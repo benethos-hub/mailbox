@@ -15,7 +15,7 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from email.parser import BytesHeaderParser
 from typing import Any
 
@@ -41,6 +41,8 @@ _WHOLE = "BODY.PEEK[]"
 _MESSAGE_ID = "BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]"
 # What an untagged response during IDLE says changed.
 _CHANGES = {b"EXISTS", b"EXPUNGE", b"FETCH", b"VANISHED"}
+# Control characters, not allowed in a search text.
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 
 @dataclass(frozen=True)
@@ -70,8 +72,18 @@ class FetchedMessage(ParsedMessage):
 
 @dataclass(frozen=True)
 class SearchCriteria:
-    text: str | None = None
-    unread: bool | None = None
+    """IMAP SEARCH keys (RFC 3501 6.4.4). Fields left out do not narrow."""
+
+    text: str | None = None  # TEXT: headers and body
+    sender: str | None = None  # FROM
+    to: str | None = None  # TO
+    subject: str | None = None  # SUBJECT
+    since: date | None = None  # SINCE: on or after this day
+    before: date | None = None  # BEFORE: before this day
+    unread: bool | None = None  # UNSEEN or SEEN
+    flagged: bool | None = None  # FLAGGED or UNFLAGGED
+    # Content-Type multipart/mixed, as has_attachments reads it in a summary.
+    mixed: bool | None = None
     before_uid: int | None = None
 
 
@@ -281,15 +293,38 @@ class ImapSession:
 
     def search(self, criteria: SearchCriteria) -> list[int]:
         """UIDs in the selected folder, ascending."""
-        query: list[str] = []
-        if criteria.text:
-            query += ["TEXT", criteria.text]
+        query: list[Any] = []
+        texts = {
+            "TEXT": criteria.text,
+            "FROM": criteria.sender,
+            "TO": criteria.to,
+            "SUBJECT": criteria.subject,
+        }
+        for key, value in texts.items():
+            if value:
+                if _CONTROL.search(value):
+                    # The library quotes but keeps line breaks: they would end
+                    # the command and start one of the caller's choosing.
+                    raise ProviderError("search text must not hold control characters")
+                query += [key, value]
+        if criteria.since is not None:
+            query += ["SINCE", criteria.since]
+        if criteria.before is not None:
+            query += ["BEFORE", criteria.before]
         if criteria.unread is not None:
             query.append("UNSEEN" if criteria.unread else "SEEN")
-        charset = "UTF-8" if criteria.text and not criteria.text.isascii() else None
+        if criteria.flagged is not None:
+            query.append("FLAGGED" if criteria.flagged else "UNFLAGGED")
+        if criteria.mixed is not None:
+            mixed = ["HEADER", "Content-Type", "multipart/mixed"]
+            query += mixed if criteria.mixed else ["NOT", *mixed]
+        wide = any(v and not v.isascii() for v in texts.values())
         with _errors():
             uids = sorted(
-                int(u) for u in self._require().search(query or "ALL", charset)
+                int(u)
+                for u in self._require().search(
+                    query or "ALL", "UTF-8" if wide else None
+                )
             )
         if criteria.before_uid is not None:
             uids = [u for u in uids if u < criteria.before_uid]

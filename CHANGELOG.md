@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- Search text with a line break or another control character is refused
+  (`422`). Before, `q` could carry further IMAP commands into the
+  account's session.
+
 ### Changed
 
 - New ids of accounts, users, tokens, keys and messages carry 64 random
@@ -19,6 +25,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Search filters on `GET /v1/accounts/{account_id}/messages` and
+  `GET /v1/messages`: `from`, `to`, `subject`, `after`, `before` (days),
+  `starred` and `has_attachments`, besides `q` and `unread`. `folder` on
+  one account also takes a role such as `inbox`.
 - `PATCH /v1/accounts/{account_id}/messages/{message_id}` sets `unread`,
   `starred` and `keywords` and answers the changed summary. Right:
   `update_message` (`mail.write`).

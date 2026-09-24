@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from pydantic import SecretStr
 
-from benethos_mailbox_api.data.models import FolderRole
+from benethos_mailbox_api.data.models import FolderRole, MessageFilter
 from benethos_mailbox_api.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_api.data.providers.protocols.imap import (
     ImapServer,
@@ -152,9 +152,7 @@ async def test_folders_say_whether_they_are_subscribed(server: FakeMailBox) -> N
 
 async def test_newest_first_with_cursor(server: FakeMailBox) -> None:
     imap = provider(server)
-    first = await imap.list_messages(
-        None, limit=4, cursor=None, query=None, unread=None
-    )
+    first = await imap.list_messages(None, limit=4, cursor=None, search=None)
     assert [m.subject for m in first.items] == [
         "With files",
         "Invoice 5",
@@ -163,7 +161,7 @@ async def test_newest_first_with_cursor(server: FakeMailBox) -> None:
     ]
     assert first.next_cursor
     second = await imap.list_messages(
-        None, limit=4, cursor=first.next_cursor, query=None, unread=None
+        None, limit=4, cursor=first.next_cursor, search=None
     )
     assert [m.subject for m in second.items] == ["Hello 2", "Invoice 1"]
     assert second.next_cursor is None
@@ -171,7 +169,7 @@ async def test_newest_first_with_cursor(server: FakeMailBox) -> None:
 
 async def test_summary_fields(server: FakeMailBox) -> None:
     page = await provider(server).list_messages(
-        None, limit=10, cursor=None, query=None, unread=None
+        None, limit=10, cursor=None, search=None
     )
     files = page.items[0]
     assert files.starred is True
@@ -190,7 +188,7 @@ async def test_summary_fields(server: FakeMailBox) -> None:
 async def test_filters(server: FakeMailBox) -> None:
     imap = provider(server)
     unread = await imap.list_messages(
-        None, limit=10, cursor=None, query=None, unread=True
+        None, limit=10, cursor=None, search=MessageFilter(unread=True)
     )
     assert {m.subject for m in unread.items} == {
         "Invoice 3",
@@ -199,18 +197,18 @@ async def test_filters(server: FakeMailBox) -> None:
         "With files",
     }
     read = await imap.list_messages(
-        None, limit=10, cursor=None, query=None, unread=False
+        None, limit=10, cursor=None, search=MessageFilter(unread=False)
     )
     assert {m.subject for m in read.items} == {"Invoice 1", "Hello 2"}
     found = await imap.list_messages(
-        None, limit=10, cursor=None, query="invoice", unread=None
+        None, limit=10, cursor=None, search=MessageFilter(text="invoice")
     )
     assert {m.subject for m in found.items} == {"Invoice 1", "Invoice 3", "Invoice 5"}
 
 
 async def test_non_ascii_search_uses_utf8(server: FakeMailBox) -> None:
     await provider(server).list_messages(
-        None, limit=10, cursor=None, query="Grüße", unread=None
+        None, limit=10, cursor=None, search=MessageFilter(text="Grüße")
     )
     assert any(c[0] == "search" and c[2] == "UTF-8" for c in server.calls)
 
@@ -218,7 +216,7 @@ async def test_non_ascii_search_uses_utf8(server: FakeMailBox) -> None:
 async def test_other_folder_and_selected_read_only(server: FakeMailBox) -> None:
     server.add("Sent", 1, make_message("Sent one"))
     page = await provider(server).list_messages(
-        mappers.folder_id("Sent"), limit=10, cursor=None, query=None, unread=None
+        mappers.folder_id("Sent"), limit=10, cursor=None, search=None
     )
     assert [m.subject for m in page.items] == ["Sent one"]
     assert ("select", "Sent", True) in server.calls
@@ -227,17 +225,13 @@ async def test_other_folder_and_selected_read_only(server: FakeMailBox) -> None:
 async def test_cursor_of_another_folder_is_refused(server: FakeMailBox) -> None:
     cursor = mappers.cursor("Sent", 1, 10)
     with pytest.raises(BadRequestError, match="another folder"):
-        await provider(server).list_messages(
-            None, limit=10, cursor=cursor, query=None, unread=None
-        )
+        await provider(server).list_messages(None, limit=10, cursor=cursor, search=None)
 
 
 async def test_cursor_after_uidvalidity_change_is_refused(server: FakeMailBox) -> None:
     cursor = mappers.cursor("INBOX", 6, 10)
     with pytest.raises(BadRequestError, match="start again"):
-        await provider(server).list_messages(
-            None, limit=10, cursor=cursor, query=None, unread=None
-        )
+        await provider(server).list_messages(None, limit=10, cursor=cursor, search=None)
 
 
 # --- one message ----------------------------------------------------------------
@@ -293,7 +287,7 @@ async def test_unknown_messages(server: FakeMailBox, message_id: str) -> None:
 async def test_one_login_for_many_calls(server: FakeMailBox) -> None:
     imap = provider(server)
     await imap.list_folders()
-    await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+    await imap.list_messages(None, limit=1, cursor=None, search=None)
     assert server.logins == 1
     await imap.close()
     assert ("logout",) in server.calls
@@ -317,7 +311,7 @@ async def test_a_dropped_connection_is_retried_in_the_same_call(
     imap = provider(server, time)
     await imap.list_folders()
     server.failures = [OSError("connection reset")]
-    page = await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+    page = await imap.list_messages(None, limit=1, cursor=None, search=None)
     assert len(page.items) == 1
     assert server.logins == 2
     assert time.sleeps == [0.5]
@@ -337,11 +331,11 @@ async def test_other_errors_are_not_retried(
     imap = provider(server, time)
     server.failures = [error]
     with pytest.raises(ProviderError, match=message) as caught:
-        await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+        await imap.list_messages(None, limit=1, cursor=None, search=None)
     assert not isinstance(caught.value, ProviderUnavailableError)
     assert time.sleeps == []
     # The next call works right away.
-    await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+    await imap.list_messages(None, limit=1, cursor=None, search=None)
 
 
 async def test_an_unreachable_server_is_paused_and_the_pause_grows(
@@ -351,7 +345,7 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
     imap = provider(server, time)
     server.failures = [TimeoutError()] * 3
     with pytest.raises(ProviderUnavailableError, match="did not answer"):
-        await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+        await imap.list_messages(None, limit=1, cursor=None, search=None)
     assert time.sleeps == [0.5, 1.0]
 
     calls = len(server.calls)
@@ -362,7 +356,7 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
     time.now += 30
     server.failures = [TimeoutError()] * 3
     with pytest.raises(ProviderUnavailableError):
-        await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+        await imap.list_messages(None, limit=1, cursor=None, search=None)
     with pytest.raises(ProviderUnavailableError, match="next attempt in 60s"):
         await imap.list_folders()
 
@@ -370,7 +364,7 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
     await imap.list_folders()
     server.failures = [TimeoutError()] * 3
     with pytest.raises(ProviderUnavailableError):
-        await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+        await imap.list_messages(None, limit=1, cursor=None, search=None)
     with pytest.raises(ProviderUnavailableError, match="next attempt in 30s"):
         await imap.list_folders()  # the success in between reset the count
 

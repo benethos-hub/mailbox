@@ -23,6 +23,7 @@ from ..data.models import (
     ItemError,
     Message,
     MessageBatch,
+    MessageFilter,
     MessagePage,
     MessageReference,
     MessageSummary,
@@ -126,16 +127,18 @@ class MailboxService:
         account_id: str,
         *,
         folder_id: str | None,
-        query: str | None,
-        unread: bool | None,
+        search: MessageFilter | None = None,
         limit: int,
         cursor: str | None,
     ) -> Page[MessageSummary]:
+        """One account's messages, newest first. ``folder_id`` may also be a
+        role such as ``inbox``."""
         access.require("list_messages", account_id)
+        folder = await self._folder_by_role(account_id, folder_id)
         page = await self._call(
             account_id,
             lambda p: p.list_messages(
-                folder_id, limit=limit, cursor=cursor, query=query, unread=unread
+                folder, limit=limit, cursor=cursor, search=search
             ),
         )
         return Page[MessageSummary](
@@ -143,14 +146,23 @@ class MailboxService:
             next_cursor=page.next_cursor,
         )
 
+    async def _folder_by_role(self, account_id: str, folder: str | None) -> str | None:
+        """A folder id, or the id of the folder with that role."""
+        if folder is None or folder not in FolderRole.__members__.values():
+            return folder
+        folders = await self._call(account_id, lambda p: p.list_folders())
+        match = next((f for f in folders if f.role == folder), None)
+        if match is None:
+            raise NotFoundError(f"the account has no {folder} folder")
+        return match.id
+
     async def list_all_messages(
         self,
         access: Access,
         *,
         account_ids: list[str] | None,
         folder_role: FolderRole | None,
-        query: str | None,
-        unread: bool | None,
+        search: MessageFilter | None = None,
         limit: int,
         cursor: str | None,
     ) -> MessagePage:
@@ -177,7 +189,7 @@ class MailboxService:
 
         chunks = await merge.per_account(
             [a for a, p in positions.items() if not p.done],
-            lambda a: self._window(a, positions[a], query, unread, limit),
+            lambda a: self._window(a, positions[a], search, limit),
             failures,
         )
 
@@ -653,8 +665,7 @@ class MailboxService:
         self,
         account_id: str,
         position: merge.Position,
-        query: str | None,
-        unread: bool | None,
+        search: MessageFilter | None,
         limit: int,
     ) -> list[merge.Chunk]:
         """At least ``limit`` of the account's next messages, or all it has
@@ -667,8 +678,7 @@ class MailboxService:
                     position.folder_id,
                     limit=limit,
                     cursor=cursor,
-                    query=query,
-                    unread=unread,
+                    search=search,
                 ),
             )
 

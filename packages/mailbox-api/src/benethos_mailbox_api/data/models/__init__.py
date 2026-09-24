@@ -27,6 +27,7 @@ from .messages import (
     Attachment,
     AttachmentContent,
     Message,
+    MessageFilter,
     MessageSummary,
     MessageUpdate,
 )
@@ -68,6 +69,7 @@ __all__ = [
     "MailServer",
     "Message",
     "MessageBatch",
+    "MessageFilter",
     "MessagePage",
     "MessageReference",
     "MessageSummary",

@@ -156,7 +156,7 @@ def account_id(services: Services) -> str:
 
 async def original_id(services: Services, account_id: str) -> str:
     page = await services.mailbox.list_messages(
-        ADMIN, account_id, folder_id=None, query=None, unread=None, limit=5, cursor=None
+        ADMIN, account_id, folder_id=None, search=None, limit=5, cursor=None
     )
     return page.items[0].id
 

@@ -90,6 +90,8 @@ Everything real mail will depend on, before any real mailbox is connected.
   `\Answered` and `$Forwarded` on the original (6.4)**, done
 - **Drafts: list, create, replace, delete, send (6.4)**, done
 - **`Idempotency-Key` on send (6.4)**, done
+- **Search filters `from`, `to`, `subject`, `after`, `before`, `starred`,
+  `has_attachments`, folder by role (6.6)**, done
 
 ## Phase 3 – MCP server and container
 

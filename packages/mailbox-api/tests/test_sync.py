@@ -83,8 +83,6 @@ async def ids_by_subject(services: Services, account_id: str) -> dict[str, str]:
         ADMIN,
         account_id,
         folder_id=None,
-        query=None,
-        unread=None,
         limit=50,
         cursor=None,
     )

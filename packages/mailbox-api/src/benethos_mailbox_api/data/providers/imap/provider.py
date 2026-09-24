@@ -37,6 +37,7 @@ from ...models import (
     Folder,
     FolderRole,
     Message,
+    MessageFilter,
     MessageSummary,
     MessageUpdate,
     Page,
@@ -162,11 +163,10 @@ class ImapProvider:
         *,
         limit: int,
         cursor: str | None,
-        query: str | None,
-        unread: bool | None,
+        search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
         return await self._run(
-            lambda: self._list_messages(folder_id, limit, cursor, query, unread)
+            lambda: self._list_messages(folder_id, limit, cursor, search)
         )
 
     async def get_message(self, message_id: str) -> Message:
@@ -309,8 +309,7 @@ class ImapProvider:
         folder_id: str | None,
         limit: int,
         cursor: str | None,
-        query: str | None,
-        unread: bool | None,
+        search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
         folder = mappers.folder_name(folder_id) if folder_id else mappers.INBOX
         before: int | None = None
@@ -322,9 +321,7 @@ class ImapProvider:
         validity = self._session.select(folder)
         if expected_validity is not None and expected_validity != validity:
             raise BadRequestError("the folder changed on the server: start again")
-        uids = self._session.search(
-            SearchCriteria(text=query, unread=unread, before_uid=before)
-        )
+        uids = self._session.search(_criteria(search or MessageFilter(), before))
         page = list(reversed(uids[-limit:]))
         messages = {int(m.uid): m for m in self._session.fetch_headers(page) if m.uid}
         items = [
@@ -388,7 +385,7 @@ class ImapProvider:
 
     def _list_drafts(self, limit: int, cursor: str | None) -> Page[MessageSummary]:
         drafts = mappers.folder_id(self._drafts_folder())
-        return self._list_messages(drafts, limit, cursor, None, None)
+        return self._list_messages(drafts, limit, cursor)
 
     def _save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
         drafts = self._drafts_folder()
@@ -736,3 +733,19 @@ def _missing(
 ) -> dict[int, MessageSummary | MailboxApiError]:
     """``NotFoundError`` for every UID the folder no longer holds."""
     return {uid: NotFoundError("message not found") for uid in uids if uid not in found}
+
+
+def _criteria(search: MessageFilter, before_uid: int | None) -> SearchCriteria:
+    """The API's filter as IMAP SEARCH keys."""
+    return SearchCriteria(
+        text=search.text,
+        sender=search.sender,
+        to=search.to,
+        subject=search.subject,
+        since=search.after,
+        before=search.before,
+        unread=search.unread,
+        flagged=search.starred,
+        mixed=search.has_attachments,
+        before_uid=before_uid,
+    )

@@ -11,6 +11,8 @@ import imaplib
 from dataclasses import dataclass, field
 from datetime import datetime
 from email.message import EmailMessage
+from email.parser import BytesParser
+from email.policy import default
 from email.utils import format_datetime
 from types import SimpleNamespace
 from typing import Any
@@ -290,23 +292,16 @@ class FakeMailBox:
         return {k.encode(): v for k, v in values.items() if k in what}
 
     def search(self, criteria: Any, charset: str | None = None) -> list[int]:
+        """SEARCH with the keys the adapter uses, compared the way servers
+        do: case-insensitive substrings, dates by day."""
         if self.failures:
             raise self.failures.pop(0)
         words = [criteria] if isinstance(criteria, str) else list(criteria)
         self.calls.append(("search", tuple(words), charset))
-        text = words[words.index("TEXT") + 1].lower() if "TEXT" in words else None
-        header = words[words.index("HEADER") + 2] if "HEADER" in words else None
         found = []
         for uid, (raw, flags) in self.folders[self.selected].messages.items():
-            if header and header.encode() not in _message_id_block(raw):
-                continue
-            if "UNSEEN" in words and "\\Seen" in flags:
-                continue
-            if "SEEN" in words and "\\Seen" not in flags:
-                continue
-            if text and text not in raw.decode(errors="replace").lower():
-                continue
-            found.append(uid)
+            if _matches(words, raw, flags):
+                found.append(uid)
         return found
 
     def fetch(self, uids: list[int], items: list[str]) -> dict[int, dict[bytes, Any]]:
@@ -362,3 +357,51 @@ def _message_id_block(head: bytes) -> bytes:
         if inside:
             block += line + b"\r\n"
     return block + b"\r\n"
+
+
+def _matches(words: list[Any], raw: bytes, flags: tuple[str, ...]) -> bool:
+    mail = BytesParser(policy=default).parsebytes(raw)
+    position = 0
+    negate = False
+    while position < len(words):
+        key = words[position]
+        position += 1
+        if key == "ALL":
+            continue
+        if key == "NOT":
+            negate = True
+            continue
+        if key in ("TEXT", "FROM", "TO", "SUBJECT"):
+            value = str(words[position]).lower()
+            position += 1
+            source = {
+                "TEXT": raw.decode(errors="replace"),
+                "FROM": str(mail.get("From", "")),
+                "TO": str(mail.get("To", "")),
+                "SUBJECT": str(mail.get("Subject", "")),
+            }[key]
+            ok = value in source.lower()
+        elif key == "HEADER":
+            name, value = str(words[position]), str(words[position + 1])
+            position += 2
+            if name.lower() == "message-id":
+                ok = value.encode() in _message_id_block(raw)
+            else:
+                ok = value.lower() in str(mail.get(name, "")).lower()
+        elif key in ("SINCE", "BEFORE"):
+            day = words[position]
+            position += 1
+            sent = mail["Date"].datetime.date() if mail["Date"] else None
+            ok = sent is not None and (sent >= day if key == "SINCE" else sent < day)
+        else:
+            present = {
+                "SEEN": "\\Seen",
+                "UNSEEN": "\\Seen",
+                "FLAGGED": "\\Flagged",
+                "UNFLAGGED": "\\Flagged",
+            }[key]
+            ok = (present in flags) == (key in ("SEEN", "FLAGGED"))
+        if ok == negate:
+            return False
+        negate = False
+    return True
