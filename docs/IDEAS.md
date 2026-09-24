@@ -37,6 +37,19 @@ identity may have its own signature and reply-to.
 - Never execute or open anything. Attachments are data.
 - Attachment text is foreign content like the mail body (CONCEPT 7.7).
 
+## IMAPClient instead of imap-tools
+
+imap-tools is convenient for reading mail, but where it offers nothing,
+`client.py` talks to `imaplib` directly and parses raw answers (fetching
+only the `Message-ID` header). IMAPClient parses every server answer and
+returns any FETCH item as a dict. Mail parsing would then use the standard
+library's `email` module.
+
+- 2026-09-24: stay with imap-tools for now. Switch when phase 2 needs more
+  protocol access (`COPYUID`, `MOVE`, `QRESYNC`).
+- A switch rewrites `imap/client.py`, the message part of `imap/mappers.py`
+  and the test fake, nothing else.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

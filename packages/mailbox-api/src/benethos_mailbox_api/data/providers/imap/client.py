@@ -8,10 +8,13 @@ module as a ``MailboxApiError``.
 from __future__ import annotations
 
 import imaplib
+import re
 import ssl
+import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from email.parser import BytesHeaderParser
 from typing import Any
 
 from imap_tools import (
@@ -26,6 +29,9 @@ from imap_tools import (
 from ....errors import ProviderAuthError, ProviderError, ProviderUnavailableError
 
 MailBoxFactory = Callable[..., Any]
+
+# How often a waiting IDLE looks whether it should stop. Costs no traffic.
+IDLE_STEP = 5.0
 
 
 @dataclass(frozen=True)
@@ -187,10 +193,106 @@ class ImapSession:
                 return bytes(part[1])
         return None
 
+    def folder_state(self, folder: str) -> tuple[int, int, int]:
+        """UIDVALIDITY, UIDNEXT and MESSAGES of a folder, without selecting
+        it. Together they change whenever a message arrives or leaves."""
+        with _errors():
+            status = self._require().folder.status(
+                folder, ["UIDVALIDITY", "UIDNEXT", "MESSAGES"]
+            )
+        return (
+            int(status["UIDVALIDITY"]),
+            int(status.get("UIDNEXT", 0)),
+            int(status.get("MESSAGES", 0)),
+        )
+
+    def fetch_message_ids(self, uids: list[int]) -> dict[int, str | None]:
+        """The ``Message-ID`` header of each UID in the selected folder. Reads
+        only that header and never sets ``\\Seen``."""
+        if not uids:
+            return {}
+        with _errors():
+            status, data = self._require().client.uid(
+                "fetch",
+                ",".join(str(u) for u in uids),
+                "(UID BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])",
+            )
+        if status != "OK":
+            raise ProviderError("the server refused to hand out message headers")
+        found: dict[int, str | None] = {}
+        for index, part in enumerate(data):
+            if not (isinstance(part, tuple) and len(part) == 2):
+                continue
+            # The UID comes before the header, or after it in the next part.
+            match = _UID.search(part[0])
+            if match is None and index + 1 < len(data):
+                following = data[index + 1]
+                if isinstance(following, bytes):
+                    match = _UID.search(following)
+            if match is not None:
+                found[int(match.group(1))] = _message_id(part[1])
+        return found
+
+    def server_capabilities(self) -> frozenset[str]:
+        """What the server announces now, after the login."""
+        with _errors():
+            status, data = self._require().client.capability()
+        if status != "OK" or not data or not isinstance(data[0], bytes):
+            return frozenset()
+        return frozenset(data[0].decode(errors="replace").upper().split())
+
+    def idle(
+        self,
+        timeout: float,
+        stopped: Callable[[], bool],
+        step: float = IDLE_STEP,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> bool:
+        """IDLE in the selected folder until the server reports a change,
+        ``timeout`` passes or ``stopped`` says so. Looks at ``stopped`` every
+        ``step`` seconds, which costs no traffic. True on a change."""
+        with _errors():
+            idle = self._require().idle
+            idle.start()
+            try:
+                deadline = clock() + timeout
+                while not stopped():
+                    remaining = deadline - clock()
+                    if remaining <= 0:
+                        return False
+                    lines = idle.poll(timeout=min(step, remaining))
+                    if any(_BYE.match(line) for line in lines):
+                        raise ProviderUnavailableError(
+                            "the mail server ended the connection"
+                        )
+                    if any(_CHANGE.search(line) for line in lines):
+                        return True
+                return False
+            finally:
+                if self._mailbox is not None:
+                    try:
+                        idle.stop()
+                    except (ImapToolsError, imaplib.IMAP4.error, OSError):
+                        # The connection is spoiled. Start afresh next time.
+                        self.logout()
+
     def _require(self) -> Any:
         if self._mailbox is None:
             raise ProviderError("not connected")
         return self._mailbox
+
+
+_UID = re.compile(rb"UID (\d+)")
+_CHANGE = re.compile(rb"^\* \d+ (EXISTS|EXPUNGE|FETCH)\b|^\* VANISHED\b", re.I)
+_BYE = re.compile(rb"^\* BYE\b", re.I)
+
+
+def _message_id(header_block: bytes) -> str | None:
+    value = BytesHeaderParser().parsebytes(header_block).get("Message-ID")
+    if not value:
+        return None
+    # Folded headers keep their line breaks. The id itself has no spaces.
+    return "".join(str(value).split()) or None
 
 
 def _quietly_logout(mailbox: Any) -> None:

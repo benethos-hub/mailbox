@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ....errors import NotFoundError
+from ....errors import NotFoundError, NotSupportedError
 from ...models import (
     AttachmentContent,
     Folder,
@@ -15,7 +15,9 @@ from ..base import Capability
 
 
 class MemoryProvider:
-    capabilities = frozenset({Capability.SEND, Capability.DRAFTS})
+    capabilities = frozenset(
+        {Capability.SEND, Capability.DRAFTS, Capability.STABLE_IDS}
+    )
 
     def __init__(
         self,
@@ -80,6 +82,22 @@ class MemoryProvider:
         message = await self.get_message(message_id)
         body = message.text_body or ""
         return f"Subject: {message.subject or ''}\r\n\r\n{body}".encode()
+
+    async def folder_states(self) -> dict[str, str]:
+        return {
+            f.id: ",".join(m.id for m in self.messages if f.id in m.folder_ids)
+            for f in self.folders
+        }
+
+    async def folder_contents(self, folder_id: str) -> list[str]:
+        return [m.id for m in self.messages if folder_id in m.folder_ids]
+
+    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+        wanted = set(message_ids)
+        return {m.id: m.message_id_header for m in self.messages if m.id in wanted}
+
+    async def wait_for_change(self, timeout: float) -> bool:
+        raise NotSupportedError("the memory provider does not push changes")
 
     async def verify(self) -> None:
         return None
