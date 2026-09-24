@@ -16,6 +16,7 @@ from ..models import (
     MessageSummary,
     MessageUpdate,
     Page,
+    SentMessage,
 )
 
 # Hands an adapter one stored credential by field name, decrypted at the
@@ -78,6 +79,12 @@ class MailProvider(Protocol):
 
     async def get_raw(self, message_id: str) -> bytes:
         """The message source as RFC 822 bytes."""
+        ...
+
+    async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
+        """Send a composed message, and keep a copy where the provider does
+        not do that itself. Once the message is out it does not fail: a
+        client would send again."""
         ...
 
     async def update_messages(

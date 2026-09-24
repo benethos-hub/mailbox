@@ -15,6 +15,7 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from email.parser import BytesHeaderParser
 from typing import Any
 
@@ -232,6 +233,21 @@ class ImapSession:
                 )
             client.add_flags(uids, ["\\Deleted"], silent=True)
             client.uid_expunge(uids)
+
+    def append(self, folder: str, raw: bytes, flags: list[str]) -> int | None:
+        """Store a message in ``folder``. Returns its UID where the server
+        reports it (``APPENDUID``, RFC 4315)."""
+        with _errors():
+            client = self._require()
+            codes = client._imap.untagged_responses
+            codes.pop("APPENDUID", None)
+            answer = client.append(folder, raw, flags=flags, msg_time=datetime.now(UTC))
+            reported = codes.pop("APPENDUID", None) or [answer]
+        for item in reported:
+            match = re.search(r"(?:APPENDUID )?\d+ (\d+)", _text(item) if item else "")
+            if match:
+                return int(match.group(1))
+        return None
 
     def search_message_id(self, header: str) -> list[int]:
         """UIDs in the selected folder with this ``Message-ID``."""

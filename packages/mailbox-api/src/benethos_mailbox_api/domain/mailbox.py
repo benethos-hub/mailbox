@@ -8,8 +8,10 @@ import binascii
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, TypeVar
 
+from ..data import mime
 from ..data.models import (
     AccountFailure,
     AttachmentContent,
@@ -25,7 +27,10 @@ from ..data.models import (
     MessagePage,
     MessageSummary,
     MessageUpdate,
+    OutgoingMessage,
     Page,
+    Recipient,
+    SendResult,
 )
 from ..data.providers import MailProvider
 from ..errors import BadRequestError, ConflictError, MailboxApiError, NotFoundError
@@ -246,6 +251,34 @@ class MailboxService:
         outcome = (await self._delete(account_id, [message_id], permanent))[message_id]
         if isinstance(outcome, MailboxApiError):
             raise outcome
+
+    async def send_message(
+        self, access: Access, account_id: str, message: OutgoingMessage
+    ) -> SendResult:
+        """Send from the account's address, with a fresh Date and
+        Message-ID. Its own right: sending cannot be taken back."""
+        access.require("send_message", account_id)
+        account = self._accounts.record(account_id)
+        message_id = mime.new_message_id(account.email)
+        raw = mime.compose(
+            message,
+            Recipient(email=account.email, name=account.display_name),
+            # Local time with its offset, as mail clients write it.
+            datetime.now(UTC).astimezone(),
+            message_id,
+        )
+        sent = await self._call(
+            account_id,
+            lambda p: p.send(raw, account.email, message.recipients()),
+        )
+        copy_id = None
+        if sent.sent_copy is not None:
+            copy = sent.sent_copy
+            folder = copy.folder_ids[0] if copy.folder_ids else ""
+            [copy_id] = await self._sync.public_ids(account_id, [(copy.id, folder)])
+        return SendResult(
+            message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
+        )
 
     async def batch_messages(
         self, access: Access, account_id: str, batch: MessageBatch

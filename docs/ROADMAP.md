@@ -80,11 +80,11 @@ Everything real mail will depend on, before any real mailbox is connected.
 ## Phase 2 – Writing and sending
 
 - **IMAP protocol on IMAPClient (5.1)**, done
-- SMTP through the standard library's `smtplib` (5)
+- **SMTP through the standard library's `smtplib` (5)**, done
 - **`COPYUID` keeps the id of a message we move (4.1)**, done
 - **Update, delete and batch operations on messages (6.3)**, done
 - **Folder create, rename, delete (6.2)**, done
-- Sending over SMTP, with reply and forward by reference, `forward_as`,
+- **Sending over SMTP (6.4)**, done; reply and forward by reference, `forward_as`,
   `\Answered` and `$Forwarded` on the original (6.4)
 - Drafts
 - `Idempotency-Key` on send

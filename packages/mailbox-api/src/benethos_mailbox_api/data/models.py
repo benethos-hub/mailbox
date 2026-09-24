@@ -10,7 +10,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Generic, Literal, TypeVar
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Base64Bytes, BaseModel, Field, model_validator
 
 
 class ProviderType(StrEnum):
@@ -227,6 +227,76 @@ class BatchResult(BaseModel):
     """One result per id, in the order of the request."""
 
     results: list[BatchItemResult]
+
+
+# No line breaks in anything that goes into a header: a CR or LF there would
+# let a caller add headers of its own (header injection).
+_ONE_LINE = r"^[^\r\n]*$"
+MAX_RECIPIENTS = 100
+MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+
+
+class Recipient(BaseModel):
+    email: str = Field(pattern=r"^[^\s@<>,;\"]+@[^\s@<>,;\"]+$", max_length=254)
+    name: str | None = Field(default=None, pattern=_ONE_LINE, max_length=200)
+
+
+class OutgoingAttachment(BaseModel):
+    filename: str = Field(pattern=_ONE_LINE, min_length=1, max_length=200)
+    content_type: str = Field(
+        default="application/octet-stream",
+        pattern=r"^[\w.+-]+/[\w.+-]+$",
+    )
+    data: Base64Bytes = Field(description="The content, base64-encoded.")
+
+
+class OutgoingMessage(BaseModel):
+    """A message to send. The service sets From, Date and Message-ID."""
+
+    to: list[Recipient] = Field(default_factory=list)
+    cc: list[Recipient] = Field(default_factory=list)
+    bcc: list[Recipient] = Field(
+        default_factory=list, description="Receive it, but appear in no header."
+    )
+    reply_to: list[Recipient] = Field(default_factory=list)
+    subject: str = Field(default="", pattern=_ONE_LINE, max_length=998)
+    text: str | None = None
+    html: str | None = None
+    attachments: list[OutgoingAttachment] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _limits(self) -> OutgoingMessage:
+        recipients = len(self.to) + len(self.cc) + len(self.bcc)
+        if recipients == 0:
+            raise ValueError("a message needs at least one recipient")
+        if recipients > MAX_RECIPIENTS:
+            raise ValueError(f"at most {MAX_RECIPIENTS} recipients")
+        if sum(len(a.data) for a in self.attachments) > MAX_ATTACHMENT_BYTES:
+            raise ValueError("the attachments exceed 25 MB")
+        return self
+
+    def recipients(self) -> list[str]:
+        """Every address the message goes to, each once."""
+        return list(dict.fromkeys(r.email for r in (*self.to, *self.cc, *self.bcc)))
+
+
+class SendResult(BaseModel):
+    message_id_header: str = Field(description="The Message-ID of the sent message.")
+    sent_copy_id: str | None = Field(
+        default=None,
+        description="The copy in the sent folder, where the service put one.",
+    )
+    refused: list[str] = Field(
+        default_factory=list,
+        description="Recipients the server refused while it accepted others.",
+    )
+
+
+class SentMessage(BaseModel):
+    """What a provider reports about a send."""
+
+    refused: list[str] = Field(default_factory=list)
+    sent_copy: MessageSummary | None = None
 
 
 class Attachment(BaseModel):
