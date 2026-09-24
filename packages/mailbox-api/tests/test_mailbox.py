@@ -8,7 +8,7 @@ from benethos_mailbox_api.main import Services
 
 def test_folders(client: TestClient, account_id: str) -> None:
     folders = client.get(f"/v1/accounts/{account_id}/folders").json()
-    assert {f["role"] for f in folders} == {"inbox", "sent"}
+    assert {f["role"] for f in folders} == {"inbox", "sent", "drafts"}
 
 
 def test_messages_paginate_with_cursor(client: TestClient, account_id: str) -> None:

@@ -27,6 +27,7 @@ from ....errors import (
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
+    ProviderError,
     ProviderUnavailableError,
 )
 from ...mail import convert
@@ -92,7 +93,9 @@ async def probe(
 
 class ImapProvider:
     # PUSH needs IDLE, which wait_for_change finds out after the login.
-    capabilities = frozenset({Capability.SERVER_SEARCH, Capability.PUSH})
+    capabilities = frozenset(
+        {Capability.SERVER_SEARCH, Capability.PUSH, Capability.DRAFTS}
+    )
 
     def __init__(
         self,
@@ -193,6 +196,20 @@ class ImapProvider:
         except MailboxApiError as exc:
             log.warning("sent, but no copy in the sent folder: %s", exc.message)
         return SentMessage(refused=refused, sent_copy=copy)
+
+    async def list_drafts(
+        self, *, limit: int, cursor: str | None
+    ) -> Page[MessageSummary]:
+        return await self._run(lambda: self._list_drafts(limit, cursor))
+
+    async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
+        return await self._run(lambda: self._save_draft(raw, replaces))
+
+    async def get_draft(self, draft_id: str) -> bytes:
+        return await self._run(lambda: self._get_draft(draft_id))
+
+    async def delete_draft(self, draft_id: str) -> None:
+        await self._run(lambda: self._delete_draft(draft_id))
 
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
         return await self._run(lambda: self._create_folder(name, parent_id))
@@ -351,14 +368,70 @@ class ImapProvider:
         sent = self._role_folder(FolderRole.SENT)
         if sent is None:
             return None
-        uid = self._session.append(sent, raw, ["\\Seen"])
-        validity = self._session.select(sent)
+        return self._append(sent, raw, ["\\Seen"])
+
+    def _append(
+        self, folder: str, raw: bytes, flags: list[str]
+    ) -> MessageSummary | None:
+        """Store ``raw`` in ``folder``. The stored message, found by its UID
+        from APPENDUID or else by its Message-ID; None if neither finds it."""
+        uid = self._session.append(folder, raw, flags)
+        validity = self._session.select(folder)
         if uid is None:
             header = convert.message_id_header(ParsedMessage(raw))
             matches = self._session.search_message_id(header) if header else []
             uid = matches[-1] if matches else None
         found = self._session.fetch_headers([uid]) if uid else []
-        return mappers.to_summary(found[0], sent, validity) if found else None
+        return mappers.to_summary(found[0], folder, validity) if found else None
+
+    # --- drafts ---------------------------------------------------------------------
+
+    def _list_drafts(self, limit: int, cursor: str | None) -> Page[MessageSummary]:
+        drafts = mappers.folder_id(self._drafts_folder())
+        return self._list_messages(drafts, limit, cursor, None, None)
+
+    def _save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
+        drafts = self._drafts_folder()
+        # Checked before the new one is stored: a wrong id changes nothing.
+        old = self._draft_place(replaces, drafts) if replaces else None
+        saved = self._append(drafts, raw, ["\\Draft", "\\Seen"])
+        if saved is None:
+            raise ProviderError("the draft was stored but cannot be found again")
+        if old is not None:
+            self._delete_draft_at(drafts, *old)
+        return saved
+
+    def _get_draft(self, draft_id: str) -> bytes:
+        self._draft_place(draft_id, self._drafts_folder())
+        return self._get_raw(draft_id)
+
+    def _delete_draft(self, draft_id: str) -> None:
+        drafts = self._drafts_folder()
+        self._delete_draft_at(drafts, *self._draft_place(draft_id, drafts))
+
+    def _delete_draft_at(self, drafts: str, validity: int, uid: int) -> None:
+        found, _ = self._open_writable(drafts, validity, [uid])
+        if uid not in found:
+            raise NotFoundError("draft not found")
+        self._session.expunge([uid])
+
+    def _drafts_folder(self) -> str:
+        drafts = self._role_folder(FolderRole.DRAFTS)
+        if drafts is None:
+            raise ConflictError("the account has no drafts folder")
+        return drafts
+
+    def _draft_place(self, draft_id: str, drafts: str) -> tuple[int, int]:
+        """UIDVALIDITY and UID of a draft id; not found unless it names a
+        message in the drafts folder."""
+        missing = NotFoundError(f"draft {draft_id} not found")
+        try:
+            folder, validity, uid = mappers.parse_message_id(draft_id)
+        except NotFoundError:
+            raise missing from None
+        if folder != drafts:
+            raise missing
+        return validity, uid
 
     # --- folders --------------------------------------------------------------------
 

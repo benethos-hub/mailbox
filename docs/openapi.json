@@ -5476,7 +5476,7 @@
         },
         "type": "object",
         "title": "OutgoingMessage",
-        "description": "A message to send. The service sets From, Date and Message-ID."
+        "description": "A message to send. The service sets From, Date and Message-ID. It\nneeds a recipient, unless it is a reply: that finds one in the original."
       },
       "Page_MessageSummary_": {
         "properties": {
