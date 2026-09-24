@@ -13,7 +13,9 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 5. creates a folder and moves the mail into it through the API: the id
    stays,
 6. moves it back the way another mail client would: the id still answers,
-7. renames and deletes the folder, runs a batch,
+7. replies and forwards through the API, back to account 2 only, and
+   checks the flags on the original; renames and deletes the folder,
+   runs a batch,
 8. deletes the mail through the API, into the trash, then for good, and
    the sent copy. With ``--keep`` the mail stays in the inbox and the copy
    in the sent folder, to look at in a mail client.
@@ -240,8 +242,9 @@ def clean_up(
         except (imaplib.IMAP4.error, OSError) as exc:
             print(f"cleanup failed, remove '{subject}' by hand: {exc}")
             return
+    # A subject search finds the replies and forwards ("Re: ...") too.
     folders = [other.folder_name(base), other.folder_name(base + "-renamed")]
-    places = [*folders, "INBOX", other.trash_folder()]
+    places = [*folders, "INBOX", other.trash_folder(), other.sent_folder()]
     removed = sum(other.delete_mail(place, subject) for place in places if place)
     left = [f for f in folders if f in other.all_folders()]
     for folder in left:
@@ -252,8 +255,8 @@ def clean_up(
     except (imaplib.IMAP4.error, OSError) as exc:
         print(f"cleanup failed, remove the sent copy of '{subject}' by hand: {exc}")
         return
-    sent = outbox.sent_folder()
-    removed += outbox.delete_mail(sent, subject) if sent else 0
+    for place in ("INBOX", outbox.sent_folder(), outbox.trash_folder()):
+        removed += outbox.delete_mail(place, subject) if place else 0
     outbox.close()
     print(
         f"\n== cleanup: {removed} test mail(s) and {len(left)} leftover "
@@ -431,6 +434,49 @@ def main() -> int:
         run.check(
             "the subject matches",
             back.status_code == 200 and back.json().get("subject") == subject,
+        )
+
+        # Answered by account 1, so it goes back to account 2 only.
+        replied = client.post(
+            f"/v1/accounts/{account_id}/send",
+            json={
+                "reference": {"message_id": message_id, "action": "reply"},
+                "text": "Automatic reply of live/changes.py.",
+            },
+        )
+        reply = find_by_subject(client, sender_id, f"Re: {subject}")
+        run.check(
+            "a reply goes back to the sender, as a reply",
+            replied.status_code == 200 and reply is not None,
+            str(replied.status_code),
+        )
+        run.check(
+            "the original is marked answered",
+            "\\Answered" in other.flags("INBOX", subject),
+            " ".join(other.flags("INBOX", subject)),
+        )
+        forwarded = client.post(
+            f"/v1/accounts/{account_id}/send",
+            json={
+                "reference": {
+                    "message_id": message_id,
+                    "action": "forward",
+                    "forward_as": "attachment",
+                },
+                "to": [{"email": sender["email"]}],
+                "text": "Automatic forward of live/changes.py.",
+            },
+        )
+        forward = find_by_subject(client, sender_id, f"Fwd: {subject}")
+        run.check(
+            "a forward as attachment arrives",
+            forwarded.status_code == 200 and forward is not None,
+            str(forwarded.status_code),
+        )
+        run.check(
+            "the original is marked forwarded",
+            "$Forwarded" in other.flags("INBOX", subject),
+            " ".join(other.flags("INBOX", subject)),
         )
 
         batch = client.post(

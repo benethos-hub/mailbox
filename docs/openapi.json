@@ -5153,6 +5153,40 @@
         "title": "MessagePage",
         "description": "Messages across accounts. ``incomplete`` names the accounts that did\nnot answer; their messages are missing from this page."
       },
+      "MessageReference": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "reply",
+              "reply_all",
+              "forward"
+            ],
+            "title": "Action"
+          },
+          "forward_as": {
+            "type": "string",
+            "enum": [
+              "inline",
+              "attachment"
+            ],
+            "title": "Forward As",
+            "description": "`inline`: quoted with its headers, its attachments attached. `attachment`: the unchanged original as `message/rfc822`. Ignored for replies.",
+            "default": "inline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "action"
+        ],
+        "title": "MessageReference",
+        "description": "Reply to or forward a message of the same account. The service sets\nthe recipients of a reply where none are given, the subject prefix,\nIn-Reply-To, References and the quote."
+      },
       "MessageSummary": {
         "properties": {
           "id": {
@@ -5364,6 +5398,16 @@
       },
       "OutgoingMessage": {
         "properties": {
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "to": {
             "items": {
               "$ref": "#/components/schemas/Recipient"

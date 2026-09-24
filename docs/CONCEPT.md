@@ -590,6 +590,14 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
   headers, its attachments attached) or `attachment` (the unchanged
   original as `message/rfc822`). Ignored for replies.
 
+Rules of the implementation (phase 2): a reply without recipients goes to
+the original's `Reply-To`, else its sender; `reply_all` adds everyone in
+`To` and `Cc` except the account itself. Named recipients and a subject
+win over these. A `reference` needs `get_message` besides `send_message`:
+a reply quotes the original and a forward passes it on, so a user who may
+only send cannot get at mail this way. When the flag on the original
+cannot be set, the send still counts as done.
+
 Sending is **synchronous** in phase 2: `200` means the provider accepted the
 message. After an SMTP send the copy is appended to the sent folder unless
 the provider does that itself (Gmail, Graph). A queued outbox with `send_at`
