@@ -371,8 +371,17 @@ async def test_a_rejected_login_is_not_tried_again(server: FakeMailBox) -> None:
     assert [c for c in server.calls if c[0] == "login"] == [("login", "me@example.com")]
 
     server.password = "secret"
-    imap.reset()
+    await imap.verify()
     await imap.list_folders()
+
+
+async def test_verify_with_a_still_wrong_password(server: FakeMailBox) -> None:
+    server.password = "changed"
+    imap = provider(server)
+    with pytest.raises(ProviderAuthError):
+        await imap.verify()
+    with pytest.raises(ProviderAuthError, match="no new attempt"):
+        await imap.list_folders()
 
 
 async def test_requests_are_paced(server: FakeMailBox) -> None:

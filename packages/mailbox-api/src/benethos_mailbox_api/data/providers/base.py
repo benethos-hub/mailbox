@@ -53,4 +53,9 @@ class MailProvider(Protocol):
         """The message source as RFC 822 bytes."""
         ...
 
+    async def verify(self) -> None:
+        """Log in afresh and forget an earlier rejected login. Raises
+        ``ProviderAuthError`` if the credential does not work."""
+        ...
+
     async def close(self) -> None: ...

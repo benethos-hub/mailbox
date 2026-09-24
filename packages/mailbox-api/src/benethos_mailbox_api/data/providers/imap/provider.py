@@ -131,6 +131,9 @@ class ImapProvider:
     async def get_raw(self, message_id: str) -> bytes:
         return await self._run(lambda: self._get_raw(message_id))
 
+    async def verify(self) -> None:
+        await anyio.to_thread.run_sync(self._verify)
+
     async def close(self) -> None:
         await anyio.to_thread.run_sync(self._close)
 
@@ -207,6 +210,18 @@ class ImapProvider:
             raise NotFoundError(f"message {message_id} not found")
         return raw
 
+    def _verify(self) -> None:
+        with self._lock:
+            self._login_rejected = False
+            self._failures = 0
+            self._paused_until = 0.0
+            self._session.logout()
+            try:
+                self._login()
+            except ProviderAuthError:
+                self._login_rejected = True
+                raise
+
     def _close(self) -> None:
         with self._lock:
             self._session.logout()
@@ -263,14 +278,6 @@ class ImapProvider:
         self._failures += 1
         pause = min(LONGEST_PAUSE, FIRST_PAUSE * 2 ** (self._failures - 1))
         self._paused_until = self._clock() + pause
-
-    def reset(self) -> None:
-        """Forget a rejected login and any pause. For verify, after the
-        credential was replaced."""
-        with self._lock:
-            self._login_rejected = False
-            self._failures = 0
-            self._paused_until = 0.0
 
     def _login(self) -> None:
         if self._auth == "xoauth2":

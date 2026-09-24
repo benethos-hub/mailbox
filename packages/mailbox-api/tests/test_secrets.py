@@ -32,7 +32,7 @@ from benethos_mailbox_api.errors import (
 )
 from benethos_mailbox_api.main import build_services, key_provider
 
-from .conftest import ADMIN
+from .conftest import create_account
 
 
 class MemoryKeyProvider:
@@ -249,8 +249,8 @@ def test_stored_encrypted_and_never_returned(
     settings = Settings(data_dir=tmp_path, storage="sqlite", api_key=SecretStr("k"))
     services = build_services(settings)
     services.vault.initialize()
-    account = services.accounts.create(
-        ADMIN,
+    account = create_account(
+        services.accounts,
         ProviderType.MEMORY,
         "a@example.com",
         credentials={"password": SecretStr("hunter2")},

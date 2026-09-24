@@ -91,6 +91,10 @@ class CredentialVault:
             )
         return kek
 
+    def require_ready(self) -> None:
+        """Raise unless credentials can be stored right now."""
+        self._data_key()
+
     # --- credentials ----------------------------------------------------------
 
     def store(self, account_id: str, field: str, value: SecretStr) -> None:

@@ -81,5 +81,8 @@ class MemoryProvider:
         body = message.text_body or ""
         return f"Subject: {message.subject or ''}\r\n\r\n{body}".encode()
 
+    async def verify(self) -> None:
+        return None
+
     async def close(self) -> None:
         return None

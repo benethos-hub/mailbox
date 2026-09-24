@@ -19,7 +19,7 @@ from benethos_mailbox_api.data.providers.memory import MemoryProvider
 from benethos_mailbox_api.errors import ProviderUnavailableError
 from benethos_mailbox_api.main import Services, build_services, create_app
 
-from .conftest import ADMIN, bearer_for
+from .conftest import bearer_for, create_account
 
 START = datetime(2026, 9, 1, tzinfo=UTC)
 
@@ -55,17 +55,22 @@ def world() -> tuple[Services, TestClient, list[str], list[Flaky]]:
             messages=_messages("c", [6, 4], folder="archive"),
         ),
     ]
-    queue = list(adapters)
+    by_name = dict(zip("abc", adapters, strict=True))
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
     ) -> Flaky:
-        return queue.pop(0)
+        return by_name[str(settings["name"])]
 
     settings = Settings(storage="memory", api_key=SecretStr("k"))
     services = build_services(settings, provider_factory=factory)
     ids = [
-        services.accounts.create(ADMIN, ProviderType.MEMORY, f"{n}@example.com").id
+        create_account(
+            services.accounts,
+            ProviderType.MEMORY,
+            f"{n}@example.com",
+            settings={"name": n},
+        ).id
         for n in "abc"
     ]
     client = TestClient(

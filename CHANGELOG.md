@@ -13,6 +13,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Creating an account logs in first. Nothing is stored unless the provider
+  accepts the credential: a rejected login answers `502
+  provider_auth_failed`, a missing credential `400`.
+- `POST /v1/accounts/{account_id}/verify` logs in afresh, clears a rejected
+  login and updates the status. Right: `accounts.manage`.
 - `GET /v1/messages` lists messages across accounts, newest first, with the
   same filters as one account plus `accounts` and a folder role. Accounts the
   caller may not read are left out. An account that fails is named in

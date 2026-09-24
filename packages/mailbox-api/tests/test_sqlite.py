@@ -28,7 +28,7 @@ from benethos_mailbox_api.data.storage.sqlite import SCHEMA_VERSION
 from benethos_mailbox_api.errors import NotFoundError
 from benethos_mailbox_api.main import build_services
 
-from .conftest import ADMIN
+from .conftest import create_account
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -151,7 +151,7 @@ def test_a_failed_transaction_rolls_back(db: Database) -> None:
 def test_everything_survives_a_restart(tmp_path: Path) -> None:
     settings = Settings(data_dir=tmp_path, storage="sqlite")
     first = build_services(settings)
-    account = first.accounts.create(ADMIN, ProviderType.MEMORY, "a@example.com")
+    account = create_account(first.accounts, ProviderType.MEMORY, "a@example.com")
     user, token = first.users.create_admin("owner")
 
     first.close()

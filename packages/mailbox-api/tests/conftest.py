@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_api.config import Settings
-from benethos_mailbox_api.data.models import Address, Grant, Message, ProviderType
+from benethos_mailbox_api.data.models import (
+    Account,
+    Address,
+    Grant,
+    Message,
+    ProviderType,
+)
 from benethos_mailbox_api.data.providers import (
     CredentialReader,
     MailProvider,
@@ -99,7 +107,7 @@ def auth(services: Services) -> AuthService:
 
 @pytest.fixture
 def account_id(accounts: AccountService) -> str:
-    return accounts.create(ADMIN, ProviderType.MEMORY, "me@example.com").id
+    return create_account(accounts, ProviderType.MEMORY, "me@example.com").id
 
 
 @pytest.fixture
@@ -121,3 +129,8 @@ def bearer_for(
     user = services.users.create_user(ADMIN, "limited", roles or [], list(grants))
     _, plain = services.auth.issue_token(user.id, "test")
     return {"Authorization": f"Bearer {plain}"}
+
+
+def create_account(accounts: AccountService, *args: Any, **kwargs: Any) -> Account:
+    """``AccountService.create`` as the admin, for tests that are not async."""
+    return asyncio.run(accounts.create(ADMIN, *args, **kwargs))

@@ -6,7 +6,7 @@ from benethos_mailbox_api.data.models import Grant, ProviderType
 from benethos_mailbox_api.domain import permissions
 from benethos_mailbox_api.main import Services
 
-from .conftest import ADMIN, bearer_for
+from .conftest import bearer_for, create_account
 
 READ_A = {"accounts": ["acc_a"], "allow": ["mail.read"]}
 
@@ -20,8 +20,8 @@ def test_me_for_the_admin_key(client: TestClient, account_id: str) -> None:
 
 
 def test_me_for_a_limited_user(app_client: TestClient, services: Services) -> None:
-    a = services.accounts.create(ADMIN, ProviderType.MEMORY, "a@example.com").id
-    services.accounts.create(ADMIN, ProviderType.MEMORY, "b@example.com")
+    a = create_account(services.accounts, ProviderType.MEMORY, "a@example.com").id
+    create_account(services.accounts, ProviderType.MEMORY, "b@example.com")
     headers = bearer_for(services, Grant(accounts=[a], allow=["mail.read"]))
     me = app_client.get("/v1/me", headers=headers).json()
     assert me["name"] == "limited"

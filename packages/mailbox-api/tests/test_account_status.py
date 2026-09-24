@@ -10,7 +10,7 @@ from benethos_mailbox_api.data.providers.memory import MemoryProvider
 from benethos_mailbox_api.errors import ProviderAuthError, ProviderUnavailableError
 from benethos_mailbox_api.main import build_services, create_app
 
-from .conftest import ADMIN
+from .conftest import create_account
 
 
 class FlakyProvider(MemoryProvider):
@@ -36,8 +36,8 @@ def test_status_follows_what_the_provider_reports() -> None:
 
     settings = Settings(storage="memory", api_key=SecretStr("k"))
     services = build_services(settings, provider_factory=factory)
-    account_id = services.accounts.create(
-        ADMIN, ProviderType.MEMORY, "a@example.com"
+    account_id = create_account(
+        services.accounts, ProviderType.MEMORY, "a@example.com"
     ).id
     client = TestClient(
         create_app(settings, services), headers={"Authorization": "Bearer k"}
