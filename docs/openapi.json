@@ -2397,40 +2397,6 @@
             "description": "A folder role, e.g. inbox"
           },
           {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Search text",
-              "title": "Q"
-            },
-            "description": "Search text"
-          },
-          {
-            "name": "unread",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Unread"
-            }
-          },
-          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -2456,6 +2422,168 @@
                 }
               ],
               "title": "Cursor"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\x00-\\x1f\\x7f]{1,200}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Text anywhere: headers and body",
+              "title": "Q"
+            },
+            "description": "Text anywhere: headers and body"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\x00-\\x1f\\x7f]{1,200}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of the sender's address or name",
+              "title": "From"
+            },
+            "description": "Part of the sender's address or name"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\x00-\\x1f\\x7f]{1,200}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of a To address",
+              "title": "To"
+            },
+            "description": "Part of a To address"
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\x00-\\x1f\\x7f]{1,200}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of the subject",
+              "title": "Subject"
+            },
+            "description": "Part of the subject"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "From this day on, e.g. 2026-09-01",
+              "title": "After"
+            },
+            "description": "From this day on, e.g. 2026-09-01"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Up to this day, not including it",
+              "title": "Before"
+            },
+            "description": "Up to this day, not including it"
+          },
+          {
+            "name": "unread",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Unread"
+            }
+          },
+          {
+            "name": "starred",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Starred"
+            }
+          },
+          {
+            "name": "has_attachments",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Attachments"
             }
           }
         ],
@@ -3016,6 +3144,7 @@
           "mailbox"
         ],
         "summary": "List Messages",
+        "description": "Newest first. The search parameters narrow the list together.",
         "operationId": "list_messages",
         "security": [
           {
@@ -3045,44 +3174,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Folder id",
+              "description": "A folder id, or a role such as inbox",
               "title": "Folder"
             },
-            "description": "Folder id"
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Search text",
-              "title": "Q"
-            },
-            "description": "Search text"
-          },
-          {
-            "name": "unread",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Unread"
-            }
+            "description": "A folder id, or a role such as inbox"
           },
           {
             "name": "limit",
@@ -3110,6 +3205,168 @@
                 }
               ],
               "title": "Cursor"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\x00-\\x1f\\x7f]{1,200}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Text anywhere: headers and body",
+              "title": "Q"
+            },
+            "description": "Text anywhere: headers and body"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\x00-\\x1f\\x7f]{1,200}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of the sender's address or name",
+              "title": "From"
+            },
+            "description": "Part of the sender's address or name"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\x00-\\x1f\\x7f]{1,200}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of a To address",
+              "title": "To"
+            },
+            "description": "Part of a To address"
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\x00-\\x1f\\x7f]{1,200}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of the subject",
+              "title": "Subject"
+            },
+            "description": "Part of the subject"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "From this day on, e.g. 2026-09-01",
+              "title": "After"
+            },
+            "description": "From this day on, e.g. 2026-09-01"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Up to this day, not including it",
+              "title": "Before"
+            },
+            "description": "Up to this day, not including it"
+          },
+          {
+            "name": "unread",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Unread"
+            }
+          },
+          {
+            "name": "starred",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Starred"
+            }
+          },
+          {
+            "name": "has_attachments",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Attachments"
             }
           }
         ],

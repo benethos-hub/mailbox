@@ -665,6 +665,17 @@ Every list answers `{"items": [...], "next_cursor": "..."}`. There is no
 total count, because IMAP and Graph cannot provide one cheaply after a
 filter.
 
+Rules of the implementation (built before phase 3):
+
+- Text filters are case-insensitive parts, as IMAP `SEARCH` compares them.
+  They hold no control characters (`422`): IMAP clients quote search text
+  but keep line breaks, which would end the command and start another.
+- `after` and `before` are days, as IMAP searches by day: `after` includes
+  its day, `before` does not.
+- `has_attachments` on IMAP is a `multipart/mixed` message, the same rule
+  as the field in a summary.
+- `native` is not built yet.
+
 #### Across accounts
 
 `GET /v1/messages` (`list_all_messages`) searches several accounts in one

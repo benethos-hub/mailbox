@@ -13,6 +13,7 @@ from ..models import (
     AttachmentContent,
     Folder,
     Message,
+    MessageFilter,
     MessageSummary,
     MessageUpdate,
     Page,
@@ -67,9 +68,11 @@ class MailProvider(Protocol):
         *,
         limit: int,
         cursor: str | None,
-        query: str | None,
-        unread: bool | None,
-    ) -> Page[MessageSummary]: ...
+        search: MessageFilter | None = None,
+    ) -> Page[MessageSummary]:
+        """Newest first. ``search`` narrows the list; a cursor belongs to
+        the same folder and search."""
+        ...
 
     async def get_message(self, message_id: str) -> Message: ...
 

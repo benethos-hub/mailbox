@@ -17,6 +17,7 @@ from ...models import (
     Folder,
     FolderRole,
     Message,
+    MessageFilter,
     MessageSummary,
     MessageUpdate,
     Page,
@@ -57,15 +58,13 @@ class MemoryProvider:
         *,
         limit: int,
         cursor: str | None,
-        query: str | None,
-        unread: bool | None,
+        search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
+        search = search or MessageFilter()
         found = [
             m
             for m in self.messages
-            if (folder_id is None or folder_id in m.folder_ids)
-            and (unread is None or m.unread == unread)
-            and (query is None or query.lower() in (m.subject or "").lower())
+            if (folder_id is None or folder_id in m.folder_ids) and _matches(m, search)
         ]
         start = int(cursor) if cursor else 0
         chunk = found[start : start + limit]
@@ -157,7 +156,7 @@ class MemoryProvider:
         self, *, limit: int, cursor: str | None
     ) -> Page[MessageSummary]:
         return await self.list_messages(
-            self._drafts_folder(), limit=limit, cursor=cursor, query=None, unread=None
+            self._drafts_folder(), limit=limit, cursor=cursor
         )
 
     async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
@@ -280,3 +279,31 @@ class MemoryProvider:
 def _header(raw: bytes, name: str) -> str | None:
     value = BytesHeaderParser().parsebytes(raw).get(name)
     return str(value) if value is not None else None
+
+
+def _matches(message: Message, search: MessageFilter) -> bool:
+    """Case-insensitive substrings, as IMAP SEARCH compares."""
+
+    def has(value: str | None, *fields: str | None) -> bool:
+        return value is None or any(value.lower() in (f or "").lower() for f in fields)
+
+    sender = message.sender
+    day = message.date.date() if message.date else None
+    return (
+        has(search.text, message.subject, message.text_body)
+        and has(
+            search.sender,
+            sender.email if sender else None,
+            sender.name if sender else None,
+        )
+        and has(search.to, *(a.email for a in message.to))
+        and has(search.subject, message.subject)
+        and (search.after is None or (day is not None and day >= search.after))
+        and (search.before is None or (day is not None and day < search.before))
+        and (search.unread is None or message.unread == search.unread)
+        and (search.starred is None or message.starred == search.starred)
+        and (
+            search.has_attachments is None
+            or message.has_attachments == search.has_attachments
+        )
+    )

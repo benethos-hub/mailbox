@@ -21,7 +21,7 @@ from ...data.models import (
     Page,
     SendResult,
 )
-from ..deps import Caller, Mailbox
+from ..deps import Caller, Mailbox, Search
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
 
@@ -68,18 +68,19 @@ async def list_messages(
     account_id: str,
     caller: Caller,
     mailbox: Mailbox,
-    folder: Annotated[str | None, Query(description="Folder id")] = None,
-    q: Annotated[str | None, Query(description="Search text")] = None,
-    unread: bool | None = None,
+    search: Search,
+    folder: Annotated[
+        str | None, Query(description="A folder id, or a role such as inbox")
+    ] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     cursor: str | None = None,
 ) -> Page[MessageSummary]:
+    """Newest first. The search parameters narrow the list together."""
     return await mailbox.list_messages(
         caller,
         account_id,
         folder_id=folder,
-        query=q,
-        unread=unread,
+        search=search,
         limit=limit,
         cursor=cursor,
     )

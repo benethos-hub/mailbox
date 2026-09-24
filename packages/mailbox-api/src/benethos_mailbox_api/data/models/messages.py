@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from pydantic import BaseModel, Field
@@ -62,6 +62,26 @@ class Message(MessageSummary):
     text_body: str | None = None
     html_body: str | None = None
     attachments: list[Attachment] = Field(default_factory=list)
+
+
+# Search text on one line: a line break would end the IMAP command and start
+# another one of the caller's choosing.
+SEARCH_TEXT_PATTERN = r"^[^\x00-\x1f\x7f]{1,200}$"
+
+
+class MessageFilter(BaseModel):
+    """What a list keeps. Fields left out do not filter; several narrow it
+    down together."""
+
+    text: str | None = Field(default=None, pattern=SEARCH_TEXT_PATTERN)
+    sender: str | None = Field(default=None, pattern=SEARCH_TEXT_PATTERN)
+    to: str | None = Field(default=None, pattern=SEARCH_TEXT_PATTERN)
+    subject: str | None = Field(default=None, pattern=SEARCH_TEXT_PATTERN)
+    after: date | None = None  # on or after this day
+    before: date | None = None  # before this day
+    unread: bool | None = None
+    starred: bool | None = None
+    has_attachments: bool | None = None
 
 
 # A keyword as IMAP allows it: an atom, no spaces, brackets, quotes or

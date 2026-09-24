@@ -198,7 +198,53 @@ def smoke_account(
             == [m["id"] for m in items],
             items[0]["id"][:4] + "...",
         )
+        check_search(run, client, account_id, items[0])
     return account_id
+
+
+def check_search(
+    run: Run, client: TestClient, account_id: str, newest: dict[str, Any]
+) -> None:
+    """Every filter finds the newest mail when it fits and leaves it out
+    when it does not. Nothing of the mail is printed."""
+    url = f"/v1/accounts/{account_id}/messages"
+
+    def found(**params: Any) -> bool | None:
+        answer = client.get(url, params={"limit": 50, **params})
+        if answer.status_code != 200:
+            return None
+        return newest["id"] in [m["id"] for m in answer.json().get("items", [])]
+
+    by_role = client.get(url, params={"folder": "inbox", "limit": 1}).json()
+    run.check(
+        "folder by its role",
+        [m["id"] for m in by_role.get("items", [])] == [newest["id"]],
+    )
+    words = [w for w in (newest.get("subject") or "").split() if len(w) >= 3]
+    sender = (newest.get("from") or {}).get("email", "")
+    day = (newest.get("date") or "")[:10]
+    starred = bool(newest.get("starred"))
+    attached = bool(newest.get("has_attachments"))
+    cases = [
+        ("subject", words and found(subject=words[0]), True),
+        ("from", sender and found(**{"from": sender.split("@")[0]}), True),
+        ("after its day", day and found(after=day), True),
+        ("before its day", day and found(before=day), False),
+        ("starred", found(starred=starred), True),
+        ("starred, the other way", found(starred=not starred), False),
+        ("has_attachments", found(has_attachments=attached), True),
+        ("has_attachments, the other way", found(has_attachments=not attached), False),
+    ]
+    for name, result, expected in cases:
+        if result == "" or result == []:
+            continue  # the newest mail has no such field
+        run.check(f"search: {name}", result is expected)
+    injected = client.get(url, params={"q": "a\r\nX1 LOGOUT"})
+    run.check(
+        "search text with a line break is refused",
+        injected.status_code == 422,
+        str(injected.status_code),
+    )
 
 
 SHOW_CHARS = 1000
