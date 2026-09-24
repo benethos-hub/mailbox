@@ -1137,13 +1137,21 @@ one or two `operationId`s.
 | `search_messages` | read | `list_all_messages` across accounts, or `list_messages` for one |
 | `get_message` | read | `get_message`, body shortened, `max_chars` param |
 | `get_thread` | read | `get_thread` |
-| `get_attachment` | read | `get_attachment`, saved to a download dir, text extracted where possible |
+| `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
 | `whats_new` | read | `list_changes` across accounts, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash |
 | `create_folder` | write | `create_folder` |
 | `create_draft` | write | `create_draft`, incl. reply / forward by reference |
 | `send_message` | send | `send_message`, with an idempotency key derived from the call |
 | `send_draft` | send | `send_draft`, with an idempotency key derived from the call |
+
+**Decided 2026-09-24, attachments:** `get_attachment` hands images over
+as images, the pages of a PDF as PNG images (a page range, a few pages at
+a time), text types as text inside the foreign-content marker, and other
+types by name, type and size only. The conversion happens in the MCP
+server; the API keeps handing out the attachment as it is. A PDF sent as
+an embedded resource was refused by claude.ai in a test: it takes such a
+blob for an image.
 
 **Decided 2026-09-24:** sending a new mail and sending a draft are two
 tools, `send_message` and `send_draft`. The model may create folders

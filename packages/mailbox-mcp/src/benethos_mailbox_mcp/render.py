@@ -130,11 +130,14 @@ def message(account_id: str, item: dict[str, Any], max_chars: int) -> str:
         )
     if cut:
         lines.append(f"note: body cut to {max_chars} characters")
-    source = f"{account_id}/{item['id']}"
+    return "\n".join(lines) + "\n\n" + foreign(f"{account_id}/{item['id']}", body)
+
+
+def foreign(source: str, text: str) -> str:
+    """``text`` inside the foreign-content marker, with the note after it."""
     return (
-        "\n".join(lines)
-        + f'\n\n<mail-content source="{source}">\n'
-        + _defused(body)
+        f'<mail-content source="{source}">\n'
+        + _defused(text)
         + "\n</mail-content>\n"
         + MARKER_NOTE
     )

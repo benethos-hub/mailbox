@@ -32,6 +32,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   the tools the token's rights allow are offered. Mail content comes back
   as plain text inside `<mail-content>` markers, hidden HTML left out.
   stdio only for now.
+- MCP server: `get_attachment` hands images over as images, PDF pages as
+  PNG images, text types as text and other types by name, type and size.
 - Search filters on `GET /v1/accounts/{account_id}/messages` and
   `GET /v1/messages`: `from`, `to`, `subject`, `after`, `before` (days),
   `starred` and `has_attachments`, besides `q` and `unread`. `folder` on

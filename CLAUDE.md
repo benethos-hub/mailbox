@@ -127,6 +127,7 @@ packages/
     src/benethos_mailbox_mcp/
       server.py           # MCPServer, tools by the token's rights, CLI
       render.py           # what the model sees of mail, marked as foreign
+      pdf.py              # PDF pages as PNG (pypdfium2)
       client.py           # ALL access to the REST API
       errors.py           # ToolError subclasses
     tests/                # REST mocked with httpx.MockTransport

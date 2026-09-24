@@ -32,7 +32,13 @@ from smoke import ENV_FILE, Run, accounts, read_env
 
 from benethos_mailbox_api.data.secrets import cipher, encode_recovery
 
-READ_TOOLS = {"list_accounts", "list_folders", "search_messages", "get_message"}
+READ_TOOLS = {
+    "list_accounts",
+    "list_folders",
+    "search_messages",
+    "get_message",
+    "get_attachment",
+}
 
 
 def free_port() -> int:
@@ -145,6 +151,7 @@ async def check_tools(run: Run, url: str, token: str, emails: set[str]) -> None:
                 and "</mail-content>" in body,
                 f"{len(body)} characters",
             )
+        await check_pdf(run, session)
         refused = await session.call_tool(
             "get_message", {"account_id": "acc_unknown", "message_id": "msg_x"}
         )
@@ -152,6 +159,43 @@ async def check_tools(run: Run, url: str, token: str, emails: set[str]) -> None:
             "an unknown account is a tool error, not a crash",
             bool(refused.is_error) and "not found" in text_of(refused),
         )
+
+
+async def check_pdf(run: Run, session: ClientSession) -> None:
+    """A PDF attachment, if the test accounts hold one, comes as PNG pages."""
+    found = await session.call_tool(
+        "search_messages", {"has_attachments": True, "limit": 20}
+    )
+    for summary in (found.structured_content or {}).get("messages", []):
+        read = await session.call_tool(
+            "get_message",
+            {"account_id": summary["account_id"], "message_id": summary["id"]},
+        )
+        pdfs = [
+            line.split()[1]
+            for line in text_of(read).splitlines()
+            if line.startswith("attachment:") and "application/pdf" in line
+        ]
+        if not pdfs:
+            continue
+        result = await session.call_tool(
+            "get_attachment",
+            {
+                "account_id": summary["account_id"],
+                "message_id": summary["id"],
+                "attachment_id": pdfs[0],
+            },
+        )
+        images = [p for p in result.content if p.type == "image"]
+        run.check(
+            "get_attachment hands a PDF over as PNG pages",
+            not result.is_error
+            and bool(images)
+            and all(p.mime_type == "image/png" for p in images),
+            f"{len(images)} pages",
+        )
+        return
+    print("SKIP  no PDF attachment in the test accounts")
 
 
 def main() -> int:
