@@ -19,6 +19,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `PATCH /v1/accounts/{account_id}/messages/{message_id}` sets `unread`,
   `starred` and `keywords` and answers the changed summary. Right:
   `update_message` (`mail.write`).
+- `PATCH /v1/accounts/{account_id}` changes the display name, settings
+  (merged, `null` removes one) or credentials. New settings or credentials
+  are tried first. Right: `update_account` (`accounts.manage`).
+- IMAP accounts take an SMTP server for sending: `smtp_host`, `smtp_port`,
+  `smtp_security` (`tls` or `starttls`), optionally `smtp_username`; the
+  password is the IMAP one. Discovery fills them in, and creating or
+  verifying an account logs in over SMTP too.
 - `POST /v1/accounts/{account_id}/folders` creates a folder, subscribed,
   in the account's personal namespace. `PATCH .../folders/{folder_id}`
   renames or moves it, `DELETE` deletes it when it is empty and has no

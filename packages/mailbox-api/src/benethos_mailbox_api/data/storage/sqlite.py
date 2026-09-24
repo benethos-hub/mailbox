@@ -255,6 +255,15 @@ class SqliteAccountRepository:
             if updated == 0:
                 raise NotFoundError(f"account {account_id} not found")
 
+    def update(self, account: Account, settings: SettingsDict) -> None:
+        with self._db.transaction() as db:
+            updated = db.execute(
+                "UPDATE accounts SET display_name = ?, settings = ? WHERE id = ?",
+                (account.display_name, json.dumps(settings), account.id),
+            ).rowcount
+            if updated == 0:
+                raise NotFoundError(f"account {account.id} not found")
+
     def delete(self, account_id: str) -> None:
         with self._db.transaction() as db:
             if (

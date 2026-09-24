@@ -27,6 +27,10 @@ class AccountRepository(Protocol):
 
     def set_status(self, account_id: str, status: AccountStatus) -> None: ...
 
+    def update(self, account: Account, settings: SettingsDict) -> None:
+        """Replace the display name and the settings of an account."""
+        ...
+
     def delete(self, account_id: str) -> None: ...
 
 
@@ -57,6 +61,13 @@ class InMemoryAccountRepository:
     def set_status(self, account_id: str, status: AccountStatus) -> None:
         account = self.get(account_id)
         self._accounts[account_id] = account.model_copy(update={"status": status})
+
+    def update(self, account: Account, settings: SettingsDict) -> None:
+        current = self.get(account.id)
+        self._accounts[account.id] = current.model_copy(
+            update={"display_name": account.display_name}
+        )
+        self._settings[account.id] = dict(settings)
 
     def delete(self, account_id: str) -> None:
         self.get(account_id)

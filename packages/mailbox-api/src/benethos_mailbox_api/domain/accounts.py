@@ -95,6 +95,58 @@ class AccountService:
             raise
         return self._with_credentials(account)
 
+    async def update(
+        self,
+        access: Access,
+        account_id: str,
+        *,
+        display_name: str | None,
+        rename: bool,
+        settings: Mapping[str, str | int | bool | None] | None = None,
+        credentials: Mapping[str, SecretStr] | None = None,
+    ) -> Account:
+        """Change the display name, settings (``None`` removes one) or
+        credentials. A change of settings or credentials logs in first, as on
+        create: nothing is stored unless the provider accepts it."""
+        access.require("update_account", account_id)
+        account = self._repository.get(account_id)
+        merged: dict[str, str | int | bool] = dict(
+            self._repository.settings(account_id)
+        )
+        for key, value in (settings or {}).items():
+            if value is None:
+                merged.pop(key, None)
+            else:
+                merged[key] = value
+        secrets = dict(credentials or {})
+        if secrets:
+            self._vault.require_ready()
+        if settings or secrets:
+
+            def read(field: str) -> SecretStr:
+                if field in secrets:
+                    return secrets[field]
+                return self._vault.read(account_id, field)
+
+            probe = self._provider_factory(account.provider, merged, read)
+            try:
+                await probe.verify()
+            finally:
+                await probe.close()
+        if rename:
+            account = account.model_copy(update={"display_name": display_name})
+        self._repository.update(account, merged)
+        for field, secret in secrets.items():
+            self._vault.store(account_id, field, secret)
+        if settings or secrets:
+            # The live adapter still has the old settings: the next use
+            # builds a new one.
+            adapter = self._providers.pop(account_id, None)
+            if adapter is not None:
+                await adapter.close()
+            self._set_status(account_id, AccountStatus.CONNECTED)
+        return self._with_credentials(self._repository.get(account_id))
+
     async def verify(self, access: Access, account_id: str) -> Account:
         """Log in afresh, e.g. after the credential was changed at the
         provider. Clears a rejected login and updates the status."""
