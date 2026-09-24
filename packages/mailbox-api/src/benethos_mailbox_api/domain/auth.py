@@ -10,9 +10,10 @@ import hashlib
 import secrets
 import string
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime
 
-from ..data.ids import new_id
+from ..common.clock import utc_now
+from ..common.ids import new_id
 from ..data.models import ApiToken
 from ..data.storage import RoleRepository, TokenRepository, UserRepository
 from ..errors import NotFoundError, SetupRequiredError, UnauthorizedError
@@ -43,7 +44,7 @@ class AuthService:
         roles: RoleRepository,
         tokens: TokenRepository,
         admin_key: str | None = None,
-        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._users = users
         self._roles = roles

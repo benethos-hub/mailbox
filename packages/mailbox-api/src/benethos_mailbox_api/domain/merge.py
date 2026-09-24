@@ -8,7 +8,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TypeVar
 
-from ..data import opaque
+from ..common import opaque
 from ..data.models import AccountFailure, MessageSummary
 from ..errors import BadRequestError, MailboxApiError
 

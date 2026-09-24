@@ -15,7 +15,7 @@ from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import replace
 from typing import TypeVar
 
-from ..data.ids import new_id
+from ..common.ids import new_id
 from ..data.providers import Capability
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ..errors import MailboxApiError, NotFoundError

@@ -15,11 +15,12 @@ import hashlib
 import json
 import weakref
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import TypeVar
 
 from pydantic import BaseModel
 
+from ..common.clock import utc_now
 from ..data.storage import IdempotencyRepository, StoredResult
 from ..errors import IdempotencyConflictError
 
@@ -32,7 +33,7 @@ class Idempotency:
     def __init__(
         self,
         store: IdempotencyRepository,
-        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._store = store
         self._clock = clock

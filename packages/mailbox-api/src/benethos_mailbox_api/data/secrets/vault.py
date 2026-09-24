@@ -8,12 +8,13 @@ encrypts every credential, each bound to its account and field.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime
 
 from pydantic import SecretStr
 
+from ...common.clock import utc_now
+from ...common.ids import new_id
 from ...errors import ConflictError, CredentialError, SetupRequiredError
-from ..ids import new_id
 from ..models import CredentialInfo
 from ..storage import (
     CredentialRepository,
@@ -39,7 +40,7 @@ class CredentialVault:
         keys: KeyRepository,
         credentials: CredentialRepository,
         provider: KeyProvider,
-        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._keys = keys
         self._credentials = credentials

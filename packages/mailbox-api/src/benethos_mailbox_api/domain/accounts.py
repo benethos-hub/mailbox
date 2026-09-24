@@ -8,7 +8,7 @@ from typing import TypeVar
 
 from pydantic import SecretStr
 
-from ..data.ids import new_id
+from ..common.ids import new_id
 from ..data.models import Account, AccountStatus, ProviderType
 from ..data.providers import (
     CredentialReader,
