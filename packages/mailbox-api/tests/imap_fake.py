@@ -75,8 +75,14 @@ class _FolderManager:
 
 
 class _Client:
+    capabilities = ("IMAP4REV1", "ID")
+
     def __init__(self, box: FakeMailBox) -> None:
         self._box = box
+
+    def xatom(self, name: str, arguments: str) -> tuple[str, list[bytes]]:
+        self._box.calls.append(("xatom", name, arguments))
+        return ("OK", [b""])
 
     def uid(self, command: str, uid: str, parts: str) -> tuple[str, list[Any]]:
         self._box.calls.append(("uid", command, uid, parts))
@@ -101,7 +107,7 @@ class FakeMailBox:
         self.selected = "INBOX"
         self.calls: list[tuple[Any, ...]] = []
         self.logins = 0
-        self.fail_next: Exception | None = None
+        self.failures: list[Exception] = []
         self.folder = _FolderManager(self)
         self.client = _Client(self)
         self.error = RuntimeError
@@ -136,9 +142,8 @@ class FakeMailBox:
         self.calls.append(("logout",))
 
     def uids(self, query: Any, charset: str | None = None) -> list[str]:
-        if self.fail_next is not None:
-            error, self.fail_next = self.fail_next, None
-            raise error
+        if self.failures:
+            raise self.failures.pop(0)
         self.calls.append(("search", str(query), charset))
         folder = self.folders[self.selected]
         text = str(query)

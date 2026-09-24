@@ -3,19 +3,35 @@
 IMAP connections are stateful (the selected folder), so every operation runs
 as one uninterrupted sequence under the account's lock, in a worker thread.
 The credential is decrypted right before a login and not kept.
+
+Towards the server the adapter is careful (CONCEPT 5.9): every request passes
+the account's rate limiter, a rejected login is not tried again until the
+credential changes, and an unreachable server is retried with backoff and
+then left alone for a growing pause.
 """
 
 from __future__ import annotations
 
+import math
 import threading
+import time
 from collections.abc import Callable
+from functools import partial
 from typing import Any, TypeVar
 
 import anyio
 
-from ....errors import BadRequestError, NotFoundError, ProviderError
+from .... import __version__
+from ....errors import (
+    BadRequestError,
+    NotFoundError,
+    ProviderAuthError,
+    ProviderError,
+    ProviderUnavailableError,
+)
 from ...models import AttachmentContent, Folder, Message, MessageSummary, Page
 from ..base import Capability, CredentialReader
+from ..ratelimit import Clock, Sleep, TokenBucket, backoff
 from . import mappers
 from .client import ImapServer, ImapSession, SearchCriteria
 
@@ -25,6 +41,18 @@ SessionFactory = Callable[[ImapServer], ImapSession]
 
 DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
+CLIENT_ID = ("benethos-mailbox-api", __version__)
+
+# A cautious default for servers nobody has told us about.
+DEFAULT_REQUESTS_PER_MINUTE = 60
+ATTEMPTS = 3
+FIRST_PAUSE = 30.0
+LONGEST_PAUSE = 900.0
+
+
+def default_session(server: ImapServer) -> ImapSession:
+    return ImapSession(server, client_id=CLIENT_ID)
+
 
 class ImapProvider:
     capabilities = frozenset({Capability.SERVER_SEARCH})
@@ -33,7 +61,10 @@ class ImapProvider:
         self,
         settings: Any,
         credentials: CredentialReader,
-        session_factory: SessionFactory = ImapSession,
+        session_factory: SessionFactory = default_session,
+        clock: Clock = time.monotonic,
+        sleep: Sleep = time.sleep,
+        jitter: Callable[[float, float], float] | None = None,
     ) -> None:
         host = settings.get("host")
         if not host:
@@ -60,6 +91,16 @@ class ImapProvider:
         self._credentials = credentials
         self._session = session_factory(self._server)
         self._lock = threading.Lock()
+        per_minute = float(
+            settings.get("max_requests_per_minute") or DEFAULT_REQUESTS_PER_MINUTE
+        )
+        self._bucket = TokenBucket(per_minute, burst=10, clock=clock, sleep=sleep)
+        self._clock = clock
+        self._sleep = sleep
+        self._backoff = partial(backoff, jitter=jitter) if jitter else backoff
+        self._login_rejected = False
+        self._failures = 0
+        self._paused_until = 0.0
 
     # --- MailProvider ---------------------------------------------------------
 
@@ -178,14 +219,59 @@ class ImapProvider:
 
     def _locked(self, operation: Callable[[], T]) -> T:
         with self._lock:
-            if not self._session.connected:
-                self._login()
-            try:
-                return operation()
-            except ProviderError:
-                # The connection may be broken. The next call starts afresh.
-                self._session.logout()
-                raise
+            self._check_allowed()
+            last: ProviderUnavailableError | None = None
+            for attempt in range(ATTEMPTS):
+                if attempt:
+                    self._sleep(self._backoff(attempt - 1))
+                try:
+                    self._bucket.acquire()
+                    if not self._session.connected:
+                        self._login()
+                    result = operation()
+                except ProviderAuthError:
+                    self._session.logout()
+                    self._login_rejected = True
+                    raise
+                except ProviderUnavailableError as exc:
+                    self._session.logout()
+                    last = exc
+                    continue
+                except ProviderError:
+                    # Not a connection problem, so retrying will not help. The
+                    # connection may still be in a bad state: start afresh.
+                    self._session.logout()
+                    raise
+                self._failures = 0
+                return result
+            self._pause()
+            assert last is not None
+            raise last
+
+    def _check_allowed(self) -> None:
+        if self._login_rejected:
+            raise ProviderAuthError(
+                "the server rejected the login before: no new attempt until the "
+                "credential is replaced or the account is verified"
+            )
+        wait = self._paused_until - self._clock()
+        if wait > 0:
+            raise ProviderUnavailableError(
+                f"the mail server was unreachable: next attempt in {math.ceil(wait)}s"
+            )
+
+    def _pause(self) -> None:
+        self._failures += 1
+        pause = min(LONGEST_PAUSE, FIRST_PAUSE * 2 ** (self._failures - 1))
+        self._paused_until = self._clock() + pause
+
+    def reset(self) -> None:
+        """Forget a rejected login and any pause. For verify, after the
+        credential was replaced."""
+        with self._lock:
+            self._login_rejected = False
+            self._failures = 0
+            self._paused_until = 0.0
 
     def _login(self) -> None:
         if self._auth == "xoauth2":

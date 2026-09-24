@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import imaplib
+import ssl
 from datetime import UTC, datetime
 from typing import Any
 
@@ -18,6 +20,7 @@ from benethos_mailbox_api.errors import (
     NotFoundError,
     ProviderAuthError,
     ProviderError,
+    ProviderUnavailableError,
 )
 
 from .imap_fake import FakeFolder, FakeMailBox, make_message
@@ -57,15 +60,38 @@ def server() -> FakeMailBox:
     return box
 
 
-def provider(box: FakeMailBox, **overrides: Any) -> ImapProvider:
+class FakeTime:
+    """A clock that only moves when something sleeps or a test advances it."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+        self.sleeps: list[float] = []
+
+    def clock(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.sleeps.append(seconds)
+        self.now += seconds
+
+
+def provider(
+    box: FakeMailBox, time: FakeTime | None = None, **overrides: Any
+) -> ImapProvider:
     def credentials(field: str) -> SecretStr:
         assert field in ("password", "access_token")
         return SecretStr("secret")
 
+    time = time or FakeTime()
     return ImapProvider(
         {**SETTINGS, **overrides},
         credentials,
-        session_factory=lambda s: ImapSession(s, mailbox_factory=box),
+        session_factory=lambda s: ImapSession(
+            s, mailbox_factory=box, client_id=("benethos-mailbox-api", "1.0")
+        ),
+        clock=time.clock,
+        sleep=time.sleep,
+        jitter=lambda low, high: high,
     )
 
 
@@ -270,31 +296,102 @@ async def test_xoauth2(server: FakeMailBox) -> None:
     assert ("xoauth2", "me@example.com") in server.calls
 
 
-async def test_a_broken_connection_is_reopened(server: FakeMailBox) -> None:
-    imap = provider(server)
+async def test_a_dropped_connection_is_retried_in_the_same_call(
+    server: FakeMailBox,
+) -> None:
+    time = FakeTime()
+    imap = provider(server, time)
     await imap.list_folders()
-    server.fail_next = OSError("connection reset")
-    with pytest.raises(ProviderError, match="not reachable"):
-        await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
-    await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+    server.failures = [OSError("connection reset")]
+    page = await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+    assert len(page.items) == 1
     assert server.logins == 2
+    assert time.sleeps == [0.5]
 
 
 @pytest.mark.parametrize(
     ("error", "message"),
     [
-        (TimeoutError(), "did not answer"),
-        (__import__("ssl").SSLError("bad cert"), "TLS"),
-        (__import__("imaplib").IMAP4.error("BAD"), "answered with an error"),
+        (ssl.SSLError("bad cert"), "TLS"),
+        (imaplib.IMAP4.error("BAD"), "answered with an error"),
     ],
 )
-async def test_errors_are_translated(
+async def test_other_errors_are_not_retried(
     server: FakeMailBox, error: Exception, message: str
 ) -> None:
-    imap = provider(server)
-    server.fail_next = error
-    with pytest.raises(ProviderError, match=message):
+    time = FakeTime()
+    imap = provider(server, time)
+    server.failures = [error]
+    with pytest.raises(ProviderError, match=message) as caught:
         await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+    assert not isinstance(caught.value, ProviderUnavailableError)
+    assert time.sleeps == []
+    # The next call works right away.
+    await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+
+
+async def test_an_unreachable_server_is_paused_and_the_pause_grows(
+    server: FakeMailBox,
+) -> None:
+    time = FakeTime()
+    imap = provider(server, time)
+    server.failures = [TimeoutError()] * 3
+    with pytest.raises(ProviderUnavailableError, match="did not answer"):
+        await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+    assert time.sleeps == [0.5, 1.0]
+
+    calls = len(server.calls)
+    with pytest.raises(ProviderUnavailableError, match="next attempt in 30s"):
+        await imap.list_folders()
+    assert len(server.calls) == calls  # the server was left alone
+
+    time.now += 30
+    server.failures = [TimeoutError()] * 3
+    with pytest.raises(ProviderUnavailableError):
+        await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+    with pytest.raises(ProviderUnavailableError, match="next attempt in 60s"):
+        await imap.list_folders()
+
+    time.now += 60
+    await imap.list_folders()
+    server.failures = [TimeoutError()] * 3
+    with pytest.raises(ProviderUnavailableError):
+        await imap.list_messages(None, limit=1, cursor=None, query=None, unread=None)
+    with pytest.raises(ProviderUnavailableError, match="next attempt in 30s"):
+        await imap.list_folders()  # the success in between reset the count
+
+
+async def test_a_rejected_login_is_not_tried_again(server: FakeMailBox) -> None:
+    server.password = "changed"
+    imap = provider(server)
+    with pytest.raises(ProviderAuthError, match="rejected the login"):
+        await imap.list_folders()
+    with pytest.raises(ProviderAuthError, match="no new attempt"):
+        await imap.list_folders()
+    assert [c for c in server.calls if c[0] == "login"] == [("login", "me@example.com")]
+
+    server.password = "secret"
+    imap.reset()
+    await imap.list_folders()
+
+
+async def test_requests_are_paced(server: FakeMailBox) -> None:
+    time = FakeTime()
+    imap = provider(server, time, max_requests_per_minute=60)
+    for _ in range(10):
+        await imap.list_folders()
+    assert time.sleeps == []
+    await imap.list_folders()
+    assert time.sleeps == [pytest.approx(1.0)]
+
+
+async def test_the_client_says_who_it_is_before_login(server: FakeMailBox) -> None:
+    await provider(server).list_folders()
+    names = [c[0] for c in server.calls]
+    assert names.index("xatom") < names.index("login")
+    xatom = next(c for c in server.calls if c[0] == "xatom")
+    assert xatom[1] == "ID"
+    assert "benethos-mailbox-api" in xatom[2]
 
 
 # --- pure mappers ---------------------------------------------------------------

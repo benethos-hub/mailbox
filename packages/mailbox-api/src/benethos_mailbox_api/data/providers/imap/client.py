@@ -23,7 +23,7 @@ from imap_tools import (
     MailMessage,
 )
 
-from ....errors import ProviderAuthError, ProviderError
+from ....errors import ProviderAuthError, ProviderError, ProviderUnavailableError
 
 MailBoxFactory = Callable[..., Any]
 
@@ -64,10 +64,12 @@ class ImapSession:
         server: ImapServer,
         timeout: float = 30.0,
         mailbox_factory: MailBoxFactory = _default_mailbox,
+        client_id: tuple[str, str] | None = None,
     ) -> None:
         self._server = server
         self._timeout = timeout
         self._factory = mailbox_factory
+        self._client_id = client_id
         self._mailbox: Any = None
 
     @property
@@ -76,7 +78,7 @@ class ImapSession:
 
     def login(self, username: str, password: str) -> None:
         with _errors():
-            mailbox = self._factory(self._server, self._timeout)
+            mailbox = self._connect()
             try:
                 mailbox.login(username, password, initial_folder=None)
             except MailboxLoginError:
@@ -85,12 +87,29 @@ class ImapSession:
 
     def login_oauth(self, username: str, access_token: str) -> None:
         with _errors():
-            mailbox = self._factory(self._server, self._timeout)
+            mailbox = self._connect()
             try:
                 mailbox.xoauth2(username, access_token, initial_folder=None)
             except MailboxLoginError:
                 raise ProviderAuthError("the server rejected the token") from None
             self._mailbox = mailbox
+
+    def _connect(self) -> Any:
+        mailbox = self._factory(self._server, self._timeout)
+        if self._client_id is not None:
+            self._send_id(mailbox, *self._client_id)
+        return mailbox
+
+    @staticmethod
+    def _send_id(mailbox: Any, name: str, version: str) -> None:
+        """RFC 2971 ID, where the server offers it. Some servers require it."""
+        client = mailbox.client
+        if "ID" not in getattr(client, "capabilities", ()):
+            return
+        try:
+            client.xatom("ID", f'("name" "{name}" "version" "{version}")')
+        except (imaplib.IMAP4.error, OSError):
+            pass
 
     def logout(self) -> None:
         mailbox, self._mailbox = self._mailbox, None
@@ -174,10 +193,18 @@ def _errors() -> Iterator[None]:
     except (ProviderAuthError, ProviderError):
         raise
     except TimeoutError:
-        raise ProviderError("the mail server did not answer in time") from None
+        raise ProviderUnavailableError(
+            "the mail server did not answer in time"
+        ) from None
     except (ssl.SSLError, ssl.CertificateError) as exc:
         raise ProviderError(f"TLS with the mail server failed: {exc}") from None
+    except imaplib.IMAP4.abort as exc:
+        raise ProviderUnavailableError(
+            f"the mail server dropped the connection: {exc}"
+        ) from None
     except (ImapToolsError, imaplib.IMAP4.error) as exc:
         raise ProviderError(f"the mail server answered with an error: {exc}") from None
     except OSError as exc:
-        raise ProviderError(f"the mail server is not reachable: {exc}") from None
+        raise ProviderUnavailableError(
+            f"the mail server is not reachable: {exc}"
+        ) from None

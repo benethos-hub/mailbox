@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import builtins
 import uuid
-from collections.abc import Mapping
+from collections.abc import Awaitable, Mapping
+from typing import TypeVar
 
 from pydantic import SecretStr
 
-from ..data.models import Account, ProviderType
+from ..data.models import Account, AccountStatus, ProviderType
 from ..data.providers import (
     CredentialReader,
     MailProvider,
@@ -18,7 +19,10 @@ from ..data.providers import (
 )
 from ..data.secrets import CredentialVault
 from ..data.storage import AccountRepository
+from ..errors import ProviderAuthError, ProviderUnavailableError
 from .access import Access
+
+T = TypeVar("T")
 
 
 class AccountService:
@@ -103,6 +107,25 @@ class AccountService:
             )
             self._providers[account_id] = adapter
         return adapter
+
+    async def observe(self, account_id: str, operation: Awaitable[T]) -> T:
+        """Await a provider operation and record what it says about the
+        account: a rejected login needs a new credential, an unreachable
+        server is marked as such, and success clears both."""
+        try:
+            result = await operation
+        except ProviderAuthError:
+            self._set_status(account_id, AccountStatus.NEEDS_REAUTH)
+            raise
+        except ProviderUnavailableError:
+            self._set_status(account_id, AccountStatus.UNREACHABLE)
+            raise
+        self._set_status(account_id, AccountStatus.CONNECTED)
+        return result
+
+    def _set_status(self, account_id: str, status: AccountStatus) -> None:
+        if self._repository.get(account_id).status is not status:
+            self._repository.set_status(account_id, status)
 
     def _reader(self, account_id: str) -> CredentialReader:
         return lambda field: self._vault.read(account_id, field)

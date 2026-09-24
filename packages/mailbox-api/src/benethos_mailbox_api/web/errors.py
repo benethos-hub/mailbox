@@ -23,6 +23,7 @@ from ..errors import (
     NotSupportedError,
     ProviderAuthError,
     ProviderError,
+    ProviderUnavailableError,
     SetupRequiredError,
     UnauthorizedError,
 )
@@ -37,6 +38,7 @@ STATUS: list[tuple[type[MailboxApiError], int]] = [
     (ConflictError, 409),
     (NotSupportedError, 501),
     (ProviderAuthError, 502),
+    (ProviderUnavailableError, 502),
     (ProviderError, 502),
     (CredentialError, 500),
     (SetupRequiredError, 503),

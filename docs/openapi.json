@@ -2751,6 +2751,7 @@
         "enum": [
           "connected",
           "needs_reauth",
+          "unreachable",
           "disabled"
         ],
         "title": "AccountStatus"

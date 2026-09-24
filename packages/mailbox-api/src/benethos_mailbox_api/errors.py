@@ -72,3 +72,9 @@ class ProviderError(MailboxApiError):
     """The provider failed or was unreachable."""
 
     code = "provider_error"
+
+
+class ProviderUnavailableError(ProviderError):
+    """The provider did not answer or dropped the connection. Worth retrying."""
+
+    code = "provider_unavailable"

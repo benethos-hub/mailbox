@@ -13,6 +13,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- IMAP accounts are paced by a rate limiter (setting
+  `max_requests_per_minute`, default 60). A rejected login is not retried
+  until the credential changes. Timeouts and dropped connections are retried
+  with backoff, then the server is left alone for a pause that grows from 30
+  seconds up to 15 minutes. The client identifies itself with IMAP `ID`.
+- Account status `unreachable`. The status follows the provider: a rejected
+  login sets `needs_reauth`, an unreachable server `unreachable`, success
+  `connected`. Errors of an unreachable server carry the code
+  `provider_unavailable`.
 - IMAP accounts (`provider: imap`), read-only: folders with their roles,
   messages newest first with cursor paging, unread and text filters, single
   messages with text, HTML and attachments. Settings `host`, `username`,
