@@ -137,8 +137,7 @@ class ImapProvider:
     # --- the sequences, each under the lock -------------------------------------
 
     def _list_folders(self) -> list[Folder]:
-        folders = [mappers.to_folder(raw) for raw in self._session.list_folders()]
-        return [folder for folder in folders if folder is not None]
+        return mappers.to_folders(self._session.list_folders())
 
     def _list_messages(
         self,

@@ -13,6 +13,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- IMAP special folders without SPECIAL-USE flags are recognised by their
+  German or English name (Gesendet, Entwürfe, Papierkorb, Spam, Archiv, ...).
+- Internationalised domains in addresses are returned in Unicode. A `Date`
+  header without a zone is returned as UTC.
 - IMAP accounts are paced by a rate limiter (setting
   `max_requests_per_minute`, default 60). A rejected login is not retried
   until the credential changes. Timeouts and dropped connections are retried

@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from ....errors import NotFoundError
@@ -36,6 +36,41 @@ SPECIAL_USE: dict[str, FolderRole] = {
 }
 
 _NOT_SELECTABLE = {"\\noselect", "\\nonexistent"}
+
+# Special folders of servers that announce no SPECIAL-USE, by the name the
+# mailbox language gives them. Compared case-insensitively with the last
+# segment of the folder name. Only used for a role no flag has claimed.
+LOCALISED_NAMES: dict[FolderRole, tuple[str, ...]] = {
+    FolderRole.SENT: (
+        "sent",
+        "sent items",
+        "sent messages",
+        "sent mail",
+        "gesendet",
+        "gesendete elemente",
+        "gesendete objekte",
+        "gesendete nachrichten",
+    ),
+    FolderRole.DRAFTS: ("drafts", "draft", "entwürfe", "entwurf"),
+    FolderRole.TRASH: (
+        "trash",
+        "deleted items",
+        "deleted messages",
+        "bin",
+        "papierkorb",
+        "gelöschte elemente",
+        "gelöschte objekte",
+    ),
+    FolderRole.JUNK: (
+        "junk",
+        "spam",
+        "junk e-mail",
+        "junk-e-mail",
+        "spamverdacht",
+        "unerwünscht",
+    ),
+    FolderRole.ARCHIVE: ("archive", "archiv"),
+}
 
 
 # --- opaque ids ---------------------------------------------------------------
@@ -97,6 +132,24 @@ def parse_cursor(value: str) -> tuple[str, int, int]:
 
 
 # --- folders ------------------------------------------------------------------
+
+
+def to_folders(raws: list[RawFolder]) -> list[Folder]:
+    """Every selectable folder, with roles from flags first, then from the
+    localised names for roles no flag claimed."""
+    folders = [f for f in (to_folder(raw) for raw in raws) if f is not None]
+    claimed = {f.role for f in folders if f.role is not None}
+    names = {f.id: f.name.casefold() for f in folders}
+    result = []
+    for folder in folders:
+        if folder.role is None:
+            for role, candidates in LOCALISED_NAMES.items():
+                if role not in claimed and names[folder.id] in candidates:
+                    folder = folder.model_copy(update={"role": role})
+                    claimed.add(role)
+                    break
+        result.append(folder)
+    return result
 
 
 def to_folder(raw: RawFolder) -> Folder | None:
@@ -186,7 +239,19 @@ def _summary_fields(msg: Any, folder: str, uidvalidity: int) -> dict[str, Any]:
 
 
 def _address(value: Any) -> Address:
-    return Address(email=value.email, name=value.name or None)
+    return Address(email=unicode_address(value.email), name=value.name or None)
+
+
+def unicode_address(email: str) -> str:
+    """An address with an internationalised domain in Unicode: on the wire it
+    travels as punycode (``xn--``), the API shows it as people write it."""
+    local, at, domain = email.rpartition("@")
+    if not at or "xn--" not in domain.lower():
+        return email
+    try:
+        return f"{local}@{domain.encode('ascii').decode('idna')}"
+    except UnicodeError:
+        return email
 
 
 def _addresses(values: Any) -> list[Address]:
@@ -203,4 +268,5 @@ def _date(value: datetime | None) -> datetime | None:
     # imap-tools answers an unparsable Date header with 1900-01-01.
     if value is None or value.year <= 1900:
         return None
-    return value
+    # A Date header without a zone is taken as UTC, so every date carries one.
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
