@@ -47,7 +47,7 @@ REST client can do too.
    accounts, mailbox, rights, id mapping, sync
       │
  data/         DATA ─ decides nothing
-   models      provider-neutral types
+   models/     provider-neutral types, one module per subject
    providers/  imap · gmail · microsoft · pop3 · memory, behind a registry
    storage/    own records: accounts, users, credentials
    secrets/    envelope encryption, key providers, backup
