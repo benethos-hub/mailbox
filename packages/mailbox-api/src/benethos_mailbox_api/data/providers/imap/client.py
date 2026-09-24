@@ -168,6 +168,25 @@ class ImapSession:
             answer = self._require().select_folder(folder, readonly=True)
         return int(answer[b"UIDVALIDITY"])
 
+    def select_writable(self, folder: str) -> tuple[int, frozenset[str]]:
+        """Select a folder read-write. Returns its UIDVALIDITY and the flags
+        the server keeps (``PERMANENTFLAGS``); ``\\*`` means any keyword."""
+        with _errors():
+            answer = self._require().select_folder(folder, readonly=False)
+        if b"READ-ONLY" in answer:
+            raise ProviderError(f"the folder {folder} is read-only on the server")
+        permanent = answer.get(b"PERMANENTFLAGS", ())
+        return int(answer[b"UIDVALIDITY"]), frozenset(_text(f) for f in permanent)
+
+    def store_flags(self, uid: int, add: list[str], remove: list[str]) -> None:
+        """Set and clear flags of one message in the selected folder."""
+        with _errors():
+            client = self._require()
+            if add:
+                client.add_flags([uid], add, silent=True)
+            if remove:
+                client.remove_flags([uid], remove, silent=True)
+
     def folder_state(self, folder: str) -> tuple[int, int, int]:
         """UIDVALIDITY, UIDNEXT and MESSAGES of a folder, without selecting
         it. Together they change whenever a message arrives or leaves."""

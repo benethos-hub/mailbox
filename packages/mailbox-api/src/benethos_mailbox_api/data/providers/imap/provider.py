@@ -31,7 +31,14 @@ from ....errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from ...models import AttachmentContent, Folder, Message, MessageSummary, Page
+from ...models import (
+    AttachmentContent,
+    Folder,
+    Message,
+    MessageSummary,
+    MessageUpdate,
+    Page,
+)
 from ..base import Capability, CredentialReader
 from ..ratelimit import Clock, Sleep, TokenBucket, backoff
 from . import mappers
@@ -161,6 +168,11 @@ class ImapProvider:
     async def get_raw(self, message_id: str) -> bytes:
         return await self._run(lambda: self._get_raw(message_id))
 
+    async def update_message(
+        self, message_id: str, changes: MessageUpdate
+    ) -> MessageSummary:
+        return await self._run(lambda: self._update_message(message_id, changes))
+
     async def folder_states(self) -> dict[str, str]:
         return await self._run(self._folder_states)
 
@@ -260,6 +272,20 @@ class ImapProvider:
             content_type=part.content_type or "application/octet-stream",
             data=part.payload,
         )
+
+    def _update_message(
+        self, message_id: str, changes: MessageUpdate
+    ) -> MessageSummary:
+        folder, validity, uid = mappers.parse_message_id(message_id)
+        current, permanent = self._session.select_writable(folder)
+        found = self._session.fetch_headers([uid]) if current == validity else []
+        if not found:
+            raise NotFoundError(f"message {message_id} not found")
+        add, remove = mappers.flag_changes(found[0].flags, changes, permanent)
+        if add or remove:
+            self._session.store_flags(uid, add, remove)
+            found = self._session.fetch_headers([uid])
+        return mappers.to_summary(found[0], folder, validity)
 
     def _get_raw(self, message_id: str) -> bytes:
         folder, validity, uid = mappers.parse_message_id(message_id)

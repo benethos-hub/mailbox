@@ -12,7 +12,7 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from ....errors import NotFoundError
+from ....errors import BadRequestError, NotFoundError, NotSupportedError
 from ...models import (
     Address,
     Attachment,
@@ -20,6 +20,7 @@ from ...models import (
     FolderRole,
     Message,
     MessageSummary,
+    MessageUpdate,
 )
 from .client import RawFolder
 
@@ -221,6 +222,75 @@ def attachment_index(attachment_id: str) -> int:
     return int(attachment_id[4:])
 
 
+# IMAP flags that are keywords in the API, and back (JMAP, RFC 8621).
+_SYSTEM_KEYWORDS = {"\\answered": "$answered", "\\draft": "$draft"}
+# unread, starred and deletion have their own fields and operations.
+_NOT_KEYWORDS = {"\\seen", "\\flagged", "\\deleted", "\\recent"}
+# The spelling IMAP servers and clients use for the common keywords.
+_IMAP_SPELLING = {
+    "$answered": "\\Answered",
+    "$draft": "\\Draft",
+    "$forwarded": "$Forwarded",
+    "$junk": "$Junk",
+    "$notjunk": "$NotJunk",
+    "$mdnsent": "$MDNSent",
+    "$phishing": "$Phishing",
+}
+# Keywords that would bypass unread, starred or deletion.
+RESERVED_KEYWORDS = {"$seen", "$flagged", "$deleted", "$recent"}
+
+
+def keywords(flags: Any) -> list[str]:
+    """The API's keywords of a message's IMAP flags, sorted."""
+    found = set()
+    for flag in flags:
+        lowered = str(flag).lower()
+        if lowered in _NOT_KEYWORDS:
+            continue
+        if lowered in _SYSTEM_KEYWORDS:
+            found.add(_SYSTEM_KEYWORDS[lowered])
+        elif not lowered.startswith("\\"):
+            found.add(lowered)
+    return sorted(found)
+
+
+def imap_flag(keyword: str) -> str:
+    """The IMAP flag of an API keyword."""
+    lowered = keyword.lower()
+    return _IMAP_SPELLING.get(lowered, keyword)
+
+
+def flag_changes(
+    current: Any, changes: MessageUpdate, permanent: frozenset[str]
+) -> tuple[list[str], list[str]]:
+    """The IMAP flags to add and to remove for ``changes``, given the
+    message's ``current`` flags and what the server keeps (``permanent``)."""
+    add: list[str] = []
+    remove: list[str] = []
+    if changes.unread is not None:
+        (remove if changes.unread else add).append("\\Seen")
+    if changes.starred is not None:
+        (add if changes.starred else remove).append("\\Flagged")
+    if changes.keywords is not None:
+        wanted = {k.lower(): k for k in changes.keywords}
+        reserved = sorted(set(wanted) & RESERVED_KEYWORDS)
+        if reserved:
+            raise BadRequestError(
+                f"{', '.join(reserved)}: use unread, starred or DELETE instead"
+            )
+        # Each keyword the message has, with the flag as the server spells it.
+        present: dict[str, str] = {}
+        for flag in current:
+            for keyword in keywords([flag]):
+                present[keyword] = str(flag)
+        new = [imap_flag(wanted[k]) for k in wanted if k not in present]
+        if any(not f.startswith("\\") for f in new) and "\\*" not in permanent:
+            raise NotSupportedError("the mail server keeps no new keywords")
+        add += new
+        remove += [flag for k, flag in present.items() if k not in wanted]
+    return add, remove
+
+
 def _summary_fields(msg: Any, folder: str, uidvalidity: int) -> dict[str, Any]:
     flags = {flag.lower() for flag in msg.flags}
     headers = {k.lower(): v for k, v in msg.headers.items()}
@@ -235,6 +305,7 @@ def _summary_fields(msg: Any, folder: str, uidvalidity: int) -> dict[str, Any]:
         "date": _date(msg.date),
         "unread": "\\seen" not in flags,
         "starred": "\\flagged" in flags,
+        "keywords": keywords(msg.flags),
         "has_attachments": content_type.startswith("multipart/mixed"),
     }
 
