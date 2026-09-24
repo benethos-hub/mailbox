@@ -22,6 +22,11 @@ curl -X POST http://127.0.0.1:8080/v1/users/<user id>/tokens \
 The second answer holds the token, shown this once. The account ids come
 from `GET /v1/accounts`.
 
+Below, `<path to this repository>` is the folder this repository was cloned
+into, the one with `pyproject.toml` and `uv.lock` at its top. It is not a
+configuration folder: `uv run --directory` finds `benethos-mailbox-mcp`
+there, and answers `os error 2` for a folder that does not exist.
+
 ## Claude Code
 
 ```
