@@ -5,10 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from ...domain import permissions
-from ...domain.users import UserService
-from .deps import Viewer
-from .templates import render
+from ....domain import permissions
+from ....domain.users import UserService
+from ..deps import Viewer
+from ..templates import render
 
 router = APIRouter()
 

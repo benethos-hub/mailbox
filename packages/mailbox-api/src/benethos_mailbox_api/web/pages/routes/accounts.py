@@ -8,12 +8,12 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
-from ...data.models import Candidate, ProviderType
-from ...domain.accounts import AccountService
-from ...domain.discovery import DiscoveryService
-from ...errors import MailboxApiError
-from .deps import Actor, Viewer
-from .templates import back, render
+from ....data.models import Candidate, ProviderType
+from ....domain.accounts import AccountService
+from ....domain.discovery import DiscoveryService
+from ....errors import MailboxApiError
+from ..deps import Actor, Viewer
+from ..templates import back, render
 
 router = APIRouter()
 

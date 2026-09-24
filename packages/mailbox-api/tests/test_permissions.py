@@ -5,7 +5,8 @@ from fastapi import APIRouter, FastAPI
 
 from benethos_mailbox_api.domain import permissions
 from benethos_mailbox_api.main import create_app
-from benethos_mailbox_api.web import API_PREFIX, include_routes
+from benethos_mailbox_api.web import api
+from benethos_mailbox_api.web.api import PREFIX as API_PREFIX
 
 METHODS = {"get", "post", "put", "patch", "delete"}
 
@@ -31,7 +32,7 @@ def test_health_carries_no_right() -> None:
 def test_a_route_missing_from_the_catalogue_stops_the_app(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from benethos_mailbox_api.web.routes import accounts
+    from benethos_mailbox_api.web.api.routes import accounts
 
     stray = APIRouter()
 
@@ -41,7 +42,7 @@ def test_a_route_missing_from_the_catalogue_stops_the_app(
 
     monkeypatch.setattr(accounts, "router", stray)
     with pytest.raises(RuntimeError, match="stray_operation"):
-        include_routes(FastAPI())
+        api.install(FastAPI())
 
 
 def test_expand_groups_operations_and_admin() -> None:

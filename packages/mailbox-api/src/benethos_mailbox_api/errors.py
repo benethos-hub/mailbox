@@ -1,7 +1,7 @@
 """Error hierarchy, shared by every layer.
 
 Cross-cutting like ``config``: imports no layer. An error names what went
-wrong with a stable ``code`` and carries no HTTP status. ``web.errors`` maps
+wrong with a stable ``code`` and carries no HTTP status. ``web.api.errors`` maps
 each class onto one, so the domain and the data layer stay free of HTTP.
 """
 

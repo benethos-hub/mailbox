@@ -12,14 +12,14 @@ from typing import Annotated
 from fastapi import Depends, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from ..data.models import MessageFilter
-from ..data.models.messages import SEARCH_TEXT_PATTERN
-from ..domain.access import Access
-from ..domain.accounts import AccountService
-from ..domain.auth import AuthService
-from ..domain.discovery import DiscoveryService
-from ..domain.mailbox import MailboxService
-from ..domain.users import UserService
+from ...data.models import MessageFilter
+from ...data.models.messages import SEARCH_TEXT_PATTERN
+from ...domain.access import Access
+from ...domain.accounts import AccountService
+from ...domain.auth import AuthService
+from ...domain.discovery import DiscoveryService
+from ...domain.mailbox import MailboxService
+from ...domain.users import UserService
 
 _bearer = HTTPBearer(auto_error=False, scheme_name="bearerAuth")
 

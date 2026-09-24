@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from ... import __version__
+from .... import __version__
 
 router = APIRouter(tags=["health"])
 
