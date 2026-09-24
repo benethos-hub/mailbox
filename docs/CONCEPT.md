@@ -139,6 +139,24 @@ between calls. Per adapter:
 
 Ids are opaque strings to clients. Nothing may parse them.
 
+#### IMAP without `OBJECTID`
+
+**Decided 2026-09-24:**
+
+- **An id mapping in the store.** Our id (`msg_…`) points to a folder,
+  `UIDVALIDITY` and UID. Per message the store keeps only the account, the
+  folder, `UIDVALIDITY`, the UID, the `Message-ID` header and our id, plus
+  a state per folder. No subject, no sender, no content.
+- **Our own moves** update the mapping from the new UID the server reports
+  with `COPYUID` (UIDPLUS).
+- **Moves by others** (another client, a server rule) are found by the sync
+  worker (8.1): a message that leaves one folder and one with the same
+  `Message-ID` that arrives in another is the same message, and keeps its
+  id. A `UIDVALIDITY` change is handled the same way.
+- **A lookup that misses** syncs the account once and tries again.
+- **Ambiguous matches are never guessed.** Several candidates with the same
+  `Message-ID`, or none, and the old id answers `404`.
+
 ## 5. Provider adapters and libraries
 
 Every adapter implements `data.providers.base.MailProvider` and declares a
@@ -1070,8 +1088,13 @@ Why the REST server cannot be spawned per session like an MCP server:
 5. **Shared state.** Id mapping, idempotency keys and sync state belong to
    one owner, not to several short-lived processes.
 
-What the worker does and does not do: it keeps sync state and the change
-feed current. It does **not** mirror mailboxes. List, search and get still
+What the worker does and does not do: it keeps sync state, the id mapping
+(4.1) and the change feed current.
+
+**Decided 2026-09-24:** the worker watches the inbox of an IMAP account
+over IDLE and polls the other folders, every 5 minutes by default,
+configurable. A poll asks each folder for its state and reads only the
+folders whose state changed. It does **not** mirror mailboxes. List, search and get still
 go to the provider live, unless the local cache of open question 5 is
 decided.
 
