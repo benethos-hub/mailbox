@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # Autodiscovery: host names that may resolve to private addresses, e.g.
     # an internal mail server. A JSON list.
     discovery_internal_hosts: list[str] = Field(default_factory=list)
+    # Sync worker: seconds between two polls of every folder. 0 switches the
+    # worker off.
+    sync_interval: int = Field(default=300, ge=0)
+    # Sync worker: watch the inbox over IMAP IDLE, which needs a second
+    # connection per account.
+    sync_idle: bool = True
 
     @property
     def database_path(self) -> Path:

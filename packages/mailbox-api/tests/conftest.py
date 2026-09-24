@@ -51,6 +51,8 @@ def no_configuration_from_this_machine(
     monkeypatch.setenv("MAILBOX_API_STORAGE", "memory")
     # Never the machine's real credential store.
     monkeypatch.setenv("MAILBOX_API_KEY_PROVIDER", "env")
+    # No background worker. Tests that want one build it.
+    monkeypatch.setenv("MAILBOX_API_SYNC_INTERVAL", "0")
 
 
 @pytest.fixture

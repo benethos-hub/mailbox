@@ -10,9 +10,14 @@ from pydantic import SecretStr
 
 from benethos_mailbox_api.config import Settings
 from benethos_mailbox_api.data.models import ProviderType
-from benethos_mailbox_api.data.providers import CredentialReader, ProviderSettings
+from benethos_mailbox_api.data.providers import (
+    CredentialReader,
+    MailProvider,
+    ProviderSettings,
+)
 from benethos_mailbox_api.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_api.data.providers.imap.client import ImapSession
+from benethos_mailbox_api.data.providers.memory import MemoryProvider
 from benethos_mailbox_api.data.secrets import cipher, encode_recovery
 from benethos_mailbox_api.errors import NotFoundError, ProviderUnavailableError
 from benethos_mailbox_api.main import Services, build_services
@@ -42,7 +47,9 @@ def services(server: FakeMailBox, monkeypatch: pytest.MonkeyPatch) -> Services:
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
-    ) -> ImapProvider:
+    ) -> MailProvider:
+        if kind is ProviderType.MEMORY:
+            return MemoryProvider()
         return ImapProvider(
             settings,
             credentials,

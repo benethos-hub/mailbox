@@ -83,6 +83,8 @@ packages/
         accounts.py       # AccountService: accounts and their live adapters
         mailbox.py        # MailboxService: folders and messages
         discovery.py      # DiscoveryService: trust, ranking, cache, limits
+        sync.py           # SyncService: stable message ids, the sync pass
+        worker.py         # SyncWorker: polling and IDLE in the background
         permissions.py    # the catalogue of rights and groups
         access.py         # Access: what one caller may do
         auth.py           # AuthService: tokens, the admin key

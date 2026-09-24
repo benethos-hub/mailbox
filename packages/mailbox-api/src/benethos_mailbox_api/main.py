@@ -12,6 +12,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
+import anyio
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
@@ -56,6 +57,7 @@ from .domain.discovery import DiscoveryService
 from .domain.mailbox import MailboxService
 from .domain.sync import SyncService
 from .domain.users import UserService
+from .domain.worker import SyncWorker
 from .web import include_routes
 from .web.errors import install_error_handlers
 
@@ -69,6 +71,7 @@ class Services:
     discovery: DiscoveryService
     sync: SyncService
     vault: CredentialVault
+    worker: SyncWorker | None = None
     database: Database | None = None
 
     def close(self) -> None:
@@ -118,6 +121,13 @@ def build_services(
         mailbox=MailboxService(accounts, sync),
         discovery=discovery or build_discovery(settings),
         sync=sync,
+        worker=(
+            SyncWorker(
+                accounts, sync, interval=settings.sync_interval, push=settings.sync_idle
+            )
+            if settings.sync_interval
+            else None
+        ),
         vault=vault,
         database=db,
     )
@@ -168,7 +178,16 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        yield
+        async with anyio.create_task_group() as background:
+            if services.worker is not None:
+                background.start_soon(services.worker.run)
+            try:
+                yield
+            finally:
+                # The worker first, so it opens nothing new while the
+                # adapters close.
+                background.cancel_scope.cancel()
+        await services.accounts.close()
         services.close()
 
     app = FastAPI(
