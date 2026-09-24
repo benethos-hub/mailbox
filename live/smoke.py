@@ -1,16 +1,18 @@
 """Live smoke run against the test accounts in ``live/.env``.
 
-    uv run python live/smoke.py [--wrong-password]
+    uv run python live/smoke.py [--show] [--wrong-password]
 
 Read-only: discovers each address, connects it, lists folders and messages,
 reads one message and its source, and checks that reading changed no
-unread flag. Then lists across all accounts. ``--wrong-password`` also
-tries one login with a wrong password, which the server may count against
-the account.
+unread flag. Then lists across all accounts. ``--show`` prints the messages
+of the first page: sender, recipients, subject, attachment names and the
+start of the text. ``--wrong-password`` also tries one login with a wrong
+password, which the server may count against the account.
 
 Runs in-process with memory storage and a throwaway master key, so nothing
-is stored. Prints counts and sizes, never message content or credentials.
-Not a test: it is outside ``testpaths`` and needs the network.
+is stored. Without ``--show`` it prints counts and sizes, never message
+content. Credentials are never printed. Not a test: it is outside
+``testpaths`` and needs the network.
 """
 
 from __future__ import annotations
@@ -98,6 +100,7 @@ def smoke_account(
     env: dict[str, str],
     account: dict[str, str],
     used: dict[str, dict[str, Any]],
+    show: bool = False,
 ) -> str | None:
     """Connect and read one account. Records the settings in ``used``."""
     email = account["email"]
@@ -165,14 +168,59 @@ def smoke_account(
         )
         raw = client.get(f"/v1/accounts/{account_id}/messages/{first}/raw")
         run.check("raw source", raw.status_code == 200, f"{len(raw.content)} bytes")
+        if show:
+            for item in items:
+                show_message(client, account_id, item["id"])
         run.check(
             "reading left unread flags alone", unread_ids(client, account_id) == before
         )
     return account_id
 
 
+SHOW_CHARS = 1000
+
+
+def address(value: dict[str, Any] | None) -> str:
+    if not value:
+        return "-"
+    name, email = value.get("name"), value.get("email")
+    return f"{name} <{email}>" if name else str(email)
+
+
+def show_message(client: TestClient, account_id: str, message_id: str) -> None:
+    response = client.get(f"/v1/accounts/{account_id}/messages/{message_id}")
+    if response.status_code != 200:
+        print(f"\n   --- {message_id}: {response.status_code}")
+        return
+    m = response.json()
+    print("\n   ---")
+    print(f"   From:    {address(m.get('from'))}")
+    print(f"   To:      {', '.join(address(a) for a in m.get('to', [])) or '-'}")
+    if m.get("cc"):
+        print(f"   Cc:      {', '.join(address(a) for a in m['cc'])}")
+    print(f"   Date:    {m.get('date') or '-'}")
+    print(f"   Subject: {m.get('subject') or '-'}")
+    print(f"   Unread:  {m.get('unread')}")
+    for a in m.get("attachments", []):
+        inline = ", inline" if a.get("inline") else ""
+        print(
+            f"   Attachment: {a.get('filename') or '(no name)'} "
+            f"({a.get('content_type')}, {a.get('size')} bytes{inline})"
+        )
+    text = m.get("text_body")
+    if not text and m.get("html_body"):
+        text = "(HTML only, " + str(len(m["html_body"])) + " chars)"
+    text = (text or "(no text)").strip()
+    if len(text) > SHOW_CHARS:
+        text = text[:SHOW_CHARS] + f"\n... ({len(text) - SHOW_CHARS} more chars)"
+    print("   Body:")
+    for line in text.splitlines():
+        print(f"      {line}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--show", action="store_true")
     parser.add_argument("--wrong-password", action="store_true")
     args = parser.parse_args()
 
@@ -194,7 +242,7 @@ def main() -> int:
     ids = [
         account_id
         for account in accounts(env)
-        if (account_id := smoke_account(run, client, env, account, used))
+        if (account_id := smoke_account(run, client, env, account, used, args.show))
     ]
 
     if ids:
