@@ -146,7 +146,8 @@ Ids are opaque strings to clients. Nothing may parse them.
 - **An id mapping in the store.** Our id (`msg_…`) points to a folder,
   `UIDVALIDITY` and UID. Per message the store keeps only the account, the
   folder, `UIDVALIDITY`, the UID, the `Message-ID` header and our id, plus
-  a state per folder. No subject, no sender, no content.
+  a state per folder. No subject, no sender, no content. Decided later the
+  same day: also `In-Reply-To` and `References`, for threads (6.3).
 - **Our own moves** update the mapping from the new UID the server reports
   with `COPYUID` (UIDPLUS).
 - **Moves by others** (another client, a server rule) are found by the sync
@@ -524,6 +525,12 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | GET | `{acc}/threads` | thread list (capability `threads`) |
 | GET | `{acc}/threads/{thread_id}` | thread with its message summaries |
 
+**Decided 2026-09-24, threads for IMAP:** IMAP's `THREAD` extension
+(RFC 5256) works within one folder only, while a conversation is spread
+over the inbox, the sent folder and the archive. The service builds IMAP
+threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
+`References` in the id mapping (4.1).
+
 ### 6.4 Sending and drafts
 
 | Method | Path | Purpose |
@@ -534,6 +541,15 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | PUT | `{acc}/drafts/{draft_id}` | replace |
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
 | POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
+
+**Decided 2026-09-24, reply and forward:**
+
+- After a reply the original gets the flag `\Answered`, after a forward the
+  keyword `$Forwarded`, so other mail clients show it too.
+- `reference.forward_as` chooses how a forward carries the original:
+  `inline` (the default, as in common mail clients: quoted with its
+  headers, its attachments attached) or `attachment` (the unchanged
+  original as `message/rfc822`). Ignored for replies.
 
 Sending is **synchronous** in phase 2: `200` means the provider accepted the
 message. After an SMTP send the copy is appended to the sent folder unless

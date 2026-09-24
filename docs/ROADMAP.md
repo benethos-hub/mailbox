@@ -81,7 +81,8 @@ Before phase 2, so that ids stay valid once messages are moved.
 - `COPYUID` keeps the id of a message we move (4.1)
 - Update, delete and batch operations on messages (6.3)
 - Folder create, rename, delete (6.2)
-- Sending over SMTP, with reply and forward by reference (6.4)
+- Sending over SMTP, with reply and forward by reference, `forward_as`,
+  `Answered` and `$Forwarded` on the original (6.4)
 - Drafts
 - `Idempotency-Key` on send
 
@@ -112,7 +113,8 @@ Before phase 2, so that ids stay valid once messages are moved.
 - `jmap` adapter for Fastmail and JMAP servers (5.6)
 - Configuration UI under `/ui` (1.1): accounts, OAuth, users, tokens,
   recovery key, status
-- Threads
+- Threads (6.3): for IMAP built across folders from the id mapping,
+  which then also keeps `In-Reply-To` and `References`
 - Grant constraint `folders` (7.5)
 - `pop3` adapter (5.2)
 
