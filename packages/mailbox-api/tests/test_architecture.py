@@ -28,6 +28,13 @@ ASSEMBLY = {"main", "__main__"}
 # Web frameworks live in the web layer. main.py builds the app, so it may too.
 WEB_LIBRARIES = {"fastapi", "starlette"}
 
+# One library, one home (CLAUDE.md): the only module allowed to import each.
+LIBRARY_HOMES = {
+    "cryptography": f"{PACKAGE}.data.secrets.cipher",
+    "keyring": f"{PACKAGE}.data.secrets.keys",
+    "sqlite3": f"{PACKAGE}.data.storage.sqlite",
+}
+
 
 def _module_name(path: Path) -> str:
     rel = path.relative_to(ROOT.parent).with_suffix("")
@@ -130,3 +137,13 @@ def test_every_layer_exists_and_is_documented() -> None:
         assert init.exists(), f"{layer}/__init__.py is missing"
         docstring = ast.get_docstring(ast.parse(init.read_text(encoding="utf-8")))
         assert docstring, f"{layer}/__init__.py has no docstring"
+
+
+def test_each_wrapped_library_has_one_home() -> None:
+    violations = []
+    for name, path in _modules():
+        for imported, line in _imports(path):
+            home = LIBRARY_HOMES.get(imported.split(".")[0])
+            if home is not None and name != home:
+                violations.append(f"{name}:{line} imports {imported}, home is {home}")
+    assert not violations, "library outside its home:\n  " + "\n  ".join(violations)

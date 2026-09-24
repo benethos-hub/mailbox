@@ -7,19 +7,22 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from ...data.models import Folder, Message, MessageSummary, Page
-from ..deps import Mailbox
+from ..deps import Caller, Mailbox
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
 
 
 @router.get("/folders")
-async def list_folders(account_id: str, mailbox: Mailbox) -> list[Folder]:
-    return await mailbox.list_folders(account_id)
+async def list_folders(
+    account_id: str, caller: Caller, mailbox: Mailbox
+) -> list[Folder]:
+    return await mailbox.list_folders(caller, account_id)
 
 
 @router.get("/messages")
 async def list_messages(
     account_id: str,
+    caller: Caller,
     mailbox: Mailbox,
     folder: Annotated[str | None, Query(description="Folder id")] = None,
     q: Annotated[str | None, Query(description="Search text")] = None,
@@ -28,6 +31,7 @@ async def list_messages(
     cursor: str | None = None,
 ) -> Page[MessageSummary]:
     return await mailbox.list_messages(
+        caller,
         account_id,
         folder_id=folder,
         query=q,
@@ -38,5 +42,7 @@ async def list_messages(
 
 
 @router.get("/messages/{message_id}")
-async def get_message(account_id: str, message_id: str, mailbox: Mailbox) -> Message:
-    return await mailbox.get_message(account_id, message_id)
+async def get_message(
+    account_id: str, message_id: str, caller: Caller, mailbox: Mailbox
+) -> Message:
+    return await mailbox.get_message(caller, account_id, message_id)

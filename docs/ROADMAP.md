@@ -6,8 +6,8 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | Phase | Topic | State |
 |---|---|---|
 | [0](#phase-0--skeleton) | Skeleton | **done** |
-| [1a](#phase-1a--users-rights-storage-backup) | Users, rights, storage, backup | next |
-| [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | |
+| [1a](#phase-1a--users-rights-storage-backup) | Users, rights, storage, backup | **done** |
+| [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | next |
 | [2](#phase-2--writing-and-sending) | Writing and sending | |
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | |
 | [4](#phase-4--background-worker) | Background worker | |
@@ -33,6 +33,8 @@ design early.
 - MCP server skeleton over stdio and streamable HTTP with `list_accounts`
 
 ## Phase 1a – Users, rights, storage, backup
+
+**Done.**
 
 Everything real mail will depend on, before any real mailbox is connected.
 

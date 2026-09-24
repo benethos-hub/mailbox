@@ -22,6 +22,36 @@ class NotFoundError(MailboxApiError):
     code = "not_found"
 
 
+class BadRequestError(MailboxApiError):
+    """The request is well-formed but makes no sense, e.g. an unknown right."""
+
+    code = "bad_request"
+
+
+class UnauthorizedError(MailboxApiError):
+    """No valid credential: missing, wrong, expired, revoked, or user disabled."""
+
+    code = "unauthorized"
+
+
+class ForbiddenError(MailboxApiError):
+    """The caller may see the account, but not do this."""
+
+    code = "forbidden"
+
+
+class SetupRequiredError(MailboxApiError):
+    """The service has no way to authenticate anyone yet."""
+
+    code = "setup_required"
+
+
+class CredentialError(MailboxApiError):
+    """A stored credential is missing or cannot be decrypted."""
+
+    code = "credential_unreadable"
+
+
 class ConflictError(MailboxApiError):
     code = "conflict"
 

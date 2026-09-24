@@ -1,15 +1,27 @@
-"""Command line entry point: ``benethos-mailbox-api serve``."""
+"""Command line entry point: ``benethos-mailbox-api serve`` and the host tools."""
 
 from __future__ import annotations
 
 import argparse
+import getpass
 import sys
+from pathlib import Path
 
 from . import __version__
 from .config import Settings
 
 
 def main(argv: list[str] | None = None) -> int:
+    parser = _parser()
+    args = parser.parse_args(argv)
+    try:
+        return _run(args)
+    except _EXPECTED as exc:
+        print(f"error: {_message(exc)}", file=sys.stderr)
+        return 1
+
+
+def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="benethos-mailbox-api")
     parser.add_argument("--version", action="version", version=__version__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -17,12 +29,60 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--host")
     serve.add_argument("--port", type=int)
     commands.add_parser("openapi", help="print the OpenAPI document as JSON")
-    args = parser.parse_args(argv)
 
+    users = commands.add_parser("users", help="manage users on this host")
+    users_commands = users.add_subparsers(dest="users_command", required=True)
+    create_admin = users_commands.add_parser(
+        "create-admin", help="create a user with every right and print its token"
+    )
+    create_admin.add_argument("--name", default="admin")
+
+    keys = commands.add_parser("keys", help="the master key and the data key")
+    keys_commands = keys.add_subparsers(dest="keys_command", required=True)
+    keys_commands.add_parser(
+        "init", help="create the keys and print the recovery key once"
+    )
+    keys_commands.add_parser(
+        "import", help="store the master key from a recovery key, read from stdin"
+    )
+
+    backup = commands.add_parser(
+        "backup",
+        help="write an encrypted backup: `backup FILE`, or check one: "
+        "`backup verify FILE`",
+    )
+    backup.add_argument("target", nargs="+", metavar="[verify] FILE")
+    backup.add_argument(
+        "--recovery-key",
+        action="store_true",
+        help="with verify: read the recovery key from stdin",
+    )
+
+    restore = commands.add_parser(
+        "restore", help="replace the database with a backup; stop the service first"
+    )
+    restore.add_argument("source", type=Path)
+    restore.add_argument(
+        "--recovery-key",
+        action="store_true",
+        help="read the recovery key from stdin and store it in the key provider",
+    )
+    return parser
+
+
+def _run(args: argparse.Namespace) -> int:
     if args.command == "openapi":
         from .main import openapi_json
 
         sys.stdout.write(openapi_json())
+    elif args.command == "users":
+        _create_admin(args.name)
+    elif args.command == "keys":
+        _keys(args.keys_command)
+    elif args.command == "backup":
+        _backup(args.target, args.recovery_key)
+    elif args.command == "restore":
+        _restore(args.source, args.recovery_key)
     elif args.command == "serve":  # pragma: no branch
         import uvicorn
 
@@ -36,6 +96,145 @@ def main(argv: list[str] | None = None) -> int:
             log_level=settings.log_level.lower(),
         )
     return 0
+
+
+def _create_admin(name: str) -> None:
+    from .main import build_services
+
+    settings = Settings()
+    services = build_services(settings)
+    try:
+        user, token = services.users.create_admin(name)
+    finally:
+        services.close()
+    print(
+        f"Created user {user.id} ({user.name}) with every right in "
+        f"{settings.database_path}. Its token is shown this once:",
+        file=sys.stderr,
+    )
+    print(token)
+
+
+def _keys(command: str) -> None:
+    from .main import build_services
+
+    services = build_services(Settings())
+    try:
+        if command == "init":
+            recovery = services.vault.initialize()
+            print(
+                "Keys created. The recovery key below is shown this once. Keep it "
+                "apart from any backup: without it, a backup cannot be restored "
+                "on another machine.",
+                file=sys.stderr,
+            )
+            print(recovery)
+        else:
+            services.vault.import_master_key(_read_recovery_key())
+            print("Master key stored.", file=sys.stderr)
+    finally:
+        services.close()
+
+
+def _backup(target: list[str], recovery_key: bool) -> None:
+    from .data.secrets.backup import create_backup, read_backup
+    from .main import build_services
+
+    if target[0] == "verify" and len(target) == 2:
+        master = _read_recovery_key() if recovery_key else _master_key()
+        manifest, _ = read_backup(Path(target[1]), master)
+        print(
+            f"OK: backup of {manifest.created_at}, service "
+            f"{manifest.service_version}, schema {manifest.schema_version}",
+            file=sys.stderr,
+        )
+        return
+    if len(target) != 1:
+        raise _UsageError("use `backup FILE` or `backup verify FILE`")
+    settings = Settings()
+    if settings.storage != "sqlite":
+        raise _UsageError("backups need MAILBOX_API_STORAGE=sqlite")
+    services = build_services(settings)
+    try:
+        assert services.database is not None
+        manifest = create_backup(
+            services.database,
+            services.vault.master_key(),
+            Path(target[0]),
+            __version__,
+        )
+    finally:
+        services.close()
+    print(
+        f"Backup written: schema {manifest.schema_version}, {manifest.created_at}. "
+        "It opens only with this master key or the recovery key.",
+        file=sys.stderr,
+    )
+
+
+def _restore(source: Path, recovery_key: bool) -> None:
+    from .data.secrets.backup import restore_backup
+    from .main import build_services, key_provider
+
+    settings = Settings()
+    master = _read_recovery_key() if recovery_key else _master_key()
+    manifest = restore_backup(source, master, settings.database_path)
+    if recovery_key:
+        if key_provider(settings).load() != master:
+            services = build_services(settings)
+            try:
+                services.vault.import_master_key(master)
+            finally:
+                services.close()
+    print(
+        f"Restored the backup of {manifest.created_at}. The previous database "
+        "was kept beside it. Accounts whose OAuth tokens changed since then "
+        "need reconnecting.",
+        file=sys.stderr,
+    )
+
+
+def _master_key() -> bytes:
+    from .main import key_provider
+
+    provider = key_provider(Settings())
+    key = provider.load()
+    if key is None:
+        raise _UsageError(
+            f"no master key in {provider.describe()}: pass --recovery-key"
+        )
+    return key
+
+
+def _read_recovery_key() -> bytes:
+    from .data.secrets import decode_recovery
+
+    text = (
+        getpass.getpass("Recovery key: ")
+        if sys.stdin.isatty()
+        else sys.stdin.readline()
+    )
+    return decode_recovery(text)
+
+
+class _UsageError(Exception):
+    pass
+
+
+def _expected() -> tuple[type[BaseException], ...]:
+    from .data.secrets import KeyProviderError
+    from .data.secrets.backup import BackupError
+    from .errors import MailboxApiError
+
+    return (_UsageError, BackupError, KeyProviderError, MailboxApiError, ValueError)
+
+
+def _message(exc: BaseException) -> str:
+    message = getattr(exc, "message", None)
+    return str(message or exc)
+
+
+_EXPECTED = _expected()
 
 
 if __name__ == "__main__":

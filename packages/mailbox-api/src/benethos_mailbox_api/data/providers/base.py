@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import StrEnum
 from typing import Protocol
 
+from pydantic import SecretStr
+
 from ..models import Folder, Message, MessageSummary, Page
+
+# Hands an adapter one stored credential by field name, decrypted at the
+# moment of the call. Adapters call it right before a login and keep nothing.
+CredentialReader = Callable[[str], SecretStr]
 
 
 class Capability(StrEnum):

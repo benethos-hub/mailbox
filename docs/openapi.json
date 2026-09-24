@@ -31,30 +31,36 @@
         }
       }
     },
-    "/v1/accounts": {
+    "/v1/me": {
       "get": {
         "tags": [
-          "accounts"
+          "users"
         ],
-        "summary": "List Accounts",
-        "operationId": "list_accounts",
+        "summary": "Get Me",
+        "operationId": "get_me",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/Account"
-                  },
-                  "type": "array",
-                  "title": "Response List Accounts"
+                  "$ref": "#/components/schemas/Me"
                 }
               }
             }
           },
           "401": {
             "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
             "content": {
               "application/json": {
                 "schema": {
@@ -94,7 +100,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -108,7 +114,1569 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "x-permission": "authenticated"
+      }
+    },
+    "/v1/permissions": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List Permissions",
+        "operationId": "list_permissions",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionCatalogue"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-permission": "authenticated"
+      }
+    },
+    "/v1/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List Users",
+        "operationId": "list_users",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  },
+                  "type": "array",
+                  "title": "Response List Users"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-permission": "users.manage"
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create User",
+        "operationId": "create_user",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-permission": "users.manage"
+      }
+    },
+    "/v1/users/{user_id}": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get User",
+        "operationId": "get_user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update User",
+        "operationId": "update_user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete User",
+        "operationId": "delete_user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      }
+    },
+    "/v1/users/{user_id}/tokens": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List Tokens",
+        "operationId": "list_tokens",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TokenInfo"
+                  },
+                  "title": "Response List Tokens"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create Token",
+        "operationId": "create_token",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      }
+    },
+    "/v1/users/{user_id}/tokens/{token_id}": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Revoke Token",
+        "operationId": "revoke_token",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      }
+    },
+    "/v1/roles": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List Roles",
+        "operationId": "list_roles",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Role"
+                  },
+                  "type": "array",
+                  "title": "Response List Roles"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-permission": "users.manage"
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create Role",
+        "operationId": "create_role",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-permission": "users.manage"
+      }
+    },
+    "/v1/roles/{role_id}": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Role",
+        "operationId": "get_role",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      },
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Replace Role",
+        "operationId": "replace_role",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleReplace"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete Role",
+        "operationId": "delete_role",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      }
+    },
+    "/v1/accounts": {
+      "get": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "List Accounts",
+        "operationId": "list_accounts",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Account"
+                  },
+                  "type": "array",
+                  "title": "Response List Accounts"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-permission": "accounts.read"
       },
       "post": {
         "tags": [
@@ -147,6 +1715,16 @@
               }
             }
           },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -178,7 +1756,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -202,7 +1780,8 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "x-permission": "accounts.manage"
       }
     },
     "/v1/accounts/{account_id}": {
@@ -249,6 +1828,16 @@
               }
             }
           },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -280,7 +1869,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -299,7 +1888,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "accounts.read"
       },
       "delete": {
         "tags": [
@@ -337,6 +1927,16 @@
               }
             }
           },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -368,7 +1968,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -387,7 +1987,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "accounts.manage"
       }
     },
     "/v1/accounts/{account_id}/folders": {
@@ -438,6 +2039,16 @@
               }
             }
           },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -469,7 +2080,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -488,7 +2099,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "mail.read"
       }
     },
     "/v1/accounts/{account_id}/messages": {
@@ -615,6 +2227,16 @@
               }
             }
           },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -646,7 +2268,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -665,7 +2287,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "mail.read"
       }
     },
     "/v1/accounts/{account_id}/messages/{message_id}": {
@@ -721,6 +2344,16 @@
               }
             }
           },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -752,7 +2385,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -771,7 +2404,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "mail.read"
       }
     }
   },
@@ -804,6 +2438,13 @@
           "status": {
             "$ref": "#/components/schemas/AccountStatus",
             "default": "connected"
+          },
+          "credentials": {
+            "items": {
+              "$ref": "#/components/schemas/CredentialInfo"
+            },
+            "type": "array",
+            "title": "Credentials"
           }
         },
         "type": "object",
@@ -849,7 +2490,18 @@
               ]
             },
             "type": "object",
-            "title": "Settings"
+            "title": "Settings",
+            "description": "Provider-specific connection settings: host, port, ..."
+          },
+          "credentials": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "password",
+              "writeOnly": true
+            },
+            "type": "object",
+            "title": "Credentials",
+            "description": "Secrets such as `password`. Stored encrypted, never returned."
           }
         },
         "type": "object",
@@ -930,6 +2582,26 @@
           "size"
         ],
         "title": "Attachment"
+      },
+      "CredentialInfo": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "updated_at"
+        ],
+        "title": "CredentialInfo",
+        "description": "That a credential is stored, never its value."
       },
       "ErrorDetail": {
         "properties": {
@@ -1037,6 +2709,31 @@
         "title": "FolderRole",
         "description": "Special-use role, after RFC 6154 and JMAP."
       },
+      "Grant": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Accounts"
+          },
+          "allow": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allow"
+          }
+        },
+        "type": "object",
+        "required": [
+          "accounts",
+          "allow"
+        ],
+        "title": "Grant",
+        "description": "Rights on accounts: operation or group names, account ids or ``*``."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1049,6 +2746,46 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "Me": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "accounts": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Accounts",
+            "description": "Account id to the operations allowed on it"
+          },
+          "operations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Operations",
+            "description": "Operations not bound to one existing account"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "name",
+          "accounts",
+          "operations"
+        ],
+        "title": "Me",
+        "description": "The caller and its effective rights."
       },
       "Message": {
         "properties": {
@@ -1343,6 +3080,26 @@
         ],
         "title": "Page[MessageSummary]"
       },
+      "PermissionCatalogue": {
+        "properties": {
+          "groups": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Groups",
+            "description": "Group name to the operations it allows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups"
+        ],
+        "title": "PermissionCatalogue"
+      },
       "ProviderType": {
         "type": "string",
         "enum": [
@@ -1352,6 +3109,343 @@
           "memory"
         ],
         "title": "ProviderType"
+      },
+      "Role": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "type": "array",
+            "title": "Grants"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Role",
+        "description": "A named, reusable set of grants."
+      },
+      "RoleCreate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "type": "array",
+            "title": "Grants"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "RoleCreate"
+      },
+      "RoleReplace": {
+        "properties": {
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "type": "array",
+            "title": "Grants"
+          }
+        },
+        "type": "object",
+        "title": "RoleReplace"
+      },
+      "TokenCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TokenCreate"
+      },
+      "TokenCreated": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "The token itself. Shown this once only."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "created_at",
+          "token"
+        ],
+        "title": "TokenCreated"
+      },
+      "TokenInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "created_at"
+        ],
+        "title": "TokenInfo",
+        "description": "A token without its secret."
+      },
+      "User": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "type": "array",
+            "title": "Grants"
+          },
+          "disabled": {
+            "type": "boolean",
+            "title": "Disabled",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "User",
+        "description": "Someone or something that calls the API."
+      },
+      "UserCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "type": "array",
+            "title": "Grants"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "UserCreate"
+      },
+      "UserUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "roles": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roles"
+          },
+          "grants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Grant"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grants"
+          },
+          "disabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdate"
       },
       "ValidationError": {
         "properties": {

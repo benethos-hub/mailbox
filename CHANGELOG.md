@@ -6,8 +6,40 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Without `MAILBOX_API_KEY` and without any user, `/v1` answers
+  `503 setup_required`.
+
 ### Added
 
+- `benethos-mailbox-api backup FILE`, `backup verify FILE` and
+  `restore FILE`: encrypted backups of the whole database, opened with the
+  master key or, with `--recovery-key`, the recovery key.
+- Accounts take `credentials` on creation. They are stored encrypted and
+  never returned; an account lists only which credentials it has.
+- `benethos-mailbox-api keys init` creates the keys and prints the recovery
+  key once, `keys import` stores the master key from a recovery key.
+- Master key providers: the OS credential store (default), a key file, or
+  `MAILBOX_API_MASTER_KEY`.
+- Accounts, users, roles and tokens are stored in SQLite in the per-user
+  data directory. `MAILBOX_API_DATA_DIR` moves it, `MAILBOX_API_STORAGE=memory`
+  keeps nothing.
+- `benethos-mailbox-api users create-admin` creates a user with every right
+  and prints its token once.
+- Users with roles and grants per account and per operation:
+  `/v1/users`, `/v1/roles`.
+- API tokens per user: `/v1/users/{user_id}/tokens`. A token is shown once on
+  creation and can expire and be revoked.
+- `/v1/me` returns the caller and its effective rights, `/v1/permissions`
+  the catalogue of rights and groups.
+- A caller can only grant rights it holds, and only manage users whose rights
+  it holds.
+- Rights are checked on every `/v1` request, per account and per operation.
+  An account without a grant answers `404`, a missing right `403 forbidden`.
+  `list_accounts` returns only the accounts the caller may read.
+- Every `/v1` operation carries its required right as `x-permission` in the
+  OpenAPI document.
 - Two distributions in one uv workspace: `benethos-mailbox-api` (the service)
   and `benethos-mailbox-mcp` (the MCP server, a REST client only).
 - MCP server skeleton over stdio or streamable HTTP with a first tool,

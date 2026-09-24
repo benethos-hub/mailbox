@@ -43,12 +43,57 @@ class Address(BaseModel):
     name: str | None = None
 
 
+class CredentialInfo(BaseModel):
+    """That a credential is stored, never its value."""
+
+    field: str
+    updated_at: datetime
+
+
 class Account(BaseModel):
     id: str
     provider: ProviderType
     email: str
     display_name: str | None = None
     status: AccountStatus = AccountStatus.CONNECTED
+    credentials: list[CredentialInfo] = Field(default_factory=list)
+
+
+class Grant(BaseModel):
+    """Rights on accounts: operation or group names, account ids or ``*``."""
+
+    accounts: list[str]
+    allow: list[str]
+
+
+class User(BaseModel):
+    """Someone or something that calls the API."""
+
+    id: str
+    name: str
+    roles: list[str] = Field(default_factory=list)
+    grants: list[Grant] = Field(default_factory=list)
+    disabled: bool = False
+
+
+class Role(BaseModel):
+    """A named, reusable set of grants."""
+
+    id: str
+    grants: list[Grant] = Field(default_factory=list)
+
+
+class ApiToken(BaseModel):
+    """An API token of a user. Only the SHA-256 hash of the token is kept."""
+
+    id: str
+    user_id: str
+    name: str
+    token_hash: str
+    created_at: datetime
+    expires_at: datetime | None = None
+    last_used_at: datetime | None = None
+    revoked_at: datetime | None = None
 
 
 class Folder(BaseModel):

@@ -14,22 +14,32 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from ..errors import (
+    BadRequestError,
     ConflictError,
+    CredentialError,
+    ForbiddenError,
     MailboxApiError,
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
     ProviderError,
+    SetupRequiredError,
+    UnauthorizedError,
 )
 from .schemas import ErrorResponse
 
 # Most specific first: the first matching class decides.
 STATUS: list[tuple[type[MailboxApiError], int]] = [
+    (BadRequestError, 400),
+    (UnauthorizedError, 401),
+    (ForbiddenError, 403),
     (NotFoundError, 404),
     (ConflictError, 409),
     (NotSupportedError, 501),
     (ProviderAuthError, 502),
     (ProviderError, 502),
+    (CredentialError, 500),
+    (SetupRequiredError, 503),
 ]
 
 # Documented on every protected route, so generated clients know the shape.
@@ -37,10 +47,11 @@ DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
     status: {"model": ErrorResponse, "description": text}
     for status, text in {
         401: "Missing or wrong bearer token",
+        403: "The caller lacks the right for this operation",
         404: "Account or resource not found",
         501: "The provider cannot do this",
         502: "The provider failed or rejected the credentials",
-        503: "The API key is not configured on the server",
+        503: "No user and no admin key exist yet",
     }.items()
 }
 
@@ -55,7 +66,9 @@ def status_of(error: MailboxApiError) -> int:
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(MailboxApiError)
     async def _mailbox_api_error(_: Request, exc: MailboxApiError) -> JSONResponse:
-        return error_response(status_of(exc), exc.code, exc.message)
+        status = status_of(exc)
+        headers = {"WWW-Authenticate": "Bearer"} if status == 401 else None
+        return error_response(status, exc.code, exc.message, headers)
 
     # Framework errors (auth, unknown route) get the same envelope, so a client
     # parses one error shape. Request validation keeps FastAPI's 422 format,
