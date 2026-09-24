@@ -87,7 +87,7 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **Sending over SMTP (6.4)**, done; reply and forward by reference, `forward_as`,
   `\Answered` and `$Forwarded` on the original (6.4)
 - Drafts
-- `Idempotency-Key` on send
+- **`Idempotency-Key` on send (6.4)**, done
 
 ## Phase 3 – MCP server and container
 

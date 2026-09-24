@@ -36,6 +36,7 @@ from ..data.providers import MailProvider
 from ..errors import BadRequestError, ConflictError, MailboxApiError, NotFoundError
 from .access import Access
 from .accounts import AccountService
+from .idempotency import Idempotency
 from .sync import SyncService
 
 T = TypeVar("T")
@@ -64,9 +65,12 @@ class _Chunk:
 class MailboxService:
     """Callers see our stable message ids (``sync``), providers their own."""
 
-    def __init__(self, accounts: AccountService, sync: SyncService) -> None:
+    def __init__(
+        self, accounts: AccountService, sync: SyncService, idempotency: Idempotency
+    ) -> None:
         self._accounts = accounts
         self._sync = sync
+        self._idempotency = idempotency
 
     async def list_folders(self, access: Access, account_id: str) -> list[Folder]:
         access.require("list_folders", account_id)
@@ -253,11 +257,26 @@ class MailboxService:
             raise outcome
 
     async def send_message(
-        self, access: Access, account_id: str, message: OutgoingMessage
+        self,
+        access: Access,
+        account_id: str,
+        message: OutgoingMessage,
+        idempotency_key: str | None = None,
     ) -> SendResult:
         """Send from the account's address, with a fresh Date and
-        Message-ID. Its own right: sending cannot be taken back."""
+        Message-ID. Its own right: sending cannot be taken back. With an
+        ``idempotency_key`` a retry returns the first result."""
         access.require("send_message", account_id)
+        return await self._idempotency.run(
+            account_id,
+            idempotency_key,
+            "send_message",
+            message,
+            lambda: self._send(account_id, message),
+            SendResult,
+        )
+
+    async def _send(self, account_id: str, message: OutgoingMessage) -> SendResult:
         account = self._accounts.record(account_id)
         message_id = mime.new_message_id(account.email)
         raw = mime.compose(

@@ -31,8 +31,10 @@ from .data.storage import (
     AccountRepository,
     CredentialRepository,
     Database,
+    IdempotencyRepository,
     InMemoryAccountRepository,
     InMemoryCredentialRepository,
+    InMemoryIdempotencyRepository,
     InMemoryKeyRepository,
     InMemoryMessageIndexRepository,
     InMemoryRoleRepository,
@@ -43,6 +45,7 @@ from .data.storage import (
     RoleRepository,
     SqliteAccountRepository,
     SqliteCredentialRepository,
+    SqliteIdempotencyRepository,
     SqliteKeyRepository,
     SqliteMessageIndexRepository,
     SqliteRoleRepository,
@@ -54,6 +57,7 @@ from .data.storage import (
 from .domain.accounts import AccountService
 from .domain.auth import AuthService
 from .domain.discovery import DiscoveryService
+from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
 from .domain.sync import SyncService
 from .domain.users import UserService
@@ -91,6 +95,7 @@ def build_services(
     key_repo: KeyRepository
     credential_repo: CredentialRepository
     index_repo: MessageIndexRepository
+    idempotency_repo: IdempotencyRepository
     db: Database | None = None
     if settings.storage == "memory":
         account_repo = InMemoryAccountRepository()
@@ -100,6 +105,7 @@ def build_services(
         key_repo = InMemoryKeyRepository()
         credential_repo = InMemoryCredentialRepository()
         index_repo = InMemoryMessageIndexRepository()
+        idempotency_repo = InMemoryIdempotencyRepository()
     else:
         db = Database(settings.database_path)
         account_repo = SqliteAccountRepository(db)
@@ -109,6 +115,7 @@ def build_services(
         key_repo = SqliteKeyRepository(db)
         credential_repo = SqliteCredentialRepository(db)
         index_repo = SqliteMessageIndexRepository(db)
+        idempotency_repo = SqliteIdempotencyRepository(db)
     vault = CredentialVault(key_repo, credential_repo, key_provider(settings))
     admin_key = settings.api_key.get_secret_value() if settings.api_key else None
     accounts = AccountService(account_repo, vault, provider_factory, index_repo)
@@ -118,7 +125,7 @@ def build_services(
         accounts=accounts,
         auth=auth,
         users=UserService(user_repo, role_repo, token_repo, accounts, auth),
-        mailbox=MailboxService(accounts, sync),
+        mailbox=MailboxService(accounts, sync, Idempotency(idempotency_repo)),
         discovery=discovery or build_discovery(settings),
         sync=sync,
         worker=(

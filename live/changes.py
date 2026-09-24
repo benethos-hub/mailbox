@@ -310,16 +310,17 @@ def main() -> int:
         provider = services.accounts.provider(account_id)
         answer: dict[str, Any] = {}
 
+        send_url = f"/v1/accounts/{sender_id}/send"
+        # Only ever to the other test account.
+        outgoing = {
+            "to": [{"email": receiver["email"]}],
+            "subject": subject,
+            "text": KEPT_TEXT if keep else TEXT,
+        }
+        once = {"Idempotency-Key": f"live-{token}"}
+
         def send() -> None:
-            # Only ever to the other test account.
-            response = client.post(
-                f"/v1/accounts/{sender_id}/send",
-                json={
-                    "to": [{"email": receiver["email"]}],
-                    "subject": subject,
-                    "text": KEPT_TEXT if keep else TEXT,
-                },
-            )
+            response = client.post(send_url, json=outgoing, headers=once)
             answer["status"], answer["body"] = response.status_code, response.json()
 
         try:
@@ -332,6 +333,12 @@ def main() -> int:
             "POST send: the server accepted it",
             answer.get("status") == 200 and body.get("refused") == [],
             f"{answer.get('status')} {body.get('error', '')}",
+        )
+        retry = client.post(send_url, json=outgoing, headers=once)
+        run.check(
+            "a retry with the same Idempotency-Key returns the first result",
+            retry.status_code == 200 and retry.json() == body,
+            str(retry.status_code),
         )
         sent_copy_id = body.get("sent_copy_id")
         outbox = OtherClient(env, sender)

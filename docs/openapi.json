@@ -3584,6 +3584,26 @@
               "type": "string",
               "title": "Account Id"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`.",
+              "title": "Idempotency-Key"
+            },
+            "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`."
           }
         ],
         "requestBody": {
