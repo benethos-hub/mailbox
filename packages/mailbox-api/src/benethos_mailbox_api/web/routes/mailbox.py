@@ -7,7 +7,15 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Query, Response
 
-from ...data.models import Folder, Message, MessageSummary, MessageUpdate, Page
+from ...data.models import (
+    BatchResult,
+    Folder,
+    Message,
+    MessageBatch,
+    MessageSummary,
+    MessageUpdate,
+    Page,
+)
 from ..deps import Caller, Mailbox
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
@@ -59,6 +67,16 @@ async def update_message(
 ) -> MessageSummary:
     """Mark read or unread, star, set keywords. Fields left out stay."""
     return await mailbox.update_message(caller, account_id, message_id, changes)
+
+
+@router.post("/messages/batch")
+async def batch_messages(
+    account_id: str, batch: MessageBatch, caller: Caller, mailbox: Mailbox
+) -> BatchResult:
+    """One action for up to 100 messages, with a result per id. Needs the
+    right of the single operation too: `update_message`, `delete_message`
+    or, with `permanent`, `delete_message_permanent`."""
+    return await mailbox.batch_messages(caller, account_id, batch)
 
 
 @router.delete("/messages/{message_id}", status_code=204)

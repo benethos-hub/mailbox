@@ -428,6 +428,23 @@ def main() -> int:
             back.status_code == 200 and back.json().get("subject") == subject,
         )
 
+        batch = client.post(
+            f"/v1/accounts/{account_id}/messages/batch",
+            json={
+                "action": "update",
+                "ids": [message_id, "msg_does_not_exist"],
+                "changes": {"starred": True},
+            },
+        )
+        outcomes = [r["ok"] for r in batch.json().get("results", [])]
+        run.check(
+            "a batch answers per id",
+            batch.status_code == 200
+            and outcomes == [True, False]
+            and "\\Flagged" in other.flags("INBOX", subject),
+            f"{batch.status_code} {outcomes}",
+        )
+
         if not keep:
             url = f"/v1/accounts/{account_id}/messages/{message_id}"
             trash = other.trash_folder()

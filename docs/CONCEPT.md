@@ -882,8 +882,8 @@ with the role
   |---|---|
   | `accounts.read` | `list_accounts`, `get_account` |
   | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes` |
-  | `mail.write` | `update_message`, `batch_messages` (update and move only), `delete_message` to trash, `create_folder`, `update_folder` |
-  | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `batch_messages` with delete, `delete_folder` |
+  | `mail.write` | `update_message`, `delete_message` to trash, `batch_messages`, `create_folder`, `update_folder` |
+  | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
@@ -899,7 +899,9 @@ with the role
   grants of its roles. Default deny.
 - **Check per request.** Credential → user → the route's `operationId` and
   the `account_id` from the path against the effective rights. Operations
-  that carry an action in the body (`batch_messages`) are checked per action.
+  that carry an action in the body (`batch_messages`) are checked per action:
+  a batch needs `batch_messages` and the right of the single operation
+  (`update_message`, `delete_message` or `delete_message_permanent`).
 - **Cross-account operations filter instead of failing.** `list_accounts`
   and `GET /v1/changes` return only accounts the user has a grant for.
 - **No existence leak.** An account the user has no grant for answers `404`,

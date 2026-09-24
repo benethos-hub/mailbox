@@ -12,6 +12,7 @@ from benethos_mailbox_api.main import Services
 
 from .conftest import bearer_for
 from .imap_fake import FakeFolder, FakeMailBox
+from .provider_ops import delete
 from .test_imap import provider, server  # noqa: F401 - the fixture
 
 MESSAGE = mappers.message_id("INBOX", 7, 3)
@@ -27,7 +28,7 @@ def with_trash(server: FakeMailBox) -> FakeMailBox:  # noqa: F811
 
 
 async def test_into_the_trash(with_trash: FakeMailBox) -> None:
-    trashed = await provider(with_trash).delete_message(MESSAGE, permanent=False)
+    trashed = await delete(provider(with_trash), MESSAGE, permanent=False)
     assert trashed is not None
     assert trashed.folder_ids == [mappers.folder_id("Trash")]
     assert trashed.subject == "Invoice 3"
@@ -37,17 +38,17 @@ async def test_into_the_trash(with_trash: FakeMailBox) -> None:
 
 async def test_from_the_trash_only_for_good(with_trash: FakeMailBox) -> None:
     imap = provider(with_trash)
-    trashed = await imap.delete_message(MESSAGE, permanent=False)
+    trashed = await delete(imap, MESSAGE, permanent=False)
     assert trashed is not None
     with pytest.raises(ConflictError, match="in the trash already"):
-        await imap.delete_message(trashed.id, permanent=False)
-    assert await imap.delete_message(trashed.id, permanent=True) is None
+        await delete(imap, trashed.id, permanent=False)
+    assert await delete(imap, trashed.id, permanent=True) is None
     assert with_trash.folders["Trash"].messages == {}
 
 
 async def test_no_trash_no_deletion(server: FakeMailBox) -> None:  # noqa: F811
     with pytest.raises(ConflictError, match="no trash folder"):
-        await provider(server).delete_message(MESSAGE, permanent=False)
+        await delete(provider(server), MESSAGE, permanent=False)
     assert 3 in server.folders["INBOX"].messages
 
 
@@ -55,7 +56,7 @@ async def test_for_good_only_this_message(server: FakeMailBox) -> None:  # noqa:
     # Another client marked a message deleted and has not expunged yet.
     raw, _ = server.folders["INBOX"].messages[4]
     server.folders["INBOX"].messages[4] = (raw, ("\\Deleted",))
-    assert await provider(server).delete_message(MESSAGE, permanent=True) is None
+    assert await delete(provider(server), MESSAGE, permanent=True) is None
     assert 3 not in server.folders["INBOX"].messages
     assert 4 in server.folders["INBOX"].messages
     assert ("expunge", (3,)) in server.calls
@@ -64,7 +65,7 @@ async def test_for_good_only_this_message(server: FakeMailBox) -> None:  # noqa:
 async def test_for_good_needs_uidplus(server: FakeMailBox) -> None:  # noqa: F811
     server.announced = ["IMAP4REV1", "MOVE"]
     with pytest.raises(NotSupportedError, match="UIDPLUS"):
-        await provider(server).delete_message(MESSAGE, permanent=True)
+        await delete(provider(server), MESSAGE, permanent=True)
     assert 3 in server.folders["INBOX"].messages
 
 

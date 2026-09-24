@@ -47,6 +47,7 @@ from . import mappers
 from .client import ImapServer, ImapSession, SearchCriteria
 
 T = TypeVar("T")
+R = TypeVar("R")
 
 SessionFactory = Callable[[ImapServer], ImapSession]
 
@@ -170,15 +171,53 @@ class ImapProvider:
     async def get_raw(self, message_id: str) -> bytes:
         return await self._run(lambda: self._get_raw(message_id))
 
-    async def update_message(
-        self, message_id: str, changes: MessageUpdate
-    ) -> MessageSummary:
-        return await self._run(lambda: self._update_message(message_id, changes))
+    async def update_messages(
+        self, message_ids: list[str], changes: MessageUpdate
+    ) -> dict[str, MessageSummary | MailboxApiError]:
+        return await self._per_folder(
+            message_ids,
+            lambda folder, validity, uids: self._update_in_folder(
+                folder, validity, uids, changes
+            ),
+        )
 
-    async def delete_message(
-        self, message_id: str, permanent: bool
-    ) -> MessageSummary | None:
-        return await self._run(lambda: self._delete_message(message_id, permanent))
+    async def delete_messages(
+        self, message_ids: list[str], permanent: bool
+    ) -> dict[str, MessageSummary | None | MailboxApiError]:
+        return await self._per_folder(
+            message_ids,
+            lambda folder, validity, uids: self._delete_in_folder(
+                folder, validity, uids, permanent
+            ),
+        )
+
+    async def _per_folder(
+        self,
+        message_ids: list[str],
+        work: Callable[[str, int, list[int]], dict[int, R | MailboxApiError]],
+    ) -> dict[str, R | MailboxApiError]:
+        """Run ``work`` once per folder, each under the lock. A failure of
+        the connection or the login stops everything; any other failure
+        answers for that folder's messages only."""
+        results: dict[str, R | MailboxApiError] = {}
+        folders: dict[tuple[str, int], dict[int, str]] = {}
+        for message_id in message_ids:
+            try:
+                folder, validity, uid = mappers.parse_message_id(message_id)
+            except NotFoundError as exc:
+                results[message_id] = exc
+                continue
+            folders.setdefault((folder, validity), {})[uid] = message_id
+        for (folder, validity), by_uid in folders.items():
+            try:
+                done = await self._run(partial(work, folder, validity, list(by_uid)))
+            except (ProviderAuthError, ProviderUnavailableError):
+                raise
+            except MailboxApiError as exc:
+                done = dict.fromkeys(by_uid, exc)
+            for uid, outcome in done.items():
+                results[by_uid[uid]] = outcome
+        return results
 
     async def folder_states(self) -> dict[str, str]:
         return await self._run(self._folder_states)
@@ -280,33 +319,56 @@ class ImapProvider:
             data=part.payload,
         )
 
-    def _update_message(
-        self, message_id: str, changes: MessageUpdate
-    ) -> MessageSummary:
-        folder, validity, uid, found, permanent = self._open_writable(message_id)
-        target = self._move_target(changes.folder_ids, folder)
-        add, remove = mappers.flag_changes(found.flags, changes, permanent)
-        if add or remove:
-            self._session.store_flags(uid, add, remove)
-            found = self._session.fetch_headers([uid])[0]
-        if target is None:
-            return mappers.to_summary(found, folder, validity)
-        moved = self._move(uid, target, mappers.message_id_header(found))
-        if moved is None:
-            # Moved, but not to be found at once. The next sync follows it.
-            summary = mappers.to_summary(found, folder, validity)
-            return summary.model_copy(
-                update={"folder_ids": [mappers.folder_id(target)]}
-            )
-        return moved
+    # --- changing messages, one folder at a time ------------------------------------
 
-    def _delete_message(
-        self, message_id: str, permanent: bool
-    ) -> MessageSummary | None:
-        folder, _, uid, found, _ = self._open_writable(message_id)
+    def _update_in_folder(
+        self, folder: str, validity: int, uids: list[int], changes: MessageUpdate
+    ) -> dict[int, MessageSummary | MailboxApiError]:
+        """One folder's share of an update: one SELECT, one STORE per set
+        of flag changes, one MOVE."""
+        found, permanent = self._open_writable(folder, validity, uids)
+        results = _missing(uids, found)
+        if not found:
+            return results
+        target = self._move_target(changes.folder_ids, folder)
+        plans: dict[tuple[tuple[str, ...], tuple[str, ...]], list[int]] = {}
+        for uid, message in found.items():
+            add, remove = mappers.flag_changes(message.flags, changes, permanent)
+            if add or remove:
+                plans.setdefault((tuple(add), tuple(remove)), []).append(uid)
+        for (to_add, to_remove), plan_uids in plans.items():
+            self._session.store_flags(plan_uids, list(to_add), list(to_remove))
+        if plans:
+            found = {int(m.uid): m for m in self._session.fetch_headers(list(found))}
+        if target is None:
+            results.update(
+                {
+                    uid: mappers.to_summary(m, folder, validity)
+                    for uid, m in found.items()
+                }
+            )
+            return results
+        moved = self._move(found, target)
+        for uid, message in found.items():
+            # Not found in the target at once: the next sync follows it.
+            results[uid] = moved.get(uid) or mappers.to_summary(
+                message, folder, validity
+            ).model_copy(update={"folder_ids": [mappers.folder_id(target)]})
+        return results
+
+    def _delete_in_folder(
+        self, folder: str, validity: int, uids: list[int], permanent: bool
+    ) -> dict[int, MessageSummary | None | MailboxApiError]:
+        found, _ = self._open_writable(folder, validity, uids)
+        results: dict[int, MessageSummary | None | MailboxApiError] = dict(
+            _missing(uids, found)
+        )
+        if not found:
+            return results
         if permanent:
-            self._session.expunge(uid)
-            return None
+            self._session.expunge(list(found))
+            results.update({uid: None for uid in found})
+            return results
         trash = next(
             (
                 mappers.folder_name(f.id)
@@ -323,31 +385,41 @@ class ImapProvider:
             raise ConflictError(
                 "the message is in the trash already: delete with permanent=true"
             )
-        moved = self._move(uid, trash, mappers.message_id_header(found))
-        return moved
+        moved = self._move(found, trash)
+        results.update({uid: moved.get(uid) for uid in found})
+        return results
 
     def _open_writable(
-        self, message_id: str
-    ) -> tuple[str, int, int, Any, frozenset[str]]:
-        """Select the message's folder read-write and fetch its headers."""
-        folder, validity, uid = mappers.parse_message_id(message_id)
+        self, folder: str, validity: int, uids: list[int]
+    ) -> tuple[dict[int, Any], frozenset[str]]:
+        """Select a folder read-write and fetch the headers of ``uids``.
+        None found when the folder was renumbered."""
         current, permanent = self._session.select_writable(folder)
-        found = self._session.fetch_headers([uid]) if current == validity else []
-        if not found:
-            raise NotFoundError(f"message {message_id} not found")
-        return folder, validity, uid, found[0], permanent
+        if current != validity:
+            return {}, permanent
+        found = {int(m.uid): m for m in self._session.fetch_headers(uids)}
+        return found, permanent
 
-    def _move(self, uid: int, target: str, header: str | None) -> MessageSummary | None:
-        """Move one message of the selected folder. Its summary in ``target``,
-        or None if it cannot be found there at once."""
-        new_uid = self._session.move(uid, target)
+    def _move(self, found: dict[int, Any], target: str) -> dict[int, MessageSummary]:
+        """Move messages of the selected folder with one command. Their
+        summaries in ``target``, for those found there at once."""
+        new_uids = self._session.move(list(found), target)
         target_validity = self._session.select(target)
-        if new_uid is None and header:
-            # No COPYUID: find it by its Message-ID, if that is unambiguous.
-            matches = self._session.search_message_id(header)
-            new_uid = matches[0] if len(matches) == 1 else None
-        moved = self._session.fetch_headers([new_uid]) if new_uid else []
-        return mappers.to_summary(moved[0], target, target_validity) if moved else None
+        for uid, message in found.items():
+            header = mappers.message_id_header(message)
+            if uid not in new_uids and header:
+                # No COPYUID: find it by its Message-ID, if that is unambiguous.
+                matches = self._session.search_message_id(header)
+                if len(matches) == 1:
+                    new_uids[uid] = matches[0]
+        fetched = {
+            int(m.uid): m for m in self._session.fetch_headers(list(new_uids.values()))
+        }
+        return {
+            uid: mappers.to_summary(fetched[new], target, target_validity)
+            for uid, new in new_uids.items()
+            if new in fetched
+        }
 
     def _move_target(self, folder_ids: list[str] | None, current: str) -> str | None:
         """The folder to move to, or None to stay."""
@@ -501,3 +573,10 @@ class ImapProvider:
         else:
             password = self._credentials("password")
             session.login(self._username, password.get_secret_value())
+
+
+def _missing(
+    uids: list[int], found: dict[int, Any]
+) -> dict[int, MessageSummary | MailboxApiError]:
+    """``NotFoundError`` for every UID the folder no longer holds."""
+    return {uid: NotFoundError("message not found") for uid in uids if uid not in found}
