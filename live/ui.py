@@ -3,10 +3,11 @@
     uv run python live/ui.py
 
 Starts a service of its own with a throwaway database, as mcp_stdio.py
-does, adds the first two test accounts through the API, and then uses the
-UI the way a browser does: signs in with the admin key, opens the pages
-and follows their forms. Nothing in the mailboxes is written. Credentials
-and mail content are never printed.
+does, adds the first test account through the API, and then uses the UI
+the way a browser does: signs in with the admin key, connects the second
+test account through discovery and the form, opens the pages and follows
+their forms. Nothing in the mailboxes is written. Credentials and mail
+content are never printed.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from pathlib import Path
 import httpx
 from mcp_stdio import free_port, service_env, start_service
 from register import register
-from smoke import ENV_FILE, Run, accounts, read_env
+from smoke import ENV_FILE, Run, accounts, imap_settings, read_env
 
 
 def sign_in(browser: httpx.Client, token: str) -> bool:
@@ -49,6 +50,64 @@ def check_frame(run: Run, browser: httpx.Client, emails: list[str]) -> None:
     )
 
 
+def csrf_of(html: str) -> str:
+    found = re.search(r'name="csrf_token" value="([^"]+)"', html)
+    return found.group(1) if found else ""
+
+
+def check_accounts(
+    run: Run, browser: httpx.Client, env: dict[str, str], account: dict[str, str]
+) -> str | None:
+    """The second test account, connected through the UI; its id."""
+    csrf = csrf_of(browser.get("/ui/accounts").text)
+    found = browser.post(
+        "/ui/accounts/discover", data={"csrf_token": csrf, "email": account["email"]}
+    )
+    run.check(
+        "discovery answers on the page",
+        found.status_code == 200 and "What the sources answered" in found.text,
+    )
+    host = re.search(r'name="host" value="([^"]*)"', found.text)
+    fields = {
+        key: str(value)
+        for key, value in imap_settings(
+            env, account, {"host": host.group(1) if host else ""}
+        ).items()
+    }
+    created = browser.post(
+        "/ui/accounts",
+        data={
+            "csrf_token": csrf,
+            "email": account["email"],
+            "provider": "imap",
+            "password": account["password"],
+            **fields,
+        },
+    )
+    account_id = created.url.path.rpartition("/")[2]
+    if not run.check(
+        "connect through the form",
+        created.status_code == 200 and account_id.startswith("acc_"),
+        "connected" if "connected." in created.text else "not connected",
+    ):
+        return None
+    listed = browser.get("/ui/accounts").text
+    run.check("both test accounts in the list", listed.count("/ui/accounts/acc_") >= 2)
+    verified = browser.post(
+        f"/ui/accounts/{account_id}/verify", data={"csrf_token": csrf}
+    )
+    run.check(
+        "verify signs in to the provider",
+        "Status: connected." in verified.text,
+    )
+    renamed = browser.post(
+        f"/ui/accounts/{account_id}",
+        data={"csrf_token": csrf, "display_name": "UI live check"},
+    )
+    run.check("rename", "Saved." in renamed.text and "UI live check" in renamed.text)
+    return account_id
+
+
 def main() -> int:
     env = read_env(ENV_FILE)
     test_accounts = accounts(env)[:2]
@@ -62,16 +121,18 @@ def main() -> int:
         with httpx.Client(
             base_url=url, headers={"Authorization": f"Bearer {admin_key}"}, timeout=60
         ) as client:
-            for number, account in enumerate(test_accounts, 1):
-                account_id, outcome = register(client, env, account)
-                if not run.check(
-                    f"account {number} in the service", account_id is not None, outcome
-                ):
-                    return 1
+            account_id, outcome = register(client, env, test_accounts[0])
+            if not run.check(
+                "account 1 in the service", account_id is not None, outcome
+            ):
+                return 1
         with httpx.Client(base_url=url, timeout=60, follow_redirects=True) as browser:
             print("\n== signing in")
             if not run.check("sign in with the admin key", sign_in(browser, admin_key)):
                 return 1
+            print("\n== accounts")
+            check_accounts(run, browser, env, test_accounts[1])
+            print("\n== the frame")
             check_frame(run, browser, [a["email"].lower() for a in test_accounts])
     finally:
         process.terminate()

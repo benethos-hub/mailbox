@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import csrf_field with context %}
+{% from "components/connection.html" import connection_fields %}
+{% block title %}Connect an account · {{ APP_NAME }}{% endblock %}
+{% block heading %}Connect an account{% endblock %}
+{% block subheading %}<div class="sub">Look up how to reach an address, then sign in with its password</div>{% endblock %}
+{% block content %}
+<section class="card">
+  <header><h2>1. The address</h2></header>
+  <div class="body">
+    <form class="toolbar" method="post" action="/ui/accounts/discover">
+      {{ csrf_field() }}
+      <input class="grow" name="email" type="email" value="{{ email }}" placeholder="name@example.org" required />
+      <button class="primary" type="submit">Look up</button>
+    </form>
+    <p class="hint faint">Asks public sources how the address's provider is reached. No password leaves this service.</p>
+  </div>
+</section>
+
+{% if discovery %}
+{% for hint in discovery.hints %}
+<div class="notice warn">{{ hint.text }}{% if hint.url %} <a href="{{ hint.url }}" rel="noreferrer">More</a>{% endif %}</div>
+{% endfor %}
+
+{% for candidate in usable %}
+<section class="card">
+  <header>
+    <h2>2. {{ candidate.name or discovery.domain }}</h2>
+    <span class="meta">found by {{ candidate.source.value }}</span>
+    <span class="right">
+      {% if candidate.confirmed %}<span class="tag ok">trusted source</span>{% else %}<span class="tag warn">check these servers</span>{% endif %}
+    </span>
+  </header>
+  <div class="body">
+    {% if not candidate.confirmed %}
+    <div class="notice warn">This answer does not come from the domain itself or from a known provider. Connect only if the servers below are really your provider's.</div>
+    {% endif %}
+    {% for hint in candidate.hints %}
+    <p class="muted">{{ hint.text }}{% if hint.url %} <a href="{{ hint.url }}" rel="noreferrer">More</a>{% endif %}</p>
+    {% endfor %}
+    <form method="post" action="/ui/accounts">
+      {{ csrf_field() }}
+      <input type="hidden" name="email" value="{{ discovery.email }}" />
+      <input type="hidden" name="provider" value="{{ candidate.provider.value }}" />
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-display_name-{{ loop.index }}">Display name</label>
+          <input id="f-display_name-{{ loop.index }}" name="display_name" placeholder="optional" />
+        </div>
+        <div class="field">
+          <label for="f-password-{{ loop.index }}">{{ "App password" if candidate.credential.value == "app_password" else "Password" }}</label>
+          <input id="f-password-{{ loop.index }}" name="password" type="password" autocomplete="new-password" required />
+          <span class="hint">Tried against the provider first, then stored encrypted. Never shown again.</span>
+        </div>
+      </div>
+      <details class="fold">
+        <summary>Servers</summary>
+        {{ connection_fields(candidate.settings, security) }}
+      </details>
+      <div class="form-actions"><button class="primary" type="submit">Connect</button></div>
+    </form>
+  </div>
+</section>
+{% endfor %}
+
+<section class="card">
+  <header><h2>{{ "Or set it up by hand" if usable else "2. Set it up by hand" }}</h2></header>
+  <div class="body">
+    {% if not usable %}<p class="muted">No way to connect {{ discovery.email }} over IMAP was found. Enter your provider's servers.</p>{% endif %}
+    <form method="post" action="/ui/accounts">
+      {{ csrf_field() }}
+      <input type="hidden" name="email" value="{{ discovery.email }}" />
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-display_name">Display name</label>
+          <input id="f-display_name" name="display_name" placeholder="optional" />
+        </div>
+        <div class="field">
+          <label for="f-password">Password</label>
+          <input id="f-password" name="password" type="password" autocomplete="new-password" required />
+        </div>
+      </div>
+      <div class="fold">{{ connection_fields({}, security) }}</div>
+      <div class="form-actions"><button type="submit">Connect</button></div>
+    </form>
+  </div>
+</section>
+
+<details class="card fold">
+  <summary class="body">What the sources answered</summary>
+  <div class="body tight">
+    <table>
+      <tbody>
+        {% for report in discovery.sources %}
+        <tr><td>{{ report.source.value }}</td><td>{{ report.outcome.value }}</td><td class="muted">{{ report.message | or_missing }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
+{% endif %}
+{% endblock %}

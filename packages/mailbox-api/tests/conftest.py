@@ -136,3 +136,12 @@ def bearer_for(
 def create_account(accounts: AccountService, *args: Any, **kwargs: Any) -> Account:
     """``AccountService.create`` as the admin, for tests that are not async."""
     return asyncio.run(accounts.create(ADMIN, *args, **kwargs))
+
+
+@pytest.fixture
+def ui(app_client: TestClient) -> TestClient:
+    """A browser signed in to the configuration UI with the admin key."""
+    from .ui_helpers import sign_in
+
+    sign_in(app_client)
+    return app_client
