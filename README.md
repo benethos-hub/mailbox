@@ -3,9 +3,11 @@
 One REST API for all your mailboxes, whichever provider they are at, with
 an MCP server on top so an AI assistant can work with them too.
 
-> **Status: 0.1.0, pre-alpha.** Reads IMAP accounts: folders, messages,
-> search, attachments, raw source, across accounts, with autodiscovery from
-> the address. Nothing is sent or changed yet. What comes next and in which
+> **Status: 0.1.0, pre-alpha.** IMAP accounts with autodiscovery from the
+> address: reading (folders, messages, search, attachments, raw source,
+> across accounts), stable message ids kept by a background sync, changing
+> and moving messages, folders, and sending over SMTP with reply, forward
+> and `Idempotency-Key`. Drafts are next. What comes next and in which
 > order:
 > [docs/ROADMAP.md](docs/ROADMAP.md). The design behind it:
 > [docs/CONCEPT.md](docs/CONCEPT.md).
