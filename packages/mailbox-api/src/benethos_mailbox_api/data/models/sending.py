@@ -46,8 +46,9 @@ class MessageReference(BaseModel):
     )
 
 
-class OutgoingMessage(BaseModel):
-    """A message to send. The service sets From, Date and Message-ID."""
+class DraftMessage(BaseModel):
+    """A draft: a message that may still lack recipients. The service sets
+    From, Date and Message-ID."""
 
     reference: MessageReference | None = None
     to: list[Recipient] = Field(default_factory=list)
@@ -62,12 +63,8 @@ class OutgoingMessage(BaseModel):
     attachments: list[OutgoingAttachment] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def _limits(self) -> OutgoingMessage:
-        recipients = len(self.to) + len(self.cc) + len(self.bcc)
-        replying = self.reference is not None and self.reference.action != "forward"
-        if recipients == 0 and not replying:
-            raise ValueError("a message needs at least one recipient")
-        if recipients > MAX_RECIPIENTS:
+    def _limits(self) -> DraftMessage:
+        if len(self.recipients()) > MAX_RECIPIENTS:
             raise ValueError(f"at most {MAX_RECIPIENTS} recipients")
         if sum(len(a.data) for a in self.attachments) > MAX_ATTACHMENT_BYTES:
             raise ValueError("the attachments exceed 25 MB")
@@ -76,6 +73,18 @@ class OutgoingMessage(BaseModel):
     def recipients(self) -> list[str]:
         """Every address the message goes to, each once."""
         return list(dict.fromkeys(r.email for r in (*self.to, *self.cc, *self.bcc)))
+
+
+class OutgoingMessage(DraftMessage):
+    """A message to send. The service sets From, Date and Message-ID. It
+    needs a recipient, unless it is a reply: that finds one in the original."""
+
+    @model_validator(mode="after")
+    def _addressed(self) -> OutgoingMessage:
+        replying = self.reference is not None and self.reference.action != "forward"
+        if not self.recipients() and not replying:
+            raise ValueError("a message needs at least one recipient")
+        return self
 
 
 class SendResult(BaseModel):

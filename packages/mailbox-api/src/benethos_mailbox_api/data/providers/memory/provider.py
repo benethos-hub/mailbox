@@ -10,6 +10,8 @@ from ....errors import (
     NotFoundError,
     NotSupportedError,
 )
+from ...mail import convert
+from ...mail.parse import ParsedMessage
 from ...models import (
     AttachmentContent,
     Folder,
@@ -36,9 +38,13 @@ class MemoryProvider:
         self.folders = folders or [
             Folder(id="inbox", name="Inbox", role=FolderRole.INBOX),
             Folder(id="sent", name="Sent", role=FolderRole.SENT),
+            Folder(id="drafts", name="Drafts", role=FolderRole.DRAFTS),
         ]
         self.messages = messages or []
         self.attachment_data: dict[tuple[str, str], bytes] = {}
+        # The source of every stored draft, by id.
+        self.raws: dict[str, bytes] = {}
+        self._drafts_saved = 0
         # (sender, recipients, raw) of every send, for tests.
         self.outbox: list[tuple[str, list[str], bytes]] = []
 
@@ -91,6 +97,8 @@ class MemoryProvider:
 
     async def get_raw(self, message_id: str) -> bytes:
         message = await self.get_message(message_id)
+        if message.id in self.raws:
+            return self.raws[message.id]
         body = message.text_body or ""
         return f"Subject: {message.subject or ''}\r\n\r\n{body}".encode()
 
@@ -144,6 +152,54 @@ class MemoryProvider:
         )
         self.messages.append(copy)
         return SentMessage(sent_copy=MessageSummary.model_validate(copy.model_dump()))
+
+    async def list_drafts(
+        self, *, limit: int, cursor: str | None
+    ) -> Page[MessageSummary]:
+        return await self.list_messages(
+            self._drafts_folder(), limit=limit, cursor=cursor, query=None, unread=None
+        )
+
+    async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
+        drafts = self._drafts_folder()
+        old = self._draft(replaces) if replaces else None
+        parsed = ParsedMessage(raw)
+        self._drafts_saved += 1
+        draft = Message.model_validate(
+            {
+                **convert.summary_fields(parsed),
+                **convert.message_fields(parsed),
+                "id": f"draft_{self._drafts_saved}",
+                "folder_ids": [drafts],
+                "keywords": ["$draft"],
+            }
+        )
+        self.messages.append(draft)
+        self.raws[draft.id] = raw
+        if old is not None:
+            await self.delete_draft(old.id)
+        return MessageSummary.model_validate(draft.model_dump())
+
+    async def get_draft(self, draft_id: str) -> bytes:
+        return self.raws[self._draft(draft_id).id]
+
+    async def delete_draft(self, draft_id: str) -> None:
+        draft = self._draft(draft_id)
+        self.messages.remove(draft)
+        self.raws.pop(draft.id, None)
+
+    def _drafts_folder(self) -> str:
+        drafts = next((f.id for f in self.folders if f.role is FolderRole.DRAFTS), None)
+        if drafts is None:
+            raise ConflictError("the account has no drafts folder")
+        return drafts
+
+    def _draft(self, draft_id: str) -> Message:
+        drafts = self._drafts_folder()
+        for message in self.messages:
+            if message.id == draft_id and drafts in message.folder_ids:
+                return message
+        raise NotFoundError(f"draft {draft_id} not found")
 
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
         if parent_id is not None:

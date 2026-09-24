@@ -87,6 +87,28 @@ class MailProvider(Protocol):
         client would send again."""
         ...
 
+    # --- drafts, with DRAFTS ----------------------------------------------------
+    # A draft id names a message the provider keeps as a draft, on IMAP one
+    # in the folder with the drafts role. Any other id is not found, so that
+    # the draft operations reach drafts only.
+
+    async def list_drafts(
+        self, *, limit: int, cursor: str | None
+    ) -> Page[MessageSummary]: ...
+
+    async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
+        """Store a composed draft, then remove the draft it ``replaces``.
+        The draft as stored; its id may differ from ``replaces``."""
+        ...
+
+    async def get_draft(self, draft_id: str) -> bytes:
+        """The draft's source as RFC 822 bytes."""
+        ...
+
+    async def delete_draft(self, draft_id: str) -> None:
+        """Remove a draft for good, as mail clients do once it is sent."""
+        ...
+
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxApiError]:

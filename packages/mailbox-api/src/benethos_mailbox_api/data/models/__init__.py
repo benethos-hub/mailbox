@@ -32,6 +32,7 @@ from .messages import (
 )
 from .paging import AccountFailure, MessagePage, Page
 from .sending import (
+    DraftMessage,
     MessageReference,
     OutgoingAttachment,
     OutgoingMessage,
@@ -56,6 +57,7 @@ __all__ = [
     "CredentialKind",
     "Discovery",
     "DiscoverySourceName",
+    "DraftMessage",
     "Folder",
     "FolderCreate",
     "FolderRole",

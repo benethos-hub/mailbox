@@ -9,12 +9,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from email import message_from_bytes
 from email.message import EmailMessage
-from email.parser import BytesHeaderParser
+from email.parser import BytesHeaderParser, BytesParser
 from email.policy import SMTP, default
-from email.utils import format_datetime, formataddr, make_msgid
+from email.utils import format_datetime, formataddr, getaddresses, make_msgid
 from html import escape
 
-from ..models import Address, Message, OutgoingMessage, Recipient
+from ..models import Address, DraftMessage, Message, Recipient
+
+# Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
+REFERENCE_HEADER = "X-Mailbox-Api-Reference"
 
 
 def new_message_id(sender_email: str) -> str:
@@ -35,20 +38,30 @@ class Extras:
 
 
 def message(
-    message: OutgoingMessage,
+    message: DraftMessage,
     sender: Recipient,
     date: datetime,
     message_id: str,
     extras: Extras = Extras(),  # noqa: B008 - frozen, shared safely
+    *,
+    draft: bool = False,
+    reference: str | None = None,
 ) -> bytes:
     """The message with CRLF line ends, ready for SMTP and IMAP APPEND.
-    Bcc recipients appear in no header."""
+    Bcc recipients appear in no header.
+
+    A ``draft`` keeps its Bcc recipients, and ``reference`` in a header of
+    its own; ``outgoing`` takes both out again before the draft is sent."""
     mail = EmailMessage(policy=SMTP)
     mail["From"] = _address(sender)
     if message.to:
         mail["To"] = ", ".join(_address(r) for r in message.to)
     if message.cc:
         mail["Cc"] = ", ".join(_address(r) for r in message.cc)
+    if draft and message.bcc:
+        mail["Bcc"] = ", ".join(_address(r) for r in message.bcc)
+    if draft and reference:
+        mail[REFERENCE_HEADER] = reference
     if message.reply_to:
         mail["Reply-To"] = ", ".join(_address(r) for r in message.reply_to)
     mail["Subject"] = message.subject
@@ -71,6 +84,21 @@ def message(
         original = message_from_bytes(extras.attached_message, policy=default)
         mail.add_attachment(original, filename="forwarded.eml")
     return mail.as_bytes()
+
+
+def outgoing(draft: bytes, date: datetime) -> tuple[bytes, list[str], str | None]:
+    """A stored draft made ready to send: dated ``date``, without its Bcc
+    and reference headers. Returns the bytes, every recipient once (To, Cc
+    and Bcc) and the reference the draft kept, if any."""
+    mail = BytesParser(policy=SMTP).parsebytes(draft)
+    fields = [str(v) for name in ("To", "Cc", "Bcc") for v in mail.get_all(name, [])]
+    recipients = list(dict.fromkeys(a for _, a in getaddresses(fields) if a))
+    reference = mail.get(REFERENCE_HEADER)
+    del mail["Bcc"]
+    del mail[REFERENCE_HEADER]
+    del mail["Date"]
+    mail["Date"] = format_datetime(date)
+    return mail.as_bytes(), recipients, str(reference) if reference else None
 
 
 # --- replies and forwards --------------------------------------------------------
