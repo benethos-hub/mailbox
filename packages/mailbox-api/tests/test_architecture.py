@@ -28,7 +28,8 @@ ASSEMBLY = {"main", "__main__"}
 # Web frameworks live in the web layer. main.py builds the app, so it may too.
 WEB_LIBRARIES = {"fastapi", "starlette"}
 
-# One library, one home (CLAUDE.md): the only module allowed to import each.
+# One library, one home (CLAUDE.md): the only module, or package, allowed to
+# import each.
 LIBRARY_HOMES = {
     "cryptography": f"{PACKAGE}.data.secrets.cipher",
     "keyring": f"{PACKAGE}.data.secrets.keys",
@@ -151,6 +152,6 @@ def test_each_wrapped_library_has_one_home() -> None:
     for name, path in _modules():
         for imported, line in _imports(path):
             home = LIBRARY_HOMES.get(imported.split(".")[0])
-            if home is not None and name != home:
+            if home is not None and name != home and not name.startswith(home + "."):
                 violations.append(f"{name}:{line} imports {imported}, home is {home}")
     assert not violations, "library outside its home:\n  " + "\n  ".join(violations)
