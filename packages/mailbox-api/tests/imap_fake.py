@@ -71,7 +71,14 @@ class _FolderManager:
         return ("OK", [b""])
 
     def status(self, name: str, options: list[str]) -> dict[str, int]:
-        return {"UIDVALIDITY": self._box.folders[name].uidvalidity}
+        self._box.calls.append(("status", name, tuple(options)))
+        folder = self._box.folders[name]
+        values = {
+            "UIDVALIDITY": folder.uidvalidity,
+            "UIDNEXT": max(folder.messages, default=0) + 1,
+            "MESSAGES": len(folder.messages),
+        }
+        return {k: v for k, v in values.items() if k in options}
 
 
 class _Client:
@@ -84,10 +91,15 @@ class _Client:
         self._box.calls.append(("xatom", name, arguments))
         return ("OK", [b""])
 
+    def capability(self) -> tuple[str, list[bytes]]:
+        return ("OK", [" ".join(self._box.capabilities).encode()])
+
     def uid(self, command: str, uid: str, parts: str) -> tuple[str, list[Any]]:
         self._box.calls.append(("uid", command, uid, parts))
         assert "PEEK" in parts, "a read must never set \\Seen"
         folder = self._box.folders[self._box.selected]
+        if "HEADER.FIELDS (MESSAGE-ID)" in parts:
+            return ("OK", self._message_ids(folder, uid))
         entry = folder.messages.get(int(uid))
         if entry is None:
             return ("OK", [None])
@@ -95,6 +107,53 @@ class _Client:
             "OK",
             [(f"1 (UID {uid} BODY[] {{{len(entry[0])}}}".encode(), entry[0]), b")"],
         )
+
+    def _message_ids(self, folder: FakeFolder, uids: str) -> list[Any]:
+        """Like imaplib hands them out: a (head, literal) tuple and a closing
+        part per message. ``uid_last`` puts the UID after the literal, as
+        some servers do."""
+        data: list[Any] = []
+        for number, uid in enumerate(int(u) for u in uids.split(",")):
+            entry = folder.messages.get(uid)
+            if entry is None:
+                continue
+            head, _, _ = entry[0].partition(b"\n\n")
+            block = b""
+            inside = False
+            for line in head.split(b"\n"):
+                # A header, with the lines folded into it.
+                if not line[:1].isspace():
+                    inside = line.lower().startswith(b"message-id:")
+                if inside:
+                    block += line + b"\r\n"
+            block += b"\r\n"
+            item = f"BODY[HEADER.FIELDS (MESSAGE-ID)] {{{len(block)}}}"
+            if self._box.uid_last:
+                data += [
+                    (f"{number + 1} ({item}".encode(), block),
+                    f" UID {uid})".encode(),
+                ]
+            else:
+                data += [(f"{number + 1} (UID {uid} {item}".encode(), block), b")"]
+        return data
+
+
+class _Idle:
+    """IDLE answers from a script: one list of lines per poll."""
+
+    def __init__(self, box: FakeMailBox) -> None:
+        self._box = box
+
+    def start(self) -> None:
+        self._box.calls.append(("idle", self._box.selected))
+
+    def poll(self, timeout: float) -> list[bytes]:
+        if self._box.idle_script:
+            return self._box.idle_script.pop(0)
+        return []
+
+    def stop(self) -> None:
+        self._box.calls.append(("done",))
 
 
 class FakeMailBox:
@@ -110,7 +169,16 @@ class FakeMailBox:
         self.failures: list[Exception] = []
         self.folder = _FolderManager(self)
         self.client = _Client(self)
+        self.idle = _Idle(self)
+        self.idle_script: list[list[bytes]] = []
+        self.capabilities = ["IMAP4REV1", "IDLE", "UIDPLUS"]
+        self.uid_last = False
         self.error = RuntimeError
+
+    def move(self, source: str, uid: int, target: str, new_uid: int) -> None:
+        """Another client moves a message."""
+        entry = self.folders[source].messages.pop(uid)
+        self.folders.setdefault(target, FakeFolder()).messages[new_uid] = entry
 
     # the factory signature ImapSession expects
     def __call__(self, server: Any, timeout: float) -> FakeMailBox:

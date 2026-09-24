@@ -24,7 +24,9 @@ import anyio
 from .... import __version__
 from ....errors import (
     BadRequestError,
+    MailboxApiError,
     NotFoundError,
+    NotSupportedError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
@@ -52,6 +54,9 @@ LONGEST_PAUSE = 900.0
 
 PROBE_TIMEOUT = 10.0
 
+# Message-ID headers fetched per request during a sync.
+HEADER_BATCH = 200
+
 
 def default_session(server: ImapServer) -> ImapSession:
     return ImapSession(server, client_id=CLIENT_ID)
@@ -75,7 +80,8 @@ async def probe(
 
 
 class ImapProvider:
-    capabilities = frozenset({Capability.SERVER_SEARCH})
+    # PUSH needs IDLE, which wait_for_change finds out after the login.
+    capabilities = frozenset({Capability.SERVER_SEARCH, Capability.PUSH})
 
     def __init__(
         self,
@@ -111,6 +117,10 @@ class ImapProvider:
         self._credentials = credentials
         self._session = session_factory(self._server)
         self._lock = threading.Lock()
+        # IDLE blocks its connection, so it gets one of its own.
+        self._idle_session = session_factory(self._server)
+        self._idle_lock = threading.Lock()
+        self._closing = threading.Event()
         per_minute = float(
             settings.get("max_requests_per_minute") or DEFAULT_REQUESTS_PER_MINUTE
         )
@@ -151,10 +161,40 @@ class ImapProvider:
     async def get_raw(self, message_id: str) -> bytes:
         return await self._run(lambda: self._get_raw(message_id))
 
+    async def folder_states(self) -> dict[str, str]:
+        return await self._run(self._folder_states)
+
+    async def folder_contents(self, folder_id: str) -> list[str]:
+        return await self._run(lambda: self._folder_contents(folder_id))
+
+    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+        by_place: dict[tuple[str, int], list[int]] = {}
+        for message_id in message_ids:
+            folder, validity, uid = mappers.parse_message_id(message_id)
+            by_place.setdefault((folder, validity), []).append(uid)
+        found: dict[str, str | None] = {}
+        for (folder, validity), uids in by_place.items():
+            # One request per batch, so a long first sync never holds the
+            # connection for long.
+            for start in range(0, len(uids), HEADER_BATCH):
+                batch = uids[start : start + HEADER_BATCH]
+                found.update(
+                    await self._run(
+                        partial(self._message_headers, folder, validity, batch)
+                    )
+                )
+        return found
+
+    async def wait_for_change(self, timeout: float) -> bool:
+        return await anyio.to_thread.run_sync(
+            self._wait_for_change, timeout, abandon_on_cancel=True
+        )
+
     async def verify(self) -> None:
         await anyio.to_thread.run_sync(self._verify)
 
     async def close(self) -> None:
+        self._closing.set()
         await anyio.to_thread.run_sync(self._close)
 
     # --- the sequences, each under the lock -------------------------------------
@@ -230,6 +270,57 @@ class ImapProvider:
             raise NotFoundError(f"message {message_id} not found")
         return raw
 
+    def _folder_states(self) -> dict[str, str]:
+        states = {}
+        for folder in self._list_folders():
+            validity, uidnext, count = self._session.folder_state(
+                mappers.folder_name(folder.id)
+            )
+            states[folder.id] = f"{validity}.{uidnext}.{count}"
+        return states
+
+    def _folder_contents(self, folder_id: str) -> list[str]:
+        folder = mappers.folder_name(folder_id)
+        validity = self._session.select(folder)
+        return [
+            mappers.message_id(folder, validity, uid)
+            for uid in self._session.search(SearchCriteria())
+        ]
+
+    def _message_headers(
+        self, folder: str, validity: int, uids: list[int]
+    ) -> dict[str, str | None]:
+        if self._session.select(folder) != validity:
+            return {}  # renumbered: these ids are gone
+        return {
+            mappers.message_id(folder, validity, uid): header
+            for uid, header in self._session.fetch_message_ids(uids).items()
+        }
+
+    def _wait_for_change(self, timeout: float) -> bool:
+        """IDLE on the inbox, over a connection of its own so requests are
+        not held up."""
+        with self._idle_lock:
+            if self._closing.is_set():
+                return False
+            self._check_allowed()
+            session = self._idle_session
+            try:
+                if not session.connected:
+                    self._bucket.acquire()
+                    self._login(session)
+                    if "IDLE" not in session.server_capabilities():
+                        raise NotSupportedError("the mail server does not offer IDLE")
+                    session.select(mappers.INBOX)
+                return session.idle(timeout, self._closing.is_set)
+            except ProviderAuthError:
+                session.logout()
+                self._login_rejected = True
+                raise
+            except MailboxApiError:
+                session.logout()
+                raise
+
     def _verify(self) -> None:
         with self._lock:
             self._login_rejected = False
@@ -237,7 +328,7 @@ class ImapProvider:
             self._paused_until = 0.0
             self._session.logout()
             try:
-                self._login()
+                self._login(self._session)
             except ProviderAuthError:
                 self._login_rejected = True
                 raise
@@ -245,6 +336,9 @@ class ImapProvider:
     def _close(self) -> None:
         with self._lock:
             self._session.logout()
+        # Waits for a running IDLE to notice ``_closing``, at most IDLE_STEP.
+        with self._idle_lock:
+            self._idle_session.logout()
 
     # --- plumbing ---------------------------------------------------------------
 
@@ -261,7 +355,7 @@ class ImapProvider:
                 try:
                     self._bucket.acquire()
                     if not self._session.connected:
-                        self._login()
+                        self._login(self._session)
                     result = operation()
                 except ProviderAuthError:
                     self._session.logout()
@@ -299,10 +393,10 @@ class ImapProvider:
         pause = min(LONGEST_PAUSE, FIRST_PAUSE * 2 ** (self._failures - 1))
         self._paused_until = self._clock() + pause
 
-    def _login(self) -> None:
+    def _login(self, session: ImapSession) -> None:
         if self._auth == "xoauth2":
             token = self._credentials("access_token")
-            self._session.login_oauth(self._username, token.get_secret_value())
+            session.login_oauth(self._username, token.get_secret_value())
         else:
             password = self._credentials("password")
-            self._session.login(self._username, password.get_secret_value())
+            session.login(self._username, password.get_secret_value())
