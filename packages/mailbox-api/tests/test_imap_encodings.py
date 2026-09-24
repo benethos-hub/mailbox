@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from imap_tools.folder import MailBoxFolderManager
+from imapclient import testable_imapclient
 from pydantic import SecretStr
 
 from benethos_mailbox_api.data.models import FolderRole
@@ -21,33 +21,17 @@ from .imap_fake import FakeMailBox
 # --- folder names in modified UTF-7, decoded by the real library -----------------
 
 
-class _RawListClient:
-    """Answers LIST and SELECT the way imaplib hands a server's reply over."""
-
-    def __init__(self, lines: list[bytes]) -> None:
-        self.lines = lines
-        self.selected: list[bytes | str] = []
-
-    def _simple_command(self, command: str, *args: Any) -> tuple[str, list[bytes]]:
-        return "OK", self.lines
-
-    def _untagged_response(
-        self, typ: str, data: list[bytes], command: str
-    ) -> tuple[str, list[bytes]]:
-        return typ, data
-
-    def select(self, folder: bytes | str, readonly: bool) -> tuple[str, list[bytes]]:
-        self.selected.append(folder)
-        return "OK", [b"1"]
-
-
-class _RawMailBox:
-    def __init__(self, lines: list[bytes]) -> None:
-        self.client = _RawListClient(lines)
-        self.folder = MailBoxFolderManager(self)
-
-    def login(self, *args: Any, **kwargs: Any) -> None:
-        return None
+def _raw_client(lines: list[bytes]) -> Any:
+    """The real IMAPClient over imaplib's replies as the server sent them,
+    with IMAPClient's own test double in place of the connection."""
+    client = testable_imapclient.TestableIMAPClient()
+    imap = client._imap
+    imap.login.return_value = ("OK", [b"Logged in"])
+    imap._simple_command.return_value = ("OK", [b"LIST done"])
+    imap._untagged_response.return_value = ("OK", lines)
+    imap.select.return_value = ("OK", [b"1"])
+    imap.untagged_responses = {"UIDVALIDITY": [b"1"]}
+    return client
 
 
 LIST_REPLY = [
@@ -59,13 +43,14 @@ LIST_REPLY = [
 ]
 
 
-def _session(lines: list[bytes]) -> tuple[ImapSession, _RawMailBox]:
-    box = _RawMailBox(lines)
+def _session(lines: list[bytes]) -> tuple[ImapSession, Any]:
+    client = _raw_client(lines)
     session = ImapSession(
-        ImapServer("imap.example.com", 993, "tls"), mailbox_factory=lambda s, t: box
+        ImapServer("imap.example.com", 993, "tls"),
+        client_factory=lambda s, t: client,
     )
     session.login("me", "secret")
-    return session, box
+    return session, client
 
 
 def test_folder_names_are_decoded() -> None:
@@ -90,10 +75,10 @@ def test_localised_special_folders_get_their_roles() -> None:
 
 
 def test_selecting_encodes_the_name_again() -> None:
-    session, box = _session(LIST_REPLY)
-    box.folder.status = lambda folder, options: {"UIDVALIDITY": 1}  # type: ignore[method-assign]
-    session.select("Entwürfe")
-    assert box.client.selected == [b'"Entw&APw-rfe"']
+    session, client = _session(LIST_REPLY)
+    assert session.select("Entwürfe") == 1
+    folder = client._imap.select.call_args.args[0]
+    assert folder == b'"Entw&APw-rfe"'
 
 
 def test_flags_win_over_names() -> None:
@@ -139,7 +124,7 @@ def _provider(box: FakeMailBox) -> ImapProvider:
     return ImapProvider(
         {"host": "imap.example.com", "username": "me"},
         lambda field: SecretStr("secret"),
-        session_factory=lambda s: ImapSession(s, mailbox_factory=box),
+        session_factory=lambda s: ImapSession(s, client_factory=box),
     )
 
 

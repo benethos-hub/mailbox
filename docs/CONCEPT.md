@@ -167,23 +167,29 @@ client can tell in advance.
 
 | Adapter | Covers | Library | Licence | Notes |
 |---|---|---|---|---|
-| `imap` | everything without a better API: GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, Zoho, own servers, Proton via Bridge | **imap-tools** (reading), stdlib `imaplib` underneath | Apache-2.0 | synchronous, run in a worker thread. Auth: password, app password **and XOAUTH2** |
-| `smtp` | sending for `imap`, `jmap`-less and `pop3` accounts | **aiosmtplib** | MIT | async, also XOAUTH2 |
+| `imap` | everything without a better API: GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, Zoho, own servers, Proton via Bridge | **IMAPClient** (protocol), the mail parser of **imap-tools** (messages) | BSD-3-Clause, Apache-2.0 | synchronous, run in a worker thread. Auth: password, app password **and XOAUTH2** |
+| `smtp` | sending for `imap`, `jmap`-less and `pop3` accounts | stdlib **smtplib**, for now (decided 2026-09-24) | PSF | synchronous, run in a worker thread like IMAP, also XOAUTH2 |
 | `microsoft` | Microsoft 365, Outlook.com | Microsoft Graph over **httpx** | — | OAuth 2.0, the only sensible route (5.4) |
 | `gmail` | Gmail, Google Workspace | Gmail REST API over **httpx** | — | OAuth 2.0, no Google SDK needed (5.5) |
 | `jmap` | Fastmail, Stalwart, Cyrus, any JMAP server | JMAP (RFC 8620/8621) over **httpx** | — | API token or OAuth. A second generic protocol next to IMAP (5.6) |
 | `pop3` | legacy mailboxes | stdlib **poplib** | PSF | synchronous, worker thread, reduced (5.2) |
 | `memory` | tests and development | — | — | built |
 
-### 5.1 IMAP: imap-tools, and why
+### 5.1 IMAP: IMAPClient for the protocol, imap-tools for parsing
 
-imap-tools is a mature wrapper over `imaplib` with a clean search builder
-(`AND(from_=…, date_gte=…)`), message parsing into subject / addresses /
-text / html / attachments, and folder, flag, move, copy, append and IDLE
-support. It saves writing a MIME and IMAP response parser, which is where
-most of the effort of an IMAP client goes.
+**Decided 2026-09-24:** the protocol goes through **IMAPClient**, in
+`imap/client.py`. It parses every server answer and returns any FETCH item
+as a dict, which the sync (4.1) and phase 2 (`COPYUID`, `MOVE`, `QRESYNC`)
+need. Phase 1b started on imap-tools, which offered nothing for fetching
+only the `Message-ID` header, so raw `imaplib` answers had to be parsed by
+hand.
 
-Its one drawback is that it is **synchronous**, while the API is async.
+Fetched messages are parsed by the mail parser of **imap-tools**, in
+`imap/parse.py`: subject, addresses, dates, text and HTML with broken
+charsets, attachments. It saves writing a MIME parser. Replacing it, e.g.
+with the standard library's `email`, rewrites that one module.
+
+Both are **synchronous**, while the API is async.
 Solution: one connection per account, owned by the adapter, guarded by a
 lock, every call run via `anyio.to_thread.run_sync`. IMAP connections are
 stateful (selected folder) and per account anyway, so this costs little.
@@ -1129,7 +1135,7 @@ mode, since it would put the service package into the MCP installation.
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
 | Storage | SQLite (stdlib `sqlite3` via a thread, or `aiosqlite`) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |
-| Mail | imap-tools, aiosmtplib, poplib, httpx (Gmail, Graph) |
+| Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (Gmail, Graph) |
 | MCP | `mcp` 2.x |
 | Quality | pytest, pytest-asyncio, pytest-cov (≥ 80 %), ruff, mypy, GitHub Actions |
 | Container | non-root image, compose file bound to the loopback address |
@@ -1138,7 +1144,7 @@ mode, since it would put the service package into the MCP installation.
 
 - **Offline suite is the gate.** No test reaches a mail server.
 - API tests run against the `memory` adapter through `TestClient`.
-- IMAP adapter tests use a fake `MailBox` object at the imap-tools boundary.
+- IMAP adapter tests use a fake `IMAPClient` object at the library boundary.
   Additionally a Stalwart container, which speaks IMAP, SMTP and JMAP,
   for an optional integration job (5.6).
 - Gmail and Graph adapter tests use `httpx.MockTransport` with recorded,

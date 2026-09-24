@@ -67,5 +67,5 @@ plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 # Ships no type information.
-module = ["publicsuffixlist"]
+module = ["publicsuffixlist", "imapclient", "imapclient.*"]
 ignore_missing_imports = true

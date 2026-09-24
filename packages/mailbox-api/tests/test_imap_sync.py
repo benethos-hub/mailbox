@@ -4,6 +4,7 @@ Message-ID headers and IDLE."""
 from __future__ import annotations
 
 import pytest
+from imapclient.imapclient import _parse_untagged_response
 
 from benethos_mailbox_api.data.providers.imap import mappers
 from benethos_mailbox_api.data.providers.imap.client import ImapServer, ImapSession
@@ -47,9 +48,7 @@ async def test_folder_contents(server: FakeMailBox) -> None:  # noqa: F811
     assert ids == [mappers.message_id("INBOX", 7, uid) for uid in (1, 2, 3, 4, 5, 9)]
 
 
-@pytest.mark.parametrize("uid_last", [False, True])
-async def test_message_headers(server: FakeMailBox, uid_last: bool) -> None:  # noqa: F811
-    server.uid_last = uid_last
+async def test_message_headers(server: FakeMailBox) -> None:  # noqa: F811
     server.add(
         "INBOX",
         20,
@@ -67,8 +66,8 @@ async def test_message_headers(server: FakeMailBox, uid_last: bool) -> None:  # 
     assert found[wanted[1]] == f"<{abs(hash('Folded'))}@example.com>"
     assert found[wanted[2]] is None
     assert wanted[3] not in found  # gone
-    fetches = [c for c in server.calls if c[0] == "uid"]
-    assert all("BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]" in c[3] for c in fetches)
+    fetches = [c for c in server.calls if c[0] == "fetch"]
+    assert fetches and all(c[2] == "message-id" for c in fetches)
 
 
 async def test_message_headers_in_batches(server: FakeMailBox) -> None:  # noqa: F811
@@ -78,7 +77,7 @@ async def test_message_headers_in_batches(server: FakeMailBox) -> None:  # noqa:
     wanted = [mappers.message_id("Sent", 1, uid) for uid in range(100, 550)]
     found = await imap.message_headers(wanted)
     assert len(found) == 450
-    assert len([c for c in server.calls if c[0] == "uid"]) == 3
+    assert len([c for c in server.calls if c[0] == "fetch"]) == 3
 
 
 async def test_message_headers_after_a_uidvalidity_change(
@@ -93,7 +92,7 @@ async def test_message_headers_after_a_uidvalidity_change(
 
 def session(box: FakeMailBox) -> ImapSession:
     session = ImapSession(
-        ImapServer("imap.example.com", 993, "tls"), mailbox_factory=box
+        ImapServer("imap.example.com", 993, "tls"), client_factory=box
     )
     session.login("me@example.com", "secret")
     return session
@@ -101,7 +100,7 @@ def session(box: FakeMailBox) -> ImapSession:
 
 def test_idle_reports_a_change() -> None:
     box = FakeMailBox()
-    box.idle_script = [[b"* OK Still here"], [b"* 4 EXISTS", b"* 1 RECENT"]]
+    box.idle_script = [[(b"OK", b"Still here")], [(4, b"EXISTS"), (1, b"RECENT")]]
     assert session(box).idle(60, stopped=lambda: False) is True
     # "Still here" is no change. After the change, IDLE is ended with DONE.
     assert box.idle_script == []
@@ -113,7 +112,8 @@ def test_idle_reports_a_change() -> None:
 )
 def test_idle_changes(line: bytes) -> None:
     box = FakeMailBox()
-    box.idle_script = [[line]]
+    # Parsed the way IMAPClient hands IDLE responses over.
+    box.idle_script = [[_parse_untagged_response(line)]]
     assert session(box).idle(60, stopped=lambda: False) is True
 
 
@@ -137,7 +137,7 @@ def test_idle_stops_when_asked() -> None:
 
 def test_idle_bye_is_a_lost_connection() -> None:
     box = FakeMailBox()
-    box.idle_script = [[b"* BYE Server shutting down"]]
+    box.idle_script = [[(b"BYE", b"Server shutting down")]]
     with pytest.raises(ProviderUnavailableError):
         session(box).idle(60, stopped=lambda: False)
 
@@ -145,7 +145,7 @@ def test_idle_bye_is_a_lost_connection() -> None:
 async def test_wait_for_change_uses_a_connection_of_its_own(
     server: FakeMailBox,  # noqa: F811
 ) -> None:
-    server.idle_script = [[b"* 7 EXISTS"]]
+    server.idle_script = [[(7, b"EXISTS")]]
     imap = provider(server)
     await imap.list_folders()
     assert await imap.wait_for_change(60) is True
@@ -156,7 +156,7 @@ async def test_wait_for_change_uses_a_connection_of_its_own(
 
 
 async def test_wait_for_change_without_idle(server: FakeMailBox) -> None:  # noqa: F811
-    server.capabilities = ["IMAP4REV1"]
+    server.announced = ["IMAP4REV1"]
     with pytest.raises(NotSupportedError):
         await provider(server).wait_for_change(60)
 

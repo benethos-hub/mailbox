@@ -53,7 +53,7 @@ def services(server: FakeMailBox, monkeypatch: pytest.MonkeyPatch) -> Services:
         return ImapProvider(
             settings,
             credentials,
-            session_factory=lambda s: ImapSession(s, mailbox_factory=server),
+            session_factory=lambda s: ImapSession(s, client_factory=server),
             sleep=lambda seconds: None,
         )
 
@@ -203,8 +203,10 @@ async def test_the_sync_reads_only_the_headers_it_lacks(
     server.calls.clear()
     server.add("INBOX", 5, make_message("Mail 5"))
     await services.sync.sync_account(account_id)
-    header_fetches = [c for c in server.calls if c[0] == "uid"]
-    assert [c[2] for c in header_fetches] == ["5"]
+    header_fetches = [
+        c for c in server.calls if c[0] == "fetch" and c[2] == "message-id"
+    ]
+    assert [c[1] for c in header_fetches] == [("5",)]
 
 
 async def test_a_failed_sync_changes_nothing(

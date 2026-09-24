@@ -154,8 +154,8 @@ noticing. Every change is measured against that.
    third-party type. A library's objects, exceptions and quirks do not cross
    the module that wraps it.
 2. **One library, one home.** Each external dependency is imported in
-   exactly one module or, for a framework, one package: imap-tools only in
-   the imap adapter, `cryptography` only in the crypto module, FastAPI only
+   exactly one module or, for a framework, one package: IMAPClient only in
+   `imap/client.py`, `cryptography` only in the crypto module, FastAPI only
    under `web/`. When you need it somewhere else, extend its wrapper instead
    of importing it a second time. The one deliberate exception is pydantic,
    which is how this project writes its own types.
@@ -178,7 +178,7 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap; planned: gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for imap-tools |
+| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap; planned: gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX; planned: JMAP well-known, Microsoft realm, SRV, guessing | any further lookup, or one switched off |
@@ -193,8 +193,8 @@ in several layers to swap one technology, the seam is in the wrong place:
 fix that first, and say so.
 
 **Tests use the seams too.** Fakes are plugged in at an interface (the
-memory provider, `httpx.MockTransport`, a fake `MailBox` at the imap-tools
-boundary), never by patching deep inside a library.
+memory provider, `httpx.MockTransport`, a fake `IMAPClient` at the
+imapclient boundary), never by patching deep inside a library.
 
 ## Verifying
 

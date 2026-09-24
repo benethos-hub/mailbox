@@ -22,12 +22,12 @@ from .imap_fake import FakeMailBox
 
 
 def factory(mailbox_factory: Any) -> Any:
-    return lambda server: ImapSession(server, mailbox_factory=mailbox_factory)
+    return lambda server: ImapSession(server, client_factory=mailbox_factory)
 
 
 async def test_probe_reads_capabilities_and_sends_no_credential() -> None:
     box = FakeMailBox()
-    box.client.capabilities = ("IMAP4rev1", "IDLE", "AUTH=PLAIN")  # type: ignore[misc]
+    box.announced = ["IMAP4rev1", "IDLE", "AUTH=PLAIN"]
     caps = await probe("imap.example.com", 143, "starttls", factory(box))
     assert caps == frozenset({"IMAP4REV1", "IDLE", "AUTH=PLAIN"})
     assert box.calls == [
