@@ -48,6 +48,18 @@ class MailProvider(Protocol):
 
     async def list_folders(self) -> list[Folder]: ...
 
+    async def create_folder(self, name: str, parent_id: str | None) -> Folder:
+        """A new folder, subscribed where the provider knows subscriptions."""
+        ...
+
+    async def update_folder(
+        self, folder_id: str, name: str, parent_id: str | None
+    ) -> Folder:
+        """Rename or move. The folder's id may change with its name."""
+        ...
+
+    async def delete_folder(self, folder_id: str) -> None: ...
+
     async def list_messages(
         self,
         folder_id: str | None,

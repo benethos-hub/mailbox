@@ -124,6 +124,36 @@ class MemoryProvider:
         self.messages[self.messages.index(message)] = moved
         return MessageSummary.model_validate(moved.model_dump())
 
+    async def create_folder(self, name: str, parent_id: str | None) -> Folder:
+        if parent_id is not None:
+            self._folder(parent_id)
+        if any(f.name == name and f.parent_id == parent_id for f in self.folders):
+            raise ConflictError(f"a folder {name} exists there already")
+        folder = Folder(
+            id=f"folder_{len(self.folders)}", name=name, parent_id=parent_id
+        )
+        self.folders.append(folder)
+        return folder
+
+    async def update_folder(
+        self, folder_id: str, name: str, parent_id: str | None
+    ) -> Folder:
+        folder = self._folder(folder_id)
+        if parent_id is not None:
+            self._folder(parent_id)
+        updated = folder.model_copy(update={"name": name, "parent_id": parent_id})
+        self.folders[self.folders.index(folder)] = updated
+        return updated
+
+    async def delete_folder(self, folder_id: str) -> None:
+        self.folders.remove(self._folder(folder_id))
+
+    def _folder(self, folder_id: str) -> Folder:
+        for folder in self.folders:
+            if folder.id == folder_id:
+                return folder
+        raise NotFoundError(f"folder {folder_id} not found")
+
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxApiError]:

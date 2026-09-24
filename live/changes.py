@@ -142,6 +142,22 @@ class OtherClient:
         if subscribe:
             self.conn.subscribe(_quoted(folder))
 
+    def all_folders(self) -> set[str]:
+        return self._names(self.conn.list())
+
+    def subscribed_folders(self) -> set[str]:
+        return self._names(self.conn.lsub())
+
+    def _names(self, answer: tuple[str, list[Any]]) -> set[str]:
+        status, data = answer
+        names = set()
+        for line in data if status == "OK" else []:
+            if isinstance(line, bytes):
+                match = re.match(rb'\([^)]*\) (?:"[^"]*"|NIL) (.+)$', line)
+                if match:
+                    names.add(match.group(1).decode().strip('"'))
+        return names
+
     def sent_folder(self) -> str | None:
         return self._special_folder(b"\\sent")
 
@@ -257,13 +273,15 @@ def clean_up(
         except (imaplib.IMAP4.error, OSError) as exc:
             print(f"cleanup failed, remove '{subject}' by hand: {exc}")
             return
-    folder = other.folder_name(base)
-    places = [folder, "INBOX", other.trash_folder()]
+    folders = [other.folder_name(base), other.folder_name(base + "-renamed")]
+    places = [*folders, "INBOX", other.trash_folder()]
     removed = sum(other.delete_mail(place, subject) for place in places if place)
-    gone = other.delete_folder(folder)
+    left = [f for f in folders if f in other.all_folders()]
+    for folder in left:
+        other.delete_folder(folder)
     print(
-        f"\n== cleanup: {removed} test mail(s) deleted, "
-        + ("the folder too" if gone else "no folder to delete")
+        f"\n== cleanup: {removed} test mail(s) and {len(left)} leftover "
+        "folder(s) deleted"
     )
     other.close()
 
@@ -391,12 +409,17 @@ def main() -> int:
             other.flags("INBOX", subject) == [],
             " ".join(other.flags("INBOX", subject)),
         )
+        folders_url = f"/v1/accounts/{account_id}/folders"
+        created = client.post(folders_url, json={"name": base})
         folder = other.folder_name(base)
-        other.create_folder(folder)
-        names = {
-            f["name"]: f["id"]
-            for f in client.get(f"/v1/accounts/{account_id}/folders").json()
-        }
+        run.check(
+            "POST creates a folder, subscribed, in the personal namespace",
+            created.status_code == 201
+            and created.json().get("subscribed") is True
+            and folder in other.subscribed_folders(),
+            f"{created.status_code}, {folder}",
+        )
+        names = {f["name"]: f["id"] for f in client.get(folders_url).json()}
         moved = client.patch(
             f"/v1/accounts/{account_id}/messages/{message_id}",
             json={"folder_ids": [names.get(base, "?")]},
@@ -443,6 +466,25 @@ def main() -> int:
             and outcomes == [True, False]
             and "\\Flagged" in other.flags("INBOX", subject),
             f"{batch.status_code} {outcomes}",
+        )
+
+        test_folder = names.get(base, "?")
+        renamed = client.patch(
+            f"{folders_url}/{test_folder}", json={"name": base + "-renamed"}
+        )
+        new_name = other.folder_name(base + "-renamed")
+        run.check(
+            "PATCH renames the folder, the subscription goes along",
+            renamed.status_code == 200
+            and new_name in other.subscribed_folders()
+            and folder not in other.subscribed_folders(),
+            str(renamed.status_code),
+        )
+        removed = client.delete(f"{folders_url}/{renamed.json().get('id', '?')}")
+        run.check(
+            "DELETE removes the empty folder",
+            removed.status_code == 204 and new_name not in other.all_folders(),
+            str(removed.status_code),
         )
 
         if not keep:

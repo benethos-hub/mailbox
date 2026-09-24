@@ -19,6 +19,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `PATCH /v1/accounts/{account_id}/messages/{message_id}` sets `unread`,
   `starred` and `keywords` and answers the changed summary. Right:
   `update_message` (`mail.write`).
+- `POST /v1/accounts/{account_id}/folders` creates a folder, subscribed,
+  in the account's personal namespace. `PATCH .../folders/{folder_id}`
+  renames or moves it, `DELETE` deletes it when it is empty and has no
+  subfolders. Folders with a role answer `409`. Rights: `create_folder`,
+  `update_folder` (`mail.write`), `delete_folder` (`mail.delete`).
 - `POST /v1/accounts/{account_id}/messages/batch` applies one action,
   `update` with `changes` or `delete` with `permanent`, to up to 100
   messages and answers a result per id. Needs `batch_messages`

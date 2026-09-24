@@ -9,7 +9,12 @@ import pytest
 from pydantic import SecretStr
 
 from benethos_mailbox_api.config import Settings
-from benethos_mailbox_api.data.models import MessageBatch, MessageUpdate, ProviderType
+from benethos_mailbox_api.data.models import (
+    FolderUpdate,
+    MessageBatch,
+    MessageUpdate,
+    ProviderType,
+)
 from benethos_mailbox_api.data.providers import (
     CredentialReader,
     MailProvider,
@@ -337,3 +342,21 @@ async def test_a_batch_finds_messages_moved_by_others(
     assert [r.ok for r in result.results] == [True, True]
     assert result.results[1].message is not None
     assert result.results[1].message.folder_ids == [ARCHIVE]
+
+
+async def test_renaming_a_folder_keeps_the_ids_inside(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    server.folders["Projekte"] = FakeFolder()
+    projects = mappers.folder_id("Projekte")
+    ids = await ids_by_subject(services, account_id)
+    await services.mailbox.update_message(
+        ADMIN, account_id, ids["Mail 2"], MessageUpdate(folder_ids=[projects])
+    )
+    await services.sync.sync_account(account_id)
+    renamed = await services.mailbox.update_folder(
+        ADMIN, account_id, projects, FolderUpdate(name="Ablage")
+    )
+    assert renamed.id == mappers.folder_id("Ablage")
+    message = await services.mailbox.get_message(ADMIN, account_id, ids["Mail 2"])
+    assert message.folder_ids == [renamed.id]

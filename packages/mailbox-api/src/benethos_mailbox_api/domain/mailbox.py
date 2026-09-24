@@ -16,7 +16,9 @@ from ..data.models import (
     BatchItemResult,
     BatchResult,
     Folder,
+    FolderCreate,
     FolderRole,
+    FolderUpdate,
     ItemError,
     Message,
     MessageBatch,
@@ -26,7 +28,7 @@ from ..data.models import (
     Page,
 )
 from ..data.providers import MailProvider
-from ..errors import BadRequestError, MailboxApiError, NotFoundError
+from ..errors import BadRequestError, ConflictError, MailboxApiError, NotFoundError
 from .access import Access
 from .accounts import AccountService
 from .sync import SyncService
@@ -64,6 +66,64 @@ class MailboxService:
     async def list_folders(self, access: Access, account_id: str) -> list[Folder]:
         access.require("list_folders", account_id)
         return await self._call(account_id, lambda p: p.list_folders())
+
+    async def create_folder(
+        self, access: Access, account_id: str, new: FolderCreate
+    ) -> Folder:
+        access.require("create_folder", account_id)
+        return await self._call(
+            account_id, lambda p: p.create_folder(new.name, new.parent_id)
+        )
+
+    async def update_folder(
+        self, access: Access, account_id: str, folder_id: str, changes: FolderUpdate
+    ) -> Folder:
+        """Rename or move. Folders with a role stay where mail clients expect
+        them. The messages inside keep their ids: a sync follows them."""
+        access.require("update_folder", account_id)
+        folder = await self._own_folder(account_id, folder_id)
+        name = changes.name or folder.name
+        parent = changes.parent_id if changes.moves else folder.parent_id
+        updated = await self._call(
+            account_id, lambda p: p.update_folder(folder_id, name, parent)
+        )
+        if updated.id != folder_id:
+            try:
+                await self._sync.sync_account(account_id)
+            except MailboxApiError:
+                pass  # the next sync, or the next lookup, follows them
+        return updated
+
+    async def delete_folder(
+        self, access: Access, account_id: str, folder_id: str
+    ) -> None:
+        """Only an empty folder without subfolders: deleting a folder takes
+        its messages with it on many servers, and they cannot be taken back."""
+        access.require("delete_folder", account_id)
+        folder = await self._own_folder(account_id, folder_id)
+        folders = await self._call(account_id, lambda p: p.list_folders())
+        if any(f.parent_id == folder_id for f in folders):
+            raise ConflictError(f"the folder {folder.name} has subfolders")
+        contents = await self._call(account_id, lambda p: p.folder_contents(folder_id))
+        if contents:
+            raise ConflictError(
+                f"the folder {folder.name} holds {len(contents)} messages: "
+                "move or delete them first"
+            )
+        await self._call(account_id, lambda p: p.delete_folder(folder_id))
+
+    async def _own_folder(self, account_id: str, folder_id: str) -> Folder:
+        """A folder the user made: one with a role is refused."""
+        folders = await self._call(account_id, lambda p: p.list_folders())
+        folder = next((f for f in folders if f.id == folder_id), None)
+        if folder is None:
+            raise NotFoundError(f"folder {folder_id} not found")
+        if folder.role is not None:
+            raise ConflictError(
+                f"the folder {folder.name} is the account's {folder.role}: "
+                "it stays as it is"
+            )
+        return folder
 
     async def list_messages(
         self,

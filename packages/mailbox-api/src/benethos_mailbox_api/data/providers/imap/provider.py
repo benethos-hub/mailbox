@@ -171,6 +171,17 @@ class ImapProvider:
     async def get_raw(self, message_id: str) -> bytes:
         return await self._run(lambda: self._get_raw(message_id))
 
+    async def create_folder(self, name: str, parent_id: str | None) -> Folder:
+        return await self._run(lambda: self._create_folder(name, parent_id))
+
+    async def update_folder(
+        self, folder_id: str, name: str, parent_id: str | None
+    ) -> Folder:
+        return await self._run(lambda: self._update_folder(folder_id, name, parent_id))
+
+    async def delete_folder(self, folder_id: str) -> None:
+        await self._run(lambda: self._delete_folder(folder_id))
+
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxApiError]:
@@ -318,6 +329,68 @@ class ImapProvider:
             content_type=part.content_type or "application/octet-stream",
             data=part.payload,
         )
+
+    # --- folders --------------------------------------------------------------------
+
+    def _create_folder(self, name: str, parent_id: str | None) -> Folder:
+        raws = self._session.list_folders()
+        full = self._full_name(raws, name, parent_id)
+        if full in {raw.name for raw in raws}:
+            raise ConflictError(f"a folder {name} exists there already")
+        self._session.create_folder(full)
+        return self._folder(full)
+
+    def _update_folder(
+        self, folder_id: str, name: str, parent_id: str | None
+    ) -> Folder:
+        raws = self._session.list_folders()
+        old = mappers.folder_name(folder_id)
+        if old not in {raw.name for raw in raws}:
+            raise NotFoundError(f"folder {folder_id} not found")
+        new = self._full_name(raws, name, parent_id)
+        if new == old:
+            return self._folder(old)
+        if new in {raw.name for raw in raws}:
+            raise ConflictError(f"a folder {name} exists there already")
+        if new.startswith(old + (self._delimiter(raws) or "\0")):
+            raise BadRequestError("a folder cannot move into itself")
+        self._session.rename_folder(old, new)
+        return self._folder(new)
+
+    def _delete_folder(self, folder_id: str) -> None:
+        name = mappers.folder_name(folder_id)
+        if name not in {raw.name for raw in self._session.list_folders()}:
+            raise NotFoundError(f"folder {folder_id} not found")
+        self._session.delete_folder(name)
+
+    def _full_name(self, raws: list[Any], name: str, parent_id: str | None) -> str:
+        """The server's name for ``name`` below ``parent_id``, or at the top
+        of the user's personal namespace."""
+        delimiter = self._delimiter(raws)
+        if delimiter and delimiter in name:
+            raise BadRequestError(
+                f"a folder name cannot contain {delimiter!r}: use parent_id"
+            )
+        if parent_id is None:
+            prefix, _ = self._session.personal_namespace()
+            return prefix + name
+        parent = mappers.folder_name(parent_id)
+        if parent not in {raw.name for raw in raws}:
+            raise NotFoundError(f"folder {parent_id} not found")
+        if not delimiter:
+            raise NotSupportedError("the mail server has no folder hierarchy")
+        return parent + delimiter + name
+
+    def _delimiter(self, raws: list[Any]) -> str | None:
+        found = next((raw.delimiter for raw in raws if raw.delimiter), None)
+        return found or self._session.personal_namespace()[1]
+
+    def _folder(self, name: str) -> Folder:
+        """A folder as listed, with its role and subscription."""
+        for folder in self._list_folders(subscriptions=True):
+            if folder.id == mappers.folder_id(name):
+                return folder
+        raise NotFoundError(f"folder {name} not found")
 
     # --- changing messages, one folder at a time ------------------------------------
 

@@ -83,7 +83,7 @@ Everything real mail will depend on, before any real mailbox is connected.
 - SMTP through the standard library's `smtplib` (5)
 - **`COPYUID` keeps the id of a message we move (4.1)**, done
 - **Update, delete and batch operations on messages (6.3)**, done
-- Folder create, rename, delete (6.2)
+- **Folder create, rename, delete (6.2)**, done
 - Sending over SMTP, with reply and forward by reference, `forward_as`,
   `\Answered` and `$Forwarded` on the original (6.4)
 - Drafts
