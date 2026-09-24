@@ -115,7 +115,7 @@ The decisions that shape every endpoint.
 | Resource | Notes |
 |---|---|
 | **Account** | one mailbox at one provider. `id` is ours (`acc_…`). Carries `provider`, `email`, `status` (`connected`, `needs_reauth`, `disabled`), `capabilities`. |
-| **Folder** | `id`, `name`, `role` (RFC 6154 special use: inbox, sent, drafts, trash, junk, archive, all), `parent_id`, counts. Gmail labels are folders. |
+| **Folder** | `id`, `name`, `role` (RFC 6154 special use: inbox, sent, drafts, trash, junk, archive, all), `parent_id`, counts, `subscribed` (IMAP; decided 2026-09-24). Gmail labels are folders. |
 | **Message** | summary (list) and full form (get). `folder_ids` is an array. `unread`, `starred` as booleans, further flags as `keywords`. |
 | **Thread** | where the provider supports it (Gmail, Graph conversations), otherwise built from `References` / `In-Reply-To`. |
 | **Attachment** | metadata on the message, content via its own download route. |

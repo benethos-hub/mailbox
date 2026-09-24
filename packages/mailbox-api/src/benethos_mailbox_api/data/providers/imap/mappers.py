@@ -166,6 +166,7 @@ def to_folder(raw: RawFolder) -> Folder | None:
         name=display,
         role=role_of(raw.name, flags),
         parent_id=parent,
+        subscribed=raw.subscribed,
     )
 
 

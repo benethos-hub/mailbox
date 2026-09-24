@@ -154,8 +154,11 @@ def smoke_account(
 
     folders = client.get(f"/v1/accounts/{account_id}/folders")
     roles = sorted(f["role"] for f in folders.json() if f.get("role"))
+    subscribed = sum(1 for f in folders.json() if f.get("subscribed"))
     run.check(
-        "folders", folders.status_code == 200, f"{len(folders.json())}, roles {roles}"
+        "folders",
+        folders.status_code == 200,
+        f"{len(folders.json())}, {subscribed} subscribed, roles {roles}",
     )
 
     before = unread_ids(client, account_id)

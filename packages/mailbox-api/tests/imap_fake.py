@@ -79,6 +79,9 @@ class FakeMailBox:
         # IDLE answers, one list of parsed responses per idle_check.
         self.idle_script: list[list[tuple[Any, ...]]] = []
         self.announced = ["IMAP4REV1", "ID", "IDLE", "UIDPLUS"]
+        # Folder names a mail client would show. Servers often leave the
+        # inbox out: clients show it anyway.
+        self.subscribed: set[str] = set()
 
     # the factory signature ImapSession expects
     def __call__(self, server: Any, timeout: float) -> FakeMailBox:
@@ -131,6 +134,10 @@ class FakeMailBox:
             (tuple(f.encode() for f in folder.flags), self.delimiter.encode(), name)
             for name, folder in self.folders.items()
         ]
+
+    def list_sub_folders(self) -> list[tuple[tuple[bytes, ...], bytes, str]]:
+        self.calls.append(("lsub",))
+        return [f for f in self.list_folders() if f[2] in self.subscribed]
 
     def select_folder(self, name: str, readonly: bool = False) -> dict[bytes, Any]:
         self.calls.append(("select", name, readonly))

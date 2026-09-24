@@ -16,6 +16,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Folders carry `subscribed`: whether the folder is subscribed on the IMAP
+  server, which decides whether mail clients such as Outlook show it.
+  `null` where the provider has no subscriptions.
 - A sync worker runs with `serve`: it watches the inbox of IMAP accounts
   over IDLE and polls the other folders, every 5 minutes by default
   (`MAILBOX_API_SYNC_INTERVAL`, `MAILBOX_API_SYNC_IDLE`). Accounts that need
