@@ -8,9 +8,10 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [0](#phase-0--skeleton) | Skeleton | **done** |
 | [1a](#phase-1a--users-rights-storage-backup) | Users, rights, storage, backup | **done** |
 | [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | **done** |
+| [1c](#phase-1c--stable-ids-and-sync-worker) | Stable ids and sync worker | in progress |
 | [2](#phase-2--writing-and-sending) | Writing and sending | next |
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | |
-| [4](#phase-4--background-worker) | Background worker | |
+| [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
@@ -66,8 +67,18 @@ Everything real mail will depend on, before any real mailbox is connected.
 - `verify` before a credential is stored
 - Live checks against test accounts on our own IMAP server
 
+## Phase 1c – Stable ids and sync worker
+
+Before phase 2, so that ids stay valid once messages are moved.
+
+- **Id mapping (4.1):** our own message ids for IMAP, kept in the store
+- **Sync worker (8.1):** IDLE on the inbox, the other folders polled,
+  moves by other clients recognised by `Message-ID`
+- A lookup that misses syncs the account and tries again
+
 ## Phase 2 – Writing and sending
 
+- `COPYUID` keeps the id of a message we move (4.1)
 - Update, delete and batch operations on messages (6.3)
 - Folder create, rename, delete (6.2)
 - Sending over SMTP, with reply and forward by reference (6.4)
@@ -88,9 +99,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 - Container image and compose file for the service, bound to the loopback
   address (8.1)
 
-## Phase 4 – Background worker
+## Phase 4 – Change feed and webhooks
 
-- IMAP IDLE and polling (8.1)
 - Change feed, `/v1/changes`, and the MCP tool `whats_new` (6.5)
 - Webhooks
 
