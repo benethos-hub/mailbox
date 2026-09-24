@@ -78,7 +78,7 @@ packages/
       errors.py           # cross-cutting: MailboxApiError hierarchy, no HTTP
       common/             # cross-cutting: helpers several layers share,
                           #   standard library only
-        ids.py            # ids of own records: acc_, usr_, msg_, ...
+        ids.py            # ids of own records: acc_, usr_, msg_, ... + 64 hex
         opaque.py         # opaque ids and cursors: prefix + base64 JSON
         clock.py          # utc_now, the default clock of the services
       web/                # PRESENTATION: HTTP only, FastAPI lives here

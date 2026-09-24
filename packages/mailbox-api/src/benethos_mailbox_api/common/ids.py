@@ -1,10 +1,11 @@
-"""Ids of this service's own records: a prefix for the kind, then random hex."""
+"""Ids of this service's own records: a prefix for the kind, then 64 random
+hex digits (256 bits) from the operating system's secure source."""
 
 from __future__ import annotations
 
-import uuid
+import secrets
 
 
-def new_id(prefix: str, length: int = 12) -> str:
-    """For example ``acc_3f9a0c1b2d4e``."""
-    return f"{prefix}_{uuid.uuid4().hex[:length]}"
+def new_id(prefix: str) -> str:
+    """For example ``acc_`` followed by 64 hex digits."""
+    return f"{prefix}_{secrets.token_hex(32)}"
