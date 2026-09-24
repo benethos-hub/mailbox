@@ -34,6 +34,8 @@ config/**
 !config/**/
 !config/*/.env.example
 *.token.json
+# containers/secrets/: the master key of a container deployment
+containers/secrets/
 
 # Service data: the database holds encrypted credentials, backups the same.
 # data/: per package, only the folders are versioned (.gitkeep)

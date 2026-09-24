@@ -45,6 +45,11 @@ def _parser() -> argparse.ArgumentParser:
     keys_commands.add_parser(
         "import", help="store the master key from a recovery key, read from stdin"
     )
+    keys_commands.add_parser(
+        "generate",
+        help="print a new master key for a key file or container secret; "
+        "stores nothing",
+    )
 
     backup = commands.add_parser(
         "backup",
@@ -120,6 +125,11 @@ def _create_admin(name: str) -> None:
 
 
 def _keys(command: str) -> None:
+    if command == "generate":
+        from .data.secrets import cipher, encode_recovery
+
+        print(encode_recovery(cipher.new_key()))
+        return
     from .main import build_services
 
     services = build_services(Settings())

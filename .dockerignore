@@ -1,0 +1,9 @@
+# Build context of the images in containers/: the repository root. Only
+# pyproject.toml, uv.lock and packages/ are needed.
+**
+!pyproject.toml
+!uv.lock
+!packages/**
+packages/**/tests
+packages/**/__pycache__
+packages/**/*.egg-info
