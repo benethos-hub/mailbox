@@ -118,6 +118,10 @@ class AccountService:
         for adapter in adapters:
             await adapter.close()
 
+    def status(self, account_id: str) -> AccountStatus:
+        """Internal: callers check rights first."""
+        return self._repository.get(account_id).status
+
     def all_ids(self) -> builtins.list[str]:
         """Every account id. Internal: callers filter by rights themselves."""
         return [account.id for account in self._repository.list()]

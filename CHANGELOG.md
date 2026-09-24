@@ -16,6 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A sync worker runs with `serve`: it watches the inbox of IMAP accounts
+  over IDLE and polls the other folders, every 5 minutes by default
+  (`MAILBOX_API_SYNC_INTERVAL`, `MAILBOX_API_SYNC_IDLE`). Accounts that need
+  a new credential are left alone.
 - `config/benethos-mailbox-api/.env.example` lists every setting of the
   service with its default. The service reads `.env` from that folder,
   relative to the working directory.

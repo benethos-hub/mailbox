@@ -123,6 +123,8 @@ directory, normally the repository root.
 | `MAILBOX_API_MASTER_KEY` | the recovery key, for `env` |
 | `MAILBOX_API_DISCOVERY_ISPDB` | `true` (default) or `false`: whether autodiscovery asks Thunderbird's ISPDB |
 | `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS` | JSON list of hosts autodiscovery may reach on private addresses |
+| `MAILBOX_API_SYNC_INTERVAL` | seconds between two polls of every folder by the sync worker, default `300`, `0` switches it off |
+| `MAILBOX_API_SYNC_IDLE` | `true` (default) or `false`: whether the sync worker watches the inbox over IMAP IDLE, with a second connection per account |
 
 Mail credentials are stored encrypted (AES-256-GCM). The master key stays
 out of the database, in the key provider. `keys init` prints a recovery key

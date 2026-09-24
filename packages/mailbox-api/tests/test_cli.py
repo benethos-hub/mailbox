@@ -62,6 +62,7 @@ def test_env_example_holds_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None
         "MAILBOX_API_DATA_DIR",
         "MAILBOX_API_STORAGE",
         "MAILBOX_API_KEY_PROVIDER",
+        "MAILBOX_API_SYNC_INTERVAL",
     ):
         monkeypatch.delenv(name, raising=False)
     example = (
