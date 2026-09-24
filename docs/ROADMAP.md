@@ -98,7 +98,9 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **MCP read tools over stdio, registered by the token's rights (8)**, done
 - **MCP write tools `update_messages` and `create_folder` (8)**, done
 - **The MCP server registers only what its user may do (`/v1/me`)**, done
-- MCP draft tools, then the send tools (8)
+- **MCP draft tools `list_drafts`, `create_draft`, `update_draft`,
+  `delete_draft` (8)**, done
+- MCP send tools `send_message` and `send_draft` (8)
 - Prompt injection measures (7.7): mail content marked as foreign and
   hidden HTML dropped (done); the read-and-send warning, send audit
 - Grant constraints `recipients` and `max_sends_per_day` (7.5), together

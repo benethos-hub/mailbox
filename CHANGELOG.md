@@ -36,6 +36,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   PNG images, text types as text and other types by name, type and size.
 - MCP server: `update_messages` marks read or unread, stars, moves (by
   folder id or role) and trashes up to 100 messages; `create_folder`.
+- MCP server: `list_drafts`, `create_draft`, `update_draft` and
+  `delete_draft`. Drafts take plain text; a reply, reply to all or
+  forward names its original with `original_id`.
 - Search filters on `GET /v1/accounts/{account_id}/messages` and
   `GET /v1/messages`: `from`, `to`, `subject`, `after`, `before` (days),
   `starred` and `has_attachments`, besides `q` and `unread`. `folder` on
