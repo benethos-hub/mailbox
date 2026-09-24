@@ -11,22 +11,29 @@ from typing import Protocol
 from ...errors import NotFoundError
 from ..models import Account
 
+SettingsDict = dict[str, str | int | bool]
+
 
 class AccountRepository(Protocol):
     def list(self) -> list[Account]: ...
 
     def get(self, account_id: str) -> Account: ...
 
-    def add(self, account: Account) -> None: ...
+    def add(self, account: Account, settings: SettingsDict | None = None) -> None: ...
+
+    def settings(self, account_id: str) -> SettingsDict:
+        """The connection settings the account was created with."""
+        ...
 
     def delete(self, account_id: str) -> None: ...
 
 
 class InMemoryAccountRepository:
-    """For tests and development. SQLite follows in phase 1."""
+    """For tests and ``storage = memory``."""
 
     def __init__(self) -> None:
         self._accounts: dict[str, Account] = {}
+        self._settings: dict[str, SettingsDict] = {}
 
     def list(self) -> list[Account]:
         return list(self._accounts.values())
@@ -37,9 +44,15 @@ class InMemoryAccountRepository:
         except KeyError:
             raise NotFoundError(f"account {account_id} not found") from None
 
-    def add(self, account: Account) -> None:
+    def add(self, account: Account, settings: SettingsDict | None = None) -> None:
         self._accounts[account.id] = account
+        self._settings[account.id] = dict(settings or {})
+
+    def settings(self, account_id: str) -> SettingsDict:
+        self.get(account_id)
+        return dict(self._settings[account_id])
 
     def delete(self, account_id: str) -> None:
         self.get(account_id)
         del self._accounts[account_id]
+        del self._settings[account_id]

@@ -17,12 +17,33 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--host")
     serve.add_argument("--port", type=int)
     commands.add_parser("openapi", help="print the OpenAPI document as JSON")
+    users = commands.add_parser("users", help="manage users on this host")
+    users_commands = users.add_subparsers(dest="users_command", required=True)
+    create_admin = users_commands.add_parser(
+        "create-admin", help="create a user with every right and print its token"
+    )
+    create_admin.add_argument("--name", default="admin")
     args = parser.parse_args(argv)
 
     if args.command == "openapi":
         from .main import openapi_json
 
         sys.stdout.write(openapi_json())
+    elif args.command == "users":
+        from .main import build_services
+
+        settings = Settings()
+        services = build_services(settings)
+        try:
+            user, token = services.users.create_admin(args.name)
+        finally:
+            services.close()
+        print(
+            f"Created user {user.id} ({user.name}) with every right in "
+            f"{settings.database_path}. Its token is shown this once:",
+            file=sys.stderr,
+        )
+        print(token)
     elif args.command == "serve":  # pragma: no branch
         import uvicorn
 

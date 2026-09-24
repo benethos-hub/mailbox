@@ -41,6 +41,8 @@ dependencies = [
     "pydantic-settings>=2.10",
     # Outbound HTTP for the Gmail and Microsoft Graph adapters.
     "httpx>=0.28",
+    # The per-user data directory for the database.
+    "platformdirs>=4.0",
 ]
 
 [project.scripts]

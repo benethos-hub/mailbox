@@ -13,6 +13,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Accounts, users, roles and tokens are stored in SQLite in the per-user
+  data directory. `MAILBOX_API_DATA_DIR` moves it, `MAILBOX_API_STORAGE=memory`
+  keeps nothing.
+- `benethos-mailbox-api users create-admin` creates a user with every right
+  and prints its token once.
 - Users with roles and grants per account and per operation:
   `/v1/users`, `/v1/roles`.
 - API tokens per user: `/v1/users/{user_id}/tokens`. A token is shown once on

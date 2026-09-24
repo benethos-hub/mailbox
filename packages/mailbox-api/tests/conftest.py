@@ -28,17 +28,23 @@ ADMIN = Access.admin("usr_test_admin", "test admin")
 
 
 @pytest.fixture(autouse=True)
-def no_configuration_from_this_machine(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The suite must not read a developer's ``.env`` or environment."""
+def no_configuration_from_this_machine(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """The suite must not read a developer's ``.env`` or environment, and must
+    never write into the real data directory."""
     monkeypatch.setitem(Settings.model_config, "env_file", None)
     for name in list(os.environ):
         if name.startswith("MAILBOX_API_"):
             monkeypatch.delenv(name)
+    monkeypatch.setenv("MAILBOX_API_DATA_DIR", str(tmp_path_factory.mktemp("data")))
+    # Tests that want SQLite ask for it.
+    monkeypatch.setenv("MAILBOX_API_STORAGE", "memory")
 
 
 @pytest.fixture
 def settings() -> Settings:
-    return Settings(api_key=SecretStr(API_KEY))
+    return Settings(api_key=SecretStr(API_KEY), storage="memory")
 
 
 @pytest.fixture

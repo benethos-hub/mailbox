@@ -58,6 +58,20 @@ class UserService:
             operations=sorted(access.general_operations()),
         )
 
+    # --- setup ----------------------------------------------------------------
+
+    def create_admin(self, name: str) -> tuple[User, str]:
+        """A user with every right, and a token for it. For the command line
+        on the host only: it checks no caller."""
+        user = User(
+            id=f"usr_{uuid.uuid4().hex[:12]}",
+            name=name,
+            grants=[Grant(accounts=["*"], allow=[permissions.ADMIN])],
+        )
+        self._users.save(user)
+        _, plain = self._auth.issue_token(user.id, "created on the command line")
+        return user, plain
+
     # --- users ----------------------------------------------------------------
 
     def list_users(self, access: Access) -> list[User]:

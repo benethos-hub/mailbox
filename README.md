@@ -94,11 +94,20 @@ uv run mypy
 ## Running
 
 ```
-MAILBOX_API_KEY=change-me uv run benethos-mailbox-api serve
-MAILBOX_API_TOKEN=change-me uv run benethos-mailbox-mcp
+uv run benethos-mailbox-api users create-admin     # once: prints an admin token
+uv run benethos-mailbox-api serve
+MAILBOX_API_TOKEN=<token> uv run benethos-mailbox-mcp
 ```
 
-The API documentation is at `http://127.0.0.1:8080/docs`.
+The API documentation is at `http://127.0.0.1:8080/docs`. Data is kept in a
+SQLite database in the per-user data directory.
+
+| Setting | Meaning |
+|---|---|
+| `MAILBOX_API_KEY` | optional built-in admin key, for containers and tests |
+| `MAILBOX_API_DATA_DIR` | where the database lives |
+| `MAILBOX_API_STORAGE` | `sqlite` (default) or `memory`, which keeps nothing |
+| `MAILBOX_API_HOST`, `MAILBOX_API_PORT` | where the API listens, default `127.0.0.1:8080` |
 
 ### Authentication
 
@@ -112,18 +121,13 @@ separate question from what it may do:
   with TOTP or a passkey for the configuration UI, OAuth 2.0 client
   credentials for machines.
 - **What the caller may do** follows from the user's rights, per account and
-  per API operation, checked on every request.
+  per API operation, checked on every request. `GET /v1/me` shows them.
+
+Users, roles and tokens are managed under `/v1/users` and `/v1/roles`. A
+token is shown once, when it is created. With neither a user nor
+`MAILBOX_API_KEY`, the API answers `503 setup_required`.
 
 See [docs/CONCEPT.md](docs/CONCEPT.md), section 7.5.
-
-**Current state (pre-alpha, temporary):** users do not exist yet. The only
-credential is one static admin key, `MAILBOX_API_KEY`, sent as bearer
-token, and whoever presents it may do everything. There is no default:
-`change-me` above is a placeholder, and without a key set the API refuses
-every request. The MCP server uses the same key as `MAILBOX_API_TOKEN`, and
-so has full rights for now. Once users exist, the admin key is only for
-setting things up, and the MCP server gets a user of its own with only the
-rights it needs.
 
 ## Licence
 

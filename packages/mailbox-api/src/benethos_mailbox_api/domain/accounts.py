@@ -56,7 +56,7 @@ class AccountService:
         )
         # The adapter first: an unsupported provider leaves no record behind.
         adapter = self._provider_factory(provider, settings or {})
-        self._repository.add(account)
+        self._repository.add(account, dict(settings or {}))
         self._providers[account.id] = adapter
         return account
 
@@ -72,6 +72,13 @@ class AccountService:
         return [account.id for account in self._repository.list()]
 
     def provider(self, account_id: str) -> MailProvider:
-        """The adapter of an account. Internal: callers check rights first."""
-        self._repository.get(account_id)
-        return self._providers[account_id]
+        """The adapter of an account, built on first use after a restart.
+        Internal: callers check rights first."""
+        account = self._repository.get(account_id)
+        adapter = self._providers.get(account_id)
+        if adapter is None:
+            adapter = self._provider_factory(
+                account.provider, self._repository.settings(account_id)
+            )
+            self._providers[account_id] = adapter
+        return adapter
