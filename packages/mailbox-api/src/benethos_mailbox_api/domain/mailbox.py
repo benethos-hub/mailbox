@@ -39,6 +39,7 @@ from .idempotency import Idempotency
 from .sync import SyncService
 
 T = TypeVar("T")
+S = TypeVar("S", bound=MessageSummary)
 
 _CURSOR_PREFIX = "x_"
 
@@ -190,19 +191,11 @@ class MailboxService:
         else:
             positions = await self._start(visible, folder_role, failures)
 
-        active = [a for a, p in positions.items() if not p.done]
-        windows = await asyncio.gather(
-            *(self._window(a, positions[a], query, unread, limit) for a in active),
-            return_exceptions=True,
+        chunks = await _per_account(
+            [a for a, p in positions.items() if not p.done],
+            lambda a: self._window(a, positions[a], query, unread, limit),
+            failures,
         )
-        chunks: dict[str, list[_Chunk]] = {}
-        for account_id, window in zip(active, windows, strict=True):
-            if isinstance(window, MailboxApiError):
-                failures.append(_failure(account_id, window))
-            elif isinstance(window, BaseException):
-                raise window
-            else:
-                chunks[account_id] = window
 
         merged = [
             (item, account_id)
@@ -233,7 +226,7 @@ class MailboxService:
         message = await self._on_message(
             account_id, message_id, lambda p, native: p.get_message(native)
         )
-        return message.model_copy(update={"id": message_id, "account_id": account_id})
+        return _public(message, message_id, account_id)
 
     async def update_message(
         self,
@@ -312,8 +305,9 @@ class MailboxService:
         copy_id = None
         if sent.sent_copy is not None:
             copy = sent.sent_copy
-            folder = copy.folder_ids[0] if copy.folder_ids else ""
-            [copy_id] = await self._sync.public_ids(account_id, [(copy.id, folder)])
+            [copy_id] = await self._sync.public_ids(
+                account_id, [(copy.id, _folder_of(copy))]
+            )
         return SendResult(
             message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
         )
@@ -429,9 +423,7 @@ class MailboxService:
                 results[message_id] = outcome
                 continue
             self._follow(account_id, message_id, natives[message_id], outcome)
-            results[message_id] = outcome.model_copy(
-                update={"id": message_id, "account_id": account_id}
-            )
+            results[message_id] = _public(outcome, message_id, account_id)
         return results
 
     async def _delete(
@@ -500,8 +492,7 @@ class MailboxService:
     ) -> None:
         """A message the provider moved: its id points to the new place."""
         if now.id != native:
-            folder = now.folder_ids[0] if now.folder_ids else ""
-            self._sync.relocate(account_id, message_id, now.id, folder)
+            self._sync.relocate(account_id, message_id, now.id, _folder_of(now))
 
     async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:
         access.require("get_message_raw", account_id)
@@ -513,11 +504,7 @@ class MailboxService:
         self, access: Access, account_id: str, message_id: str, attachment_id: str
     ) -> AttachmentContent:
         access.require("get_attachment", account_id)
-        return await self._on_message(
-            account_id,
-            message_id,
-            lambda p, native: p.get_attachment(native, attachment_id),
-        )
+        return await self._attachment(account_id, message_id, attachment_id)
 
     # --- ids -------------------------------------------------------------------------
 
@@ -526,11 +513,10 @@ class MailboxService:
     ) -> list[MessageSummary]:
         """The provider's summaries with our ids and the account."""
         ids = await self._sync.public_ids(
-            account_id,
-            [(i.id, i.folder_ids[0] if i.folder_ids else "") for i in items],
+            account_id, [(i.id, _folder_of(i)) for i in items]
         )
         return [
-            item.model_copy(update={"id": public, "account_id": account_id})
+            _public(item, public, account_id)
             for item, public in zip(items, ids, strict=True)
         ]
 
@@ -556,20 +542,14 @@ class MailboxService:
     ) -> dict[str, _Position]:
         if role is None:
             return {a: _Position(None, None, 0) for a in account_ids}
-        folders = await asyncio.gather(
-            *(self._call(a, lambda p: p.list_folders()) for a in account_ids),
-            return_exceptions=True,
+        folders = await _per_account(
+            account_ids, lambda a: self._call(a, lambda p: p.list_folders()), failures
         )
         positions = {}
-        for account_id, found in zip(account_ids, folders, strict=True):
-            if isinstance(found, MailboxApiError):
-                failures.append(_failure(account_id, found))
-            elif isinstance(found, BaseException):
-                raise found
-            else:
-                match = next((f for f in found if f.role is role), None)
-                if match is not None:
-                    positions[account_id] = _Position(match.id, None, 0)
+        for account_id, found in folders.items():
+            match = next((f for f in found if f.role is role), None)
+            if match is not None:
+                positions[account_id] = _Position(match.id, None, 0)
         return positions
 
     async def _window(
@@ -636,8 +616,39 @@ def _advance(position: _Position, window: list[_Chunk], consumed: int) -> _Posit
     return _Position(position.folder_id, last, 0)
 
 
-def _failure(account_id: str, error: MailboxApiError) -> AccountFailure:
-    return AccountFailure(account_id=account_id, code=error.code, message=error.message)
+async def _per_account(
+    account_ids: list[str],
+    run: Callable[[str], Awaitable[T]],
+    failures: list[AccountFailure],
+) -> dict[str, T]:
+    """``run`` for every account at once. An account that fails goes to
+    ``failures`` instead of failing the rest."""
+    outcomes = await asyncio.gather(
+        *(run(a) for a in account_ids), return_exceptions=True
+    )
+    results: dict[str, T] = {}
+    for account_id, outcome in zip(account_ids, outcomes, strict=True):
+        if isinstance(outcome, MailboxApiError):
+            failures.append(
+                AccountFailure(
+                    account_id=account_id, code=outcome.code, message=outcome.message
+                )
+            )
+        elif isinstance(outcome, BaseException):
+            raise outcome
+        else:
+            results[account_id] = outcome
+    return results
+
+
+def _folder_of(message: MessageSummary) -> str:
+    """The provider's folder of a message, empty where it names none."""
+    return message.folder_ids[0] if message.folder_ids else ""
+
+
+def _public(message: S, message_id: str, account_id: str) -> S:
+    """A provider's message under our id, with its account."""
+    return message.model_copy(update={"id": message_id, "account_id": account_id})
 
 
 def _encode_cursor(positions: dict[str, _Position]) -> str:

@@ -16,7 +16,8 @@ import logging
 import math
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from functools import partial
 from typing import Any, TypeVar
 
@@ -240,15 +241,8 @@ class ImapProvider:
         """Run ``work`` once per folder, each under the lock. A failure of
         the connection or the login stops everything; any other failure
         answers for that folder's messages only."""
-        results: dict[str, R | MailboxApiError] = {}
-        folders: dict[tuple[str, int], dict[int, str]] = {}
-        for message_id in message_ids:
-            try:
-                folder, validity, uid = mappers.parse_message_id(message_id)
-            except NotFoundError as exc:
-                results[message_id] = exc
-                continue
-            folders.setdefault((folder, validity), {})[uid] = message_id
+        folders, unknown = _by_folder(message_ids)
+        results: dict[str, R | MailboxApiError] = dict(unknown)
         for (folder, validity), by_uid in folders.items():
             try:
                 done = await self._run(partial(work, folder, validity, list(by_uid)))
@@ -267,12 +261,12 @@ class ImapProvider:
         return await self._run(lambda: self._folder_contents(folder_id))
 
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
-        by_place: dict[tuple[str, int], list[int]] = {}
-        for message_id in message_ids:
-            folder, validity, uid = mappers.parse_message_id(message_id)
-            by_place.setdefault((folder, validity), []).append(uid)
+        folders, unknown = _by_folder(message_ids)
+        if unknown:
+            raise next(iter(unknown.values()))
         found: dict[str, str | None] = {}
-        for (folder, validity), uids in by_place.items():
+        for (folder, validity), by_uid in folders.items():
+            uids = list(by_uid)
             # One request per batch, so a long first sync never holds the
             # connection for long.
             for start in range(0, len(uids), HEADER_BATCH):
@@ -335,10 +329,15 @@ class ImapProvider:
             next_cursor=mappers.cursor(folder, validity, page[-1]) if more else None,
         )
 
-    def _fetch(self, message_id: str) -> tuple[Any, str, int]:
+    def _select_message(self, message_id: str) -> tuple[str, int, int]:
+        """Select the message's folder: its folder, UIDVALIDITY and UID."""
         folder, validity, uid = mappers.parse_message_id(message_id)
         if self._session.select(folder) != validity:
             raise NotFoundError(f"message {message_id} not found")
+        return folder, validity, uid
+
+    def _fetch(self, message_id: str) -> tuple[Any, str, int]:
+        folder, validity, uid = self._select_message(message_id)
         message = self._session.fetch_message(uid)
         if message is None:
             raise NotFoundError(f"message {message_id} not found")
@@ -366,24 +365,14 @@ class ImapProvider:
         assert self._smtp is not None
         self._check_allowed()
         self._bucket.acquire()
-        try:
+        # The same credential as IMAP: no new attempt until it changes.
+        with self._refused_logins():
             return self._smtp.send(self._smtp_login(), sender, recipients, raw)
-        except ProviderAuthError:
-            # The same credential as IMAP: no new attempt until it changes.
-            self._login_rejected = True
-            raise
 
     def _store_sent(self, raw: bytes) -> MessageSummary | None:
         """A read copy in the folder with the sent role, as mail clients do.
         None where the account has no such folder."""
-        sent = next(
-            (
-                mappers.folder_name(f.id)
-                for f in self._list_folders()
-                if f.role is FolderRole.SENT
-            ),
-            None,
-        )
+        sent = self._role_folder(FolderRole.SENT)
         if sent is None:
             return None
         uid = self._session.append(sent, raw, ["\\Seen"])
@@ -400,7 +389,7 @@ class ImapProvider:
     def _create_folder(self, name: str, parent_id: str | None) -> Folder:
         raws = self._session.list_folders()
         full = self._full_name(raws, name, parent_id)
-        if full in {raw.name for raw in raws}:
+        if full in _names(raws):
             raise ConflictError(f"a folder {name} exists there already")
         self._session.create_folder(full)
         return self._folder(full)
@@ -410,12 +399,12 @@ class ImapProvider:
     ) -> Folder:
         raws = self._session.list_folders()
         old = mappers.folder_name(folder_id)
-        if old not in {raw.name for raw in raws}:
+        if old not in _names(raws):
             raise NotFoundError(f"folder {folder_id} not found")
         new = self._full_name(raws, name, parent_id)
         if new == old:
             return self._folder(old)
-        if new in {raw.name for raw in raws}:
+        if new in _names(raws):
             raise ConflictError(f"a folder {name} exists there already")
         if new.startswith(old + (self._delimiter(raws) or "\0")):
             raise BadRequestError("a folder cannot move into itself")
@@ -424,7 +413,7 @@ class ImapProvider:
 
     def _delete_folder(self, folder_id: str) -> None:
         name = mappers.folder_name(folder_id)
-        if name not in {raw.name for raw in self._session.list_folders()}:
+        if name not in _names(self._session.list_folders()):
             raise NotFoundError(f"folder {folder_id} not found")
         self._session.delete_folder(name)
 
@@ -440,7 +429,7 @@ class ImapProvider:
             prefix, _ = self._session.personal_namespace()
             return prefix + name
         parent = mappers.folder_name(parent_id)
-        if parent not in {raw.name for raw in raws}:
+        if parent not in _names(raws):
             raise NotFoundError(f"folder {parent_id} not found")
         if not delimiter:
             raise NotSupportedError("the mail server has no folder hierarchy")
@@ -449,6 +438,13 @@ class ImapProvider:
     def _delimiter(self, raws: list[Any]) -> str | None:
         found = next((raw.delimiter for raw in raws if raw.delimiter), None)
         return found or self._session.personal_namespace()[1]
+
+    def _role_folder(self, role: FolderRole) -> str | None:
+        """The server's name of the folder with ``role``, if there is one."""
+        return next(
+            (mappers.folder_name(f.id) for f in self._list_folders() if f.role is role),
+            None,
+        )
 
     def _folder(self, name: str) -> Folder:
         """A folder as listed, with its role and subscription."""
@@ -507,14 +503,7 @@ class ImapProvider:
             self._session.expunge(list(found))
             results.update({uid: None for uid in found})
             return results
-        trash = next(
-            (
-                mappers.folder_name(f.id)
-                for f in self._list_folders()
-                if f.role is FolderRole.TRASH
-            ),
-            None,
-        )
+        trash = self._role_folder(FolderRole.TRASH)
         if trash is None:
             raise ConflictError(
                 "the account has no trash folder: delete with permanent=true"
@@ -568,14 +557,12 @@ class ImapProvider:
         target = mappers.folder_name(folder_ids[0])
         if target == current:
             return None
-        if target not in {raw.name for raw in self._session.list_folders()}:
+        if target not in _names(self._session.list_folders()):
             raise NotFoundError(f"folder {folder_ids[0]} not found")
         return target
 
     def _get_raw(self, message_id: str) -> bytes:
-        folder, validity, uid = mappers.parse_message_id(message_id)
-        if self._session.select(folder) != validity:
-            raise NotFoundError(f"message {message_id} not found")
+        _, _, uid = self._select_message(message_id)
         raw = self._session.fetch_raw(uid)
         if raw is None:
             raise NotFoundError(f"message {message_id} not found")
@@ -617,17 +604,16 @@ class ImapProvider:
             self._check_allowed()
             session = self._idle_session
             try:
-                if not session.connected:
-                    self._bucket.acquire()
-                    self._login(session)
-                    if "IDLE" not in session.server_capabilities():
-                        raise NotSupportedError("the mail server does not offer IDLE")
-                    session.select(mappers.INBOX)
-                return session.idle(timeout, self._closing.is_set)
-            except ProviderAuthError:
-                session.logout()
-                self._login_rejected = True
-                raise
+                with self._refused_logins():
+                    if not session.connected:
+                        self._bucket.acquire()
+                        self._login(session)
+                        if "IDLE" not in session.server_capabilities():
+                            raise NotSupportedError(
+                                "the mail server does not offer IDLE"
+                            )
+                        session.select(mappers.INBOX)
+                    return session.idle(timeout, self._closing.is_set)
             except MailboxApiError:
                 session.logout()
                 raise
@@ -638,13 +624,10 @@ class ImapProvider:
             self._failures = 0
             self._paused_until = 0.0
             self._session.logout()
-            try:
+            with self._refused_logins():
                 self._login(self._session)
                 if self._smtp is not None:
                     self._smtp.verify(self._smtp_login())
-            except ProviderAuthError:
-                self._login_rejected = True
-                raise
 
     def _close(self) -> None:
         with self._lock:
@@ -666,19 +649,16 @@ class ImapProvider:
                 if attempt:
                     self._sleep(self._backoff(attempt - 1))
                 try:
-                    self._bucket.acquire()
-                    if not self._session.connected:
-                        self._login(self._session)
-                    result = operation()
-                except ProviderAuthError:
-                    self._session.logout()
-                    self._login_rejected = True
-                    raise
+                    with self._refused_logins():
+                        self._bucket.acquire()
+                        if not self._session.connected:
+                            self._login(self._session)
+                        result = operation()
                 except ProviderUnavailableError as exc:
                     self._session.logout()
                     last = exc
                     continue
-                except ProviderError:
+                except (ProviderAuthError, ProviderError):
                     # Not a connection problem, so retrying will not help. The
                     # connection may still be in a bad state: start afresh.
                     self._session.logout()
@@ -706,21 +686,52 @@ class ImapProvider:
         pause = min(LONGEST_PAUSE, FIRST_PAUSE * 2 ** (self._failures - 1))
         self._paused_until = self._clock() + pause
 
+    @contextmanager
+    def _refused_logins(self) -> Iterator[None]:
+        """A login the server rejects is not tried again until the
+        credential changes or the account is verified."""
+        try:
+            yield
+        except ProviderAuthError:
+            self._login_rejected = True
+            raise
+
+    def _secret(self) -> str:
+        """The credential for the login, decrypted for this one use."""
+        field = "access_token" if self._auth == "xoauth2" else "password"
+        return self._credentials(field).get_secret_value()
+
     def _smtp_login(self) -> SmtpLogin:
-        """The same credential as IMAP, decrypted for this one use."""
-        if self._auth == "xoauth2":
-            secret = self._credentials("access_token")
-        else:
-            secret = self._credentials("password")
-        return SmtpLogin(self._smtp_username, secret.get_secret_value(), self._auth)
+        """The same credential as IMAP."""
+        return SmtpLogin(self._smtp_username, self._secret(), self._auth)
 
     def _login(self, session: ImapSession) -> None:
         if self._auth == "xoauth2":
-            token = self._credentials("access_token")
-            session.login_oauth(self._username, token.get_secret_value())
+            session.login_oauth(self._username, self._secret())
         else:
-            password = self._credentials("password")
-            session.login(self._username, password.get_secret_value())
+            session.login(self._username, self._secret())
+
+
+def _by_folder(
+    message_ids: list[str],
+) -> tuple[dict[tuple[str, int], dict[int, str]], dict[str, NotFoundError]]:
+    """The ids by folder and UIDVALIDITY, as UID -> id; and those that are
+    no id of this adapter."""
+    folders: dict[tuple[str, int], dict[int, str]] = {}
+    unknown: dict[str, NotFoundError] = {}
+    for message_id in message_ids:
+        try:
+            folder, validity, uid = mappers.parse_message_id(message_id)
+        except NotFoundError as exc:
+            unknown[message_id] = exc
+            continue
+        folders.setdefault((folder, validity), {})[uid] = message_id
+    return folders, unknown
+
+
+def _names(raws: list[Any]) -> set[str]:
+    """The server's names of listed folders."""
+    return {raw.name for raw in raws}
 
 
 def _missing(
