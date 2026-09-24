@@ -36,3 +36,10 @@ class Account(BaseModel):
     display_name: str | None = None
     status: AccountStatus = AccountStatus.CONNECTED
     credentials: list[CredentialInfo] = Field(default_factory=list)
+    settings: dict[str, str | int | bool] = Field(
+        default_factory=dict,
+        description=(
+            "The connection settings: host, port, security, username, "
+            "smtp_host, ... Never a secret; those are `credentials`."
+        ),
+    )

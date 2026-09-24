@@ -152,3 +152,32 @@ def test_a_failed_connect_never_echoes_the_password(ui: TestClient) -> None:
     assert "err=" in answer.headers["location"]
     assert "s3cret-pw" not in answer.headers["location"]
     assert "s3cret-pw" not in ui.get(answer.headers["location"]).text
+
+
+def test_only_changed_settings_are_sent() -> None:
+    from benethos_mailbox_api.web.pages.routes.accounts import SETTING_FIELDS, _changed
+
+    current = {"host": "imap.a.org", "port": 993, "username": "me"}
+    every = set(SETTING_FIELDS)
+    same = {"host": "imap.a.org", "port": 993, "username": "me"}
+    assert _changed(current, same, every) == {}
+    moved = {**same, "host": "imap.b.org"}
+    assert _changed(current, moved, every) == {"host": "imap.b.org"}
+    emptied = {"host": "imap.a.org", "username": "me"}
+    assert _changed(current, emptied, every) == {"port": None}
+    # A form that sends only the name removes nothing.
+    assert _changed(current, {}, {"display_name", "csrf_token"}) == {}
+
+
+def test_the_form_shows_the_settings(ui: TestClient, client: TestClient) -> None:
+    created = client.post(
+        "/v1/accounts",
+        json={
+            "provider": "memory",
+            "email": "s@example.org",
+            "settings": {"host": "imap.example.org", "smtp_host": "smtp.example.org"},
+        },
+    ).json()
+    page = ui.get(f"/ui/accounts/{created['id']}").text
+    assert 'name="host" value="imap.example.org"' in page
+    assert 'name="smtp_host" value="smtp.example.org"' in page

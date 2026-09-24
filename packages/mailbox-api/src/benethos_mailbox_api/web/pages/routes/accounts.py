@@ -48,6 +48,24 @@ def _settings(form: Any) -> dict[str, str | int | bool]:
     return found
 
 
+def _changed(
+    current: dict[str, str | int | bool],
+    submitted: dict[str, str | int | bool],
+    sent: set[str],
+) -> dict[str, str | int | bool | None]:
+    """What the form changes: new or different values, and ``None`` for a
+    field that was sent empty. A field the form did not send changes
+    nothing. Unchanged settings are not passed on, so a rename does not log
+    in to the provider again."""
+    changed: dict[str, str | int | bool | None] = {
+        key: value for key, value in submitted.items() if current.get(key) != value
+    }
+    for key in SETTING_FIELDS:
+        if key in current and key in sent and key not in submitted:
+            changed[key] = None
+    return changed
+
+
 def _password(form: Any) -> dict[str, SecretStr]:
     value = str(form.get("password") or "")
     return {"password": SecretStr(value)} if value else {}
@@ -156,10 +174,14 @@ async def update_account(request: Request, caller: Actor, account_id: str) -> Re
             "rename": True,
         }
     try:
+        existing = _service(request).get(caller, account_id)
+        settings = _changed(existing.settings, _settings(form), set(form.keys()))
+        if "username" in settings and settings["username"] is None:
+            settings["username"] = existing.email  # as the hint says
         await _service(request).update(
             caller,
             account_id,
-            settings=_settings(form),
+            settings=settings,
             credentials=_password(form),
             **changes,
         )

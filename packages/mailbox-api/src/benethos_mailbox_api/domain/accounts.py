@@ -65,6 +65,7 @@ class AccountService:
         """Verify, then store: nothing is kept unless the provider accepts the
         credential."""
         access.require("create_account")
+        _no_secrets_in(settings)
         secrets = dict(credentials or {})
         if secrets:
             self._vault.require_ready()
@@ -109,6 +110,7 @@ class AccountService:
         credentials. A change of settings or credentials logs in first, as on
         create: nothing is stored unless the provider accepts it."""
         access.require("update_account", account_id)
+        _no_secrets_in(settings)
         account = self._repository.get(account_id)
         merged: dict[str, str | int | bool] = dict(
             self._repository.settings(account_id)
@@ -219,7 +221,28 @@ class AccountService:
         return lambda field: self._vault.read(account_id, field)
 
     def _with_credentials(self, account: Account) -> Account:
-        return account.model_copy(update={"credentials": self._vault.info(account.id)})
+        """The account as callers see it: which credentials are stored, and
+        its settings."""
+        return account.model_copy(
+            update={
+                "credentials": self._vault.info(account.id),
+                "settings": self._repository.settings(account.id),
+            }
+        )
+
+
+# Settings are returned to callers; a secret belongs in the credentials,
+# which never are.
+_SECRET_WORDS = ("password", "secret", "token", "credential", "apikey", "api_key")
+
+
+def _no_secrets_in(settings: Mapping[str, object] | None) -> None:
+    for key in settings or {}:
+        if any(word in key.lower().replace("-", "_") for word in _SECRET_WORDS):
+            raise BadRequestError(
+                f"{key} looks like a secret: pass it in credentials, which are "
+                "stored encrypted and never returned, not in settings"
+            )
 
 
 def _pending(secrets: Mapping[str, SecretStr], field: str) -> SecretStr:
