@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from ....errors import ConflictError, NotFoundError, NotSupportedError
+from ....errors import (
+    ConflictError,
+    MailboxApiError,
+    NotFoundError,
+    NotSupportedError,
+)
 from ...models import (
     AttachmentContent,
     Folder,
@@ -84,7 +89,7 @@ class MemoryProvider:
         body = message.text_body or ""
         return f"Subject: {message.subject or ''}\r\n\r\n{body}".encode()
 
-    async def update_message(
+    async def _update_one(
         self, message_id: str, changes: MessageUpdate
     ) -> MessageSummary:
         message = await self.get_message(message_id)
@@ -99,7 +104,7 @@ class MemoryProvider:
         self.messages[self.messages.index(message)] = updated
         return MessageSummary.model_validate(updated.model_dump())
 
-    async def delete_message(
+    async def _delete_one(
         self, message_id: str, permanent: bool
     ) -> MessageSummary | None:
         message = await self.get_message(message_id)
@@ -118,6 +123,28 @@ class MemoryProvider:
         moved = message.model_copy(update={"folder_ids": [trash]})
         self.messages[self.messages.index(message)] = moved
         return MessageSummary.model_validate(moved.model_dump())
+
+    async def update_messages(
+        self, message_ids: list[str], changes: MessageUpdate
+    ) -> dict[str, MessageSummary | MailboxApiError]:
+        results: dict[str, MessageSummary | MailboxApiError] = {}
+        for message_id in message_ids:
+            try:
+                results[message_id] = await self._update_one(message_id, changes)
+            except MailboxApiError as exc:
+                results[message_id] = exc
+        return results
+
+    async def delete_messages(
+        self, message_ids: list[str], permanent: bool
+    ) -> dict[str, MessageSummary | None | MailboxApiError]:
+        results: dict[str, MessageSummary | None | MailboxApiError] = {}
+        for message_id in message_ids:
+            try:
+                results[message_id] = await self._delete_one(message_id, permanent)
+            except MailboxApiError as exc:
+                results[message_id] = exc
+        return results
 
     async def folder_states(self) -> dict[str, str]:
         return {

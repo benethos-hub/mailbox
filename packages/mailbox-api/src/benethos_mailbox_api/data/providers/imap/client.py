@@ -184,19 +184,20 @@ class ImapSession:
         permanent = answer.get(b"PERMANENTFLAGS", ())
         return int(answer[b"UIDVALIDITY"]), frozenset(_text(f) for f in permanent)
 
-    def store_flags(self, uid: int, add: list[str], remove: list[str]) -> None:
-        """Set and clear flags of one message in the selected folder."""
+    def store_flags(self, uids: list[int], add: list[str], remove: list[str]) -> None:
+        """Set and clear the same flags on messages of the selected folder."""
         with _errors():
             client = self._require()
             if add:
-                client.add_flags([uid], add, silent=True)
+                client.add_flags(uids, add, silent=True)
             if remove:
-                client.remove_flags([uid], remove, silent=True)
+                client.remove_flags(uids, remove, silent=True)
 
-    def move(self, uid: int, target: str) -> int | None:
-        """Move one message of the selected folder into ``target``. Returns
-        its UID there where the server reports it (``COPYUID``, RFC 4315).
-        Needs ``MOVE``, or ``UIDPLUS`` to copy and expunge just this one."""
+    def move(self, uids: list[int], target: str) -> dict[int, int]:
+        """Move messages of the selected folder into ``target`` with one
+        command. Returns their UIDs there, as far as the server reports them
+        (``COPYUID``, RFC 4315). Needs ``MOVE``, or ``UIDPLUS`` to copy and
+        expunge just these."""
         with _errors():
             client = self._require()
             announced = _capabilities(client)
@@ -204,21 +205,21 @@ class ImapSession:
             codes = client._imap.untagged_responses
             codes.pop("COPYUID", None)
             if "MOVE" in announced:
-                answer = client.move([uid], target)
+                answer = client.move(uids, target)
             elif "UIDPLUS" in announced:
-                answer = client.copy([uid], target)
-                client.add_flags([uid], ["\\Deleted"], silent=True)
-                client.uid_expunge([uid])
+                answer = client.copy(uids, target)
+                client.add_flags(uids, ["\\Deleted"], silent=True)
+                client.uid_expunge(uids)
             else:
                 raise NotSupportedError(
                     "the mail server offers neither MOVE nor UIDPLUS: moving "
                     "would expunge other deleted messages of the folder too"
                 )
             reported = codes.pop("COPYUID", None) or [answer]
-        return _new_uid(reported, uid)
+        return _new_uids(reported)
 
-    def expunge(self, uid: int) -> None:
-        """Delete one message of the selected folder for good. Needs
+    def expunge(self, uids: list[int]) -> None:
+        """Delete messages of the selected folder for good. Needs
         ``UIDPLUS``: a plain EXPUNGE would take every message marked
         deleted with it, other clients' too."""
         with _errors():
@@ -228,8 +229,8 @@ class ImapSession:
                     "the mail server offers no UIDPLUS: deleting one message "
                     "for good would expunge other deleted messages too"
                 )
-            client.add_flags([uid], ["\\Deleted"], silent=True)
-            client.uid_expunge([uid])
+            client.add_flags(uids, ["\\Deleted"], silent=True)
+            client.uid_expunge(uids)
 
     def search_message_id(self, header: str) -> list[int]:
         """UIDs in the selected folder with this ``Message-ID``."""
@@ -361,17 +362,18 @@ def _part(data: dict[bytes, Any], key: bytes) -> bytes:
     return b""
 
 
-def _new_uid(reported: list[Any], uid: int) -> int | None:
-    """The UID ``uid`` got, from ``COPYUID <validity> <old set> <new set>``."""
+def _new_uids(reported: list[Any]) -> dict[int, int]:
+    """Old UID to new, from ``COPYUID <validity> <old set> <new set>``."""
+    found: dict[int, int] = {}
     for item in reported:
         text = _text(item) if isinstance(item, bytes | str) else ""
         match = re.search(r"(?:COPYUID )?\d+ ([\d:,]+) ([\d:,]+)", text)
         if match is None:
             continue
         old, new = _uid_set(match.group(1)), _uid_set(match.group(2))
-        if uid in old and len(old) == len(new):
-            return new[old.index(uid)]
-    return None
+        if len(old) == len(new):
+            found.update(zip(old, new, strict=True))
+    return found
 
 
 def _uid_set(text: str) -> list[int]:

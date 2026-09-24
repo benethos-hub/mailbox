@@ -119,6 +119,17 @@ class SyncService:
         except MailboxApiError:
             return {}
 
+    def natives(self, account_id: str, message_ids: list[str]) -> dict[str, str | None]:
+        """The provider's id of each message, None for ids the index does
+        not know."""
+        if not self.mapped(account_id):
+            return {i: i for i in message_ids}
+        entries = (self._index.get(account_id, i) for i in message_ids)
+        return {
+            i: entry.native_id if entry else None
+            for i, entry in zip(message_ids, entries, strict=True)
+        }
+
     def _native(self, account_id: str, message_id: str) -> str:
         entry = self._index.get(account_id, message_id)
         if entry is None:

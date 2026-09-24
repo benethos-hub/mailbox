@@ -8,21 +8,25 @@ import binascii
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from ..data.models import (
     AccountFailure,
     AttachmentContent,
+    BatchItemResult,
+    BatchResult,
     Folder,
     FolderRole,
+    ItemError,
     Message,
+    MessageBatch,
     MessagePage,
     MessageSummary,
     MessageUpdate,
     Page,
 )
 from ..data.providers import MailProvider
-from ..errors import BadRequestError, MailboxApiError
+from ..errors import BadRequestError, MailboxApiError, NotFoundError
 from .access import Access
 from .accounts import AccountService
 from .sync import SyncService
@@ -169,39 +173,123 @@ class MailboxService:
         changes: MessageUpdate,
     ) -> MessageSummary:
         access.require("update_message", account_id)
-
-        async def change(native: str) -> MessageSummary:
-            summary = await self._call(
-                account_id, lambda p: p.update_message(native, changes)
-            )
-            if summary.id != native:
-                # Moved: the provider's id names the new place.
-                folder = summary.folder_ids[0] if summary.folder_ids else ""
-                self._sync.relocate(account_id, message_id, summary.id, folder)
-            return summary
-
-        updated = await self._sync.resolve(account_id, message_id, change)
-        return updated.model_copy(update={"id": message_id, "account_id": account_id})
+        outcome = (await self._update(account_id, [message_id], changes))[message_id]
+        if isinstance(outcome, MailboxApiError):
+            raise outcome
+        return outcome
 
     async def delete_message(
         self, access: Access, account_id: str, message_id: str, permanent: bool
     ) -> None:
         """Into the trash, or for good: then its own right (CONCEPT 7.5)."""
-        access.require(
-            "delete_message_permanent" if permanent else "delete_message", account_id
-        )
+        access.require(_delete_right(permanent), account_id)
+        outcome = (await self._delete(account_id, [message_id], permanent))[message_id]
+        if isinstance(outcome, MailboxApiError):
+            raise outcome
 
-        async def delete(native: str) -> None:
-            trashed = await self._call(
-                account_id, lambda p: p.delete_message(native, permanent)
+    async def batch_messages(
+        self, access: Access, account_id: str, batch: MessageBatch
+    ) -> BatchResult:
+        """One action for many messages. The rights are those of the single
+        operation, checked once for the whole batch."""
+        access.require("batch_messages", account_id)
+        outcomes: dict[str, Any]
+        if batch.action == "update":
+            access.require("update_message", account_id)
+            assert batch.changes is not None
+            outcomes = await self._update(account_id, batch.ids, batch.changes)
+        else:
+            access.require(_delete_right(batch.permanent), account_id)
+            outcomes = await self._delete(account_id, batch.ids, batch.permanent)
+        return BatchResult(results=[_item(i, outcomes[i]) for i in batch.ids])
+
+    # --- changing, one or many ------------------------------------------------------
+
+    async def _update(
+        self, account_id: str, ids: list[str], changes: MessageUpdate
+    ) -> dict[str, MessageSummary | MailboxApiError]:
+        outcomes, natives = await self._on_messages(
+            account_id, ids, lambda p, n: p.update_messages(n, changes)
+        )
+        results: dict[str, MessageSummary | MailboxApiError] = {}
+        for message_id, outcome in outcomes.items():
+            if isinstance(outcome, MailboxApiError):
+                results[message_id] = outcome
+                continue
+            self._follow(account_id, message_id, natives[message_id], outcome)
+            results[message_id] = outcome.model_copy(
+                update={"id": message_id, "account_id": account_id}
             )
+        return results
+
+    async def _delete(
+        self, account_id: str, ids: list[str], permanent: bool
+    ) -> dict[str, None | MailboxApiError]:
+        outcomes, natives = await self._on_messages(
+            account_id, ids, lambda p, n: p.delete_messages(n, permanent)
+        )
+        results: dict[str, None | MailboxApiError] = {}
+        for message_id, outcome in outcomes.items():
+            if isinstance(outcome, MailboxApiError):
+                results[message_id] = outcome
+                continue
             if permanent:
                 self._sync.forget(account_id, message_id)
-            elif trashed is not None and trashed.id != native:
-                folder = trashed.folder_ids[0] if trashed.folder_ids else ""
-                self._sync.relocate(account_id, message_id, trashed.id, folder)
+            elif outcome is not None:
+                self._follow(account_id, message_id, natives[message_id], outcome)
+            results[message_id] = None
+        return results
 
-        await self._sync.resolve(account_id, message_id, delete)
+    async def _on_messages(
+        self,
+        account_id: str,
+        ids: list[str],
+        run: Callable[[MailProvider, list[str]], Awaitable[dict[str, Any]]],
+    ) -> tuple[dict[str, Any], dict[str, str]]:
+        """Run a provider operation on the messages behind ``ids``. Those
+        the provider does not find where the index says get one sync and a
+        second try. Returns the outcome per id and the provider id used."""
+        natives = {i: n for i, n in self._sync.natives(account_id, ids).items() if n}
+        outcomes: dict[str, Any] = {
+            i: NotFoundError(f"message {i} not found") for i in ids if i not in natives
+        }
+        outcomes.update(await self._run_on(account_id, natives, run))
+        missing = [i for i in natives if isinstance(outcomes[i], NotFoundError)]
+        if missing and self._sync.mapped(account_id):
+            await self._sync.sync_account(account_id)
+            moved = {
+                i: n
+                for i, n in self._sync.natives(account_id, missing).items()
+                if n and n != natives[i]
+            }
+            outcomes.update(await self._run_on(account_id, moved, run))
+            natives.update(moved)
+        for message_id, outcome in outcomes.items():
+            if isinstance(outcome, NotFoundError):
+                outcomes[message_id] = NotFoundError(f"message {message_id} not found")
+        return outcomes, natives
+
+    async def _run_on(
+        self,
+        account_id: str,
+        natives: dict[str, str],
+        run: Callable[[MailProvider, list[str]], Awaitable[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        if not natives:
+            return {}
+        by_native = await self._call(
+            account_id, lambda p: run(p, list(natives.values()))
+        )
+        missing = NotFoundError("message not found")
+        return {i: by_native.get(n, missing) for i, n in natives.items()}
+
+    def _follow(
+        self, account_id: str, message_id: str, native: str, now: MessageSummary
+    ) -> None:
+        """A message the provider moved: its id points to the new place."""
+        if now.id != native:
+            folder = now.folder_ids[0] if now.folder_ids else ""
+            self._sync.relocate(account_id, message_id, now.id, folder)
 
     async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:
         access.require("get_message_raw", account_id)
@@ -358,3 +446,18 @@ def _decode_cursor(value: str) -> dict[str, _Position]:
         }
     except (binascii.Error, ValueError, TypeError, AttributeError):
         raise BadRequestError("invalid cursor") from None
+
+
+def _delete_right(permanent: bool) -> str:
+    return "delete_message_permanent" if permanent else "delete_message"
+
+
+def _item(message_id: str, outcome: Any) -> BatchItemResult:
+    if isinstance(outcome, MailboxApiError):
+        return BatchItemResult(
+            id=message_id,
+            ok=False,
+            error=ItemError(code=outcome.code, message=outcome.message),
+        )
+    summary = outcome if isinstance(outcome, MessageSummary) else None
+    return BatchItemResult(id=message_id, ok=True, message=summary)

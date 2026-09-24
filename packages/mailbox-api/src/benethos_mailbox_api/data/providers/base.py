@@ -8,6 +8,7 @@ from typing import Protocol
 
 from pydantic import SecretStr
 
+from ...errors import MailboxApiError
 from ..models import (
     AttachmentContent,
     Folder,
@@ -67,18 +68,20 @@ class MailProvider(Protocol):
         """The message source as RFC 822 bytes."""
         ...
 
-    async def update_message(
-        self, message_id: str, changes: MessageUpdate
-    ) -> MessageSummary:
-        """Change flags and keywords, or move. Returns the message as it is
-        now; after a move its id names the new place."""
+    async def update_messages(
+        self, message_ids: list[str], changes: MessageUpdate
+    ) -> dict[str, MessageSummary | MailboxApiError]:
+        """Change flags and keywords, or move, of every message. Per id the
+        message as it is now (after a move its id names the new place), or
+        why not. A failed login or connection raises instead."""
         ...
 
-    async def delete_message(
-        self, message_id: str, permanent: bool
-    ) -> MessageSummary | None:
-        """Into the trash, or for good. Returns the message in the trash where
-        it is known, None when it is gone or not found there at once."""
+    async def delete_messages(
+        self, message_ids: list[str], permanent: bool
+    ) -> dict[str, MessageSummary | None | MailboxApiError]:
+        """Into the trash, or for good. Per id the message in the trash
+        where it is known, None when it is gone or not found there at once,
+        or why not. A failed login or connection raises instead."""
         ...
 
     # --- for the sync worker ---------------------------------------------------

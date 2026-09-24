@@ -16,6 +16,7 @@ from benethos_mailbox_api.main import Services
 
 from .conftest import bearer_for
 from .imap_fake import FakeMailBox
+from .provider_ops import update
 from .test_imap import provider, server  # noqa: F401 - the fixture
 
 ANY_KEYWORD = frozenset({"\\Seen", "\\Flagged", "\\*"})
@@ -75,8 +76,10 @@ def test_invalid_keywords_are_refused(keyword: str) -> None:
 async def test_update_on_the_server(server: FakeMailBox) -> None:  # noqa: F811
     imap = provider(server)
     message_id = mappers.message_id("INBOX", 7, 3)
-    summary = await imap.update_message(
-        message_id, MessageUpdate(unread=False, starred=True, keywords=["$forwarded"])
+    summary = await update(
+        imap,
+        message_id,
+        MessageUpdate(unread=False, starred=True, keywords=["$forwarded"]),
     )
     assert summary.id == message_id
     assert (summary.unread, summary.starred) == (False, True)
@@ -93,9 +96,7 @@ async def test_update_on_the_server(server: FakeMailBox) -> None:  # noqa: F811
 
 async def test_an_empty_update_writes_nothing(server: FakeMailBox) -> None:  # noqa: F811
     imap = provider(server)
-    summary = await imap.update_message(
-        mappers.message_id("INBOX", 7, 3), MessageUpdate()
-    )
+    summary = await update(imap, mappers.message_id("INBOX", 7, 3), MessageUpdate())
     assert summary.unread is True
     assert not any(c[0] == "store" for c in server.calls)
 
@@ -109,7 +110,7 @@ async def test_update_of_an_unknown_message(
     message_id: str,
 ) -> None:
     with pytest.raises(NotFoundError):
-        await provider(server).update_message(message_id, MessageUpdate(starred=True))
+        await update(provider(server), message_id, MessageUpdate(starred=True))
 
 
 # --- the API ---------------------------------------------------------

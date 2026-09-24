@@ -19,6 +19,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `PATCH /v1/accounts/{account_id}/messages/{message_id}` sets `unread`,
   `starred` and `keywords` and answers the changed summary. Right:
   `update_message` (`mail.write`).
+- `POST /v1/accounts/{account_id}/messages/batch` applies one action,
+  `update` with `changes` or `delete` with `permanent`, to up to 100
+  messages and answers a result per id. Needs `batch_messages`
+  (`mail.write`) and the right of the single operation.
 - `DELETE /v1/accounts/{account_id}/messages/{message_id}` moves a message
   into the trash (`delete_message`, `mail.write`). `?permanent=true`
   deletes it for good and needs `delete_message_permanent` (`mail.delete`).

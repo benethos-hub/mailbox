@@ -9,7 +9,7 @@ import pytest
 from pydantic import SecretStr
 
 from benethos_mailbox_api.config import Settings
-from benethos_mailbox_api.data.models import MessageUpdate, ProviderType
+from benethos_mailbox_api.data.models import MessageBatch, MessageUpdate, ProviderType
 from benethos_mailbox_api.data.providers import (
     CredentialReader,
     MailProvider,
@@ -298,3 +298,42 @@ async def test_the_trash_keeps_the_id_and_for_good_forgets_it(
     await services.mailbox.delete_message(ADMIN, account_id, ids["Mail 3"], True)
     with pytest.raises(NotFoundError):
         await services.mailbox.get_message(ADMIN, account_id, ids["Mail 3"])
+
+
+async def test_a_batch_move_keeps_every_id(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    ids = await ids_by_subject(services, account_id)
+    wanted = [ids["Mail 1"], ids["Mail 2"], ids["Mail 4"]]
+    result = await services.mailbox.batch_messages(
+        ADMIN,
+        account_id,
+        MessageBatch(
+            action="update", ids=wanted, changes=MessageUpdate(folder_ids=[ARCHIVE])
+        ),
+    )
+    assert [r.id for r in result.results] == wanted
+    assert all(r.ok and r.message and r.message.id == r.id for r in result.results)
+    for message_id in wanted:
+        message = await services.mailbox.get_message(ADMIN, account_id, message_id)
+        assert message.folder_ids == [ARCHIVE]
+
+
+async def test_a_batch_finds_messages_moved_by_others(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    await services.sync.sync_account(account_id)
+    ids = await ids_by_subject(services, account_id)
+    server.other_client_moves("INBOX", 2, "Archive", 7)
+    result = await services.mailbox.batch_messages(
+        ADMIN,
+        account_id,
+        MessageBatch(
+            action="update",
+            ids=[ids["Mail 1"], ids["Mail 2"]],
+            changes=MessageUpdate(starred=True),
+        ),
+    )
+    assert [r.ok for r in result.results] == [True, True]
+    assert result.results[1].message is not None
+    assert result.results[1].message.folder_ids == [ARCHIVE]
