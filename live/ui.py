@@ -56,7 +56,11 @@ def csrf_of(html: str) -> str:
 
 
 def check_accounts(
-    run: Run, browser: httpx.Client, env: dict[str, str], account: dict[str, str]
+    run: Run,
+    browser: httpx.Client,
+    env: dict[str, str],
+    account: dict[str, str],
+    admin_key: str,
 ) -> str | None:
     """The second test account, connected through the UI; its id."""
     csrf = csrf_of(browser.get("/ui/accounts").text)
@@ -105,6 +109,20 @@ def check_accounts(
         data={"csrf_token": csrf, "display_name": "UI live check"},
     )
     run.check("rename", "Saved." in renamed.text and "UI live check" in renamed.text)
+    detail = browser.get(f"/ui/accounts/{account_id}").text
+    host_shown = re.search(r'name="host" value="([^"]+)"', detail)
+    run.check(
+        "the form shows the servers, never the password",
+        host_shown is not None and account["password"] not in detail,
+    )
+    api = browser.get(
+        f"/v1/accounts/{account_id}",
+        headers={"Authorization": f"Bearer {admin_key}"},
+    ).text
+    run.check(
+        "the API shows the settings, never the password",
+        "host" in api and account["password"] not in api,
+    )
     return account_id
 
 
@@ -131,7 +149,7 @@ def main() -> int:
             if not run.check("sign in with the admin key", sign_in(browser, admin_key)):
                 return 1
             print("\n== accounts")
-            check_accounts(run, browser, env, test_accounts[1])
+            check_accounts(run, browser, env, test_accounts[1], admin_key)
             print("\n== the frame")
             check_frame(run, browser, [a["email"].lower() for a in test_accounts])
     finally:

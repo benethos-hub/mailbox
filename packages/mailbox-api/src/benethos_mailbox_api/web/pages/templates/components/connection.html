@@ -1,49 +1,50 @@
-{# The connection fields of an IMAP account, with sending over SMTP.
-   ``values`` fills them in; ``keep`` says empty fields change nothing. #}
-{% macro connection_fields(values, security, keep=False) %}
-{% set hint = "Empty: unchanged." if keep else None %}
+{# The connection fields of an IMAP account, with sending over SMTP, filled
+   in from ``values``. ``editing``: the account exists, an emptied field
+   removes that setting. #}
+{% macro connection_fields(values, security, editing=False) %}
 <div class="form-grid">
   <div class="field">
     <label for="f-host">IMAP server</label>
-    <input id="f-host" name="host" value="{{ values.get('host', '') }}"{% if not keep %} required{% endif %} />
-    {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+    <input id="f-host" name="host" value="{{ values.get('host', '') }}"{% if not editing %} required{% endif %} />
   </div>
   <div class="field">
     <label for="f-port">IMAP port</label>
     <input id="f-port" name="port" inputmode="numeric" value="{{ values.get('port', '') }}" />
+    <span class="hint">Empty: 993 for tls, 143 for starttls.</span>
   </div>
   <div class="field">
     <label for="f-security">IMAP security</label>
     <select id="f-security" name="security">
-      {% if keep %}<option value="">unchanged</option>{% endif %}
-      {% for option in security %}<option value="{{ option }}"{% if values.get('security') == option %} selected{% endif %}>{{ option }}</option>{% endfor %}
+      {% for option in security %}<option value="{{ option }}"{% if values.get('security', 'tls') == option %} selected{% endif %}>{{ option }}</option>{% endfor %}
     </select>
   </div>
   <div class="field">
     <label for="f-username">Login name</label>
     <input id="f-username" name="username" value="{{ values.get('username', '') }}" autocomplete="off" />
-    <span class="hint">{{ hint or "Empty: the address." }}</span>
+    <span class="hint">Empty: the address.</span>
   </div>
   <div class="field">
     <label for="f-smtp_host">SMTP server</label>
     <input id="f-smtp_host" name="smtp_host" value="{{ values.get('smtp_host', '') }}" />
-    <span class="hint">{{ hint or "For sending. Empty: this account only reads." }}</span>
+    <span class="hint">For sending. Empty: this account only reads.</span>
   </div>
   <div class="field">
     <label for="f-smtp_port">SMTP port</label>
     <input id="f-smtp_port" name="smtp_port" inputmode="numeric" value="{{ values.get('smtp_port', '') }}" />
+    <span class="hint">Empty: 465 for tls, 587 for starttls.</span>
   </div>
   <div class="field">
     <label for="f-smtp_security">SMTP security</label>
     <select id="f-smtp_security" name="smtp_security">
-      <option value="">{{ "unchanged" if keep else "default (tls)" }}</option>
+      <option value="">default (tls)</option>
       {% for option in security %}<option value="{{ option }}"{% if values.get('smtp_security') == option %} selected{% endif %}>{{ option }}</option>{% endfor %}
     </select>
   </div>
   <div class="field">
     <label for="f-smtp_username">SMTP login name</label>
     <input id="f-smtp_username" name="smtp_username" value="{{ values.get('smtp_username', '') }}" autocomplete="off" />
-    <span class="hint">{{ hint or "Empty: the IMAP login name." }}</span>
+    <span class="hint">Empty: the IMAP login name.</span>
   </div>
 </div>
+{% if editing %}<p class="hint faint">Only what you change is sent; a change of server logs in again first.</p>{% endif %}
 {% endmacro %}

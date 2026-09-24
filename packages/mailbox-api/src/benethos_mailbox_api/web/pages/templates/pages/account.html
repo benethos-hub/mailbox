@@ -14,6 +14,8 @@
     <dl class="facts">
       <dt>Id</dt><dd class="mono">{{ account.id }}</dd>
       <dt>Provider</dt><dd>{{ account.provider.value }}</dd>
+      <dt>IMAP</dt><dd>{{ account.settings.get("host") | or_missing }}{% if account.settings.get("port") %}:{{ account.settings.port }}{% endif %}</dd>
+      <dt>SMTP</dt><dd>{{ account.settings.get("smtp_host") | or_missing }}{% if account.settings.get("smtp_port") %}:{{ account.settings.smtp_port }}{% endif %}</dd>
       <dt>Status</dt><dd>{% include "partials/account_status.html" %}</dd>
       <dt>Credentials</dt>
       <dd>
@@ -41,10 +43,7 @@
           <span class="hint">Empty: unchanged.</span>
         </div>
       </div>
-      <details class="fold">
-        <summary>Servers</summary>
-        {{ connection_fields({}, security, keep=True) }}
-      </details>
+      <div class="fold">{{ connection_fields(account.settings, security, editing=True) }}</div>
       <div class="form-actions"><button class="primary" type="submit">Save</button></div>
     </form>
   </div>

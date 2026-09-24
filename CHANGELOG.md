@@ -14,6 +14,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- An account carries its `settings` (host, port, security, username,
+  `smtp_*`), never a secret. Settings whose name looks like a secret
+  (`password`, `secret`, `token`, `api_key`, ...) are refused with `400`:
+  secrets go in `credentials`.
+
 - Grants in responses carry `recipients` and `max_sends_per_day`, null
   where not set.
 

@@ -5135,6 +5135,24 @@
             },
             "type": "array",
             "title": "Credentials"
+          },
+          "settings": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Settings",
+            "description": "The connection settings: host, port, security, username, smtp_host, ... Never a secret; those are `credentials`."
           }
         },
         "type": "object",
