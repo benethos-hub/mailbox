@@ -169,15 +169,16 @@ class MemoryProvider:
             {
                 **convert.summary_fields(parsed),
                 **convert.message_fields(parsed),
-                "id": f"draft_{self._drafts_saved}",
+                # Stable ids: a replaced draft keeps its id.
+                "id": old.id if old else f"draft_{self._drafts_saved}",
                 "folder_ids": [drafts],
                 "keywords": ["$draft"],
             }
         )
+        if old is not None:
+            self.messages.remove(old)
         self.messages.append(draft)
         self.raws[draft.id] = raw
-        if old is not None:
-            await self.delete_draft(old.id)
         return MessageSummary.model_validate(draft.model_dump())
 
     async def get_draft(self, draft_id: str) -> bytes:

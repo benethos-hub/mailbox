@@ -7,23 +7,26 @@ the answer looks like.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypeVar
 
 from ..data.mail import compose
-from ..data.models import Message, MessageReference, OutgoingMessage, Recipient
+from ..data.models import DraftMessage, Message, MessageReference, Recipient
 from ..errors import BadRequestError
 
 # (filename, content type, data) of one of the original's attachments.
 AttachedFile = tuple[str, str, bytes]
 
+# A message to send or a draft: what goes in comes out, filled in.
+M = TypeVar("M", bound=DraftMessage)
+
 
 def reply(
-    message: OutgoingMessage,
+    message: M,
     action: str,
     original: Message,
     raw: bytes,
     own_address: str,
-) -> tuple[OutgoingMessage, compose.Extras]:
+) -> tuple[M, compose.Extras]:
     """``reply`` or ``reply_all``, in the original's thread."""
     in_reply_to, chain = compose.references(raw)
     changes: dict[str, Any] = {
@@ -43,12 +46,12 @@ def reply(
 
 
 def forward(
-    message: OutgoingMessage,
+    message: M,
     forward_as: str,
     original: Message,
     raw: bytes,
     files: list[AttachedFile],
-) -> tuple[OutgoingMessage, compose.Extras]:
+) -> tuple[M, compose.Extras]:
     """``inline``: quoted with its headers, ``files`` attached.
     ``attachment``: the unchanged original as ``message/rfc822``."""
     changes: dict[str, Any] = {

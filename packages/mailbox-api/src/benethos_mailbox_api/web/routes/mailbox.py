@@ -9,6 +9,7 @@ from fastapi import APIRouter, Header, Query, Response
 
 from ...data.models import (
     BatchResult,
+    DraftMessage,
     Folder,
     FolderCreate,
     FolderUpdate,
@@ -127,6 +128,50 @@ async def send_message(
     Message-ID and keeps a read copy in the sent folder. `200` means the
     mail server accepted the message; it cannot be taken back."""
     return await mailbox.send_message(caller, account_id, message, idempotency_key)
+
+
+@router.get("/drafts")
+async def list_drafts(
+    account_id: str,
+    caller: Caller,
+    mailbox: Mailbox,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    cursor: str | None = None,
+) -> Page[MessageSummary]:
+    """The drafts, newest first. A draft id is a message id and reads with
+    `get_message`."""
+    return await mailbox.list_drafts(caller, account_id, limit=limit, cursor=cursor)
+
+
+@router.post("/drafts", status_code=201)
+async def create_draft(
+    account_id: str, draft: DraftMessage, caller: Caller, mailbox: Mailbox
+) -> MessageSummary:
+    """Store a draft in the drafts folder, composed as `send_message` would,
+    recipients optional. With a `reference` the quote is added now, and it
+    needs `get_message` too."""
+    return await mailbox.create_draft(caller, account_id, draft)
+
+
+@router.put("/drafts/{draft_id}")
+async def update_draft(
+    account_id: str,
+    draft_id: str,
+    draft: DraftMessage,
+    caller: Caller,
+    mailbox: Mailbox,
+) -> MessageSummary:
+    """Replace a draft as a whole. Its id stays. An id that names no draft
+    answers `404`."""
+    return await mailbox.update_draft(caller, account_id, draft_id, draft)
+
+
+@router.delete("/drafts/{draft_id}", status_code=204)
+async def delete_draft(
+    account_id: str, draft_id: str, caller: Caller, mailbox: Mailbox
+) -> None:
+    """Delete a draft for good. An id that names no draft answers `404`."""
+    await mailbox.delete_draft(caller, account_id, draft_id)
 
 
 @router.post("/messages/batch")

@@ -15,7 +15,7 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 6. moves it back the way another mail client would: the id still answers,
 7. replies and forwards through the API, back to account 2 only, and
    checks the flags on the original; renames and deletes the folder,
-   runs a batch,
+   runs a batch, stores, replaces and deletes a reply draft (not sent),
 8. deletes the mail through the API, into the trash, then for good, and
    the sent copy. With ``--keep`` the mail stays in the inbox and the copy
    in the sent folder, to look at in a mail client.
@@ -138,6 +138,9 @@ class OtherClient:
     def trash_folder(self) -> str | None:
         return self._special_folder(b"\\trash")
 
+    def drafts_folder(self) -> str | None:
+        return self._special_folder(b"\\drafts")
+
     def _special_folder(self, flag: bytes) -> str | None:
         """The folder with this special-use flag (RFC 6154)."""
         status, data = self.conn.list()
@@ -212,6 +215,61 @@ async def idle_while_sending(provider: Any, send: Any) -> bool:
     return result.get("changed", False)
 
 
+def check_drafts(
+    run: Run,
+    client: TestClient,
+    other: OtherClient,
+    account_id: str,
+    message_id: str,
+    subject: str,
+) -> None:
+    """A reply draft to the test mail: stored, replaced, listed, deleted.
+    Nothing is sent."""
+    drafts = other.drafts_folder()
+    url = f"/v1/accounts/{account_id}/drafts"
+    reply = f"Re: {subject}"
+    created = client.post(
+        url,
+        json={
+            "reference": {"message_id": message_id, "action": "reply"},
+            "text": "Automatic draft of live/changes.py, never sent.",
+        },
+    )
+    draft_id = created.json().get("id", "?")
+    run.check(
+        "POST drafts stores a draft, another client sees it",
+        created.status_code == 201
+        and drafts is not None
+        and "\\Draft" in other.flags(drafts, reply),
+        f"{created.status_code}, {drafts}",
+    )
+    replaced = client.put(
+        f"{url}/{draft_id}",
+        json={
+            "reference": {"message_id": message_id, "action": "reply"},
+            "text": "Automatic draft of live/changes.py, replaced, never sent.",
+        },
+    )
+    run.check(
+        "PUT replaces it, the id stays, the old one is gone",
+        replaced.status_code == 200
+        and replaced.json().get("id") == draft_id
+        and drafts is not None
+        and len(other.uids(drafts, reply)) == 1,
+        str(replaced.status_code),
+    )
+    listed = [d["id"] for d in client.get(url).json().get("items", [])]
+    run.check("GET drafts lists it", draft_id in listed)
+    deleted = client.delete(f"{url}/{draft_id}")
+    run.check(
+        "DELETE removes it for good",
+        deleted.status_code == 204
+        and drafts is not None
+        and not other.uids(drafts, reply),
+        str(deleted.status_code),
+    )
+
+
 def find_by_subject(
     client: TestClient, account_id: str, subject: str
 ) -> dict[str, Any] | None:
@@ -244,7 +302,13 @@ def clean_up(
             return
     # A subject search finds the replies and forwards ("Re: ...") too.
     folders = [other.folder_name(base), other.folder_name(base + "-renamed")]
-    places = [*folders, "INBOX", other.trash_folder(), other.sent_folder()]
+    places = [
+        *folders,
+        "INBOX",
+        other.trash_folder(),
+        other.sent_folder(),
+        other.drafts_folder(),
+    ]
     removed = sum(other.delete_mail(place, subject) for place in places if place)
     left = [f for f in folders if f in other.all_folders()]
     for folder in left:
@@ -495,6 +559,8 @@ def main() -> int:
             and "\\Flagged" in other.flags("INBOX", subject),
             f"{batch.status_code} {outcomes}",
         )
+
+        check_drafts(run, client, other, account_id, message_id, subject)
 
         test_folder = names.get(base, "?")
         renamed = client.patch(
