@@ -232,3 +232,15 @@ async def test_deleting_the_account_forgets_its_ids(
     index = services.sync._index  # the store behind the service
     assert index.folder_states(account_id) == {}
     assert index.in_folders(account_id, [mappers.folder_id("INBOX")]) == []
+
+
+async def test_a_new_mail_listed_and_moved_before_the_next_sync(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    # Found live: the listing gave the new mail its id, and another client
+    # moved it before any sync had read its Message-ID.
+    await services.sync.sync_account(account_id)
+    server.add("INBOX", 5, make_message("Just arrived"))
+    ids = await ids_by_subject(services, account_id)
+    server.move("INBOX", 5, "Archive", 1)
+    assert await subject(services, account_id, ids["Just arrived"]) == "Just arrived"

@@ -51,6 +51,13 @@ class FakeFolder:
     flags: tuple[str, ...] = ()
     uidvalidity: int = 1
     messages: dict[int, tuple[bytes, tuple[str, ...]]] = field(default_factory=dict)
+    # Like a real server, UIDNEXT never goes down, even when messages leave.
+    highest_uid: int = 0
+
+    @property
+    def uidnext(self) -> int:
+        self.highest_uid = max(self.highest_uid, *self.messages, 0)
+        return self.highest_uid + 1
 
 
 class _FolderManager:
@@ -75,7 +82,7 @@ class _FolderManager:
         folder = self._box.folders[name]
         values = {
             "UIDVALIDITY": folder.uidvalidity,
-            "UIDNEXT": max(folder.messages, default=0) + 1,
+            "UIDNEXT": folder.uidnext,
             "MESSAGES": len(folder.messages),
         }
         return {k: v for k, v in values.items() if k in options}
@@ -178,7 +185,7 @@ class FakeMailBox:
     def move(self, source: str, uid: int, target: str, new_uid: int) -> None:
         """Another client moves a message."""
         entry = self.folders[source].messages.pop(uid)
-        self.folders.setdefault(target, FakeFolder()).messages[new_uid] = entry
+        self.add(target, new_uid, *entry)
 
     # the factory signature ImapSession expects
     def __call__(self, server: Any, timeout: float) -> FakeMailBox:
@@ -188,7 +195,9 @@ class FakeMailBox:
     def add(
         self, folder: str, uid: int, raw: bytes, flags: tuple[str, ...] = ()
     ) -> None:
-        self.folders.setdefault(folder, FakeFolder()).messages[uid] = (raw, flags)
+        target = self.folders.setdefault(folder, FakeFolder())
+        target.messages[uid] = (raw, flags)
+        target.highest_uid = max(target.highest_uid, uid)
 
     def login(
         self, username: str, password: str, initial_folder: str | None = None

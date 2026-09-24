@@ -79,7 +79,7 @@ class MailboxService:
             ),
         )
         return Page[MessageSummary](
-            items=self._published(account_id, page.items),
+            items=await self._published(account_id, page.items),
             next_cursor=page.next_cursor,
         )
 
@@ -132,19 +132,21 @@ class MailboxService:
         merged = [
             (item, account_id)
             for account_id, window in chunks.items()
-            for item in self._published(
-                account_id, [i for chunk in window for i in chunk.items]
-            )
+            for chunk in window
+            for item in chunk.items
         ]
         merged.sort(key=lambda pair: _newest_first(pair[0]))
         taken = merged[:limit]
+        published: dict[str, list[MessageSummary]] = {}
         for account_id, window in chunks.items():
-            consumed = sum(1 for _, owner in taken if owner == account_id)
-            positions[account_id] = _advance(positions[account_id], window, consumed)
+            mine = [item for item, owner in taken if owner == account_id]
+            positions[account_id] = _advance(positions[account_id], window, len(mine))
+            # Only what is handed out gets our ids.
+            published[account_id] = await self._published(account_id, mine)
 
         more = any(not p.done for p in positions.values())
         return MessagePage(
-            items=[item for item, _ in taken],
+            items=[published[owner].pop(0) for _, owner in taken],
             next_cursor=_encode_cursor(positions) if more else None,
             incomplete=failures,
         )
@@ -176,11 +178,11 @@ class MailboxService:
 
     # --- ids -------------------------------------------------------------------------
 
-    def _published(
+    async def _published(
         self, account_id: str, items: list[MessageSummary]
     ) -> list[MessageSummary]:
         """The provider's summaries with our ids and the account."""
-        ids = self._sync.public_ids(
+        ids = await self._sync.public_ids(
             account_id,
             [(i.id, i.folder_ids[0] if i.folder_ids else "") for i in items],
         )

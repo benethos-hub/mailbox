@@ -18,7 +18,7 @@ from typing import TypeVar
 
 from ..data.providers import Capability
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
-from ..errors import NotFoundError
+from ..errors import MailboxApiError, NotFoundError
 from .accounts import AccountService
 
 T = TypeVar("T")
@@ -47,11 +47,12 @@ class SyncService:
 
     # --- ids ------------------------------------------------------------------------
 
-    def public_ids(
+    async def public_ids(
         self, account_id: str, places: Iterable[tuple[str, str]]
     ) -> list[str]:
         """Our ids for provider ids, each with its folder. Unknown ones get a
-        new id; the next sync fills in their ``Message-ID``."""
+        new id, with their ``Message-ID`` read right away: a message moved
+        before the next sync can only be followed by it."""
         places = list(places)
         if not self.mapped(account_id):
             return [native for native, _ in places]
@@ -59,9 +60,10 @@ class SyncService:
         known = self._index.by_native(account_id, natives)
         missing = [(n, f) for n, f in dict(places).items() if n not in known]
         if missing:
+            headers = await self._headers(account_id, [n for n, _ in missing])
             self._index.add(
                 account_id,
-                [IndexEntry(self._new_id(), n, f) for n, f in missing],
+                [IndexEntry(self._new_id(), n, f, headers.get(n)) for n, f in missing],
             )
             # Read back: a sync may have added the same place meanwhile.
             known = self._index.by_native(account_id, natives)
@@ -86,6 +88,19 @@ class SyncService:
             if entry is None or entry.native_id == native:
                 raise NotFoundError(f"message {message_id} not found") from None
             return await operation(entry.native_id)
+
+    async def _headers(
+        self, account_id: str, natives: list[str]
+    ) -> dict[str, str | None]:
+        """Best effort: without the headers the listing still works, the next
+        sync reads them."""
+        provider = self._accounts.provider(account_id)
+        try:
+            return await self._accounts.observe(
+                account_id, provider.message_headers(natives)
+            )
+        except MailboxApiError:
+            return {}
 
     def _native(self, account_id: str, message_id: str) -> str:
         entry = self._index.get(account_id, message_id)
