@@ -59,13 +59,22 @@ class ErrorResponse(BaseModel):
     error: ErrorDetail
 
 
+class MeAccount(BaseModel):
+    """An account the caller may act on."""
+
+    id: str
+    email: str
+    display_name: str | None = None
+    operations: list[str] = Field(description="What the caller may do on it")
+
+
 class Me(BaseModel):
     """The caller and its effective rights."""
 
     user_id: str
     name: str
-    accounts: dict[str, list[str]] = Field(
-        description="Account id to the operations allowed on it"
+    accounts: list[MeAccount] = Field(
+        description="Every account the caller may act on, with its operations"
     )
     operations: list[str] = Field(
         description="Operations not bound to one existing account"

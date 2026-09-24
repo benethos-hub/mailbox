@@ -21,10 +21,20 @@ from .auth import AuthService
 
 
 @dataclass(frozen=True)
+class AccountRights:
+    """One account the caller may act on, and what it may do there."""
+
+    id: str
+    email: str
+    display_name: str | None
+    operations: list[str]
+
+
+@dataclass(frozen=True)
 class EffectiveRights:
     user_id: str
     name: str
-    accounts: dict[str, list[str]]
+    accounts: list[AccountRights]
     operations: list[str]
 
 
@@ -46,11 +56,19 @@ class UserService:
     # --- the caller itself --------------------------------------------------
 
     def me(self, access: Access) -> EffectiveRights:
-        accounts = {}
+        accounts = []
         for account_id in self._accounts.all_ids():
             operations = access.operations_on(account_id)
             if operations:
-                accounts[account_id] = sorted(operations)
+                account = self._accounts.record(account_id)
+                accounts.append(
+                    AccountRights(
+                        account.id,
+                        account.email,
+                        account.display_name,
+                        sorted(operations),
+                    )
+                )
         return EffectiveRights(
             user_id=access.user_id,
             name=access.name,

@@ -324,6 +324,19 @@ def main() -> int:
             not page.get("incomplete"),
             f"{len(page.get('items', []))} items, incomplete {page.get('incomplete')}",
         )
+        me = client.get("/v1/me").json()
+        listed = {a["id"]: a for a in me.get("accounts", [])}
+        emails = {a["email"].lower() for a in accounts(env)}
+        run.check(
+            "GET /v1/me lists every account with its address",
+            all(
+                i in listed
+                and listed[i]["email"].lower() in emails
+                and listed[i]["operations"]
+                for i in ids
+            ),
+            f"{len(listed)} accounts",
+        )
 
     for account_id in ids:
         print(f"\n== sync {account_id}")
