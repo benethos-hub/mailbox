@@ -3536,6 +3536,18 @@
               }
             ],
             "title": "Unread"
+          },
+          "subscribed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscribed",
+            "description": "Whether the folder is subscribed on the server (IMAP). Mail clients such as Outlook show only subscribed folders, and the inbox always. Null where the provider has no subscriptions."
           }
         },
         "type": "object",

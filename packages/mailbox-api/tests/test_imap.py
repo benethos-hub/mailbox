@@ -133,6 +133,20 @@ async def test_folders_with_roles_and_parents(server: FakeMailBox) -> None:
     assert mappers.folder_name(folders["2026"].id) == "Archive/2026"
 
 
+async def test_folders_say_whether_they_are_subscribed(server: FakeMailBox) -> None:
+    server.subscribed = {"Sent"}
+    imap = provider(server)
+    folders = {f.name: f for f in await imap.list_folders()}
+    assert folders["Sent"].subscribed is True
+    # Reported as the server has it, even for the inbox.
+    assert folders["INBOX"].subscribed is False
+    assert folders["2026"].subscribed is False
+    # The sync asks for folder states and needs no subscriptions.
+    server.calls.clear()
+    await imap.folder_states()
+    assert ("lsub",) not in server.calls
+
+
 # --- listing ------------------------------------------------------------------
 
 

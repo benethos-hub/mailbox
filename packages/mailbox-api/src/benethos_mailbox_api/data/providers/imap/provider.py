@@ -135,7 +135,7 @@ class ImapProvider:
     # --- MailProvider ---------------------------------------------------------
 
     async def list_folders(self) -> list[Folder]:
-        return await self._run(self._list_folders)
+        return await self._run(lambda: self._list_folders(subscriptions=True))
 
     async def list_messages(
         self,
@@ -199,8 +199,8 @@ class ImapProvider:
 
     # --- the sequences, each under the lock -------------------------------------
 
-    def _list_folders(self) -> list[Folder]:
-        return mappers.to_folders(self._session.list_folders())
+    def _list_folders(self, subscriptions: bool = False) -> list[Folder]:
+        return mappers.to_folders(self._session.list_folders(subscriptions))
 
     def _list_messages(
         self,

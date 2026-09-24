@@ -47,6 +47,7 @@ class RawFolder:
     name: str
     delimiter: str | None
     flags: tuple[str, ...]
+    subscribed: bool | None = None  # None: not asked
 
 
 @dataclass(frozen=True)
@@ -141,15 +142,24 @@ class ImapSession:
         if client is not None:
             _quietly_logout(client)
 
-    def list_folders(self) -> list[RawFolder]:
+    def list_folders(self, subscriptions: bool = False) -> list[RawFolder]:
+        """Every folder. With ``subscriptions`` also whether each one is
+        subscribed, which costs one more command (LSUB)."""
         with _errors():
+            client = self._require()
+            subscribed = (
+                {str(name) for _, _, name in client.list_sub_folders()}
+                if subscriptions
+                else None
+            )
             return [
                 RawFolder(
                     str(name),
                     _text(delimiter) if delimiter else None,
                     tuple(_text(flag) for flag in flags),
+                    None if subscribed is None else str(name) in subscribed,
                 )
-                for flags, delimiter, name in self._require().list_folders()
+                for flags, delimiter, name in client.list_folders()
             ]
 
     def select(self, folder: str) -> int:

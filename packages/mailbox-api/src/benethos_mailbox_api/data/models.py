@@ -104,6 +104,14 @@ class Folder(BaseModel):
     parent_id: str | None = None
     total: int | None = None
     unread: int | None = None
+    subscribed: bool | None = Field(
+        default=None,
+        description=(
+            "Whether the folder is subscribed on the server (IMAP). Mail "
+            "clients such as Outlook show only subscribed folders, and the "
+            "inbox always. Null where the provider has no subscriptions."
+        ),
+    )
 
 
 class MessageSummary(BaseModel):
