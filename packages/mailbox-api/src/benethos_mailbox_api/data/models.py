@@ -114,6 +114,30 @@ class Folder(BaseModel):
     )
 
 
+# A folder name as shown: no control characters, no IMAP wildcards.
+FOLDER_NAME_PATTERN = r"^[^\x00-\x1f\x7f*%]{1,200}$"
+
+
+class FolderCreate(BaseModel):
+    name: str = Field(pattern=FOLDER_NAME_PATTERN)
+    parent_id: str | None = Field(
+        default=None, description="The folder to create it in. Left out: the top."
+    )
+
+
+class FolderUpdate(BaseModel):
+    """Rename or move a folder. Fields left out stay as they are."""
+
+    name: str | None = Field(default=None, pattern=FOLDER_NAME_PATTERN)
+    parent_id: str | None = Field(
+        default=None, description="The new parent. `null` moves it to the top."
+    )
+
+    @property
+    def moves(self) -> bool:
+        return "parent_id" in self.model_fields_set
+
+
 class MessageSummary(BaseModel):
     id: str
     account_id: str | None = None

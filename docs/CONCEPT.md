@@ -516,6 +516,19 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | PATCH | `{acc}/folders/{folder_id}` | rename, move |
 | DELETE | `{acc}/folders/{folder_id}` | delete |
 
+Rules of the implementation (phase 2):
+
+- A new folder goes into the user's personal namespace (RFC 2342), e.g.
+  below `INBOX.` where the server keeps every folder there. It is
+  subscribed, since Outlook and other clients list only subscribed
+  folders. Renaming moves the subscription along, deleting drops it.
+- Folders with a role (inbox, sent, trash, ...) are neither renamed nor
+  deleted: `409`. `RENAME INBOX` would move the inbox's messages.
+- Only an empty folder without subfolders is deleted, otherwise `409`: on
+  many servers `DELETE` takes the messages inside with it.
+- On IMAP a folder's id follows its name and changes when it is renamed.
+  The messages inside keep their ids: a sync follows them at once (4.1).
+
 ### 6.3 Messages
 
 | Method | Path | Purpose |

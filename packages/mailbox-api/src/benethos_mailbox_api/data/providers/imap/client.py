@@ -22,6 +22,7 @@ from imapclient import IMAPClient
 from imapclient.exceptions import LoginError
 
 from ....errors import (
+    NotFoundError,
     NotSupportedError,
     ProviderAuthError,
     ProviderError,
@@ -171,14 +172,14 @@ class ImapSession:
     def select(self, folder: str) -> int:
         """Select a folder read-only, return its UIDVALIDITY."""
         with _errors():
-            answer = self._require().select_folder(folder, readonly=True)
+            answer = self._select_folder(folder, readonly=True)
         return int(answer[b"UIDVALIDITY"])
 
     def select_writable(self, folder: str) -> tuple[int, frozenset[str]]:
         """Select a folder read-write. Returns its UIDVALIDITY and the flags
         the server keeps (``PERMANENTFLAGS``); ``\\*`` means any keyword."""
         with _errors():
-            answer = self._require().select_folder(folder, readonly=False)
+            answer = self._select_folder(folder, readonly=False)
         if b"READ-ONLY" in answer:
             raise ProviderError(f"the folder {folder} is read-only on the server")
         permanent = answer.get(b"PERMANENTFLAGS", ())
@@ -335,6 +336,57 @@ class ImapSession:
                         # The connection is spoiled. Start afresh next time.
                         self.logout()
 
+    def _select_folder(self, folder: str, readonly: bool) -> dict[bytes, Any]:
+        """SELECT or EXAMINE. A folder that is gone, e.g. renamed by another
+        client, is ``NotFoundError`` rather than a server error."""
+        client = self._require()
+        try:
+            answer: dict[bytes, Any] = client.select_folder(folder, readonly=readonly)
+        except imaplib.IMAP4.error:
+            if not client.folder_exists(folder):
+                raise NotFoundError(f"folder {folder} not found") from None
+            raise
+        return answer
+
+    # --- folders ---------------------------------------------------------------------
+
+    def personal_namespace(self) -> tuple[str, str | None]:
+        """Where top-level folders of the user go (RFC 2342), e.g.
+        ``("INBOX.", ".")`` on servers that keep all folders below the inbox,
+        and its delimiter."""
+        with _errors():
+            client = self._require()
+            if "NAMESPACE" not in _capabilities(client):
+                return "", None
+            personal = client.namespace().personal
+        if not personal:
+            return "", None
+        prefix, delimiter = personal[0]
+        return _text(prefix), _text(delimiter) if delimiter else None
+
+    def create_folder(self, name: str) -> None:
+        """Create and subscribe: mail clients such as Outlook list only
+        subscribed folders."""
+        with _errors():
+            client = self._require()
+            client.create_folder(name)
+            client.subscribe_folder(name)
+
+    def rename_folder(self, old: str, new: str) -> None:
+        """Rename, and move the subscription along."""
+        with _errors():
+            client = self._require()
+            client.rename_folder(old, new)
+            client.subscribe_folder(new)
+            _quietly(lambda: client.unsubscribe_folder(old))
+
+    def delete_folder(self, name: str) -> None:
+        """Delete, and drop the subscription, which would otherwise stay."""
+        with _errors():
+            client = self._require()
+            _quietly(lambda: client.unsubscribe_folder(name))
+            client.delete_folder(name)
+
     def _require(self) -> Any:
         if self._client is None:
             raise ProviderError("not connected")
@@ -395,6 +447,15 @@ def _message_id(header_block: bytes) -> str | None:
     return "".join(str(value).split()) or None
 
 
+def _quietly(command: Callable[[], Any]) -> None:
+    """A command whose failure changes nothing, e.g. dropping a subscription
+    that does not exist."""
+    try:
+        command()
+    except imaplib.IMAP4.error:
+        pass
+
+
 def _quietly_logout(client: Any) -> None:
     try:
         client.logout()
@@ -406,7 +467,7 @@ def _quietly_logout(client: Any) -> None:
 def _errors() -> Iterator[None]:
     try:
         yield
-    except (ProviderAuthError, ProviderError, NotSupportedError):
+    except (ProviderAuthError, ProviderError, NotSupportedError, NotFoundError):
         raise
     except TimeoutError:
         raise ProviderUnavailableError(
