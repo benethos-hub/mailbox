@@ -13,6 +13,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `config/benethos-mailbox-api/.env.example` lists every setting of the
+  service with its default. The service reads `.env` from that folder,
+  relative to the working directory.
+  `serve` names the database it uses.
 - `POST /v1/discovery` with `{"email": ...}` returns ways to connect the
   address, best first: servers with port and encryption, the credential to
   ask for, hints, whether the answer is `confirmed`, and `settings` for
@@ -65,9 +69,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   key once, `keys import` stores the master key from a recovery key.
 - Master key providers: the OS credential store (default), a key file, or
   `MAILBOX_API_MASTER_KEY`.
-- Accounts, users, roles and tokens are stored in SQLite in the per-user
-  data directory. `MAILBOX_API_DATA_DIR` moves it, `MAILBOX_API_STORAGE=memory`
-  keeps nothing.
+- Accounts, users, roles and tokens are stored in SQLite in
+  `data/benethos-mailbox-api/`, relative to the working directory. `MAILBOX_API_DATA_DIR` moves it,
+  `MAILBOX_API_STORAGE=memory` keeps nothing.
 - `benethos-mailbox-api users create-admin` creates a user with every right
   and prints its token once.
 - Users with roles and grants per account and per operation:

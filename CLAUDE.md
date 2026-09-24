@@ -36,6 +36,11 @@ done. Update the roadmap in the same commit that finishes an item.
 
 - Windows, PowerShell or Bash. Python 3.11-3.14.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
+- Configuration: one folder per package under `config/`, e.g.
+  `config/benethos-mailbox-api/.env` (not versioned) beside its
+  `.env.example`. Paths count from the repository root, where `uv run` is
+  started. Data likewise, one folder per package under `data/` (not
+  versioned): the database in `data/benethos-mailbox-api/`.
 - Run the service: `MAILBOX_API_KEY=... uv run benethos-mailbox-api serve`,
   then `http://127.0.0.1:8080/docs`.
 - Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`.

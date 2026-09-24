@@ -89,6 +89,10 @@ def _run(args: argparse.Namespace) -> int:
         from .main import create_app
 
         settings = Settings()
+        if settings.storage == "sqlite":
+            print(f"database: {settings.database_path}", file=sys.stderr)
+        else:
+            print("storage: memory, nothing is kept", file=sys.stderr)
         uvicorn.run(
             create_app(settings),
             host=args.host or settings.host,

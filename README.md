@@ -101,12 +101,15 @@ MAILBOX_API_TOKEN=<token> uv run benethos-mailbox-mcp
 ```
 
 The API documentation is at `http://127.0.0.1:8080/docs`. Data is kept in a
-SQLite database in the per-user data directory.
+SQLite database in `data/benethos-mailbox-api/`, relative to the working
+directory. Settings come
+from the environment or `config/benethos-mailbox-api/.env`, relative to the
+working directory; copy the `.env.example` beside it to start.
 
 | Setting | Meaning |
 |---|---|
 | `MAILBOX_API_KEY` | optional built-in admin key, for containers and tests |
-| `MAILBOX_API_DATA_DIR` | where the database lives |
+| `MAILBOX_API_DATA_DIR` | where the database lives, default `data/benethos-mailbox-api` in the working directory |
 | `MAILBOX_API_STORAGE` | `sqlite` (default) or `memory`, which keeps nothing |
 | `MAILBOX_API_HOST`, `MAILBOX_API_PORT` | where the API listens, default `127.0.0.1:8080` |
 | `MAILBOX_API_KEY_PROVIDER` | where the master key lives: `keyring` (default), `file` or `env` |

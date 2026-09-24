@@ -5,11 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from platformdirs import user_data_dir
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-APP_NAME = "benethos-mailbox-api"
+# Relative to the working directory. Template: .env.example beside it.
+ENV_FILE = "config/benethos-mailbox-api/.env"
 
 
 class Settings(BaseSettings):
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="MAILBOX_API_",
-        env_file=".env",
+        env_file=ENV_FILE,
         extra="ignore",
         populate_by_name=True,
     )
@@ -28,8 +28,9 @@ class Settings(BaseSettings):
     # MAILBOX_API_API_KEY.
     api_key: SecretStr | None = Field(default=None, validation_alias="MAILBOX_API_KEY")
     log_level: str = "INFO"
-    # Where the database lives. Defaults to the per-user data directory.
-    data_dir: Path | None = None
+    # Where the database lives. A relative path counts from the working
+    # directory.
+    data_dir: Path = Path("data/benethos-mailbox-api")
     # "memory" keeps nothing across restarts. For tests and trying things out.
     storage: Literal["sqlite", "memory"] = "sqlite"
     # Where the master key comes from.
@@ -47,5 +48,4 @@ class Settings(BaseSettings):
 
     @property
     def database_path(self) -> Path:
-        base = self.data_dir or Path(user_data_dir(APP_NAME, appauthor=False))
-        return base / "mailbox.db"
+        return (self.data_dir / "mailbox.db").resolve()
