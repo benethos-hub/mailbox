@@ -111,13 +111,20 @@ class ImapSession:
         except (imaplib.IMAP4.error, OSError):
             pass
 
+    def read_capabilities(self) -> frozenset[str]:
+        """Connect without logging in and return what the server announces
+        after TLS or STARTTLS. Sends no credential."""
+        with _errors():
+            mailbox = self._factory(self._server, self._timeout)
+            try:
+                return frozenset(str(c).upper() for c in mailbox.client.capabilities)
+            finally:
+                _quietly_logout(mailbox)
+
     def logout(self) -> None:
         mailbox, self._mailbox = self._mailbox, None
         if mailbox is not None:
-            try:
-                mailbox.logout()
-            except (ImapToolsError, imaplib.IMAP4.error, OSError):
-                pass
+            _quietly_logout(mailbox)
 
     def list_folders(self) -> list[RawFolder]:
         with _errors():
@@ -184,6 +191,13 @@ class ImapSession:
         if self._mailbox is None:
             raise ProviderError("not connected")
         return self._mailbox
+
+
+def _quietly_logout(mailbox: Any) -> None:
+    try:
+        mailbox.logout()
+    except (ImapToolsError, imaplib.IMAP4.error, OSError):
+        pass
 
 
 @contextmanager

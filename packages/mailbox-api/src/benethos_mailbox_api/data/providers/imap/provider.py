@@ -50,8 +50,28 @@ FIRST_PAUSE = 30.0
 LONGEST_PAUSE = 900.0
 
 
+PROBE_TIMEOUT = 10.0
+
+
 def default_session(server: ImapServer) -> ImapSession:
     return ImapSession(server, client_id=CLIENT_ID)
+
+
+def probe_session(server: ImapServer) -> ImapSession:
+    return ImapSession(server, timeout=PROBE_TIMEOUT)
+
+
+async def probe(
+    host: str,
+    port: int,
+    security: str,
+    session_factory: SessionFactory = probe_session,
+) -> frozenset[str]:
+    """The capabilities of an IMAP server, read without logging in."""
+    if security not in DEFAULT_PORTS:
+        raise BadRequestError("IMAP without encryption is not supported")
+    session = session_factory(ImapServer(host=host, port=port, security=security))
+    return await anyio.to_thread.run_sync(session.read_capabilities)
 
 
 class ImapProvider:
