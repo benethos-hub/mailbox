@@ -94,8 +94,9 @@ uv run mypy
 ```
 
 Live checks against test accounts, outside the test suite:
-`uv run python live/smoke.py`, configured in `live/.env` (template
-`live/.env.example`).
+`uv run python live/smoke.py` reads only, `uv run python live/changes.py`
+sends one test mail between two test accounts, moves it and deletes it.
+Both are configured in `live/.env` (template `live/.env.example`).
 
 ## Running
 

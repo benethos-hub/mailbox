@@ -8,7 +8,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [0](#phase-0--skeleton) | Skeleton | **done** |
 | [1a](#phase-1a--users-rights-storage-backup) | Users, rights, storage, backup | **done** |
 | [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | **done** |
-| [1c](#phase-1c--stable-ids-and-sync-worker) | Stable ids and sync worker | in progress |
+| [1c](#phase-1c--stable-ids-and-sync-worker) | Stable ids and sync worker | **done** |
 | [2](#phase-2--writing-and-sending) | Writing and sending | next |
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | |
 | [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | |
@@ -69,12 +69,13 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 1c – Stable ids and sync worker
 
-Before phase 2, so that ids stay valid once messages are moved.
+**Done.** Before phase 2, so that ids stay valid once messages are moved.
 
 - **Id mapping (4.1):** our own message ids for IMAP, kept in the store
 - **Sync worker (8.1):** IDLE on the inbox, the other folders polled,
   moves by other clients recognised by `Message-ID`
 - A lookup that misses syncs the account and tries again
+- Live checks: IDLE, and an id that survives a move by another client
 
 ## Phase 2 – Writing and sending
 
