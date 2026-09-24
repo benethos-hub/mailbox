@@ -531,6 +531,21 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | GET | `{acc}/threads` | thread list (capability `threads`) |
 | GET | `{acc}/threads/{thread_id}` | thread with its message summaries |
 
+**Decided 2026-09-24, changing messages:**
+
+- `PATCH` answers the changed message as a summary, with the same id.
+- Moving needs `MOVE` or `UIDPLUS` on an IMAP server. Without both, a move
+  would have to expunge the whole folder, other clients' deleted messages
+  included, so it answers `501 not_supported`.
+- `DELETE` without a folder with the trash role answers `409`, instead of
+  deleting for good.
+- Permanent deletion is the right `delete_message_permanent` in the group
+  `mail.delete`, so it can also be granted on its own.
+
+`keywords` follow JMAP (RFC 8621): `$answered`, `$forwarded`, `$draft` and
+the provider's own keywords as they are. `\Seen` and `\Flagged` are
+`unread` and `starred`. A `PATCH` with `keywords` replaces the list.
+
 **Decided 2026-09-24, threads for IMAP:** IMAP's `THREAD` extension
 (RFC 5256) works within one folder only, while a conversation is spread
 over the inbox, the sent folder and the archive. The service builds IMAP
@@ -863,7 +878,7 @@ with the role
   | `accounts.read` | `list_accounts`, `get_account` |
   | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes` |
   | `mail.write` | `update_message`, `batch_messages` (update and move only), `delete_message` to trash, `create_folder`, `update_folder` |
-  | `mail.delete` | `delete_message` with `permanent=true`, `batch_messages` with delete, `delete_folder` |
+  | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `batch_messages` with delete, `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
