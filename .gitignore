@@ -29,10 +29,11 @@ Thumbs.db
 
 # Local configuration and secrets
 .env
-config/.env
+config/*/.env
 *.token.json
 
 # Service data: the database holds encrypted credentials, backups the same
+data/
 *.db
 *.db-journal
 *.db-wal

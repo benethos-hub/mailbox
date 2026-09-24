@@ -718,9 +718,12 @@ the data, rather than a readable file.
 - **Deletion:** removing an account deletes its credential rows.
   `PRAGMA secure_delete = ON` makes SQLite overwrite freed pages, so the
   ciphertext does not linger in the file.
-- **Files:** the database sits in the per-user data directory
-  (`platformdirs`), created with owner-only permissions (0600, on Windows an
-  ACL for the user only).
+- **Files:** the database sits in `data/benethos-mailbox-api/` in the
+  working directory, moved with `MAILBOX_API_DATA_DIR`. Decided 2026-09-24:
+  one folder per package under `data/` and under `config/`; the MCP server
+  gets `data/benethos-mailbox-mcp/` once it stores anything, e.g.
+  downloaded attachments. The database is created with owner-only
+  permissions (0600, on Windows an ACL for the user only).
 - **Credential kinds per provider:** always the one that is not the main
   password. Per provider in the table of 5.3. In short: OAuth for Google
   and Microsoft, an API token for Fastmail, an app password everywhere
@@ -1083,7 +1086,7 @@ mode, since it would put the service package into the MCP installation.
 | Packaging | uv workspace with two distributions, hatchling, `src/` layout |
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
 | Storage | SQLite (stdlib `sqlite3` via a thread, or `aiosqlite`) |
-| Crypto | `cryptography` (AES-256-GCM), `keyring`, `platformdirs` |
+| Crypto | `cryptography` (AES-256-GCM), `keyring` |
 | Mail | imap-tools, aiosmtplib, poplib, httpx (Gmail, Graph) |
 | MCP | `mcp` 2.x |
 | Quality | pytest, pytest-asyncio, pytest-cov (≥ 80 %), ruff, mypy, GitHub Actions |
