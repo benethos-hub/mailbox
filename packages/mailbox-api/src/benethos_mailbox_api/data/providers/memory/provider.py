@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from email.parser import BytesHeaderParser
+
 from ....errors import (
     ConflictError,
     MailboxApiError,
@@ -16,6 +18,7 @@ from ...models import (
     MessageSummary,
     MessageUpdate,
     Page,
+    SentMessage,
 )
 from ..base import Capability
 
@@ -36,6 +39,8 @@ class MemoryProvider:
         ]
         self.messages = messages or []
         self.attachment_data: dict[tuple[str, str], bytes] = {}
+        # (sender, recipients, raw) of every send, for tests.
+        self.outbox: list[tuple[str, list[str], bytes]] = []
 
     async def list_folders(self) -> list[Folder]:
         return list(self.folders)
@@ -124,6 +129,22 @@ class MemoryProvider:
         self.messages[self.messages.index(message)] = moved
         return MessageSummary.model_validate(moved.model_dump())
 
+    async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
+        """Records what was sent in ``outbox`` and keeps a copy in the sent
+        folder."""
+        self.outbox.append((sender, list(recipients), raw))
+        sent = next((f.id for f in self.folders if f.role is FolderRole.SENT), None)
+        if sent is None:
+            return SentMessage()
+        copy = Message(
+            id=f"sent_{len(self.outbox)}",
+            folder_ids=[sent],
+            subject=_header(raw, "Subject"),
+            message_id_header=_header(raw, "Message-ID"),
+        )
+        self.messages.append(copy)
+        return SentMessage(sent_copy=MessageSummary.model_validate(copy.model_dump()))
+
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
         if parent_id is not None:
             self._folder(parent_id)
@@ -197,3 +218,8 @@ class MemoryProvider:
 
     async def close(self) -> None:
         return None
+
+
+def _header(raw: bytes, name: str) -> str | None:
+    value = BytesHeaderParser().parsebytes(raw).get(name)
+    return str(value) if value is not None else None

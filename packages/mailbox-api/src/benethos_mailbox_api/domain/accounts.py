@@ -170,6 +170,10 @@ class AccountService:
         for adapter in adapters:
             await adapter.close()
 
+    def record(self, account_id: str) -> Account:
+        """Internal: callers check rights first."""
+        return self._repository.get(account_id)
+
     def status(self, account_id: str) -> AccountStatus:
         """Internal: callers check rights first."""
         return self._repository.get(account_id).status

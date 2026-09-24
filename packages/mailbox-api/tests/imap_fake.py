@@ -90,6 +90,7 @@ class FakeMailBox:
         self.writable = False
         # Whether MOVE and COPY report the new UID (UIDPLUS).
         self.copyuid = True
+        self.append_failure: Exception | None = None
         # imaplib's store of response codes, which IMAPClient keeps in _imap.
         self._imap = SimpleNamespace(untagged_responses={})
 
@@ -146,6 +147,20 @@ class FakeMailBox:
             (tuple(f.encode() for f in folder.flags), self.delimiter.encode(), name)
             for name, folder in self.folders.items()
         ]
+
+    def append(
+        self, folder: str, msg: bytes, flags: Any = (), msg_time: Any = None
+    ) -> bytes:
+        """Stores the message; reports APPENDUID like a server with UIDPLUS
+        (``copyuid`` False: none), or fails with ``append_failure``."""
+        self.calls.append(("append", folder, tuple(flags)))
+        if self.append_failure is not None:
+            raise self.append_failure
+        uid = self.folders[folder].uidnext
+        self.add(folder, uid, msg.replace(b"\r\n", b"\n"), tuple(flags))
+        if not self.copyuid:
+            return b"Append completed"
+        return f"[APPENDUID {self.folders[folder].uidvalidity} {uid}] Done".encode()
 
     def namespace(self) -> SimpleNamespace:
         return SimpleNamespace(personal=((self.namespace_prefix, self.delimiter),))

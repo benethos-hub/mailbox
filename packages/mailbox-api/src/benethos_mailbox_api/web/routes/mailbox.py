@@ -16,7 +16,9 @@ from ...data.models import (
     MessageBatch,
     MessageSummary,
     MessageUpdate,
+    OutgoingMessage,
     Page,
+    SendResult,
 )
 from ..deps import Caller, Mailbox
 
@@ -99,6 +101,16 @@ async def update_message(
 ) -> MessageSummary:
     """Mark read or unread, star, set keywords. Fields left out stay."""
     return await mailbox.update_message(caller, account_id, message_id, changes)
+
+
+@router.post("/send")
+async def send_message(
+    account_id: str, message: OutgoingMessage, caller: Caller, mailbox: Mailbox
+) -> SendResult:
+    """Send from the account's address. The service sets From, Date and
+    Message-ID and keeps a read copy in the sent folder. `200` means the
+    mail server accepted the message; it cannot be taken back."""
+    return await mailbox.send_message(caller, account_id, message)
 
 
 @router.post("/messages/batch")

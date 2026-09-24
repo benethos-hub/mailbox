@@ -1,20 +1,22 @@
-"""Live check of IDLE, of changing a message, and of an id that survives
-moves.
+"""Live check of sending, IDLE, changing a message, folders, and ids that
+survive moves.
 
     uv run python live/changes.py [--keep]
 
 Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 
 1. watches the inbox of account 1 over IDLE,
-2. sends one test mail from account 2 to account 1 over SMTP,
+2. sends one test mail through the API from account 2 to account 1, and
+   checks the read copy in account 2's sent folder,
 3. checks that IDLE reported it and that the API lists it,
 4. marks it read, starred, with a keyword, and back, through the API,
-5. moves it through the API into a folder it creates: the id stays,
+5. creates a folder and moves the mail into it through the API: the id
+   stays,
 6. moves it back the way another mail client would: the id still answers,
-7. deletes it through the API: into the trash, then for good, and the
-   folder. With ``--keep`` the mail
-   stays in the inbox, and a copy goes into the Sent folder of account 2,
-   as a mail client would put it there, to look at in a mail client.
+7. renames and deletes the folder, runs a batch,
+8. deletes the mail through the API, into the trash, then for good, and
+   the sent copy. With ``--keep`` the mail stays in the inbox and the copy
+   in the sent folder, to look at in a mail client.
 
 Nothing else in the mailboxes is touched. The service runs in-process with
 memory storage and a throwaway master key. Credentials are never printed.
@@ -25,13 +27,10 @@ from __future__ import annotations
 import argparse
 import imaplib
 import re
-import smtplib
 import ssl
 import sys
 import time
 import uuid
-from email.message import EmailMessage
-from email.utils import format_datetime, localtime, make_msgid
 from typing import Any
 
 import anyio
@@ -50,62 +49,35 @@ DELIVERY_TRIES = 10
 DELIVERY_PAUSE = 3.0
 # Set and cleared again on the test mail.
 LIVE_KEYWORD = "$mailbox-api-live"
+TEXT = (
+    "Automatic test mail of live/changes.py in the mailbox-api repository.\n"
+    "It deletes itself when the check is over.\n"
+)
+KEPT_TEXT = (
+    "Automatic test mail of live/changes.py in the mailbox-api repository.\n"
+    "It was kept for inspection (--keep): delete it by hand.\n"
+)
 
 
-def smtp_server(
-    client: TestClient, env: dict[str, str], sender: dict[str, str]
-) -> dict[str, Any] | None:
-    """From ``LIVE_SMTP_HOST`` if set, otherwise what autodiscovery finds for
-    the sender's address."""
-    if "LIVE_SMTP_HOST" in env:
-        return {
-            "host": env["LIVE_SMTP_HOST"],
-            "port": int(env.get("LIVE_SMTP_PORT", "465")),
-            "security": env.get("LIVE_SMTP_SECURITY", "tls"),
-        }
-    found = client.post("/v1/discovery", json={"email": sender["email"]})
-    for candidate in found.json().get("candidates", []):
-        for server in candidate["servers"]:
-            if server["protocol"] == "smtp":
-                return dict(server)
-    return None
-
-
-def send_test_mail(
-    server: dict[str, Any],
-    sender: dict[str, str],
-    recipient: str,
-    subject: str,
-    keep: bool,
-) -> bytes:
-    """One mail, to one of the test accounts only. Returns what was sent."""
-    message = EmailMessage()
-    message["From"] = sender["email"]
-    message["To"] = recipient
-    message["Subject"] = subject
-    # RFC 5322 requires Date. Without it mail clients show no date.
-    message["Date"] = format_datetime(localtime())
-    message["Message-ID"] = make_msgid(domain=sender["email"].rpartition("@")[2])
-    message.set_content(
-        "Automatic test mail of live/changes.py in the mailbox-api repository.\n"
-        + (
-            "It was kept for inspection (--keep): delete it by hand.\n"
-            if keep
-            else "It deletes itself when the check is over.\n"
-        )
+def connect(
+    client: TestClient, env: dict[str, str], account: dict[str, str]
+) -> str | None:
+    """The account in the service, with IMAP and the SMTP server discovery
+    finds. Its id, or None if it did not connect."""
+    found = client.post("/v1/discovery", json={"email": account["email"]}).json()
+    discovered: dict[str, Any] = next(
+        (c["settings"] for c in found.get("candidates", []) if c.get("settings")), {}
     )
-    host, port = server["host"], int(server["port"])
-    context = ssl.create_default_context()
-    smtp: smtplib.SMTP
-    if server["security"] == "tls":
-        smtp = smtplib.SMTP_SSL(host, port, context=context, timeout=30)
-    else:
-        smtp = smtplib.SMTP(host, port, timeout=30)
-        smtp.starttls(context=context)
-    with smtp:
-        smtp.login(sender["username"], sender["password"])
-        smtp.send_message(message, from_addr=sender["email"], to_addrs=[recipient])
-    return message.as_bytes()
+    created = client.post(
+        "/v1/accounts",
+        json={
+            "provider": "imap",
+            "email": account["email"],
+            "settings": imap_settings(env, account, discovered),
+            "credentials": {"password": account["password"]},
+        },
+    )
+    return str(created.json()["id"]) if created.status_code == 201 else None
 
 
 class OtherClient:
@@ -174,13 +146,6 @@ class OtherClient:
             if match and flag in match.group(1).lower():
                 return match.group(2).decode().strip('"')
         return None
-
-    def append_sent(self, folder: str, raw: bytes) -> bool:
-        """What a mail client does after sending: a read copy in Sent."""
-        status, _ = self.conn.append(
-            _quoted(folder), r"(\Seen)", imaplib.Time2Internaldate(time.time()), raw
-        )
-        return status == "OK"
 
     def delete_folder(self, folder: str) -> bool:
         self.conn.unsubscribe(_quoted(folder))
@@ -262,11 +227,13 @@ def find_by_subject(
 def clean_up(
     env: dict[str, str],
     receiver: dict[str, str],
+    sender: dict[str, str],
     other: OtherClient | None,
     base: str,
     subject: str,
 ) -> None:
-    """Delete the test mail wherever it is, and the test folder."""
+    """Delete the test mail wherever it is, its copy in the sender's sent
+    folder, and the test folder."""
     if other is None:
         try:
             other = OtherClient(env, receiver)
@@ -279,11 +246,19 @@ def clean_up(
     left = [f for f in folders if f in other.all_folders()]
     for folder in left:
         other.delete_folder(folder)
+    other.close()
+    try:
+        outbox = OtherClient(env, sender)
+    except (imaplib.IMAP4.error, OSError) as exc:
+        print(f"cleanup failed, remove the sent copy of '{subject}' by hand: {exc}")
+        return
+    sent = outbox.sent_folder()
+    removed += outbox.delete_mail(sent, subject) if sent else 0
+    outbox.close()
     print(
         f"\n== cleanup: {removed} test mail(s) and {len(left)} leftover "
         "folder(s) deleted"
     )
-    other.close()
 
 
 def main() -> int:
@@ -322,55 +297,55 @@ def main() -> int:
     other: OtherClient | None = None
     print(f"== {receiver['email']} receives from {sender['email']}")
     try:
-        created = client.post(
-            "/v1/accounts",
-            json={
-                "provider": "imap",
-                "email": receiver["email"],
-                "settings": imap_settings(env, receiver, {}),
-                "credentials": {"password": receiver["password"]},
-            },
-        )
-        if not run.check("connect", created.status_code == 201):
-            return 1
-        account_id = created.json()["id"]
-        anyio.run(services.sync.sync_account, account_id)
-
-        smtp = smtp_server(client, env, sender)
+        account_id = connect(client, env, receiver)
+        sender_id = connect(client, env, sender)
         if not run.check(
-            "an SMTP server for the sender",
-            smtp is not None,
-            f"{smtp['host']}:{smtp['port']} {smtp['security']}" if smtp else "",
+            "connect both test accounts, the sender with SMTP",
+            account_id is not None and sender_id is not None,
         ):
             return 1
-        assert smtp is not None
+        assert account_id is not None and sender_id is not None
+        anyio.run(services.sync.sync_account, account_id)
 
         provider = services.accounts.provider(account_id)
-        sent: list[bytes] = []
-        try:
-            changed = anyio.run(
-                idle_while_sending,
-                provider,
-                lambda: sent.append(
-                    send_test_mail(smtp, sender, receiver["email"], subject, keep)
-                ),
+        answer: dict[str, Any] = {}
+
+        def send() -> None:
+            # Only ever to the other test account.
+            response = client.post(
+                f"/v1/accounts/{sender_id}/send",
+                json={
+                    "to": [{"email": receiver["email"]}],
+                    "subject": subject,
+                    "text": KEPT_TEXT if keep else TEXT,
+                },
             )
+            answer["status"], answer["body"] = response.status_code, response.json()
+
+        try:
+            changed = anyio.run(idle_while_sending, provider, send)
             run.check("IDLE reports the new mail", changed)
         except MailboxApiError as exc:
             run.check("IDLE reports the new mail", False, f"{exc.code}: {exc.message}")
-
-        if keep and sent:
-            outbox = OtherClient(env, sender)
-            try:
-                sent_folder = outbox.sent_folder()
-                run.check(
-                    "a copy in the sender's Sent folder",
-                    sent_folder is not None
-                    and outbox.append_sent(sent_folder, sent[0]),
-                    sent_folder or "no folder flagged \\Sent",
-                )
-            finally:
-                outbox.close()
+        body = answer.get("body", {})
+        run.check(
+            "POST send: the server accepted it",
+            answer.get("status") == 200 and body.get("refused") == [],
+            f"{answer.get('status')} {body.get('error', '')}",
+        )
+        sent_copy_id = body.get("sent_copy_id")
+        outbox = OtherClient(env, sender)
+        try:
+            sent_folder = outbox.sent_folder()
+            run.check(
+                "a read copy in the sender's sent folder",
+                bool(sent_copy_id)
+                and sent_folder is not None
+                and outbox.flags(sent_folder, subject) == ["\\Seen"],
+                str(sent_folder),
+            )
+        finally:
+            outbox.close()
 
         found = find_by_subject(client, account_id, subject)
         if not run.check("the API lists it", found is not None):
@@ -514,6 +489,16 @@ def main() -> int:
                 and client.get(url).status_code == 404,
                 str(gone.status_code),
             )
+            if sent_copy_id:
+                copy_gone = client.delete(
+                    f"/v1/accounts/{sender_id}/messages/{sent_copy_id}",
+                    params={"permanent": True},
+                )
+                run.check(
+                    "and the sender's copy too",
+                    copy_gone.status_code == 204,
+                    str(copy_gone.status_code),
+                )
     finally:
         if keep:
             if other is not None:
@@ -524,7 +509,7 @@ def main() -> int:
                 "in the Sent folder of the sender: delete them by hand"
             )
         else:
-            clean_up(env, receiver, other, base, subject)
+            clean_up(env, receiver, sender, other, base, subject)
         anyio.run(services.accounts.close)
         services.close()
 

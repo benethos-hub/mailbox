@@ -3562,6 +3562,125 @@
         "x-permission": "mail.write"
       }
     },
+    "/v1/accounts/{account_id}/send": {
+      "post": {
+        "tags": [
+          "mailbox"
+        ],
+        "summary": "Send Message",
+        "description": "Send from the account's address. The service sets From, Date and\nMessage-ID and keeps a read copy in the sent folder. `200` means the\nmail server accepted the message; it cannot be taken back.",
+        "operationId": "send_message",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Account Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutgoingMessage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "send"
+      }
+    },
     "/v1/accounts/{account_id}/messages/batch": {
       "post": {
         "tags": [
@@ -5193,6 +5312,108 @@
         "title": "MessageUpdate",
         "description": "What ``PATCH`` changes on a message. Fields left out stay as they are."
       },
+      "OutgoingAttachment": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "^[^\\r\\n]*$",
+            "title": "Filename"
+          },
+          "content_type": {
+            "type": "string",
+            "pattern": "^[\\w.+-]+/[\\w.+-]+$",
+            "title": "Content Type",
+            "default": "application/octet-stream"
+          },
+          "data": {
+            "type": "string",
+            "format": "base64",
+            "contentMediaType": "application/octet-stream",
+            "title": "Data",
+            "description": "The content, base64-encoded."
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "data"
+        ],
+        "title": "OutgoingAttachment"
+      },
+      "OutgoingMessage": {
+        "properties": {
+          "to": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "To"
+          },
+          "cc": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "Cc"
+          },
+          "bcc": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "Bcc",
+            "description": "Receive it, but appear in no header."
+          },
+          "reply_to": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "Reply To"
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 998,
+            "pattern": "^[^\\r\\n]*$",
+            "title": "Subject",
+            "default": ""
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/OutgoingAttachment"
+            },
+            "type": "array",
+            "title": "Attachments"
+          }
+        },
+        "type": "object",
+        "title": "OutgoingMessage",
+        "description": "A message to send. The service sets From, Date and Message-ID."
+      },
       "Page_MessageSummary_": {
         "properties": {
           "items": {
@@ -5249,6 +5470,34 @@
           "memory"
         ],
         "title": "ProviderType"
+      },
+      "Recipient": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[^\\s@<>,;\\\"]+@[^\\s@<>,;\\\"]+$",
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[^\\r\\n]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "Recipient"
       },
       "Role": {
         "properties": {
@@ -5312,6 +5561,40 @@
         ],
         "title": "Security",
         "description": "Encryption of a mail server connection. Plain text is never offered."
+      },
+      "SendResult": {
+        "properties": {
+          "message_id_header": {
+            "type": "string",
+            "title": "Message Id Header",
+            "description": "The Message-ID of the sent message."
+          },
+          "sent_copy_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent Copy Id",
+            "description": "The copy in the sent folder, where the service put one."
+          },
+          "refused": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Refused",
+            "description": "Recipients the server refused while it accepted others."
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id_header"
+        ],
+        "title": "SendResult"
       },
       "ServerProtocol": {
         "type": "string",

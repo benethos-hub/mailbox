@@ -12,6 +12,7 @@ then left alone for a growing pause.
 
 from __future__ import annotations
 
+import logging
 import math
 import threading
 import time
@@ -40,6 +41,7 @@ from ...models import (
     MessageSummary,
     MessageUpdate,
     Page,
+    SentMessage,
 )
 from ..base import Capability, CredentialReader
 from ..ratelimit import Clock, Sleep, TokenBucket, backoff
@@ -47,8 +49,11 @@ from ..smtp import DEFAULT_PORTS as SMTP_PORTS
 from ..smtp import SmtpLogin, SmtpServer, SmtpSession
 from . import mappers
 from .client import ImapServer, ImapSession, SearchCriteria
+from .parse import FetchedMessage
 
 T = TypeVar("T")
+
+log = logging.getLogger(__name__)
 R = TypeVar("R")
 
 SessionFactory = Callable[[ImapServer], ImapSession]
@@ -131,6 +136,8 @@ class ImapProvider:
         self._credentials = credentials
         self._smtp = _smtp_session(settings, smtp_factory)
         self._smtp_username = str(settings.get("smtp_username") or username)
+        if self._smtp is not None:
+            self.capabilities = self.capabilities | {Capability.SEND}
         self._session = session_factory(self._server)
         self._lock = threading.Lock()
         # IDLE blocks its connection, so it gets one of its own.
@@ -176,6 +183,23 @@ class ImapProvider:
 
     async def get_raw(self, message_id: str) -> bytes:
         return await self._run(lambda: self._get_raw(message_id))
+
+    async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
+        if self._smtp is None:
+            raise ConflictError(
+                "the account has no SMTP server: set settings.smtp_host with "
+                "PATCH /v1/accounts/{account_id}"
+            )
+        refused = await anyio.to_thread.run_sync(
+            self._send_smtp, raw, sender, recipients
+        )
+        # Sent: from here on nothing may fail, or a client would send again.
+        copy = None
+        try:
+            copy = await self._run(lambda: self._store_sent(raw))
+        except MailboxApiError as exc:
+            log.warning("sent, but no copy in the sent folder: %s", exc.message)
+        return SentMessage(refused=refused, sent_copy=copy)
 
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
         return await self._run(lambda: self._create_folder(name, parent_id))
@@ -335,6 +359,41 @@ class ImapProvider:
             content_type=part.content_type or "application/octet-stream",
             data=part.payload,
         )
+
+    # --- sending ---------------------------------------------------------------------
+
+    def _send_smtp(self, raw: bytes, sender: str, recipients: list[str]) -> list[str]:
+        assert self._smtp is not None
+        self._check_allowed()
+        self._bucket.acquire()
+        try:
+            return self._smtp.send(self._smtp_login(), sender, recipients, raw)
+        except ProviderAuthError:
+            # The same credential as IMAP: no new attempt until it changes.
+            self._login_rejected = True
+            raise
+
+    def _store_sent(self, raw: bytes) -> MessageSummary | None:
+        """A read copy in the folder with the sent role, as mail clients do.
+        None where the account has no such folder."""
+        sent = next(
+            (
+                mappers.folder_name(f.id)
+                for f in self._list_folders()
+                if f.role is FolderRole.SENT
+            ),
+            None,
+        )
+        if sent is None:
+            return None
+        uid = self._session.append(sent, raw, ["\\Seen"])
+        validity = self._session.select(sent)
+        if uid is None:
+            header = mappers.message_id_header(FetchedMessage(0, (), raw))
+            matches = self._session.search_message_id(header) if header else []
+            uid = matches[-1] if matches else None
+        found = self._session.fetch_headers([uid]) if uid else []
+        return mappers.to_summary(found[0], sent, validity) if found else None
 
     # --- folders --------------------------------------------------------------------
 

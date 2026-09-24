@@ -19,6 +19,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `PATCH /v1/accounts/{account_id}/messages/{message_id}` sets `unread`,
   `starred` and `keywords` and answers the changed summary. Right:
   `update_message` (`mail.write`).
+- `POST /v1/accounts/{account_id}/send` sends a message: `to`, `cc`,
+  `bcc`, `reply_to`, `subject`, `text`, `html`, `attachments` (base64, 25 MB
+  in all). The service sets From, Date and Message-ID and keeps a read
+  copy in the sent folder; the answer names both and any refused
+  recipients. Right: `send_message` (`send`). An account without an SMTP
+  server answers `409`.
 - `PATCH /v1/accounts/{account_id}` changes the display name, settings
   (merged, `null` removes one) or credentials. New settings or credentials
   are tried first. Right: `update_account` (`accounts.manage`).
