@@ -39,6 +39,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - MCP server: `list_drafts`, `create_draft`, `update_draft` and
   `delete_draft`. Drafts take plain text; a reply, reply to all or
   forward names its original with `original_id`.
+- MCP server: `send_message` and `send_draft`, each with an
+  `Idempotency-Key` derived from the call.
 - Search filters on `GET /v1/accounts/{account_id}/messages` and
   `GET /v1/messages`: `from`, `to`, `subject`, `after`, `before` (days),
   `starred` and `has_attachments`, besides `q` and `unread`. `folder` on

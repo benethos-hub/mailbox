@@ -120,6 +120,27 @@ class MailboxApiClient:
     async def delete_draft(self, account_id: str, draft_id: str) -> None:
         await self.request("DELETE", f"/v1/accounts/{account_id}/drafts/{draft_id}")
 
+    async def send_message(
+        self, account_id: str, message: dict[str, Any], idempotency_key: str
+    ) -> dict[str, Any]:
+        result: dict[str, Any] = await self.request(
+            "POST",
+            f"/v1/accounts/{account_id}/send",
+            json=message,
+            headers={"Idempotency-Key": idempotency_key},
+        )
+        return result
+
+    async def send_draft(
+        self, account_id: str, draft_id: str, idempotency_key: str
+    ) -> dict[str, Any]:
+        result: dict[str, Any] = await self.request(
+            "POST",
+            f"/v1/accounts/{account_id}/drafts/{draft_id}/send",
+            headers={"Idempotency-Key": idempotency_key},
+        )
+        return result
+
     async def list_messages(
         self, account_id: str | None, params: dict[str, Any]
     ) -> dict[str, Any]:

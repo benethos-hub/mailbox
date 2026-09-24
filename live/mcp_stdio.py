@@ -9,9 +9,11 @@ API, and makes a user that may only read them. Then it starts
 tools. A second user may also write: with it the check creates a folder in
 the first test account, stars, moves and trashes the newest inbox message
 there, and puts everything back as it was. A third user may write drafts:
-it writes, replaces and deletes a reply draft; nothing is sent. The
-throwaway database is deleted at the end. Credentials and mail content are
-never printed.
+it writes, replaces and deletes a reply draft; nothing is sent. A fourth
+user may send: it sends one mail twice with the same call and one draft,
+from the first test account to the second only, and deletes both for good
+afterwards. The throwaway database is deleted at the end. Credentials and
+mail content are never printed.
 """
 
 from __future__ import annotations
@@ -403,6 +405,87 @@ async def check_drafts(
             admin.delete(f"/v1/accounts/{account_id}/drafts/{draft_id}")
 
 
+def arrived(admin: httpx.Client, account_id: str, subject: str) -> list[dict[str, Any]]:
+    """The messages with ``subject`` in the account, once one is there."""
+    for _ in range(20):
+        page = admin.get(
+            f"/v1/accounts/{account_id}/messages", params={"q": subject, "limit": 10}
+        ).json()
+        found = [m for m in page.get("items", []) if m.get("subject") == subject]
+        if found:
+            return found
+        time.sleep(3)
+    return []
+
+
+async def check_sending(
+    run: Run,
+    url: str,
+    token: str,
+    admin: httpx.Client,
+    ids: list[str],
+    to: str,
+) -> None:
+    """From the first test account to the second only: a mail sent twice
+    with the same call arrives once, a draft is sent. Both are deleted for
+    good afterwards, in the inbox and in the sent folder."""
+    sender, receiver = ids
+    subject = f"mailbox-api MCP send check {secrets.token_hex(4)}"
+    subjects = [subject, f"{subject} draft"]
+    try:
+        async with mcp_session(url, token) as session:
+            tools = {tool.name for tool in (await session.list_tools()).tools}
+            run.check(
+                "a token with send sees the send tools",
+                {"send_message", "send_draft"} <= tools,
+            )
+            call = {"account_id": sender, "to": [to], "subject": subject, "text": "1"}
+            first = await session.call_tool("send_message", call)
+            again = await session.call_tool("send_message", call)
+            header = (first.structured_content or {}).get("message_id_header")
+            run.check(
+                "send_message sends, the same call again answers the first result",
+                not first.is_error
+                and bool(header)
+                and (again.structured_content or {}).get("message_id_header") == header,
+                text_of(first) if first.is_error else "",
+            )
+            draft = await session.call_tool(
+                "create_draft",
+                {"account_id": sender, "to": [to], "subject": subjects[1], "text": "2"},
+            )
+            draft_id = (draft.structured_content or {}).get("id")
+            sent = await session.call_tool(
+                "send_draft", {"account_id": sender, "draft_id": draft_id}
+            )
+            run.check(
+                "send_draft sends the draft",
+                not sent.is_error and (sent.structured_content or {}).get("sent"),
+                text_of(sent) if sent.is_error else "",
+            )
+        received = arrived(admin, receiver, subject)
+        run.check(
+            "the mail arrived once", len(received) == 1, f"{len(received)} copies"
+        )
+        run.check("the sent draft arrived", bool(arrived(admin, receiver, subjects[1])))
+    finally:
+        removed = 0
+        for account_id, folder in ((receiver, "inbox"), (sender, "sent")):
+            for title in subjects:
+                page = admin.get(
+                    f"/v1/accounts/{account_id}/messages",
+                    params={"folder": folder, "q": title, "limit": 10},
+                ).json()
+                for message in page.get("items", []):
+                    if message.get("subject") == title:
+                        admin.delete(
+                            f"/v1/accounts/{account_id}/messages/{message['id']}",
+                            params={"permanent": True},
+                        )
+                        removed += 1
+        print(f"      cleanup: {removed} test mail(s) deleted for good")
+
+
 def main() -> int:
     env = read_env(ENV_FILE)
     test_accounts = accounts(env)[:2]
@@ -444,6 +527,12 @@ def main() -> int:
                 client,
                 ids[0],
                 test_accounts[1]["email"],
+            )
+            # Sends from the first test account to the second, nowhere else.
+            sender = user_token(client, ids, ["mail.read", "drafts", "send"])
+            print("\n== the MCP server over stdio, sending")
+            anyio.run(
+                check_sending, run, url, sender, client, ids, test_accounts[1]["email"]
             )
     finally:
         process.terminate()

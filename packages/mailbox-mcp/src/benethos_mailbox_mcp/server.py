@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
+import json
 import logging
 import sys
 from collections.abc import Callable, Iterable
@@ -411,6 +413,53 @@ async def delete_draft(account_id: str, draft_id: str) -> str:
     return f"draft {draft_id} deleted"
 
 
+# --- sending ------------------------------------------------------------------------
+
+
+def _idempotency_key(tool: str, account_id: str, arguments: Any) -> str:
+    """The same call gives the same key: the service answers a repeat within
+    24 hours with the first result instead of sending twice."""
+    call = json.dumps([tool, account_id, arguments], sort_keys=True)
+    return "mcp-" + hashlib.sha256(call.encode("utf-8")).hexdigest()
+
+
+def _sent(result: dict[str, Any]) -> dict[str, Any]:
+    found: dict[str, Any] = {
+        "sent": True,
+        "message_id_header": result.get("message_id_header"),
+    }
+    if result.get("refused"):
+        found["refused"] = result["refused"]
+    return found
+
+
+async def send_message(
+    account_id: str,
+    to: Addresses = None,
+    cc: Addresses = None,
+    bcc: Addresses = None,
+    subject: str = "",
+    text: Annotated[str, Field(description="The body, plain text")] = "",
+    original_id: OriginalId = None,
+    action: Action = "reply",
+) -> dict[str, Any]:
+    """Send a mail at once; it cannot be taken back. With original_id it
+    answers or forwards that message, and a reply without recipients goes
+    to its sender. The same call repeated within 24 hours sends nothing and
+    answers the first result. refused lists recipients the server did not
+    take."""
+    body = _composed(to, cc, bcc, subject, text, original_id, action)
+    key = _idempotency_key("send_message", account_id, body)
+    return _sent(await client().send_message(account_id, body, key))
+
+
+async def send_draft(account_id: str, draft_id: str) -> dict[str, Any]:
+    """Send a draft as it is stored; it cannot be taken back. Afterwards the
+    draft is gone and a copy is in the sent folder."""
+    key = _idempotency_key("send_draft", account_id, draft_id)
+    return _sent(await client().send_draft(account_id, draft_id, key))
+
+
 # --- which tools exist ----------------------------------------------------------------
 
 
@@ -440,6 +489,8 @@ TOOLS = (
     _Tool(create_draft, frozenset({"create_draft"}), read_only=False),
     _Tool(update_draft, frozenset({"update_draft"}), read_only=False, destructive=True),
     _Tool(delete_draft, frozenset({"delete_draft"}), read_only=False, destructive=True),
+    _Tool(send_message, frozenset({"send_message"}), read_only=False, destructive=True),
+    _Tool(send_draft, frozenset({"send_draft"}), read_only=False, destructive=True),
 )
 
 
