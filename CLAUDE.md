@@ -103,11 +103,13 @@ packages/
         models/           # provider-neutral types, one module per subject:
                           #   accounts, users, folders, messages, batch,
                           #   sending, paging, discovery
-        mime.py           # outgoing messages as RFC 5322 bytes (email)
+        mail/             # messages in RFC 5322, whatever protocol carries them
+          compose.py      # outgoing messages as bytes (email)
+          parse.py        # incoming bytes parsed (imap-tools' mail parser)
+          convert.py      # a parsed message to Message / MessageSummary
         providers/        # registry in __init__.py, base.py protocol,
                           #   one directory per provider: memory/, imap/, ...
-                          #   imap/client.py (IMAPClient), imap/parse.py
-                          #   (imap-tools' mail parser), smtp.py (smtplib),
+                          #   imap/client.py (IMAPClient), smtp.py (smtplib),
                           #   sender.py (SMTP for IMAP, POP3, ...),
                           #   guard.py (pacing, retries, blocked logins)
         storage/          # own records, one module per subject

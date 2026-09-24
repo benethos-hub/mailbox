@@ -8,6 +8,7 @@ from typing import Any
 from imapclient import testable_imapclient
 from pydantic import SecretStr
 
+from benethos_mailbox_api.data.mail import convert
 from benethos_mailbox_api.data.models import FolderRole
 from benethos_mailbox_api.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_api.data.providers.imap.client import (
@@ -142,6 +143,6 @@ async def test_broken_charsets_idn_and_zoneless_dates() -> None:
 
 
 def test_unicode_address_leaves_plain_and_broken_domains_alone() -> None:
-    assert mappers.unicode_address("me@example.com") == "me@example.com"
-    assert mappers.unicode_address("no-at-sign") == "no-at-sign"
-    assert mappers.unicode_address("x@xn--.de") == "x@xn--.de"
+    assert convert.unicode_address("me@example.com") == "me@example.com"
+    assert convert.unicode_address("no-at-sign") == "no-at-sign"
+    assert convert.unicode_address("x@xn--.de") == "x@xn--.de"

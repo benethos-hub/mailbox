@@ -185,7 +185,8 @@ only the `Message-ID` header, so raw `imaplib` answers had to be parsed by
 hand.
 
 Fetched messages are parsed by the mail parser of **imap-tools**, in
-`imap/parse.py`: subject, addresses, dates, text and HTML with broken
+`data/mail/parse.py`, shared by every adapter that sees raw messages:
+subject, addresses, dates, text and HTML with broken
 charsets, attachments. It saves writing a MIME parser. Replacing it, e.g.
 with the standard library's `email`, rewrites that one module.
 

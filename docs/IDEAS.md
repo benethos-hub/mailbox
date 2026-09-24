@@ -40,7 +40,7 @@ identity may have its own signature and reply-to.
 ## The standard library's mail parser instead of imap-tools
 
 Since the switch to IMAPClient (CONCEPT 5.1), imap-tools is left only for
-its mail parser in `imap/parse.py`. The standard library's `email` module
+its mail parser in `data/mail/parse.py`. The standard library's `email` module
 could take that over and drop the dependency. It would have to handle the
 encoding traps of CONCEPT 5.10 as well, which the fixtures check.
 

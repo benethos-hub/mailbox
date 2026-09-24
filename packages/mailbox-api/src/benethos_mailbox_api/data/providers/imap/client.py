@@ -3,7 +3,7 @@
 Synchronous, like the library. The adapter runs it in a worker thread and
 never calls it from two threads at once. Every library error leaves this
 module as a ``MailboxApiError``. What is fetched of a message is parsed in
-``parse``; this module only speaks the protocol.
+``data.mail.parse``; this module only speaks the protocol.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from ....errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from .parse import FetchedMessage
+from ...mail.parse import ParsedMessage
 
 ClientFactory = Callable[..., Any]
 
@@ -56,6 +56,16 @@ class RawFolder:
     delimiter: str | None
     flags: tuple[str, ...]
     subscribed: bool | None = None  # None: not asked
+
+
+class FetchedMessage(ParsedMessage):
+    """A fetched message: UID and flags as the server reported them, the
+    rest parsed from the fetched bytes."""
+
+    def __init__(self, uid: int, flags: tuple[str, ...], raw: bytes) -> None:
+        super().__init__(raw)
+        self.uid = str(uid)
+        self.flags = flags
 
 
 @dataclass(frozen=True)

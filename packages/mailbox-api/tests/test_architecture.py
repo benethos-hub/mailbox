@@ -40,7 +40,7 @@ LIBRARY_HOMES = {
     "keyring": f"{PACKAGE}.data.secrets.keys",
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
     "imapclient": f"{PACKAGE}.data.providers.imap.client",
-    "imap_tools": f"{PACKAGE}.data.providers.imap.parse",
+    "imap_tools": f"{PACKAGE}.data.mail.parse",
     "smtplib": f"{PACKAGE}.data.providers.smtp",
     "httpx": f"{PACKAGE}.data.discovery.fetch",
     "dns": f"{PACKAGE}.data.discovery.dns",

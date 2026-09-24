@@ -1,4 +1,5 @@
-"""IMAP data to the neutral model. Pure functions, testable offline.
+"""IMAP data to the neutral model: ids, folders and flags. Pure functions,
+testable offline. What the message itself says comes from ``data.mail.convert``.
 
 Works on the objects ``client`` hands out without importing the library:
 messages are read by attribute (``uid``, ``flags``, ``from_values``, ...).
@@ -6,14 +7,12 @@ messages are read by attribute (``uid``, ``flags``, ``from_values``, ...).
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any
 
 from ....common import opaque
 from ....errors import BadRequestError, NotFoundError, NotSupportedError
+from ...mail import convert
 from ...models import (
-    Address,
-    Attachment,
     Folder,
     FolderRole,
     Message,
@@ -178,48 +177,31 @@ def role_of(name: str, flags: set[str]) -> FolderRole | None:
 
 
 def to_summary(msg: Any, folder: str, uidvalidity: int) -> MessageSummary:
-    return MessageSummary.model_validate(_summary_fields(msg, folder, uidvalidity))
+    return MessageSummary.model_validate(
+        {**convert.summary_fields(msg), **_imap_fields(msg, folder, uidvalidity)}
+    )
 
 
 def to_message(msg: Any, folder: str, uidvalidity: int) -> Message:
-    attachments = [
-        Attachment(
-            id=f"att_{index}",
-            filename=part.filename or None,
-            content_type=part.content_type or "application/octet-stream",
-            size=part.size,
-            inline=(part.content_disposition or "").lower() == "inline",
-        )
-        for index, part in enumerate(msg.attachments)
-    ]
-    headers = {k.lower(): v for k, v in msg.headers.items()}
-    fields = _summary_fields(msg, folder, uidvalidity)
-    fields["has_attachments"] = bool(attachments)
     return Message.model_validate(
         {
-            **fields,
-            "cc": _addresses(msg.cc_values),
-            "bcc": _addresses(msg.bcc_values),
-            "reply_to": _addresses(msg.reply_to_values),
-            "message_id_header": _first(headers.get("message-id")),
-            "in_reply_to": _first(headers.get("in-reply-to")),
-            "text_body": msg.text or None,
-            "html_body": msg.html or None,
-            "attachments": attachments,
+            **convert.summary_fields(msg),
+            **_imap_fields(msg, folder, uidvalidity),
+            **convert.message_fields(msg),
         }
     )
 
 
-def message_id_header(msg: Any) -> str | None:
-    headers = {k.lower(): v for k, v in msg.headers.items()}
-    value = _first(headers.get("message-id"))
-    return "".join(value.split()) if value else None
-
-
-def attachment_index(attachment_id: str) -> int:
-    if not attachment_id.startswith("att_") or not attachment_id[4:].isdigit():
-        raise NotFoundError(f"attachment {attachment_id} not found")
-    return int(attachment_id[4:])
+def _imap_fields(msg: Any, folder: str, uidvalidity: int) -> dict[str, Any]:
+    """What only IMAP knows of a message: its id, folder and flags."""
+    flags = {flag.lower() for flag in msg.flags}
+    return {
+        "id": message_id(folder, uidvalidity, int(msg.uid)),
+        "folder_ids": [folder_id(folder)],
+        "unread": "\\seen" not in flags,
+        "starred": "\\flagged" in flags,
+        "keywords": keywords(msg.flags),
+    }
 
 
 # IMAP flags that are keywords in the API, and back (JMAP, RFC 8621).
@@ -289,56 +271,3 @@ def flag_changes(
         add += new
         remove += [flag for k, flag in present.items() if k not in wanted]
     return add, remove
-
-
-def _summary_fields(msg: Any, folder: str, uidvalidity: int) -> dict[str, Any]:
-    flags = {flag.lower() for flag in msg.flags}
-    headers = {k.lower(): v for k, v in msg.headers.items()}
-    content_type = (_first(headers.get("content-type")) or "").lower()
-    sender = msg.from_values
-    return {
-        "id": message_id(folder, uidvalidity, int(msg.uid)),
-        "folder_ids": [folder_id(folder)],
-        "subject": msg.subject or None,
-        "from": _address(sender) if sender and sender.email else None,
-        "to": _addresses(msg.to_values),
-        "date": _date(msg.date),
-        "unread": "\\seen" not in flags,
-        "starred": "\\flagged" in flags,
-        "keywords": keywords(msg.flags),
-        "has_attachments": content_type.startswith("multipart/mixed"),
-    }
-
-
-def _address(value: Any) -> Address:
-    return Address(email=unicode_address(value.email), name=value.name or None)
-
-
-def unicode_address(email: str) -> str:
-    """An address with an internationalised domain in Unicode: on the wire it
-    travels as punycode (``xn--``), the API shows it as people write it."""
-    local, at, domain = email.rpartition("@")
-    if not at or "xn--" not in domain.lower():
-        return email
-    try:
-        return f"{local}@{domain.encode('ascii').decode('idna')}"
-    except UnicodeError:
-        return email
-
-
-def _addresses(values: Any) -> list[Address]:
-    return [_address(v) for v in values or () if v.email]
-
-
-def _first(value: Any) -> str | None:
-    if isinstance(value, tuple | list):
-        return str(value[0]).strip() if value else None
-    return str(value).strip() if value else None
-
-
-def _date(value: datetime | None) -> datetime | None:
-    # imap-tools answers an unparsable Date header with 1900-01-01.
-    if value is None or value.year <= 1900:
-        return None
-    # A Date header without a zone is taken as UTC, so every date carries one.
-    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
