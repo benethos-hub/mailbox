@@ -10,25 +10,21 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_api.config import Settings
-from benethos_mailbox_api.data.models import Address, Message, ProviderType
+from benethos_mailbox_api.data.models import Address, Grant, Message, ProviderType
 from benethos_mailbox_api.data.providers import (
     MailProvider,
     ProviderSettings,
     build_provider,
 )
 from benethos_mailbox_api.data.providers.memory import MemoryProvider
-from benethos_mailbox_api.data.storage import (
-    InMemoryAccountRepository,
-    InMemoryRoleRepository,
-    InMemoryTokenRepository,
-    InMemoryUserRepository,
-)
 from benethos_mailbox_api.domain.access import Access
 from benethos_mailbox_api.domain.accounts import AccountService
 from benethos_mailbox_api.domain.auth import AuthService
-from benethos_mailbox_api.main import create_app
+from benethos_mailbox_api.main import Services, build_services, create_app
 
 API_KEY = "test-key"
+
+ADMIN = Access.admin("usr_test_admin", "test admin")
 
 
 @pytest.fixture(autouse=True)
@@ -63,22 +59,31 @@ def messages() -> list[Message]:
 
 
 @pytest.fixture
-def accounts(messages: list[Message]) -> AccountService:
-    """The real service, with the memory adapter preloaded with ``messages``.
+def services(settings: Settings, messages: list[Message]) -> Services:
+    """The real services, with the memory adapter preloaded with ``messages``.
 
     Swapped in through the provider factory, the same seam a deployment uses
     to choose its adapters. Other provider types go to the real registry.
     """
 
-    def factory(kind: ProviderType, settings: ProviderSettings) -> MailProvider:
+    def factory(
+        kind: ProviderType, provider_settings: ProviderSettings
+    ) -> MailProvider:
         if kind is ProviderType.MEMORY:
             return MemoryProvider(messages=messages)
-        return build_provider(kind, settings)
+        return build_provider(kind, provider_settings)
 
-    return AccountService(InMemoryAccountRepository(), provider_factory=factory)
+    return build_services(settings, provider_factory=factory)
 
 
-ADMIN = Access.admin("usr_test_admin", "test admin")
+@pytest.fixture
+def accounts(services: Services) -> AccountService:
+    return services.accounts
+
+
+@pytest.fixture
+def auth(services: Services) -> AuthService:
+    return services.auth
 
 
 @pytest.fixture
@@ -87,24 +92,21 @@ def account_id(accounts: AccountService) -> str:
 
 
 @pytest.fixture
-def auth(settings: Settings) -> AuthService:
-    return AuthService(
-        InMemoryUserRepository(),
-        InMemoryRoleRepository(),
-        InMemoryTokenRepository(),
-        admin_key=API_KEY,
-    )
-
-
-@pytest.fixture
-def app_client(settings: Settings, accounts: AccountService, auth: AuthService):
+def app_client(settings: Settings, services: Services) -> TestClient:
     """A client without credentials, for tests that bring their own token."""
-    return TestClient(create_app(settings, accounts, auth))
+    return TestClient(create_app(settings, services))
 
 
 @pytest.fixture
-def client(
-    settings: Settings, accounts: AccountService, auth: AuthService
-) -> TestClient:
-    app = create_app(settings, accounts, auth)
+def client(settings: Settings, services: Services) -> TestClient:
+    app = create_app(settings, services)
     return TestClient(app, headers={"Authorization": f"Bearer {API_KEY}"})
+
+
+def bearer_for(
+    services: Services, *grants: Grant, roles: list[str] | None = None
+) -> dict[str, str]:
+    """A user with these grants, and the header of a fresh token for it."""
+    user = services.users.create_user(ADMIN, "limited", roles or [], list(grants))
+    _, plain = services.auth.issue_token(user.id, "test")
+    return {"Authorization": f"Bearer {plain}"}

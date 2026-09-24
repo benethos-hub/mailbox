@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import uuid
 
 from ..data.models import Account, ProviderType
@@ -65,6 +66,10 @@ class AccountService:
         adapter = self._providers.pop(account_id, None)
         if adapter is not None:
             await adapter.close()
+
+    def all_ids(self) -> builtins.list[str]:
+        """Every account id. Internal: callers filter by rights themselves."""
+        return [account.id for account in self._repository.list()]
 
     def provider(self, account_id: str) -> MailProvider:
         """The adapter of an account. Internal: callers check rights first."""

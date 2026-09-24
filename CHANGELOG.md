@@ -13,6 +13,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Users with roles and grants per account and per operation:
+  `/v1/users`, `/v1/roles`.
+- API tokens per user: `/v1/users/{user_id}/tokens`. A token is shown once on
+  creation and can expire and be revoked.
+- `/v1/me` returns the caller and its effective rights, `/v1/permissions`
+  the catalogue of rights and groups.
+- A caller can only grant rights it holds, and only manage users whose rights
+  it holds.
 - Rights are checked on every `/v1` request, per account and per operation.
   An account without a grant answers `404`, a missing right `403 forbidden`.
   `list_accounts` returns only the accounts the caller may read.

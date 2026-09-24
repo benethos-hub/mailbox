@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from ..errors import (
+    BadRequestError,
     ConflictError,
     ForbiddenError,
     MailboxApiError,
@@ -28,6 +29,7 @@ from .schemas import ErrorResponse
 
 # Most specific first: the first matching class decides.
 STATUS: list[tuple[type[MailboxApiError], int]] = [
+    (BadRequestError, 400),
     (UnauthorizedError, 401),
     (ForbiddenError, 403),
     (NotFoundError, 404),

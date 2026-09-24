@@ -22,6 +22,12 @@ class NotFoundError(MailboxApiError):
     code = "not_found"
 
 
+class BadRequestError(MailboxApiError):
+    """The request is well-formed but makes no sense, e.g. an unknown right."""
+
+    code = "bad_request"
+
+
 class UnauthorizedError(MailboxApiError):
     """No valid credential: missing, wrong, expired, revoked, or user disabled."""
 

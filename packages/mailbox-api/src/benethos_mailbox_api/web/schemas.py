@@ -6,9 +6,11 @@ are. What lives here is what only a caller of the API sends or receives.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
-from ..data.models import ProviderType
+from ..data.models import ApiToken, Grant, ProviderType
 
 
 class AccountCreate(BaseModel):
@@ -29,3 +31,69 @@ class ErrorResponse(BaseModel):
     """The body of every error the API raises itself."""
 
     error: ErrorDetail
+
+
+class Me(BaseModel):
+    """The caller and its effective rights."""
+
+    user_id: str
+    name: str
+    accounts: dict[str, list[str]] = Field(
+        description="Account id to the operations allowed on it"
+    )
+    operations: list[str] = Field(
+        description="Operations not bound to one existing account"
+    )
+
+
+class PermissionCatalogue(BaseModel):
+    groups: dict[str, list[str]] = Field(
+        description="Group name to the operations it allows"
+    )
+
+
+class UserCreate(BaseModel):
+    name: str
+    roles: list[str] = Field(default_factory=list)
+    grants: list[Grant] = Field(default_factory=list)
+
+
+class UserUpdate(BaseModel):
+    name: str | None = None
+    roles: list[str] | None = None
+    grants: list[Grant] | None = None
+    disabled: bool | None = None
+
+
+class RoleCreate(BaseModel):
+    id: str
+    grants: list[Grant] = Field(default_factory=list)
+
+
+class RoleReplace(BaseModel):
+    grants: list[Grant] = Field(default_factory=list)
+
+
+class TokenCreate(BaseModel):
+    name: str
+    expires_at: datetime | None = None
+
+
+class TokenInfo(BaseModel):
+    """A token without its secret."""
+
+    id: str
+    user_id: str
+    name: str
+    created_at: datetime
+    expires_at: datetime | None = None
+    last_used_at: datetime | None = None
+    revoked_at: datetime | None = None
+
+    @classmethod
+    def of(cls, token: ApiToken) -> TokenInfo:
+        return cls.model_validate(token.model_dump(exclude={"token_hash"}))
+
+
+class TokenCreated(TokenInfo):
+    token: str = Field(description="The token itself. Shown this once only.")

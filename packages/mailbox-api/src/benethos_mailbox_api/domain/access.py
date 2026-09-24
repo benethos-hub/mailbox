@@ -45,6 +45,8 @@ class Access:
         )
 
     def allows(self, operation: str, account_id: str | None = None) -> bool:
+        if operation in permissions.AUTHENTICATED_OPERATIONS:
+            return True
         for rule in self._rules:
             if operation not in rule.operations:
                 continue
