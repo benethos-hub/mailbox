@@ -128,10 +128,14 @@ class OtherClient:
             return name
         return match.group(1).decode() + name
 
-    def create_folder(self, folder: str) -> None:
+    def create_folder(self, folder: str, subscribe: bool = False) -> None:
+        """``subscribe`` makes mail clients such as Outlook show it: they list
+        only subscribed folders."""
         status, data = self.conn.create(_quoted(folder))
         if status != "OK":
             raise RuntimeError(f"CREATE failed: {data!r}")
+        if subscribe:
+            self.conn.subscribe(_quoted(folder))
 
     def sent_folder(self) -> str | None:
         """The folder flagged ``\\Sent`` (RFC 6154)."""
@@ -152,6 +156,7 @@ class OtherClient:
         return status == "OK"
 
     def delete_folder(self, folder: str) -> bool:
+        self.conn.unsubscribe(_quoted(folder))
         self.conn.select("INBOX")
         status, _ = self.conn.delete(_quoted(folder))
         return status == "OK"
@@ -339,7 +344,7 @@ def main() -> int:
 
         other = OtherClient(env, receiver)
         folder = other.folder_name(base)
-        other.create_folder(folder)
+        other.create_folder(folder, subscribe=keep)
         uids = other.uids("INBOX", subject)
         if not run.check("another client finds it", len(uids) == 1, f"{len(uids)}"):
             return 1
