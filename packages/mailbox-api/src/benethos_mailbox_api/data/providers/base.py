@@ -70,7 +70,15 @@ class MailProvider(Protocol):
     async def update_message(
         self, message_id: str, changes: MessageUpdate
     ) -> MessageSummary:
-        """Change flags and keywords. Returns the message as it is now."""
+        """Change flags and keywords, or move. Returns the message as it is
+        now; after a move its id names the new place."""
+        ...
+
+    async def delete_message(
+        self, message_id: str, permanent: bool
+    ) -> MessageSummary | None:
+        """Into the trash, or for good. Returns the message in the trash where
+        it is known, None when it is gone or not found there at once."""
         ...
 
     # --- for the sync worker ---------------------------------------------------

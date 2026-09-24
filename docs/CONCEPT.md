@@ -542,6 +542,11 @@ Base path `/v1`, JSON, bearer authentication on everything except
 - Permanent deletion is the right `delete_message_permanent` in the group
   `mail.delete`, so it can also be granted on its own.
 
+A message already in the trash answers `DELETE` without `permanent` with
+`409`: otherwise two calls with `mail.write` would delete for good what
+needs `mail.delete`. Deleting for good needs `UIDPLUS` on an IMAP server,
+for the same reason as a move.
+
 `keywords` follow JMAP (RFC 8621): `$answered`, `$forwarded`, `$draft` and
 the provider's own keywords as they are. `\Seen` and `\Flagged` are
 `unread` and `starred`. A `PATCH` with `keywords` replaces the list.

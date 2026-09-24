@@ -26,7 +26,10 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "get_message_raw",
         "get_attachment",
     ),
-    "mail.write": ("update_message",),
+    "mail.write": ("update_message", "delete_message"),
+    # Cannot be taken back. delete_message_permanent is DELETE with
+    # permanent=true: a right of its own, not a route.
+    "mail.delete": ("delete_message_permanent",),
     "accounts.manage": (
         "discover_account",
         "create_account",

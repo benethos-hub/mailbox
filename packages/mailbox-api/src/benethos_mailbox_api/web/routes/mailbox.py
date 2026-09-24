@@ -61,6 +61,27 @@ async def update_message(
     return await mailbox.update_message(caller, account_id, message_id, changes)
 
 
+@router.delete("/messages/{message_id}", status_code=204)
+async def delete_message(
+    account_id: str,
+    message_id: str,
+    caller: Caller,
+    mailbox: Mailbox,
+    permanent: Annotated[
+        bool,
+        Query(
+            description=(
+                "Delete for good instead of moving into the trash. Needs the "
+                "right `delete_message_permanent` (`mail.delete`)."
+            )
+        ),
+    ] = False,
+) -> None:
+    """Into the trash. A message already there answers `409`: delete it
+    with `permanent=true`."""
+    await mailbox.delete_message(caller, account_id, message_id, permanent)
+
+
 @router.get(
     "/messages/{message_id}/raw",
     response_class=Response,

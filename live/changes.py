@@ -11,7 +11,8 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 4. marks it read, starred, with a keyword, and back, through the API,
 5. moves it through the API into a folder it creates: the id stays,
 6. moves it back the way another mail client would: the id still answers,
-7. deletes the test mail and the folder again. With ``--keep`` the mail
+7. deletes it through the API: into the trash, then for good, and the
+   folder. With ``--keep`` the mail
    stays in the inbox, and a copy goes into the Sent folder of account 2,
    as a mail client would put it there, to look at in a mail client.
 
@@ -142,13 +143,19 @@ class OtherClient:
             self.conn.subscribe(_quoted(folder))
 
     def sent_folder(self) -> str | None:
-        """The folder flagged ``\\Sent`` (RFC 6154)."""
+        return self._special_folder(b"\\sent")
+
+    def trash_folder(self) -> str | None:
+        return self._special_folder(b"\\trash")
+
+    def _special_folder(self, flag: bytes) -> str | None:
+        """The folder with this special-use flag (RFC 6154)."""
         status, data = self.conn.list()
         for line in data if status == "OK" else []:
             if not isinstance(line, bytes):
                 continue
             match = re.match(rb'\(([^)]*)\) (?:"[^"]*"|NIL) (.+)$', line)
-            if match and b"\\sent" in match.group(1).lower():
+            if match and flag in match.group(1).lower():
                 return match.group(2).decode().strip('"')
         return None
 
@@ -251,7 +258,8 @@ def clean_up(
             print(f"cleanup failed, remove '{subject}' by hand: {exc}")
             return
     folder = other.folder_name(base)
-    removed = other.delete_mail(folder, subject) + other.delete_mail("INBOX", subject)
+    places = [folder, "INBOX", other.trash_folder()]
+    removed = sum(other.delete_mail(place, subject) for place in places if place)
     gone = other.delete_folder(folder)
     print(
         f"\n== cleanup: {removed} test mail(s) deleted, "
@@ -419,6 +427,34 @@ def main() -> int:
             "the subject matches",
             back.status_code == 200 and back.json().get("subject") == subject,
         )
+
+        if not keep:
+            url = f"/v1/accounts/{account_id}/messages/{message_id}"
+            trash = other.trash_folder()
+            deleted = client.delete(url)
+            run.check(
+                "DELETE moves it into the trash",
+                deleted.status_code == 204
+                and trash is not None
+                and len(other.uids(trash, subject)) == 1
+                and not other.uids("INBOX", subject),
+                f"{deleted.status_code}, {trash}",
+            )
+            again = client.delete(url)
+            run.check(
+                "from the trash only with permanent=true",
+                again.status_code == 409,
+                str(again.status_code),
+            )
+            gone = client.delete(url, params={"permanent": True})
+            run.check(
+                "DELETE permanent=true removes it for good",
+                gone.status_code == 204
+                and trash is not None
+                and not other.uids(trash, subject)
+                and client.get(url).status_code == 404,
+                str(gone.status_code),
+            )
     finally:
         if keep:
             if other is not None:
