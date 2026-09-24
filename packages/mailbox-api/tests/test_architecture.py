@@ -10,6 +10,7 @@ breaks a rule.
 from __future__ import annotations
 
 import ast
+import sys
 from pathlib import Path
 
 PACKAGE = "benethos_mailbox_api"
@@ -20,7 +21,11 @@ ROOT = Path(__file__).resolve().parents[1] / "src" / PACKAGE
 LAYERS = {"data": 0, "domain": 1, "web": 2}
 
 # Outside the layers. Read from every layer, so they import none of them.
-CROSS_CUTTING = {"config", "errors"}
+# A module (config.py) or a package (common/).
+CROSS_CUTTING = {"config", "errors", "common"}
+
+# Shared helpers: the standard library and each other, nothing else.
+HELPERS = "common"
 
 # Assemble the app from the layers and may therefore reach anywhere.
 ASSEMBLY = {"main", "__main__"}
@@ -99,16 +104,35 @@ def test_no_module_imports_a_higher_layer() -> None:
     assert not violations, "import against the layering:\n  " + "\n  ".join(violations)
 
 
+def _cross_cutting_files(part: str) -> list[Path]:
+    module, package = ROOT / f"{part}.py", ROOT / part
+    if package.is_dir():
+        return sorted(package.rglob("*.py"))
+    assert module.exists(), f"{part}.py is missing"
+    return [module]
+
+
 def test_cross_cutting_modules_import_no_layer() -> None:
-    for module in CROSS_CUTTING:
-        path = ROOT / f"{module}.py"
-        assert path.exists(), f"{module}.py is missing"
-        inside = [
-            imported
-            for imported, _ in _imports(path)
-            if _own_part(imported) in LAYERS or _own_part(imported) in ASSEMBLY
-        ]
-        assert not inside, f"{module}.py imports from the layers: {inside}"
+    for part in CROSS_CUTTING:
+        for path in _cross_cutting_files(part):
+            inside = [
+                imported
+                for imported, _ in _imports(path)
+                if _own_part(imported) in LAYERS or _own_part(imported) in ASSEMBLY
+            ]
+            assert not inside, f"{path.name} imports from the layers: {inside}"
+
+
+def test_shared_helpers_use_the_standard_library_only() -> None:
+    """common/ holds what several layers share, so it depends on nothing."""
+    violations = []
+    for path in _cross_cutting_files(HELPERS):
+        for imported, line in _imports(path):
+            top = imported.split(".")[0]
+            own = imported.startswith(f"{PACKAGE}.{HELPERS}")
+            if not own and top not in sys.stdlib_module_names:
+                violations.append(f"{path.name}:{line} imports {imported}")
+    assert not violations, "common/ beyond the stdlib:\n  " + "\n  ".join(violations)
 
 
 def test_web_framework_stays_in_the_web_layer() -> None:

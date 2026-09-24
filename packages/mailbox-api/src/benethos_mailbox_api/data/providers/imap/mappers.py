@@ -9,8 +9,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from ....common import opaque
 from ....errors import BadRequestError, NotFoundError, NotSupportedError
-from ... import opaque
 from ...models import (
     Address,
     Attachment,

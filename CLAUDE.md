@@ -74,6 +74,11 @@ packages/
       config.py           # cross-cutting: Settings (MAILBOX_API_* env and
                           #   config/benethos-mailbox-api/.env)
       errors.py           # cross-cutting: MailboxApiError hierarchy, no HTTP
+      common/             # cross-cutting: helpers several layers share,
+                          #   standard library only
+        ids.py            # ids of own records: acc_, usr_, msg_, ...
+        opaque.py         # opaque ids and cursors: prefix + base64 JSON
+        clock.py          # utc_now, the default clock of the services
       web/                # PRESENTATION: HTTP only, FastAPI lives here
         __init__.py       # include_routes: /health open, the rest under /v1
         deps.py           # authentication, services per request
@@ -99,8 +104,6 @@ packages/
                           #   accounts, users, folders, messages, batch,
                           #   sending, paging, discovery
         mime.py           # outgoing messages as RFC 5322 bytes (email)
-        opaque.py         # opaque ids and cursors: prefix + base64 JSON
-        ids.py            # ids of own records: acc_, usr_, msg_, ...
         providers/        # registry in __init__.py, base.py protocol,
                           #   one directory per provider: memory/, imap/, ...
                           #   imap/client.py (IMAPClient), imap/parse.py
@@ -129,8 +132,11 @@ Three layers, imports only point down: `web/` → `domain/` → `data/`.
 | Business logic | `domain/` | decide: accounts, rights, id mapping, sync | data |
 | Data | `data/` | own records and foreign mail sources | neither |
 
-- `config.py` and `errors.py` are cross-cutting: read by every layer, they
-  import none. `main.py` and `__main__.py` only assemble.
+- `config.py`, `errors.py` and `common/` are cross-cutting: read by every
+  layer, they import none. `main.py` and `__main__.py` only assemble.
+- **`common/` is not a drawer.** Only stateless helpers that more than one
+  layer needs, on the standard library alone. What one layer needs stays in
+  that layer.
 - **No HTTP in the domain.** Nothing below `web/` raises an HTTP exception or
   knows a status code. The domain raises `errors`, and `web/errors.py` maps
   each class to a status.
@@ -148,8 +154,8 @@ Three layers, imports only point down: `web/` → `domain/` → `data/`.
   the contract covers the API only.
 
 `tests/test_architecture.py` checks the direction, the cross-cutting
-modules, that FastAPI stays in `web/` (and `main.py`), and that providers are
-reached through the registry. An import that breaks a rule fails the suite.
+modules, that `common/` stays on the standard library, that FastAPI stays in
+`web/` (and `main.py`), and that providers are reached through the registry. An import that breaks a rule fails the suite.
 
 ## Encapsulation and replaceable parts
 
