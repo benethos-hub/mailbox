@@ -42,6 +42,8 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
     # Cannot be taken back either.
     "send": ("send_message", "send_draft"),
+    # Who sent what to whom, never content.
+    "audit": ("list_sends",),
     "accounts.manage": (
         "discover_account",
         "create_account",

@@ -22,6 +22,7 @@ from .index import (
     InMemoryMessageIndexRepository,
     MessageIndexRepository,
 )
+from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
     Database,
     SqliteAccountRepository,
@@ -30,6 +31,7 @@ from .sqlite import (
     SqliteKeyRepository,
     SqliteMessageIndexRepository,
     SqliteRoleRepository,
+    SqliteSendLogRepository,
     SqliteTokenRepository,
     SqliteUserRepository,
     inspect_snapshot,
@@ -66,6 +68,9 @@ __all__ = [
     "Database",
     "SqliteAccountRepository",
     "SqliteRoleRepository",
+    "SqliteSendLogRepository",
+    "InMemorySendLogRepository",
+    "SendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",
     "InMemoryAccountRepository",

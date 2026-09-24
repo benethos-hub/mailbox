@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 from urllib.parse import quote
 
 from fastapi import APIRouter, Header, Query, Response
@@ -19,11 +19,29 @@ from ...data.models import (
     MessageUpdate,
     OutgoingMessage,
     Page,
+    SendRecord,
     SendResult,
 )
 from ..deps import Caller, Mailbox, Search
+from ..schemas import ErrorResponse
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
+
+# A grant may narrow sending (CONCEPT 7.5).
+SEND_ERRORS: dict[int | str, dict[str, Any]] = {
+    403: {
+        "model": ErrorResponse,
+        "description": (
+            "The caller lacks the right, or no grant allows these recipients "
+            "(`recipient_not_allowed`)"
+        ),
+    },
+    429: {
+        "model": ErrorResponse,
+        "description": "The grant's send limit is reached (`send_limit_reached`), "
+        "see Retry-After",
+    },
+}
 
 
 @router.get("/folders")
@@ -120,7 +138,7 @@ IdempotencyKey = Annotated[
 ]
 
 
-@router.post("/send")
+@router.post("/send", responses=SEND_ERRORS)
 async def send_message(
     account_id: str,
     message: OutgoingMessage,
@@ -132,6 +150,20 @@ async def send_message(
     Message-ID and keeps a read copy in the sent folder. `200` means the
     mail server accepted the message; it cannot be taken back."""
     return await mailbox.send_message(caller, account_id, message, idempotency_key)
+
+
+@router.get("/sends")
+async def list_sends(
+    account_id: str,
+    caller: Caller,
+    mailbox: Mailbox,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    cursor: str | None = None,
+) -> Page[SendRecord]:
+    """The audit of sends from this account, newest first: every attempt
+    through `send_message` or `send_draft`, sent, denied by a grant or
+    failed, with user, token and recipients, never content."""
+    return mailbox.list_sends(caller, account_id, limit=limit, cursor=cursor)
 
 
 @router.get("/drafts")
@@ -170,7 +202,7 @@ async def update_draft(
     return await mailbox.update_draft(caller, account_id, draft_id, draft)
 
 
-@router.post("/drafts/{draft_id}/send")
+@router.post("/drafts/{draft_id}/send", responses=SEND_ERRORS)
 async def send_draft(
     account_id: str,
     draft_id: str,

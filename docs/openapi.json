@@ -3895,6 +3895,153 @@
             }
           },
           "403": {
+            "description": "The caller lacks the right, or no grant allows these recipients (`recipient_not_allowed`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The grant's send limit is reached (`send_limit_reached`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "send"
+      }
+    },
+    "/v1/accounts/{account_id}/sends": {
+      "get": {
+        "tags": [
+          "mailbox"
+        ],
+        "summary": "List Sends",
+        "description": "The audit of sends from this account, newest first: every attempt\nthrough `send_message` or `send_draft`, sent, denied by a grant or\nfailed, with user, token and recipients, never content.",
+        "operationId": "list_sends",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SendRecord_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
             "description": "The caller lacks the right for this operation",
             "content": {
               "application/json": {
@@ -3955,7 +4102,7 @@
             }
           }
         },
-        "x-permission": "send"
+        "x-permission": "audit"
       }
     },
     "/v1/accounts/{account_id}/drafts": {
@@ -4524,7 +4671,7 @@
             }
           },
           "403": {
-            "description": "The caller lacks the right for this operation",
+            "description": "The caller lacks the right, or no grant allows these recipients (`recipient_not_allowed`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4565,6 +4712,16 @@
           },
           "503": {
             "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The grant's send limit is reached (`send_limit_reached`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -5692,6 +5849,36 @@
             },
             "type": "array",
             "title": "Allow"
+          },
+          "recipients": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "pattern": "^(\\*|\\*@[^\\s@*]+|[^\\s@*]+@[^\\s@*]+)$"
+                },
+                "type": "array",
+                "maxItems": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipients",
+            "description": "Send only to these: an address, `*@domain` or `*`. Null: to anyone."
+          },
+          "max_sends_per_day": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Sends Per Day",
+            "description": "Mails the user may send from one account in any 24 hours under this grant. Null: no limit."
           }
         },
         "type": "object",
@@ -5700,7 +5887,7 @@
           "allow"
         ],
         "title": "Grant",
-        "description": "Rights on accounts: operation or group names, account ids or ``*``."
+        "description": "Rights on accounts: operation or group names, account ids or ``*``.\n``recipients`` and ``max_sends_per_day`` narrow sending under this grant."
       },
       "HTTPValidationError": {
         "properties": {
@@ -6509,6 +6696,33 @@
         ],
         "title": "Page[MessageSummary]"
       },
+      "Page_SendRecord_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SendRecord"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[SendRecord]"
+      },
       "PermissionCatalogue": {
         "properties": {
           "groups": {
@@ -6629,6 +6843,108 @@
         ],
         "title": "Security",
         "description": "Encryption of a mail server connection. Plain text is never offered."
+      },
+      "SendRecord": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "credential_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential Id",
+            "description": "The token used; null for the admin key."
+          },
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "send_message",
+              "send_draft"
+            ],
+            "title": "Operation"
+          },
+          "recipients": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recipients"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "denied",
+              "failed"
+            ],
+            "title": "Outcome",
+            "description": "`sent`: the mail server took it. `denied`: a grant's recipients or send limit stopped it. `failed`: an error before or while sending."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "The error code, if any."
+          },
+          "refused": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Refused",
+            "description": "Recipients the server refused while it accepted others."
+          },
+          "message_id_header": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id Header"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "user_id",
+          "credential_id",
+          "account_id",
+          "operation",
+          "recipients",
+          "outcome"
+        ],
+        "title": "SendRecord",
+        "description": "One attempt to send: a mail or a draft."
       },
       "SendResult": {
         "properties": {

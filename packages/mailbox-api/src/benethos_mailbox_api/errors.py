@@ -40,6 +40,12 @@ class ForbiddenError(MailboxApiError):
     code = "forbidden"
 
 
+class RecipientNotAllowedError(ForbiddenError):
+    """No grant of the caller allows sending to these recipients."""
+
+    code = "recipient_not_allowed"
+
+
 class SetupRequiredError(MailboxApiError):
     """The service has no way to authenticate anyone yet."""
 
@@ -70,6 +76,12 @@ class RateLimitedError(MailboxApiError):
     def __init__(self, message: str, retry_after: int) -> None:
         super().__init__(message)
         self.retry_after = retry_after
+
+
+class SendLimitError(RateLimitedError):
+    """The caller has sent as many mails in 24 hours as its grants allow."""
+
+    code = "send_limit_reached"
 
 
 class NotSupportedError(MailboxApiError):

@@ -57,7 +57,8 @@ done. Update the roadmap in the same commit that finishes an item.
   a folder and star, move and trash a message of the first test account,
   then put everything back; the draft tools write, replace and delete a
   reply draft there; the send tools send two mails from the first test
-  account to the second and delete them for good.
+  account to the second and delete them for good; grants with recipients
+  and a send limit stop mails, and the audit names each attempt.
 
 ## Project layout
 
@@ -104,6 +105,7 @@ packages/
         sync.py           # SyncService: stable message ids, the sync pass
         worker.py         # SyncWorker: polling and IDLE in the background
         idempotency.py    # Idempotency-Key: a retried send returns its result
+        sending.py        # SendControl: grant constraints on sending, send audit
         permissions.py    # the catalogue of rights and groups
         access.py         # Access: what one caller may do
         auth.py           # AuthService: tokens, the admin key
@@ -111,7 +113,7 @@ packages/
       data/               # DATA: reads and writes, decides nothing
         models/           # provider-neutral types, one module per subject:
                           #   accounts, users, folders, messages, batch,
-                          #   sending, paging, discovery
+                          #   sending, paging, discovery, audit
         mail/             # messages in RFC 5322, whatever protocol carries them
           compose.py      # outgoing messages as bytes (email)
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
@@ -213,7 +215,7 @@ noticing. Every change is measured against that.
 | Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap; planned: gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/providers/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`) | in-memory, SQLite | another database |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX; planned: JMAP well-known, Microsoft realm, SRV, guessing | any further lookup, or one switched off |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token | password + TOTP, OAuth client credentials |

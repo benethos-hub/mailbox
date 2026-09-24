@@ -3,15 +3,34 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+RECIPIENT_PATTERN = r"^(\*|\*@[^\s@*]+|[^\s@*]+@[^\s@*]+)$"
+
 
 class Grant(BaseModel):
-    """Rights on accounts: operation or group names, account ids or ``*``."""
+    """Rights on accounts: operation or group names, account ids or ``*``.
+    ``recipients`` and ``max_sends_per_day`` narrow sending under this grant."""
 
     accounts: list[str]
     allow: list[str]
+    recipients: list[Annotated[str, Field(pattern=RECIPIENT_PATTERN)]] | None = Field(
+        default=None,
+        max_length=100,
+        description=(
+            "Send only to these: an address, `*@domain` or `*`. Null: to anyone."
+        ),
+    )
+    max_sends_per_day: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Mails the user may send from one account in any 24 hours under "
+            "this grant. Null: no limit."
+        ),
+    )
 
 
 class User(BaseModel):
