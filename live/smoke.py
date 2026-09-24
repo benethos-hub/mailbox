@@ -1,13 +1,21 @@
 """Live smoke run against the test accounts in ``live/.env``.
 
-    uv run python live/smoke.py [--show] [--wrong-password]
+    uv run python live/smoke.py [--show] [--wrong-password] [--follow]
+                                [--idle SECONDS]
 
 Read-only: discovers each address, connects it, lists folders and messages,
 reads one message and its source, and checks that reading changed no
-unread flag. Then lists across all accounts. ``--show`` prints the messages
-of the first page: sender, recipients, subject, attachment names and the
-start of the text. ``--wrong-password`` also tries one login with a wrong
-password, which the server may count against the account.
+unread flag and that ids stay the same. Then lists across all accounts and
+syncs each account once. ``--show`` prints the messages of the first page:
+sender, recipients, subject, attachment names and the start of the text.
+``--wrong-password`` also tries one login with a wrong password, which the
+server may count against the account.
+
+``--follow`` prints the ids of the first account's first page, waits while
+you move one of those messages in another mail client, then looks every id
+up again. ``--idle`` waits up to SECONDS for the server to report a change
+in the first account's inbox over IDLE, e.g. a test mail you send meanwhile.
+The script itself never moves or sends anything.
 
 Runs in-process with memory storage and a throwaway master key, so nothing
 is stored. Without ``--show`` it prints counts and sizes, never message
@@ -22,11 +30,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import anyio
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_api.config import Settings
 from benethos_mailbox_api.data.secrets import cipher, encode_recovery
+from benethos_mailbox_api.errors import MailboxApiError
 from benethos_mailbox_api.main import build_services, create_app
 
 ENV_FILE = Path(__file__).with_name(".env")
@@ -174,6 +184,13 @@ def smoke_account(
         run.check(
             "reading left unread flags alone", unread_ids(client, account_id) == before
         )
+        again = client.get(f"/v1/accounts/{account_id}/messages", params={"limit": 5})
+        run.check(
+            "ids stay the same",
+            [m["id"] for m in again.json().get("items", [])]
+            == [m["id"] for m in items],
+            items[0]["id"][:4] + "...",
+        )
     return account_id
 
 
@@ -218,10 +235,49 @@ def show_message(client: TestClient, account_id: str, message_id: str) -> None:
         print(f"      {line}")
 
 
+def folder_names(client: TestClient, account_id: str) -> dict[str, str]:
+    folders = client.get(f"/v1/accounts/{account_id}/folders").json()
+    return {f["id"]: f["name"] for f in folders}
+
+
+def follow(run: Run, client: TestClient, account_id: str) -> None:
+    """The ids of the first page, before and after a move by someone else."""
+    items = (
+        client.get(f"/v1/accounts/{account_id}/messages", params={"limit": 10})
+        .json()
+        .get("items", [])
+    )
+    names = folder_names(client, account_id)
+    print("\n== follow")
+    for number, item in enumerate(items, 1):
+        folder = names.get(item["folder_ids"][0], "?") if item["folder_ids"] else "?"
+        print(f"   {number:>2}  {item['id']}  {folder}  {item.get('subject') or '-'}")
+    input("\n   Move one of these in another mail client, then press Enter ")
+    names = folder_names(client, account_id)
+    for number, item in enumerate(items, 1):
+        found = client.get(f"/v1/accounts/{account_id}/messages/{item['id']}")
+        if found.status_code == 200:
+            folder_ids = found.json()["folder_ids"]
+            where = names.get(folder_ids[0], "?") if folder_ids else "?"
+            print(f"   {number:>2}  {item['id']}  now in {where}")
+        else:
+            print(f"   {number:>2}  {item['id']}  {found.status_code}")
+    run.check(
+        "every id still answers",
+        all(
+            client.get(f"/v1/accounts/{account_id}/messages/{i['id']}").status_code
+            == 200
+            for i in items
+        ),
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--show", action="store_true")
     parser.add_argument("--wrong-password", action="store_true")
+    parser.add_argument("--follow", action="store_true")
+    parser.add_argument("--idle", type=int, metavar="SECONDS")
     args = parser.parse_args()
 
     env = read_env(ENV_FILE)
@@ -230,6 +286,7 @@ def main() -> int:
         api_key=SecretStr("live-smoke"),
         key_provider="env",
         master_key=SecretStr(encode_recovery(cipher.new_key())),
+        sync_interval=0,
     )
     services = build_services(settings)
     services.vault.initialize()
@@ -254,6 +311,31 @@ def main() -> int:
             f"{len(page.get('items', []))} items, incomplete {page.get('incomplete')}",
         )
 
+    for account_id in ids:
+        print(f"\n== sync {account_id}")
+        try:
+            anyio.run(services.sync.sync_account, account_id)
+            states = services.sync._index.folder_states(account_id)
+            run.check("one pass", True, f"{len(states)} folders indexed")
+            anyio.run(services.sync.sync_account, account_id)
+            run.check("a second pass right after", True)
+        except MailboxApiError as exc:
+            run.check("one pass", False, f"{exc.code}: {exc.message}")
+
+    if args.follow and ids:
+        follow(run, client, ids[0])
+
+    if args.idle and ids:
+        print(f"\n== IDLE, up to {args.idle}s: send a test mail to this account now")
+        provider = services.accounts.provider(ids[0])
+        try:
+            changed = anyio.run(provider.wait_for_change, float(args.idle))
+            run.check(
+                "IDLE", True, "change reported" if changed else "nothing reported"
+            )
+        except MailboxApiError as exc:
+            run.check("IDLE", False, f"{exc.code}: {exc.message}")
+
     if args.wrong_password and used:
         email, settings_used = next(iter(used.items()))
         print("\n== wrong password")
@@ -273,6 +355,7 @@ def main() -> int:
             str(wrong.status_code),
         )
 
+    anyio.run(services.accounts.close)
     services.close()
     print(f"\n{run.failures} failed" if run.failures else "\nall passed")
     return 1 if run.failures else 0
