@@ -85,6 +85,13 @@ the tools that fit:
 | `create_draft` | `drafts` | a draft with plain text, recipients optional; with `original_id` a reply, reply to all or forward |
 | `update_draft` | `drafts` | replaces a draft as a whole, the id stays |
 | `delete_draft` | `drafts` | deletes a draft for good; reaches drafts only |
+| `send_message` | `send` | sends a mail at once, plain text; with `original_id` a reply, reply to all or forward |
+| `send_draft` | `send` | sends a stored draft |
+
+Each send carries an `Idempotency-Key` derived from the call: the same
+call repeated within 24 hours sends nothing and returns the first result.
+Give a user `send` only if the model may send without a person looking at
+the mail first; with `drafts` alone it writes drafts for a person to send.
 
 Mail content comes back inside `<mail-content>` markers: it is written by
 strangers and is data, not instructions. HTML is turned into text without

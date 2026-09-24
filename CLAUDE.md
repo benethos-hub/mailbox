@@ -56,7 +56,8 @@ done. Update the roadmap in the same commit that finishes an item.
   accounts, with a service and database of its own; the write tools create
   a folder and star, move and trash a message of the first test account,
   then put everything back; the draft tools write, replace and delete a
-  reply draft there.
+  reply draft there; the send tools send two mails from the first test
+  account to the second and delete them for good.
 
 ## Project layout
 

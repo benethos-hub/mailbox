@@ -1,0 +1,98 @@
+"""Send tools: send_message and send_draft, each call with its own
+idempotency key."""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Callable
+from typing import Any
+
+import httpx
+
+from benethos_mailbox_mcp import server
+
+SENT = {"message_id_header": "<m1@example.com>", "sent_copy_id": "msg_s", "refused": []}
+
+
+def api(answer: Any = SENT) -> Callable[[httpx.Request], httpx.Response]:
+    """Answers every request with ``answer``; records path, key and body."""
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content) if request.content else None
+        handle.calls.append(  # type: ignore[attr-defined]
+            (request.url.path, request.headers.get("idempotency-key"), body)
+        )
+        return httpx.Response(200, json=answer)
+
+    handle.calls = []  # type: ignore[attr-defined]
+    return handle
+
+
+async def test_send_message(make_client: Callable) -> None:
+    handler = api()
+    make_client(handler)
+    result = await server.send_message(
+        "acc_1", to=["bob@example.com"], subject="Hi", text="Hello"
+    )
+    assert result == {"sent": True, "message_id_header": "<m1@example.com>"}
+    [(path, key, body)] = handler.calls
+    assert path == "/v1/accounts/acc_1/send"
+    assert key.startswith("mcp-") and len(key) == 4 + 64
+    assert body == {
+        "to": [{"email": "bob@example.com"}],
+        "cc": [],
+        "bcc": [],
+        "subject": "Hi",
+        "text": "Hello",
+    }
+
+
+async def test_the_same_call_gives_the_same_key(make_client: Callable) -> None:
+    handler = api()
+    make_client(handler)
+    for text in ("Hello", "Hello", "Hello again"):
+        await server.send_message("acc_1", to=["bob@example.com"], text=text)
+    await server.send_message("acc_2", to=["bob@example.com"], text="Hello")
+    keys = [key for _, key, _ in handler.calls]
+    assert keys[0] == keys[1]
+    assert len(set(keys)) == 3
+
+
+async def test_a_reply_by_reference(make_client: Callable) -> None:
+    handler = api()
+    make_client(handler)
+    await server.send_message("acc_1", text="Thanks", original_id="msg_1")
+    body = handler.calls[0][2]
+    assert body["reference"] == {"message_id": "msg_1", "action": "reply"}
+
+
+async def test_refused_recipients_are_named(make_client: Callable) -> None:
+    make_client(api({**SENT, "refused": ["gone@example.com"]}))
+    result = await server.send_message("acc_1", to=["gone@example.com", "b@x.org"])
+    assert result["refused"] == ["gone@example.com"]
+
+
+async def test_send_draft(make_client: Callable) -> None:
+    handler = api()
+    make_client(handler)
+    assert (await server.send_draft("acc_1", "msg_d"))["sent"] is True
+    [(path, key, body)] = handler.calls
+    assert path == "/v1/accounts/acc_1/drafts/msg_d/send"
+    assert body is None
+    assert key != server._idempotency_key("send_draft", "acc_1", "msg_e")
+    assert key == server._idempotency_key("send_draft", "acc_1", "msg_d")
+
+
+async def test_registered_only_with_the_send_rights() -> None:
+    assert {
+        t.name for t in await server.build_server(["create_draft"]).list_tools()
+    } == {"list_accounts", "create_draft"}
+    tools = {
+        t.name: t
+        for t in await server.build_server(["send_message", "send_draft"]).list_tools()
+    }
+    assert set(tools) == {"list_accounts", "send_message", "send_draft"}
+    for name in ("send_message", "send_draft"):
+        annotations = tools[name].annotations
+        assert annotations is not None and annotations.destructive_hint is True
+        assert len(tools[name].description or "") < 700
