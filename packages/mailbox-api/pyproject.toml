@@ -47,6 +47,10 @@ dependencies = [
     "cryptography>=44",
     # The OS credential store that holds the master key on a host.
     "keyring>=25",
+    # IMAP: search builder, message parsing, folder name decoding.
+    "imap-tools>=1.10",
+    # Worker threads for the synchronous IMAP library.
+    "anyio>=4",
 ]
 
 [project.scripts]

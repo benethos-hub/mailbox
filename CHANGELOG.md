@@ -13,6 +13,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- IMAP accounts (`provider: imap`), read-only: folders with their roles,
+  messages newest first with cursor paging, unread and text filters, single
+  messages with text, HTML and attachments. Settings `host`, `username`,
+  `port`, `security` (`tls` or `starttls`) and `auth` (`password` or
+  `xoauth2`), credential `password` or `access_token`. Reading never marks a
+  message as read.
+- `GET .../messages/{message_id}/raw` returns the RFC 822 source,
+  `GET .../messages/{message_id}/attachments/{attachment_id}` an attachment.
 - `benethos-mailbox-api backup FILE`, `backup verify FILE` and
   `restore FILE`: encrypted backups of the whole database, opened with the
   master key or, with `--recovery-key`, the recovery key.

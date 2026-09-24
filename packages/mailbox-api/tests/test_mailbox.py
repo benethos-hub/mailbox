@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_api.data.models import Attachment
+from benethos_mailbox_api.main import Services
+
 
 def test_folders(client: TestClient, account_id: str) -> None:
     folders = client.get(f"/v1/accounts/{account_id}/folders").json()
@@ -44,3 +47,33 @@ def test_limit_is_bounded(client: TestClient, account_id: str) -> None:
     url = f"/v1/accounts/{account_id}/messages"
     assert client.get(url, params={"limit": 0}).status_code == 422
     assert client.get(url, params={"limit": 201}).status_code == 422
+
+
+def test_raw_source(client: TestClient, account_id: str) -> None:
+    response = client.get(f"/v1/accounts/{account_id}/messages/m2/raw")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "message/rfc822"
+    assert response.content.startswith(b"Subject: Hello 2")
+
+
+def test_attachment_download(
+    client: TestClient, account_id: str, services: Services
+) -> None:
+    adapter = services.accounts.provider(account_id)
+    message = adapter.messages[0]
+    message.attachments.append(
+        Attachment(
+            id="att_0", filename="Grüße.pdf", content_type="application/pdf", size=3
+        )
+    )
+    adapter.attachment_data[("m0", "att_0")] = b"PDF"
+    url = f"/v1/accounts/{account_id}/messages/m0/attachments/att_0"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert response.content == b"PDF"
+    assert response.headers["content-type"] == "application/pdf"
+    assert (
+        "filename*=UTF-8''Gr%C3%BC%C3%9Fe.pdf"
+        in response.headers["content-disposition"]
+    )
+    assert client.get(url.replace("att_0", "att_9")).status_code == 404

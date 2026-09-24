@@ -33,6 +33,7 @@ LIBRARY_HOMES = {
     "cryptography": f"{PACKAGE}.data.secrets.cipher",
     "keyring": f"{PACKAGE}.data.secrets.keys",
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
+    "imap_tools": f"{PACKAGE}.data.providers.imap.client",
 }
 
 

@@ -18,7 +18,13 @@ AUTHENTICATED_OPERATIONS: frozenset[str] = frozenset({"get_me", "list_permission
 
 GROUPS: dict[str, tuple[str, ...]] = {
     "accounts.read": ("list_accounts", "get_account"),
-    "mail.read": ("list_folders", "list_messages", "get_message"),
+    "mail.read": (
+        "list_folders",
+        "list_messages",
+        "get_message",
+        "get_message_raw",
+        "get_attachment",
+    ),
     "accounts.manage": ("create_account", "delete_account"),
     "users.manage": (
         "list_users",

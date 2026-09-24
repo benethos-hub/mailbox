@@ -129,6 +129,14 @@ class Attachment(BaseModel):
     inline: bool = False
 
 
+class AttachmentContent(BaseModel):
+    """An attachment with its bytes, for download."""
+
+    filename: str | None = None
+    content_type: str
+    data: bytes
+
+
 class Message(MessageSummary):
     cc: list[Address] = Field(default_factory=list)
     bcc: list[Address] = Field(default_factory=list)

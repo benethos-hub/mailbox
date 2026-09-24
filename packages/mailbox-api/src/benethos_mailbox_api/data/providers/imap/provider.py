@@ -1,0 +1,196 @@
+"""The IMAP adapter: one account, one connection, one lock.
+
+IMAP connections are stateful (the selected folder), so every operation runs
+as one uninterrupted sequence under the account's lock, in a worker thread.
+The credential is decrypted right before a login and not kept.
+"""
+
+from __future__ import annotations
+
+import threading
+from collections.abc import Callable
+from typing import Any, TypeVar
+
+import anyio
+
+from ....errors import BadRequestError, NotFoundError, ProviderError
+from ...models import AttachmentContent, Folder, Message, MessageSummary, Page
+from ..base import Capability, CredentialReader
+from . import mappers
+from .client import ImapServer, ImapSession, SearchCriteria
+
+T = TypeVar("T")
+
+SessionFactory = Callable[[ImapServer], ImapSession]
+
+DEFAULT_PORTS = {"tls": 993, "starttls": 143}
+
+
+class ImapProvider:
+    capabilities = frozenset({Capability.SERVER_SEARCH})
+
+    def __init__(
+        self,
+        settings: Any,
+        credentials: CredentialReader,
+        session_factory: SessionFactory = ImapSession,
+    ) -> None:
+        host = settings.get("host")
+        if not host:
+            raise BadRequestError("an IMAP account needs settings.host")
+        security = settings.get("security", "tls")
+        if security not in DEFAULT_PORTS:
+            raise BadRequestError(
+                "settings.security must be 'tls' or 'starttls': "
+                "IMAP without encryption is not supported"
+            )
+        username = settings.get("username")
+        if not username:
+            raise BadRequestError("an IMAP account needs settings.username")
+        auth = settings.get("auth", "password")
+        if auth not in ("password", "xoauth2"):
+            raise BadRequestError("settings.auth must be 'password' or 'xoauth2'")
+        self._server = ImapServer(
+            host=str(host),
+            port=int(settings.get("port") or DEFAULT_PORTS[security]),
+            security=str(security),
+        )
+        self._username = str(username)
+        self._auth = str(auth)
+        self._credentials = credentials
+        self._session = session_factory(self._server)
+        self._lock = threading.Lock()
+
+    # --- MailProvider ---------------------------------------------------------
+
+    async def list_folders(self) -> list[Folder]:
+        return await self._run(self._list_folders)
+
+    async def list_messages(
+        self,
+        folder_id: str | None,
+        *,
+        limit: int,
+        cursor: str | None,
+        query: str | None,
+        unread: bool | None,
+    ) -> Page[MessageSummary]:
+        return await self._run(
+            lambda: self._list_messages(folder_id, limit, cursor, query, unread)
+        )
+
+    async def get_message(self, message_id: str) -> Message:
+        return await self._run(lambda: self._get_message(message_id))
+
+    async def get_attachment(
+        self, message_id: str, attachment_id: str
+    ) -> AttachmentContent:
+        return await self._run(lambda: self._get_attachment(message_id, attachment_id))
+
+    async def get_raw(self, message_id: str) -> bytes:
+        return await self._run(lambda: self._get_raw(message_id))
+
+    async def close(self) -> None:
+        await anyio.to_thread.run_sync(self._close)
+
+    # --- the sequences, each under the lock -------------------------------------
+
+    def _list_folders(self) -> list[Folder]:
+        folders = [mappers.to_folder(raw) for raw in self._session.list_folders()]
+        return [folder for folder in folders if folder is not None]
+
+    def _list_messages(
+        self,
+        folder_id: str | None,
+        limit: int,
+        cursor: str | None,
+        query: str | None,
+        unread: bool | None,
+    ) -> Page[MessageSummary]:
+        folder = mappers.folder_name(folder_id) if folder_id else mappers.INBOX
+        before: int | None = None
+        expected_validity: int | None = None
+        if cursor:
+            cursor_folder, expected_validity, before = mappers.parse_cursor(cursor)
+            if cursor_folder != folder:
+                raise BadRequestError("the cursor belongs to another folder")
+        validity = self._session.select(folder)
+        if expected_validity is not None and expected_validity != validity:
+            raise BadRequestError("the folder changed on the server: start again")
+        uids = self._session.search(
+            SearchCriteria(text=query, unread=unread, before_uid=before)
+        )
+        page = list(reversed(uids[-limit:]))
+        messages = {int(m.uid): m for m in self._session.fetch_headers(page) if m.uid}
+        items = [
+            mappers.to_summary(messages[uid], folder, validity)
+            for uid in page
+            if uid in messages
+        ]
+        more = len(uids) > limit
+        return Page[MessageSummary](
+            items=items,
+            next_cursor=mappers.cursor(folder, validity, page[-1]) if more else None,
+        )
+
+    def _fetch(self, message_id: str) -> tuple[Any, str, int]:
+        folder, validity, uid = mappers.parse_message_id(message_id)
+        if self._session.select(folder) != validity:
+            raise NotFoundError(f"message {message_id} not found")
+        message = self._session.fetch_message(uid)
+        if message is None:
+            raise NotFoundError(f"message {message_id} not found")
+        return message, folder, validity
+
+    def _get_message(self, message_id: str) -> Message:
+        message, folder, validity = self._fetch(message_id)
+        return mappers.to_message(message, folder, validity)
+
+    def _get_attachment(self, message_id: str, attachment_id: str) -> AttachmentContent:
+        index = mappers.attachment_index(attachment_id)
+        message, _, _ = self._fetch(message_id)
+        if index >= len(message.attachments):
+            raise NotFoundError(f"attachment {attachment_id} not found")
+        part = message.attachments[index]
+        return AttachmentContent(
+            filename=part.filename or None,
+            content_type=part.content_type or "application/octet-stream",
+            data=part.payload,
+        )
+
+    def _get_raw(self, message_id: str) -> bytes:
+        folder, validity, uid = mappers.parse_message_id(message_id)
+        if self._session.select(folder) != validity:
+            raise NotFoundError(f"message {message_id} not found")
+        raw = self._session.fetch_raw(uid)
+        if raw is None:
+            raise NotFoundError(f"message {message_id} not found")
+        return raw
+
+    def _close(self) -> None:
+        with self._lock:
+            self._session.logout()
+
+    # --- plumbing ---------------------------------------------------------------
+
+    async def _run(self, operation: Callable[[], T]) -> T:
+        return await anyio.to_thread.run_sync(self._locked, operation)
+
+    def _locked(self, operation: Callable[[], T]) -> T:
+        with self._lock:
+            if not self._session.connected:
+                self._login()
+            try:
+                return operation()
+            except ProviderError:
+                # The connection may be broken. The next call starts afresh.
+                self._session.logout()
+                raise
+
+    def _login(self) -> None:
+        if self._auth == "xoauth2":
+            token = self._credentials("access_token")
+            self._session.login_oauth(self._username, token.get_secret_value())
+        else:
+            password = self._credentials("password")
+            self._session.login(self._username, password.get_secret_value())

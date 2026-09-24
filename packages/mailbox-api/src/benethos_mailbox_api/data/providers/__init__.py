@@ -14,6 +14,7 @@ from collections.abc import Callable, Mapping
 from ...errors import NotSupportedError
 from ..models import ProviderType
 from .base import Capability, CredentialReader, MailProvider
+from .imap import ImapProvider
 from .memory import MemoryProvider
 
 ProviderSettings = Mapping[str, str | int | bool]
@@ -25,6 +26,7 @@ _REGISTRY: dict[
     ProviderType, Callable[[ProviderSettings, CredentialReader], MailProvider]
 ] = {
     ProviderType.MEMORY: lambda _settings, _credentials: MemoryProvider(),
+    ProviderType.IMAP: ImapProvider,
 }
 
 
