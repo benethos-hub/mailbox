@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from ...data.models import Discovery
+from ....data.models import Discovery
 from ..deps import Caller, Discoverer
 from ..schemas import DiscoveryRequest, ErrorResponse
 

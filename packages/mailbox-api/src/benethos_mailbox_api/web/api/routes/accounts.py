@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, status
 
-from ...data.models import Account
+from ....data.models import Account
 from ..deps import Accounts, Caller
 from ..schemas import AccountCreate, AccountUpdate
 

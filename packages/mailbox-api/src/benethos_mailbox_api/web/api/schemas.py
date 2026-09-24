@@ -10,7 +10,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, SecretStr
 
-from ..data.models import ApiToken, Grant, ProviderType
+from ...data.models import ApiToken, Grant, ProviderType
 
 
 class AccountCreate(BaseModel):

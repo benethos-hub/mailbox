@@ -7,7 +7,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Header, Query, Response
 
-from ...data.models import (
+from ....data.models import (
     BatchResult,
     DraftMessage,
     Folder,

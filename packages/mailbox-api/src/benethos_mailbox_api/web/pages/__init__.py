@@ -2,10 +2,13 @@
 
 A page calls the domain directly, as a route does, and so goes through the
 same rights checks; it is not a client of the API over HTTP. The pages stay
-out of the OpenAPI document. One module per area, each with a ``router``.
+out of the OpenAPI document. ``routes`` holds one module per area, each
+with a ``router``; ``deps`` who is signed in and the CSRF check,
+``session`` the sessions, ``templates`` rendering, ``errors`` the error
+page.
 
-Recipe for a page: ``pages/<area>.py`` with its routes, a template in
-``templates/pages/``, the router added below. Forms post, and answer with a
+Recipe for a page: ``routes/<area>.py`` with its routes, a template in
+``templates/pages/``, the router added to ``AREAS`` below. Forms post, and answer with a
 303 to a page (Post/Redirect/Get); what a view shows lives in its URL.
 """
 
@@ -14,16 +17,15 @@ from __future__ import annotations
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
-from fastapi.exception_handlers import request_validation_exception_handler
-from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from . import accounts, home, login
 from .deps import CsrfRefused
+from .errors import error_page
+from .routes import accounts, home, login
 from .session import PATH, SessionStore, SignInRequired
-from .templates import STATIC_DIR, is_htmx, render
+from .templates import STATIC_DIR, is_htmx
 
 AREAS = (login, home, accounts)
 
@@ -59,6 +61,11 @@ def _secured(app: ASGIApp) -> ASGIApp:
     return wrapped
 
 
+def owns(request: Request) -> bool:
+    """Whether the request is one for the UI."""
+    return request.url.path.startswith(PATH)
+
+
 def install(app: FastAPI) -> None:
     app.state.ui_sessions = SessionStore()
     app.mount(f"{PATH}/static", StaticFiles(directory=STATIC_DIR), name="ui-static")
@@ -74,26 +81,11 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(CsrfRefused)
     async def _csrf(request: Request, _: CsrfRefused) -> HTMLResponse:
-        return render(
+        return error_page(
             request,
-            "pages/error.html",
-            page="error",
-            status_code=403,
+            403,
+            "This form is no longer valid. Reload the page and try again.",
             title="Form expired",
-            message="This form is no longer valid. Reload the page and try again.",
-        )
-
-    @app.exception_handler(RequestValidationError)
-    async def _invalid(request: Request, exc: RequestValidationError) -> Response:
-        if not request.url.path.startswith(PATH):
-            return await request_validation_exception_handler(request, exc)
-        return render(
-            request,
-            "pages/error.html",
-            page="error",
-            status_code=400,
-            title="Incomplete form",
-            message="Some fields were missing or not valid. Go back and check them.",
         )
 
     app.add_middleware(_Security)

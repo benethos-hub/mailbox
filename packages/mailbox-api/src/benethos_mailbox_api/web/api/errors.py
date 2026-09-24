@@ -9,11 +9,10 @@ from collections.abc import Mapping
 from http import HTTPStatus
 from typing import Any
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from ..errors import (
+from ...errors import (
     BadRequestError,
     ConflictError,
     CredentialError,
@@ -67,28 +66,23 @@ def status_of(error: MailboxApiError) -> int:
     return 500
 
 
-def install_error_handlers(app: FastAPI) -> None:
-    @app.exception_handler(MailboxApiError)
-    async def _mailbox_api_error(request: Request, exc: MailboxApiError) -> Response:
-        status = status_of(exc)
-        if _in_ui(request):
-            return _ui_error(request, status, exc.message)
-        headers = None
-        if status == 401:
-            headers = {"WWW-Authenticate": "Bearer"}
-        elif isinstance(exc, RateLimitedError):
-            headers = {"Retry-After": str(exc.retry_after)}
-        return error_response(status, exc.code, exc.message, headers)
+def api_error(exc: MailboxApiError) -> JSONResponse:
+    """A domain error as the API answers it: status and envelope."""
+    status = status_of(exc)
+    headers = None
+    if status == 401:
+        headers = {"WWW-Authenticate": "Bearer"}
+    elif isinstance(exc, RateLimitedError):
+        headers = {"Retry-After": str(exc.retry_after)}
+    return error_response(status, exc.code, exc.message, headers)
 
-    # Framework errors (auth, unknown route) get the same envelope, so a client
-    # parses one error shape. Request validation keeps FastAPI's 422 format,
-    # which the schema documents on its own.
-    @app.exception_handler(HTTPException)
-    async def _http_error(request: Request, exc: HTTPException) -> Response:
-        if _in_ui(request):
-            return _ui_error(request, exc.status_code, str(exc.detail))
-        code = HTTPStatus(exc.status_code).phrase.lower().replace(" ", "_")
-        return error_response(exc.status_code, code, str(exc.detail), exc.headers)
+
+def http_error(exc: HTTPException) -> JSONResponse:
+    """Framework errors (auth, unknown route) in the same envelope, so a
+    client parses one error shape. Request validation keeps FastAPI's 422
+    format, which the schema documents on its own."""
+    code = HTTPStatus(exc.status_code).phrase.lower().replace(" ", "_")
+    return error_response(exc.status_code, code, str(exc.detail), exc.headers)
 
 
 def error_response(
@@ -96,21 +90,3 @@ def error_response(
 ) -> JSONResponse:
     body = ErrorResponse.model_validate({"error": {"code": code, "message": message}})
     return JSONResponse(status_code=status, content=body.model_dump(), headers=headers)
-
-
-def _in_ui(request: Request) -> bool:
-    return request.url.path.startswith("/ui")
-
-
-def _ui_error(request: Request, status: int, message: str) -> Response:
-    """The configuration UI answers errors as a page, not as JSON."""
-    from .pages.templates import render
-
-    return render(
-        request,
-        "pages/error.html",
-        page="error",
-        status_code=status,
-        title=HTTPStatus(status).phrase,
-        message=message,
-    )

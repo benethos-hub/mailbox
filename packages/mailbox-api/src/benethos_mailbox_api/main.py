@@ -16,7 +16,7 @@ import anyio
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
-from . import __version__
+from . import __version__, web
 from .config import Settings
 from .data.discovery import SafeFetcher, default_sources, preset_hosts
 from .data.providers import ProviderFactory, build_provider, probe_server
@@ -66,8 +66,6 @@ from .domain.sending import SendControl
 from .domain.sync import SyncService
 from .domain.users import UserService
 from .domain.worker import SyncWorker
-from .web import include_routes
-from .web.errors import install_error_handlers
 
 
 @dataclass(frozen=True)
@@ -220,8 +218,7 @@ def create_app(
     app.state.mailbox = services.mailbox
     app.state.discovery = services.discovery
 
-    include_routes(app)
-    install_error_handlers(app)
+    web.install(app)
     return app
 
 

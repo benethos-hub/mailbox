@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from ...data.models import FolderRole, MessagePage
+from ....data.models import FolderRole, MessagePage
 from ..deps import Caller, Mailbox, Search
 
 router = APIRouter(tags=["mailbox"])

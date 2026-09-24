@@ -98,15 +98,20 @@ packages/
         opaque.py         # opaque ids and cursors: prefix + base64 JSON
         clock.py          # utc_now, the default clock of the services
       web/                # PRESENTATION: HTTP only, FastAPI lives here
-        __init__.py       # include_routes: /health open, the rest under /v1
-        deps.py           # authentication, services per request
-        schemas.py        # shapes that exist only at the HTTP boundary
-        errors.py         # error class -> status code, the error envelope
-        routes/           # JSON API under /v1, one router per resource
-        pages/            # configuration UI under /ui, not in OpenAPI:
-                          #   one module per area, session.py (sign-in,
-                          #   CSRF), templates.py (Jinja2), templates/,
-                          #   static/ (app.css, app.js, vendored htmx)
+        __init__.py       # install: both front ends, errors to the right one
+        api/              # the JSON API: /health open, the rest under /v1
+          deps.py         # bearer authentication, services per request
+          schemas.py      # shapes that exist only at the HTTP boundary
+          errors.py       # error class -> status code, the error envelope
+          routes/         # one router per resource
+        pages/            # the configuration UI under /ui, not in OpenAPI
+          deps.py         # who is signed in, the CSRF check
+          session.py      # sign-in with a token, server-side sessions
+          templates.py    # Jinja2: filters, render, Post/Redirect/Get
+          errors.py       # errors as a page
+          routes/         # one module per area
+          templates/      # base, partials, components (macros), pages
+          static/         # app.css, app.js, vendored htmx
       domain/             # BUSINESS LOGIC: decides, knows no HTTP
         accounts.py       # AccountService: accounts and their live adapters
         mailbox.py        # MailboxService: folders and messages
@@ -168,13 +173,13 @@ Three layers, imports only point down: `web/` → `domain/` → `data/`.
   layer needs, on the standard library alone. What one layer needs stays in
   that layer.
 - **No HTTP in the domain.** Nothing below `web/` raises an HTTP exception or
-  knows a status code. The domain raises `errors`, and `web/errors.py` maps
+  knows a status code. The domain raises `errors`, and `web/api/errors.py` maps
   each class to a status.
 - **No decisions in the data layer.** It reads and writes, it does not judge.
 - **Providers only through the registry.** Outside `data/providers/`,
   nothing imports a provider module, only `data.providers` itself.
-- **Two front ends, one domain.** `web/routes/` serves the JSON API,
-  `web/pages/` will serve the configuration UI. Both call the same domain
+- **Two front ends, one domain.** `web/api/` serves the JSON API,
+  `web/pages/` the configuration UI. Both call the same domain
   services. Therefore **rights are checked in the domain**, not in a web
   dependency: a check that lives in `routes/` would have to be built a
   second time for `pages/`, and one of the two would drift. The web layer

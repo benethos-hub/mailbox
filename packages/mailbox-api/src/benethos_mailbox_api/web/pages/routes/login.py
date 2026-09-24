@@ -9,11 +9,11 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse, Response
 
-from ...domain.auth import AuthService
-from ...errors import MailboxApiError
-from .deps import Actor
-from .session import COOKIE, PATH, SignInRequired, current, store_of
-from .templates import back, render
+from ....domain.auth import AuthService
+from ....errors import MailboxApiError
+from ..deps import Actor
+from ..session import COOKIE, PATH, SignInRequired, current, store_of
+from ..templates import back, render
 
 router = APIRouter()
 

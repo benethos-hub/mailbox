@@ -9,7 +9,7 @@ import pytest
 
 from benethos_mailbox_api.__main__ import main
 from benethos_mailbox_api.main import create_app, openapi_json
-from benethos_mailbox_api.web import API_PREFIX
+from benethos_mailbox_api.web.api import PREFIX as API_PREFIX
 
 COMMITTED = Path(__file__).resolve().parents[3] / "docs" / "openapi.json"
 METHODS = {"get", "post", "put", "patch", "delete"}

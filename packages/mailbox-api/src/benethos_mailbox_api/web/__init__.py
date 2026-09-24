@@ -1,58 +1,53 @@
 """Web layer: HTTP and nothing else.
 
-Checks input, calls the domain, answers. FastAPI is imported here and
-nowhere else. ``routes`` holds one router per resource, ``schemas`` the
-shapes that exist only at the HTTP boundary, ``errors`` the mapping from
-domain errors to status codes, ``deps`` authentication and the services a
-route needs. May import ``domain`` and ``data``.
+Two front ends on one domain: ``api`` serves the JSON API under ``/v1``
+(and ``/health``), ``pages`` the configuration UI under ``/ui``. Both check
+input, call the domain and answer; neither decides what a caller may do.
+FastAPI is imported here and nowhere below. May import ``domain`` and
+``data``.
+
+This module only puts the two together, and sends an error to the front
+end whose request failed: a page for the UI, the error envelope for the
+API.
 """
 
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI
-from fastapi.routing import APIRoute
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import Response
+from starlette.exceptions import HTTPException
 
-from ..domain.permissions import permission_of
-from . import pages
-from .deps import authenticate
-from .errors import DOCUMENTED_ERRORS
-from .routes import accounts, discovery, health, mailbox, messages, users
-
-API_PREFIX = "/v1"
+from ..errors import MailboxApiError
+from . import api, pages
+from .api.errors import api_error, http_error, status_of
+from .pages.errors import error_page
 
 
-def include_routes(app: FastAPI) -> None:
-    """Mount every router: ``/health`` open, everything else under ``/v1``.
-
-    Every ``/v1`` route gets its right from the catalogue as ``x-permission``.
-    A route missing from the catalogue stops the app from starting.
-    """
-    app.include_router(health.router)
+def install(app: FastAPI) -> None:
+    api.install(app)
     pages.install(app)
-    # Every /v1 route authenticates, even one that does not use the caller.
-    protected = [Depends(authenticate)]
-    for router in (
-        users.router,
-        accounts.router,
-        discovery.router,
-        messages.router,
-        mailbox.router,
-    ):
-        for route in router.routes:
-            if isinstance(route, APIRoute):
-                _declare_permission(route)
-        app.include_router(
-            router,
-            prefix=API_PREFIX,
-            dependencies=protected,
-            responses=DOCUMENTED_ERRORS,
-        )
 
+    @app.exception_handler(MailboxApiError)
+    async def _domain_error(request: Request, exc: MailboxApiError) -> Response:
+        if pages.owns(request):
+            return error_page(request, status_of(exc), exc.message)
+        return api_error(exc)
 
-def _declare_permission(route: APIRoute) -> None:
-    permission = permission_of(route.name)
-    if permission is None:
-        raise RuntimeError(
-            f"route {route.name} has no entry in the permission catalogue"
-        )
-    route.openapi_extra = {**(route.openapi_extra or {}), "x-permission": permission}
+    @app.exception_handler(HTTPException)
+    async def _http_error(request: Request, exc: HTTPException) -> Response:
+        if pages.owns(request):
+            return error_page(request, exc.status_code, str(exc.detail))
+        return http_error(exc)
+
+    @app.exception_handler(RequestValidationError)
+    async def _invalid(request: Request, exc: RequestValidationError) -> Response:
+        if pages.owns(request):
+            return error_page(
+                request,
+                400,
+                "Some fields were missing or not valid. Go back and check them.",
+                title="Incomplete form",
+            )
+        return await request_validation_exception_handler(request, exc)
