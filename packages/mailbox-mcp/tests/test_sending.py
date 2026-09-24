@@ -96,3 +96,26 @@ async def test_registered_only_with_the_send_rights() -> None:
         annotations = tools[name].annotations
         assert annotations is not None and annotations.destructive_hint is True
         assert len(tools[name].description or "") < 700
+
+
+async def test_send_html(make_client: Callable) -> None:
+    handler = api()
+    make_client(handler)
+    await server.send_message(
+        "acc_1", to=["bob@example.com"], html='<p style="color:red">Hi</p>'
+    )
+    body = handler.calls[0][2]
+    assert body["html"] == '<p style="color:red">Hi</p>'
+    assert body["text"] == ""  # the service makes the text part
+
+
+async def test_the_html_field_is_offered() -> None:
+    tools = {
+        t.name: t
+        for t in await server.build_server(
+            ["send_message", "create_draft", "update_draft"]
+        ).list_tools()
+    }
+    for name in ("send_message", "create_draft", "update_draft"):
+        html = tools[name].input_schema["properties"]["html"]
+        assert "Inline styles" in html["description"], name

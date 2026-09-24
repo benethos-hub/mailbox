@@ -313,6 +313,17 @@ OriginalId = Annotated[
     Field(description="A message to answer or forward; recipients and quote follow"),
 ]
 Action = Literal["reply", "reply_all", "forward"]
+Text = Annotated[str, Field(description="The body as plain text")]
+Html = Annotated[
+    str | None,
+    Field(
+        description=(
+            "The body as HTML, for formatting. Inline styles only (style=...),"
+            " many mail programs drop <style> blocks. Without text, the text"
+            " part is made from it"
+        )
+    ),
+]
 
 
 def _recipients(addresses: list[str] | None) -> list[dict[str, str]]:
@@ -331,6 +342,7 @@ def _composed(
     bcc: list[str] | None,
     subject: str,
     text: str,
+    html: str | None,
     original_id: str | None,
     action: Action,
 ) -> dict[str, Any]:
@@ -342,6 +354,8 @@ def _composed(
         "subject": subject,
         "text": text,
     }
+    if html is not None:
+        body["html"] = html
     if original_id is not None:
         body["reference"] = {"message_id": original_id, "action": action}
     return body
@@ -378,7 +392,8 @@ async def create_draft(
     cc: Addresses = None,
     bcc: Addresses = None,
     subject: str = "",
-    text: Annotated[str, Field(description="The body, plain text")] = "",
+    text: Text = "",
+    html: Html = None,
     original_id: OriginalId = None,
     action: Action = "reply",
 ) -> dict[str, Any]:
@@ -386,7 +401,7 @@ async def create_draft(
     original_id it answers or forwards that message: the service adds
     recipients of a reply, the subject prefix and the quote. Recipients may
     stay empty."""
-    body = _composed(to, cc, bcc, subject, text, original_id, action)
+    body = _composed(to, cc, bcc, subject, text, html, original_id, action)
     return _draft(await client().create_draft(account_id, body))
 
 
@@ -397,13 +412,14 @@ async def update_draft(
     cc: Addresses = None,
     bcc: Addresses = None,
     subject: str = "",
-    text: Annotated[str, Field(description="The body, plain text")] = "",
+    text: Text = "",
+    html: Html = None,
     original_id: OriginalId = None,
     action: Action = "reply",
 ) -> dict[str, Any]:
     """Replace a draft as a whole: what is left out is gone afterwards. Read
     it with get_message first to keep parts of it. The id stays."""
-    body = _composed(to, cc, bcc, subject, text, original_id, action)
+    body = _composed(to, cc, bcc, subject, text, html, original_id, action)
     return _draft(await client().update_draft(account_id, draft_id, body))
 
 
@@ -439,7 +455,8 @@ async def send_message(
     cc: Addresses = None,
     bcc: Addresses = None,
     subject: str = "",
-    text: Annotated[str, Field(description="The body, plain text")] = "",
+    text: Text = "",
+    html: Html = None,
     original_id: OriginalId = None,
     action: Action = "reply",
 ) -> dict[str, Any]:
@@ -448,7 +465,7 @@ async def send_message(
     to its sender. The same call repeated within 24 hours sends nothing and
     answers the first result. refused lists recipients the server did not
     take."""
-    body = _composed(to, cc, bcc, subject, text, original_id, action)
+    body = _composed(to, cc, bcc, subject, text, html, original_id, action)
     key = _idempotency_key("send_message", account_id, body)
     return _sent(await client().send_message(account_id, body, key))
 

@@ -16,6 +16,7 @@ from html import escape
 from typing import NamedTuple
 
 from ..models import Address, DraftMessage, Message, Recipient
+from .text import from_html
 
 # Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
 REFERENCE_HEADER = "X-Mailbox-Api-Reference"
@@ -74,7 +75,7 @@ def message(
     if extras.references:
         mail["References"] = " ".join(extras.references)
 
-    mail.set_content(message.text or "")
+    mail.set_content(body_text(message))
     if message.html is not None:
         mail.add_alternative(message.html, subtype="html")
     files = [(a.filename, a.content_type, a.data) for a in message.attachments]
@@ -85,6 +86,14 @@ def message(
         original = message_from_bytes(extras.attached_message, policy=default)
         mail.add_attachment(original, filename="forwarded.eml")
     return mail.as_bytes()
+
+
+def body_text(message: DraftMessage) -> str:
+    """The text part: ``text``, or for a message written as HTML only, the
+    text made from its HTML, for clients that show text alone."""
+    if message.text:
+        return message.text
+    return from_html(message.html) if message.html else ""
 
 
 class Outgoing(NamedTuple):

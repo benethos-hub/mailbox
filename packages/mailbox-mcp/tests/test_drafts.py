@@ -134,3 +134,11 @@ async def test_registered_by_the_right_and_marked() -> None:
 async def test_only_create_draft_with_that_right() -> None:
     names = {t.name for t in await server.build_server(["create_draft"]).list_tools()}
     assert names == {"list_accounts", "create_draft"}
+
+
+async def test_a_draft_in_html(make_client: Callable) -> None:
+    handler = api(SUMMARY, status=201)
+    make_client(handler)
+    await server.create_draft("acc_1", html="<p>Hi</p>", text="Hi")
+    body = handler.calls[0][3]
+    assert (body["html"], body["text"]) == ("<p>Hi</p>", "Hi")

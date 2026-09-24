@@ -33,7 +33,7 @@ def reply(
     in_reply_to, chain = compose.references(raw)
     changes: dict[str, Any] = {
         "subject": message.subject or compose.prefixed("Re:", original.subject),
-        "text": compose.quoted(original, message.text),
+        "text": compose.quoted(original, compose.body_text(message) or None),
     }
     if message.html is not None:
         changes["html"] = compose.quoted_html(
@@ -61,7 +61,7 @@ def forward(
     }
     if forward_as == "attachment":
         return message.model_copy(update=changes), compose.Extras(attached_message=raw)
-    changes["text"] = compose.forwarded(original, message.text)
+    changes["text"] = compose.forwarded(original, compose.body_text(message) or None)
     if message.html is not None:
         changes["html"] = compose.quoted_html(
             original, message.html, "Forwarded message"
