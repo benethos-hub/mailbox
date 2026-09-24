@@ -82,7 +82,7 @@ Before phase 2, so that ids stay valid once messages are moved.
 - Update, delete and batch operations on messages (6.3)
 - Folder create, rename, delete (6.2)
 - Sending over SMTP, with reply and forward by reference, `forward_as`,
-  `Answered` and `$Forwarded` on the original (6.4)
+  `\Answered` and `$Forwarded` on the original (6.4)
 - Drafts
 - `Idempotency-Key` on send
 
