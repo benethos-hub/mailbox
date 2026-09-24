@@ -18,8 +18,20 @@ AUTHENTICATED_OPERATIONS: frozenset[str] = frozenset({"get_me", "list_permission
 
 GROUPS: dict[str, tuple[str, ...]] = {
     "accounts.read": ("list_accounts", "get_account"),
-    "mail.read": ("list_folders", "list_messages", "get_message"),
-    "accounts.manage": ("create_account", "delete_account"),
+    "mail.read": (
+        "list_all_messages",
+        "list_folders",
+        "list_messages",
+        "get_message",
+        "get_message_raw",
+        "get_attachment",
+    ),
+    "accounts.manage": (
+        "discover_account",
+        "create_account",
+        "delete_account",
+        "verify_account",
+    ),
     "users.manage": (
         "list_users",
         "create_user",
@@ -43,7 +55,7 @@ ACCOUNT_FREE: frozenset[str] = frozenset(GROUPS["users.manage"])
 
 # Operations that act on accounts which may not exist yet. They need a grant
 # on every account ("*").
-ALL_ACCOUNTS: frozenset[str] = frozenset({"create_account"})
+ALL_ACCOUNTS: frozenset[str] = frozenset({"discover_account", "create_account"})
 
 GROUP_OF: dict[str, str] = {op: group for group, ops in GROUPS.items() for op in ops}
 

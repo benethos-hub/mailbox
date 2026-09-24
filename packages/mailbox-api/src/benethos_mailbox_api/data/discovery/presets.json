@@ -1,0 +1,263 @@
+{
+  "providers": [
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "domains": ["gmail.com", "googlemail.com"],
+      "mx_domains": ["google.com", "googlemail.com"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "app_password",
+          "servers": [
+            {"protocol": "imap", "host": "imap.gmail.com", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "smtp.gmail.com", "port": 465, "security": "tls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Create an app password in the Google account. App passwords need 2-step verification."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "microsoft",
+      "name": "Outlook.com",
+      "domains": ["outlook.com", "outlook.de", "hotmail.com", "hotmail.de", "live.com", "live.de", "msn.com"],
+      "mx_domains": ["outlook.com"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "oauth",
+          "oauth_provider": "microsoft",
+          "servers": [
+            {"protocol": "imap", "host": "outlook.office365.com", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "smtp.office365.com", "port": 587, "security": "starttls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Microsoft accepts only a sign-in with Microsoft (OAuth), no password."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yahoo",
+      "name": "Yahoo Mail",
+      "domains": ["yahoo.com", "yahoo.de", "ymail.com", "rocketmail.com"],
+      "mx_domains": ["yahoodns.net"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "app_password",
+          "servers": [
+            {"protocol": "imap", "host": "imap.mail.yahoo.com", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "smtp.mail.yahoo.com", "port": 465, "security": "tls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Create an app password in the Yahoo account security settings."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aol",
+      "name": "AOL Mail",
+      "domains": ["aol.com", "aol.de"],
+      "mx_domains": [],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "app_password",
+          "servers": [
+            {"protocol": "imap", "host": "imap.aol.com", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "smtp.aol.com", "port": 465, "security": "tls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Create an app password in the AOL account security settings."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "icloud",
+      "name": "iCloud Mail",
+      "domains": ["icloud.com", "me.com", "mac.com"],
+      "mx_domains": ["icloud.com"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "app_password",
+          "servers": [
+            {"protocol": "imap", "host": "imap.mail.me.com", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "smtp.mail.me.com", "port": 587, "security": "starttls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Create an app-specific password in the Apple account."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fastmail",
+      "name": "Fastmail",
+      "domains": ["fastmail.com", "fastmail.fm"],
+      "mx_domains": ["messagingengine.com"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "app_password",
+          "servers": [
+            {"protocol": "imap", "host": "imap.fastmail.com", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "smtp.fastmail.com", "port": 465, "security": "tls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Create an app password under Settings, Privacy & Security."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gmx",
+      "name": "GMX",
+      "domains": ["gmx.de", "gmx.net", "gmx.at", "gmx.ch"],
+      "mx_domains": ["gmx.net"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "password",
+          "servers": [
+            {"protocol": "imap", "host": "imap.gmx.net", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "mail.gmx.net", "port": 587, "security": "starttls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Switch on IMAP access in the GMX web mailer first."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "webde",
+      "name": "WEB.DE",
+      "domains": ["web.de"],
+      "mx_domains": ["web.de"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "password",
+          "servers": [
+            {"protocol": "imap", "host": "imap.web.de", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "smtp.web.de", "port": 587, "security": "starttls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Switch on IMAP access in the WEB.DE web mailer first."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "t-online",
+      "name": "Telekom Mail",
+      "domains": ["t-online.de", "magenta.de"],
+      "mx_domains": ["t-online.de"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "password",
+          "servers": [
+            {"protocol": "imap", "host": "secureimap.t-online.de", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "securesmtp.t-online.de", "port": 465, "security": "tls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Use the email password set in the Telekom email centre, not the password of the Telekom login."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "freenet",
+      "name": "freenet Mail",
+      "domains": ["freenet.de"],
+      "mx_domains": ["freenet.de"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "password",
+          "servers": [
+            {"protocol": "imap", "host": "mx.freenet.de", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "mx.freenet.de", "port": 587, "security": "starttls", "username": "%EMAILADDRESS%"}
+          ],
+          "hints": [
+            {"text": "Allow access for mail programs in the freenet web mailer first."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "posteo",
+      "name": "Posteo",
+      "domains": ["posteo.de"],
+      "mx_domains": ["posteo.de"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "password",
+          "servers": [
+            {"protocol": "imap", "host": "posteo.de", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "posteo.de", "port": 465, "security": "tls", "username": "%EMAILADDRESS%"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mailbox-org",
+      "name": "mailbox.org",
+      "domains": ["mailbox.org"],
+      "mx_domains": ["mailbox.org"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "password",
+          "servers": [
+            {"protocol": "imap", "host": "imap.mailbox.org", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "smtp.mailbox.org", "port": 465, "security": "tls", "username": "%EMAILADDRESS%"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ionos",
+      "name": "IONOS",
+      "domains": [],
+      "mx_domains": ["ionos.de"],
+      "candidates": [
+        {
+          "provider": "imap",
+          "credential": "password",
+          "servers": [
+            {"protocol": "imap", "host": "imap.ionos.de", "port": 993, "security": "tls", "username": "%EMAILADDRESS%"},
+            {"protocol": "smtp", "host": "smtp.ionos.de", "port": 465, "security": "tls", "username": "%EMAILADDRESS%"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tuta",
+      "name": "Tuta",
+      "domains": ["tuta.com", "tuta.io", "tutanota.com", "tutanota.de", "tutamail.com", "keemail.me"],
+      "mx_domains": ["tutanota.de"],
+      "candidates": [],
+      "hints": [
+        {"text": "Tuta offers no access for other mail programs. There is nothing to connect."}
+      ]
+    },
+    {
+      "id": "proton",
+      "name": "Proton Mail",
+      "domains": ["proton.me", "protonmail.com", "protonmail.ch", "pm.me"],
+      "mx_domains": ["protonmail.ch"],
+      "candidates": [],
+      "hints": [
+        {"text": "Proton Mail needs Proton Mail Bridge on this machine, which comes with the paid plans only."}
+      ]
+    }
+  ]
+}

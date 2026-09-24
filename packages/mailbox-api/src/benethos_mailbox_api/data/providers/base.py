@@ -8,7 +8,7 @@ from typing import Protocol
 
 from pydantic import SecretStr
 
-from ..models import Folder, Message, MessageSummary, Page
+from ..models import AttachmentContent, Folder, Message, MessageSummary, Page
 
 # Hands an adapter one stored credential by field name, decrypted at the
 # moment of the call. Adapters call it right before a login and keep nothing.
@@ -44,5 +44,18 @@ class MailProvider(Protocol):
     ) -> Page[MessageSummary]: ...
 
     async def get_message(self, message_id: str) -> Message: ...
+
+    async def get_attachment(
+        self, message_id: str, attachment_id: str
+    ) -> AttachmentContent: ...
+
+    async def get_raw(self, message_id: str) -> bytes:
+        """The message source as RFC 822 bytes."""
+        ...
+
+    async def verify(self) -> None:
+        """Log in afresh and forget an earlier rejected login. Raises
+        ``ProviderAuthError`` if the credential does not work."""
+        ...
 
     async def close(self) -> None: ...

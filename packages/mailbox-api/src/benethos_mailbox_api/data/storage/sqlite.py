@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from ...errors import NotFoundError
-from ..models import Account, ApiToken, Grant, Role, User
+from ..models import Account, AccountStatus, ApiToken, Grant, Role, User
 from .credentials import EncryptedCredential, WrappedKey
 
 SettingsDict = dict[str, str | int | bool]
@@ -225,6 +225,15 @@ class SqliteAccountRepository:
             raise NotFoundError(f"account {account_id} not found")
         result: SettingsDict = json.loads(rows[0]["settings"])
         return result
+
+    def set_status(self, account_id: str, status: AccountStatus) -> None:
+        with self._db.transaction() as db:
+            updated = db.execute(
+                "UPDATE accounts SET status = ? WHERE id = ?",
+                (status.value, account_id),
+            ).rowcount
+            if updated == 0:
+                raise NotFoundError(f"account {account_id} not found")
 
     def delete(self, account_id: str) -> None:
         with self._db.transaction() as db:

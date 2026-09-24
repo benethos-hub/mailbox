@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import builtins
 import uuid
-from collections.abc import Mapping
+from collections.abc import Awaitable, Mapping
+from typing import TypeVar
 
 from pydantic import SecretStr
 
-from ..data.models import Account, ProviderType
+from ..data.models import Account, AccountStatus, ProviderType
 from ..data.providers import (
     CredentialReader,
     MailProvider,
@@ -18,7 +19,10 @@ from ..data.providers import (
 )
 from ..data.secrets import CredentialVault
 from ..data.storage import AccountRepository
+from ..errors import BadRequestError, ProviderAuthError, ProviderUnavailableError
 from .access import Access
+
+T = TypeVar("T")
 
 
 class AccountService:
@@ -47,7 +51,7 @@ class AccountService:
         access.require("get_account", account_id)
         return self._with_credentials(self._repository.get(account_id))
 
-    def create(
+    async def create(
         self,
         access: Access,
         provider: ProviderType,
@@ -56,27 +60,45 @@ class AccountService:
         settings: ProviderSettings | None = None,
         credentials: Mapping[str, SecretStr] | None = None,
     ) -> Account:
+        """Verify, then store: nothing is kept unless the provider accepts the
+        credential."""
         access.require("create_account")
+        secrets = dict(credentials or {})
+        if secrets:
+            self._vault.require_ready()
         account = Account(
             id=f"acc_{uuid.uuid4().hex[:12]}",
             provider=provider,
             email=email,
             display_name=display_name,
         )
-        # The adapter first: an unsupported provider leaves no record behind.
-        adapter = self._provider_factory(
-            provider, settings or {}, self._reader(account.id)
+        # A throwaway adapter that reads the credential from the request. An
+        # unsupported provider or bad settings fail here, before anything is
+        # stored.
+        probe = self._provider_factory(
+            provider, settings or {}, lambda field: _pending(secrets, field)
         )
+        try:
+            await probe.verify()
+        finally:
+            await probe.close()
+
         self._repository.add(account, dict(settings or {}))
         try:
-            for field, value in (credentials or {}).items():
+            for field, value in secrets.items():
                 self._vault.store(account.id, field, value)
         except BaseException:
             self._vault.delete(account.id)
             self._repository.delete(account.id)
             raise
-        self._providers[account.id] = adapter
         return self._with_credentials(account)
+
+    async def verify(self, access: Access, account_id: str) -> Account:
+        """Log in afresh, e.g. after the credential was changed at the
+        provider. Clears a rejected login and updates the status."""
+        access.require("verify_account", account_id)
+        await self.observe(account_id, self.provider(account_id).verify())
+        return self._with_credentials(self._repository.get(account_id))
 
     async def delete(self, access: Access, account_id: str) -> None:
         access.require("delete_account", account_id)
@@ -104,8 +126,34 @@ class AccountService:
             self._providers[account_id] = adapter
         return adapter
 
+    async def observe(self, account_id: str, operation: Awaitable[T]) -> T:
+        """Await a provider operation and record what it says about the
+        account: a rejected login needs a new credential, an unreachable
+        server is marked as such, and success clears both."""
+        try:
+            result = await operation
+        except ProviderAuthError:
+            self._set_status(account_id, AccountStatus.NEEDS_REAUTH)
+            raise
+        except ProviderUnavailableError:
+            self._set_status(account_id, AccountStatus.UNREACHABLE)
+            raise
+        self._set_status(account_id, AccountStatus.CONNECTED)
+        return result
+
+    def _set_status(self, account_id: str, status: AccountStatus) -> None:
+        if self._repository.get(account_id).status is not status:
+            self._repository.set_status(account_id, status)
+
     def _reader(self, account_id: str) -> CredentialReader:
         return lambda field: self._vault.read(account_id, field)
 
     def _with_credentials(self, account: Account) -> Account:
         return account.model_copy(update={"credentials": self._vault.info(account.id)})
+
+
+def _pending(secrets: Mapping[str, SecretStr], field: str) -> SecretStr:
+    try:
+        return secrets[field]
+    except KeyError:
+        raise BadRequestError(f"the account needs the credential {field}") from None

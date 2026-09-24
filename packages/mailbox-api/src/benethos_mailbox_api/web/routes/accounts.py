@@ -18,7 +18,7 @@ async def list_accounts(caller: Caller, accounts: Accounts) -> list[Account]:
 async def create_account(
     data: AccountCreate, caller: Caller, accounts: Accounts
 ) -> Account:
-    return accounts.create(
+    return await accounts.create(
         caller,
         data.provider,
         data.email,
@@ -36,3 +36,10 @@ async def get_account(account_id: str, caller: Caller, accounts: Accounts) -> Ac
 @router.delete("/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_account(account_id: str, caller: Caller, accounts: Accounts) -> None:
     await accounts.delete(caller, account_id)
+
+
+@router.post("/{account_id}/verify")
+async def verify_account(
+    account_id: str, caller: Caller, accounts: Accounts
+) -> Account:
+    return await accounts.verify(caller, account_id)

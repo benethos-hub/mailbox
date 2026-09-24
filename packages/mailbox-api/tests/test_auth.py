@@ -25,7 +25,7 @@ from benethos_mailbox_api.errors import (
 )
 from benethos_mailbox_api.main import Services
 
-from .conftest import ADMIN, bearer_for
+from .conftest import bearer_for, create_account
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -152,8 +152,8 @@ def test_nothing_configured_asks_for_setup(repos) -> None:
 
 @pytest.fixture
 def two_accounts(accounts: AccountService) -> tuple[str, str]:
-    a = accounts.create(ADMIN, ProviderType.MEMORY, "a@example.com").id
-    b = accounts.create(ADMIN, ProviderType.MEMORY, "b@example.com").id
+    a = create_account(accounts, ProviderType.MEMORY, "a@example.com").id
+    b = create_account(accounts, ProviderType.MEMORY, "b@example.com").id
     return a, b
 
 

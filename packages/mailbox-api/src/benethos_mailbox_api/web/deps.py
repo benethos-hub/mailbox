@@ -14,6 +14,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ..domain.access import Access
 from ..domain.accounts import AccountService
 from ..domain.auth import AuthService
+from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
 from ..domain.users import UserService
 
@@ -28,6 +29,11 @@ def get_accounts(request: Request) -> AccountService:
 def get_mailbox(request: Request) -> MailboxService:
     mailbox: MailboxService = request.app.state.mailbox
     return mailbox
+
+
+def get_discovery(request: Request) -> DiscoveryService:
+    discovery: DiscoveryService = request.app.state.discovery
+    return discovery
 
 
 def get_users(request: Request) -> UserService:
@@ -48,6 +54,7 @@ def authenticate(
 
 
 Accounts = Annotated[AccountService, Depends(get_accounts)]
+Discoverer = Annotated[DiscoveryService, Depends(get_discovery)]
 Mailbox = Annotated[MailboxService, Depends(get_mailbox)]
 Users = Annotated[UserService, Depends(get_users)]
 Caller = Annotated[Access, Depends(authenticate)]

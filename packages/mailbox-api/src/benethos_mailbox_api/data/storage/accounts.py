@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from ...errors import NotFoundError
-from ..models import Account
+from ..models import Account, AccountStatus
 
 SettingsDict = dict[str, str | int | bool]
 
@@ -24,6 +24,8 @@ class AccountRepository(Protocol):
     def settings(self, account_id: str) -> SettingsDict:
         """The connection settings the account was created with."""
         ...
+
+    def set_status(self, account_id: str, status: AccountStatus) -> None: ...
 
     def delete(self, account_id: str) -> None: ...
 
@@ -51,6 +53,10 @@ class InMemoryAccountRepository:
     def settings(self, account_id: str) -> SettingsDict:
         self.get(account_id)
         return dict(self._settings[account_id])
+
+    def set_status(self, account_id: str, status: AccountStatus) -> None:
+        account = self.get(account_id)
+        self._accounts[account_id] = account.model_copy(update={"status": status})
 
     def delete(self, account_id: str) -> None:
         self.get(account_id)

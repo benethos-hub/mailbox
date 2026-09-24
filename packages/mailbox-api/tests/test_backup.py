@@ -23,7 +23,7 @@ from benethos_mailbox_api.data.secrets.backup import (
 from benethos_mailbox_api.data.storage import Database, inspect_snapshot
 from benethos_mailbox_api.main import Services, build_services
 
-from .conftest import ADMIN
+from .conftest import create_account
 
 
 class _Stdin(io.StringIO):
@@ -48,8 +48,8 @@ def _services() -> Services:
 def _populate() -> tuple[str, str]:
     services = _services()
     recovery = services.vault.initialize()
-    account = services.accounts.create(
-        ADMIN,
+    account = create_account(
+        services.accounts,
         ProviderType.MEMORY,
         "owner@example.com",
         credentials={"password": SecretStr("hunter2")},
@@ -64,7 +64,7 @@ def test_backup_and_restore_round_trip(machine: Path) -> None:
     assert services.database is not None
     master = services.vault.master_key()
     manifest = create_backup(services.database, master, machine / "b.bak", "9.9.9")
-    services.accounts.create(ADMIN, ProviderType.MEMORY, "later@example.com")
+    create_account(services.accounts, ProviderType.MEMORY, "later@example.com")
     services.close()
 
     assert manifest.service_version == "9.9.9"

@@ -7,8 +7,8 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 |---|---|---|
 | [0](#phase-0--skeleton) | Skeleton | **done** |
 | [1a](#phase-1a--users-rights-storage-backup) | Users, rights, storage, backup | **done** |
-| [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | next |
-| [2](#phase-2--writing-and-sending) | Writing and sending | |
+| [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | **done** |
+| [2](#phase-2--writing-and-sending) | Writing and sending | next |
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | |
 | [4](#phase-4--background-worker) | Background worker | |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
@@ -50,6 +50,8 @@ Everything real mail will depend on, before any real mailbox is connected.
   whole file encrypted
 
 ## Phase 1b – IMAP reading and autodiscovery
+
+**Done.**
 
 - **`imap` adapter (5.1):** folders, list, search, get, attachments, raw
   source. Password, app password and XOAUTH2. One shared connection per

@@ -23,6 +23,8 @@ from ..errors import (
     NotSupportedError,
     ProviderAuthError,
     ProviderError,
+    ProviderUnavailableError,
+    RateLimitedError,
     SetupRequiredError,
     UnauthorizedError,
 )
@@ -35,8 +37,10 @@ STATUS: list[tuple[type[MailboxApiError], int]] = [
     (ForbiddenError, 403),
     (NotFoundError, 404),
     (ConflictError, 409),
+    (RateLimitedError, 429),
     (NotSupportedError, 501),
     (ProviderAuthError, 502),
+    (ProviderUnavailableError, 502),
     (ProviderError, 502),
     (CredentialError, 500),
     (SetupRequiredError, 503),
@@ -67,7 +71,11 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(MailboxApiError)
     async def _mailbox_api_error(_: Request, exc: MailboxApiError) -> JSONResponse:
         status = status_of(exc)
-        headers = {"WWW-Authenticate": "Bearer"} if status == 401 else None
+        headers = None
+        if status == 401:
+            headers = {"WWW-Authenticate": "Bearer"}
+        elif isinstance(exc, RateLimitedError):
+            headers = {"Retry-After": str(exc.retry_after)}
         return error_response(status, exc.code, exc.message, headers)
 
     # Framework errors (auth, unknown route) get the same envelope, so a client

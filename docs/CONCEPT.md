@@ -408,7 +408,11 @@ without touching the others. `domain/discovery.py` runs them, applies the
 security rules, ranks and merges. The presets are data, one file, shared
 with the provider hints of 5.3. New dependencies, each wrapped in one
 module: `dnspython` for MX and SRV (the standard library cannot query them),
-`defusedxml` for the XML.
+`defusedxml` for the XML, `publicsuffixlist` for where a domain ends.
+
+**Decided 2026-09-24:** the Public Suffix List is the copy bundled with
+`publicsuffixlist`, updated with the package, no download at runtime. It is
+wrapped in one module so a live list can be added later.
 
 ### 5.9 Being a good client
 

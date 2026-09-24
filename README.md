@@ -112,6 +112,8 @@ SQLite database in the per-user data directory.
 | `MAILBOX_API_KEY_PROVIDER` | where the master key lives: `keyring` (default), `file` or `env` |
 | `MAILBOX_API_KEY_FILE` | the key file, for `file` |
 | `MAILBOX_API_MASTER_KEY` | the recovery key, for `env` |
+| `MAILBOX_API_DISCOVERY_ISPDB` | `true` (default) or `false`: whether autodiscovery asks Thunderbird's ISPDB |
+| `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS` | JSON list of hosts autodiscovery may reach on private addresses |
 
 Mail credentials are stored encrypted (AES-256-GCM). The master key stays
 out of the database, in the key provider. `keys init` prints a recovery key

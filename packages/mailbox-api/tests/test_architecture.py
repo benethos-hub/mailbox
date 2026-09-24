@@ -33,6 +33,11 @@ LIBRARY_HOMES = {
     "cryptography": f"{PACKAGE}.data.secrets.cipher",
     "keyring": f"{PACKAGE}.data.secrets.keys",
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
+    "imap_tools": f"{PACKAGE}.data.providers.imap.client",
+    "httpx": f"{PACKAGE}.data.discovery.fetch",
+    "dns": f"{PACKAGE}.data.discovery.dns",
+    "defusedxml": f"{PACKAGE}.data.discovery.autoconfig",
+    "publicsuffixlist": f"{PACKAGE}.data.discovery.suffix",
 }
 
 

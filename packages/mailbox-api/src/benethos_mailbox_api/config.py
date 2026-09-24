@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     master_key: SecretStr | None = Field(
         default=None, validation_alias="MAILBOX_API_MASTER_KEY"
     )
+    # Autodiscovery: whether to ask Thunderbird's ISPDB, which tells Mozilla
+    # the domain being set up.
+    discovery_ispdb: bool = True
+    # Autodiscovery: host names that may resolve to private addresses, e.g.
+    # an internal mail server. A JSON list.
+    discovery_internal_hosts: list[str] = Field(default_factory=list)
 
     @property
     def database_path(self) -> Path:
