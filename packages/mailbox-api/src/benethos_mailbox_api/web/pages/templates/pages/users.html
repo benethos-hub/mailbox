@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import empty %}
+{% from "components/grants.html" import grant_summary %}
+{% block title %}Users · {{ APP_NAME }}{% endblock %}
+{% block heading %}Users{% endblock %}
+{% block subheading %}<div class="sub">Who may call the API, and with which rights</div>{% endblock %}
+{% block actions %}
+{% if can_create %}<a class="btn primary" href="/ui/users/new">New user</a>{% endif %}
+{% endblock %}
+{% block content %}
+{% if users %}
+<section class="card">
+  <div class="body tight">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Name</th><th>Roles</th><th>Grants</th><th></th></tr></thead>
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td class="name">
+              <a href="/ui/users/{{ user.id }}">{{ user.name }}</a>
+              {% if user.id == me.user_id %}<span class="tag accent">you</span>{% endif %}
+              {% if user.disabled %}<span class="tag bad">disabled</span>{% endif %}
+              <span class="sub mono">{{ user.id[:16] }}…</span>
+            </td>
+            <td>{% for role in user.roles %}<a class="tag" href="/ui/roles/{{ role | segment }}">{{ role }}</a> {% else %}—{% endfor %}</td>
+            <td>{% for grant in user.grants %}{{ grant_summary(grant, names) }}{% else %}—{% endfor %}</td>
+            <td class="actions"><a class="btn small" href="/ui/users/{{ user.id }}">Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% else %}
+{{ empty("No user yet. The admin key is not a user.") }}
+{% endif %}
+{% endblock %}

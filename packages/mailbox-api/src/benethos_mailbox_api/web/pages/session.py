@@ -16,7 +16,7 @@ from __future__ import annotations
 import hmac
 import secrets
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from fastapi import Request
@@ -38,6 +38,9 @@ class UiSession:
     token: str
     csrf: str
     last_seen: datetime
+    # Shown on the next page only, e.g. a new token: kept here, never in a
+    # URL, and gone once shown.
+    once: dict[str, str] = field(default_factory=dict)
 
 
 class SignInRequired(Exception):
@@ -93,6 +96,16 @@ def current(request: Request) -> tuple[UiSession, Access]:
     request.state.ui_session = session
     request.state.access = access
     return session, access
+
+
+def show_once(request: Request, key: str, value: str) -> None:
+    """Keep ``value`` for the next page that asks for ``key``."""
+    current(request)[0].once[key] = value
+
+
+def take_once(request: Request, key: str) -> str | None:
+    """What ``show_once`` kept under ``key``, once."""
+    return current(request)[0].once.pop(key, None)
 
 
 def csrf_ok(session: UiSession, presented: str | None) -> bool:

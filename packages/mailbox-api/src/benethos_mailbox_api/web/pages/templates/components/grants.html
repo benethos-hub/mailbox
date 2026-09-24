@@ -1,0 +1,58 @@
+{# Grants: one line to read, and the editor inside a form (see grants.py). #}
+
+{% macro grant_summary(grant, names) %}
+<div class="grant">
+  <span class="muted">on</span>
+  {% for account in grant.accounts %}<span class="tag">{{ "every account" if account == "*" else names.get(account, account) }}</span> {% endfor %}
+  <span class="muted">may</span>
+  {% for right in grant.allow %}<span class="tag accent">{{ right }}</span> {% endfor %}
+  {% if grant.recipients is not none %}<span class="muted">sending to</span> {{ grant.recipients | join(", ") }}{% endif %}
+  {% if grant.max_sends_per_day is not none %}<span class="muted">at most</span> {{ grant.max_sends_per_day }} <span class="muted">mails a day</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro grant_editor(rows, account_choices, groups, group_ops) %}
+<input type="hidden" name="grants" value="{{ rows | length }}" />
+{% for row in rows %}
+{% set i = loop.index0 %}
+{% set adding = loop.last %}
+<fieldset class="grant-row">
+  <legend>{{ "Add a grant" if adding else "Grant " ~ loop.index }}</legend>
+  <div class="field">
+    <span class="label">Accounts</span>
+    <div class="checks">
+      <label class="check"><input type="checkbox" name="g{{ i }}_accounts" value="*"{% if "*" in row.accounts %} checked{% endif %} /> every account, also later ones</label>
+      {% for id, email in account_choices %}
+      <label class="check"><input type="checkbox" name="g{{ i }}_accounts" value="{{ id }}"{% if id in row.accounts %} checked{% endif %} /> {{ email }}</label>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="field">
+    <span class="label">Rights</span>
+    <div class="checks">
+      {% for group in groups %}
+      <label class="check" title="{{ group_ops[group] }}"><input type="checkbox" name="g{{ i }}_allow" value="{{ group }}"{% if group in row.groups %} checked{% endif %} /> {{ group }}</label>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="form-grid">
+    <div class="field">
+      <label for="f-g{{ i }}_more">Single rights</label>
+      <input id="f-g{{ i }}_more" name="g{{ i }}_more" value="{{ row.more }}" placeholder="e.g. get_message list_folders" />
+      <span class="hint">Operation names, beyond the groups.</span>
+    </div>
+    <div class="field">
+      <label for="f-g{{ i }}_max">Sends per day</label>
+      <input id="f-g{{ i }}_max" name="g{{ i }}_max" inputmode="numeric" value="{{ row.max_sends_per_day if row.max_sends_per_day is not none else '' }}" />
+      <span class="hint">From one account, in any 24 hours. Empty: no limit.</span>
+    </div>
+    <div class="field wide">
+      <label for="f-g{{ i }}_recipients">Send only to</label>
+      <textarea id="f-g{{ i }}_recipients" name="g{{ i }}_recipients" rows="2" placeholder="name@example.org, *@example.org or *">{{ row.recipients }}</textarea>
+      <span class="hint">One per line. Empty: to anyone.</span>
+    </div>
+  </div>
+  {% if not adding %}<label class="check"><input type="checkbox" name="g{{ i }}_remove" value="1" /> remove this grant</label>{% endif %}
+</fieldset>
+{% endfor %}
+{% endmacro %}

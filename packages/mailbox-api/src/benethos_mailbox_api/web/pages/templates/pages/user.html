@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import action, csrf_field, empty with context %}
+{% from "components/grants.html" import grant_editor, grant_summary %}
+{% block title %}{{ user.name }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}{{ user.name }}{% endblock %}
+{% block subheading %}<div class="sub mono">{{ user.id }}</div>{% endblock %}
+{% block content %}
+{% if new_token %}
+<section class="card">
+  <header><h2>New token</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
+  <div class="body">
+    <p class="muted">Copy it now. Only its hash is kept; it cannot be shown again.</p>
+    <code class="secret">{{ new_token }}</code>
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <header>
+    <h2>Rights</h2>
+    <span class="right">
+      {% if is_me %}<span class="tag accent">you</span>{% endif %}
+      {% if user.disabled %}<span class="tag bad">disabled</span>{% else %}<span class="tag ok">active</span>{% endif %}
+    </span>
+  </header>
+  <div class="body">
+    <dl class="facts">
+      <dt>Roles</dt>
+      <dd>{% for role in user.roles %}<a class="tag" href="/ui/roles/{{ role | segment }}">{{ role }}</a> {% else %}—{% endfor %}</dd>
+      <dt>Grants</dt>
+      <dd>{% for grant in user.grants %}{{ grant_summary(grant, names) }}{% else %}—{% endfor %}</dd>
+    </dl>
+  </div>
+</section>
+
+{% if can_list_tokens %}
+<section class="card">
+  <header><h2>Tokens</h2><span class="meta">{{ tokens | length }}</span></header>
+  <div class="body tight">
+    {% if tokens %}
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Name</th><th>Created</th><th>Expires</th><th>Last used</th><th>State</th><th></th></tr></thead>
+        <tbody>
+          {% for token, state in tokens %}
+          <tr>
+            <td class="name">{{ token.name }}<span class="sub mono">{{ token.id[:16] }}…</span></td>
+            <td>{{ token.created_at | when }}</td>
+            <td>{{ token.expires_at | when }}</td>
+            <td>{{ token.last_used_at | when }}</td>
+            <td>{% if state == "active" %}<span class="tag ok">active</span>{% else %}<span class="tag">{{ state }}</span>{% endif %}</td>
+            <td class="actions">
+              {% if can_revoke and state == "active" %}{{ action("/ui/users/" ~ user.id ~ "/tokens/" ~ token.id ~ "/revoke", "Revoke", confirm="Revoke the token " ~ token.name ~ "? Whoever uses it is locked out at once.", cls="small danger") }}{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}{{ empty("No token yet.") }}{% endif %}
+  </div>
+  {% if can_create_token %}
+  <div class="body">
+    <form class="toolbar" method="post" action="/ui/users/{{ user.id }}/tokens">
+      {{ csrf_field() }}
+      <input class="grow" name="name" required placeholder="What the token is for, e.g. laptop" aria-label="Token name" />
+      <input name="days" inputmode="numeric" placeholder="days valid (empty: no expiry)" aria-label="Days valid" />
+      <button class="primary" type="submit">Create token</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if can_update %}
+<form method="post" action="/ui/users/{{ user.id }}">
+  {{ csrf_field() }}
+  <section class="card">
+    <header><h2>Change</h2><span class="meta">You can hand out only rights you hold yourself.</span></header>
+    <div class="body">
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-name">Name</label>
+          <input id="f-name" name="name" value="{{ user.name }}" required />
+        </div>
+        <div class="field">
+          <span class="label">Access</span>
+          <label class="check"><input type="checkbox" name="disabled" value="1"{% if user.disabled %} checked{% endif %} /> disabled: its tokens are refused</label>
+        </div>
+      </div>
+      {% if role_choices %}
+      <div class="field">
+        <span class="label">Roles</span>
+        <div class="checks">
+          {% for role in role_choices %}<label class="check"><input type="checkbox" name="roles" value="{{ role }}"{% if role in user.roles %} checked{% endif %} /> {{ role }}</label>{% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="fold">{{ grant_editor(rows, account_choices, groups, group_ops) }}</div>
+      <div class="form-actions"><button class="primary" type="submit">Save</button></div>
+    </div>
+  </section>
+</form>
+{% endif %}
+
+{% if can_delete %}
+<section class="card">
+  <header><h2>Delete</h2></header>
+  <div class="body toolbar">
+    <span class="muted grow">Deletes the user and all its tokens. What it sent stays in the send audit.</span>
+    {{ action("/ui/users/" ~ user.id ~ "/delete", "Delete user", confirm="Delete " ~ user.name ~ " and its tokens?", cls="danger") }}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

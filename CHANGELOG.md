@@ -37,8 +37,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Configuration UI under `/ui`: sign in with an API token or the admin
   key, an overview of your accounts, rights and warnings; accounts:
-  connect through autodiscovery or by hand, change, verify, remove. Not
-  part of the OpenAPI document.
+  connect through autodiscovery or by hand, change, verify, remove; users,
+  roles and their grants (with `recipients` and `max_sends_per_day`),
+  tokens created (shown once) and revoked. Not part of the OpenAPI
+  document.
 
 - MCP server over streamable HTTP (`--transport streamable-http`, or
   `MAILBOX_MCP_*` in the environment), behind a bearer token

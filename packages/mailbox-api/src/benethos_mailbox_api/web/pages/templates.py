@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 import jinja2
 from fastapi import Request
@@ -73,8 +73,18 @@ def or_missing(value: Any) -> Any:
     return MISSING if value is None or value == "" else value
 
 
+def segment(value: str) -> str:
+    """Free text as one part of a path, e.g. a role name."""
+    return quote(str(value), safe="")
+
+
 templates.env.filters.update(
-    when=when, size=size, address=address, addresses=addresses, or_missing=or_missing
+    when=when,
+    size=size,
+    address=address,
+    addresses=addresses,
+    or_missing=or_missing,
+    segment=segment,
 )
 templates.env.globals.update(APP_NAME="Mailbox", VERSION=__version__)
 
