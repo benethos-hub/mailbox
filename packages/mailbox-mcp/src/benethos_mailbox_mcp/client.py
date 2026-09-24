@@ -90,6 +90,36 @@ class MailboxApiClient:
         )
         return result
 
+    async def list_drafts(
+        self, account_id: str, limit: int, cursor: str | None
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"limit": limit}
+        if cursor is not None:
+            params["cursor"] = cursor
+        result: dict[str, Any] = await self.request(
+            "GET", f"/v1/accounts/{account_id}/drafts", params=params
+        )
+        return result
+
+    async def create_draft(
+        self, account_id: str, draft: dict[str, Any]
+    ) -> dict[str, Any]:
+        result: dict[str, Any] = await self.request(
+            "POST", f"/v1/accounts/{account_id}/drafts", json=draft
+        )
+        return result
+
+    async def update_draft(
+        self, account_id: str, draft_id: str, draft: dict[str, Any]
+    ) -> dict[str, Any]:
+        result: dict[str, Any] = await self.request(
+            "PUT", f"/v1/accounts/{account_id}/drafts/{draft_id}", json=draft
+        )
+        return result
+
+    async def delete_draft(self, account_id: str, draft_id: str) -> None:
+        await self.request("DELETE", f"/v1/accounts/{account_id}/drafts/{draft_id}")
+
     async def list_messages(
         self, account_id: str | None, params: dict[str, Any]
     ) -> dict[str, Any]:

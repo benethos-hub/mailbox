@@ -8,8 +8,10 @@ API, and makes a user that may only read them. Then it starts
 ``benethos-mailbox-mcp`` over stdio with that user's token and calls the
 tools. A second user may also write: with it the check creates a folder in
 the first test account, stars, moves and trashes the newest inbox message
-there, and puts everything back as it was. The throwaway database is
-deleted at the end. Credentials and mail content are never printed.
+there, and puts everything back as it was. A third user may write drafts:
+it writes, replaces and deletes a reply draft; nothing is sent. The
+throwaway database is deleted at the end. Credentials and mail content are
+never printed.
 """
 
 from __future__ import annotations
@@ -44,6 +46,12 @@ READ_TOOLS = {
     "get_attachment",
 }
 WRITE_TOOLS = READ_TOOLS | {"update_messages", "create_folder"}
+DRAFT_TOOLS = READ_TOOLS | {
+    "list_drafts",
+    "create_draft",
+    "update_draft",
+    "delete_draft",
+}
 
 
 def free_port() -> int:
@@ -312,6 +320,89 @@ async def check_writing(
             run.check("the test folder removed again", removed.status_code == 204)
 
 
+async def check_drafts(
+    run: Run, url: str, token: str, admin: httpx.Client, account_id: str, to: str
+) -> None:
+    """A reply draft written, listed, replaced, read and deleted; nothing is
+    sent."""
+    newest = admin.get(
+        f"/v1/accounts/{account_id}/messages", params={"folder": "inbox", "limit": 1}
+    ).json()["items"]
+    if not newest:
+        print("SKIP  no message in the inbox of the first test account")
+        return
+    original = newest[0]
+    draft_id = None
+    try:
+        async with mcp_session(url, token) as session:
+            tools = {tool.name for tool in (await session.list_tools()).tools}
+            run.check(
+                "a token with drafts sees the draft tools",
+                tools == DRAFT_TOOLS,
+                ", ".join(sorted(tools - READ_TOOLS)),
+            )
+            created = await session.call_tool(
+                "create_draft",
+                {
+                    "account_id": account_id,
+                    "text": "mailbox-api MCP draft check",
+                    "original_id": original["id"],
+                },
+            )
+            draft = created.structured_content or {}
+            draft_id = draft.get("id")
+            run.check(
+                "create_draft writes a reply draft",
+                not created.is_error
+                and str(draft.get("subject", "")).startswith("Re:"),
+                text_of(created) if created.is_error else "",
+            )
+            listed = await session.call_tool("list_drafts", {"account_id": account_id})
+            run.check(
+                "list_drafts has it",
+                draft_id
+                in [
+                    d["id"] for d in (listed.structured_content or {}).get("drafts", [])
+                ],
+            )
+            replaced = await session.call_tool(
+                "update_draft",
+                {
+                    "account_id": account_id,
+                    "draft_id": draft_id,
+                    "to": [to],
+                    "subject": "mailbox-api MCP draft check",
+                    "text": "second version",
+                },
+            )
+            read = await session.call_tool(
+                "get_message", {"account_id": account_id, "message_id": draft_id}
+            )
+            run.check(
+                "update_draft replaces it, the id stays",
+                not replaced.is_error
+                and (replaced.structured_content or {}).get("id") == draft_id
+                and "second version" in text_of(read),
+                text_of(replaced) if replaced.is_error else "",
+            )
+            refused = await session.call_tool(
+                "delete_draft", {"account_id": account_id, "draft_id": original["id"]}
+            )
+            run.check(
+                "delete_draft does not reach other mail",
+                bool(refused.is_error) and "404" in text_of(refused),
+            )
+            deleted = await session.call_tool(
+                "delete_draft", {"account_id": account_id, "draft_id": draft_id}
+            )
+            run.check("delete_draft", not deleted.is_error)
+            if not deleted.is_error:
+                draft_id = None
+    finally:
+        if draft_id:
+            admin.delete(f"/v1/accounts/{account_id}/drafts/{draft_id}")
+
+
 def main() -> int:
     env = read_env(ENV_FILE)
     test_accounts = accounts(env)[:2]
@@ -343,6 +434,17 @@ def main() -> int:
             anyio.run(check_tools, run, url, token, emails)
             print("\n== the MCP server over stdio, writing")
             anyio.run(check_writing, run, url, writer, client, ids[0])
+            drafter = user_token(client, ids, ["mail.read", "drafts"])
+            print("\n== the MCP server over stdio, drafts")
+            anyio.run(
+                check_drafts,
+                run,
+                url,
+                drafter,
+                client,
+                ids[0],
+                test_accounts[1]["email"],
+            )
     finally:
         process.terminate()
         process.wait(timeout=10)

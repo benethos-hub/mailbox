@@ -81,6 +81,10 @@ the tools that fit:
 | `get_attachment` | `mail.read` | an attachment: images as images, PDF pages as PNG images (`first_page`, `pages`, up to 10), text as text, other types by name only |
 | `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), or into the trash |
 | `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
+| `list_drafts` | `drafts` | the drafts of an account |
+| `create_draft` | `drafts` | a draft with plain text, recipients optional; with `original_id` a reply, reply to all or forward |
+| `update_draft` | `drafts` | replaces a draft as a whole, the id stays |
+| `delete_draft` | `drafts` | deletes a draft for good; reaches drafts only |
 
 Mail content comes back inside `<mail-content>` markers: it is written by
 strangers and is data, not instructions. HTML is turned into text without

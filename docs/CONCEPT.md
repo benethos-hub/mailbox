@@ -1141,7 +1141,10 @@ one or two `operationId`s.
 | `whats_new` | read | `list_changes` across accounts, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash |
 | `create_folder` | write | `create_folder` |
-| `create_draft` | write | `create_draft`, incl. reply / forward by reference |
+| `list_drafts` | drafts | `list_drafts` |
+| `create_draft` | drafts | `create_draft`, incl. reply / forward by reference |
+| `update_draft` | drafts | `update_draft`, replaces the whole draft |
+| `delete_draft` | drafts | `delete_draft` |
 | `send_message` | send | `send_message`, with an idempotency key derived from the call |
 | `send_draft` | send | `send_draft`, with an idempotency key derived from the call |
 

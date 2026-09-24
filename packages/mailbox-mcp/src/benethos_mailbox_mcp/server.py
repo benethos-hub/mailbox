@@ -13,7 +13,8 @@ import logging
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Annotated, Any
+from email.utils import parseaddr
+from typing import Annotated, Any, Literal
 
 import anyio
 from mcp.server.mcpserver import MCPServer
@@ -299,6 +300,117 @@ async def create_folder(
     return {"id": folder["id"], "name": folder["name"]}
 
 
+# --- drafts -------------------------------------------------------------------------
+
+Addresses = Annotated[
+    list[str] | None,
+    Field(max_length=100, description="Addresses, plain or as Name <address>"),
+]
+OriginalId = Annotated[
+    str | None,
+    Field(description="A message to answer or forward; recipients and quote follow"),
+]
+Action = Literal["reply", "reply_all", "forward"]
+
+
+def _recipients(addresses: list[str] | None) -> list[dict[str, str]]:
+    found = []
+    for value in addresses or []:
+        name, email = parseaddr(value)
+        if "@" not in email:
+            raise ToolError(f"not an address: {value}")
+        found.append({"email": email, "name": name} if name else {"email": email})
+    return found
+
+
+def _composed(
+    to: list[str] | None,
+    cc: list[str] | None,
+    bcc: list[str] | None,
+    subject: str,
+    text: str,
+    original_id: str | None,
+    action: Action,
+) -> dict[str, Any]:
+    """The body of a draft or a message to send, as the API takes it."""
+    body: dict[str, Any] = {
+        "to": _recipients(to),
+        "cc": _recipients(cc),
+        "bcc": _recipients(bcc),
+        "subject": subject,
+        "text": text,
+    }
+    if original_id is not None:
+        body["reference"] = {"message_id": original_id, "action": action}
+    return body
+
+
+def _draft(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": item["id"],
+        "date": item.get("date"),
+        "to": ", ".join(render.address(a) for a in item.get("to", [])) or "-",
+        "subject": item.get("subject"),
+    }
+
+
+async def list_drafts(
+    account_id: str,
+    limit: Annotated[int, Field(ge=1, le=MAX_LIMIT)] = 20,
+    cursor: Annotated[
+        str | None, Field(description="next_cursor of the previous call")
+    ] = None,
+) -> dict[str, Any]:
+    """The drafts of an account, newest first. get_message reads one by
+    its id."""
+    page = await client().list_drafts(account_id, limit, cursor)
+    return {
+        "drafts": [_draft(item) for item in page.get("items", [])],
+        "next_cursor": page.get("next_cursor"),
+    }
+
+
+async def create_draft(
+    account_id: str,
+    to: Addresses = None,
+    cc: Addresses = None,
+    bcc: Addresses = None,
+    subject: str = "",
+    text: Annotated[str, Field(description="The body, plain text")] = "",
+    original_id: OriginalId = None,
+    action: Action = "reply",
+) -> dict[str, Any]:
+    """Write a draft into the drafts folder; nothing is sent. With
+    original_id it answers or forwards that message: the service adds
+    recipients of a reply, the subject prefix and the quote. Recipients may
+    stay empty."""
+    body = _composed(to, cc, bcc, subject, text, original_id, action)
+    return _draft(await client().create_draft(account_id, body))
+
+
+async def update_draft(
+    account_id: str,
+    draft_id: str,
+    to: Addresses = None,
+    cc: Addresses = None,
+    bcc: Addresses = None,
+    subject: str = "",
+    text: Annotated[str, Field(description="The body, plain text")] = "",
+    original_id: OriginalId = None,
+    action: Action = "reply",
+) -> dict[str, Any]:
+    """Replace a draft as a whole: what is left out is gone afterwards. Read
+    it with get_message first to keep parts of it. The id stays."""
+    body = _composed(to, cc, bcc, subject, text, original_id, action)
+    return _draft(await client().update_draft(account_id, draft_id, body))
+
+
+async def delete_draft(account_id: str, draft_id: str) -> str:
+    """Delete a draft for good. Reaches drafts only, never other mail."""
+    await client().delete_draft(account_id, draft_id)
+    return f"draft {draft_id} deleted"
+
+
 # --- which tools exist ----------------------------------------------------------------
 
 
@@ -324,6 +436,10 @@ TOOLS = (
         destructive=True,
     ),
     _Tool(create_folder, frozenset({"create_folder"}), read_only=False),
+    _Tool(list_drafts, frozenset({"list_drafts"})),
+    _Tool(create_draft, frozenset({"create_draft"}), read_only=False),
+    _Tool(update_draft, frozenset({"update_draft"}), read_only=False, destructive=True),
+    _Tool(delete_draft, frozenset({"delete_draft"}), read_only=False, destructive=True),
 )
 
 
