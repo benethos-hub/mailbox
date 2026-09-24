@@ -7,13 +7,13 @@ encrypts every credential, each bound to its account and field.
 
 from __future__ import annotations
 
-import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
 
 from pydantic import SecretStr
 
 from ...errors import ConflictError, CredentialError, SetupRequiredError
+from ..ids import new_id
 from ..models import CredentialInfo
 from ..storage import (
     CredentialRepository,
@@ -61,7 +61,7 @@ class CredentialVault:
         if kek is None:
             kek = cipher.new_key()
             self._provider.store(kek)
-        key_id = f"key_{uuid.uuid4().hex[:12]}"
+        key_id = new_id("key")
         dek = cipher.new_key()
         nonce, wrapped = cipher.encrypt(kek, dek, _key_aad(key_id))
         self._keys.add(WrappedKey(key_id, nonce, wrapped))

@@ -9,10 +9,10 @@ from __future__ import annotations
 import hashlib
 import secrets
 import string
-import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from ..data.ids import new_id
 from ..data.models import ApiToken
 from ..data.storage import RoleRepository, TokenRepository, UserRepository
 from ..errors import NotFoundError, SetupRequiredError, UnauthorizedError
@@ -72,7 +72,7 @@ class AuthService:
         self._users.get(user_id)
         plain = new_token()
         token = ApiToken(
-            id=f"tok_{uuid.uuid4().hex[:12]}",
+            id=new_id("tok"),
             user_id=user_id,
             name=name,
             token_hash=hash_token(plain),
