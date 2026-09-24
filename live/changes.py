@@ -28,7 +28,7 @@ import sys
 import time
 import uuid
 from email.message import EmailMessage
-from email.utils import make_msgid
+from email.utils import format_datetime, localtime, make_msgid
 from typing import Any
 
 import anyio
@@ -78,6 +78,8 @@ def send_test_mail(
     message["From"] = sender["email"]
     message["To"] = recipient
     message["Subject"] = subject
+    # RFC 5322 requires Date. Without it mail clients show no date.
+    message["Date"] = format_datetime(localtime())
     message["Message-ID"] = make_msgid(domain=sender["email"].rpartition("@")[2])
     message.set_content(
         "Automatic test mail of live/changes.py in the mailbox-api repository.\n"
@@ -329,6 +331,9 @@ def main() -> int:
         if not run.check("the API lists it", found is not None):
             return 1
         assert found is not None
+        run.check(
+            "it has a date", found.get("date") is not None, str(found.get("date"))
+        )
         message_id = found["id"]
         inbox_folder = found["folder_ids"][0]
 
