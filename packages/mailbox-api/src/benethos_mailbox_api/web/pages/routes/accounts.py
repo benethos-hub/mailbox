@@ -156,6 +156,7 @@ async def account(request: Request, caller: Viewer, account_id: str) -> HTMLResp
         "pages/account.html",
         page="accounts",
         account=_service(request).get(caller, account_id),
+        can_read=caller.allows("list_messages", account_id),
         can_update=caller.allows("update_account", account_id),
         can_verify=caller.allows("verify_account", account_id),
         can_delete=caller.allows("delete_account", account_id),

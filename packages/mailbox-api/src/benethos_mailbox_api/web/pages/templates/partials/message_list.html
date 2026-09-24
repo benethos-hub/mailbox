@@ -1,0 +1,42 @@
+{# A page of messages. ``emails``: the account column, for lists across
+   accounts; without it, one account's list. #}
+{% if messages %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        {% if emails is defined %}<th>Account</th>{% endif %}
+        <th>From</th><th>Subject</th><th>Date</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in messages %}
+      <tr class="{{ 'unread' if m.unread }}">
+        {% if emails is defined %}<td class="muted">{{ emails.get(m.account_id, m.account_id) }}</td>{% endif %}
+        <td>{{ m.sender | address }}</td>
+        <td class="name">
+          <a href="/ui/accounts/{{ m.account_id }}/mail/{{ m.id }}">{{ m.subject | or_missing }}</a>
+          <span class="sub">{{ m.snippet | or_missing }}</span>
+        </td>
+        <td>{{ m.date | when }}</td>
+        <td>
+          {% if m.starred %}<span class="tag warn" title="starred">★</span>{% endif %}
+          {% if m.has_attachments %}<span class="tag" title="has attachments">📎</span>{% endif %}
+          {% if "$answered" in m.keywords %}<span class="tag" title="answered">↩</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">No messages{{ " match the search" if fields else "" }}.</div>
+{% endif %}
+{% set more, first = pages %}
+{% if more or first %}
+<div class="body toolbar">
+  {% if first %}<a class="btn small" href="{{ first }}">Newest</a>{% endif %}
+  <span class="grow"></span>
+  {% if more %}<a class="btn small" href="{{ more }}">Older</a>{% endif %}
+</div>
+{% endif %}

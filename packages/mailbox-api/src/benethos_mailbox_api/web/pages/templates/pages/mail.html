@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Mail · {{ APP_NAME }}{% endblock %}
+{% block heading %}Mail{% endblock %}
+{% block subheading %}<div class="sub">{{ role }} of {{ "every account you may read" if not chosen else chosen | length ~ " account(s)" }}, newest first</div>{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="body">
+    <form class="toolbar" method="get" action="/ui/mail">
+      <label for="f-folder">Folder</label>
+      <select id="f-folder" name="folder">
+        {% for r in roles %}<option value="{{ r }}"{% if r == role %} selected{% endif %}>{{ r }}</option>{% endfor %}
+      </select>
+      {% for account in accounts %}
+      <label class="check"><input type="checkbox" name="account" value="{{ account.id }}"{% if account.id in chosen %} checked{% endif %} /> {{ account.email }}</label>
+      {% endfor %}
+      <button type="submit">Show</button>
+    </form>
+  </div>
+  <div class="body">
+    {% include "partials/mail_search.html" %}
+  </div>
+  {% for failure in incomplete %}
+  <div class="body"><div class="notice warn">{{ emails.get(failure.account_id, failure.account_id) }}: {{ failure.message }}</div></div>
+  {% endfor %}
+  <div class="body tight">{% include "partials/message_list.html" %}</div>
+</section>
+{% endblock %}

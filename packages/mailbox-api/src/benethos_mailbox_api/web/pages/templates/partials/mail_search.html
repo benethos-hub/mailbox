@@ -1,0 +1,25 @@
+{# The search above a message list: a GET form, so a result has its URL.
+   ``keep``: further query fields to carry, as (name, value) pairs. #}
+<form class="search" method="get" action="{{ request.url.path }}">
+  {% for name, value in keep %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endfor %}
+  <div class="toolbar">
+    <input class="grow" name="q" value="{{ fields.get('q', '') }}" placeholder="Search text" aria-label="Search text" />
+    <button class="primary" type="submit">Search</button>
+    {% if fields %}<a class="btn" href="{{ request.url.path }}{% if keep %}?{{ keep | urlencode }}{% endif %}">Clear</a>{% endif %}
+  </div>
+  <details class="fold"{% if fields | length > (1 if 'q' in fields else 0) %} open{% endif %}>
+    <summary>More filters</summary>
+    <div class="form-grid">
+      <div class="field"><label for="f-sender">From</label><input id="f-sender" name="sender" value="{{ fields.get('sender', '') }}" /></div>
+      <div class="field"><label for="f-subject">Subject</label><input id="f-subject" name="subject" value="{{ fields.get('subject', '') }}" /></div>
+      <div class="field"><label for="f-after">From day</label><input id="f-after" name="after" type="date" value="{{ fields.get('after', '') }}" /></div>
+      <div class="field"><label for="f-before">Before day</label><input id="f-before" name="before" type="date" value="{{ fields.get('before', '') }}" /></div>
+    </div>
+    <div class="checks">
+      <label class="check"><input type="checkbox" name="unread" value="1"{% if 'unread' in fields %} checked{% endif %} /> unread</label>
+      <label class="check"><input type="checkbox" name="starred" value="1"{% if 'starred' in fields %} checked{% endif %} /> starred</label>
+      <label class="check"><input type="checkbox" name="has_attachments" value="1"{% if 'has_attachments' in fields %} checked{% endif %} /> with attachments</label>
+    </div>
+  </details>
+</form>
+{% if problem %}<div class="notice err" role="alert">{{ problem }}</div>{% endif %}

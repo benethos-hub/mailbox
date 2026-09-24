@@ -330,6 +330,26 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 .fold > summary:hover { color: var(--text); }
 .fold > .form-grid { margin-top: 12px; }
 
+/* --- mail ------------------------------------------------------------------ */
+
+.mail-layout { display: grid; gap: var(--gap); grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+.folders ul { list-style: none; margin: 0; padding: 6px; }
+.folders a {
+  display: flex; gap: 6px; align-items: center;
+  padding: 5px 8px; border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13px; overflow-wrap: anywhere;
+}
+.folders a:hover { background: var(--surface-2); text-decoration: none; }
+.folders a.active { background: var(--surface-2); font-weight: 600; }
+.folders .grow { flex: 1; }
+.folders .count { font-size: 12px; color: var(--text-muted); }
+.folders .depth-1 a { padding-left: 20px; }
+.folders .depth-2 a { padding-left: 32px; }
+.folders .depth-3 a { padding-left: 44px; }
+.folders .depth-4 a { padding-left: 56px; }
+.search .fold { margin-top: 10px; }
+.search .checks { margin-top: 10px; }
+
 /* --- the window a form opens in -------------------------------------------- */
 
 .modal {
@@ -366,6 +386,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 /* --- narrow windows -------------------------------------------------------- */
 
 @media (max-width: 860px) {
+  .mail-layout { grid-template-columns: 1fr; }
   .layout { flex-direction: column; }
   .sidebar {
     width: auto; flex: none; height: auto; position: static;
