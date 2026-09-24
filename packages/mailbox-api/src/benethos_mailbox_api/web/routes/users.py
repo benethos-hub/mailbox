@@ -9,6 +9,7 @@ from ...domain import permissions
 from ..deps import Caller, Users
 from ..schemas import (
     Me,
+    MeAccount,
     PermissionCatalogue,
     RoleCreate,
     RoleReplace,
@@ -28,7 +29,15 @@ async def get_me(caller: Caller, users: Users) -> Me:
     return Me(
         user_id=rights.user_id,
         name=rights.name,
-        accounts=rights.accounts,
+        accounts=[
+            MeAccount(
+                id=a.id,
+                email=a.email,
+                display_name=a.display_name,
+                operations=a.operations,
+            )
+            for a in rights.accounts
+        ],
         operations=rights.operations,
     )
 

@@ -14,6 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `GET /v1/me` lists `accounts` as objects with `id`, `email`,
+  `display_name` and `operations`, instead of a map from id to operations.
 - New ids of accounts, users, tokens, keys and messages carry 64 random
   hex digits after their prefix (`acc_`, `usr_`, `tok_`, `key_`, `msg_`).
   Existing ids stay valid.

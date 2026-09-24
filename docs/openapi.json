@@ -5824,15 +5824,12 @@
             "title": "Name"
           },
           "accounts": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
+            "items": {
+              "$ref": "#/components/schemas/MeAccount"
             },
-            "type": "object",
+            "type": "array",
             "title": "Accounts",
-            "description": "Account id to the operations allowed on it"
+            "description": "Every account the caller may act on, with its operations"
           },
           "operations": {
             "items": {
@@ -5852,6 +5849,45 @@
         ],
         "title": "Me",
         "description": "The caller and its effective rights."
+      },
+      "MeAccount": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "operations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Operations",
+            "description": "What the caller may do on it"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "operations"
+        ],
+        "title": "MeAccount",
+        "description": "An account the caller may act on."
       },
       "Message": {
         "properties": {

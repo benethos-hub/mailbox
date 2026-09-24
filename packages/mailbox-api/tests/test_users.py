@@ -14,7 +14,9 @@ READ_A = {"accounts": ["acc_a"], "allow": ["mail.read"]}
 def test_me_for_the_admin_key(client: TestClient, account_id: str) -> None:
     me = client.get("/v1/me").json()
     assert me["user_id"] == "usr_admin_key"
-    assert "list_messages" in me["accounts"][account_id]
+    [account] = me["accounts"]
+    assert (account["id"], account["email"]) == (account_id, "me@example.com")
+    assert "list_messages" in account["operations"]
     assert "create_account" in me["operations"]
     assert "create_user" in me["operations"]
 
@@ -25,7 +27,14 @@ def test_me_for_a_limited_user(app_client: TestClient, services: Services) -> No
     headers = bearer_for(services, Grant(accounts=[a], allow=["mail.read"]))
     me = app_client.get("/v1/me", headers=headers).json()
     assert me["name"] == "limited"
-    assert me["accounts"] == {a: sorted(permissions.GROUPS["mail.read"])}
+    assert me["accounts"] == [
+        {
+            "id": a,
+            "email": "a@example.com",
+            "display_name": None,
+            "operations": sorted(permissions.GROUPS["mail.read"]),
+        }
+    ]
     assert me["operations"] == []
 
 
