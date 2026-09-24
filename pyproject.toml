@@ -1,0 +1,65 @@
+# Workspace root. Not a package itself: it holds the two distributions under
+# packages/, the shared development tools and the tool configuration.
+#
+#   packages/mailbox-api      the service: REST API, adapters, credential store
+#   packages/mailbox-mcp  the MCP server, a client of the REST API only
+#
+# The MCP package does not depend on the service package. That is what keeps
+# it a REST client: it cannot import an adapter because it cannot see one.
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+benethos-mailbox-api = { workspace = true }
+benethos-mailbox-mcp = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "benethos-mailbox-api",
+    "benethos-mailbox-mcp",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.19",
+    "mypy>=2.1.0",
+    # Gives back the `mcp` command, whose `mcp dev` runs a server against the
+    # MCP Inspector.
+    "mcp[cli]>=2.0.0,<3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["packages/mailbox-api/tests", "packages/mailbox-mcp/tests"]
+asyncio_mode = "auto"
+# Both packages have tests with the same file names (test_cli.py, ...).
+addopts = "--import-mode=importlib"
+
+[tool.coverage.run]
+source = ["benethos_mailbox_api", "benethos_mailbox_mcp"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+src = ["packages/*/src", "packages/*/tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort (import sorting)
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "W",    # pycodestyle warnings
+]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["packages/mailbox-api/src", "packages/mailbox-mcp/src"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]

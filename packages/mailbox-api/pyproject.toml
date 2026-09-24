@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "benethos-mailbox-api"
+version = "0.1.0"
+description = "Mail service: one REST API for several mail providers and accounts."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Benedikt Oswald" }]
+keywords = [
+    "email",
+    "imap",
+    "smtp",
+    "gmail",
+    "microsoft-graph",
+    "rest-api",
+    "openapi",
+    "multi-account",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Web Environment",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Communications :: Email",
+]
+dependencies = [
+    "fastapi>=0.120",
+    "uvicorn>=0.38",
+    "pydantic>=2.11",
+    "pydantic-settings>=2.10",
+    # Outbound HTTP for the Gmail and Microsoft Graph adapters.
+    "httpx>=0.28",
+]
+
+[project.scripts]
+benethos-mailbox-api = "benethos_mailbox_api.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/benethos_mailbox_api"]

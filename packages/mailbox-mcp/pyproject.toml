@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "benethos-mailbox-mcp"
+version = "0.1.0"
+description = "MCP server for the Mailbox API, over stdio or HTTP. Reaches mail through that REST API only."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Benedikt Oswald" }]
+keywords = [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "email",
+    "multi-account",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Communications :: Email",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# Deliberately small: no service package, no mail libraries. Everything this
+# server knows about mail it learns from the REST API.
+dependencies = [
+    # Plain `mcp`, not `mcp[cli]`: the extra only adds the `mcp` command and
+    # its dependencies. It lives in the workspace dev group.
+    "mcp>=2.0.0,<3",
+    "httpx>=0.28",
+]
+
+[project.scripts]
+benethos-mailbox-mcp = "benethos_mailbox_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/benethos_mailbox_mcp"]

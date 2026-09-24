@@ -1,0 +1,132 @@
+"""The layering, checked instead of only written down.
+
+web -> domain -> data, never the other way. A single reverse import is enough
+to undo the split, and it happens by accident: a data module needs one domain
+rule, imports it, and the data layer can no longer be used without the domain.
+This test reads every import of the package and fails on the first one that
+breaks a rule.
+"""
+
+from __future__ import annotations
+
+import ast
+from pathlib import Path
+
+PACKAGE = "benethos_mailbox_api"
+ROOT = Path(__file__).resolve().parents[1] / "src" / PACKAGE
+
+# Lower number = lower layer. A module may import its own layer and everything
+# below it, never above.
+LAYERS = {"data": 0, "domain": 1, "web": 2}
+
+# Outside the layers. Read from every layer, so they import none of them.
+CROSS_CUTTING = {"config", "errors"}
+
+# Assemble the app from the layers and may therefore reach anywhere.
+ASSEMBLY = {"main", "__main__"}
+
+# Web frameworks live in the web layer. main.py builds the app, so it may too.
+WEB_LIBRARIES = {"fastapi", "starlette"}
+
+
+def _module_name(path: Path) -> str:
+    rel = path.relative_to(ROOT.parent).with_suffix("")
+    parts = list(rel.parts)
+    if parts[-1] == "__init__":
+        parts.pop()
+    return ".".join(parts)
+
+
+def _imports(path: Path) -> list[tuple[str, int]]:
+    """Every imported module of this file, relative imports resolved."""
+    module = _module_name(path)
+    package = module if path.name == "__init__.py" else module.rsplit(".", 1)[0]
+    found = []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            found += [(alias.name, node.lineno) for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                base = package.split(".")
+                base = base[: len(base) - node.level + 1]
+                name = ".".join(base + ([node.module] if node.module else []))
+            else:
+                name = node.module or ""
+            found.append((name, node.lineno))
+            # `from . import x` imports a submodule by name, resolve it too.
+            if not node.module:
+                found += [(f"{name}.{alias.name}", node.lineno) for alias in node.names]
+    return found
+
+
+def _own_part(module: str) -> str | None:
+    """'benethos_mailbox_api.domain.accounts' -> 'domain'."""
+    parts = module.split(".")
+    if parts[0] != PACKAGE or len(parts) < 2:
+        return None
+    return parts[1]
+
+
+def _modules() -> list[tuple[str, Path]]:
+    return [(_module_name(p), p) for p in sorted(ROOT.rglob("*.py"))]
+
+
+def test_no_module_imports_a_higher_layer() -> None:
+    violations = []
+    for name, path in _modules():
+        own = LAYERS.get(_own_part(name) or "")
+        if own is None:
+            continue
+        for imported, line in _imports(path):
+            other = LAYERS.get(_own_part(imported) or "")
+            if other is not None and other > own:
+                violations.append(f"{name}:{line} imports {imported}")
+    assert not violations, "import against the layering:\n  " + "\n  ".join(violations)
+
+
+def test_cross_cutting_modules_import_no_layer() -> None:
+    for module in CROSS_CUTTING:
+        path = ROOT / f"{module}.py"
+        assert path.exists(), f"{module}.py is missing"
+        inside = [
+            imported
+            for imported, _ in _imports(path)
+            if _own_part(imported) in LAYERS or _own_part(imported) in ASSEMBLY
+        ]
+        assert not inside, f"{module}.py imports from the layers: {inside}"
+
+
+def test_web_framework_stays_in_the_web_layer() -> None:
+    violations = []
+    for name, path in _modules():
+        part = _own_part(name)
+        if part == "web" or part in ASSEMBLY:
+            continue
+        for imported, line in _imports(path):
+            if imported.split(".")[0] in WEB_LIBRARIES:
+                violations.append(f"{name}:{line} imports {imported}")
+    assert not violations, "web framework outside web/:\n  " + "\n  ".join(violations)
+
+
+def test_providers_are_reached_through_the_registry() -> None:
+    """Outside data/providers/, only the package itself is imported."""
+    prefix = f"{PACKAGE}.data.providers"
+    violations = []
+    for name, path in _modules():
+        if name.startswith(prefix):
+            continue
+        for imported, line in _imports(path):
+            if imported.startswith(prefix + "."):
+                violations.append(f"{name}:{line} imports {imported}")
+    assert not violations, "provider module imported directly:\n  " + "\n  ".join(
+        violations
+    )
+
+
+def test_every_layer_exists_and_is_documented() -> None:
+    """A layer without a docstring is a folder, not a decision."""
+    for layer in LAYERS:
+        init = ROOT / layer / "__init__.py"
+        assert init.exists(), f"{layer}/__init__.py is missing"
+        docstring = ast.get_docstring(ast.parse(init.read_text(encoding="utf-8")))
+        assert docstring, f"{layer}/__init__.py has no docstring"

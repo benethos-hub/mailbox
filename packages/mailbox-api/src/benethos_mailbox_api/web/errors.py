@@ -1,0 +1,73 @@
+"""Domain errors to HTTP responses, and the one error envelope.
+
+The only place that knows which error becomes which status code.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from http import HTTPStatus
+from typing import Any
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException
+
+from ..errors import (
+    ConflictError,
+    MailboxApiError,
+    NotFoundError,
+    NotSupportedError,
+    ProviderAuthError,
+    ProviderError,
+)
+from .schemas import ErrorResponse
+
+# Most specific first: the first matching class decides.
+STATUS: list[tuple[type[MailboxApiError], int]] = [
+    (NotFoundError, 404),
+    (ConflictError, 409),
+    (NotSupportedError, 501),
+    (ProviderAuthError, 502),
+    (ProviderError, 502),
+]
+
+# Documented on every protected route, so generated clients know the shape.
+DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
+    status: {"model": ErrorResponse, "description": text}
+    for status, text in {
+        401: "Missing or wrong bearer token",
+        404: "Account or resource not found",
+        501: "The provider cannot do this",
+        502: "The provider failed or rejected the credentials",
+        503: "The API key is not configured on the server",
+    }.items()
+}
+
+
+def status_of(error: MailboxApiError) -> int:
+    for cls, status in STATUS:
+        if isinstance(error, cls):
+            return status
+    return 500
+
+
+def install_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(MailboxApiError)
+    async def _mailbox_api_error(_: Request, exc: MailboxApiError) -> JSONResponse:
+        return error_response(status_of(exc), exc.code, exc.message)
+
+    # Framework errors (auth, unknown route) get the same envelope, so a client
+    # parses one error shape. Request validation keeps FastAPI's 422 format,
+    # which the schema documents on its own.
+    @app.exception_handler(HTTPException)
+    async def _http_error(_: Request, exc: HTTPException) -> JSONResponse:
+        code = HTTPStatus(exc.status_code).phrase.lower().replace(" ", "_")
+        return error_response(exc.status_code, code, str(exc.detail), exc.headers)
+
+
+def error_response(
+    status: int, code: str, message: str, headers: Mapping[str, str] | None = None
+) -> JSONResponse:
+    body = ErrorResponse.model_validate({"error": {"code": code, "message": message}})
+    return JSONResponse(status_code=status, content=body.model_dump(), headers=headers)

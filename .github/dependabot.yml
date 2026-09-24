@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # "uv", not "pip": the versions actually installed are the ones pinned in
+  # uv.lock, and the pip ecosystem does not read that file.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

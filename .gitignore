@@ -1,0 +1,43 @@
+# Virtual environment
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Caching / coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+*.sqlite
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local configuration and secrets
+.env
+config/.env
+*.token.json
+
+# Service data: the database holds encrypted credentials, backups the same
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+backups/
+
+# Live checks: test server address and test accounts stay local
+live/.env
