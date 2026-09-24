@@ -43,11 +43,11 @@ from ...models import (
 )
 from ..base import Capability, CredentialReader
 from ..guard import Guard
+from ..protocols.imap import ImapServer, ImapSession, SearchCriteria
+from ..protocols.smtp import SmtpSession
 from ..ratelimit import Clock, Sleep
 from ..sender import SmtpFactory, SmtpSender
-from ..smtp import SmtpSession
 from . import mappers
-from .client import ImapServer, ImapSession, SearchCriteria
 
 T = TypeVar("T")
 

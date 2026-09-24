@@ -21,8 +21,8 @@ from benethos_mailbox_api.data.providers import (
     ProviderSettings,
 )
 from benethos_mailbox_api.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_api.data.providers.imap.client import ImapSession
 from benethos_mailbox_api.data.providers.memory import MemoryProvider
+from benethos_mailbox_api.data.providers.protocols.imap import ImapSession
 from benethos_mailbox_api.data.secrets import cipher, encode_recovery
 from benethos_mailbox_api.errors import NotFoundError, ProviderUnavailableError
 from benethos_mailbox_api.main import Services, build_services

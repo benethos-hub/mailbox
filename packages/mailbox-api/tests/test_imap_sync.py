@@ -7,7 +7,7 @@ import pytest
 from imapclient.imapclient import _parse_untagged_response
 
 from benethos_mailbox_api.data.providers.imap import mappers
-from benethos_mailbox_api.data.providers.imap.client import ImapServer, ImapSession
+from benethos_mailbox_api.data.providers.protocols.imap import ImapServer, ImapSession
 from benethos_mailbox_api.errors import (
     NotSupportedError,
     ProviderAuthError,

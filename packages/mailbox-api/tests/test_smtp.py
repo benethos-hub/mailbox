@@ -13,8 +13,12 @@ from benethos_mailbox_api.config import Settings
 from benethos_mailbox_api.data.models import ProviderType
 from benethos_mailbox_api.data.providers import CredentialReader, ProviderSettings
 from benethos_mailbox_api.data.providers.imap import ImapProvider
-from benethos_mailbox_api.data.providers.imap.client import ImapSession
-from benethos_mailbox_api.data.providers.smtp import SmtpLogin, SmtpServer, SmtpSession
+from benethos_mailbox_api.data.providers.protocols.imap import ImapSession
+from benethos_mailbox_api.data.providers.protocols.smtp import (
+    SmtpLogin,
+    SmtpServer,
+    SmtpSession,
+)
 from benethos_mailbox_api.data.secrets import cipher, encode_recovery
 from benethos_mailbox_api.errors import (
     BadRequestError,

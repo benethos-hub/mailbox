@@ -20,9 +20,9 @@ from benethos_mailbox_api.data.models import (
     Recipient,
 )
 from benethos_mailbox_api.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_api.data.providers.imap.client import ImapSession
 from benethos_mailbox_api.data.providers.memory import MemoryProvider
-from benethos_mailbox_api.data.providers.smtp import SmtpSession
+from benethos_mailbox_api.data.providers.protocols.imap import ImapSession
+from benethos_mailbox_api.data.providers.protocols.smtp import SmtpSession
 from benethos_mailbox_api.errors import ConflictError, ProviderAuthError
 from benethos_mailbox_api.main import Services
 

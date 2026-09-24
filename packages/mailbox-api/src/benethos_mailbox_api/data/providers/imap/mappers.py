@@ -19,7 +19,7 @@ from ...models import (
     MessageSummary,
     MessageUpdate,
 )
-from .client import RawFolder
+from ..protocols.imap import RawFolder
 
 INBOX = "INBOX"
 

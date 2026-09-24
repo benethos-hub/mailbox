@@ -107,11 +107,12 @@ packages/
           compose.py      # outgoing messages as bytes (email)
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
           convert.py      # a parsed message to Message / MessageSummary
-        providers/        # registry in __init__.py, base.py protocol,
-                          #   one directory per provider: memory/, imap/, ...
-                          #   imap/client.py (IMAPClient), smtp.py (smtplib),
-                          #   sender.py (SMTP for IMAP, POP3, ...),
-                          #   guard.py (pacing, retries, blocked logins)
+        providers/        # registry in __init__.py, base.py protocol
+          protocols/      # wire protocols, one library each:
+                          #   imap.py (IMAPClient), smtp.py (smtplib)
+          guard.py        # pacing, retries, blocked logins, for any adapter
+          sender.py       # SmtpSender: sending for IMAP, POP3, ...
+          imap/, memory/  # one directory per provider (adapter)
         storage/          # own records, one module per subject
         secrets/          # envelope encryption, key providers, backup
         discovery/        # autodiscovery sources and their helpers
@@ -175,7 +176,7 @@ noticing. Every change is measured against that.
    the module that wraps it.
 2. **One library, one home.** Each external dependency is imported in
    exactly one module or, for a framework, one package: IMAPClient only in
-   `imap/client.py`, `cryptography` only in the crypto module, FastAPI only
+   `protocols/imap.py`, `cryptography` only in the crypto module, FastAPI only
    under `web/`. When you need it somewhere else, extend its wrapper instead
    of importing it a second time. The one deliberate exception is pydantic,
    which is how this project writes its own types.
@@ -199,7 +200,7 @@ noticing. Every change is measured against that.
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
 | Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap; planned: gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for IMAPClient |
-| Sending | `data/providers/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
+| Sending | `data/providers/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX; planned: JMAP well-known, Microsoft realm, SRV, guessing | any further lookup, or one switched off |

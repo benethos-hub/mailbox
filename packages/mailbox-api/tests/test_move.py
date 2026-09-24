@@ -6,7 +6,7 @@ import pytest
 
 from benethos_mailbox_api.data.models import MessageUpdate
 from benethos_mailbox_api.data.providers.imap import mappers
-from benethos_mailbox_api.data.providers.imap.client import _new_uids, _uid_set
+from benethos_mailbox_api.data.providers.protocols.imap import _new_uids, _uid_set
 from benethos_mailbox_api.errors import (
     BadRequestError,
     NotFoundError,
