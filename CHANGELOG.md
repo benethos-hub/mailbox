@@ -34,6 +34,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   stdio only for now.
 - MCP server: `get_attachment` hands images over as images, PDF pages as
   PNG images, text types as text and other types by name, type and size.
+- MCP server: `update_messages` marks read or unread, stars, moves (by
+  folder id or role) and trashes up to 100 messages; `create_folder`.
 - Search filters on `GET /v1/accounts/{account_id}/messages` and
   `GET /v1/messages`: `from`, `to`, `subject`, `after`, `before` (days),
   `starred` and `has_attachments`, besides `q` and `unread`. `folder` on
