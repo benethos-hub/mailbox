@@ -185,6 +185,7 @@ dependencies = [
     { name = "httpx" },
     { name = "mcp" },
     { name = "pypdfium2" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -192,6 +193,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28" },
     { name = "mcp", specifier = ">=2.0.0,<3" },
     { name = "pypdfium2", specifier = ">=4.30" },
+    { name = "uvicorn", specifier = ">=0.31" },
 ]
 
 [[package]]

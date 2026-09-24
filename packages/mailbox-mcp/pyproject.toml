@@ -40,6 +40,8 @@ dependencies = [
     "httpx>=0.28",
     # PDF attachments reach the model as page images (pdf.py).
     "pypdfium2>=4.30",
+    # The HTTP transport (transport.py); mcp brings it too.
+    "uvicorn>=0.31",
 ]
 
 [project.scripts]

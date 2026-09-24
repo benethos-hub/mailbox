@@ -12,6 +12,7 @@ import base64
 import hashlib
 import json
 import logging
+import os
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -23,7 +24,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, ImageContent, TextContent, ToolAnnotations
 from pydantic import Field
 
-from . import __version__, pdf, render
+from . import __version__, pdf, render, transport
 from .client import MailboxApiClient
 from .errors import ToolError
 
@@ -565,22 +566,90 @@ async def _at_start() -> set[str]:
 # --- command line ---------------------------------------------------------------------
 
 
+TRANSPORTS = ("stdio", "streamable-http")
+
+
+def _env(name: str, default: str) -> str:
+    return os.environ.get(f"MAILBOX_MCP_{name}") or default
+
+
 def _build_parser() -> argparse.ArgumentParser:
+    """Options on the command line win over ``MAILBOX_MCP_*`` in the
+    environment, which win over the defaults. The bearer token has no option:
+    an argument shows in the process list."""
     parser = argparse.ArgumentParser(prog="benethos-mailbox-mcp")
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("--transport", choices=["stdio"], default="stdio")
-    parser.add_argument("--log-level", default="INFO")
+    parser.add_argument(
+        "--transport", choices=TRANSPORTS, default=_env("TRANSPORT", "stdio")
+    )
+    parser.add_argument("--host", default=_env("HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(_env("PORT", "8000")))
+    parser.add_argument("--path", default=_env("PATH", "/mcp"))
+    parser.add_argument(
+        "--allowed-hosts",
+        default=_env("ALLOWED_HOSTS", ""),
+        help="comma-separated Host values, e.g. mcp.example.org:443",
+    )
+    parser.add_argument(
+        "--allowed-origins",
+        default=_env("ALLOWED_ORIGINS", ""),
+        help="comma-separated Origin values",
+    )
+    parser.add_argument("--log-level", default=_env("LOG_LEVEL", "INFO"))
     return parser
 
 
+def _csv(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 def main(argv: list[str] | None = None) -> None:
-    args = _build_parser().parse_args(argv)
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    if args.transport not in TRANSPORTS:
+        parser.error(f"unknown transport {args.transport!r}")
     # stderr only: on stdio, stdout carries the JSON-RPC stream.
-    logging.basicConfig(level=args.log_level, stream=sys.stderr)
+    logging.basicConfig(level=args.log_level.upper(), stream=sys.stderr)
     try:
         operations = anyio.run(_at_start)
     except ToolError as exc:
         sys.exit(f"benethos-mailbox-mcp: {exc}")
     server = build_server(operations)
-    logger.info("Starting Mailbox MCP server (%s)", args.transport)
-    server.run(transport=args.transport)
+    token = transport.token_from_env()
+    if args.transport == "stdio":
+        if token is not None:
+            logger.warning(
+                "%s is set, but stdio has no port anyone could reach: the "
+                "client owns this process, so the token is ignored",
+                transport.ENV_VAR,
+            )
+        logger.info("Starting Mailbox MCP server (stdio)")
+        server.run(transport="stdio")
+        return
+    logger.info(
+        "Starting Mailbox MCP server (streamable HTTP) on http://%s:%s%s",
+        args.host,
+        args.port,
+        args.path,
+    )
+    if token is None:
+        logger.warning(
+            "No %s set: anything that can reach %s:%s can use every tool of "
+            "this server's user. Fine for a loopback bind on your own "
+            "machine, not anywhere else.",
+            transport.ENV_VAR,
+            args.host,
+            args.port,
+        )
+    else:
+        logger.info("Bearer token required: requests without it get HTTP 401.")
+    app = transport.http_app(
+        server,
+        path=args.path,
+        host=args.host,
+        security=transport.transport_security(
+            args.host, _csv(args.allowed_hosts), _csv(args.allowed_origins)
+        ),
+        token=token,
+    )
+    transport.run_http(app, host=args.host, port=args.port, log_level=args.log_level)

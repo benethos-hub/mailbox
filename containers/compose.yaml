@@ -31,6 +31,37 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # The MCP server over streamable HTTP, started with the profile `mcp`:
+  #   docker compose --profile mcp up -d
+  # It needs MAILBOX_MCP_API_TOKEN (the API token of the user it acts as) and
+  # MAILBOX_MCP_BEARER_TOKEN (what its own clients must send).
+  mailbox-mcp:
+    profiles: [mcp]
+    image: ${MAILBOX_MCP_IMAGE:-benethos-mailbox-mcp:local}
+    build:
+      context: ..
+      dockerfile: containers/benethos-mailbox-mcp/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mailbox-api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${MAILBOX_MCP_PORT:-8000}:8000"
+    environment:
+      MAILBOX_API_URL: http://mailbox-api:8080
+      MAILBOX_API_TOKEN: ${MAILBOX_MCP_API_TOKEN:-}
+      MAILBOX_MCP_BEARER_TOKEN: ${MAILBOX_MCP_BEARER_TOKEN:-}
+      # The Host values clients use; the port as published on the host.
+      MAILBOX_MCP_ALLOWED_HOSTS: ${MAILBOX_MCP_ALLOWED_HOSTS:-127.0.0.1:8000,localhost:8000}
+      MAILBOX_MCP_LOG_LEVEL: ${MAILBOX_MCP_LOG_LEVEL:-INFO}
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
 secrets:
   master_key:
     file: ./secrets/master_key

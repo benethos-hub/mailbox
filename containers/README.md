@@ -7,13 +7,15 @@ containers/
   compose.yaml                   # the service, published on 127.0.0.1 only
   benethos-mailbox-api/
     Dockerfile                   # build context: the repository root
+  benethos-mailbox-mcp/
+    Dockerfile                   # the MCP server over streamable HTTP
   secrets/                       # local, not versioned: master_key
 ```
 
-The image of `benethos-mailbox-api` is built for `linux/amd64` and
-`linux/arm64` by the GitHub workflow `.github/workflows/container.yml` and
-pushed to the GitHub container registry as
-`ghcr.io/<owner>/benethos-mailbox-api`:
+The images of `benethos-mailbox-api` and `benethos-mailbox-mcp` are built
+for `linux/amd64` and `linux/arm64` by the GitHub workflow
+`.github/workflows/container.yml` and pushed to the GitHub container
+registry as `ghcr.io/<owner>/<image>`:
 
 | Event | Tags |
 |---|---|
@@ -21,7 +23,8 @@ pushed to the GitHub container registry as
 | push to `main` | `main`, `sha-<commit>` |
 | pull request | built, not pushed |
 
-The MCP server has no image: a client starts it over stdio.
+A client that starts the MCP server over stdio needs no image; the image
+serves it over streamable HTTP.
 
 ## In the container
 
@@ -85,3 +88,23 @@ docker compose cp backup.mbx mailbox-api:/data/backup.mbx
 docker compose run --rm mailbox-api restore /data/backup.mbx
 docker compose up -d
 ```
+
+## The MCP server
+
+The service `mailbox-mcp` runs with the profile `mcp`. It reaches the
+service inside the compose network and publishes its own port on
+`127.0.0.1` only.
+
+```sh
+# A user for the MCP server with only the rights it needs, and its token:
+# see packages/mailbox-mcp/README.md, "A token for it".
+export MAILBOX_MCP_API_TOKEN=<that token>
+export MAILBOX_MCP_BEARER_TOKEN=$(openssl rand -base64 32)
+export MAILBOX_MCP_IMAGE=ghcr.io/<owner>/benethos-mailbox-mcp:<version>
+docker compose --profile mcp up -d
+```
+
+Clients connect to `http://127.0.0.1:8000/mcp` with
+`Authorization: Bearer $MAILBOX_MCP_BEARER_TOKEN`. Behind a reverse proxy,
+set `MAILBOX_MCP_ALLOWED_HOSTS` to the host name clients use. Both tokens
+are environment variables and show in `docker inspect`.
