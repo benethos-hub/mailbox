@@ -44,7 +44,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   downloads; flags, moving and deleting, one message or the ticked ones;
   folders created, renamed, moved and deleted; writing, replying and
   forwarding with attachments, drafts saved, changed and sent, each send
-  form with its own idempotency key. Not part of the OpenAPI document.
+  form with its own idempotency key; the send audit of one account or of
+  every account together. Not part of the OpenAPI document.
 
 - MCP server over streamable HTTP (`--transport streamable-http`, or
   `MAILBOX_MCP_*` in the environment), behind a bearer token

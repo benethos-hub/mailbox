@@ -137,7 +137,7 @@ Everything real mail will depend on, before any real mailbox is connected.
     done
   - **writing: flags, moving, deleting, folders, compose, reply, forward,
     drafts, sending**, done
-  - the audit of sends
+  - **the audit of sends**, done
   - with the new providers: the OAuth round trip; recovery key, status
 - Threads (6.3): for IMAP built across folders from the id mapping,
   which then also keeps `In-Reply-To` and `References`
