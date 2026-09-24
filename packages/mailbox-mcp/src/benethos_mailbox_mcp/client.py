@@ -70,6 +70,26 @@ class MailboxApiClient:
         )
         return result
 
+    async def create_folder(
+        self, account_id: str, name: str, parent_id: str | None
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {"name": name}
+        if parent_id is not None:
+            body["parent_id"] = parent_id
+        result: dict[str, Any] = await self.request(
+            "POST", f"/v1/accounts/{account_id}/folders", json=body
+        )
+        return result
+
+    async def batch_messages(
+        self, account_id: str, body: dict[str, Any]
+    ) -> dict[str, Any]:
+        """One action for many messages, a result per id."""
+        result: dict[str, Any] = await self.request(
+            "POST", f"/v1/accounts/{account_id}/messages/batch", json=body
+        )
+        return result
+
     async def list_messages(
         self, account_id: str | None, params: dict[str, Any]
     ) -> dict[str, Any]:

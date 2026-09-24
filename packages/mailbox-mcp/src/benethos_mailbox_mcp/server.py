@@ -225,6 +225,80 @@ def _result(text: str, images: list[tuple[bytes, str]] | None = None) -> CallToo
     return CallToolResult(content=list(content))
 
 
+# --- writing ------------------------------------------------------------------------
+
+# Folder roles a tool takes in place of a folder id.
+ROLES = frozenset({"inbox", "sent", "drafts", "trash", "junk", "archive"})
+MAX_BATCH = 100
+
+
+async def _folder_id(account_id: str, folder: str) -> str:
+    """A folder id, or the id of the account's folder with that role."""
+    if folder not in ROLES:
+        return folder
+    for found in await client().list_folders(account_id):
+        if found.get("role") == folder:
+            return str(found["id"])
+    raise ToolError(f"account {account_id} has no {folder} folder")
+
+
+async def update_messages(
+    account_id: str,
+    message_ids: Annotated[list[str], Field(min_length=1, max_length=MAX_BATCH)],
+    unread: bool | None = None,
+    starred: bool | None = None,
+    move_to: Annotated[
+        str | None,
+        Field(description="Folder id, or a role such as archive, inbox, junk"),
+    ] = None,
+    trash: Annotated[
+        bool, Field(description="Into the trash; alone, without other changes")
+    ] = False,
+) -> dict[str, Any]:
+    """Change mail of one account: mark read or unread, star, move to a
+    folder or archive, or put into the trash. Ids stay the same after a
+    move. Answers which ids were done and which failed, with the reason."""
+    if trash:
+        if unread is not None or starred is not None or move_to is not None:
+            raise ToolError("trash goes alone, without other changes")
+        body: dict[str, Any] = {"ids": message_ids, "action": "delete"}
+    else:
+        changes: dict[str, Any] = {
+            key: value
+            for key, value in (("unread", unread), ("starred", starred))
+            if value is not None
+        }
+        if move_to is not None:
+            changes["folder_ids"] = [await _folder_id(account_id, move_to)]
+        if not changes:
+            raise ToolError("nothing to change: give unread, starred, move_to or trash")
+        body = {"ids": message_ids, "action": "update", "changes": changes}
+    result = await client().batch_messages(account_id, body)
+    done, failed = [], []
+    for item in result.get("results", []):
+        if item.get("ok"):
+            done.append(item["id"])
+        else:
+            error = item.get("error") or {}
+            failed.append({"id": item["id"], "error": error.get("message", "failed")})
+    return {"done": done, "failed": failed}
+
+
+async def create_folder(
+    account_id: str,
+    name: str,
+    parent: Annotated[
+        str | None,
+        Field(description="Folder id or role to create it in; left out: the top"),
+    ] = None,
+) -> dict[str, Any]:
+    """Create a folder in an account. Answers its id, which update_messages
+    takes as move_to."""
+    parent_id = await _folder_id(account_id, parent) if parent is not None else None
+    folder = await client().create_folder(account_id, name, parent_id)
+    return {"id": folder["id"], "name": folder["name"]}
+
+
 # --- which tools exist ----------------------------------------------------------------
 
 
@@ -234,6 +308,7 @@ class _Tool:
     # Registered when the token holds any of these on at least one account.
     needs: frozenset[str]
     read_only: bool = True
+    destructive: bool = False
 
 
 TOOLS = (
@@ -242,6 +317,13 @@ TOOLS = (
     _Tool(search_messages, frozenset({"list_messages", "list_all_messages"})),
     _Tool(get_message, frozenset({"get_message"})),
     _Tool(get_attachment, frozenset({"get_attachment"})),
+    _Tool(
+        update_messages,
+        frozenset({"batch_messages"}),
+        read_only=False,
+        destructive=True,
+    ),
+    _Tool(create_folder, frozenset({"create_folder"}), read_only=False),
 )
 
 
@@ -259,7 +341,9 @@ def build_server(operations: Iterable[str]) -> MCPServer:
             server.add_tool(
                 tool.fn,
                 annotations=ToolAnnotations(
-                    readOnlyHint=tool.read_only, openWorldHint=True
+                    readOnlyHint=tool.read_only,
+                    destructiveHint=None if tool.read_only else tool.destructive,
+                    openWorldHint=True,
                 ),
             )
     return server

@@ -96,12 +96,13 @@ Everything real mail will depend on, before any real mailbox is connected.
 ## Phase 3 – MCP server and container
 
 - **MCP read tools over stdio, registered by the token's rights (8)**, done
-- MCP tools beyond reading (8): writing and drafts, then sending
-- Prompt injection measures (7.7): mail content marked as foreign, hidden
-  HTML dropped, the read-and-send warning, send audit
+- **MCP write tools `update_messages` and `create_folder` (8)**, done
+- **The MCP server registers only what its user may do (`/v1/me`)**, done
+- MCP draft tools, then the send tools (8)
+- Prompt injection measures (7.7): mail content marked as foreign and
+  hidden HTML dropped (done); the read-and-send warning, send audit
 - Grant constraints `recipients` and `max_sends_per_day` (7.5), together
   with the send tools
-- The MCP server registers only what its user may do (`/v1/me`)
 - Policy file, nothing enabled by default
 - Bearer guard for the MCP server's HTTP transport
 - Container image and compose file for the service, bound to the loopback

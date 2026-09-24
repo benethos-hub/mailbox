@@ -79,6 +79,8 @@ the tools that fit:
 | `search_messages` | `mail.read` | find mail by text, sender, recipient, subject, days, flags, attachments; one account or all |
 | `get_message` | `mail.read` | one mail as plain text, cut to `max_chars` |
 | `get_attachment` | `mail.read` | an attachment: images as images, PDF pages as PNG images (`first_page`, `pages`, up to 10), text as text, other types by name only |
+| `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), or into the trash |
+| `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
 
 Mail content comes back inside `<mail-content>` markers: it is written by
 strangers and is data, not instructions. HTML is turned into text without

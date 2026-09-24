@@ -6,7 +6,9 @@ Starts a service of its own on a free port, with a throwaway database and
 master key, adds the first two test accounts of ``live/.env`` through the
 API, and makes a user that may only read them. Then it starts
 ``benethos-mailbox-mcp`` over stdio with that user's token and calls the
-tools. Nothing in the mailboxes is written; the throwaway database is
+tools. A second user may also write: with it the check creates a folder in
+the first test account, stars, moves and trashes the newest inbox message
+there, and puts everything back as it was. The throwaway database is
 deleted at the end. Credentials and mail content are never printed.
 """
 
@@ -20,6 +22,8 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +43,7 @@ READ_TOOLS = {
     "get_message",
     "get_attachment",
 }
+WRITE_TOOLS = READ_TOOLS | {"update_messages", "create_folder"}
 
 
 def free_port() -> int:
@@ -80,13 +85,13 @@ def start_service(env: dict[str, str], url: str) -> subprocess.Popen[bytes]:
     sys.exit("the service did not start")
 
 
-def reader_token(client: httpx.Client, account_ids: list[str]) -> str:
-    """A user that may only read the test accounts, and a token for it."""
+def user_token(client: httpx.Client, account_ids: list[str], allow: list[str]) -> str:
+    """A user with ``allow`` on the test accounts, and a token for it."""
     user = client.post(
         "/v1/users",
         json={
-            "name": "mcp live check",
-            "grants": [{"accounts": account_ids, "allow": ["mail.read"]}],
+            "name": f"mcp live check {'+'.join(allow)}",
+            "grants": [{"accounts": account_ids, "allow": allow}],
         },
     ).json()
     created = client.post(f"/v1/users/{user['id']}/tokens", json={"name": "live"})
@@ -97,7 +102,9 @@ def text_of(result: Any) -> str:
     return "".join(getattr(part, "text", "") for part in result.content)
 
 
-async def check_tools(run: Run, url: str, token: str, emails: set[str]) -> None:
+@asynccontextmanager
+async def mcp_session(url: str, token: str) -> AsyncIterator[ClientSession]:
+    """``benethos-mailbox-mcp`` over stdio with ``token``."""
     command = shutil.which("benethos-mailbox-mcp")
     if command is None:
         sys.exit("benethos-mailbox-mcp not found: run this with uv run")
@@ -110,6 +117,11 @@ async def check_tools(run: Run, url: str, token: str, emails: set[str]) -> None:
         ClientSession(read, write) as session,
     ):
         await session.initialize()
+        yield session
+
+
+async def check_tools(run: Run, url: str, token: str, emails: set[str]) -> None:
+    async with mcp_session(url, token) as session:
         tools = {tool.name for tool in (await session.list_tools()).tools}
         run.check(
             "a read-only token sees the read tools, nothing more",
@@ -198,6 +210,108 @@ async def check_pdf(run: Run, session: ClientSession) -> None:
     print("SKIP  no PDF attachment in the test accounts")
 
 
+async def check_writing(
+    run: Run, url: str, token: str, admin: httpx.Client, account_id: str
+) -> None:
+    """Folder, star, move and trash through the tools, then all put back."""
+    folders_url = f"/v1/accounts/{account_id}/folders"
+    inbox = next(f for f in admin.get(folders_url).json() if f.get("role") == "inbox")
+    newest = admin.get(
+        f"/v1/accounts/{account_id}/messages",
+        params={"folder": inbox["id"], "limit": 1},
+    ).json()["items"]
+    if not newest:
+        print("SKIP  no message in the inbox of the first test account")
+        return
+    message = newest[0]
+    message_url = f"/v1/accounts/{account_id}/messages/{message['id']}"
+    folder_id = None
+    try:
+        async with mcp_session(url, token) as session:
+            tools = {tool.name for tool in (await session.list_tools()).tools}
+            run.check(
+                "a token that may write sees the write tools too",
+                tools == WRITE_TOOLS,
+                ", ".join(sorted(tools - READ_TOOLS)),
+            )
+
+            async def update(**changes: Any) -> dict[str, Any]:
+                result = await session.call_tool(
+                    "update_messages",
+                    {
+                        "account_id": account_id,
+                        "message_ids": [message["id"]],
+                        **changes,
+                    },
+                )
+                found: dict[str, Any] = result.structured_content or {}
+                if result.is_error:
+                    found = {"error": text_of(result)}
+                return found
+
+            created = await session.call_tool(
+                "create_folder",
+                {"account_id": account_id, "name": f"mcp-live-{secrets.token_hex(4)}"},
+            )
+            folder_id = (created.structured_content or {}).get("id")
+            run.check("create_folder", not created.is_error and bool(folder_id))
+
+            starred = await update(starred=not message["starred"])
+            now = admin.get(message_url).json()
+            run.check(
+                "update_messages stars",
+                starred.get("done") == [message["id"]]
+                and now["starred"] is not message["starred"],
+                str(starred.get("error", "")),
+            )
+            await update(starred=message["starred"])
+
+            if folder_id:
+                moved = await update(move_to=folder_id)
+                now = admin.get(message_url).json()
+                run.check(
+                    "update_messages moves into the new folder, the id stays",
+                    moved.get("done") == [message["id"]]
+                    and now.get("folder_ids") == [folder_id],
+                    str(moved.get("error", "")),
+                )
+
+            trashed = await update(trash=True)
+            now = admin.get(message_url).json()
+            trash = next(
+                (f for f in admin.get(folders_url).json() if f.get("role") == "trash"),
+                {},
+            )
+            run.check(
+                "update_messages trashes",
+                trashed.get("done") == [message["id"]]
+                and now.get("folder_ids") == [trash.get("id")],
+                str(trashed.get("error", "")),
+            )
+
+            back = await update(move_to="inbox")
+            now = admin.get(message_url).json()
+            run.check(
+                "update_messages moves back by role",
+                back.get("done") == [message["id"]]
+                and now.get("folder_ids") == [inbox["id"]],
+                str(back.get("error", "")),
+            )
+    finally:
+        # Whatever failed above: the message back in the inbox as it was.
+        admin.patch(
+            message_url,
+            json={
+                "folder_ids": [inbox["id"]],
+                "starred": message["starred"],
+                "unread": message["unread"],
+            },
+        )
+        if folder_id:
+            removed = admin.delete(f"{folders_url}/{folder_id}")
+            run.check("the test folder removed again", removed.status_code == 204)
+
+
 def main() -> int:
     env = read_env(ENV_FILE)
     test_accounts = accounts(env)[:2]
@@ -222,10 +336,13 @@ def main() -> int:
                     ids.append(str(account_id))
             if len(ids) != len(test_accounts):
                 return 1
-            token = reader_token(client, ids)
-        emails = {a["email"].lower() for a in test_accounts}
-        print("\n== the MCP server over stdio")
-        anyio.run(check_tools, run, url, token, emails)
+            token = user_token(client, ids, ["mail.read"])
+            writer = user_token(client, ids, ["mail.read", "mail.write"])
+            emails = {a["email"].lower() for a in test_accounts}
+            print("\n== the MCP server over stdio, reading")
+            anyio.run(check_tools, run, url, token, emails)
+            print("\n== the MCP server over stdio, writing")
+            anyio.run(check_writing, run, url, writer, client, ids[0])
     finally:
         process.terminate()
         process.wait(timeout=10)
