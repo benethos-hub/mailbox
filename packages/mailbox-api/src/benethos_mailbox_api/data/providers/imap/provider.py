@@ -4,20 +4,16 @@ IMAP connections are stateful (the selected folder), so every operation runs
 as one uninterrupted sequence under the account's lock, in a worker thread.
 The credential is decrypted right before a login and not kept.
 
-Towards the server the adapter is careful (CONCEPT 5.9): every request passes
-the account's rate limiter, a rejected login is not tried again until the
-credential changes, and an unreachable server is retried with backoff and
-then left alone for a growing pause.
+Towards the server the adapter is careful (CONCEPT 5.9): ``Guard`` paces
+the requests, blocks a rejected login and pauses an unreachable server.
 """
 
 from __future__ import annotations
 
 import logging
-import math
 import threading
 import time
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
 from functools import partial
 from typing import Any, TypeVar
 
@@ -31,7 +27,6 @@ from ....errors import (
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
-    ProviderError,
     ProviderUnavailableError,
 )
 from ...models import (
@@ -45,7 +40,8 @@ from ...models import (
     SentMessage,
 )
 from ..base import Capability, CredentialReader
-from ..ratelimit import Clock, Sleep, TokenBucket, backoff
+from ..guard import Guard
+from ..ratelimit import Clock, Sleep
 from ..smtp import DEFAULT_PORTS as SMTP_PORTS
 from ..smtp import SmtpLogin, SmtpServer, SmtpSession
 from . import mappers
@@ -66,10 +62,6 @@ CLIENT_ID = ("benethos-mailbox-api", __version__)
 
 # A cautious default for servers nobody has told us about.
 DEFAULT_REQUESTS_PER_MINUTE = 60
-ATTEMPTS = 3
-FIRST_PAUSE = 30.0
-LONGEST_PAUSE = 900.0
-
 
 PROBE_TIMEOUT = 10.0
 
@@ -148,13 +140,7 @@ class ImapProvider:
         per_minute = float(
             settings.get("max_requests_per_minute") or DEFAULT_REQUESTS_PER_MINUTE
         )
-        self._bucket = TokenBucket(per_minute, burst=10, clock=clock, sleep=sleep)
-        self._clock = clock
-        self._sleep = sleep
-        self._backoff = partial(backoff, jitter=jitter) if jitter else backoff
-        self._login_rejected = False
-        self._failures = 0
-        self._paused_until = 0.0
+        self._guard = Guard(per_minute, clock=clock, sleep=sleep, jitter=jitter)
 
     # --- MailProvider ---------------------------------------------------------
 
@@ -363,10 +349,10 @@ class ImapProvider:
 
     def _send_smtp(self, raw: bytes, sender: str, recipients: list[str]) -> list[str]:
         assert self._smtp is not None
-        self._check_allowed()
-        self._bucket.acquire()
+        self._guard.check()
+        self._guard.acquire()
         # The same credential as IMAP: no new attempt until it changes.
-        with self._refused_logins():
+        with self._guard.refused_logins():
             return self._smtp.send(self._smtp_login(), sender, recipients, raw)
 
     def _store_sent(self, raw: bytes) -> MessageSummary | None:
@@ -601,12 +587,12 @@ class ImapProvider:
         with self._idle_lock:
             if self._closing.is_set():
                 return False
-            self._check_allowed()
+            self._guard.check()
             session = self._idle_session
             try:
-                with self._refused_logins():
+                with self._guard.refused_logins():
                     if not session.connected:
-                        self._bucket.acquire()
+                        self._guard.acquire()
                         self._login(session)
                         if "IDLE" not in session.server_capabilities():
                             raise NotSupportedError(
@@ -620,11 +606,9 @@ class ImapProvider:
 
     def _verify(self) -> None:
         with self._lock:
-            self._login_rejected = False
-            self._failures = 0
-            self._paused_until = 0.0
+            self._guard.reset()
             self._session.logout()
-            with self._refused_logins():
+            with self._guard.refused_logins():
                 self._login(self._session)
                 if self._smtp is not None:
                     self._smtp.verify(self._smtp_login())
@@ -642,59 +626,13 @@ class ImapProvider:
         return await anyio.to_thread.run_sync(self._locked, operation)
 
     def _locked(self, operation: Callable[[], T]) -> T:
+        def step() -> T:
+            if not self._session.connected:
+                self._login(self._session)
+            return operation()
+
         with self._lock:
-            self._check_allowed()
-            last: ProviderUnavailableError | None = None
-            for attempt in range(ATTEMPTS):
-                if attempt:
-                    self._sleep(self._backoff(attempt - 1))
-                try:
-                    with self._refused_logins():
-                        self._bucket.acquire()
-                        if not self._session.connected:
-                            self._login(self._session)
-                        result = operation()
-                except ProviderUnavailableError as exc:
-                    self._session.logout()
-                    last = exc
-                    continue
-                except (ProviderAuthError, ProviderError):
-                    # Not a connection problem, so retrying will not help. The
-                    # connection may still be in a bad state: start afresh.
-                    self._session.logout()
-                    raise
-                self._failures = 0
-                return result
-            self._pause()
-            assert last is not None
-            raise last
-
-    def _check_allowed(self) -> None:
-        if self._login_rejected:
-            raise ProviderAuthError(
-                "the server rejected the login before: no new attempt until the "
-                "credential is replaced or the account is verified"
-            )
-        wait = self._paused_until - self._clock()
-        if wait > 0:
-            raise ProviderUnavailableError(
-                f"the mail server was unreachable: next attempt in {math.ceil(wait)}s"
-            )
-
-    def _pause(self) -> None:
-        self._failures += 1
-        pause = min(LONGEST_PAUSE, FIRST_PAUSE * 2 ** (self._failures - 1))
-        self._paused_until = self._clock() + pause
-
-    @contextmanager
-    def _refused_logins(self) -> Iterator[None]:
-        """A login the server rejects is not tried again until the
-        credential changes or the account is verified."""
-        try:
-            yield
-        except ProviderAuthError:
-            self._login_rejected = True
-            raise
+            return self._guard.attempts(step, drop=self._session.logout)
 
     def _secret(self) -> str:
         """The credential for the login, decrypted for this one use."""
