@@ -30,6 +30,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- MCP server over streamable HTTP (`--transport streamable-http`, or
+  `MAILBOX_MCP_*` in the environment), behind a bearer token
+  (`MAILBOX_MCP_BEARER_TOKEN`, else `401`) and a Host/Origin check against
+  DNS rebinding. Its container image `benethos-mailbox-mcp` is built with
+  the service's and runs in compose with the profile `mcp`.
+
 - Container image of the service (`containers/benethos-mailbox-api/`), for
   `linux/amd64` and `linux/arm64`, with a compose file that publishes the
   port on `127.0.0.1` only, and a GitHub workflow that pushes it to the

@@ -50,7 +50,8 @@ done. Update the roadmap in the same commit that finishes an item.
   versioned, template `live/.env.example`).
   `MAILBOX_API_TOKEN=... uv run python live/register.py` adds the test
   accounts to a running service over its API and checks them.
-- Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`;
+- Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`
+  (stdio; `--transport streamable-http` for HTTP);
   for Claude Code and Claude Desktop see `packages/mailbox-mcp/README.md`.
   `uv run python live/mcp_stdio.py` checks it over stdio against the test
   accounts, with a service and database of its own; the write tools create
@@ -59,6 +60,8 @@ done. Update the roadmap in the same commit that finishes an item.
   reply draft there; the send tools send two mails from the first test
   account to the second and delete them for good; grants with recipients
   and a send limit stop mails, and the audit names each attempt.
+  `uv run python live/mcp_http.py` checks it over streamable HTTP behind
+  its bearer token, read-only.
 
 ## Project layout
 
@@ -136,6 +139,7 @@ packages/
   mailbox-mcp/            # the MCP server, a REST client
     src/benethos_mailbox_mcp/
       server.py           # MCPServer, tools by the token's rights, CLI
+      transport.py        # streamable HTTP: bearer guard, host check (uvicorn)
       render.py           # what the model sees of mail, marked as foreign
       pdf.py              # PDF pages as PNG (pypdfium2)
       client.py           # ALL access to the REST API

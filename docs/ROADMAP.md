@@ -107,7 +107,8 @@ Everything real mail will depend on, before any real mailbox is connected.
   HTML dropped, send audit, the read-and-send warning in `/v1/me` and the
   MCP start log**, done
 - Policy file, nothing enabled by default
-- Bearer guard for the MCP server's HTTP transport
+- **The MCP server over streamable HTTP, behind a bearer guard, with its
+  own container image**, done
 - **Container image and compose file for the service, bound to the loopback
   address (8.1)**, done: `containers/`, the workflow
   `.github/workflows/container.yml`. The image is not built by the

@@ -1156,8 +1156,11 @@ small and the REST-only rule is enforced by the dependency list itself. A
 test checks that no module imports the service.
 
 It reads `MAILBOX_API_URL` and `MAILBOX_API_TOKEN` and calls the REST API with
-httpx. It runs over stdio; streamable HTTP follows with its bearer guard
-(phase 3). At start it
+httpx. It runs over stdio or streamable HTTP. Over HTTP a bearer guard
+admits clients with one shared token (`MAILBOX_MCP_BEARER_TOKEN`), which
+is not passed on: the server acts as the user of its own API token, for
+every client alike. Host and Origin are checked against DNS rebinding.
+At start it
 asks `/v1/me` what its user may do, and only those tools exist
 (7.5).
 

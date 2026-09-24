@@ -2,7 +2,8 @@
 
 MCP server for the Mailbox API. It reaches mail only through that REST
 API, so the service `benethos-mailbox-api` has to be running. It runs over
-stdio: the MCP client starts it and it ends with the client.
+stdio, where the MCP client starts it and it ends with the client, or over
+streamable HTTP as a server of its own (see "Over HTTP").
 
 ## A token for it
 
@@ -66,6 +67,51 @@ a change.
 ```
 MAILBOX_API_URL=http://127.0.0.1:8080 MAILBOX_API_TOKEN=<token> uv run benethos-mailbox-mcp
 ```
+
+## Over HTTP
+
+```
+MAILBOX_API_URL=http://127.0.0.1:8080 MAILBOX_API_TOKEN=<token> MAILBOX_MCP_BEARER_TOKEN=<a long random token>   uv run benethos-mailbox-mcp --transport streamable-http
+```
+
+The server answers at `http://127.0.0.1:8000/mcp`.
+
+| Option | Environment | Default |
+|---|---|---|
+| `--transport` | `MAILBOX_MCP_TRANSPORT` | `stdio`; or `streamable-http` |
+| `--host` | `MAILBOX_MCP_HOST` | `127.0.0.1` |
+| `--port` | `MAILBOX_MCP_PORT` | `8000` |
+| `--path` | `MAILBOX_MCP_PATH` | `/mcp` |
+| `--allowed-hosts` | `MAILBOX_MCP_ALLOWED_HOSTS` | none; comma-separated Host values |
+| `--allowed-origins` | `MAILBOX_MCP_ALLOWED_ORIGINS` | none; comma-separated |
+| `--log-level` | `MAILBOX_MCP_LOG_LEVEL` | `INFO` |
+| – | `MAILBOX_MCP_BEARER_TOKEN` | none |
+
+The command line wins over the environment.
+
+- **Bearer token.** With `MAILBOX_MCP_BEARER_TOKEN` set, every HTTP request
+  must carry `Authorization: Bearer <token>`; anything else gets `401`. It
+  has no command-line option, since arguments show in the process list.
+  Without it the server logs a warning and admits anyone who can reach
+  the port. Over stdio the token is ignored.
+- **Two tokens.** The bearer token only admits MCP clients. The server
+  calls the REST API with its own `MAILBOX_API_TOKEN`, and that user's
+  rights decide which tools exist, for every client alike.
+- **Host check.** Against DNS rebinding the server checks the `Host` and
+  `Origin` headers: on a loopback bind it admits `127.0.0.1`, `localhost`
+  and `[::1]`; with `--allowed-hosts` exactly those. A bind such as
+  `0.0.0.0` without a list checks nothing, so set the list there. A refused
+  host gets `421`.
+- Beyond your own machine, put a TLS reverse proxy in front.
+
+Claude Code:
+
+```
+claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp   --header "Authorization: Bearer <bearer token>"
+```
+
+As a container: `containers/benethos-mailbox-mcp/`, started with
+`docker compose --profile mcp up -d`; see `containers/README.md`.
 
 ## Tools
 
