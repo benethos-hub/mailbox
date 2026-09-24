@@ -39,8 +39,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   key, an overview of your accounts, rights and warnings; accounts:
   connect through autodiscovery or by hand, change, verify, remove; users,
   roles and their grants (with `recipients` and `max_sends_per_day`),
-  tokens created (shown once) and revoked. Not part of the OpenAPI
-  document.
+  tokens created (shown once) and revoked; mail: every inbox together,
+  folders, search, a message as text, attachments and the original as
+  downloads. Not part of the OpenAPI document.
 
 - MCP server over streamable HTTP (`--transport streamable-http`, or
   `MAILBOX_MCP_*` in the environment), behind a bearer token

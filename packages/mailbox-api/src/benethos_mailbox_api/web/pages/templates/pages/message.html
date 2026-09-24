@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ message.subject | or_missing }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}{{ message.subject | or_missing }}{% endblock %}
+{% block subheading %}<div class="sub"><a href="/ui/accounts/{{ account.id }}/mail">{{ account.email }}</a>{% for folder_id in message.folder_ids %} · <a href="/ui/accounts/{{ account.id }}/mail?{{ [('folder', folder_id)] | urlencode }}">{{ folder_names.get(folder_id, folder_id) }}</a>{% endfor %}</div>{% endblock %}
+{% block actions %}
+{% if can_raw %}<a class="btn" href="/ui/accounts/{{ account.id }}/mail/{{ message.id }}/raw">Download original</a>{% endif %}
+{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="body">
+    <dl class="facts">
+      <dt>From</dt><dd>{{ message.sender | address }}</dd>
+      <dt>To</dt><dd>{{ message.to | addresses }}</dd>
+      {% if message.cc %}<dt>Cc</dt><dd>{{ message.cc | addresses }}</dd>{% endif %}
+      {% if message.bcc %}<dt>Bcc</dt><dd>{{ message.bcc | addresses }}</dd>{% endif %}
+      {% if message.reply_to %}<dt>Reply to</dt><dd>{{ message.reply_to | addresses }}</dd>{% endif %}
+      <dt>Date</dt><dd>{{ message.date | when }}</dd>
+      <dt>Flags</dt>
+      <dd>
+        {{ "unread" if message.unread else "read" }}{% if message.starred %}, starred{% endif %}
+        {% for keyword in message.keywords %}<span class="tag">{{ keyword }}</span> {% endfor %}
+      </dd>
+      <dt>Id</dt><dd class="mono">{{ message.id }}</dd>
+    </dl>
+  </div>
+</section>
+
+{% if message.attachments %}
+<section class="card">
+  <header><h2>Attachments</h2><span class="meta">{{ message.attachments | length }}</span></header>
+  <div class="body tight">
+    <table>
+      <tbody>
+        {% for a in message.attachments %}
+        <tr>
+          <td class="name">{{ a.filename | or_missing }}<span class="sub">{{ a.content_type }}{% if a.inline %}, inline{% endif %}</span></td>
+          <td class="num">{{ a.size | size }}</td>
+          <td class="actions">{% if can_attachment %}<a class="btn small" href="/ui/accounts/{{ account.id }}/mail/{{ message.id }}/attachments/{{ a.id | segment }}">Download</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <header>
+    <h2>Message</h2>
+    {% if from_html %}<span class="meta">Written as HTML; shown here as text.</span>{% elif message.html_body %}<span class="meta">Also has an HTML part, not shown.</span>{% endif %}
+  </header>
+  <div class="body">
+    {% if body %}<pre class="mail-body">{{ body }}</pre>{% else %}<div class="empty">No text.</div>{% endif %}
+  </div>
+</section>
+{% endblock %}

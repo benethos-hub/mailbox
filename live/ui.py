@@ -202,6 +202,42 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
     run.check("delete the role", "Role ui-live-reader deleted." in gone.text)
 
 
+def check_mail(run: Run, browser: httpx.Client, account_id: str) -> None:
+    """Every inbox, one account's folders, a message and its original. Only
+    reads; nothing of the mail is printed."""
+    together = browser.get("/ui/mail")
+    run.check(
+        "every inbox together",
+        together.status_code == 200 and "notice warn" not in together.text,
+    )
+    folders = browser.get(f"/ui/accounts/{account_id}/mail")
+    run.check(
+        "the first test account's folders and inbox",
+        folders.status_code == 200 and 'aria-label="Folders"' in folders.text,
+    )
+    found = re.search(
+        rf'href="(/ui/accounts/{account_id}/mail/msg_[0-9a-f]+)"', folders.text
+    )
+    if not run.check("its inbox lists a message", found is not None):
+        return
+    assert found is not None
+    message = browser.get(found.group(1))
+    run.check(
+        "a message opens",
+        message.status_code == 200 and "<dt>From</dt>" in message.text,
+    )
+    raw = browser.get(f"{found.group(1)}/raw")
+    run.check(
+        "its original downloads",
+        raw.status_code == 200
+        and raw.headers.get("content-disposition", "").startswith("attachment;"),
+    )
+    searched = browser.get(
+        f"/ui/accounts/{account_id}/mail", params={"q": "zz-no-such-mail-zz"}
+    )
+    run.check("a search that finds nothing", "match the search" in searched.text)
+
+
 def main() -> int:
     env = read_env(ENV_FILE)
     test_accounts = accounts(env)[:2]
@@ -229,6 +265,8 @@ def main() -> int:
             print("\n== users, tokens, roles")
             assert account_id is not None
             check_users(run, browser, url, account_id)
+            print("\n== reading mail")
+            check_mail(run, browser, account_id)
             print("\n== the frame")
             check_frame(run, browser, [a["email"].lower() for a in test_accounts])
     finally:

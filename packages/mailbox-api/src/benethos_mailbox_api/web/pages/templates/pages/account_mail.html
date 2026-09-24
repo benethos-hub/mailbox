@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ current.name }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}{{ current.name }}{% endblock %}
+{% block subheading %}<div class="sub"><a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a>{% if current.total is not none %} · {{ current.total }} messages{% endif %}{% if current.unread %}, {{ current.unread }} unread{% endif %}</div>{% endblock %}
+{% block content %}
+<div class="mail-layout">
+  <nav class="card folders" aria-label="Folders">
+    <header><h2>Folders</h2></header>
+    <ul>
+      {% for folder, depth in tree %}
+      <li class="depth-{{ [depth, 4] | min }}">
+        <a href="?{{ [('folder', folder.id)] | urlencode }}" class="{{ 'active' if folder.id == current.id }}">
+          <span class="grow">{{ folder.name }}</span>
+          {% if folder.unread %}<span class="count">{{ folder.unread }}</span>{% endif %}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+  <section class="card">
+    <div class="body">{% include "partials/mail_search.html" %}</div>
+    <div class="body tight">{% include "partials/message_list.html" %}</div>
+  </section>
+</div>
+{% endblock %}
