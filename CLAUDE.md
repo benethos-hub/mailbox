@@ -62,6 +62,8 @@ done. Update the roadmap in the same commit that finishes an item.
   and a send limit stop mails, and the audit names each attempt.
   `uv run python live/mcp_http.py` checks it over streamable HTTP behind
   its bearer token, read-only.
+- The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a token.
+  `uv run python live/ui.py` checks it against the test accounts.
 
 ## Project layout
 
@@ -101,7 +103,10 @@ packages/
         schemas.py        # shapes that exist only at the HTTP boundary
         errors.py         # error class -> status code, the error envelope
         routes/           # JSON API under /v1, one router per resource
-        pages/            # configuration UI (planned), not in OpenAPI
+        pages/            # configuration UI under /ui, not in OpenAPI:
+                          #   one module per area, session.py (sign-in,
+                          #   CSRF), templates.py (Jinja2), templates/,
+                          #   static/ (app.css, app.js, vendored htmx)
       domain/             # BUSINESS LOGIC: decides, knows no HTTP
         accounts.py       # AccountService: accounts and their live adapters
         mailbox.py        # MailboxService: folders and messages

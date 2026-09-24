@@ -10,7 +10,7 @@ from http import HTTPStatus
 from typing import Any
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException
 
 from ..errors import (
@@ -69,8 +69,10 @@ def status_of(error: MailboxApiError) -> int:
 
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(MailboxApiError)
-    async def _mailbox_api_error(_: Request, exc: MailboxApiError) -> JSONResponse:
+    async def _mailbox_api_error(request: Request, exc: MailboxApiError) -> Response:
         status = status_of(exc)
+        if _in_ui(request):
+            return _ui_error(request, status, exc.message)
         headers = None
         if status == 401:
             headers = {"WWW-Authenticate": "Bearer"}
@@ -82,7 +84,9 @@ def install_error_handlers(app: FastAPI) -> None:
     # parses one error shape. Request validation keeps FastAPI's 422 format,
     # which the schema documents on its own.
     @app.exception_handler(HTTPException)
-    async def _http_error(_: Request, exc: HTTPException) -> JSONResponse:
+    async def _http_error(request: Request, exc: HTTPException) -> Response:
+        if _in_ui(request):
+            return _ui_error(request, exc.status_code, str(exc.detail))
         code = HTTPStatus(exc.status_code).phrase.lower().replace(" ", "_")
         return error_response(exc.status_code, code, str(exc.detail), exc.headers)
 
@@ -92,3 +96,21 @@ def error_response(
 ) -> JSONResponse:
     body = ErrorResponse.model_validate({"error": {"code": code, "message": message}})
     return JSONResponse(status_code=status, content=body.model_dump(), headers=headers)
+
+
+def _in_ui(request: Request) -> bool:
+    return request.url.path.startswith("/ui")
+
+
+def _ui_error(request: Request, status: int, message: str) -> Response:
+    """The configuration UI answers errors as a page, not as JSON."""
+    from .pages.templates import render
+
+    return render(
+        request,
+        "pages/error.html",
+        page="error",
+        status_code=status,
+        title=HTTPStatus(status).phrase,
+        message=message,
+    )

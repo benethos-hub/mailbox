@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in · {{ APP_NAME }}</title>
+    <link rel="stylesheet" href="/ui/static/css/app.css" />
+  </head>
+  <body>
+    <div class="signin">
+      <section class="card">
+        <header><h2>✉ {{ APP_NAME }} · Sign in</h2></header>
+        <div class="body">
+          {% include "partials/flash.html" %}
+          <form method="post" action="/ui/login">
+            <input type="hidden" name="nonce" value="{{ nonce }}" />
+            <input type="hidden" name="next" value="{{ next }}" />
+            <div class="field">
+              <label for="f-token">API token</label>
+              <input id="f-token" name="token" type="password" autocomplete="current-password" required autofocus />
+              <span class="hint">A token of your user, or the admin key. You act with the rights of that user.</span>
+            </div>
+            <div class="form-actions">
+              <button class="primary" type="submit">Sign in</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

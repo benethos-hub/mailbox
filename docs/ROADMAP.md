@@ -127,8 +127,12 @@ Everything real mail will depend on, before any real mailbox is connected.
 - `gmail` adapter with OAuth, own Google Cloud client per deployment (5.5)
 - Gmail history and Graph delta in the worker
 - `jmap` adapter for Fastmail and JMAP servers (5.6)
-- Configuration UI under `/ui` (1.1): accounts, OAuth, users, tokens,
-  recovery key, status
+- Configuration UI under `/ui` (1.1), brought forward on 2026-09-24:
+  - **frame: sign-in with an API token, server-side session, CSRF,
+    security headers, layout**, done
+  - pages for everything the REST API does: accounts, users, roles and
+    tokens, reading mail, writing and sending, the audit of sends
+  - with the new providers: the OAuth round trip; recovery key, status
 - Threads (6.3): for IMAP built across folders from the id mapping,
   which then also keeps `In-Reply-To` and `References`
 - Grant constraint `folders` (7.5)

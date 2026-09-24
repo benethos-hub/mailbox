@@ -1,0 +1,16 @@
+<aside class="sidebar">
+  <div class="brand"><span class="mark">✉</span> {{ APP_NAME }}</div>
+  <nav class="nav">
+    <a href="/ui" class="{{ 'active' if page == 'home' }}"><span class="icon">◫</span> Overview</a>
+  </nav>
+  <div class="spacer"></div>
+  {% if me %}
+  <div class="foot">
+    Signed in as <strong>{{ me.name }}</strong>
+    <form method="post" action="/ui/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+      <button class="small ghost" type="submit">Sign out</button>
+    </form>
+  </div>
+  {% endif %}
+</aside>
