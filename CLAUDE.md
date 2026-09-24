@@ -45,7 +45,7 @@ done. Update the roadmap in the same commit that finishes an item.
   `MAILBOX_API_KEY=... uv run benethos-mailbox-api serve` and
   `http://127.0.0.1:8080/docs`.
 - Live checks: `uv run python live/smoke.py [--show]` (read-only) and
-  `uv run python live/changes.py` (sends one test mail between the test
+  `uv run python live/changes.py [--keep]` (sends one test mail between the test
   accounts, moves it, deletes it), test accounts in `live/.env` (not
   versioned, template `live/.env.example`).
 - Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`.
