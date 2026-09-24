@@ -3,8 +3,10 @@
 One REST API for all your mailboxes, whichever provider they are at, with
 an MCP server on top so an AI assistant can work with them too.
 
-> **Status: 0.1.0, pre-alpha.** The REST skeleton runs against an in-memory
-> provider. What comes next and in which order:
+> **Status: 0.1.0, pre-alpha.** Reads IMAP accounts: folders, messages,
+> search, attachments, raw source, across accounts, with autodiscovery from
+> the address. Nothing is sent or changed yet. What comes next and in which
+> order:
 > [docs/ROADMAP.md](docs/ROADMAP.md). The design behind it:
 > [docs/CONCEPT.md](docs/CONCEPT.md).
 
@@ -91,6 +93,10 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
 
+Live checks against test accounts, outside the test suite:
+`uv run python live/smoke.py`, configured in `live/.env` (template
+`live/.env.example`).
+
 ## Running
 
 ```
@@ -101,10 +107,10 @@ MAILBOX_API_TOKEN=<token> uv run benethos-mailbox-mcp
 ```
 
 The API documentation is at `http://127.0.0.1:8080/docs`. Data is kept in a
-SQLite database in `data/benethos-mailbox-api/`, relative to the working
-directory. Settings come
-from the environment or `config/benethos-mailbox-api/.env`, relative to the
-working directory; copy the `.env.example` beside it to start.
+SQLite database in `data/benethos-mailbox-api/`. Settings come from the
+environment or from `config/benethos-mailbox-api/.env`; copy the
+`.env.example` beside it to start. Both paths count from the working
+directory, normally the repository root.
 
 | Setting | Meaning |
 |---|---|
