@@ -614,6 +614,11 @@ Rules of the implementation for drafts (phase 2):
   goes out. The quote of a reply or forward is written when the draft is
   made, as a mail client does.
 - A deleted draft is gone for good, not moved to the trash.
+- `send_draft` sends the draft as stored, with the date of the send, and
+  then deletes it; the sent folder gets its read copy as with `send`. The
+  reference a draft kept marks its original. A draft without recipients
+  answers `400`. It needs only `send_draft`: the draft was written by
+  whoever may write drafts.
 
 Sending is **synchronous** in phase 2: `200` means the provider accepted the
 message. After an SMTP send the copy is appended to the sent folder unless

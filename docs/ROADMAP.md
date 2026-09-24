@@ -9,7 +9,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [1a](#phase-1a--users-rights-storage-backup) | Users, rights, storage, backup | **done** |
 | [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | **done** |
 | [1c](#phase-1c--stable-ids-and-sync-worker) | Stable ids and sync worker | **done** |
-| [2](#phase-2--writing-and-sending) | Writing and sending | in progress |
+| [2](#phase-2--writing-and-sending) | Writing and sending | **done** |
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | |
 | [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
@@ -79,6 +79,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 2 – Writing and sending
 
+**Done.**
+
 - **IMAP protocol on IMAPClient (5.1)**, done
 - **SMTP through the standard library's `smtplib` (5)**, done
 - **`COPYUID` keeps the id of a message we move (4.1)**, done
@@ -86,7 +88,7 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **Folder create, rename, delete (6.2)**, done
 - **Sending over SMTP, with reply and forward by reference, `forward_as`,
   `\Answered` and `$Forwarded` on the original (6.4)**, done
-- Drafts
+- **Drafts: list, create, replace, delete, send (6.4)**, done
 - **`Idempotency-Key` on send (6.4)**, done
 
 ## Phase 3 – MCP server and container
