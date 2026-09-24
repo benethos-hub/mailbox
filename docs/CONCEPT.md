@@ -599,6 +599,22 @@ a reply quotes the original and a forward passes it on, so a user who may
 only send cannot get at mail this way. When the flag on the original
 cannot be set, the send still counts as done.
 
+Rules of the implementation for drafts (phase 2):
+
+- A draft lives where mail clients keep drafts: on IMAP in the folder with
+  the drafts role, flagged `\Draft`. An account without one answers `409`.
+- Its id is a message id, so `get_message` and the raw source read it. The
+  draft routes reach only messages in the drafts folder: any other id
+  answers `404`, so the right `drafts` cannot touch other mail.
+- `PUT` replaces the whole draft. IMAP cannot change a stored message, so
+  the new one is appended and the old one deleted; the id follows through
+  the id mapping (4.1).
+- A draft keeps its Bcc recipients, and its `reference` in the header
+  `X-Mailbox-Api-Reference`, until it is sent. Both are removed before it
+  goes out. The quote of a reply or forward is written when the draft is
+  made, as a mail client does.
+- A deleted draft is gone for good, not moved to the trash.
+
 Sending is **synchronous** in phase 2: `200` means the provider accepted the
 message. After an SMTP send the copy is appended to the sent folder unless
 the provider does that itself (Gmail, Graph). A queued outbox with `send_at`

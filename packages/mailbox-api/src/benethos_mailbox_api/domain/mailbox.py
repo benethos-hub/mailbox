@@ -13,6 +13,7 @@ from ..data.models import (
     AttachmentContent,
     BatchItemResult,
     BatchResult,
+    DraftMessage,
     Folder,
     FolderCreate,
     FolderRole,
@@ -28,6 +29,7 @@ from ..data.models import (
     Page,
     Recipient,
     SendResult,
+    SentMessage,
 )
 from ..data.providers import MailProvider
 from ..errors import ConflictError, MailboxApiError, NotFoundError
@@ -39,6 +41,7 @@ from .sync import SyncService
 
 T = TypeVar("T")
 S = TypeVar("S", bound=MessageSummary)
+M = TypeVar("M", bound=DraftMessage)
 
 log = logging.getLogger(__name__)
 
@@ -257,25 +260,8 @@ class MailboxService:
 
     async def _send(self, account_id: str, message: OutgoingMessage) -> SendResult:
         account = self._accounts.record(account_id)
-        extras = compose.Extras()
-        original: Message | None = None
-        if message.reference is not None:
-            original = await self._on_message(
-                account_id,
-                message.reference.message_id,
-                lambda p, native: p.get_message(native),
-            )
-            message, extras = await self._answer(
-                account_id, account.email, message, message.reference, original
-            )
-        message_id = compose.new_message_id(account.email)
-        raw = compose.message(
-            message,
-            Recipient(email=account.email, name=account.display_name),
-            # Local time with its offset, as mail clients write it.
-            datetime.now(UTC).astimezone(),
-            message_id,
-            extras,
+        raw, message_id, message, original = await self._compose(
+            account_id, message, draft=False
         )
         sent = await self._call(
             account_id,
@@ -283,6 +269,11 @@ class MailboxService:
         )
         if message.reference is not None and original is not None:
             await self._mark_answered(account_id, message.reference, original)
+        return await self._send_result(account_id, message_id, sent)
+
+    async def _send_result(
+        self, account_id: str, message_id: str, sent: SentMessage
+    ) -> SendResult:
         copy_id = None
         if sent.sent_copy is not None:
             copy = sent.sent_copy
@@ -293,14 +284,47 @@ class MailboxService:
             message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
         )
 
+    async def _compose(
+        self, account_id: str, message: M, *, draft: bool
+    ) -> tuple[bytes, str, M, Message | None]:
+        """The message as bytes, from the account's address, with a fresh
+        Date and Message-ID. A reference is filled in from the original.
+        Returns the bytes, the Message-ID, the message as filled in and the
+        original, if any."""
+        account = self._accounts.record(account_id)
+        extras = compose.Extras()
+        original: Message | None = None
+        reference = message.reference
+        if reference is not None:
+            original = await self._on_message(
+                account_id,
+                reference.message_id,
+                lambda p, native: p.get_message(native),
+            )
+            message, extras = await self._answer(
+                account_id, account.email, message, reference, original
+            )
+        message_id = compose.new_message_id(account.email)
+        raw = compose.message(
+            message,
+            Recipient(email=account.email, name=account.display_name),
+            # Local time with its offset, as mail clients write it.
+            datetime.now(UTC).astimezone(),
+            message_id,
+            extras,
+            draft=draft,
+            reference=_reference_header(reference) if reference else None,
+        )
+        return raw, message_id, message, original
+
     async def _answer(
         self,
         account_id: str,
         own_address: str,
-        message: OutgoingMessage,
+        message: M,
         reference: MessageReference,
         original: Message,
-    ) -> tuple[OutgoingMessage, compose.Extras]:
+    ) -> tuple[M, compose.Extras]:
         """Fetch what the reply or forward needs of the original; ``replies``
         makes it."""
         raw = await self._on_message(
@@ -348,6 +372,57 @@ class MailboxService:
             log.warning(
                 "sent, but %s not set on the original: %s", keyword, exc.message
             )
+
+    # --- drafts ---------------------------------------------------------------------
+
+    async def list_drafts(
+        self, access: Access, account_id: str, *, limit: int, cursor: str | None
+    ) -> Page[MessageSummary]:
+        access.require("list_drafts", account_id)
+        page = await self._call(
+            account_id, lambda p: p.list_drafts(limit=limit, cursor=cursor)
+        )
+        return Page[MessageSummary](
+            items=await self._published(account_id, page.items),
+            next_cursor=page.next_cursor,
+        )
+
+    async def create_draft(
+        self, access: Access, account_id: str, draft: DraftMessage
+    ) -> MessageSummary:
+        """Store a draft in the drafts folder, composed like a message to
+        send. A reference is filled in now and remembered for the send."""
+        _require_draft_right(access, "create_draft", account_id, draft)
+        raw, _, _, _ = await self._compose(account_id, draft, draft=True)
+        saved = await self._call(account_id, lambda p: p.save_draft(raw, None))
+        [published] = await self._published(account_id, [saved])
+        return published
+
+    async def update_draft(
+        self, access: Access, account_id: str, draft_id: str, draft: DraftMessage
+    ) -> MessageSummary:
+        """Replace a draft. It keeps its id, though the provider stores a
+        new message and removes the old one."""
+        _require_draft_right(access, "update_draft", account_id, draft)
+        raw, _, _, _ = await self._compose(account_id, draft, draft=True)
+        saved = await self._on_message(
+            account_id, draft_id, lambda p, native: p.save_draft(raw, native)
+        )
+        self._sync.relocate(account_id, draft_id, saved.id, _folder_of(saved))
+        [public] = await self._sync.public_ids(
+            account_id, [(saved.id, _folder_of(saved))]
+        )
+        return _public(saved, public, account_id)
+
+    async def delete_draft(
+        self, access: Access, account_id: str, draft_id: str
+    ) -> None:
+        """For good: a draft is not kept in the trash."""
+        access.require("delete_draft", account_id)
+        await self._on_message(
+            account_id, draft_id, lambda p, native: p.delete_draft(native)
+        )
+        self._sync.forget(account_id, draft_id)
 
     async def batch_messages(
         self, access: Access, account_id: str, batch: MessageBatch
@@ -565,6 +640,20 @@ def _folder_of(message: MessageSummary) -> str:
 def _public(message: S, message_id: str, account_id: str) -> S:
     """A provider's message under our id, with its account."""
     return message.model_copy(update={"id": message_id, "account_id": account_id})
+
+
+def _require_draft_right(
+    access: Access, operation: str, account_id: str, draft: DraftMessage
+) -> None:
+    access.require(operation, account_id)
+    if draft.reference is not None:
+        # The draft quotes or carries the original, as a send would.
+        access.require("get_message", account_id)
+
+
+def _reference_header(reference: MessageReference) -> str:
+    """What a draft keeps of its reference, e.g. ``reply msg_...``."""
+    return f"{reference.action} {reference.message_id}"
 
 
 def _delete_right(permanent: bool) -> str:

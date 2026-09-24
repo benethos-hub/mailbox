@@ -6,13 +6,32 @@ from datetime import UTC, datetime
 from email import message_from_bytes
 
 import pytest
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
+from benethos_mailbox_api.config import Settings
 from benethos_mailbox_api.data.mail import compose
-from benethos_mailbox_api.data.models import DraftMessage, Folder, FolderRole, Recipient
-from benethos_mailbox_api.data.providers import MemoryProvider
-from benethos_mailbox_api.data.providers.imap import mappers
+from benethos_mailbox_api.data.models import (
+    DraftMessage,
+    Folder,
+    FolderRole,
+    Grant,
+    ProviderType,
+    Recipient,
+)
+from benethos_mailbox_api.data.providers import (
+    CredentialReader,
+    MailProvider,
+    MemoryProvider,
+    ProviderSettings,
+)
+from benethos_mailbox_api.data.providers.imap import ImapProvider, mappers
+from benethos_mailbox_api.data.providers.protocols.imap import ImapSession
+from benethos_mailbox_api.data.secrets import cipher, encode_recovery
 from benethos_mailbox_api.errors import ConflictError, NotFoundError
+from benethos_mailbox_api.main import Services, build_services
 
+from .conftest import ADMIN, bearer_for, create_account
 from .imap_fake import FakeFolder, FakeMailBox, make_message
 from .test_imap import provider
 
@@ -158,3 +177,141 @@ async def test_memory_drafts_reach_no_other_mail() -> None:
     memory.folders.append(Folder(id="drafts", name="Drafts", role=FolderRole.DRAFTS))
     with pytest.raises(NotFoundError):
         await memory.delete_draft("m0")
+
+
+# --- the API ------------------------------------------------------------------------
+
+
+def drafts_url(account_id: str, draft_id: str = "") -> str:
+    return f"/v1/accounts/{account_id}/drafts" + (f"/{draft_id}" if draft_id else "")
+
+
+def test_a_draft_through_its_life(client: TestClient, account_id: str) -> None:
+    created = client.post(
+        drafts_url(account_id),
+        json={"subject": "Plan", "text": "First", "bcc": [{"email": "c@example.com"}]},
+    )
+    assert created.status_code == 201
+    draft_id = created.json()["id"]
+    listed = client.get(drafts_url(account_id)).json()["items"]
+    assert [d["id"] for d in listed] == [draft_id]
+
+    replaced = client.put(
+        drafts_url(account_id, draft_id),
+        json={"to": [{"email": "bob@example.com"}], "subject": "Plan B", "text": "x"},
+    )
+    assert replaced.status_code == 200
+    assert replaced.json()["id"] == draft_id
+    message = client.get(f"/v1/accounts/{account_id}/messages/{draft_id}").json()
+    assert message["subject"] == "Plan B"
+    assert message["to"] == [{"email": "bob@example.com", "name": None}]
+
+    assert client.delete(drafts_url(account_id, draft_id)).status_code == 204
+    assert client.delete(drafts_url(account_id, draft_id)).status_code == 404
+    assert client.get(drafts_url(account_id)).json()["items"] == []
+
+
+def test_a_reply_draft_keeps_its_reference(client: TestClient, account_id: str) -> None:
+    created = client.post(
+        drafts_url(account_id),
+        json={"reference": {"message_id": "m1", "action": "reply"}, "text": "Gern."},
+    ).json()
+    assert created["subject"] == "Re: Invoice 1"
+    raw = client.get(f"/v1/accounts/{account_id}/messages/{created['id']}/raw")
+    stored = message_from_bytes(raw.content)
+    assert stored[compose.REFERENCE_HEADER] == "reply m1"
+    assert stored["To"] == "Alice <alice@example.com>"
+    assert "> body 1" in stored.get_payload()
+
+
+def test_draft_routes_reach_no_other_mail(client: TestClient, account_id: str) -> None:
+    body = {"subject": "Overwrite", "text": "x"}
+    assert client.put(drafts_url(account_id, "m1"), json=body).status_code == 404
+    assert client.delete(drafts_url(account_id, "m1")).status_code == 404
+    assert client.get(f"/v1/accounts/{account_id}/messages/m1").status_code == 200
+
+
+def test_drafts_is_a_right_of_its_own(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    drafter = bearer_for(services, Grant(accounts=[account_id], allow=["drafts"]))
+    created = app_client.post(
+        drafts_url(account_id), json={"text": "x"}, headers=drafter
+    )
+    assert created.status_code == 201
+    # A reference quotes the original: reading it is a right of its own.
+    reply = {"reference": {"message_id": "m1", "action": "reply"}, "text": "x"}
+    answer = app_client.post(drafts_url(account_id), json=reply, headers=drafter)
+    assert answer.status_code == 403
+    assert "get_message" in answer.json()["error"]["message"]
+
+    reader = bearer_for(services, Grant(accounts=[account_id], allow=["mail.read"]))
+    answer = app_client.post(drafts_url(account_id), json={"text": "x"}, headers=reader)
+    assert answer.status_code == 403
+
+
+# --- ids on IMAP: a replaced draft is a new message, its id stays --------------------
+
+
+@pytest.fixture
+def on_imap(box: FakeMailBox, monkeypatch: pytest.MonkeyPatch) -> tuple[Services, str]:
+    monkeypatch.setenv("MAILBOX_API_MASTER_KEY", encode_recovery(cipher.new_key()))
+
+    def factory(
+        kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
+    ) -> MailProvider:
+        return ImapProvider(
+            settings,
+            credentials,
+            session_factory=lambda s: ImapSession(s, client_factory=box),
+            sleep=lambda seconds: None,
+        )
+
+    services = build_services(Settings(storage="memory"), provider_factory=factory)
+    services.vault.initialize()
+    account = create_account(
+        services.accounts,
+        ProviderType.IMAP,
+        "me@example.com",
+        settings={"host": "imap.example.com", "username": "me@example.com"},
+        credentials={"password": SecretStr("secret")},
+    )
+    return services, account.id
+
+
+async def test_a_replaced_draft_keeps_its_id(
+    box: FakeMailBox, on_imap: tuple[Services, str]
+) -> None:
+    services, account_id = on_imap
+    mailbox = services.mailbox
+    first = await mailbox.create_draft(
+        ADMIN, account_id, DraftMessage(subject="One", text="x")
+    )
+    second = await mailbox.update_draft(
+        ADMIN, account_id, first.id, DraftMessage(subject="Two", text="y")
+    )
+    assert second.id == first.id
+    assert list(box.folders["Drafts"].messages) == [2]
+    message = await mailbox.get_message(ADMIN, account_id, first.id)
+    assert message.subject == "Two"
+    listed = await mailbox.list_drafts(ADMIN, account_id, limit=10, cursor=None)
+    assert [d.id for d in listed.items] == [first.id]
+
+    await mailbox.delete_draft(ADMIN, account_id, first.id)
+    assert not box.folders["Drafts"].messages
+    with pytest.raises(NotFoundError):
+        await mailbox.get_message(ADMIN, account_id, first.id)
+
+
+async def test_a_draft_id_that_left_the_drafts_folder(
+    box: FakeMailBox, on_imap: tuple[Services, str]
+) -> None:
+    """Another client moved the draft away: it is no draft any more."""
+    services, account_id = on_imap
+    draft = await services.mailbox.create_draft(
+        ADMIN, account_id, DraftMessage(subject="One", text="x")
+    )
+    box.other_client_moves("Drafts", 1, "INBOX", 2)
+    with pytest.raises(NotFoundError):
+        await services.mailbox.delete_draft(ADMIN, account_id, draft.id)
+    assert box.folders["INBOX"].messages

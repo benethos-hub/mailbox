@@ -37,6 +37,9 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # Cannot be taken back. delete_message_permanent is DELETE with
     # permanent=true: a right of its own, not a route.
     "mail.delete": ("delete_message_permanent", "delete_folder"),
+    # Reach drafts only, never other mail. A draft with a reference needs
+    # get_message too.
+    "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
     # Cannot be taken back either.
     "send": ("send_message",),
     "accounts.manage": (

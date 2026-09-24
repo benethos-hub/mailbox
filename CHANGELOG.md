@@ -30,6 +30,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   message of the account. The service sets the recipients of a reply,
   the subject prefix, In-Reply-To, References and the quote, and marks the
   original `$answered` or `$forwarded`. Needs `get_message` as well.
+- Drafts: `GET`, `POST /v1/accounts/{account_id}/drafts`, `PUT` and
+  `DELETE .../drafts/{draft_id}`. A draft takes the body of `send`,
+  recipients optional, and is stored in the drafts folder; its id is a
+  message id and stays when the draft is replaced. Ids of other messages
+  answer `404`. Right: `drafts`; a `reference` needs `get_message` as well.
 - `Idempotency-Key` on `POST .../send`: the same key within 24 hours
   returns the first result instead of sending again; with a different
   message it answers `409 idempotency_conflict`.
