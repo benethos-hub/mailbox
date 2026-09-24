@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import empty %}
+{% block title %}Sends · {{ APP_NAME }}{% endblock %}
+{% block heading %}Sends{% endblock %}
+{% block subheading %}
+<div class="sub">
+  {% if account is not none %}From <a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a> · <a href="/ui/sends">all accounts</a>
+  {% else %}The latest of every account you may audit{% endif %}
+  · who sent to whom, never what
+</div>
+{% endblock %}
+{% block content %}
+{% if account is none and accounts %}
+<section class="card">
+  <div class="body toolbar">
+    <span class="muted">Everything of one account:</span>
+    {% for a in accounts %}<a class="btn small" href="/ui/accounts/{{ a.id }}/sends">{{ a.email }}</a>{% endfor %}
+  </div>
+</section>
+{% endif %}
+<section class="card">
+  <div class="body tight">
+    {% if records %}
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>When</th>
+            {% if account is none %}<th>Account</th>{% endif %}
+            <th>Who</th><th>To</th><th>Outcome</th><th>How</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td>{{ r.created_at | when }}</td>
+            {% if account is none %}<td><a href="/ui/accounts/{{ r.account_id }}/sends">{{ emails.get(r.account_id, r.account_id) }}</a></td>{% endif %}
+            <td class="name">
+              {% if r.user_id in names %}{{ names[r.user_id] }}{% else %}<span class="mono">{{ r.user_id[:16] }}…</span>{% endif %}
+              <span class="sub">{% if r.credential_id %}token <span class="mono">{{ r.credential_id[:16] }}…</span>{% else %}admin key{% endif %}</span>
+            </td>
+            <td>
+              {{ r.recipients | join(", ") }}
+              {% if r.refused %}<span class="sub">refused: {{ r.refused | join(", ") }}</span>{% endif %}
+            </td>
+            <td>
+              {% if r.outcome == "sent" %}<span class="tag ok">sent</span>
+              {% elif r.outcome == "denied" %}<span class="tag warn">denied</span>
+              {% else %}<span class="tag bad">failed</span>{% endif %}
+              {% if r.error %}<span class="sub">{{ r.error }}</span>{% endif %}
+            </td>
+            <td>{{ "draft" if r.operation == "send_draft" else "message" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {{ empty("Nothing sent yet, or no account you may audit.") }}
+    {% endif %}
+  </div>
+  {% set more, first = pages %}
+  {% if more or first %}
+  <div class="body toolbar">
+    {% if first %}<a class="btn small" href="{{ first }}">Newest</a>{% endif %}
+    <span class="grow"></span>
+    {% if more %}<a class="btn small" href="{{ more }}">Older</a>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

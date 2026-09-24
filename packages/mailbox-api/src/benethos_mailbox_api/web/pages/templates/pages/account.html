@@ -6,6 +6,7 @@
 {% block subheading %}<div class="sub">{{ account.display_name | or_missing }}</div>{% endblock %}
 {% block actions %}
 {% if can_read %}<a class="btn" href="/ui/accounts/{{ account.id }}/mail">Mail</a>{% endif %}
+{% if can_audit %}<a class="btn" href="/ui/accounts/{{ account.id }}/sends">Sends</a>{% endif %}
 {% if can_verify %}{{ action("/ui/accounts/" ~ account.id ~ "/verify", "Verify", cls="") }}{% endif %}
 {% endblock %}
 {% block content %}

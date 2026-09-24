@@ -365,6 +365,20 @@ def check_writing(
         run.check("delete the sent copy for good", "Deleted for good." in purged.text)
 
 
+def check_sends(
+    run: Run, browser: httpx.Client, sender_id: str, receiver_email: str
+) -> None:
+    """The send before is in the audit, as sent, without its content."""
+    page = browser.get(f"/ui/accounts/{sender_id}/sends").text
+    run.check(
+        "the audit names the send and its recipient",
+        receiver_email in page and '<span class="tag ok">sent</span>' in page,
+    )
+    run.check("never its content", "deleted again at once" not in page)
+    together = browser.get("/ui/sends").text
+    run.check("every account's sends together", receiver_email in together)
+
+
 def main() -> int:
     env = read_env(ENV_FILE)
     test_accounts = accounts(env)[:2]
@@ -399,6 +413,8 @@ def main() -> int:
                 check_writing(
                     run, browser, account_id, second_id, test_accounts[1]["email"]
                 )
+                print("\n== the send audit")
+                check_sends(run, browser, account_id, test_accounts[1]["email"])
             print("\n== the frame")
             check_frame(run, browser, [a["email"].lower() for a in test_accounts])
     finally:

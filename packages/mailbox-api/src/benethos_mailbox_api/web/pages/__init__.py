@@ -23,11 +23,21 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from .deps import CsrfRefused
 from .errors import error_page
-from .routes import accounts, compose, folders, home, login, mail, messages, users
+from .routes import (
+    accounts,
+    compose,
+    folders,
+    home,
+    login,
+    mail,
+    messages,
+    sends,
+    users,
+)
 from .session import PATH, SessionStore, SignInRequired
 from .templates import STATIC_DIR, is_htmx
 
-AREAS = (login, home, accounts, mail, messages, folders, compose, users)
+AREAS = (login, home, accounts, mail, messages, folders, compose, sends, users)
 
 # No inline script or style, no framing, nothing loaded from elsewhere.
 SECURITY_HEADERS = [
