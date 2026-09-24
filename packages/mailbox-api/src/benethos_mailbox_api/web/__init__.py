@@ -10,7 +10,9 @@ route needs. May import ``domain`` and ``data``.
 from __future__ import annotations
 
 from fastapi import Depends, FastAPI
+from fastapi.routing import APIRoute
 
+from ..domain.permissions import permission_of
 from .deps import require_api_key
 from .errors import DOCUMENTED_ERRORS
 from .routes import accounts, health, mailbox
@@ -19,13 +21,29 @@ API_PREFIX = "/v1"
 
 
 def include_routes(app: FastAPI) -> None:
-    """Mount every router: ``/health`` open, everything else under ``/v1``."""
+    """Mount every router: ``/health`` open, everything else under ``/v1``.
+
+    Every ``/v1`` route gets its right from the catalogue as ``x-permission``.
+    A route missing from the catalogue stops the app from starting.
+    """
     app.include_router(health.router)
     protected = [Depends(require_api_key)]
     for router in (accounts.router, mailbox.router):
+        for route in router.routes:
+            if isinstance(route, APIRoute):
+                _declare_permission(route)
         app.include_router(
             router,
             prefix=API_PREFIX,
             dependencies=protected,
             responses=DOCUMENTED_ERRORS,
         )
+
+
+def _declare_permission(route: APIRoute) -> None:
+    permission = permission_of(route.name)
+    if permission is None:
+        raise RuntimeError(
+            f"route {route.name} has no entry in the permission catalogue"
+        )
+    route.openapi_extra = {**(route.openapi_extra or {}), "x-permission": permission}

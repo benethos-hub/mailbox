@@ -108,7 +108,8 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "x-permission": "accounts.read"
       },
       "post": {
         "tags": [
@@ -202,7 +203,8 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "x-permission": "accounts.manage"
       }
     },
     "/v1/accounts/{account_id}": {
@@ -299,7 +301,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "accounts.read"
       },
       "delete": {
         "tags": [
@@ -387,7 +390,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "accounts.manage"
       }
     },
     "/v1/accounts/{account_id}/folders": {
@@ -488,7 +492,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "mail.read"
       }
     },
     "/v1/accounts/{account_id}/messages": {
@@ -665,7 +670,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "mail.read"
       }
     },
     "/v1/accounts/{account_id}/messages/{message_id}": {
@@ -771,7 +777,8 @@
               }
             }
           }
-        }
+        },
+        "x-permission": "mail.read"
       }
     }
   },

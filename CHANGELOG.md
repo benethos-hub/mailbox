@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Every `/v1` operation carries its required right as `x-permission` in the
+  OpenAPI document.
 - Two distributions in one uv workspace: `benethos-mailbox-api` (the service)
   and `benethos-mailbox-mcp` (the MCP server, a REST client only).
 - MCP server skeleton over stdio or streamable HTTP with a first tool,
