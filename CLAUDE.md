@@ -50,7 +50,10 @@ done. Update the roadmap in the same commit that finishes an item.
   versioned, template `live/.env.example`).
   `MAILBOX_API_TOKEN=... uv run python live/register.py` adds the test
   accounts to a running service over its API and checks them.
-- Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`.
+- Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`;
+  for Claude Code and Claude Desktop see `packages/mailbox-mcp/README.md`.
+  `uv run python live/mcp_stdio.py` checks it over stdio against the test
+  accounts, with a service and database of its own.
 
 ## Project layout
 
@@ -122,7 +125,8 @@ packages/
       test_architecture.py  # checks the layering on every run
   mailbox-mcp/            # the MCP server, a REST client
     src/benethos_mailbox_mcp/
-      server.py           # MCPServer, tools, CLI
+      server.py           # MCPServer, tools by the token's rights, CLI
+      render.py           # what the model sees of mail, marked as foreign
       client.py           # ALL access to the REST API
       errors.py           # ToolError subclasses
     tests/                # REST mocked with httpx.MockTransport
