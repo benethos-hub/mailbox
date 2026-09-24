@@ -104,7 +104,8 @@ packages/
         providers/        # registry in __init__.py, base.py protocol,
                           #   one directory per provider: memory/, imap/, ...
                           #   imap/client.py (IMAPClient), imap/parse.py
-                          #   (imap-tools' mail parser), smtp.py (smtplib)
+                          #   (imap-tools' mail parser), smtp.py (smtplib),
+                          #   guard.py (pacing, retries, blocked logins)
         storage/          # own records, one module per subject
         secrets/          # envelope encryption, key providers, backup
         discovery/        # autodiscovery sources and their helpers
