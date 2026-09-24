@@ -13,6 +13,7 @@ from fastapi import Depends, FastAPI
 from fastapi.routing import APIRoute
 
 from ..domain.permissions import permission_of
+from . import pages
 from .deps import authenticate
 from .errors import DOCUMENTED_ERRORS
 from .routes import accounts, discovery, health, mailbox, messages, users
@@ -27,6 +28,7 @@ def include_routes(app: FastAPI) -> None:
     A route missing from the catalogue stops the app from starting.
     """
     app.include_router(health.router)
+    pages.install(app)
     # Every /v1 route authenticates, even one that does not use the caller.
     protected = [Depends(authenticate)]
     for router in (

@@ -69,6 +69,19 @@ REST client can do too.
   status view of accounts and sync. Server-rendered pages, not in the
   OpenAPI document, under `/ui`. Forms carry CSRF protection, since a
   session cookie authenticates them.
+
+  **Decided 2026-09-24:** the UI comes before the new providers and covers
+  everything the REST API does. A person signs in with an API token of its
+  user (or the admin key); password with TOTP can follow as a credential
+  kind of its own. Its texts are English. Built with Jinja2 templates,
+  htmx and one stylesheet, without a build step.
+
+  Rules of the implementation: the session lives on the server, the cookie
+  (`HttpOnly`, `SameSite=Strict`, path `/ui`) carries only a random id, and
+  every request authenticates the token anew, so revoking it ends the
+  session. Sessions end after 8 hours without a request and with a
+  restart. A content security policy allows no inline script or style and
+  no framing. A form answers with a redirect (Post/Redirect/Get).
 - **No HTTP below the web layer**, no decisions in the data layer,
   providers reached only through their registry. A test checks the
   direction of every import.

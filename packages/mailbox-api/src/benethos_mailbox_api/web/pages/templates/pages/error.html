@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}{{ title }}{% endblock %}
+{% block content %}
+<div class="notice err" role="alert">{{ message }}</div>
+<p><a href="/ui">Back to the overview</a></p>
+{% endblock %}

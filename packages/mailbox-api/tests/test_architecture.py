@@ -46,6 +46,7 @@ LIBRARY_HOMES = {
     "dns": f"{PACKAGE}.data.discovery.dns",
     "defusedxml": f"{PACKAGE}.data.discovery.autoconfig",
     "publicsuffixlist": f"{PACKAGE}.data.discovery.suffix",
+    "jinja2": f"{PACKAGE}.web.pages.templates",
 }
 
 

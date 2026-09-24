@@ -37,6 +37,10 @@ classifiers = [
 dependencies = [
     "fastapi>=0.120",
     "uvicorn>=0.38",
+    # The configuration UI: server-rendered pages (web/pages/) and their
+    # forms.
+    "jinja2>=3.1",
+    "python-multipart>=0.0.20",
     "pydantic>=2.11",
     "pydantic-settings>=2.10",
     # Outbound HTTP: autodiscovery, later the Gmail and Microsoft Graph

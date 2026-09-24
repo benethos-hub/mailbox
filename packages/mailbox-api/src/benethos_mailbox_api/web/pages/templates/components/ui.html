@@ -1,0 +1,35 @@
+{# Small shared parts. #}
+
+{% macro empty(text) %}<div class="empty">{{ text }}</div>{% endmacro %}
+
+{# The hidden field every form that changes something carries. #}
+{% macro csrf_field() %}<input type="hidden" name="csrf_token" value="{{ csrf }}" />{% endmacro %}
+
+{# A form that is only a button, e.g. "Delete", with a question before it. #}
+{% macro action(url, label, confirm=None, cls="small", fields={}) %}
+<form class="inline" method="post" action="{{ url }}"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
+  <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+  {% for name, value in fields.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endfor %}
+  <button class="{{ cls }}" type="submit">{{ label }}</button>
+</form>
+{% endmacro %}
+
+{# A labelled input. #}
+{% macro field(name, label, value="", type="text", hint=None, required=False, cls="", attrs="") %}
+<div class="field {{ cls }}">
+  <label for="f-{{ name }}">{{ label }}</label>
+  <input id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"{% if required %} required{% endif %} {{ attrs }} />
+  {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{# A native dialog for a form loaded into #modal. #}
+{% macro modal(title) %}
+<dialog class="modal">
+  <header>
+    <h2>{{ title }}</h2>
+    <button class="ghost small" type="button" data-close aria-label="Close">✕</button>
+  </header>
+  <div class="body">{{ caller() }}</div>
+</dialog>
+{% endmacro %}
