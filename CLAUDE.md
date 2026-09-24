@@ -108,6 +108,7 @@ packages/
                           #   one directory per provider: memory/, imap/, ...
                           #   imap/client.py (IMAPClient), imap/parse.py
                           #   (imap-tools' mail parser), smtp.py (smtplib),
+                          #   sender.py (SMTP for IMAP, POP3, ...),
                           #   guard.py (pacing, retries, blocked logins)
         storage/          # own records, one module per subject
         secrets/          # envelope encryption, key providers, backup
@@ -196,7 +197,7 @@ noticing. Every change is measured against that.
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
 | Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap; planned: gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for IMAPClient |
-| Sending | `data/providers/smtp.py` (`SmtpSession`), used by the adapters without sending of their own | stdlib smtplib | e.g. aiosmtplib |
+| Sending | `data/providers/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX; planned: JMAP well-known, Microsoft realm, SRV, guessing | any further lookup, or one switched off |

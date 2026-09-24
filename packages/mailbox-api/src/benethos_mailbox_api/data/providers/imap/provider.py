@@ -42,8 +42,8 @@ from ...models import (
 from ..base import Capability, CredentialReader
 from ..guard import Guard
 from ..ratelimit import Clock, Sleep
-from ..smtp import DEFAULT_PORTS as SMTP_PORTS
-from ..smtp import SmtpLogin, SmtpServer, SmtpSession
+from ..sender import SmtpFactory, SmtpSender
+from ..smtp import SmtpSession
 from . import mappers
 from .client import ImapServer, ImapSession, SearchCriteria
 from .parse import FetchedMessage
@@ -54,7 +54,6 @@ log = logging.getLogger(__name__)
 R = TypeVar("R")
 
 SessionFactory = Callable[[ImapServer], ImapSession]
-SmtpFactory = Callable[[SmtpServer], SmtpSession]
 
 DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
@@ -127,8 +126,18 @@ class ImapProvider:
         self._username = str(username)
         self._auth = str(auth)
         self._credentials = credentials
-        self._smtp = _smtp_session(settings, smtp_factory)
-        self._smtp_username = str(settings.get("smtp_username") or username)
+        per_minute = float(
+            settings.get("max_requests_per_minute") or DEFAULT_REQUESTS_PER_MINUTE
+        )
+        self._guard = Guard(per_minute, clock=clock, sleep=sleep, jitter=jitter)
+        self._smtp = SmtpSender.from_settings(
+            settings,
+            self._username,
+            self._auth,
+            self._secret,
+            self._guard,
+            smtp_factory,
+        )
         if self._smtp is not None:
             self.capabilities = self.capabilities | {Capability.SEND}
         self._session = session_factory(self._server)
@@ -137,10 +146,6 @@ class ImapProvider:
         self._idle_session = session_factory(self._server)
         self._idle_lock = threading.Lock()
         self._closing = threading.Event()
-        per_minute = float(
-            settings.get("max_requests_per_minute") or DEFAULT_REQUESTS_PER_MINUTE
-        )
-        self._guard = Guard(per_minute, clock=clock, sleep=sleep, jitter=jitter)
 
     # --- MailProvider ---------------------------------------------------------
 
@@ -178,7 +183,7 @@ class ImapProvider:
                 "PATCH /v1/accounts/{account_id}"
             )
         refused = await anyio.to_thread.run_sync(
-            self._send_smtp, raw, sender, recipients
+            self._smtp.send, raw, sender, recipients
         )
         # Sent: from here on nothing may fail, or a client would send again.
         copy = None
@@ -346,14 +351,6 @@ class ImapProvider:
         )
 
     # --- sending ---------------------------------------------------------------------
-
-    def _send_smtp(self, raw: bytes, sender: str, recipients: list[str]) -> list[str]:
-        assert self._smtp is not None
-        self._guard.check()
-        self._guard.acquire()
-        # The same credential as IMAP: no new attempt until it changes.
-        with self._guard.refused_logins():
-            return self._smtp.send(self._smtp_login(), sender, recipients, raw)
 
     def _store_sent(self, raw: bytes) -> MessageSummary | None:
         """A read copy in the folder with the sent role, as mail clients do.
@@ -611,7 +608,7 @@ class ImapProvider:
             with self._guard.refused_logins():
                 self._login(self._session)
                 if self._smtp is not None:
-                    self._smtp.verify(self._smtp_login())
+                    self._smtp.verify()
 
     def _close(self) -> None:
         with self._lock:
@@ -638,10 +635,6 @@ class ImapProvider:
         """The credential for the login, decrypted for this one use."""
         field = "access_token" if self._auth == "xoauth2" else "password"
         return self._credentials(field).get_secret_value()
-
-    def _smtp_login(self) -> SmtpLogin:
-        """The same credential as IMAP."""
-        return SmtpLogin(self._smtp_username, self._secret(), self._auth)
 
     def _login(self, session: ImapSession) -> None:
         if self._auth == "xoauth2":
@@ -677,19 +670,3 @@ def _missing(
 ) -> dict[int, MessageSummary | MailboxApiError]:
     """``NotFoundError`` for every UID the folder no longer holds."""
     return {uid: NotFoundError("message not found") for uid in uids if uid not in found}
-
-
-def _smtp_session(settings: Any, factory: SmtpFactory) -> SmtpSession | None:
-    """The SMTP server for sending, from ``smtp_host``, ``smtp_port`` and
-    ``smtp_security``. None when the account has none: it cannot send."""
-    host = settings.get("smtp_host")
-    if not host:
-        return None
-    security = settings.get("smtp_security", "tls")
-    if security not in SMTP_PORTS:
-        raise BadRequestError(
-            "settings.smtp_security must be 'tls' or 'starttls': "
-            "SMTP without encryption is not supported"
-        )
-    port = int(settings.get("smtp_port") or SMTP_PORTS[security])
-    return factory(SmtpServer(host=str(host), port=port, security=str(security)))
