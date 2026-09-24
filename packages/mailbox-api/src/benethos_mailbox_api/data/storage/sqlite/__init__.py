@@ -8,6 +8,7 @@ from .credentials import SqliteCredentialRepository, SqliteKeyRepository
 from .database import SCHEMA_VERSION, Database, inspect_snapshot
 from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
+from .sends import SqliteSendLogRepository
 from .users import SqliteRoleRepository, SqliteTokenRepository, SqliteUserRepository
 
 __all__ = [
@@ -19,6 +20,7 @@ __all__ = [
     "SqliteKeyRepository",
     "SqliteMessageIndexRepository",
     "SqliteRoleRepository",
+    "SqliteSendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",
     "inspect_snapshot",

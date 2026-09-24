@@ -9,6 +9,8 @@ from benethos_mailbox_api.main import Services
 from .conftest import bearer_for, create_account
 
 READ_A = {"accounts": ["acc_a"], "allow": ["mail.read"]}
+# As the API answers it: constraints not set are null.
+READ_A_OUT = {**READ_A, "recipients": None, "max_sends_per_day": None}
 
 
 def test_me_for_the_admin_key(client: TestClient, account_id: str) -> None:
@@ -53,7 +55,7 @@ def test_user_lifecycle(client: TestClient) -> None:
 
     patched = client.patch(f"/v1/users/{user['id']}", json={"disabled": True}).json()
     assert patched["disabled"] is True
-    assert patched["grants"] == [READ_A]
+    assert patched["grants"] == [READ_A_OUT]
 
     assert client.delete(f"/v1/users/{user['id']}").status_code == 204
     assert client.get(f"/v1/users/{user['id']}").status_code == 404
@@ -121,13 +123,24 @@ def test_unknown_role_is_a_bad_request(client: TestClient) -> None:
 
 def test_role_lifecycle(client: TestClient) -> None:
     role = {"id": "reader", "grants": [{"accounts": ["*"], "allow": ["mail.read"]}]}
-    assert client.post("/v1/roles", json=role).json() == role
+    stored = {
+        "id": "reader",
+        "grants": [
+            {
+                "accounts": ["*"],
+                "allow": ["mail.read"],
+                "recipients": None,
+                "max_sends_per_day": None,
+            }
+        ],
+    }
+    assert client.post("/v1/roles", json=role).json() == stored
     assert client.post("/v1/roles", json=role).status_code == 409
-    assert client.get("/v1/roles/reader").json() == role
+    assert client.get("/v1/roles/reader").json() == stored
     assert [r["id"] for r in client.get("/v1/roles").json()] == ["reader"]
 
     replaced = client.put("/v1/roles/reader", json={"grants": [READ_A]}).json()
-    assert replaced["grants"] == [READ_A]
+    assert replaced["grants"] == [READ_A_OUT]
 
     user = client.post("/v1/users", json={"name": "u", "roles": ["reader"]}).json()
     assert client.delete("/v1/roles/reader").status_code == 409

@@ -105,4 +105,4 @@ class AuthService:
             raise UnauthorizedError("user is disabled")
         self._tokens.save(token.model_copy(update={"last_used_at": now}))
         roles = {role.id: role for role in self._roles.list()}
-        return Access.for_user(user, roles)
+        return Access.for_user(user, roles, token.id)

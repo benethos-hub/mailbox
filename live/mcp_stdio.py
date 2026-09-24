@@ -12,7 +12,9 @@ there, and puts everything back as it was. A third user may write drafts:
 it writes, replaces and deletes a reply draft; nothing is sent. A fourth
 user may send: it sends one mail twice with the same call and one draft,
 from the first test account to the second only, and deletes both for good
-afterwards. The throwaway database is deleted at the end. Credentials and
+afterwards. Two more users check that a grant's recipients and send limit
+stop a mail, again only between the test accounts, and that the audit
+names each attempt. The throwaway database is deleted at the end. Credentials and
 mail content are never printed.
 """
 
@@ -95,13 +97,18 @@ def start_service(env: dict[str, str], url: str) -> subprocess.Popen[bytes]:
     sys.exit("the service did not start")
 
 
-def user_token(client: httpx.Client, account_ids: list[str], allow: list[str]) -> str:
+def user_token(
+    client: httpx.Client,
+    account_ids: list[str],
+    allow: list[str],
+    **constraints: Any,
+) -> str:
     """A user with ``allow`` on the test accounts, and a token for it."""
     user = client.post(
         "/v1/users",
         json={
             "name": f"mcp live check {'+'.join(allow)}",
-            "grants": [{"accounts": account_ids, "allow": allow}],
+            "grants": [{"accounts": account_ids, "allow": allow, **constraints}],
         },
     ).json()
     created = client.post(f"/v1/users/{user['id']}/tokens", json={"name": "live"})
@@ -469,21 +476,88 @@ async def check_sending(
         )
         run.check("the sent draft arrived", bool(arrived(admin, receiver, subjects[1])))
     finally:
-        removed = 0
-        for account_id, folder in ((receiver, "inbox"), (sender, "sent")):
+        delete_test_mails(admin, ids, subjects)
+
+
+def delete_test_mails(admin: httpx.Client, ids: list[str], subjects: list[str]) -> None:
+    """The mails with these subjects, for good: in the second test account's
+    inbox and the first one's sent folder."""
+    sender, receiver = ids
+    removed = 0
+    for account_id, folder in ((receiver, "inbox"), (sender, "sent")):
+        for title in subjects:
+            page = admin.get(
+                f"/v1/accounts/{account_id}/messages",
+                params={"folder": folder, "q": title, "limit": 10},
+            ).json()
+            for message in page.get("items", []):
+                if message.get("subject") == title:
+                    admin.delete(
+                        f"/v1/accounts/{account_id}/messages/{message['id']}",
+                        params={"permanent": True},
+                    )
+                    removed += 1
+    print(f"      cleanup: {removed} test mail(s) deleted for good")
+
+
+async def check_constraints(
+    run: Run,
+    url: str,
+    admin: httpx.Client,
+    ids: list[str],
+    emails: list[str],
+) -> None:
+    """Grants that narrow sending, and the audit. Only between the test
+    accounts: the recipient that must be refused is the second test account
+    too, so a failing check still sends nowhere else."""
+    sender, _ = ids
+    own, other = emails
+    subject = f"mailbox-api MCP limit check {secrets.token_hex(4)}"
+    subjects = [subject, f"{subject} 2"]
+    only_self = user_token(admin, ids, ["send"], recipients=[own])
+    once = user_token(admin, ids, ["send"], recipients=[other], max_sends_per_day=1)
+    try:
+        async with mcp_session(url, only_self) as session:
+            refused = await session.call_tool(
+                "send_message",
+                {"account_id": sender, "to": [other], "subject": subject, "text": "x"},
+            )
+            run.check(
+                "a grant's recipients stop a mail to anyone else",
+                bool(refused.is_error) and "recipient_not_allowed" in text_of(refused),
+                "refused" if refused.is_error else "sent",
+            )
+        async with mcp_session(url, once) as session:
+            results = []
             for title in subjects:
-                page = admin.get(
-                    f"/v1/accounts/{account_id}/messages",
-                    params={"folder": folder, "q": title, "limit": 10},
-                ).json()
-                for message in page.get("items", []):
-                    if message.get("subject") == title:
-                        admin.delete(
-                            f"/v1/accounts/{account_id}/messages/{message['id']}",
-                            params={"permanent": True},
-                        )
-                        removed += 1
-        print(f"      cleanup: {removed} test mail(s) deleted for good")
+                results.append(
+                    await session.call_tool(
+                        "send_message",
+                        {
+                            "account_id": sender,
+                            "to": [other],
+                            "subject": title,
+                            "text": "x",
+                        },
+                    )
+                )
+            first, second = results
+            run.check(
+                "a grant's send limit stops the second mail of the day",
+                not first.is_error
+                and bool(second.is_error)
+                and "send_limit_reached" in text_of(second),
+                "stopped" if second.is_error else "sent",
+            )
+        audit = admin.get(f"/v1/accounts/{sender}/sends", params={"limit": 3}).json()
+        outcomes = [record["outcome"] for record in audit.get("items", [])]
+        run.check(
+            "the audit names every attempt, newest first",
+            outcomes == ["denied", "sent", "denied"],
+            ", ".join(outcomes),
+        )
+    finally:
+        delete_test_mails(admin, ids, subjects)
 
 
 def main() -> int:
@@ -533,6 +607,15 @@ def main() -> int:
             print("\n== the MCP server over stdio, sending")
             anyio.run(
                 check_sending, run, url, sender, client, ids, test_accounts[1]["email"]
+            )
+            print("\n== grants that narrow sending, and the audit")
+            anyio.run(
+                check_constraints,
+                run,
+                url,
+                client,
+                ids,
+                [a["email"] for a in test_accounts],
             )
     finally:
         process.terminate()

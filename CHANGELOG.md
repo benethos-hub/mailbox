@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Grants in responses carry `recipients` and `max_sends_per_day`, null
+  where not set.
+
 - `GET /v1/me` lists `accounts` as objects with `id`, `email`,
   `display_name` and `operations`, instead of a map from id to operations.
 - New ids of accounts, users, tokens, keys and messages carry 64 random
@@ -26,6 +29,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   `503 setup_required`.
 
 ### Added
+
+- Grants take `recipients` (addresses, `*@domain`, `*`) and
+  `max_sends_per_day`, which narrow `send_message` and `send_draft`:
+  `403 recipient_not_allowed`, `429 send_limit_reached` with
+  `Retry-After`. A user with `users.manage` hands out sending only as
+  narrow as its own.
+- `GET /v1/accounts/{account_id}/sends`: every attempt to send, with user,
+  token, recipients and outcome, never content. Right `list_sends`, group
+  `audit`.
 
 - MCP server: `list_folders`, `search_messages` and `get_message` besides
   `list_accounts`, which now says what may be done on each account. Only

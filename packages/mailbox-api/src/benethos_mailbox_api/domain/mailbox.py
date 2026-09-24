@@ -31,6 +31,7 @@ from ..data.models import (
     OutgoingMessage,
     Page,
     Recipient,
+    SendRecord,
     SendResult,
     SentMessage,
 )
@@ -40,6 +41,7 @@ from . import merge, replies
 from .access import Access
 from .accounts import AccountService
 from .idempotency import Idempotency
+from .sending import SendControl
 from .sync import SyncService
 
 T = TypeVar("T")
@@ -53,11 +55,16 @@ class MailboxService:
     """Callers see our stable message ids (``sync``), providers their own."""
 
     def __init__(
-        self, accounts: AccountService, sync: SyncService, idempotency: Idempotency
+        self,
+        accounts: AccountService,
+        sync: SyncService,
+        idempotency: Idempotency,
+        sends: SendControl,
     ) -> None:
         self._accounts = accounts
         self._sync = sync
         self._idempotency = idempotency
+        self._sends = sends
 
     async def list_folders(self, access: Access, account_id: str) -> list[Folder]:
         access.require("list_folders", account_id)
@@ -268,18 +275,28 @@ class MailboxService:
             idempotency_key,
             "send_message",
             message,
-            lambda: self._send(account_id, message),
+            lambda: self._send(access, account_id, message),
             SendResult,
         )
 
-    async def _send(self, account_id: str, message: OutgoingMessage) -> SendResult:
+    async def _send(
+        self, access: Access, account_id: str, message: OutgoingMessage
+    ) -> SendResult:
         account = self._accounts.record(account_id)
         raw, message_id, message, original = await self._compose(
             account_id, message, draft=False
         )
-        sent = await self._call(
+        # Checked once composed: a reply finds its recipients in the original.
+        recipients = message.recipients()
+        sent = await self._sends.send(
+            access,
+            "send_message",
             account_id,
-            lambda p: p.send(raw, account.email, message.recipients()),
+            recipients,
+            lambda: self._call(
+                account_id, lambda p: p.send(raw, account.email, recipients)
+            ),
+            message_id,
         )
         if message.reference is not None and original is not None:
             await self._mark_answered(account_id, message.reference, original)
@@ -387,6 +404,12 @@ class MailboxService:
                 "sent, but %s not set on the original: %s", keyword, exc.message
             )
 
+    def list_sends(
+        self, access: Access, account_id: str, *, limit: int, cursor: str | None
+    ) -> Page[SendRecord]:
+        """The audit of sends from an account, newest first."""
+        return self._sends.list_sends(access, account_id, limit=limit, cursor=cursor)
+
     # --- drafts ---------------------------------------------------------------------
 
     async def list_drafts(
@@ -445,11 +468,13 @@ class MailboxService:
             idempotency_key,
             "send_draft",
             _DraftToSend(draft_id=draft_id),
-            lambda: self._send_draft(account_id, draft_id),
+            lambda: self._send_draft(access, account_id, draft_id),
             SendResult,
         )
 
-    async def _send_draft(self, account_id: str, draft_id: str) -> SendResult:
+    async def _send_draft(
+        self, access: Access, account_id: str, draft_id: str
+    ) -> SendResult:
         account = self._accounts.record(account_id)
         stored = await self._on_message(
             account_id, draft_id, lambda p, native: p.get_draft(native)
@@ -461,8 +486,15 @@ class MailboxService:
         )
         if not out.recipients:
             raise BadRequestError("the draft has no recipients")
-        sent = await self._call(
-            account_id, lambda p: p.send(out.raw, account.email, out.recipients)
+        sent = await self._sends.send(
+            access,
+            "send_draft",
+            account_id,
+            out.recipients,
+            lambda: self._call(
+                account_id, lambda p: p.send(out.raw, account.email, out.recipients)
+            ),
+            out.message_id,
         )
         # Sent: from here on nothing may fail, or a client would send again.
         try:

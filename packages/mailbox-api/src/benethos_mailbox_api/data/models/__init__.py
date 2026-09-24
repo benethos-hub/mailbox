@@ -8,6 +8,7 @@ Callers import from here, not the modules.
 from __future__ import annotations
 
 from .accounts import Account, AccountStatus, CredentialInfo, ProviderType
+from .audit import SendOutcome, SendRecord
 from .batch import BatchItemResult, BatchResult, ItemError, MessageBatch
 from .discovery import (
     Candidate,
@@ -81,6 +82,8 @@ __all__ = [
     "Recipient",
     "Role",
     "Security",
+    "SendOutcome",
+    "SendRecord",
     "SendResult",
     "SentMessage",
     "ServerProtocol",

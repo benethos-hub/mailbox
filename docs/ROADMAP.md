@@ -101,10 +101,10 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **MCP draft tools `list_drafts`, `create_draft`, `update_draft`,
   `delete_draft` (8)**, done
 - **MCP send tools `send_message` and `send_draft` (8)**, done
-- Prompt injection measures (7.7): mail content marked as foreign and
-  hidden HTML dropped (done); the read-and-send warning, send audit
-- Grant constraints `recipients` and `max_sends_per_day` (7.5), together
-  with the send tools
+- **Grant constraints `recipients` and `max_sends_per_day` (7.5), with the
+  audit of sends (`GET {acc}/sends`)**, done
+- Prompt injection measures (7.7): mail content marked as foreign, hidden
+  HTML dropped, send audit (done); the read-and-send warning
 - Policy file, nothing enabled by default
 - Bearer guard for the MCP server's HTTP transport
 - Container image and compose file for the service, bound to the loopback

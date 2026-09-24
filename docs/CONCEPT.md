@@ -581,6 +581,7 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
 | PUT | `{acc}/drafts/{draft_id}` | replace |
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
 | POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
+| GET | `{acc}/sends` | the audit of sends, newest first |
 
 **Decided 2026-09-24, reply and forward:**
 
@@ -943,6 +944,7 @@ with the role
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
+  | `audit` | `list_sends` |
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
   | `webhooks.manage` | webhook routes |
   | `users.manage` | users, their tokens, roles. Not account-bound |
@@ -976,6 +978,26 @@ with the role
   injection (7.7). `folders` (read only `INBOX` and `Rechnungen`) follows
   later.
 
+  **Decided 2026-09-24:** `recipients` takes addresses, `*@domain` and `*`
+  (anyone), without regard to case; a subdomain is named on its own.
+  Constraints count per grant: a send is allowed when one grant that allows
+  it on the account accepts every recipient and its limit is not reached.
+  `max_sends_per_day` counts mails, whatever their number of recipients,
+  that the user sent from the account in the last 24 hours, rolling.
+
+  Rules of the implementation (phase 3):
+  - Null means no constraint. Recipients are checked once the mail is
+    composed: To, Cc and Bcc, and for a reply the recipients taken from the
+    original; `send_draft` checks the stored draft.
+  - A refused recipient answers `403 recipient_not_allowed`, a reached
+    limit `429 send_limit_reached` with `Retry-After`. A retry with its
+    `Idempotency-Key` returns the stored result and is not counted again.
+  - Only sends with the outcome `sent` count. Sends of one user from one
+    account run one after the other, so two cannot both pass the limit.
+  - No escalation: a user with `users.manage` hands out `send_message` or
+    `send_draft` only as narrow as one of its own grants for them, or
+    narrower. The admin key has no constraints.
+
 #### Credentials
 
 - **API token**, the first and for now only kind:
@@ -1008,6 +1030,15 @@ tokens are created through the API.
 
 User, credential, operation, account, status, time. Never content, never a
 secret.
+
+**Decided 2026-09-24:** the audit of sends is built first, together with
+the send limits, which count from it. Every attempt through `send_message`
+or `send_draft` is one record: time, user, token (null for the admin key),
+account, operation, recipients, outcome (`sent`, `denied` by a grant,
+`failed`), error code, refused recipients and the Message-ID. It keeps no
+reference to account or user, so it outlives both.
+`GET /v1/accounts/{account_id}/sends` reads it, newest first, with the
+right `list_sends` (group `audit`).
 
 #### Endpoints
 
