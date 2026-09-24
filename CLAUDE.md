@@ -41,8 +41,11 @@ done. Update the roadmap in the same commit that finishes an item.
   `.env.example`. Paths count from the repository root, where `uv run` is
   started. Data likewise, one folder per package under `data/` (not
   versioned): the database in `data/benethos-mailbox-api/`.
-- Run the service: `MAILBOX_API_KEY=... uv run benethos-mailbox-api serve`,
-  then `http://127.0.0.1:8080/docs`.
+- Run the service: once `uv run benethos-mailbox-api keys init`, then
+  `MAILBOX_API_KEY=... uv run benethos-mailbox-api serve` and
+  `http://127.0.0.1:8080/docs`.
+- Live checks: `uv run python live/smoke.py [--show]`, test accounts in
+  `live/.env` (not versioned, template `live/.env.example`).
 - Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`.
 
 ## Project layout
@@ -64,9 +67,10 @@ docs/
 packages/
   mailbox-api/            # the service, runs permanently
     src/benethos_mailbox_api/
-      __main__.py         # CLI: serve, openapi
+      __main__.py         # CLI: serve, openapi, users, keys, backup, restore
       main.py             # assembly only: create_app, picks implementations
-      config.py           # cross-cutting: Settings (MAILBOX_API_* env, .env)
+      config.py           # cross-cutting: Settings (MAILBOX_API_* env and
+                          #   config/benethos-mailbox-api/.env)
       errors.py           # cross-cutting: MailboxApiError hierarchy, no HTTP
       web/                # PRESENTATION: HTTP only, FastAPI lives here
         __init__.py       # include_routes: /health open, the rest under /v1
@@ -78,6 +82,11 @@ packages/
       domain/             # BUSINESS LOGIC: decides, knows no HTTP
         accounts.py       # AccountService: accounts and their live adapters
         mailbox.py        # MailboxService: folders and messages
+        discovery.py      # DiscoveryService: trust, ranking, cache, limits
+        permissions.py    # the catalogue of rights and groups
+        access.py         # Access: what one caller may do
+        auth.py           # AuthService: tokens, the admin key
+        users.py          # UserService: users, roles, tokens
       data/               # DATA: reads and writes, decides nothing
         models.py         # provider-neutral types (Account, Folder, Message)
         providers/        # registry in __init__.py, base.py protocol,
@@ -165,11 +174,11 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for imap-tools |
+| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap; planned: gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for imap-tools |
 | Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, users in phase 1) | in-memory, SQLite (phase 1) | another database |
-| Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, autoconfig, JMAP well-known, ISPDB, MX, SRV, guessing | any further lookup, or one switched off |
-| Secret encryption | a key provider protocol (phase 1) | keyring, file, env | a secret manager such as Vault |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`) | in-memory, SQLite | another database |
+| Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX; planned: JMAP well-known, Microsoft realm, SRV, guessing | any further lookup, or one switched off |
+| Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token | password + TOTP, OAuth client credentials |
 | MCP ↔ service | the REST API, `docs/openapi.json` | httpx client in `client.py` | a generated client |
 

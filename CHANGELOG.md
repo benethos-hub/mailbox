@@ -93,8 +93,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_accounts`. Configured by `MAILBOX_API_URL` and `MAILBOX_API_TOKEN`.
 - REST skeleton on FastAPI: `/health`, account CRUD, folder list, message list
   with cursor pagination and filters, single message.
-- Bearer authentication on every `/v1` route. Without `MAILBOX_API_KEY` the
-  API refuses every request.
+- Bearer authentication on every `/v1` route.
 - In-memory provider for tests and local development.
 - OpenAPI 3.1 document with stable `operationId`s, the `bearerAuth` scheme
   and documented error responses. `benethos-mailbox-api openapi` prints it,

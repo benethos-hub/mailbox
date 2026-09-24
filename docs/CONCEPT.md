@@ -50,6 +50,8 @@ REST client can do too.
    models      provider-neutral types
    providers/  imap · gmail · microsoft · pop3 · memory, behind a registry
    storage/    own records: accounts, users, credentials
+   secrets/    envelope encryption, key providers, backup
+   discovery/  autodiscovery sources
 ```
 
 - **Two front ends, one domain.** The JSON API and the configuration UI are
@@ -598,8 +600,9 @@ One envelope for every error the API raises itself:
 | 422 | FastAPI validation format | schema violation |
 | 429 | `rate_limited` | with `Retry-After` |
 | 501 | `not_supported` | capability missing |
-| 502 | `provider_error`, `provider_auth_failed` | upstream failed; auth failure also sets the account to `needs_reauth` |
-| 503 | `service_unavailable` | no API key configured |
+| 500 | `credential_unreadable` | a stored credential cannot be decrypted |
+| 502 | `provider_error`, `provider_auth_failed`, `provider_unavailable` | upstream failed; auth failure sets the account to `needs_reauth`, an unreachable server to `unreachable` |
+| 503 | `setup_required` | neither a user nor `MAILBOX_API_KEY` exists yet |
 
 ### 6.8 OpenAPI
 
@@ -614,7 +617,7 @@ Rules, all built and tested:
 - Every `/v1` operation declares the `bearerAuth` scheme and documents its
   error responses with the `ErrorResponse` schema.
 - Every `/v1` operation declares its required right as `x-permission`
-  (7.5). **(planned, phase 1)**
+  (7.5).
 - Interactive docs at `/docs` (Swagger UI) and `/redoc`.
 
 ## 7. Security
@@ -1133,7 +1136,8 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    the filtering gateway in front of a mail server.
 3. **Gmail / Microsoft priority:** are they needed early, or are GMX / web.de
    / T-Online over IMAP the main use?
-4. **Sending from the MCP server:** allowed at all, or drafts only?
+4. **Sending from the MCP server:** decided 2026-09-24, both stay open,
+   governed by rights and the policy file (7.7).
 5. **Local cache:** list and search go straight to the provider in the
    design above. A local index (SQLite FTS) would make search across all
    accounts fast, at the cost of a sync engine. Decide after phase 3.
