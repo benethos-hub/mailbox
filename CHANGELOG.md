@@ -13,6 +13,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `benethos-mailbox-api backup FILE`, `backup verify FILE` and
+  `restore FILE`: encrypted backups of the whole database, opened with the
+  master key or, with `--recovery-key`, the recovery key.
 - Accounts take `credentials` on creation. They are stored encrypted and
   never returned; an account lists only which credentials it has.
 - `benethos-mailbox-api keys init` creates the keys and prints the recovery

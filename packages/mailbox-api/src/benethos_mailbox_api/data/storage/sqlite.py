@@ -122,6 +122,16 @@ class Database:
         with self._lock:
             self._connection.close()
 
+    def snapshot(self) -> bytes:
+        """A consistent copy of the whole database, taken while it is in use."""
+        with self._lock:
+            copy = sqlite3.connect(":memory:")
+            try:
+                self._connection.backup(copy)
+                return copy.serialize()
+            finally:
+                copy.close()
+
     def _migrate(self) -> None:
         with self.transaction() as db:
             db.execute(
@@ -142,6 +152,26 @@ class Database:
                     " VALUES ('schema_version', ?)",
                     (str(version + 1),),
                 )
+
+
+def inspect_snapshot(data: bytes) -> int:
+    """Check a snapshot's integrity and return its schema version."""
+    copy = sqlite3.connect(":memory:")
+    try:
+        copy.deserialize(data)
+        result = copy.execute("PRAGMA integrity_check").fetchone()[0]
+        if result != "ok":
+            raise ValueError(f"database integrity check failed: {result}")
+        row = copy.execute(
+            "SELECT value FROM meta WHERE key = 'schema_version'"
+        ).fetchone()
+    except sqlite3.DatabaseError as exc:
+        raise ValueError(f"not a database: {exc}") from None
+    finally:
+        copy.close()
+    if row is None:
+        raise ValueError("not a database of this service")
+    return int(row[0])
 
 
 def _statements(script: str) -> list[str]:

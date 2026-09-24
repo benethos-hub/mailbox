@@ -79,6 +79,10 @@ class CredentialVault:
 
     def master_key(self) -> bytes:
         """The master key from the provider. For backups, which derive from it."""
+        if not self.initialized():
+            raise SetupRequiredError(
+                "no keys exist yet: run `benethos-mailbox-api keys init`"
+            )
         kek = self._provider.load()
         if kek is None:
             raise SetupRequiredError(

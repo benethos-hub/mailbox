@@ -118,6 +118,20 @@ out of the database, in the key provider. `keys init` prints a recovery key
 once: keep it apart from backups. `keys import` reads it back into the key
 provider, for example on a new machine.
 
+### Backup and restore
+
+```
+uv run benethos-mailbox-api backup mailbox.bak          # while the service runs
+uv run benethos-mailbox-api backup verify mailbox.bak
+uv run benethos-mailbox-api restore mailbox.bak         # service stopped
+uv run benethos-mailbox-api restore mailbox.bak --recovery-key   # on a new machine
+```
+
+A backup holds accounts, users, rights, token hashes and the encrypted
+credentials, never mail. The whole file is encrypted, and it opens only with
+the master key or the recovery key, which are not in it. `restore` keeps the
+previous database beside the restored one.
+
 ### Authentication
 
 **Every route under `/v1` requires authentication.** Nothing is served

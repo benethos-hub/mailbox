@@ -19,6 +19,7 @@ from .sqlite import (
     SqliteRoleRepository,
     SqliteTokenRepository,
     SqliteUserRepository,
+    inspect_snapshot,
 )
 from .users import (
     InMemoryRoleRepository,
@@ -38,6 +39,7 @@ __all__ = [
     "SqliteCredentialRepository",
     "SqliteKeyRepository",
     "WrappedKey",
+    "inspect_snapshot",
     "AccountRepository",
     "Database",
     "SqliteAccountRepository",
