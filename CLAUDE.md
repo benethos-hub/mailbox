@@ -93,7 +93,9 @@ packages/
         auth.py           # AuthService: tokens, the admin key
         users.py          # UserService: users, roles, tokens
       data/               # DATA: reads and writes, decides nothing
-        models.py         # provider-neutral types (Account, Folder, Message)
+        models/           # provider-neutral types, one module per subject:
+                          #   accounts, users, folders, messages, batch,
+                          #   sending, paging, discovery
         mime.py           # outgoing messages as RFC 5322 bytes (email)
         providers/        # registry in __init__.py, base.py protocol,
                           #   one directory per provider: memory/, imap/, ...
@@ -164,7 +166,7 @@ noticing. Every change is measured against that.
    of importing it a second time. The one deliberate exception is pydantic,
    which is how this project writes its own types.
 3. **Translate at the edge.** A wrapper maps everything into this project's
-   types on the way in (`models.py`) and every failure into a
+   types on the way in (`data/models/`) and every failure into a
    `MailboxApiError` subclass. Nothing upstream sees a raw library exception
    or response.
 4. **Dependencies point inward.** Routes know the store and the models. The
