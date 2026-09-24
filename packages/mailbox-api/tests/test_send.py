@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from benethos_mailbox_api.data import mime
+from benethos_mailbox_api.data.mail import compose
 from benethos_mailbox_api.data.models import (
     Grant,
     OutgoingMessage,
@@ -51,7 +51,7 @@ SENDER = Recipient(email="me@example.com", name="Me")
 
 
 def test_compose() -> None:
-    raw = mime.compose(
+    raw = compose.message(
         MESSAGE, SENDER, datetime(2026, 9, 24, 12, 0, tzinfo=UTC), "<id@example.com>"
     )
     assert b"\r\n" in raw and b"\n" not in raw.replace(b"\r\n", b"")
@@ -71,7 +71,7 @@ def test_compose() -> None:
 
 
 def test_a_message_id_in_the_sender_domain() -> None:
-    assert mime.new_message_id("me@example.com").endswith("@example.com>")
+    assert compose.new_message_id("me@example.com").endswith("@example.com>")
 
 
 def test_recipients_each_once() -> None:
@@ -105,7 +105,7 @@ def adapter(box: FakeMailBox, smtp: FakeSmtpServer, **settings: object) -> ImapP
     )
 
 
-RAW = mime.compose(MESSAGE, SENDER, datetime.now(UTC), "<one@example.com>")
+RAW = compose.message(MESSAGE, SENDER, datetime.now(UTC), "<one@example.com>")
 TO = ["you@example.com", "cc@example.com", "hidden@example.com"]
 
 

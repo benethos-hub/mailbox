@@ -14,7 +14,7 @@ from email.policy import SMTP, default
 from email.utils import format_datetime, formataddr, make_msgid
 from html import escape
 
-from .models import Address, Message, OutgoingMessage, Recipient
+from ..models import Address, Message, OutgoingMessage, Recipient
 
 
 def new_message_id(sender_email: str) -> str:
@@ -34,7 +34,7 @@ class Extras:
     attached_message: bytes | None = None
 
 
-def compose(
+def message(
     message: OutgoingMessage,
     sender: Recipient,
     date: datetime,

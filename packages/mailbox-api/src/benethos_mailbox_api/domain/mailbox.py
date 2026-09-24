@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any, TypeVar
 
-from ..data import mime
+from ..data.mail import compose
 from ..data.models import (
     AccountFailure,
     AttachmentContent,
@@ -257,7 +257,7 @@ class MailboxService:
 
     async def _send(self, account_id: str, message: OutgoingMessage) -> SendResult:
         account = self._accounts.record(account_id)
-        extras = mime.Extras()
+        extras = compose.Extras()
         original: Message | None = None
         if message.reference is not None:
             original = await self._on_message(
@@ -268,8 +268,8 @@ class MailboxService:
             message, extras = await self._answer(
                 account_id, account.email, message, message.reference, original
             )
-        message_id = mime.new_message_id(account.email)
-        raw = mime.compose(
+        message_id = compose.new_message_id(account.email)
+        raw = compose.message(
             message,
             Recipient(email=account.email, name=account.display_name),
             # Local time with its offset, as mail clients write it.
@@ -300,7 +300,7 @@ class MailboxService:
         message: OutgoingMessage,
         reference: MessageReference,
         original: Message,
-    ) -> tuple[OutgoingMessage, mime.Extras]:
+    ) -> tuple[OutgoingMessage, compose.Extras]:
         """Fetch what the reply or forward needs of the original; ``replies``
         makes it."""
         raw = await self._on_message(

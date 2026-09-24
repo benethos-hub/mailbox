@@ -29,6 +29,8 @@ from ....errors import (
     ProviderAuthError,
     ProviderUnavailableError,
 )
+from ...mail import convert
+from ...mail.parse import ParsedMessage
 from ...models import (
     AttachmentContent,
     Folder,
@@ -46,7 +48,6 @@ from ..sender import SmtpFactory, SmtpSender
 from ..smtp import SmtpSession
 from . import mappers
 from .client import ImapServer, ImapSession, SearchCriteria
-from .parse import FetchedMessage
 
 T = TypeVar("T")
 
@@ -339,16 +340,8 @@ class ImapProvider:
         return mappers.to_message(message, folder, validity)
 
     def _get_attachment(self, message_id: str, attachment_id: str) -> AttachmentContent:
-        index = mappers.attachment_index(attachment_id)
         message, _, _ = self._fetch(message_id)
-        if index >= len(message.attachments):
-            raise NotFoundError(f"attachment {attachment_id} not found")
-        part = message.attachments[index]
-        return AttachmentContent(
-            filename=part.filename or None,
-            content_type=part.content_type or "application/octet-stream",
-            data=part.payload,
-        )
+        return convert.attachment(message, attachment_id)
 
     # --- sending ---------------------------------------------------------------------
 
@@ -361,7 +354,7 @@ class ImapProvider:
         uid = self._session.append(sent, raw, ["\\Seen"])
         validity = self._session.select(sent)
         if uid is None:
-            header = mappers.message_id_header(FetchedMessage(0, (), raw))
+            header = convert.message_id_header(ParsedMessage(raw))
             matches = self._session.search_message_id(header) if header else []
             uid = matches[-1] if matches else None
         found = self._session.fetch_headers([uid]) if uid else []
@@ -516,7 +509,7 @@ class ImapProvider:
         new_uids = self._session.move(list(found), target)
         target_validity = self._session.select(target)
         for uid, message in found.items():
-            header = mappers.message_id_header(message)
+            header = convert.message_id_header(message)
             if uid not in new_uids and header:
                 # No COPYUID: find it by its Message-ID, if that is unambiguous.
                 matches = self._session.search_message_id(header)

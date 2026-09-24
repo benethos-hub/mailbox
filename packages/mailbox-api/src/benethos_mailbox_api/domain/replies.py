@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..data import mime
+from ..data.mail import compose
 from ..data.models import Message, MessageReference, OutgoingMessage, Recipient
 from ..errors import BadRequestError
 
@@ -23,20 +23,22 @@ def reply(
     original: Message,
     raw: bytes,
     own_address: str,
-) -> tuple[OutgoingMessage, mime.Extras]:
+) -> tuple[OutgoingMessage, compose.Extras]:
     """``reply`` or ``reply_all``, in the original's thread."""
-    in_reply_to, chain = mime.references(raw)
+    in_reply_to, chain = compose.references(raw)
     changes: dict[str, Any] = {
-        "subject": message.subject or mime.prefixed("Re:", original.subject),
-        "text": mime.quoted(original, message.text),
+        "subject": message.subject or compose.prefixed("Re:", original.subject),
+        "text": compose.quoted(original, message.text),
     }
     if message.html is not None:
-        changes["html"] = mime.quoted_html(original, message.html, "Original message")
+        changes["html"] = compose.quoted_html(
+            original, message.html, "Original message"
+        )
     if not message.recipients():
         changes.update(_recipients(original, action, own_address))
     return (
         message.model_copy(update=changes),
-        mime.Extras(in_reply_to=in_reply_to, references=chain),
+        compose.Extras(in_reply_to=in_reply_to, references=chain),
     )
 
 
@@ -46,18 +48,20 @@ def forward(
     original: Message,
     raw: bytes,
     files: list[AttachedFile],
-) -> tuple[OutgoingMessage, mime.Extras]:
+) -> tuple[OutgoingMessage, compose.Extras]:
     """``inline``: quoted with its headers, ``files`` attached.
     ``attachment``: the unchanged original as ``message/rfc822``."""
     changes: dict[str, Any] = {
-        "subject": message.subject or mime.prefixed("Fwd:", original.subject)
+        "subject": message.subject or compose.prefixed("Fwd:", original.subject)
     }
     if forward_as == "attachment":
-        return message.model_copy(update=changes), mime.Extras(attached_message=raw)
-    changes["text"] = mime.forwarded(original, message.text)
+        return message.model_copy(update=changes), compose.Extras(attached_message=raw)
+    changes["text"] = compose.forwarded(original, message.text)
     if message.html is not None:
-        changes["html"] = mime.quoted_html(original, message.html, "Forwarded message")
-    return message.model_copy(update=changes), mime.Extras(attachments=tuple(files))
+        changes["html"] = compose.quoted_html(
+            original, message.html, "Forwarded message"
+        )
+    return message.model_copy(update=changes), compose.Extras(attachments=tuple(files))
 
 
 def answered_keyword(reference: MessageReference) -> str:

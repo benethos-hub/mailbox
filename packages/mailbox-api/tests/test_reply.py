@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_api.config import Settings
-from benethos_mailbox_api.data import mime
+from benethos_mailbox_api.data.mail import compose
 from benethos_mailbox_api.data.models import (
     Address,
     Grant,
@@ -53,21 +53,21 @@ ORIGINAL = Message(
     [("Angebot", "Re: Angebot"), ("RE: Angebot", "RE: Angebot"), (None, "Re:")],
 )
 def test_prefixed(subject: str | None, expected: str) -> None:
-    assert mime.prefixed("Re:", subject) == expected
+    assert compose.prefixed("Re:", subject) == expected
 
 
 def test_references_carry_the_chain() -> None:
     raw = b"Message-ID: <3@x>\r\nReferences: <1@x> <2@x>\r\n\r\nbody"
-    assert mime.references(raw) == ("<3@x>", ("<1@x>", "<2@x>", "<3@x>"))
+    assert compose.references(raw) == ("<3@x>", ("<1@x>", "<2@x>", "<3@x>"))
 
 
 def test_references_from_in_reply_to_alone() -> None:
     raw = b"Message-ID: <3@x>\r\nIn-Reply-To: <2@x>\r\n\r\nbody"
-    assert mime.references(raw) == ("<3@x>", ("<2@x>", "<3@x>"))
+    assert compose.references(raw) == ("<3@x>", ("<2@x>", "<3@x>"))
 
 
 def test_a_quote() -> None:
-    text = mime.quoted(ORIGINAL, "Gern.")
+    text = compose.quoted(ORIGINAL, "Gern.")
     assert text == (
         "Gern.\n\nOn Tue, 01 Sep 2026 10:00:00 +0000, Alice <alice@example.com> "
         "wrote:\n> Line one\n>\n> Line three\n"
@@ -75,7 +75,7 @@ def test_a_quote() -> None:
 
 
 def test_a_forward_block() -> None:
-    text = mime.forwarded(ORIGINAL, "FYI")
+    text = compose.forwarded(ORIGINAL, "FYI")
     assert "---------- Forwarded message ----------" in text
     assert "From: Alice <alice@example.com>" in text
     assert "Subject: Angebot" in text
@@ -84,7 +84,7 @@ def test_a_forward_block() -> None:
 
 def test_quoted_html_escapes_plain_text() -> None:
     original = ORIGINAL.model_copy(update={"text_body": "<script>x</script>"})
-    html = mime.quoted_html(original, "<p>Hi</p>", "Original message")
+    html = compose.quoted_html(original, "<p>Hi</p>", "Original message")
     assert "&lt;script&gt;" in html
     assert "<script>" not in html
 
