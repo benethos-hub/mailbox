@@ -9,7 +9,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [1a](#phase-1a--users-rights-storage-backup) | Users, rights, storage, backup | **done** |
 | [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | **done** |
 | [1c](#phase-1c--stable-ids-and-sync-worker) | Stable ids and sync worker | **done** |
-| [2](#phase-2--writing-and-sending) | Writing and sending | next |
+| [2](#phase-2--writing-and-sending) | Writing and sending | in progress |
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | |
 | [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
@@ -79,6 +79,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 2 – Writing and sending
 
+- **IMAP protocol on IMAPClient (5.1)**, done
+- SMTP through the standard library's `smtplib` (5)
 - `COPYUID` keeps the id of a message we move (4.1)
 - Update, delete and batch operations on messages (6.3)
 - Folder create, rename, delete (6.2)
