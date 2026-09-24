@@ -3,9 +3,19 @@
 from __future__ import annotations
 
 from .accounts import AccountRepository, InMemoryAccountRepository
+from .credentials import (
+    CredentialRepository,
+    EncryptedCredential,
+    InMemoryCredentialRepository,
+    InMemoryKeyRepository,
+    KeyRepository,
+    WrappedKey,
+)
 from .sqlite import (
     Database,
     SqliteAccountRepository,
+    SqliteCredentialRepository,
+    SqliteKeyRepository,
     SqliteRoleRepository,
     SqliteTokenRepository,
     SqliteUserRepository,
@@ -20,6 +30,14 @@ from .users import (
 )
 
 __all__ = [
+    "CredentialRepository",
+    "EncryptedCredential",
+    "InMemoryCredentialRepository",
+    "InMemoryKeyRepository",
+    "KeyRepository",
+    "SqliteCredentialRepository",
+    "SqliteKeyRepository",
+    "WrappedKey",
     "AccountRepository",
     "Database",
     "SqliteAccountRepository",

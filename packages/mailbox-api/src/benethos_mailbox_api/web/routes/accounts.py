@@ -19,7 +19,12 @@ async def create_account(
     data: AccountCreate, caller: Caller, accounts: Accounts
 ) -> Account:
     return accounts.create(
-        caller, data.provider, data.email, data.display_name, data.settings
+        caller,
+        data.provider,
+        data.email,
+        data.display_name,
+        data.settings,
+        data.credentials,
     )
 
 

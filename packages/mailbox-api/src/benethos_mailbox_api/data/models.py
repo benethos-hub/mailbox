@@ -43,12 +43,20 @@ class Address(BaseModel):
     name: str | None = None
 
 
+class CredentialInfo(BaseModel):
+    """That a credential is stored, never its value."""
+
+    field: str
+    updated_at: datetime
+
+
 class Account(BaseModel):
     id: str
     provider: ProviderType
     email: str
     display_name: str | None = None
     status: AccountStatus = AccountStatus.CONNECTED
+    credentials: list[CredentialInfo] = Field(default_factory=list)
 
 
 class Grant(BaseModel):

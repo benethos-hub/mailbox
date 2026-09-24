@@ -43,6 +43,10 @@ dependencies = [
     "httpx>=0.28",
     # The per-user data directory for the database.
     "platformdirs>=4.0",
+    # AES-256-GCM for stored credentials.
+    "cryptography>=44",
+    # The OS credential store that holds the master key on a host.
+    "keyring>=25",
 ]
 
 [project.scripts]

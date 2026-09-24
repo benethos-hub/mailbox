@@ -94,6 +94,7 @@ uv run mypy
 ## Running
 
 ```
+uv run benethos-mailbox-api keys init              # once: prints the recovery key
 uv run benethos-mailbox-api users create-admin     # once: prints an admin token
 uv run benethos-mailbox-api serve
 MAILBOX_API_TOKEN=<token> uv run benethos-mailbox-mcp
@@ -108,6 +109,14 @@ SQLite database in the per-user data directory.
 | `MAILBOX_API_DATA_DIR` | where the database lives |
 | `MAILBOX_API_STORAGE` | `sqlite` (default) or `memory`, which keeps nothing |
 | `MAILBOX_API_HOST`, `MAILBOX_API_PORT` | where the API listens, default `127.0.0.1:8080` |
+| `MAILBOX_API_KEY_PROVIDER` | where the master key lives: `keyring` (default), `file` or `env` |
+| `MAILBOX_API_KEY_FILE` | the key file, for `file` |
+| `MAILBOX_API_MASTER_KEY` | the recovery key, for `env` |
+
+Mail credentials are stored encrypted (AES-256-GCM). The master key stays
+out of the database, in the key provider. `keys init` prints a recovery key
+once: keep it apart from backups. `keys import` reads it back into the key
+provider, for example on a new machine.
 
 ### Authentication
 

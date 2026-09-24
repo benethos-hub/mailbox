@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from ..data.models import ApiToken, Grant, ProviderType
 
@@ -17,9 +17,14 @@ class AccountCreate(BaseModel):
     provider: ProviderType
     email: str
     display_name: str | None = None
-    # Provider-specific connection settings (host, port, ...). Credentials are
-    # accepted here once and never returned.
-    settings: dict[str, str | int | bool] = Field(default_factory=dict)
+    settings: dict[str, str | int | bool] = Field(
+        default_factory=dict,
+        description="Provider-specific connection settings: host, port, ...",
+    )
+    credentials: dict[str, SecretStr] = Field(
+        default_factory=dict,
+        description="Secrets such as `password`. Stored encrypted, never returned.",
+    )
 
 
 class ErrorDetail(BaseModel):

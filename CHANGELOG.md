@@ -13,6 +13,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Accounts take `credentials` on creation. They are stored encrypted and
+  never returned; an account lists only which credentials it has.
+- `benethos-mailbox-api keys init` creates the keys and prints the recovery
+  key once, `keys import` stores the master key from a recovery key.
+- Master key providers: the OS credential store (default), a key file, or
+  `MAILBOX_API_MASTER_KEY`.
 - Accounts, users, roles and tokens are stored in SQLite in the per-user
   data directory. `MAILBOX_API_DATA_DIR` moves it, `MAILBOX_API_STORAGE=memory`
   keeps nothing.

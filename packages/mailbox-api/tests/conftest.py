@@ -12,6 +12,7 @@ from pydantic import SecretStr
 from benethos_mailbox_api.config import Settings
 from benethos_mailbox_api.data.models import Address, Grant, Message, ProviderType
 from benethos_mailbox_api.data.providers import (
+    CredentialReader,
     MailProvider,
     ProviderSettings,
     build_provider,
@@ -40,6 +41,8 @@ def no_configuration_from_this_machine(
     monkeypatch.setenv("MAILBOX_API_DATA_DIR", str(tmp_path_factory.mktemp("data")))
     # Tests that want SQLite ask for it.
     monkeypatch.setenv("MAILBOX_API_STORAGE", "memory")
+    # Never the machine's real credential store.
+    monkeypatch.setenv("MAILBOX_API_KEY_PROVIDER", "env")
 
 
 @pytest.fixture
@@ -73,11 +76,13 @@ def services(settings: Settings, messages: list[Message]) -> Services:
     """
 
     def factory(
-        kind: ProviderType, provider_settings: ProviderSettings
+        kind: ProviderType,
+        provider_settings: ProviderSettings,
+        credentials: CredentialReader,
     ) -> MailProvider:
         if kind is ProviderType.MEMORY:
             return MemoryProvider(messages=messages)
-        return build_provider(kind, provider_settings)
+        return build_provider(kind, provider_settings, credentials)
 
     return build_services(settings, provider_factory=factory)
 

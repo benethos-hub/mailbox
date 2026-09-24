@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     data_dir: Path | None = None
     # "memory" keeps nothing across restarts. For tests and trying things out.
     storage: Literal["sqlite", "memory"] = "sqlite"
+    # Where the master key comes from.
+    key_provider: Literal["keyring", "file", "env"] = "keyring"
+    key_file: Path | None = None
+    master_key: SecretStr | None = Field(
+        default=None, validation_alias="MAILBOX_API_MASTER_KEY"
+    )
 
     @property
     def database_path(self) -> Path:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import sys
 
 from . import __version__
@@ -23,6 +24,14 @@ def main(argv: list[str] | None = None) -> int:
         "create-admin", help="create a user with every right and print its token"
     )
     create_admin.add_argument("--name", default="admin")
+    keys = commands.add_parser("keys", help="the master key and the data key")
+    keys_commands = keys.add_subparsers(dest="keys_command", required=True)
+    keys_commands.add_parser(
+        "init", help="create the keys and print the recovery key once"
+    )
+    keys_commands.add_parser(
+        "import", help="store the master key from a recovery key, read from stdin"
+    )
     args = parser.parse_args(argv)
 
     if args.command == "openapi":
@@ -44,6 +53,8 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         print(token)
+    elif args.command == "keys":
+        return _keys(args.keys_command)
     elif args.command == "serve":  # pragma: no branch
         import uvicorn
 
@@ -56,6 +67,35 @@ def main(argv: list[str] | None = None) -> int:
             port=args.port or settings.port,
             log_level=settings.log_level.lower(),
         )
+    return 0
+
+
+def _keys(command: str) -> int:
+    from .data.secrets import decode_recovery
+    from .main import build_services
+
+    settings = Settings()
+    services = build_services(settings)
+    try:
+        if command == "init":
+            recovery = services.vault.initialize()
+            print(
+                "Keys created. The recovery key below is shown this once. Keep it "
+                "apart from any backup: without it, a backup cannot be restored "
+                "on another machine.",
+                file=sys.stderr,
+            )
+            print(recovery)
+        else:
+            text = (
+                getpass.getpass("Recovery key: ")
+                if sys.stdin.isatty()
+                else sys.stdin.readline()
+            )
+            services.vault.import_master_key(decode_recovery(text))
+            print("Master key stored.", file=sys.stderr)
+    finally:
+        services.close()
     return 0
 
 

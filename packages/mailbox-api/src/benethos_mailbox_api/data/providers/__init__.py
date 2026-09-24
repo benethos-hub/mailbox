@@ -13,28 +13,35 @@ from collections.abc import Callable, Mapping
 
 from ...errors import NotSupportedError
 from ..models import ProviderType
-from .base import Capability, MailProvider
+from .base import Capability, CredentialReader, MailProvider
 from .memory import MemoryProvider
 
 ProviderSettings = Mapping[str, str | int | bool]
-ProviderFactory = Callable[[ProviderType, ProviderSettings], MailProvider]
+ProviderFactory = Callable[
+    [ProviderType, ProviderSettings, CredentialReader], MailProvider
+]
 
-_REGISTRY: dict[ProviderType, Callable[[ProviderSettings], MailProvider]] = {
-    ProviderType.MEMORY: lambda _settings: MemoryProvider(),
+_REGISTRY: dict[
+    ProviderType, Callable[[ProviderSettings, CredentialReader], MailProvider]
+] = {
+    ProviderType.MEMORY: lambda _settings, _credentials: MemoryProvider(),
 }
 
 
-def build_provider(kind: ProviderType, settings: ProviderSettings) -> MailProvider:
+def build_provider(
+    kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
+) -> MailProvider:
     """A new adapter for one account."""
     try:
         factory = _REGISTRY[kind]
     except KeyError:
         raise NotSupportedError(f"provider {kind} is not implemented yet") from None
-    return factory(settings)
+    return factory(settings, credentials)
 
 
 __all__ = [
     "Capability",
+    "CredentialReader",
     "MailProvider",
     "ProviderFactory",
     "ProviderSettings",

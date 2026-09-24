@@ -46,6 +46,12 @@ class SetupRequiredError(MailboxApiError):
     code = "setup_required"
 
 
+class CredentialError(MailboxApiError):
+    """A stored credential is missing or cannot be decrypted."""
+
+    code = "credential_unreadable"
+
+
 class ConflictError(MailboxApiError):
     code = "conflict"
 

@@ -16,6 +16,7 @@ from starlette.exceptions import HTTPException
 from ..errors import (
     BadRequestError,
     ConflictError,
+    CredentialError,
     ForbiddenError,
     MailboxApiError,
     NotFoundError,
@@ -37,6 +38,7 @@ STATUS: list[tuple[type[MailboxApiError], int]] = [
     (NotSupportedError, 501),
     (ProviderAuthError, 502),
     (ProviderError, 502),
+    (CredentialError, 500),
     (SetupRequiredError, 503),
 ]
 

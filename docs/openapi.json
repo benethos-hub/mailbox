@@ -2438,6 +2438,13 @@
           "status": {
             "$ref": "#/components/schemas/AccountStatus",
             "default": "connected"
+          },
+          "credentials": {
+            "items": {
+              "$ref": "#/components/schemas/CredentialInfo"
+            },
+            "type": "array",
+            "title": "Credentials"
           }
         },
         "type": "object",
@@ -2483,7 +2490,18 @@
               ]
             },
             "type": "object",
-            "title": "Settings"
+            "title": "Settings",
+            "description": "Provider-specific connection settings: host, port, ..."
+          },
+          "credentials": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "password",
+              "writeOnly": true
+            },
+            "type": "object",
+            "title": "Credentials",
+            "description": "Secrets such as `password`. Stored encrypted, never returned."
           }
         },
         "type": "object",
@@ -2564,6 +2582,26 @@
           "size"
         ],
         "title": "Attachment"
+      },
+      "CredentialInfo": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "updated_at"
+        ],
+        "title": "CredentialInfo",
+        "description": "That a credential is stored, never its value."
       },
       "ErrorDetail": {
         "properties": {
