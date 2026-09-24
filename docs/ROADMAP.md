@@ -84,8 +84,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **`COPYUID` keeps the id of a message we move (4.1)**, done
 - **Update, delete and batch operations on messages (6.3)**, done
 - **Folder create, rename, delete (6.2)**, done
-- **Sending over SMTP (6.4)**, done; reply and forward by reference, `forward_as`,
-  `\Answered` and `$Forwarded` on the original (6.4)
+- **Sending over SMTP, with reply and forward by reference, `forward_as`,
+  `\Answered` and `$Forwarded` on the original (6.4)**, done
 - Drafts
 - **`Idempotency-Key` on send (6.4)**, done
 

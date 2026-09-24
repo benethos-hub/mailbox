@@ -25,6 +25,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   copy in the sent folder; the answer names both and any refused
   recipients. Right: `send_message` (`send`). An account without an SMTP
   server answers `409`.
+- `reference` on `POST .../send` replies to (`reply`, `reply_all`) or
+  forwards (`forward`, with `forward_as` `inline` or `attachment`) a
+  message of the account. The service sets the recipients of a reply,
+  the subject prefix, In-Reply-To, References and the quote, and marks the
+  original `$answered` or `$forwarded`. Needs `get_message` as well.
 - `Idempotency-Key` on `POST .../send`: the same key within 24 hours
   returns the first result instead of sending again; with a different
   message it answers `409 idempotency_conflict`.

@@ -6,6 +6,7 @@ import asyncio
 import base64
 import binascii
 import json
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -25,6 +26,7 @@ from ..data.models import (
     Message,
     MessageBatch,
     MessagePage,
+    MessageReference,
     MessageSummary,
     MessageUpdate,
     OutgoingMessage,
@@ -42,6 +44,8 @@ from .sync import SyncService
 T = TypeVar("T")
 
 _CURSOR_PREFIX = "x_"
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -267,6 +271,10 @@ class MailboxService:
         Message-ID. Its own right: sending cannot be taken back. With an
         ``idempotency_key`` a retry returns the first result."""
         access.require("send_message", account_id)
+        if message.reference is not None:
+            # A reply quotes the original and a forward passes it on: whoever
+            # may only send must not get at mail this way.
+            access.require("get_message", account_id)
         return await self._idempotency.run(
             account_id,
             idempotency_key,
@@ -278,6 +286,17 @@ class MailboxService:
 
     async def _send(self, account_id: str, message: OutgoingMessage) -> SendResult:
         account = self._accounts.record(account_id)
+        extras = mime.Extras()
+        original: Message | None = None
+        if message.reference is not None:
+            original = await self._on_message(
+                account_id,
+                message.reference.message_id,
+                lambda p, native: p.get_message(native),
+            )
+            message, extras = await self._answer(
+                account_id, account.email, message, message.reference, original
+            )
         message_id = mime.new_message_id(account.email)
         raw = mime.compose(
             message,
@@ -285,11 +304,14 @@ class MailboxService:
             # Local time with its offset, as mail clients write it.
             datetime.now(UTC).astimezone(),
             message_id,
+            extras,
         )
         sent = await self._call(
             account_id,
             lambda p: p.send(raw, account.email, message.recipients()),
         )
+        if message.reference is not None and original is not None:
+            await self._mark_answered(account_id, message.reference, original)
         copy_id = None
         if sent.sent_copy is not None:
             copy = sent.sent_copy
@@ -298,6 +320,87 @@ class MailboxService:
         return SendResult(
             message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
         )
+
+    async def _answer(
+        self,
+        account_id: str,
+        own_address: str,
+        message: OutgoingMessage,
+        reference: MessageReference,
+        original: Message,
+    ) -> tuple[OutgoingMessage, mime.Extras]:
+        """The reply or forward: recipients where the caller named none,
+        subject, quote and what goes with it (CONCEPT 6.4)."""
+        raw = await self._on_message(
+            account_id, reference.message_id, lambda p, native: p.get_raw(native)
+        )
+        changes: dict[str, Any] = {}
+        if reference.action == "forward":
+            changes["subject"] = message.subject or mime.prefixed(
+                "Fwd:", original.subject
+            )
+            if reference.forward_as == "attachment":
+                extras = mime.Extras(attached_message=raw)
+            else:
+                files = []
+                for attachment in original.attachments:
+                    content = await self._attachment(
+                        account_id, reference.message_id, attachment.id
+                    )
+                    files.append(
+                        (
+                            attachment.filename or attachment.id,
+                            attachment.content_type,
+                            content.data,
+                        )
+                    )
+                extras = mime.Extras(attachments=tuple(files))
+                changes["text"] = mime.forwarded(original, message.text)
+                if message.html is not None:
+                    changes["html"] = mime.quoted_html(
+                        original, message.html, "Forwarded message"
+                    )
+            return message.model_copy(update=changes), extras
+
+        in_reply_to, chain = mime.references(raw)
+        changes["subject"] = message.subject or mime.prefixed("Re:", original.subject)
+        changes["text"] = mime.quoted(original, message.text)
+        if message.html is not None:
+            changes["html"] = mime.quoted_html(
+                original, message.html, "Original message"
+            )
+        if not message.recipients():
+            changes.update(_reply_recipients(original, reference.action, own_address))
+        return (
+            message.model_copy(update=changes),
+            mime.Extras(in_reply_to=in_reply_to, references=chain),
+        )
+
+    async def _attachment(
+        self, account_id: str, message_id: str, attachment_id: str
+    ) -> AttachmentContent:
+        return await self._on_message(
+            account_id,
+            message_id,
+            lambda p, native: p.get_attachment(native, attachment_id),
+        )
+
+    async def _mark_answered(
+        self, account_id: str, reference: MessageReference, original: Message
+    ) -> None:
+        """``$answered`` or ``$forwarded`` on the original, so other clients
+        show it too. The message is sent already: a failure here is logged."""
+        keyword = "$forwarded" if reference.action == "forward" else "$answered"
+        changes = MessageUpdate(keywords=sorted({*original.keywords, keyword}))
+        try:
+            outcome = await self._update(account_id, [reference.message_id], changes)
+            failure = outcome[reference.message_id]
+            if isinstance(failure, MailboxApiError):
+                raise failure
+        except MailboxApiError as exc:
+            log.warning(
+                "sent, but %s not set on the original: %s", keyword, exc.message
+            )
 
     async def batch_messages(
         self, access: Access, account_id: str, batch: MessageBatch
@@ -573,3 +676,22 @@ def _item(message_id: str, outcome: Any) -> BatchItemResult:
         )
     summary = outcome if isinstance(outcome, MessageSummary) else None
     return BatchItemResult(id=message_id, ok=True, message=summary)
+
+
+def _reply_recipients(
+    original: Message, action: str, own_address: str
+) -> dict[str, list[Recipient]]:
+    """To the original's Reply-To, else its sender; for reply_all also to
+    everyone it went to, except this account."""
+    first = original.reply_to or ([original.sender] if original.sender else [])
+    to = [Recipient(email=a.email, name=a.name) for a in first]
+    cc: list[Recipient] = []
+    if action == "reply_all":
+        seen = {own_address.lower(), *(r.email.lower() for r in to)}
+        for address in (*original.to, *original.cc):
+            if address.email.lower() not in seen:
+                seen.add(address.email.lower())
+                cc.append(Recipient(email=address.email, name=address.name))
+    if not to and not cc:
+        raise BadRequestError("the original names nobody to reply to")
+    return {"to": to, "cc": cc}

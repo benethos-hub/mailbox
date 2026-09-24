@@ -250,9 +250,27 @@ class OutgoingAttachment(BaseModel):
     data: Base64Bytes = Field(description="The content, base64-encoded.")
 
 
+class MessageReference(BaseModel):
+    """Reply to or forward a message of the same account. The service sets
+    the recipients of a reply where none are given, the subject prefix,
+    In-Reply-To, References and the quote."""
+
+    message_id: str
+    action: Literal["reply", "reply_all", "forward"]
+    forward_as: Literal["inline", "attachment"] = Field(
+        default="inline",
+        description=(
+            "`inline`: quoted with its headers, its attachments attached. "
+            "`attachment`: the unchanged original as `message/rfc822`. "
+            "Ignored for replies."
+        ),
+    )
+
+
 class OutgoingMessage(BaseModel):
     """A message to send. The service sets From, Date and Message-ID."""
 
+    reference: MessageReference | None = None
     to: list[Recipient] = Field(default_factory=list)
     cc: list[Recipient] = Field(default_factory=list)
     bcc: list[Recipient] = Field(
@@ -267,7 +285,8 @@ class OutgoingMessage(BaseModel):
     @model_validator(mode="after")
     def _limits(self) -> OutgoingMessage:
         recipients = len(self.to) + len(self.cc) + len(self.bcc)
-        if recipients == 0:
+        replying = self.reference is not None and self.reference.action != "forward"
+        if recipients == 0 and not replying:
             raise ValueError("a message needs at least one recipient")
         if recipients > MAX_RECIPIENTS:
             raise ValueError(f"at most {MAX_RECIPIENTS} recipients")
