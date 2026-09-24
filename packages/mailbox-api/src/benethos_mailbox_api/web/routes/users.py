@@ -35,6 +35,7 @@ async def get_me(caller: Caller, users: Users) -> Me:
                 email=a.email,
                 display_name=a.display_name,
                 operations=a.operations,
+                warnings=a.warnings,
             )
             for a in rights.accounts
         ],

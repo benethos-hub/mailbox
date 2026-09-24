@@ -35,9 +35,56 @@ def test_me_for_a_limited_user(app_client: TestClient, services: Services) -> No
             "email": "a@example.com",
             "display_name": None,
             "operations": sorted(permissions.GROUPS["mail.read"]),
+            "warnings": [],
         }
     ]
     assert me["operations"] == []
+
+
+def warnings_of(
+    app_client: TestClient, services: Services, *grants: Grant
+) -> list[str]:
+    headers = bearer_for(services, *grants)
+    [account] = app_client.get("/v1/me", headers=headers).json()["accounts"]
+    return list(account["warnings"])
+
+
+def test_me_warns_who_may_read_and_send_anywhere(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    read, send = ["mail.read"], ["send"]
+    assert warnings_of(
+        app_client, services, Grant(accounts=[account_id], allow=[*read, *send])
+    ) == ["read_and_send_anywhere"]
+    # A limit narrows how often, not to whom.
+    assert warnings_of(
+        app_client,
+        services,
+        Grant(accounts=[account_id], allow=[*read, *send], max_sends_per_day=3),
+    ) == ["read_and_send_anywhere"]
+    # One grant with recipients "*" is as wide as none.
+    assert warnings_of(
+        app_client,
+        services,
+        Grant(accounts=[account_id], allow=read),
+        Grant(accounts=[account_id], allow=send, recipients=["*"]),
+    ) == ["read_and_send_anywhere"]
+
+
+def test_no_warning_when_sending_is_narrowed_or_blind(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    narrowed = Grant(
+        accounts=[account_id], allow=["mail.read", "send"], recipients=["*@a.org"]
+    )
+    assert warnings_of(app_client, services, narrowed) == []
+    blind = Grant(accounts=[account_id], allow=["send", "drafts"])
+    assert warnings_of(app_client, services, blind) == []
+
+
+def test_the_admin_key_is_warned(client: TestClient, account_id: str) -> None:
+    [account] = client.get("/v1/me").json()["accounts"]
+    assert account["warnings"] == ["read_and_send_anywhere"]
 
 
 def test_permission_catalogue(client: TestClient) -> None:

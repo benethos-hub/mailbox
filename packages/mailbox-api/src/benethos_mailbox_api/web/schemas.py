@@ -66,6 +66,14 @@ class MeAccount(BaseModel):
     email: str
     display_name: str | None = None
     operations: list[str] = Field(description="What the caller may do on it")
+    warnings: list[str] = Field(
+        default_factory=list,
+        description=(
+            "`read_and_send_anywhere`: the caller may read mail here and send "
+            "it to any address, which a mail with injected instructions could "
+            "use to carry data out. Narrow sending with a grant's `recipients`."
+        ),
+    )
 
 
 class Me(BaseModel):

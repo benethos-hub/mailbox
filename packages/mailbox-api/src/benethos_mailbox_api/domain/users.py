@@ -28,6 +28,7 @@ class AccountRights:
     email: str
     display_name: str | None
     operations: list[str]
+    warnings: list[str]
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,7 @@ class UserService:
                         account.email,
                         account.display_name,
                         sorted(operations),
+                        _warnings(access, account_id, operations),
                     )
                 )
         return EffectiveRights(
@@ -254,3 +256,14 @@ def _exists(roles: RoleRepository, role_id: str) -> bool:
     except NotFoundError:
         return False
     return True
+
+
+# Read mail, and send it to any address: what an injected instruction in a
+# mail needs to carry data out (CONCEPT 7.7). A warning, not a block.
+READ_AND_SEND_ANYWHERE = "read_and_send_anywhere"
+
+
+def _warnings(access: Access, account_id: str, operations: frozenset[str]) -> list[str]:
+    if "get_message" in operations and access.sends_anywhere(account_id):
+        return [READ_AND_SEND_ANYWHERE]
+    return []

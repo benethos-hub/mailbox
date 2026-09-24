@@ -76,6 +76,15 @@ async def test_allowed_operations_from_me(make_client: Callable) -> None:
     assert await server.allowed_operations() == {*READ, "create_draft", "list_users"}
 
 
+async def test_the_start_warns_who_may_read_and_send_anywhere(
+    make_client: Callable, caplog: pytest.LogCaptureFixture
+) -> None:
+    account = {**ME["accounts"][0], "warnings": ["read_and_send_anywhere"]}  # type: ignore[index]
+    make_client(answering({"/v1/me": {**ME, "accounts": [account]}}))
+    await server.allowed_operations()
+    assert "me@example.com: this token can read mail and send it" in caplog.text
+
+
 # --- the tools ------------------------------------------------------------------------
 
 

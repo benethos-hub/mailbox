@@ -6067,6 +6067,14 @@
             "type": "array",
             "title": "Operations",
             "description": "What the caller may do on it"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "`read_and_send_anywhere`: the caller may read mail here and send it to any address, which a mail with injected instructions could use to carry data out. Narrow sending with a grant's `recipients`."
           }
         },
         "type": "object",

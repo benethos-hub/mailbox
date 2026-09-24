@@ -337,6 +337,13 @@ def main() -> int:
             ),
             f"{len(listed)} accounts",
         )
+        run.check(
+            "GET /v1/me warns that the admin key may read and send anywhere",
+            all(
+                "read_and_send_anywhere" in listed.get(i, {}).get("warnings", [])
+                for i in ids
+            ),
+        )
 
     for account_id in ids:
         print(f"\n== sync {account_id}")

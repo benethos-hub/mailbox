@@ -30,6 +30,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `GET /v1/me`: each account carries `warnings`; `read_and_send_anywhere`
+  where the caller may read mail and send it to any address. The MCP
+  server logs it at start.
+
 - A mail or draft with `html` and without `text` gets a text part made
   from the HTML, without its hidden parts. Before, the text part was empty.
 - MCP server: `send_message`, `create_draft` and `update_draft` take
