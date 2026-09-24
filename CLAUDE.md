@@ -73,6 +73,8 @@ packages/
         providers/        # registry in __init__.py, base.py protocol,
                           #   one directory per provider: memory/, imap/, ...
         storage/          # own records, one module per subject
+        secrets/          # envelope encryption, key providers, backup
+        discovery/        # autodiscovery sources and their helpers
     tests/
       test_architecture.py  # checks the layering on every run
   mailbox-mcp/            # the MCP server, a REST client
@@ -156,7 +158,7 @@ noticing. Every change is measured against that.
 | Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for imap-tools |
 | Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, users in phase 1) | in-memory, SQLite (phase 1) | another database |
-| Autodiscovery source | `data/discovery/` (`DiscoverySource`, planned) | presets, autoconfig, JMAP well-known, ISPDB, MX, SRV, guessing | any further lookup, or one switched off |
+| Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, autoconfig, JMAP well-known, ISPDB, MX, SRV, guessing | any further lookup, or one switched off |
 | Secret encryption | a key provider protocol (phase 1) | keyring, file, env | a secret manager such as Vault |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token | password + TOTP, OAuth client credentials |
 | MCP ↔ service | the REST API, `docs/openapi.json` | httpx client in `client.py` | a generated client |

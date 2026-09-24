@@ -39,7 +39,8 @@ dependencies = [
     "uvicorn>=0.38",
     "pydantic>=2.11",
     "pydantic-settings>=2.10",
-    # Outbound HTTP for the Gmail and Microsoft Graph adapters.
+    # Outbound HTTP: autodiscovery, later the Gmail and Microsoft Graph
+    # adapters.
     "httpx>=0.28",
     # The per-user data directory for the database.
     "platformdirs>=4.0",
@@ -51,6 +52,12 @@ dependencies = [
     "imap-tools>=1.10",
     # Worker threads for the synchronous IMAP library.
     "anyio>=4",
+    # Autodiscovery: MX and SRV lookups.
+    "dnspython>=2.6",
+    # Autodiscovery: autoconfig XML without entity expansion.
+    "defusedxml>=0.7",
+    # Autodiscovery: where a domain ends. Ships its own copy of the list.
+    "publicsuffixlist>=1.0",
 ]
 
 [project.scripts]

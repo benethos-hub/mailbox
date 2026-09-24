@@ -26,6 +26,7 @@ dev = [
     # Gives back the `mcp` command, whose `mcp dev` runs a server against the
     # MCP Inspector.
     "mcp[cli]>=2.0.0,<3",
+    "types-defusedxml>=0.7",
 ]
 
 [tool.pytest.ini_options]
@@ -63,3 +64,8 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# Ships no type information.
+module = ["publicsuffixlist"]
+ignore_missing_imports = true

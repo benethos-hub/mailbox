@@ -46,3 +46,5 @@ identity may have its own signature and reply-to.
   sent.
 - **Local search index** across all accounts (SQLite FTS). See open
   question 5 in CONCEPT.md.
+- **Live Public Suffix List** in addition to the bundled one (CONCEPT 5.8),
+  for example a file the operator keeps current.
