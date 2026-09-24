@@ -18,7 +18,7 @@ from ..data.providers import (
     build_provider,
 )
 from ..data.secrets import CredentialVault
-from ..data.storage import AccountRepository
+from ..data.storage import AccountRepository, MessageIndexRepository
 from ..errors import BadRequestError, ProviderAuthError, ProviderUnavailableError
 from .access import Access
 
@@ -34,10 +34,12 @@ class AccountService:
         repository: AccountRepository,
         vault: CredentialVault,
         provider_factory: ProviderFactory = build_provider,
+        index: MessageIndexRepository | None = None,
     ) -> None:
         self._repository = repository
         self._vault = vault
         self._provider_factory = provider_factory
+        self._index = index
         self._providers: dict[str, MailProvider] = {}
 
     def list(self, access: Access) -> builtins.list[Account]:
@@ -103,9 +105,17 @@ class AccountService:
     async def delete(self, access: Access, account_id: str) -> None:
         access.require("delete_account", account_id)
         self._vault.delete(account_id)
+        if self._index is not None:
+            self._index.forget_account(account_id)
         self._repository.delete(account_id)
         adapter = self._providers.pop(account_id, None)
         if adapter is not None:
+            await adapter.close()
+
+    async def close(self) -> None:
+        """Close every adapter, e.g. when the service stops."""
+        adapters, self._providers = list(self._providers.values()), {}
+        for adapter in adapters:
             await adapter.close()
 
     def all_ids(self) -> builtins.list[str]:

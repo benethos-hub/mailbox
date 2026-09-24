@@ -24,6 +24,7 @@ from ..data.providers import MailProvider
 from ..errors import BadRequestError, MailboxApiError
 from .access import Access
 from .accounts import AccountService
+from .sync import SyncService
 
 T = TypeVar("T")
 
@@ -49,8 +50,11 @@ class _Chunk:
 
 
 class MailboxService:
-    def __init__(self, accounts: AccountService) -> None:
+    """Callers see our stable message ids (``sync``), providers their own."""
+
+    def __init__(self, accounts: AccountService, sync: SyncService) -> None:
         self._accounts = accounts
+        self._sync = sync
 
     async def list_folders(self, access: Access, account_id: str) -> list[Folder]:
         access.require("list_folders", account_id)
@@ -75,7 +79,7 @@ class MailboxService:
             ),
         )
         return Page[MessageSummary](
-            items=[_owned(item, account_id) for item in page.items],
+            items=self._published(account_id, page.items),
             next_cursor=page.next_cursor,
         )
 
@@ -126,10 +130,11 @@ class MailboxService:
                 chunks[account_id] = window
 
         merged = [
-            (_owned(item, account_id), account_id)
+            (item, account_id)
             for account_id, window in chunks.items()
-            for chunk in window
-            for item in chunk.items
+            for item in self._published(
+                account_id, [i for chunk in window for i in chunk.items]
+            )
         ]
         merged.sort(key=lambda pair: _newest_first(pair[0]))
         taken = merged[:limit]
@@ -148,19 +153,52 @@ class MailboxService:
         self, access: Access, account_id: str, message_id: str
     ) -> Message:
         access.require("get_message", account_id)
-        message = await self._call(account_id, lambda p: p.get_message(message_id))
-        return message.model_copy(update={"account_id": account_id})
+        message = await self._on_message(
+            account_id, message_id, lambda p, native: p.get_message(native)
+        )
+        return message.model_copy(update={"id": message_id, "account_id": account_id})
 
     async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:
         access.require("get_message_raw", account_id)
-        return await self._call(account_id, lambda p: p.get_raw(message_id))
+        return await self._on_message(
+            account_id, message_id, lambda p, native: p.get_raw(native)
+        )
 
     async def get_attachment(
         self, access: Access, account_id: str, message_id: str, attachment_id: str
     ) -> AttachmentContent:
         access.require("get_attachment", account_id)
-        return await self._call(
-            account_id, lambda p: p.get_attachment(message_id, attachment_id)
+        return await self._on_message(
+            account_id,
+            message_id,
+            lambda p, native: p.get_attachment(native, attachment_id),
+        )
+
+    # --- ids -------------------------------------------------------------------------
+
+    def _published(
+        self, account_id: str, items: list[MessageSummary]
+    ) -> list[MessageSummary]:
+        """The provider's summaries with our ids and the account."""
+        ids = self._sync.public_ids(
+            account_id,
+            [(i.id, i.folder_ids[0] if i.folder_ids else "") for i in items],
+        )
+        return [
+            item.model_copy(update={"id": public, "account_id": account_id})
+            for item, public in zip(items, ids, strict=True)
+        ]
+
+    async def _on_message(
+        self,
+        account_id: str,
+        message_id: str,
+        operation: Callable[[MailProvider, str], Awaitable[T]],
+    ) -> T:
+        return await self._sync.resolve(
+            account_id,
+            message_id,
+            lambda native: self._call(account_id, lambda p: operation(p, native)),
         )
 
     # --- across accounts ---------------------------------------------------------
@@ -236,10 +274,6 @@ class MailboxService:
         return await self._accounts.observe(
             account_id, operation(self._accounts.provider(account_id))
         )
-
-
-def _owned(item: MessageSummary, account_id: str) -> MessageSummary:
-    return item.model_copy(update={"account_id": account_id})
 
 
 def _newest_first(item: MessageSummary) -> tuple[bool, float]:

@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Message ids of IMAP accounts are the service's own (`msg_…`) and stay the
+  same when another client moves a message or the server renumbers a
+  folder. Earlier ids are no longer accepted.
 - Without `MAILBOX_API_KEY` and without any user, `/v1` answers
   `503 setup_required`.
 
