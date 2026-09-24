@@ -281,11 +281,42 @@ class ImapProvider:
         found = self._session.fetch_headers([uid]) if current == validity else []
         if not found:
             raise NotFoundError(f"message {message_id} not found")
+        target = self._move_target(changes.folder_ids, folder)
         add, remove = mappers.flag_changes(found[0].flags, changes, permanent)
         if add or remove:
             self._session.store_flags(uid, add, remove)
             found = self._session.fetch_headers([uid])
-        return mappers.to_summary(found[0], folder, validity)
+        if target is None:
+            return mappers.to_summary(found[0], folder, validity)
+
+        new_uid = self._session.move(uid, target)
+        target_validity = self._session.select(target)
+        header = mappers.message_id_header(found[0])
+        if new_uid is None and header:
+            # No COPYUID: find it by its Message-ID, if that is unambiguous.
+            matches = self._session.search_message_id(header)
+            new_uid = matches[0] if len(matches) == 1 else None
+        moved = self._session.fetch_headers([new_uid]) if new_uid else []
+        if not moved:
+            # Moved, but not to be found at once. The next sync follows it.
+            summary = mappers.to_summary(found[0], folder, validity)
+            return summary.model_copy(
+                update={"folder_ids": [mappers.folder_id(target)]}
+            )
+        return mappers.to_summary(moved[0], target, target_validity)
+
+    def _move_target(self, folder_ids: list[str] | None, current: str) -> str | None:
+        """The folder to move to, or None to stay."""
+        if folder_ids is None:
+            return None
+        if len(set(folder_ids)) != 1:
+            raise BadRequestError("an IMAP message is in exactly one folder")
+        target = mappers.folder_name(folder_ids[0])
+        if target == current:
+            return None
+        if target not in {raw.name for raw in self._session.list_folders()}:
+            raise NotFoundError(f"folder {folder_ids[0]} not found")
+        return target
 
     def _get_raw(self, message_id: str) -> bytes:
         folder, validity, uid = mappers.parse_message_id(message_id)

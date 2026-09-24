@@ -216,6 +216,12 @@ def to_message(msg: Any, folder: str, uidvalidity: int) -> Message:
     )
 
 
+def message_id_header(msg: Any) -> str | None:
+    headers = {k.lower(): v for k, v in msg.headers.items()}
+    value = _first(headers.get("message-id"))
+    return "".join(value.split()) if value else None
+
+
 def attachment_index(attachment_id: str) -> int:
     if not attachment_id.startswith("att_") or not attachment_id[4:].isdigit():
         raise NotFoundError(f"attachment {attachment_id} not found")

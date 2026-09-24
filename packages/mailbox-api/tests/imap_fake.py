@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from email.message import EmailMessage
 from email.utils import format_datetime
+from types import SimpleNamespace
 from typing import Any
 
 from imapclient.exceptions import LoginError
@@ -78,13 +79,17 @@ class FakeMailBox:
         self.failures: list[Exception] = []
         # IDLE answers, one list of parsed responses per idle_check.
         self.idle_script: list[list[tuple[Any, ...]]] = []
-        self.announced = ["IMAP4REV1", "ID", "IDLE", "UIDPLUS"]
+        self.announced = ["IMAP4REV1", "ID", "IDLE", "UIDPLUS", "MOVE"]
         # Folder names a mail client would show. Servers often leave the
         # inbox out: clients show it anyway.
         self.subscribed: set[str] = set()
         # What SELECT reports as PERMANENTFLAGS. "\*": any keyword.
         self.permanent_flags = ["\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\*"]
         self.writable = False
+        # Whether MOVE and COPY report the new UID (UIDPLUS).
+        self.copyuid = True
+        # imaplib's store of response codes, which IMAPClient keeps in _imap.
+        self._imap = SimpleNamespace(untagged_responses={})
 
     # the factory signature ImapSession expects
     def __call__(self, server: Any, timeout: float) -> FakeMailBox:
@@ -100,7 +105,9 @@ class FakeMailBox:
         target.messages[uid] = (raw, flags)
         target.highest_uid = max(target.highest_uid, uid)
 
-    def move(self, source: str, uid: int, target: str, new_uid: int) -> None:
+    def other_client_moves(
+        self, source: str, uid: int, target: str, new_uid: int
+    ) -> None:
         """Another client moves a message."""
         entry = self.folders[source].messages.pop(uid)
         self.add(target, new_uid, *entry)
@@ -168,6 +175,45 @@ class FakeMailBox:
     ) -> None:
         self._store("-", uids, flags)
 
+    def move(self, uids: list[int], target: str) -> bytes:
+        self.calls.append(("move", tuple(uids), target))
+        return self._copy(uids, target, remove=True, report="untagged")
+
+    def copy(self, uids: list[int], target: str) -> bytes:
+        self.calls.append(("copy", tuple(uids), target))
+        return self._copy(uids, target, remove=False, report="tagged")
+
+    def uid_expunge(self, uids: list[int]) -> None:
+        self.calls.append(("expunge", tuple(uids)))
+        folder = self.folders[self.selected]
+        for uid in uids:
+            if "\\Deleted" in folder.messages.get(uid, (b"", ()))[1]:
+                del folder.messages[uid]
+
+    def _copy(self, uids: list[int], target: str, remove: bool, report: str) -> bytes:
+        """Like a server with UIDPLUS: MOVE reports COPYUID in an untagged
+        response, COPY in the tagged one. ``copyuid`` False reports none."""
+        assert self.writable, "moving needs the folder selected read-write"
+        source = self.folders[self.selected]
+        new = []
+        for uid in uids:
+            new_uid = self.folders[target].uidnext
+            raw, flags = source.messages[uid]
+            self.add(target, new_uid, raw, flags)
+            if remove:
+                del source.messages[uid]
+            new.append(new_uid)
+        code = (
+            f"{self.folders[target].uidvalidity} "
+            f"{','.join(map(str, uids))} {','.join(map(str, new))}"
+        ).encode()
+        if not self.copyuid:
+            return b"Done"
+        if report == "untagged":
+            self._imap.untagged_responses.setdefault("COPYUID", []).append(code)
+            return b"Move completed"
+        return b"[COPYUID " + code + b"] Copy completed"
+
     def _store(self, sign: str, uids: list[int], flags: list[str]) -> None:
         assert self.writable, "STORE needs the folder selected read-write"
         self.calls.append(("store", sign, tuple(uids), tuple(flags)))
@@ -197,8 +243,11 @@ class FakeMailBox:
         words = [criteria] if isinstance(criteria, str) else list(criteria)
         self.calls.append(("search", tuple(words), charset))
         text = words[words.index("TEXT") + 1].lower() if "TEXT" in words else None
+        header = words[words.index("HEADER") + 2] if "HEADER" in words else None
         found = []
         for uid, (raw, flags) in self.folders[self.selected].messages.items():
+            if header and header.encode() not in _message_id_block(raw):
+                continue
             if "UNSEEN" in words and "\\Seen" in flags:
                 continue
             if "SEEN" in words and "\\Seen" not in flags:

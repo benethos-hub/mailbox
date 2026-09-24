@@ -4234,6 +4234,23 @@
             ],
             "title": "Keywords",
             "description": "Replaces the list of keywords."
+          },
+          "folder_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 20,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Ids",
+            "description": "The folders the message is to be in. A change moves it; the id stays. An IMAP message is in exactly one folder."
           }
         },
         "type": "object",

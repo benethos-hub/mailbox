@@ -56,6 +56,11 @@ class MessageIndexRepository(Protocol):
         An update takes over its provider id from any other entry."""
         ...
 
+    def relocate(self, account_id: str, entry: IndexEntry) -> None:
+        """A message moved: its entry gets the new place. Takes over the
+        provider id from any other entry."""
+        ...
+
     def folder_states(self, account_id: str) -> dict[str, str]: ...
 
     def forget_account(self, account_id: str) -> None: ...
@@ -103,15 +108,19 @@ class InMemoryMessageIndexRepository:
         for message_id in changes.removed:
             own.pop(message_id, None)
         for entry in changes.updated:
-            for other in [
-                o.id
-                for o in own.values()
-                if o.native_id == entry.native_id and o.id != entry.id
-            ]:
-                del own[other]
-            own[entry.id] = entry
+            self.relocate(account_id, entry)
         self.add(account_id, changes.added)
         self._states[account_id] = dict(changes.states)
+
+    def relocate(self, account_id: str, entry: IndexEntry) -> None:
+        own = self._entries.setdefault(account_id, {})
+        for other in [
+            o.id
+            for o in own.values()
+            if o.native_id == entry.native_id and o.id != entry.id
+        ]:
+            del own[other]
+        own[entry.id] = entry
 
     def folder_states(self, account_id: str) -> dict[str, str]:
         return dict(self._states.get(account_id, {}))

@@ -19,6 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `PATCH /v1/accounts/{account_id}/messages/{message_id}` sets `unread`,
   `starred` and `keywords` and answers the changed summary. Right:
   `update_message` (`mail.write`).
+- The same `PATCH` with `folder_ids` moves a message. Its id stays. An IMAP
+  server needs `MOVE` or `UIDPLUS` for it, otherwise `501 not_supported`.
 - Messages carry `keywords`, named as in JMAP: `$answered`, `$forwarded`,
   `$draft` and the provider's own.
 - Folders carry `subscribed`: whether the folder is subscribed on the IMAP

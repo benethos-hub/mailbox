@@ -89,6 +89,18 @@ class SyncService:
                 raise NotFoundError(f"message {message_id} not found") from None
             return await operation(entry.native_id)
 
+    def relocate(
+        self, account_id: str, message_id: str, native: str, folder_id: str
+    ) -> None:
+        """We moved a message ourselves: its id now points to the new place."""
+        if not self.mapped(account_id):
+            return
+        entry = self._index.get(account_id, message_id)
+        if entry is not None:
+            self._index.relocate(
+                account_id, replace(entry, native_id=native, folder_id=folder_id)
+            )
+
     async def _headers(
         self, account_id: str, natives: list[str]
     ) -> dict[str, str | None]:

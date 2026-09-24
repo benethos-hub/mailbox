@@ -153,6 +153,15 @@ class MessageUpdate(BaseModel):
         max_length=50,
         description="Replaces the list of keywords.",
     )
+    folder_ids: list[str] | None = Field(
+        default=None,
+        min_length=1,
+        max_length=20,
+        description=(
+            "The folders the message is to be in. A change moves it; the id "
+            "stays. An IMAP message is in exactly one folder."
+        ),
+    )
 
 
 class Attachment(BaseModel):

@@ -9,7 +9,7 @@ import pytest
 from pydantic import SecretStr
 
 from benethos_mailbox_api.config import Settings
-from benethos_mailbox_api.data.models import ProviderType
+from benethos_mailbox_api.data.models import MessageUpdate, ProviderType
 from benethos_mailbox_api.data.providers import (
     CredentialReader,
     MailProvider,
@@ -121,7 +121,7 @@ async def test_a_move_by_another_client_keeps_the_id(
 ) -> None:
     await services.sync.sync_account(account_id)
     ids = await ids_by_subject(services, account_id)
-    server.move("INBOX", 3, "Archive", 1)
+    server.other_client_moves("INBOX", 3, "Archive", 1)
     # The lookup misses, syncs once and finds the message in its new folder.
     message = await services.mailbox.get_message(ADMIN, account_id, ids["Mail 3"])
     assert message.subject == "Mail 3"
@@ -134,7 +134,7 @@ async def test_a_move_found_by_the_sync(
 ) -> None:
     ids = await ids_by_subject(services, account_id)  # before any sync
     await services.sync.sync_account(account_id)
-    server.move("INBOX", 1, "Archive", 5)
+    server.other_client_moves("INBOX", 1, "Archive", 5)
     await services.sync.sync_account(account_id)
     assert await subject(services, account_id, ids["Mail 1"]) == "Mail 1"
 
@@ -167,7 +167,7 @@ async def test_an_ambiguous_move_is_not_guessed(
     await services.sync.sync_account(account_id)
     ids = await ids_by_subject(services, account_id)
     raw = server.folders["INBOX"].messages[4][0]
-    server.move("INBOX", 4, "Archive", 1)
+    server.other_client_moves("INBOX", 4, "Archive", 1)
     server.add("Archive", 2, raw)  # a second copy with the same Message-ID
     with pytest.raises(NotFoundError):
         await services.mailbox.get_message(ADMIN, account_id, ids["Mail 4"])
@@ -179,7 +179,7 @@ async def test_a_message_without_message_id_cannot_be_followed(
     server.add("INBOX", 9, make_message("No id").replace(b"Message-ID:", b"X-Id:", 1))
     await services.sync.sync_account(account_id)
     ids = await ids_by_subject(services, account_id)
-    server.move("INBOX", 9, "Archive", 1)
+    server.other_client_moves("INBOX", 9, "Archive", 1)
     with pytest.raises(NotFoundError):
         await services.mailbox.get_message(ADMIN, account_id, ids["No id"])
 
@@ -214,7 +214,7 @@ async def test_a_failed_sync_changes_nothing(
 ) -> None:
     await services.sync.sync_account(account_id)
     ids = await ids_by_subject(services, account_id)
-    server.move("INBOX", 1, "Archive", 1)
+    server.other_client_moves("INBOX", 1, "Archive", 1)
     server.failures = [OSError("gone")] * 3
     with pytest.raises(ProviderUnavailableError):
         await services.sync.sync_account(account_id)
@@ -244,5 +244,44 @@ async def test_a_new_mail_listed_and_moved_before_the_next_sync(
     await services.sync.sync_account(account_id)
     server.add("INBOX", 5, make_message("Just arrived"))
     ids = await ids_by_subject(services, account_id)
-    server.move("INBOX", 5, "Archive", 1)
+    server.other_client_moves("INBOX", 5, "Archive", 1)
     assert await subject(services, account_id, ids["Just arrived"]) == "Just arrived"
+
+
+# --- through the domain: the id stays ------------------------------------------
+
+
+async def test_our_own_move_keeps_the_id_without_a_sync(
+    services: Services,
+    account_id: str,
+    server: FakeMailBox,
+) -> None:
+    ids = await ids_by_subject(services, account_id)
+    moved = await services.mailbox.update_message(
+        ADMIN, account_id, ids["Mail 2"], MessageUpdate(folder_ids=[ARCHIVE])
+    )
+    assert moved.id == ids["Mail 2"]
+    assert moved.folder_ids == [ARCHIVE]
+    server.calls.clear()
+    message = await services.mailbox.get_message(ADMIN, account_id, ids["Mail 2"])
+    assert message.folder_ids == [ARCHIVE]
+    # Found at once: COPYUID updated the mapping, no sync was needed.
+    assert not any(c[0] == "status" for c in server.calls)
+
+
+async def test_the_sync_after_our_move_keeps_the_id(
+    services: Services,
+    account_id: str,
+    server: FakeMailBox,
+) -> None:
+    await services.sync.sync_account(account_id)
+    ids = await ids_by_subject(services, account_id)
+    await services.mailbox.update_message(
+        ADMIN, account_id, ids["Mail 1"], MessageUpdate(folder_ids=[ARCHIVE])
+    )
+    await services.sync.sync_account(account_id)
+    server.add("INBOX", 9, make_message("Later"))
+    await services.sync.sync_account(account_id)
+    message = await services.mailbox.get_message(ADMIN, account_id, ids["Mail 1"])
+    assert message.subject == "Mail 1"
+    assert message.folder_ids == [ARCHIVE]
