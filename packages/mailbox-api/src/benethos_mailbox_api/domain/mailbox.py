@@ -169,11 +169,18 @@ class MailboxService:
         changes: MessageUpdate,
     ) -> MessageSummary:
         access.require("update_message", account_id)
-        updated = await self._on_message(
-            account_id,
-            message_id,
-            lambda p, native: p.update_message(native, changes),
-        )
+
+        async def change(native: str) -> MessageSummary:
+            summary = await self._call(
+                account_id, lambda p: p.update_message(native, changes)
+            )
+            if summary.id != native:
+                # Moved: the provider's id names the new place.
+                folder = summary.folder_ids[0] if summary.folder_ids else ""
+                self._sync.relocate(account_id, message_id, summary.id, folder)
+            return summary
+
+        updated = await self._sync.resolve(account_id, message_id, change)
         return updated.model_copy(update={"id": message_id, "account_id": account_id})
 
     async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:

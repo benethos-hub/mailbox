@@ -89,6 +89,10 @@ class MemoryProvider:
     ) -> MessageSummary:
         message = await self.get_message(message_id)
         fields = changes.model_dump(exclude_none=True)
+        known = {folder.id for folder in self.folders}
+        for folder_id in fields.get("folder_ids", []):
+            if folder_id not in known:
+                raise NotFoundError(f"folder {folder_id} not found")
         if "keywords" in fields:
             fields["keywords"] = sorted({k.lower() for k in fields["keywords"]})
         updated = message.model_copy(update=fields)

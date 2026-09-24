@@ -9,6 +9,7 @@ module as a ``MailboxApiError``. What is fetched of a message is parsed in
 from __future__ import annotations
 
 import imaplib
+import re
 import ssl
 import time
 from collections.abc import Callable, Iterator
@@ -20,7 +21,12 @@ from typing import Any
 from imapclient import IMAPClient
 from imapclient.exceptions import LoginError
 
-from ....errors import ProviderAuthError, ProviderError, ProviderUnavailableError
+from ....errors import (
+    NotSupportedError,
+    ProviderAuthError,
+    ProviderError,
+    ProviderUnavailableError,
+)
 from .parse import FetchedMessage
 
 ClientFactory = Callable[..., Any]
@@ -187,6 +193,37 @@ class ImapSession:
             if remove:
                 client.remove_flags([uid], remove, silent=True)
 
+    def move(self, uid: int, target: str) -> int | None:
+        """Move one message of the selected folder into ``target``. Returns
+        its UID there where the server reports it (``COPYUID``, RFC 4315).
+        Needs ``MOVE``, or ``UIDPLUS`` to copy and expunge just this one."""
+        with _errors():
+            client = self._require()
+            announced = _capabilities(client)
+            # imaplib files response codes such as [COPYUID ...] here.
+            codes = client._imap.untagged_responses
+            codes.pop("COPYUID", None)
+            if "MOVE" in announced:
+                answer = client.move([uid], target)
+            elif "UIDPLUS" in announced:
+                answer = client.copy([uid], target)
+                client.add_flags([uid], ["\\Deleted"], silent=True)
+                client.uid_expunge([uid])
+            else:
+                raise NotSupportedError(
+                    "the mail server offers neither MOVE nor UIDPLUS: moving "
+                    "would expunge other deleted messages of the folder too"
+                )
+            reported = codes.pop("COPYUID", None) or [answer]
+        return _new_uid(reported, uid)
+
+    def search_message_id(self, header: str) -> list[int]:
+        """UIDs in the selected folder with this ``Message-ID``."""
+        with _errors():
+            return sorted(
+                int(u) for u in self._require().search(["HEADER", "Message-ID", header])
+            )
+
     def folder_state(self, folder: str) -> tuple[int, int, int]:
         """UIDVALIDITY, UIDNEXT and MESSAGES of a folder, without selecting
         it. Together they change whenever a message arrives or leaves."""
@@ -310,6 +347,30 @@ def _part(data: dict[bytes, Any], key: bytes) -> bytes:
     return b""
 
 
+def _new_uid(reported: list[Any], uid: int) -> int | None:
+    """The UID ``uid`` got, from ``COPYUID <validity> <old set> <new set>``."""
+    for item in reported:
+        text = _text(item) if isinstance(item, bytes | str) else ""
+        match = re.search(r"(?:COPYUID )?\d+ ([\d:,]+) ([\d:,]+)", text)
+        if match is None:
+            continue
+        old, new = _uid_set(match.group(1)), _uid_set(match.group(2))
+        if uid in old and len(old) == len(new):
+            return new[old.index(uid)]
+    return None
+
+
+def _uid_set(text: str) -> list[int]:
+    """``3:5,9`` to ``[3, 4, 5, 9]``, in the order given."""
+    uids: list[int] = []
+    for part in text.split(","):
+        first, _, last = part.partition(":")
+        start, end = int(first), int(last or first)
+        step = 1 if end >= start else -1
+        uids += range(start, end + step, step)
+    return uids
+
+
 def _message_id(header_block: bytes) -> str | None:
     value = BytesHeaderParser().parsebytes(header_block).get("Message-ID")
     if not value:
@@ -329,7 +390,7 @@ def _quietly_logout(client: Any) -> None:
 def _errors() -> Iterator[None]:
     try:
         yield
-    except (ProviderAuthError, ProviderError):
+    except (ProviderAuthError, ProviderError, NotSupportedError):
         raise
     except TimeoutError:
         raise ProviderUnavailableError(

@@ -1,4 +1,5 @@
-"""Live check of IDLE and of an id that survives a move by another client.
+"""Live check of IDLE, of changing a message, and of an id that survives
+moves.
 
     uv run python live/changes.py [--keep]
 
@@ -7,11 +8,12 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 1. watches the inbox of account 1 over IDLE,
 2. sends one test mail from account 2 to account 1 over SMTP,
 3. checks that IDLE reported it and that the API lists it,
-4. moves it, the way another mail client would, into a folder it creates,
-5. checks that its id still answers, now in that folder,
-6. deletes the test mail and the folder again. With ``--keep`` both stay,
-   and a copy goes into the Sent folder of account 2, as a mail client
-   would put it there, to look at in a mail client.
+4. marks it read, starred, with a keyword, and back, through the API,
+5. moves it through the API into a folder it creates: the id stays,
+6. moves it back the way another mail client would: the id still answers,
+7. deletes the test mail and the folder again. With ``--keep`` the mail
+   stays in the inbox, and a copy goes into the Sent folder of account 2,
+   as a mail client would put it there, to look at in a mail client.
 
 Nothing else in the mailboxes is touched. The service runs in-process with
 memory storage and a throwaway master key. Credentials are never printed.
@@ -382,40 +384,50 @@ def main() -> int:
             " ".join(other.flags("INBOX", subject)),
         )
         folder = other.folder_name(base)
-        other.create_folder(folder, subscribe=keep)
-        uids = other.uids("INBOX", subject)
-        if not run.check("another client finds it", len(uids) == 1, f"{len(uids)}"):
-            return 1
-        other.move(uids[0], folder)
-        print(f"      moved into {folder} by another client")
-
-        moved = client.get(f"/v1/accounts/{account_id}/messages/{message_id}")
-        folder_ids = (
-            moved.json().get("folder_ids", []) if moved.status_code == 200 else []
-        )
+        other.create_folder(folder)
         names = {
-            f["id"]: f["name"]
+            f["name"]: f["id"]
             for f in client.get(f"/v1/accounts/{account_id}/folders").json()
         }
-        where = names.get(folder_ids[0], "?") if folder_ids else "-"
+        moved = client.patch(
+            f"/v1/accounts/{account_id}/messages/{message_id}",
+            json={"folder_ids": [names.get(base, "?")]},
+        )
         run.check(
-            "the same id finds it in the new folder",
-            moved.status_code == 200 and folder_ids != [inbox_folder] and where == base,
-            f"{moved.status_code}, now in {where}",
+            "PATCH moves it, and the id stays",
+            moved.status_code == 200
+            and moved.json().get("id") == message_id
+            and moved.json().get("folder_ids") == [names.get(base)],
+            str(moved.status_code),
+        )
+        run.check(
+            "another client finds it there, not in the inbox",
+            len(other.uids(folder, subject)) == 1 and not other.uids("INBOX", subject),
+        )
+
+        uids = other.uids(folder, subject)
+        if not run.check("another client moves it back", len(uids) == 1):
+            return 1
+        other.move(uids[0], "INBOX")
+        back = client.get(f"/v1/accounts/{account_id}/messages/{message_id}")
+        run.check(
+            "the same id finds it in the inbox again",
+            back.status_code == 200 and back.json().get("folder_ids") == [inbox_folder],
+            str(back.status_code),
         )
         run.check(
             "the subject matches",
-            moved.status_code == 200 and moved.json().get("subject") == subject,
+            back.status_code == 200 and back.json().get("subject") == subject,
         )
     finally:
         if keep:
-            print(
-                f"\n== kept: '{subject}' in {folder} of {receiver['email']}, "
-                "and a copy in the Sent folder of the sender: delete them and "
-                "the folder by hand"
-            )
             if other is not None:
+                other.delete_folder(other.folder_name(base))
                 other.close()
+            print(
+                f"\n== kept: '{subject}' in the inbox of {receiver['email']} and "
+                "in the Sent folder of the sender: delete them by hand"
+            )
         else:
             clean_up(env, receiver, other, base, subject)
         anyio.run(services.accounts.close)

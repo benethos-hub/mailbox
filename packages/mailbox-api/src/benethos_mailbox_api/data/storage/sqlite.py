@@ -556,22 +556,7 @@ class SqliteMessageIndexRepository:
                 [(account_id, message_id) for message_id in changes.removed],
             )
             for entry in changes.updated:
-                db.execute(
-                    "DELETE FROM message_index"
-                    " WHERE account_id = ? AND native_id = ? AND id <> ?",
-                    (account_id, entry.native_id, entry.id),
-                )
-                db.execute(
-                    "UPDATE message_index SET native_id = ?, folder_id = ?,"
-                    " header = ? WHERE account_id = ? AND id = ?",
-                    (
-                        entry.native_id,
-                        entry.folder_id,
-                        entry.header,
-                        account_id,
-                        entry.id,
-                    ),
-                )
+                _update(db, account_id, entry)
             _insert(db, account_id, changes.added)
             db.execute("DELETE FROM folder_states WHERE account_id = ?", (account_id,))
             db.executemany(
@@ -579,6 +564,10 @@ class SqliteMessageIndexRepository:
                 " VALUES (?, ?, ?)",
                 [(account_id, f, s) for f, s in changes.states.items()],
             )
+
+    def relocate(self, account_id: str, entry: IndexEntry) -> None:
+        with self._db.transaction() as db:
+            _update(db, account_id, entry)
 
     def folder_states(self, account_id: str) -> dict[str, str]:
         rows = self._db.query(
@@ -591,6 +580,19 @@ class SqliteMessageIndexRepository:
         with self._db.transaction() as db:
             db.execute("DELETE FROM message_index WHERE account_id = ?", (account_id,))
             db.execute("DELETE FROM folder_states WHERE account_id = ?", (account_id,))
+
+
+def _update(db: sqlite3.Connection, account_id: str, entry: IndexEntry) -> None:
+    """The entry's new place; another entry holding that place gives it up."""
+    db.execute(
+        "DELETE FROM message_index WHERE account_id = ? AND native_id = ? AND id <> ?",
+        (account_id, entry.native_id, entry.id),
+    )
+    db.execute(
+        "UPDATE message_index SET native_id = ?, folder_id = ?, header = ?"
+        " WHERE account_id = ? AND id = ?",
+        (entry.native_id, entry.folder_id, entry.header, account_id, entry.id),
+    )
 
 
 def _insert(
