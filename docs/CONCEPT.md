@@ -720,9 +720,9 @@ the data, rather than a readable file.
   ciphertext does not linger in the file.
 - **Files:** the database sits in `data/benethos-mailbox-api/` in the
   working directory, moved with `MAILBOX_API_DATA_DIR`. Decided 2026-09-24:
-  one folder per package under `data/` and under `config/`; the MCP server
-  gets `data/benethos-mailbox-mcp/` once it stores anything, e.g.
-  downloaded attachments. The database is created with owner-only
+  one folder per package under `data/` and under `config/`;
+  `data/benethos-mailbox-mcp/` is meant for what the MCP server stores, e.g.
+  downloaded attachments. A missing data folder is created. The database is created with owner-only
   permissions (0600, on Windows an ACL for the user only).
 - **Credential kinds per provider:** always the one that is not the main
   password. Per provider in the table of 5.3. In short: OAuth for Google

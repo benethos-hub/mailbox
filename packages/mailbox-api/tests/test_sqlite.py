@@ -182,3 +182,12 @@ def test_create_admin_command(
     services.close()
     assert access.name == "owner"
     assert access.allows("create_user")
+
+
+def test_a_missing_data_folder_is_created(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data" / "benethos-mailbox-api"
+    services = build_services(Settings(data_dir=data_dir, storage="sqlite"))
+    try:
+        assert (data_dir / "mailbox.db").is_file()
+    finally:
+        services.close()
