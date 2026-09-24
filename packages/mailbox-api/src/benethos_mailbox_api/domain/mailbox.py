@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, TypeVar
 
-from ..data import mime, opaque
+from ..data import mime
 from ..data.models import (
     AccountFailure,
     AttachmentContent,
@@ -32,7 +30,8 @@ from ..data.models import (
     SendResult,
 )
 from ..data.providers import MailProvider
-from ..errors import BadRequestError, ConflictError, MailboxApiError, NotFoundError
+from ..errors import ConflictError, MailboxApiError, NotFoundError
+from . import merge, replies
 from .access import Access
 from .accounts import AccountService
 from .idempotency import Idempotency
@@ -41,27 +40,7 @@ from .sync import SyncService
 T = TypeVar("T")
 S = TypeVar("S", bound=MessageSummary)
 
-_CURSOR_PREFIX = "x_"
-
 log = logging.getLogger(__name__)
-
-
-@dataclass
-class _Position:
-    """Where one account stands in a list across accounts."""
-
-    folder_id: str | None
-    cursor: str | None  # the account's own cursor of the page to read next
-    offset: int  # items of that page already delivered
-    done: bool = False
-
-
-@dataclass
-class _Chunk:
-    cursor: str | None
-    offset: int
-    items: list[MessageSummary]
-    next_cursor: str | None
 
 
 class MailboxService:
@@ -186,12 +165,12 @@ class MailboxService:
         failures: list[AccountFailure] = []
         if cursor:
             positions = {
-                a: p for a, p in _decode_cursor(cursor).items() if a in visible
+                a: p for a, p in merge.decode_cursor(cursor).items() if a in visible
             }
         else:
             positions = await self._start(visible, folder_role, failures)
 
-        chunks = await _per_account(
+        chunks = await merge.per_account(
             [a for a, p in positions.items() if not p.done],
             lambda a: self._window(a, positions[a], query, unread, limit),
             failures,
@@ -203,19 +182,21 @@ class MailboxService:
             for chunk in window
             for item in chunk.items
         ]
-        merged.sort(key=lambda pair: _newest_first(pair[0]))
+        merged.sort(key=lambda pair: merge.newest_first(pair[0]))
         taken = merged[:limit]
         published: dict[str, list[MessageSummary]] = {}
         for account_id, window in chunks.items():
             mine = [item for item, owner in taken if owner == account_id]
-            positions[account_id] = _advance(positions[account_id], window, len(mine))
+            positions[account_id] = merge.advance(
+                positions[account_id], window, len(mine)
+            )
             # Only what is handed out gets our ids.
             published[account_id] = await self._published(account_id, mine)
 
         more = any(not p.done for p in positions.values())
         return MessagePage(
             items=[published[owner].pop(0) for _, owner in taken],
-            next_cursor=_encode_cursor(positions) if more else None,
+            next_cursor=merge.encode_cursor(positions) if more else None,
             incomplete=failures,
         )
 
@@ -320,52 +301,27 @@ class MailboxService:
         reference: MessageReference,
         original: Message,
     ) -> tuple[OutgoingMessage, mime.Extras]:
-        """The reply or forward: recipients where the caller named none,
-        subject, quote and what goes with it (CONCEPT 6.4)."""
+        """Fetch what the reply or forward needs of the original; ``replies``
+        makes it."""
         raw = await self._on_message(
             account_id, reference.message_id, lambda p, native: p.get_raw(native)
         )
-        changes: dict[str, Any] = {}
-        if reference.action == "forward":
-            changes["subject"] = message.subject or mime.prefixed(
-                "Fwd:", original.subject
-            )
-            if reference.forward_as == "attachment":
-                extras = mime.Extras(attached_message=raw)
-            else:
-                files = []
-                for attachment in original.attachments:
-                    content = await self._attachment(
-                        account_id, reference.message_id, attachment.id
+        if reference.action != "forward":
+            return replies.reply(message, reference.action, original, raw, own_address)
+        files: list[replies.AttachedFile] = []
+        if reference.forward_as == "inline":
+            for attachment in original.attachments:
+                content = await self._attachment(
+                    account_id, reference.message_id, attachment.id
+                )
+                files.append(
+                    (
+                        attachment.filename or attachment.id,
+                        attachment.content_type,
+                        content.data,
                     )
-                    files.append(
-                        (
-                            attachment.filename or attachment.id,
-                            attachment.content_type,
-                            content.data,
-                        )
-                    )
-                extras = mime.Extras(attachments=tuple(files))
-                changes["text"] = mime.forwarded(original, message.text)
-                if message.html is not None:
-                    changes["html"] = mime.quoted_html(
-                        original, message.html, "Forwarded message"
-                    )
-            return message.model_copy(update=changes), extras
-
-        in_reply_to, chain = mime.references(raw)
-        changes["subject"] = message.subject or mime.prefixed("Re:", original.subject)
-        changes["text"] = mime.quoted(original, message.text)
-        if message.html is not None:
-            changes["html"] = mime.quoted_html(
-                original, message.html, "Original message"
-            )
-        if not message.recipients():
-            changes.update(_reply_recipients(original, reference.action, own_address))
-        return (
-            message.model_copy(update=changes),
-            mime.Extras(in_reply_to=in_reply_to, references=chain),
-        )
+                )
+        return replies.forward(message, reference.forward_as, original, raw, files)
 
     async def _attachment(
         self, account_id: str, message_id: str, attachment_id: str
@@ -381,7 +337,7 @@ class MailboxService:
     ) -> None:
         """``$answered`` or ``$forwarded`` on the original, so other clients
         show it too. The message is sent already: a failure here is logged."""
-        keyword = "$forwarded" if reference.action == "forward" else "$answered"
+        keyword = replies.answered_keyword(reference)
         changes = MessageUpdate(keywords=sorted({*original.keywords, keyword}))
         try:
             outcome = await self._update(account_id, [reference.message_id], changes)
@@ -539,27 +495,27 @@ class MailboxService:
         account_ids: list[str],
         role: FolderRole | None,
         failures: list[AccountFailure],
-    ) -> dict[str, _Position]:
+    ) -> dict[str, merge.Position]:
         if role is None:
-            return {a: _Position(None, None, 0) for a in account_ids}
-        folders = await _per_account(
+            return {a: merge.Position(None, None, 0) for a in account_ids}
+        folders = await merge.per_account(
             account_ids, lambda a: self._call(a, lambda p: p.list_folders()), failures
         )
         positions = {}
         for account_id, found in folders.items():
             match = next((f for f in found if f.role is role), None)
             if match is not None:
-                positions[account_id] = _Position(match.id, None, 0)
+                positions[account_id] = merge.Position(match.id, None, 0)
         return positions
 
     async def _window(
         self,
         account_id: str,
-        position: _Position,
+        position: merge.Position,
         query: str | None,
         unread: bool | None,
         limit: int,
-    ) -> list[_Chunk]:
+    ) -> list[merge.Chunk]:
         """At least ``limit`` of the account's next messages, or all it has
         left, so that merging by date cannot skip a newer one."""
 
@@ -577,7 +533,7 @@ class MailboxService:
 
         first = await page(position.cursor)
         chunks = [
-            _Chunk(
+            merge.Chunk(
                 position.cursor,
                 position.offset,
                 first.items[position.offset :],
@@ -587,7 +543,7 @@ class MailboxService:
         if len(chunks[0].items) < limit and first.next_cursor:
             second = await page(first.next_cursor)
             chunks.append(
-                _Chunk(first.next_cursor, 0, second.items, second.next_cursor)
+                merge.Chunk(first.next_cursor, 0, second.items, second.next_cursor)
             )
         return chunks
 
@@ -601,46 +557,6 @@ class MailboxService:
         )
 
 
-def _newest_first(item: MessageSummary) -> tuple[bool, float]:
-    return (item.date is None, -item.date.timestamp() if item.date else 0.0)
-
-
-def _advance(position: _Position, window: list[_Chunk], consumed: int) -> _Position:
-    for chunk in window:
-        if consumed < len(chunk.items):
-            return _Position(position.folder_id, chunk.cursor, chunk.offset + consumed)
-        consumed -= len(chunk.items)
-    last = window[-1].next_cursor
-    if last is None:
-        return _Position(position.folder_id, None, 0, done=True)
-    return _Position(position.folder_id, last, 0)
-
-
-async def _per_account(
-    account_ids: list[str],
-    run: Callable[[str], Awaitable[T]],
-    failures: list[AccountFailure],
-) -> dict[str, T]:
-    """``run`` for every account at once. An account that fails goes to
-    ``failures`` instead of failing the rest."""
-    outcomes = await asyncio.gather(
-        *(run(a) for a in account_ids), return_exceptions=True
-    )
-    results: dict[str, T] = {}
-    for account_id, outcome in zip(account_ids, outcomes, strict=True):
-        if isinstance(outcome, MailboxApiError):
-            failures.append(
-                AccountFailure(
-                    account_id=account_id, code=outcome.code, message=outcome.message
-                )
-            )
-        elif isinstance(outcome, BaseException):
-            raise outcome
-        else:
-            results[account_id] = outcome
-    return results
-
-
 def _folder_of(message: MessageSummary) -> str:
     """The provider's folder of a message, empty where it names none."""
     return message.folder_ids[0] if message.folder_ids else ""
@@ -649,22 +565,6 @@ def _folder_of(message: MessageSummary) -> str:
 def _public(message: S, message_id: str, account_id: str) -> S:
     """A provider's message under our id, with its account."""
     return message.model_copy(update={"id": message_id, "account_id": account_id})
-
-
-def _encode_cursor(positions: dict[str, _Position]) -> str:
-    state = {a: [p.folder_id, p.cursor, p.offset, p.done] for a, p in positions.items()}
-    return opaque.encode(_CURSOR_PREFIX, state)
-
-
-def _decode_cursor(value: str) -> dict[str, _Position]:
-    try:
-        state = opaque.decode(_CURSOR_PREFIX, value)
-        return {
-            account_id: _Position(folder_id, cursor, int(offset), bool(done))
-            for account_id, (folder_id, cursor, offset, done) in state.items()
-        }
-    except (ValueError, TypeError, AttributeError):
-        raise BadRequestError("invalid cursor") from None
 
 
 def _delete_right(permanent: bool) -> str:
@@ -680,22 +580,3 @@ def _item(message_id: str, outcome: Any) -> BatchItemResult:
         )
     summary = outcome if isinstance(outcome, MessageSummary) else None
     return BatchItemResult(id=message_id, ok=True, message=summary)
-
-
-def _reply_recipients(
-    original: Message, action: str, own_address: str
-) -> dict[str, list[Recipient]]:
-    """To the original's Reply-To, else its sender; for reply_all also to
-    everyone it went to, except this account."""
-    first = original.reply_to or ([original.sender] if original.sender else [])
-    to = [Recipient(email=a.email, name=a.name) for a in first]
-    cc: list[Recipient] = []
-    if action == "reply_all":
-        seen = {own_address.lower(), *(r.email.lower() for r in to)}
-        for address in (*original.to, *original.cc):
-            if address.email.lower() not in seen:
-                seen.add(address.email.lower())
-                cc.append(Recipient(email=address.email, name=address.name))
-    if not to and not cc:
-        raise BadRequestError("the original names nobody to reply to")
-    return {"to": to, "cc": cc}

@@ -84,6 +84,8 @@ packages/
       domain/             # BUSINESS LOGIC: decides, knows no HTTP
         accounts.py       # AccountService: accounts and their live adapters
         mailbox.py        # MailboxService: folders and messages
+        merge.py          # lists across accounts: merge order, cursor
+        replies.py        # replies and forwards made from the original
         discovery.py      # DiscoveryService: trust, ranking, cache, limits
         sync.py           # SyncService: stable message ids, the sync pass
         worker.py         # SyncWorker: polling and IDLE in the background
