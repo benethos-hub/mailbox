@@ -48,6 +48,8 @@ done. Update the roadmap in the same commit that finishes an item.
   `uv run python live/changes.py [--keep]` (sends one test mail between the test
   accounts, moves it, deletes it), test accounts in `live/.env` (not
   versioned, template `live/.env.example`).
+  `MAILBOX_API_TOKEN=... uv run python live/register.py` adds the test
+  accounts to a running service over its API and checks them.
 - Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`.
 
 ## Project layout

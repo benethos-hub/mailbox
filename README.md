@@ -98,7 +98,9 @@ uv run mypy
 Live checks against test accounts, outside the test suite:
 `uv run python live/smoke.py` reads only, `uv run python live/changes.py`
 sends one test mail between two test accounts, moves it and deletes it.
-Both are configured in `live/.env` (template `live/.env.example`).
+`live/register.py` adds the test accounts to a running service through its
+API, with `MAILBOX_API_TOKEN` set. All are configured in `live/.env`
+(template `live/.env.example`).
 
 ## Running
 
