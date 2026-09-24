@@ -25,7 +25,7 @@ T = TypeVar("T")
 
 
 def new_message_id() -> str:
-    return new_id("msg", 16)
+    return new_id("msg")
 
 
 class SyncService:

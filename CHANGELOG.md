@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- New ids of accounts, users, tokens, keys and messages carry 64 random
+  hex digits after their prefix (`acc_`, `usr_`, `tok_`, `key_`, `msg_`).
+  Existing ids stay valid.
 - Message ids of IMAP accounts are the service's own (`msg_…`) and stay the
   same when another client moves a message or the server renumbers a
   folder. Earlier ids are no longer accepted.
