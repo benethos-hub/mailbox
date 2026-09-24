@@ -15,16 +15,20 @@ from starlette.exceptions import HTTPException
 
 from ..errors import (
     ConflictError,
+    ForbiddenError,
     MailboxApiError,
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
     ProviderError,
+    UnauthorizedError,
 )
 from .schemas import ErrorResponse
 
 # Most specific first: the first matching class decides.
 STATUS: list[tuple[type[MailboxApiError], int]] = [
+    (UnauthorizedError, 401),
+    (ForbiddenError, 403),
     (NotFoundError, 404),
     (ConflictError, 409),
     (NotSupportedError, 501),
@@ -37,6 +41,7 @@ DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
     status: {"model": ErrorResponse, "description": text}
     for status, text in {
         401: "Missing or wrong bearer token",
+        403: "The caller lacks the right for this operation",
         404: "Account or resource not found",
         501: "The provider cannot do this",
         502: "The provider failed or rejected the credentials",

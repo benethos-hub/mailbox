@@ -51,6 +51,30 @@ class Account(BaseModel):
     status: AccountStatus = AccountStatus.CONNECTED
 
 
+class Grant(BaseModel):
+    """Rights on accounts: operation or group names, account ids or ``*``."""
+
+    accounts: list[str]
+    allow: list[str]
+
+
+class User(BaseModel):
+    """Someone or something that calls the API."""
+
+    id: str
+    name: str
+    roles: list[str] = Field(default_factory=list)
+    grants: list[Grant] = Field(default_factory=list)
+    disabled: bool = False
+
+
+class Role(BaseModel):
+    """A named, reusable set of grants."""
+
+    id: str
+    grants: list[Grant] = Field(default_factory=list)
+
+
 class Folder(BaseModel):
     id: str
     name: str

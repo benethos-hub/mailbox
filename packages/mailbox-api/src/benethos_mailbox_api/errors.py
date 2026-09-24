@@ -22,6 +22,18 @@ class NotFoundError(MailboxApiError):
     code = "not_found"
 
 
+class UnauthorizedError(MailboxApiError):
+    """No valid credential: missing, wrong, expired, revoked, or user disabled."""
+
+    code = "unauthorized"
+
+
+class ForbiddenError(MailboxApiError):
+    """The caller may see the account, but not do this."""
+
+    code = "forbidden"
+
+
 class ConflictError(MailboxApiError):
     code = "conflict"
 
