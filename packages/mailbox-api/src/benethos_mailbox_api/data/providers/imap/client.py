@@ -217,6 +217,20 @@ class ImapSession:
             reported = codes.pop("COPYUID", None) or [answer]
         return _new_uid(reported, uid)
 
+    def expunge(self, uid: int) -> None:
+        """Delete one message of the selected folder for good. Needs
+        ``UIDPLUS``: a plain EXPUNGE would take every message marked
+        deleted with it, other clients' too."""
+        with _errors():
+            client = self._require()
+            if "UIDPLUS" not in _capabilities(client):
+                raise NotSupportedError(
+                    "the mail server offers no UIDPLUS: deleting one message "
+                    "for good would expunge other deleted messages too"
+                )
+            client.add_flags([uid], ["\\Deleted"], silent=True)
+            client.uid_expunge([uid])
+
     def search_message_id(self, header: str) -> list[int]:
         """UIDs in the selected folder with this ``Message-ID``."""
         with _errors():

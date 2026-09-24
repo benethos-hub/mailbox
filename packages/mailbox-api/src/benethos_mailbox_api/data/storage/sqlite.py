@@ -569,6 +569,13 @@ class SqliteMessageIndexRepository:
         with self._db.transaction() as db:
             _update(db, account_id, entry)
 
+    def drop(self, account_id: str, message_id: str) -> None:
+        with self._db.transaction() as db:
+            db.execute(
+                "DELETE FROM message_index WHERE account_id = ? AND id = ?",
+                (account_id, message_id),
+            )
+
     def folder_states(self, account_id: str) -> dict[str, str]:
         rows = self._db.query(
             "SELECT folder_id, state FROM folder_states WHERE account_id = ?",

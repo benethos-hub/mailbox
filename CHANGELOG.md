@@ -19,6 +19,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `PATCH /v1/accounts/{account_id}/messages/{message_id}` sets `unread`,
   `starred` and `keywords` and answers the changed summary. Right:
   `update_message` (`mail.write`).
+- `DELETE /v1/accounts/{account_id}/messages/{message_id}` moves a message
+  into the trash (`delete_message`, `mail.write`). `?permanent=true`
+  deletes it for good and needs `delete_message_permanent` (`mail.delete`).
+  `409` when there is no trash folder or the message is in it already.
 - The same `PATCH` with `folder_ids` moves a message. Its id stays. An IMAP
   server needs `MOVE` or `UIDPLUS` for it, otherwise `501 not_supported`.
 - Messages carry `keywords`, named as in JMAP: `$answered`, `$forwarded`,

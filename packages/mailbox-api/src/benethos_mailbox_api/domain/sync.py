@@ -101,6 +101,11 @@ class SyncService:
                 account_id, replace(entry, native_id=native, folder_id=folder_id)
             )
 
+    def forget(self, account_id: str, message_id: str) -> None:
+        """A message is gone for good: its id answers 404 from now on."""
+        if self.mapped(account_id):
+            self._index.drop(account_id, message_id)
+
     async def _headers(
         self, account_id: str, natives: list[str]
     ) -> dict[str, str | None]:

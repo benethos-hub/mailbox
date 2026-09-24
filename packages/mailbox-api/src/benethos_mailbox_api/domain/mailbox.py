@@ -183,6 +183,26 @@ class MailboxService:
         updated = await self._sync.resolve(account_id, message_id, change)
         return updated.model_copy(update={"id": message_id, "account_id": account_id})
 
+    async def delete_message(
+        self, access: Access, account_id: str, message_id: str, permanent: bool
+    ) -> None:
+        """Into the trash, or for good: then its own right (CONCEPT 7.5)."""
+        access.require(
+            "delete_message_permanent" if permanent else "delete_message", account_id
+        )
+
+        async def delete(native: str) -> None:
+            trashed = await self._call(
+                account_id, lambda p: p.delete_message(native, permanent)
+            )
+            if permanent:
+                self._sync.forget(account_id, message_id)
+            elif trashed is not None and trashed.id != native:
+                folder = trashed.folder_ids[0] if trashed.folder_ids else ""
+                self._sync.relocate(account_id, message_id, trashed.id, folder)
+
+        await self._sync.resolve(account_id, message_id, delete)
+
     async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:
         access.require("get_message_raw", account_id)
         return await self._on_message(

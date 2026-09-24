@@ -61,6 +61,10 @@ class MessageIndexRepository(Protocol):
         provider id from any other entry."""
         ...
 
+    def drop(self, account_id: str, message_id: str) -> None:
+        """A message is gone for good."""
+        ...
+
     def folder_states(self, account_id: str) -> dict[str, str]: ...
 
     def forget_account(self, account_id: str) -> None: ...
@@ -121,6 +125,9 @@ class InMemoryMessageIndexRepository:
         ]:
             del own[other]
         own[entry.id] = entry
+
+    def drop(self, account_id: str, message_id: str) -> None:
+        self._entries.get(account_id, {}).pop(message_id, None)
 
     def folder_states(self, account_id: str) -> dict[str, str]:
         return dict(self._states.get(account_id, {}))

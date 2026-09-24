@@ -285,3 +285,16 @@ async def test_the_sync_after_our_move_keeps_the_id(
     message = await services.mailbox.get_message(ADMIN, account_id, ids["Mail 1"])
     assert message.subject == "Mail 1"
     assert message.folder_ids == [ARCHIVE]
+
+
+async def test_the_trash_keeps_the_id_and_for_good_forgets_it(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    server.folders["Trash"] = FakeFolder(flags=("\\Trash",))
+    ids = await ids_by_subject(services, account_id)
+    await services.mailbox.delete_message(ADMIN, account_id, ids["Mail 3"], False)
+    trashed = await services.mailbox.get_message(ADMIN, account_id, ids["Mail 3"])
+    assert trashed.folder_ids == [mappers.folder_id("Trash")]
+    await services.mailbox.delete_message(ADMIN, account_id, ids["Mail 3"], True)
+    with pytest.raises(NotFoundError):
+        await services.mailbox.get_message(ADMIN, account_id, ids["Mail 3"])

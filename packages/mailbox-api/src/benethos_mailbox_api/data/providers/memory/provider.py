@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ....errors import NotFoundError, NotSupportedError
+from ....errors import ConflictError, NotFoundError, NotSupportedError
 from ...models import (
     AttachmentContent,
     Folder,
@@ -98,6 +98,26 @@ class MemoryProvider:
         updated = message.model_copy(update=fields)
         self.messages[self.messages.index(message)] = updated
         return MessageSummary.model_validate(updated.model_dump())
+
+    async def delete_message(
+        self, message_id: str, permanent: bool
+    ) -> MessageSummary | None:
+        message = await self.get_message(message_id)
+        if permanent:
+            self.messages.remove(message)
+            return None
+        trash = next((f.id for f in self.folders if f.role is FolderRole.TRASH), None)
+        if trash is None:
+            raise ConflictError(
+                "the account has no trash folder: delete with permanent=true"
+            )
+        if trash in message.folder_ids:
+            raise ConflictError(
+                "the message is in the trash already: delete with permanent=true"
+            )
+        moved = message.model_copy(update={"folder_ids": [trash]})
+        self.messages[self.messages.index(message)] = moved
+        return MessageSummary.model_validate(moved.model_dump())
 
     async def folder_states(self) -> dict[str, str]:
         return {
