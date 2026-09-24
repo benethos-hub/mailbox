@@ -87,14 +87,18 @@ packages/
         discovery.py      # DiscoveryService: trust, ranking, cache, limits
         sync.py           # SyncService: stable message ids, the sync pass
         worker.py         # SyncWorker: polling and IDLE in the background
+        idempotency.py    # Idempotency-Key: a retried send returns its result
         permissions.py    # the catalogue of rights and groups
         access.py         # Access: what one caller may do
         auth.py           # AuthService: tokens, the admin key
         users.py          # UserService: users, roles, tokens
       data/               # DATA: reads and writes, decides nothing
         models.py         # provider-neutral types (Account, Folder, Message)
+        mime.py           # outgoing messages as RFC 5322 bytes (email)
         providers/        # registry in __init__.py, base.py protocol,
                           #   one directory per provider: memory/, imap/, ...
+                          #   imap/client.py (IMAPClient), imap/parse.py
+                          #   (imap-tools' mail parser), smtp.py (smtplib)
         storage/          # own records, one module per subject
         secrets/          # envelope encryption, key providers, backup
         discovery/        # autodiscovery sources and their helpers
@@ -179,8 +183,9 @@ noticing. Every change is measured against that.
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
 | Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap; planned: gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Sending | `data/providers/smtp.py` (`SmtpSession`), used by the adapters without sending of their own | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`) | in-memory, SQLite | another database |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX; planned: JMAP well-known, Microsoft realm, SRV, guessing | any further lookup, or one switched off |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token | password + TOTP, OAuth client credentials |
