@@ -7,6 +7,8 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any, TypeVar
 
+from pydantic import BaseModel
+
 from ..data.mail import compose
 from ..data.models import (
     AccountFailure,
@@ -32,7 +34,7 @@ from ..data.models import (
     SentMessage,
 )
 from ..data.providers import MailProvider
-from ..errors import ConflictError, MailboxApiError, NotFoundError
+from ..errors import BadRequestError, ConflictError, MailboxApiError, NotFoundError
 from . import merge, replies
 from .access import Access
 from .accounts import AccountService
@@ -313,7 +315,7 @@ class MailboxService:
             message_id,
             extras,
             draft=draft,
-            reference=_reference_header(reference) if reference else None,
+            reference=replies.reference_header(reference) if reference else None,
         )
         return raw, message_id, message, original
 
@@ -413,6 +415,70 @@ class MailboxService:
             account_id, [(saved.id, _folder_of(saved))]
         )
         return _public(saved, public, account_id)
+
+    async def send_draft(
+        self,
+        access: Access,
+        account_id: str,
+        draft_id: str,
+        idempotency_key: str | None = None,
+    ) -> SendResult:
+        """Send a draft as it is stored, dated now, then delete it. Its own
+        right, like ``send_message``; the draft was written by whoever may
+        write drafts. With an ``idempotency_key`` a retry returns the first
+        result."""
+        access.require("send_draft", account_id)
+        return await self._idempotency.run(
+            account_id,
+            idempotency_key,
+            "send_draft",
+            _DraftToSend(draft_id=draft_id),
+            lambda: self._send_draft(account_id, draft_id),
+            SendResult,
+        )
+
+    async def _send_draft(self, account_id: str, draft_id: str) -> SendResult:
+        account = self._accounts.record(account_id)
+        stored = await self._on_message(
+            account_id, draft_id, lambda p, native: p.get_draft(native)
+        )
+        out = compose.outgoing(
+            stored,
+            datetime.now(UTC).astimezone(),
+            compose.new_message_id(account.email),
+        )
+        if not out.recipients:
+            raise BadRequestError("the draft has no recipients")
+        sent = await self._call(
+            account_id, lambda p: p.send(out.raw, account.email, out.recipients)
+        )
+        # Sent: from here on nothing may fail, or a client would send again.
+        try:
+            await self._on_message(
+                account_id, draft_id, lambda p, native: p.delete_draft(native)
+            )
+            self._sync.forget(account_id, draft_id)
+        except MailboxApiError as exc:
+            log.warning("sent, but the draft is still there: %s", exc.message)
+        if out.reference is not None:
+            await self._mark_from_draft(account_id, out.reference)
+        return await self._send_result(account_id, out.message_id, sent)
+
+    async def _mark_from_draft(self, account_id: str, header: str) -> None:
+        """Mark the original the sent draft answered or forwarded."""
+        reference = replies.reference_from_header(header)
+        if reference is None:
+            return
+        try:
+            original = await self._on_message(
+                account_id,
+                reference.message_id,
+                lambda p, native: p.get_message(native),
+            )
+        except MailboxApiError as exc:
+            log.warning("sent, but the original is not marked: %s", exc.message)
+            return
+        await self._mark_answered(account_id, reference, original)
 
     async def delete_draft(
         self, access: Access, account_id: str, draft_id: str
@@ -642,6 +708,12 @@ def _public(message: S, message_id: str, account_id: str) -> S:
     return message.model_copy(update={"id": message_id, "account_id": account_id})
 
 
+class _DraftToSend(BaseModel):
+    """What makes two ``send_draft`` requests the same, for Idempotency-Key."""
+
+    draft_id: str
+
+
 def _require_draft_right(
     access: Access, operation: str, account_id: str, draft: DraftMessage
 ) -> None:
@@ -649,11 +721,6 @@ def _require_draft_right(
     if draft.reference is not None:
         # The draft quotes or carries the original, as a send would.
         access.require("get_message", account_id)
-
-
-def _reference_header(reference: MessageReference) -> str:
-    """What a draft keeps of its reference, e.g. ``reply msg_...``."""
-    return f"{reference.action} {reference.message_id}"
 
 
 def _delete_right(permanent: bool) -> str:

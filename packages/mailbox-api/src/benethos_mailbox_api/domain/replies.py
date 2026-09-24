@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any, TypeVar
 
+from pydantic import ValidationError
+
 from ..data.mail import compose
 from ..data.models import DraftMessage, Message, MessageReference, Recipient
 from ..errors import BadRequestError
@@ -65,6 +67,22 @@ def forward(
             original, message.html, "Forwarded message"
         )
     return message.model_copy(update=changes), compose.Extras(attachments=tuple(files))
+
+
+def reference_header(reference: MessageReference) -> str:
+    """What a draft keeps of its reference until it is sent: the action and
+    the original's id, e.g. ``reply msg_...``."""
+    return f"{reference.action} {reference.message_id}"
+
+
+def reference_from_header(value: str) -> MessageReference | None:
+    """The reference a draft kept. None for anything else, such as a header
+    another mail client changed."""
+    action, _, message_id = value.strip().partition(" ")
+    try:
+        return MessageReference(action=action, message_id=message_id.strip())
+    except ValidationError:
+        return None
 
 
 def answered_keyword(reference: MessageReference) -> str:

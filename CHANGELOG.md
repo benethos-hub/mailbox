@@ -35,6 +35,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   recipients optional, and is stored in the drafts folder; its id is a
   message id and stays when the draft is replaced. Ids of other messages
   answer `404`. Right: `drafts`; a `reference` needs `get_message` as well.
+- `POST /v1/accounts/{account_id}/drafts/{draft_id}/send` sends a draft as
+  stored, dated now, then deletes it; a reply or forward marks its
+  original. Takes `Idempotency-Key`. Right: `send_draft` (`send`).
 - `Idempotency-Key` on `POST .../send`: the same key within 24 hours
   returns the first result instead of sending again; with a different
   message it answers `409 idempotency_conflict`.

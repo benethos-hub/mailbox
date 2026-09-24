@@ -13,6 +13,7 @@ from email.parser import BytesHeaderParser, BytesParser
 from email.policy import SMTP, default
 from email.utils import format_datetime, formataddr, getaddresses, make_msgid
 from html import escape
+from typing import NamedTuple
 
 from ..models import Address, DraftMessage, Message, Recipient
 
@@ -86,10 +87,19 @@ def message(
     return mail.as_bytes()
 
 
-def outgoing(draft: bytes, date: datetime) -> tuple[bytes, list[str], str | None]:
-    """A stored draft made ready to send: dated ``date``, without its Bcc
-    and reference headers. Returns the bytes, every recipient once (To, Cc
-    and Bcc) and the reference the draft kept, if any."""
+class Outgoing(NamedTuple):
+    """A stored draft made ready to send."""
+
+    raw: bytes
+    recipients: list[str]  # To, Cc and Bcc, each once
+    reference: str | None  # what the draft kept, e.g. ``reply msg_...``
+    message_id: str
+
+
+def outgoing(draft: bytes, date: datetime, message_id: str) -> Outgoing:
+    """``draft`` dated ``date``, without its Bcc and reference headers.
+    ``message_id`` is used where the draft has none, as one another mail
+    client made may lack it."""
     mail = BytesParser(policy=SMTP).parsebytes(draft)
     fields = [str(v) for name in ("To", "Cc", "Bcc") for v in mail.get_all(name, [])]
     recipients = list(dict.fromkeys(a for _, a in getaddresses(fields) if a))
@@ -98,7 +108,15 @@ def outgoing(draft: bytes, date: datetime) -> tuple[bytes, list[str], str | None
     del mail[REFERENCE_HEADER]
     del mail["Date"]
     mail["Date"] = format_datetime(date)
-    return mail.as_bytes(), recipients, str(reference) if reference else None
+    kept = _one_id(mail.get("Message-ID"))
+    if kept is None:
+        mail["Message-ID"] = message_id
+    return Outgoing(
+        mail.as_bytes(),
+        recipients,
+        str(reference) if reference else None,
+        kept or message_id,
+    )
 
 
 # --- replies and forwards --------------------------------------------------------

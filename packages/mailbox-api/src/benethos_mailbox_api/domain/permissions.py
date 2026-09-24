@@ -41,7 +41,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # get_message too.
     "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
     # Cannot be taken back either.
-    "send": ("send_message",),
+    "send": ("send_message", "send_draft"),
     "accounts.manage": (
         "discover_account",
         "create_account",

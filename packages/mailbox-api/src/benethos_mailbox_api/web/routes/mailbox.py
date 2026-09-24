@@ -104,25 +104,28 @@ async def update_message(
     return await mailbox.update_message(caller, account_id, message_id, changes)
 
 
+IdempotencyKey = Annotated[
+    str | None,
+    Header(
+        alias="Idempotency-Key",
+        min_length=1,
+        max_length=200,
+        description=(
+            "Sent again with the same key within 24 hours, the request "
+            "returns the first result instead of sending twice. The same "
+            "key with a different message answers `409`."
+        ),
+    ),
+]
+
+
 @router.post("/send")
 async def send_message(
     account_id: str,
     message: OutgoingMessage,
     caller: Caller,
     mailbox: Mailbox,
-    idempotency_key: Annotated[
-        str | None,
-        Header(
-            alias="Idempotency-Key",
-            min_length=1,
-            max_length=200,
-            description=(
-                "Sent again with the same key within 24 hours, the request "
-                "returns the first result instead of sending twice. The same "
-                "key with a different message answers `409`."
-            ),
-        ),
-    ] = None,
+    idempotency_key: IdempotencyKey = None,
 ) -> SendResult:
     """Send from the account's address. The service sets From, Date and
     Message-ID and keeps a read copy in the sent folder. `200` means the
@@ -164,6 +167,20 @@ async def update_draft(
     """Replace a draft as a whole. Its id stays. An id that names no draft
     answers `404`."""
     return await mailbox.update_draft(caller, account_id, draft_id, draft)
+
+
+@router.post("/drafts/{draft_id}/send")
+async def send_draft(
+    account_id: str,
+    draft_id: str,
+    caller: Caller,
+    mailbox: Mailbox,
+    idempotency_key: IdempotencyKey = None,
+) -> SendResult:
+    """Send a draft as it is stored, dated now; then it is deleted and a
+    read copy kept in the sent folder. A reply or forward marks its
+    original. Right: `send_draft` (`send`); it cannot be taken back."""
+    return await mailbox.send_draft(caller, account_id, draft_id, idempotency_key)
 
 
 @router.delete("/drafts/{draft_id}", status_code=204)

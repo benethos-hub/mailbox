@@ -15,7 +15,8 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 6. moves it back the way another mail client would: the id still answers,
 7. replies and forwards through the API, back to account 2 only, and
    checks the flags on the original; renames and deletes the folder,
-   runs a batch, stores, replaces and deletes a reply draft (not sent),
+   runs a batch, stores, replaces and deletes a reply draft, sends a
+   draft to account 2,
 8. deletes the mail through the API, into the trash, then for good, and
    the sent copy. With ``--keep`` the mail stays in the inbox and the copy
    in the sent folder, to look at in a mail client.
@@ -222,9 +223,11 @@ def check_drafts(
     account_id: str,
     message_id: str,
     subject: str,
+    sender_id: str,
+    sender_email: str,
 ) -> None:
-    """A reply draft to the test mail: stored, replaced, listed, deleted.
-    Nothing is sent."""
+    """A reply draft to the test mail: stored, replaced, listed, deleted
+    and never sent. Then a draft sent to account 2."""
     drafts = other.drafts_folder()
     url = f"/v1/accounts/{account_id}/drafts"
     reply = f"Re: {subject}"
@@ -267,6 +270,28 @@ def check_drafts(
         and drafts is not None
         and not other.uids(drafts, reply),
         str(deleted.status_code),
+    )
+
+    # Sent to account 2, the one other test account: nobody else.
+    title = f"{subject} draft"
+    to_send = client.post(
+        url,
+        json={
+            "to": [{"email": sender_email}],
+            "subject": title,
+            "text": "Automatic draft of live/changes.py, sent to the test account.",
+        },
+    )
+    send_id = to_send.json().get("id", "?")
+    sent = client.post(f"{url}/{send_id}/send")
+    arrived = find_by_subject(client, sender_id, title)
+    run.check(
+        "POST drafts/{id}/send sends it, it arrives, the draft is gone",
+        sent.status_code == 200
+        and arrived is not None
+        and drafts is not None
+        and not other.uids(drafts, title),
+        str(sent.status_code),
     )
 
 
@@ -560,7 +585,16 @@ def main() -> int:
             f"{batch.status_code} {outcomes}",
         )
 
-        check_drafts(run, client, other, account_id, message_id, subject)
+        check_drafts(
+            run,
+            client,
+            other,
+            account_id,
+            message_id,
+            subject,
+            sender_id,
+            sender["email"],
+        )
 
         test_folder = names.get(base, "?")
         renamed = client.patch(

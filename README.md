@@ -6,9 +6,9 @@ an MCP server on top so an AI assistant can work with them too.
 > **Status: 0.1.0, pre-alpha.** IMAP accounts with autodiscovery from the
 > address: reading (folders, messages, search, attachments, raw source,
 > across accounts), stable message ids kept by a background sync, changing
-> and moving messages, folders, and sending over SMTP with reply, forward
-> and `Idempotency-Key`. Drafts are next. What comes next and in which
-> order:
+> and moving messages, folders, drafts, and sending over SMTP with reply,
+> forward and `Idempotency-Key`. The MCP server's tools are next. What
+> comes next and in which order:
 > [docs/ROADMAP.md](docs/ROADMAP.md). The design behind it:
 > [docs/CONCEPT.md](docs/CONCEPT.md).
 
