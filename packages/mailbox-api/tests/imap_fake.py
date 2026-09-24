@@ -82,6 +82,9 @@ class FakeMailBox:
         # Folder names a mail client would show. Servers often leave the
         # inbox out: clients show it anyway.
         self.subscribed: set[str] = set()
+        # What SELECT reports as PERMANENTFLAGS. "\*": any keyword.
+        self.permanent_flags = ["\\Answered", "\\Flagged", "\\Deleted", "\\Seen", "\\*"]
+        self.writable = False
 
     # the factory signature ImapSession expects
     def __call__(self, server: Any, timeout: float) -> FakeMailBox:
@@ -145,12 +148,38 @@ class FakeMailBox:
             raise imaplib.IMAP4.error("select failed: no such folder")
         self.selected = name
         folder = self.folders[name]
-        return {
+        answer: dict[bytes, Any] = {
             b"UIDVALIDITY": folder.uidvalidity,
             b"UIDNEXT": folder.uidnext,
             b"EXISTS": len(folder.messages),
-            b"READ-ONLY": [b""] if readonly else None,
+            b"PERMANENTFLAGS": tuple(f.encode() for f in self.permanent_flags),
         }
+        answer[b"READ-ONLY" if readonly else b"READ-WRITE"] = True
+        self.writable = not readonly
+        return answer
+
+    def add_flags(
+        self, uids: list[int], flags: list[str], silent: bool = False
+    ) -> None:
+        self._store("+", uids, flags)
+
+    def remove_flags(
+        self, uids: list[int], flags: list[str], silent: bool = False
+    ) -> None:
+        self._store("-", uids, flags)
+
+    def _store(self, sign: str, uids: list[int], flags: list[str]) -> None:
+        assert self.writable, "STORE needs the folder selected read-write"
+        self.calls.append(("store", sign, tuple(uids), tuple(flags)))
+        folder = self.folders[self.selected]
+        for uid in uids:
+            raw, current = folder.messages[uid]
+            if sign == "+":
+                changed = tuple(dict.fromkeys((*current, *flags)))
+            else:
+                gone = {f.lower() for f in flags}
+                changed = tuple(f for f in current if f.lower() not in gone)
+            folder.messages[uid] = (raw, changed)
 
     def folder_status(self, name: str, what: list[str]) -> dict[bytes, int]:
         self.calls.append(("status", name, tuple(what)))

@@ -16,6 +16,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `PATCH /v1/accounts/{account_id}/messages/{message_id}` sets `unread`,
+  `starred` and `keywords` and answers the changed summary. Right:
+  `update_message` (`mail.write`).
+- Messages carry `keywords`, named as in JMAP: `$answered`, `$forwarded`,
+  `$draft` and the provider's own.
 - Folders carry `subscribed`: whether the folder is subscribed on the IMAP
   server, which decides whether mail clients such as Outlook show it.
   `null` where the provider has no subscriptions.

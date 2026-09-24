@@ -9,6 +9,7 @@ from ...models import (
     FolderRole,
     Message,
     MessageSummary,
+    MessageUpdate,
     Page,
 )
 from ..base import Capability
@@ -82,6 +83,17 @@ class MemoryProvider:
         message = await self.get_message(message_id)
         body = message.text_body or ""
         return f"Subject: {message.subject or ''}\r\n\r\n{body}".encode()
+
+    async def update_message(
+        self, message_id: str, changes: MessageUpdate
+    ) -> MessageSummary:
+        message = await self.get_message(message_id)
+        fields = changes.model_dump(exclude_none=True)
+        if "keywords" in fields:
+            fields["keywords"] = sorted({k.lower() for k in fields["keywords"]})
+        updated = message.model_copy(update=fields)
+        self.messages[self.messages.index(message)] = updated
+        return MessageSummary.model_validate(updated.model_dump())
 
     async def folder_states(self) -> dict[str, str]:
         return {

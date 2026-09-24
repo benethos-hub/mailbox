@@ -26,6 +26,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "get_message_raw",
         "get_attachment",
     ),
+    "mail.write": ("update_message",),
     "accounts.manage": (
         "discover_account",
         "create_account",

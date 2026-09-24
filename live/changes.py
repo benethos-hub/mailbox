@@ -45,6 +45,8 @@ IDLE_WAIT = 90.0
 # How long the mail may take from SMTP to the inbox.
 DELIVERY_TRIES = 10
 DELIVERY_PAUSE = 3.0
+# Set and cleared again on the test mail.
+LIVE_KEYWORD = "$mailbox-api-live"
 
 
 def smtp_server(
@@ -160,6 +162,16 @@ class OtherClient:
         self.conn.select("INBOX")
         status, _ = self.conn.delete(_quoted(folder))
         return status == "OK"
+
+    def flags(self, folder: str, subject: str) -> list[str]:
+        """The flags of the one test mail, as the server keeps them."""
+        found = self.uids(folder, subject)
+        if len(found) != 1:
+            return [f"({len(found)} mails)"]
+        _, data = self.conn.uid("FETCH", found[0].decode(), "(FLAGS)")
+        match = re.search(rb"FLAGS \(([^)]*)\)", data[0] if data and data[0] else b"")
+        flags = match.group(1).decode().split() if match else []
+        return sorted(f for f in flags if f != "\\Recent")
 
     def uids(self, folder: str, subject: str) -> list[bytes]:
         status, _ = self.conn.select(_quoted(folder))
@@ -343,6 +355,32 @@ def main() -> int:
         inbox_folder = found["folder_ids"][0]
 
         other = OtherClient(env, receiver)
+        patched = client.patch(
+            f"/v1/accounts/{account_id}/messages/{message_id}",
+            json={"unread": False, "starred": True, "keywords": [LIVE_KEYWORD]},
+        )
+        run.check(
+            "PATCH marks it read, starred, with a keyword",
+            patched.status_code == 200
+            and patched.json().get("id") == message_id
+            and patched.json().get("keywords") == [LIVE_KEYWORD],
+            str(patched.status_code),
+        )
+        seen = other.flags("INBOX", subject)
+        run.check(
+            "another client sees the flags",
+            {"\\Seen", "\\Flagged", LIVE_KEYWORD} <= set(seen),
+            " ".join(seen),
+        )
+        client.patch(
+            f"/v1/accounts/{account_id}/messages/{message_id}",
+            json={"unread": True, "starred": False, "keywords": []},
+        )
+        run.check(
+            "and back to unread, no star, no keyword",
+            other.flags("INBOX", subject) == [],
+            " ".join(other.flags("INBOX", subject)),
+        )
         folder = other.folder_name(base)
         other.create_folder(folder, subscribe=keep)
         uids = other.uids("INBOX", subject)

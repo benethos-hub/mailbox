@@ -18,6 +18,7 @@ from ..data.models import (
     Message,
     MessagePage,
     MessageSummary,
+    MessageUpdate,
     Page,
 )
 from ..data.providers import MailProvider
@@ -159,6 +160,21 @@ class MailboxService:
             account_id, message_id, lambda p, native: p.get_message(native)
         )
         return message.model_copy(update={"id": message_id, "account_id": account_id})
+
+    async def update_message(
+        self,
+        access: Access,
+        account_id: str,
+        message_id: str,
+        changes: MessageUpdate,
+    ) -> MessageSummary:
+        access.require("update_message", account_id)
+        updated = await self._on_message(
+            account_id,
+            message_id,
+            lambda p, native: p.update_message(native, changes),
+        )
+        return updated.model_copy(update={"id": message_id, "account_id": account_id})
 
     async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:
         access.require("get_message_raw", account_id)

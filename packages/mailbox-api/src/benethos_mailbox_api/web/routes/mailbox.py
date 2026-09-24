@@ -7,7 +7,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Query, Response
 
-from ...data.models import Folder, Message, MessageSummary, Page
+from ...data.models import Folder, Message, MessageSummary, MessageUpdate, Page
 from ..deps import Caller, Mailbox
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
@@ -47,6 +47,18 @@ async def get_message(
     account_id: str, message_id: str, caller: Caller, mailbox: Mailbox
 ) -> Message:
     return await mailbox.get_message(caller, account_id, message_id)
+
+
+@router.patch("/messages/{message_id}")
+async def update_message(
+    account_id: str,
+    message_id: str,
+    changes: MessageUpdate,
+    caller: Caller,
+    mailbox: Mailbox,
+) -> MessageSummary:
+    """Mark read or unread, star, set keywords. Fields left out stay."""
+    return await mailbox.update_message(caller, account_id, message_id, changes)
 
 
 @router.get(

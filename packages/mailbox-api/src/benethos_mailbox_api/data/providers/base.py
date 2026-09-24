@@ -8,7 +8,14 @@ from typing import Protocol
 
 from pydantic import SecretStr
 
-from ..models import AttachmentContent, Folder, Message, MessageSummary, Page
+from ..models import (
+    AttachmentContent,
+    Folder,
+    Message,
+    MessageSummary,
+    MessageUpdate,
+    Page,
+)
 
 # Hands an adapter one stored credential by field name, decrypted at the
 # moment of the call. Adapters call it right before a login and keep nothing.
@@ -58,6 +65,12 @@ class MailProvider(Protocol):
 
     async def get_raw(self, message_id: str) -> bytes:
         """The message source as RFC 822 bytes."""
+        ...
+
+    async def update_message(
+        self, message_id: str, changes: MessageUpdate
+    ) -> MessageSummary:
+        """Change flags and keywords. Returns the message as it is now."""
         ...
 
     # --- for the sync worker ---------------------------------------------------

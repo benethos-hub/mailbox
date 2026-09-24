@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Generic, TypeVar
+from typing import Annotated, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -126,9 +126,33 @@ class MessageSummary(BaseModel):
     snippet: str | None = None
     unread: bool = False
     starred: bool = False
+    keywords: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Further flags, named as in JMAP: `$answered`, `$forwarded`, "
+            "`$draft`, and the provider's own keywords."
+        ),
+    )
     has_attachments: bool = False
 
     model_config = {"populate_by_name": True, "serialize_by_alias": True}
+
+
+# A keyword as IMAP allows it: an atom, no spaces, brackets, quotes or
+# wildcards, and no system flag (those start with a backslash).
+KEYWORD_PATTERN = r"^[!#$&'+\-.0-9A-Z^_a-z|~]{1,100}$"
+
+
+class MessageUpdate(BaseModel):
+    """What ``PATCH`` changes on a message. Fields left out stay as they are."""
+
+    unread: bool | None = None
+    starred: bool | None = None
+    keywords: list[Annotated[str, Field(pattern=KEYWORD_PATTERN)]] | None = Field(
+        default=None,
+        max_length=50,
+        description="Replaces the list of keywords.",
+    )
 
 
 class Attachment(BaseModel):
