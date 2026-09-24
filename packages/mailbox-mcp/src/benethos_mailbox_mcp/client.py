@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import os
+import re
+from dataclasses import dataclass
 from typing import Any
+from urllib.parse import unquote
 
 import httpx
 
@@ -12,6 +15,14 @@ from .errors import ApiError, ServiceUnavailableError
 DEFAULT_URL = "http://127.0.0.1:8080"
 URL_ENV = "MAILBOX_API_URL"
 TOKEN_ENV = "MAILBOX_API_TOKEN"
+
+
+@dataclass(frozen=True)
+class Attachment:
+    data: bytes
+    content_type: str
+    charset: str | None
+    filename: str | None
 
 
 class MailboxApiClient:
@@ -74,6 +85,37 @@ class MailboxApiClient:
             "GET", f"/v1/accounts/{account_id}/messages/{message_id}"
         )
         return result
+
+    async def get_attachment(
+        self, account_id: str, message_id: str, attachment_id: str
+    ) -> Attachment:
+        """The attachment's bytes, with its type, charset and file name."""
+        path = (
+            f"/v1/accounts/{account_id}/messages/{message_id}"
+            f"/attachments/{attachment_id}"
+        )
+        try:
+            response = await self._http.get(path)
+        except httpx.TransportError:
+            raise ServiceUnavailableError(
+                f"The Mailbox API service is not reachable at {self.base_url}."
+            ) from None
+        if response.is_error:
+            raise _api_error(response)
+        media, _, options = response.headers.get(
+            "content-type", "application/octet-stream"
+        ).partition(";")
+        charset = re.search(r"charset=\"?([\w.:-]+)", options)
+        name = re.search(
+            r"filename\*=UTF-8''([^;]+)",
+            response.headers.get("content-disposition", ""),
+        )
+        return Attachment(
+            data=response.content,
+            content_type=media.strip().lower(),
+            charset=charset.group(1) if charset else None,
+            filename=unquote(name.group(1)) if name else None,
+        )
 
     async def aclose(self) -> None:
         await self._http.aclose()

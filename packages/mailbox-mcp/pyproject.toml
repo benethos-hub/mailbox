@@ -38,6 +38,8 @@ dependencies = [
     # its dependencies. It lives in the workspace dev group.
     "mcp>=2.0.0,<3",
     "httpx>=0.28",
+    # PDF attachments reach the model as page images (pdf.py).
+    "pypdfium2>=4.30",
 ]
 
 [project.scripts]
