@@ -1,6 +1,6 @@
 """Live check of IDLE and of an id that survives a move by another client.
 
-    uv run python live/changes.py
+    uv run python live/changes.py [--keep]
 
 Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 
@@ -9,7 +9,9 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 3. checks that IDLE reported it and that the API lists it,
 4. moves it, the way another mail client would, into a folder it creates,
 5. checks that its id still answers, now in that folder,
-6. deletes the test mail and the folder again.
+6. deletes the test mail and the folder again. With ``--keep`` both stay,
+   and a copy goes into the Sent folder of account 2, as a mail client
+   would put it there, to look at in a mail client.
 
 Nothing else in the mailboxes is touched. The service runs in-process with
 memory storage and a throwaway master key. Credentials are never printed.
@@ -17,6 +19,7 @@ memory storage and a throwaway master key. Credentials are never printed.
 
 from __future__ import annotations
 
+import argparse
 import imaplib
 import re
 import smtplib
@@ -64,9 +67,13 @@ def smtp_server(
 
 
 def send_test_mail(
-    server: dict[str, Any], sender: dict[str, str], recipient: str, subject: str
-) -> None:
-    """One mail, to one of the test accounts only."""
+    server: dict[str, Any],
+    sender: dict[str, str],
+    recipient: str,
+    subject: str,
+    keep: bool,
+) -> bytes:
+    """One mail, to one of the test accounts only. Returns what was sent."""
     message = EmailMessage()
     message["From"] = sender["email"]
     message["To"] = recipient
@@ -74,7 +81,11 @@ def send_test_mail(
     message["Message-ID"] = make_msgid(domain=sender["email"].rpartition("@")[2])
     message.set_content(
         "Automatic test mail of live/changes.py in the mailbox-api repository.\n"
-        "It deletes itself when the check is over.\n"
+        + (
+            "It was kept for inspection (--keep): delete it by hand.\n"
+            if keep
+            else "It deletes itself when the check is over.\n"
+        )
     )
     host, port = server["host"], int(server["port"])
     context = ssl.create_default_context()
@@ -87,6 +98,7 @@ def send_test_mail(
     with smtp:
         smtp.login(sender["username"], sender["password"])
         smtp.send_message(message, from_addr=sender["email"], to_addrs=[recipient])
+    return message.as_bytes()
 
 
 class OtherClient:
@@ -118,6 +130,24 @@ class OtherClient:
         status, data = self.conn.create(_quoted(folder))
         if status != "OK":
             raise RuntimeError(f"CREATE failed: {data!r}")
+
+    def sent_folder(self) -> str | None:
+        """The folder flagged ``\\Sent`` (RFC 6154)."""
+        status, data = self.conn.list()
+        for line in data if status == "OK" else []:
+            if not isinstance(line, bytes):
+                continue
+            match = re.match(rb'\(([^)]*)\) (?:"[^"]*"|NIL) (.+)$', line)
+            if match and b"\\sent" in match.group(1).lower():
+                return match.group(2).decode().strip('"')
+        return None
+
+    def append_sent(self, folder: str, raw: bytes) -> bool:
+        """What a mail client does after sending: a read copy in Sent."""
+        status, _ = self.conn.append(
+            _quoted(folder), r"(\Seen)", imaplib.Time2Internaldate(time.time()), raw
+        )
+        return status == "OK"
 
     def delete_folder(self, folder: str) -> bool:
         self.conn.select("INBOX")
@@ -185,7 +215,39 @@ def find_by_subject(
     return None
 
 
+def clean_up(
+    env: dict[str, str],
+    receiver: dict[str, str],
+    other: OtherClient | None,
+    base: str,
+    subject: str,
+) -> None:
+    """Delete the test mail wherever it is, and the test folder."""
+    if other is None:
+        try:
+            other = OtherClient(env, receiver)
+        except (imaplib.IMAP4.error, OSError) as exc:
+            print(f"cleanup failed, remove '{subject}' by hand: {exc}")
+            return
+    folder = other.folder_name(base)
+    removed = other.delete_mail(folder, subject) + other.delete_mail("INBOX", subject)
+    gone = other.delete_folder(folder)
+    print(
+        f"\n== cleanup: {removed} test mail(s) deleted, "
+        + ("the folder too" if gone else "no folder to delete")
+    )
+    other.close()
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--keep",
+        action="store_true",
+        help="keep the test mail and its folder, and put a copy into the "
+        "sender's Sent folder, to look at in a mail client",
+    )
+    keep = parser.parse_args().keep
     env = read_env(ENV_FILE)
     listed = accounts(env)
     if len(listed) < 2 or "LIVE_IMAP_HOST" not in env:
@@ -237,15 +299,31 @@ def main() -> int:
         assert smtp is not None
 
         provider = services.accounts.provider(account_id)
+        sent: list[bytes] = []
         try:
             changed = anyio.run(
                 idle_while_sending,
                 provider,
-                lambda: send_test_mail(smtp, sender, receiver["email"], subject),
+                lambda: sent.append(
+                    send_test_mail(smtp, sender, receiver["email"], subject, keep)
+                ),
             )
             run.check("IDLE reports the new mail", changed)
         except MailboxApiError as exc:
             run.check("IDLE reports the new mail", False, f"{exc.code}: {exc.message}")
+
+        if keep and sent:
+            outbox = OtherClient(env, sender)
+            try:
+                sent_folder = outbox.sent_folder()
+                run.check(
+                    "a copy in the sender's Sent folder",
+                    sent_folder is not None
+                    and outbox.append_sent(sent_folder, sent[0]),
+                    sent_folder or "no folder flagged \\Sent",
+                )
+            finally:
+                outbox.close()
 
         found = find_by_subject(client, account_id, subject)
         if not run.check("the API lists it", found is not None):
@@ -282,22 +360,16 @@ def main() -> int:
             moved.status_code == 200 and moved.json().get("subject") == subject,
         )
     finally:
-        if other is None:
-            try:
-                other = OtherClient(env, receiver)
-            except (imaplib.IMAP4.error, OSError) as exc:
-                print(f"cleanup failed, remove '{subject}' by hand: {exc}")
-        if other is not None:
-            folder = other.folder_name(base)
-            removed = other.delete_mail(folder, subject) + other.delete_mail(
-                "INBOX", subject
-            )
-            gone = other.delete_folder(folder)
+        if keep:
             print(
-                f"\n== cleanup: {removed} test mail(s) deleted, "
-                + ("the folder too" if gone else "no folder to delete")
+                f"\n== kept: '{subject}' in {folder} of {receiver['email']}, "
+                "and a copy in the Sent folder of the sender: delete them and "
+                "the folder by hand"
             )
-            other.close()
+            if other is not None:
+                other.close()
+        else:
+            clean_up(env, receiver, other, base, subject)
         anyio.run(services.accounts.close)
         services.close()
 
