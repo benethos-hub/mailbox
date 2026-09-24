@@ -10,7 +10,7 @@ from pydantic import SecretStr
 
 from benethos_mailbox_api.data.models import FolderRole
 from benethos_mailbox_api.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_api.data.providers.imap.client import (
+from benethos_mailbox_api.data.providers.protocols.imap import (
     ImapServer,
     ImapSession,
     RawFolder,

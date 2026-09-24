@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_api.data.models import Grant
 from benethos_mailbox_api.data.providers.imap import mappers
-from benethos_mailbox_api.data.providers.imap.client import ImapServer, ImapSession
+from benethos_mailbox_api.data.providers.protocols.imap import ImapServer, ImapSession
 from benethos_mailbox_api.errors import (
     BadRequestError,
     ConflictError,

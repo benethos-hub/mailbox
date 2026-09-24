@@ -10,7 +10,7 @@ import pytest
 from benethos_mailbox_api.data.models import Security, ServerProtocol
 from benethos_mailbox_api.data.providers import probe_server
 from benethos_mailbox_api.data.providers.imap import probe
-from benethos_mailbox_api.data.providers.imap.client import ImapServer, ImapSession
+from benethos_mailbox_api.data.providers.protocols.imap import ImapServer, ImapSession
 from benethos_mailbox_api.errors import (
     BadRequestError,
     NotSupportedError,

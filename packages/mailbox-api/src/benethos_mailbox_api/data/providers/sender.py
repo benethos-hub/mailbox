@@ -13,7 +13,7 @@ from typing import Any
 
 from ...errors import BadRequestError
 from .guard import Guard
-from .smtp import DEFAULT_PORTS, SmtpLogin, SmtpServer, SmtpSession
+from .protocols.smtp import DEFAULT_PORTS, SmtpLogin, SmtpServer, SmtpSession
 
 SmtpFactory = Callable[[SmtpServer], SmtpSession]
 

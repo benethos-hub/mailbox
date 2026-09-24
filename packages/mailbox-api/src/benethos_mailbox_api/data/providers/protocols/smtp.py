@@ -1,8 +1,9 @@
 """Sending over SMTP. The only module that imports ``smtplib``.
 
-Used by the adapters that have no sending of their own: IMAP, and later
-POP3. One connection per send; a session is not kept open between sends.
-Every library error leaves this module as a ``MailboxApiError``.
+Used through ``sender.SmtpSender`` by the adapters that have no sending of
+their own: IMAP, and later POP3. One connection per send; a session is not
+kept open between sends. Every library error leaves this module as a
+``MailboxApiError``.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 
-from ...errors import (
+from ....errors import (
     BadRequestError,
     ProviderAuthError,
     ProviderError,
