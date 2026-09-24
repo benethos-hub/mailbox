@@ -44,8 +44,35 @@ class MailboxApiClient:
             return None
         return response.json()
 
+    async def me(self) -> dict[str, Any]:
+        """The caller: its accounts, each with the operations allowed on it."""
+        result: dict[str, Any] = await self.request("GET", "/v1/me")
+        return result
+
     async def list_accounts(self) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = await self.request("GET", "/v1/accounts")
+        return result
+
+    async def list_folders(self, account_id: str) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = await self.request(
+            "GET", f"/v1/accounts/{account_id}/folders"
+        )
+        return result
+
+    async def list_messages(
+        self, account_id: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """One account's messages, or with ``account_id`` None, those of
+        every account the caller may read."""
+        path = f"/v1/accounts/{account_id}/messages" if account_id else "/v1/messages"
+        wanted = {k: v for k, v in params.items() if v is not None}
+        result: dict[str, Any] = await self.request("GET", path, params=wanted)
+        return result
+
+    async def get_message(self, account_id: str, message_id: str) -> dict[str, Any]:
+        result: dict[str, Any] = await self.request(
+            "GET", f"/v1/accounts/{account_id}/messages/{message_id}"
+        )
         return result
 
     async def aclose(self) -> None:

@@ -10,7 +10,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | **done** |
 | [1c](#phase-1c--stable-ids-and-sync-worker) | Stable ids and sync worker | **done** |
 | [2](#phase-2--writing-and-sending) | Writing and sending | **done** |
-| [3](#phase-3--mcp-server-and-container) | MCP server and container | |
+| [3](#phase-3--mcp-server-and-container) | MCP server and container | in progress |
 | [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
 
@@ -95,8 +95,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 3 – MCP server and container
 
-- MCP tools beyond `list_accounts` (8): read tools first, then drafts, then
-  sending
+- **MCP read tools over stdio, registered by the token's rights (8)**, done
+- MCP tools beyond reading (8): writing and drafts, then sending
 - Prompt injection measures (7.7): mail content marked as foreign, hidden
   HTML dropped, the read-and-send warning, send audit
 - Grant constraints `recipients` and `max_sends_per_day` (7.5), together

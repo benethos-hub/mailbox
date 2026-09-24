@@ -27,6 +27,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- MCP server: `list_folders`, `search_messages` and `get_message` besides
+  `list_accounts`, which now says what may be done on each account. Only
+  the tools the token's rights allow are offered. Mail content comes back
+  as plain text inside `<mail-content>` markers, hidden HTML left out.
+  stdio only for now.
 - Search filters on `GET /v1/accounts/{account_id}/messages` and
   `GET /v1/messages`: `from`, `to`, `subject`, `after`, `before` (days),
   `starred` and `has_attachments`, besides `q` and `unread`. `folder` on

@@ -1121,7 +1121,8 @@ small and the REST-only rule is enforced by the dependency list itself. A
 test checks that no module imports the service.
 
 It reads `MAILBOX_API_URL` and `MAILBOX_API_TOKEN` and calls the REST API with
-httpx. It runs over stdio or streamable HTTP. At start it
+httpx. It runs over stdio; streamable HTTP follows with its bearer guard
+(phase 3). At start it
 asks `/v1/me` what its user may do, and only those tools exist
 (7.5).
 
@@ -1139,8 +1140,15 @@ one or two `operationId`s.
 | `get_attachment` | read | `get_attachment`, saved to a download dir, text extracted where possible |
 | `whats_new` | read | `list_changes` across accounts, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash |
+| `create_folder` | write | `create_folder` |
 | `create_draft` | write | `create_draft`, incl. reply / forward by reference |
-| `send_message` | send | `send_message` / `send_draft`, with an idempotency key derived from the call |
+| `send_message` | send | `send_message`, with an idempotency key derived from the call |
+| `send_draft` | send | `send_draft`, with an idempotency key derived from the call |
+
+**Decided 2026-09-24:** sending a new mail and sending a draft are two
+tools, `send_message` and `send_draft`. The model may create folders
+(`create_folder`). Text from PDF attachments comes later. The policy file
+stays as designed; the first tools go by the token's rights alone.
 
 Principles:
 
