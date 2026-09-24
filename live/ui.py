@@ -6,8 +6,10 @@ Starts a service of its own with a throwaway database, as mcp_stdio.py
 does, adds the first test account through the API, and then uses the UI
 the way a browser does: signs in with the admin key, connects the second
 test account through discovery and the form, makes a user, a role and a
-token and signs in with that token, opens the pages and follows their
-forms. Nothing in the mailboxes is written. Credentials and mail
+token and signs in with that token, reads mail, opens the pages and
+follows their forms. It writes on the test accounts only: a folder and a
+draft on the first, which it removes again, and one mail from the first
+to the second, deleted for good on both sides. Credentials and mail
 content are never printed.
 """
 
@@ -18,7 +20,9 @@ import secrets
 import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 from mcp_stdio import free_port, service_env, start_service
@@ -238,6 +242,129 @@ def check_mail(run: Run, browser: httpx.Client, account_id: str) -> None:
     run.check("a search that finds nothing", "match the search" in searched.text)
 
 
+def _find(
+    browser: httpx.Client, account_id: str, folder: str, token: str, tries: int = 1
+) -> str | None:
+    """The page of the one message whose subject holds ``token``."""
+    for attempt in range(tries):
+        listing = browser.get(
+            f"/ui/accounts/{account_id}/mail",
+            params={"folder": folder, "subject": token},
+        ).text
+        found = re.search(
+            rf'href="(/ui/accounts/{account_id}/mail/msg_[0-9a-f]+)"', listing
+        )
+        if found is not None:
+            return found.group(1)
+        if attempt + 1 < tries:
+            time.sleep(5)
+    return None
+
+
+def check_writing(
+    run: Run,
+    browser: httpx.Client,
+    sender_id: str,
+    receiver_id: str,
+    receiver_email: str,
+) -> None:
+    """Folders and a draft on the first test account, which clean up after
+    themselves, and one mail from the first test account to the second,
+    deleted for good on both sides afterwards."""
+    csrf = csrf_of(browser.get("/ui").text)
+    base = f"/ui/accounts/{sender_id}"
+    created = browser.post(
+        f"{base}/folders", data={"csrf_token": csrf, "name": "ui-live-check"}
+    )
+    folder = parse_qs(urlsplit(str(created.url)).query).get("folder", [""])[0]
+    run.check("create a folder", "ui-live-check created." in created.text)
+    renamed = browser.post(
+        f"{base}/folders/rename",
+        data={"csrf_token": csrf, "folder": folder, "name": "ui-live-check-2"},
+    )
+    run.check("rename it", "Renamed." in renamed.text)
+    folder = parse_qs(urlsplit(str(renamed.url)).query).get("folder", [""])[0]
+    deleted = browser.post(
+        f"{base}/folders/delete", data={"csrf_token": csrf, "folder": folder}
+    )
+    run.check("delete it", "Folder deleted." in deleted.text)
+
+    token = f"mailbox-api UI live check {secrets.token_hex(4)}"
+    draft = browser.post(
+        f"{base}/compose",
+        data={
+            "csrf_token": csrf,
+            "to": receiver_email,
+            "subject": f"{token} draft",
+            "text": "A draft from the UI live check.",
+            "do": "save",
+        },
+    )
+    run.check("save a draft", "Draft saved." in draft.text)
+    edited = browser.post(
+        str(draft.url.path),
+        data={
+            "csrf_token": csrf,
+            "to": receiver_email,
+            "subject": f"{token} draft",
+            "text": "Changed.",
+            "do": "save",
+        },
+    )
+    run.check("change it", "Draft saved." in edited.text and "Changed." in edited.text)
+    gone = browser.post(str(draft.url.path), data={"csrf_token": csrf, "do": "delete"})
+    run.check("delete it", "Draft deleted." in gone.text)
+
+    form = browser.get(f"{base}/compose").text
+    key = re.search(r'name="idempotency_key" value="([^"]+)"', form)
+    sent = browser.post(
+        f"{base}/compose",
+        data={
+            "csrf_token": csrf,
+            "idempotency_key": key.group(1) if key else "",
+            "to": receiver_email,
+            "subject": token,
+            "text": "Sent by the UI live check; deleted again at once.",
+            "do": "send",
+        },
+    )
+    if not run.check(
+        "send from the first test account to the second", "Sent." in sent.text
+    ):
+        return
+    received = _find(browser, receiver_id, "inbox", token, tries=12)
+    if run.check("it arrives", received is not None):
+        assert received is not None
+        message_id = received.rpartition("/")[2]
+        marked = browser.post(
+            f"/ui/accounts/{receiver_id}/mail/batch",
+            data={
+                "csrf_token": csrf,
+                "ids": message_id,
+                "action": "star",
+                "back": f"/ui/accounts/{receiver_id}/mail",
+            },
+        )
+        run.check("star it through the list", "1 done." in marked.text)
+        read = browser.post(
+            f"{received}/flags", data={"csrf_token": csrf, "unread": "0"}
+        )
+        run.check("mark it read", "Mark unread" in read.text)
+        trashed = browser.post(f"{received}/delete", data={"csrf_token": csrf})
+        run.check("move it to the trash", "Moved to the trash." in trashed.text)
+        purged = browser.post(
+            f"{received}/delete", data={"csrf_token": csrf, "permanent": "1"}
+        )
+        run.check("delete it for good", "Deleted for good." in purged.text)
+    copy = _find(browser, sender_id, "sent", token, tries=3)
+    if run.check("the sent copy", copy is not None):
+        assert copy is not None
+        purged = browser.post(
+            f"{copy}/delete", data={"csrf_token": csrf, "permanent": "1"}
+        )
+        run.check("delete the sent copy for good", "Deleted for good." in purged.text)
+
+
 def main() -> int:
     env = read_env(ENV_FILE)
     test_accounts = accounts(env)[:2]
@@ -261,12 +388,17 @@ def main() -> int:
             if not run.check("sign in with the admin key", sign_in(browser, admin_key)):
                 return 1
             print("\n== accounts")
-            check_accounts(run, browser, env, test_accounts[1], admin_key)
+            second_id = check_accounts(run, browser, env, test_accounts[1], admin_key)
             print("\n== users, tokens, roles")
             assert account_id is not None
             check_users(run, browser, url, account_id)
             print("\n== reading mail")
             check_mail(run, browser, account_id)
+            if second_id is not None:
+                print("\n== writing and sending")
+                check_writing(
+                    run, browser, account_id, second_id, test_accounts[1]["email"]
+                )
             print("\n== the frame")
             check_frame(run, browser, [a["email"].lower() for a in test_accounts])
     finally:

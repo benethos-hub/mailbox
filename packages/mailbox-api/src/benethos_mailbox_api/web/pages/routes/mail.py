@@ -21,7 +21,7 @@ from ....data.models import Folder, FolderRole, Message, MessageFilter
 from ....domain.access import Access
 from ....domain.accounts import AccountService
 from ....domain.mailbox import MailboxService
-from ..deps import Viewer
+from ..deps import Viewer, account_of
 from ..errors import error_page
 from ..templates import render
 
@@ -144,8 +144,7 @@ async def account_mail(
     request: Request, caller: Viewer, account_id: str
 ) -> HTMLResponse:
     """One folder of one account, beside the account's folders."""
-    accounts: AccountService = request.app.state.accounts
-    account = accounts.get(caller, account_id)
+    account = account_of(request, caller, account_id)
     mailbox = _mailbox(request)
     folders = await mailbox.list_folders(caller, account_id)
     wanted = request.query_params.get("folder") or FolderRole.INBOX.value
@@ -156,6 +155,12 @@ async def account_mail(
     if current is None:
         return error_page(request, 404, f"The account has no folder {wanted}.")
     search, fields, problem = _search(request)
+    can = _rights(caller, account_id)
+    can.update(
+        change=can["change"] and can["batch"],
+        trash=can["trash"] and can["batch"],
+        purge=can["purge"] and can["batch"],
+    )
     page = await mailbox.list_messages(
         caller,
         account_id,
@@ -176,15 +181,35 @@ async def account_mail(
         pages=_pages(request, page.next_cursor),
         fields=fields,
         problem=problem,
+        can=can,
+        selectable=can["change"] or can["trash"] or can["purge"],
+        here=str(request.url.path)
+        + (f"?{request.url.query}" if request.url.query else ""),
     )
+
+
+def _rights(caller: Access, account_id: str) -> dict[str, bool]:
+    """What the mail pages offer, by the caller's rights on the account."""
+    allowed = caller.operations_on(account_id)
+    return {
+        "write": "send_message" in allowed or "create_draft" in allowed,
+        "send": "send_message" in allowed,
+        "drafts": "list_drafts" in allowed,
+        "change": "update_message" in allowed,
+        "trash": "delete_message" in allowed,
+        "purge": "delete_message_permanent" in allowed,
+        "create_folder": "create_folder" in allowed,
+        "update_folder": "update_folder" in allowed,
+        "delete_folder": "delete_folder" in allowed,
+        "batch": "batch_messages" in allowed,
+    }
 
 
 @router.get("/accounts/{account_id}/mail/{message_id}")
 async def message(
     request: Request, caller: Viewer, account_id: str, message_id: str
 ) -> HTMLResponse:
-    accounts: AccountService = request.app.state.accounts
-    account = accounts.get(caller, account_id)
+    account = account_of(request, caller, account_id)
     found = await _mailbox(request).get_message(caller, account_id, message_id)
     folders = (
         await _mailbox(request).list_folders(caller, account_id)
@@ -200,6 +225,11 @@ async def message(
         body=_body(found),
         from_html=not found.text_body and bool(found.html_body),
         folder_names={f.id: f.name for f in folders},
+        tree=_tree(folders),
+        in_trash=any(
+            f.role is FolderRole.TRASH for f in folders if f.id in found.folder_ids
+        ),
+        can=_rights(caller, account_id),
         can_raw=caller.allows("get_message_raw", account_id),
         can_attachment=caller.allows("get_attachment", account_id),
     )

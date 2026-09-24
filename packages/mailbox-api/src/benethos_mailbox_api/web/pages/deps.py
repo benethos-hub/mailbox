@@ -6,7 +6,9 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
+from ...data.models import Account
 from ...domain.access import Access
+from ...domain.accounts import AccountService
 from .session import CSRF_FIELD, CSRF_HEADER, csrf_ok, current
 
 
@@ -31,6 +33,15 @@ async def changing(request: Request) -> Access:
     if not csrf_ok(session, presented):
         raise CsrfRefused
     return access
+
+
+def account_of(request: Request, caller: Access, account_id: str) -> Account:
+    """The account a mail page is about. Any right on it will do, as in
+    ``/v1/me``: whoever may only write drafts there sees its address too."""
+    if not caller.operations_on(account_id):
+        caller.require("get_account", account_id)
+    accounts: AccountService = request.app.state.accounts
+    return accounts.record(account_id)
 
 
 Viewer = Annotated[Access, Depends(signed_in)]

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% set action_name = {"reply": "Reply", "reply_all": "Reply to all", "forward": "Forward"}.get(values.get("action", ""), "") %}
+{% set title = ("Draft" if draft_id else (action_name or "New message")) %}
+{% block title %}{{ title }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}{{ title }}{% endblock %}
+{% block subheading %}<div class="sub">From <a href="/ui/accounts/{{ account.id }}/mail">{{ account.email }}</a>{% if draft_id %} · <a href="/ui/accounts/{{ account.id }}/drafts">all drafts</a>{% endif %}</div>{% endblock %}
+{% block content %}
+{% if error %}<div class="notice err" role="alert">{{ error }}</div>{% endif %}
+{% if stored is not none and stored.in_reply_to %}
+<div class="notice warn">This draft answers a message. Sent unchanged, it stays in that thread; saved with changes, it becomes a new message outside the thread.</div>
+{% endif %}
+
+{% if original is not none %}
+<section class="card">
+  <header><h2>{{ action_name }}: {{ original.subject | or_missing }}</h2><span class="meta">{{ original.sender | address }}, {{ original.date | when }}</span></header>
+  <div class="body">
+    <p class="muted">
+      {% if values.action == "forward" %}The original goes along below your text, with its attachments.{% else %}Your text comes first; the original is quoted below it.{% endif %}
+      Empty fields are filled in from the original: {% if values.action == "forward" %}the subject.{% else %}recipients and subject.{% endif %}
+    </p>
+  </div>
+</section>
+{% endif %}
+
+{% if not can_send and not can_save %}
+<div class="notice warn">You may neither send nor save drafts from this account.</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" action="{{ '/ui/accounts/' ~ account.id ~ ('/drafts/' ~ draft_id if draft_id else '/compose') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+  <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}" />
+  {% if values.get("original") %}
+  <input type="hidden" name="original" value="{{ values.original }}" />
+  <input type="hidden" name="action" value="{{ values.action }}" />
+  {% endif %}
+  <section class="card">
+    <div class="body">
+      <div class="form-grid">
+        <div class="field wide">
+          <label for="f-to">To</label>
+          <input id="f-to" name="to" value="{{ values.get('to', '') }}" placeholder="{{ 'Empty: as the original' if values.get('action') in ('reply', 'reply_all') else 'name@example.org, Name <other@example.org>' }}" />
+        </div>
+        <div class="field">
+          <label for="f-cc">Cc</label>
+          <input id="f-cc" name="cc" value="{{ values.get('cc', '') }}" />
+        </div>
+        <div class="field">
+          <label for="f-bcc">Bcc</label>
+          <input id="f-bcc" name="bcc" value="{{ values.get('bcc', '') }}" />
+          <span class="hint">Receive it, but appear in no header.</span>
+        </div>
+        <div class="field wide">
+          <label for="f-subject">Subject</label>
+          <input id="f-subject" name="subject" value="{{ values.get('subject', '') }}" />
+        </div>
+        <div class="field wide">
+          <label for="f-text">Text</label>
+          <textarea id="f-text" name="text" rows="14">{{ values.get('text', '') }}</textarea>
+        </div>
+      </div>
+      <details class="fold"{% if values.get('html') %} open{% endif %}>
+        <summary>HTML version</summary>
+        <div class="field">
+          <textarea id="f-html" name="html" rows="8" aria-label="HTML version" placeholder="Optional. Sent beside the text; without text, the text is made from it.">{{ values.get('html', '') }}</textarea>
+        </div>
+      </details>
+      {% if values.get("action") == "forward" %}
+      <div class="field">
+        <label for="f-forward_as">Forward as</label>
+        <select id="f-forward_as" name="forward_as">
+          <option value="inline"{% if values.get('forward_as') != 'attachment' %} selected{% endif %}>quoted, with its attachments</option>
+          <option value="attachment"{% if values.get('forward_as') == 'attachment' %} selected{% endif %}>the unchanged original, attached</option>
+        </select>
+      </div>
+      {% endif %}
+      {% if stored is not none and stored.attachments %}
+      <div class="field">
+        <span class="label">Attached</span>
+        <div class="checks">
+          {% for a in stored.attachments %}
+          <span class="check">{{ a.filename | or_missing }} ({{ a.size | size }}) <label class="check"><input type="checkbox" name="drop" value="{{ a.id }}" /> remove</label></span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="field">
+        <label for="f-attachments">Attach files</label>
+        <input id="f-attachments" name="attachments" type="file" multiple />
+        <span class="hint">Up to 25 MB together.{% if error %} Files chosen before must be chosen again.{% endif %}</span>
+      </div>
+      <div class="form-actions">
+        {% if can_send %}<button class="primary" type="submit" name="do" value="send" data-confirm="Send this message now? It cannot be taken back.">Send</button>{% endif %}
+        {% if can_save %}<button type="submit" name="do" value="save">{{ "Save" if draft_id else "Save as draft" }}</button>{% endif %}
+        {% if can_delete %}<button class="danger" type="submit" name="do" value="delete" formnovalidate data-confirm="Delete this draft for good?">Delete draft</button>{% endif %}
+      </div>
+    </div>
+  </section>
+</form>
+{% endblock %}

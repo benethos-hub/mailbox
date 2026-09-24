@@ -1,8 +1,14 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import action with context %}
 {% block title %}{{ message.subject | or_missing }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ message.subject | or_missing }}{% endblock %}
 {% block subheading %}<div class="sub"><a href="/ui/accounts/{{ account.id }}/mail">{{ account.email }}</a>{% for folder_id in message.folder_ids %} · <a href="/ui/accounts/{{ account.id }}/mail?{{ [('folder', folder_id)] | urlencode }}">{{ folder_names.get(folder_id, folder_id) }}</a>{% endfor %}</div>{% endblock %}
 {% block actions %}
+{% if can.write %}
+{% for verb, label in [("reply", "Reply"), ("reply_all", "Reply to all"), ("forward", "Forward")] %}
+<a class="btn" href="/ui/accounts/{{ account.id }}/compose?{{ [('original', message.id), ('action', verb)] | urlencode }}">{{ label }}</a>
+{% endfor %}
+{% endif %}
 {% if can_raw %}<a class="btn" href="/ui/accounts/{{ account.id }}/mail/{{ message.id }}/raw">Download original</a>{% endif %}
 {% endblock %}
 {% block content %}
@@ -24,6 +30,30 @@
     </dl>
   </div>
 </section>
+
+{% set url = "/ui/accounts/" ~ account.id ~ "/mail/" ~ message.id %}
+{% if can.change or can.trash or can.purge %}
+<section class="card">
+  <div class="body toolbar">
+    {% if can.change %}
+    {{ action(url ~ "/flags", "Mark unread" if not message.unread else "Mark read", fields={"unread": "0" if message.unread else "1"}, cls="") }}
+    {{ action(url ~ "/flags", "Unstar" if message.starred else "Star", fields={"starred": "0" if message.starred else "1"}, cls="") }}
+    {% if tree %}
+    <form class="inline toolbar" method="post" action="{{ url }}/move">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+      <select name="folder" aria-label="Move to folder">
+        {% for folder, depth in tree %}{% if folder.id not in message.folder_ids %}<option value="{{ folder.id }}">{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
+      </select>
+      <button type="submit">Move</button>
+    </form>
+    {% endif %}
+    {% endif %}
+    <span class="grow"></span>
+    {% if can.trash and not in_trash %}{{ action(url ~ "/delete", "Move to the trash", fields={"back": "/ui/accounts/" ~ account.id ~ "/mail"}, cls="") }}{% endif %}
+    {% if can.purge %}{{ action(url ~ "/delete", "Delete for good", confirm="Delete this message for good? This cannot be undone.", cls="danger", fields={"permanent": "1", "back": "/ui/accounts/" ~ account.id ~ "/mail"}) }}{% endif %}
+  </div>
+</section>
+{% endif %}
 
 {% if message.attachments %}
 <section class="card">

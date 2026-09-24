@@ -2,23 +2,104 @@
 {% block title %}{{ current.name }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ current.name }}{% endblock %}
 {% block subheading %}<div class="sub"><a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a>{% if current.total is not none %} · {{ current.total }} messages{% endif %}{% if current.unread %}, {{ current.unread }} unread{% endif %}</div>{% endblock %}
+{% block actions %}
+{% if can.drafts %}<a class="btn" href="/ui/accounts/{{ account.id }}/drafts">Drafts</a>{% endif %}
+{% if can.write %}<a class="btn primary" href="/ui/accounts/{{ account.id }}/compose">Write</a>{% endif %}
+{% endblock %}
 {% block content %}
 <div class="mail-layout">
-  <nav class="card folders" aria-label="Folders">
-    <header><h2>Folders</h2></header>
-    <ul>
-      {% for folder, depth in tree %}
-      <li class="depth-{{ [depth, 4] | min }}">
-        <a href="?{{ [('folder', folder.id)] | urlencode }}" class="{{ 'active' if folder.id == current.id }}">
-          <span class="grow">{{ folder.name }}</span>
-          {% if folder.unread %}<span class="count">{{ folder.unread }}</span>{% endif %}
-        </a>
-      </li>
-      {% endfor %}
-    </ul>
-  </nav>
+  <div>
+    <nav class="card folders" aria-label="Folders">
+      <header><h2>Folders</h2></header>
+      <ul>
+        {% for folder, depth in tree %}
+        <li class="depth-{{ [depth, 4] | min }}">
+          <a href="?{{ [('folder', folder.id)] | urlencode }}" class="{{ 'active' if folder.id == current.id }}">
+            <span class="grow">{{ folder.name }}</span>
+            {% if folder.unread %}<span class="count">{{ folder.unread }}</span>{% endif %}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if can.create_folder %}
+      <form class="body" method="post" action="/ui/accounts/{{ account.id }}/folders">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+        <div class="field">
+          <label for="f-new-folder">New folder</label>
+          <input id="f-new-folder" name="name" required />
+        </div>
+        <label class="check"><input type="checkbox" name="parent" value="{{ current.id }}" /> inside {{ current.name }}</label>
+        <div class="form-actions"><button class="small" type="submit">Create</button></div>
+      </form>
+      {% endif %}
+    </nav>
+
+    {% if current.role is none and (can.update_folder or can.delete_folder) %}
+    <section class="card">
+      <header><h2>This folder</h2></header>
+      <div class="body">
+        {% if can.update_folder %}
+        <form method="post" action="/ui/accounts/{{ account.id }}/folders/rename">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+          <input type="hidden" name="folder" value="{{ current.id }}" />
+          <div class="field">
+            <label for="f-rename">Name</label>
+            <input id="f-rename" name="name" value="{{ current.name }}" required />
+          </div>
+          <div class="form-actions"><button class="small" type="submit">Rename</button></div>
+        </form>
+        <form method="post" action="/ui/accounts/{{ account.id }}/folders/move">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+          <input type="hidden" name="folder" value="{{ current.id }}" />
+          <div class="field">
+            <label for="f-parent">Inside</label>
+            <select id="f-parent" name="parent">
+              <option value="">the top</option>
+              {% for folder, depth in tree %}{% if folder.id != current.id %}<option value="{{ folder.id }}"{% if folder.id == current.parent_id %} selected{% endif %}>{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
+            </select>
+          </div>
+          <div class="form-actions"><button class="small" type="submit">Move</button></div>
+        </form>
+        {% endif %}
+        {% if can.delete_folder %}
+        <form method="post" action="/ui/accounts/{{ account.id }}/folders/delete" data-confirm="Delete the folder {{ current.name }}? Only an empty folder without subfolders can be deleted.">
+          <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+          <input type="hidden" name="folder" value="{{ current.id }}" />
+          <div class="form-actions"><button class="small danger" type="submit">Delete folder</button></div>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
   <section class="card">
     <div class="body">{% include "partials/mail_search.html" %}</div>
+    {% if selectable and messages %}
+    <form id="batch" class="body toolbar" method="post" action="/ui/accounts/{{ account.id }}/mail/batch">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+      <input type="hidden" name="back" value="{{ here }}" />
+      <label for="f-batch-action">Ticked messages</label>
+      <select id="f-batch-action" name="action">
+        {% if can.change %}
+        <option value="read">mark read</option>
+        <option value="unread">mark unread</option>
+        <option value="star">star</option>
+        <option value="unstar">unstar</option>
+        <option value="move">move to …</option>
+        {% endif %}
+        {% if can.trash and current.role != "trash" %}<option value="trash">move to the trash</option>{% endif %}
+      </select>
+      {% if can.change %}
+      <select name="folder" aria-label="Folder to move to">
+        <option value="">(folder, for move)</option>
+        {% for folder, depth in tree %}{% if folder.id != current.id %}<option value="{{ folder.id }}">{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
+      </select>
+      {% endif %}
+      <button type="submit">Apply</button>
+      {% if can.purge %}<button class="danger" type="submit" name="purge" value="1" data-confirm="Delete the ticked messages for good? This cannot be undone.">Delete for good</button>{% endif %}
+    </form>
+    {% endif %}
     <div class="body tight">{% include "partials/message_list.html" %}</div>
   </section>
 </div>
