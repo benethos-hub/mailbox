@@ -88,7 +88,7 @@ async def test_a_change_reported_over_idle_is_synced(
     await services.sync.sync_account(account_id)
     before = indexed(services, account_id)
     server.add("INBOX", 10, make_message("Arrived"))
-    server.idle_script = [[b"* 5 EXISTS"]]
+    server.idle_script = [[(5, b"EXISTS")]]
     with anyio.move_on_after(0.5):
         await worker(services).watch(account_id)
     assert indexed(services, account_id) != before
@@ -100,7 +100,7 @@ async def test_without_idle_only_polling(
     account_id: str,  # noqa: F811
     server: FakeMailBox,  # noqa: F811
 ) -> None:
-    server.capabilities = ["IMAP4REV1"]
+    server.announced = ["IMAP4REV1"]
     background = worker(services)
     await background.watch(account_id)  # ends by itself
     started: list[str] = []

@@ -45,7 +45,7 @@ def world(
         return ImapProvider(
             settings,
             credentials,
-            session_factory=lambda s: ImapSession(s, mailbox_factory=server),
+            session_factory=lambda s: ImapSession(s, client_factory=server),
             sleep=lambda seconds: None,
         )
 

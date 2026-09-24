@@ -1,20 +1,20 @@
-"""A stand-in for ``imap_tools.MailBox``: the same calls, answered from memory.
+"""A stand-in for ``imapclient.IMAPClient``: the same calls, answered from
+memory, in the shapes IMAPClient hands out.
 
-Messages are real RFC 822 bytes, so imap-tools does the real parsing. Only
-the network is missing.
+Messages are real RFC 822 bytes, so the real parser reads them. Only the
+network is missing.
 """
 
 from __future__ import annotations
 
-import re
+import imaplib
 from dataclasses import dataclass, field
 from datetime import datetime
 from email.message import EmailMessage
 from email.utils import format_datetime
 from typing import Any
 
-from imap_tools import MailboxLoginError, MailMessage
-from imap_tools.folder import FolderInfo
+from imapclient.exceptions import LoginError
 
 
 def make_message(
@@ -60,111 +60,12 @@ class FakeFolder:
         return self.highest_uid + 1
 
 
-class _FolderManager:
-    def __init__(self, box: FakeMailBox) -> None:
-        self._box = box
-
-    def list(self) -> list[FolderInfo]:
-        return [
-            FolderInfo(name=name, delim=self._box.delimiter, flags=f.flags)
-            for name, f in self._box.folders.items()
-        ]
-
-    def set(self, name: str, readonly: bool = False) -> tuple[str, list[bytes]]:
-        self._box.calls.append(("select", name, readonly))
-        if name not in self._box.folders:
-            raise self._box.error("no such folder")
-        self._box.selected = name
-        return ("OK", [b""])
-
-    def status(self, name: str, options: list[str]) -> dict[str, int]:
-        self._box.calls.append(("status", name, tuple(options)))
-        folder = self._box.folders[name]
-        values = {
-            "UIDVALIDITY": folder.uidvalidity,
-            "UIDNEXT": folder.uidnext,
-            "MESSAGES": len(folder.messages),
-        }
-        return {k: v for k, v in values.items() if k in options}
-
-
-class _Client:
-    capabilities = ("IMAP4REV1", "ID")
-
-    def __init__(self, box: FakeMailBox) -> None:
-        self._box = box
-
-    def xatom(self, name: str, arguments: str) -> tuple[str, list[bytes]]:
-        self._box.calls.append(("xatom", name, arguments))
-        return ("OK", [b""])
-
-    def capability(self) -> tuple[str, list[bytes]]:
-        return ("OK", [" ".join(self._box.capabilities).encode()])
-
-    def uid(self, command: str, uid: str, parts: str) -> tuple[str, list[Any]]:
-        self._box.calls.append(("uid", command, uid, parts))
-        assert "PEEK" in parts, "a read must never set \\Seen"
-        folder = self._box.folders[self._box.selected]
-        if "HEADER.FIELDS (MESSAGE-ID)" in parts:
-            return ("OK", self._message_ids(folder, uid))
-        entry = folder.messages.get(int(uid))
-        if entry is None:
-            return ("OK", [None])
-        return (
-            "OK",
-            [(f"1 (UID {uid} BODY[] {{{len(entry[0])}}}".encode(), entry[0]), b")"],
-        )
-
-    def _message_ids(self, folder: FakeFolder, uids: str) -> list[Any]:
-        """Like imaplib hands them out: a (head, literal) tuple and a closing
-        part per message. ``uid_last`` puts the UID after the literal, as
-        some servers do."""
-        data: list[Any] = []
-        for number, uid in enumerate(int(u) for u in uids.split(",")):
-            entry = folder.messages.get(uid)
-            if entry is None:
-                continue
-            head, _, _ = entry[0].partition(b"\n\n")
-            block = b""
-            inside = False
-            for line in head.split(b"\n"):
-                # A header, with the lines folded into it.
-                if not line[:1].isspace():
-                    inside = line.lower().startswith(b"message-id:")
-                if inside:
-                    block += line + b"\r\n"
-            block += b"\r\n"
-            item = f"BODY[HEADER.FIELDS (MESSAGE-ID)] {{{len(block)}}}"
-            if self._box.uid_last:
-                data += [
-                    (f"{number + 1} ({item}".encode(), block),
-                    f" UID {uid})".encode(),
-                ]
-            else:
-                data += [(f"{number + 1} (UID {uid} {item}".encode(), block), b")"]
-        return data
-
-
-class _Idle:
-    """IDLE answers from a script: one list of lines per poll."""
-
-    def __init__(self, box: FakeMailBox) -> None:
-        self._box = box
-
-    def start(self) -> None:
-        self._box.calls.append(("idle", self._box.selected))
-
-    def poll(self, timeout: float) -> list[bytes]:
-        if self._box.idle_script:
-            return self._box.idle_script.pop(0)
-        return []
-
-    def stop(self) -> None:
-        self._box.calls.append(("done",))
-
-
 class FakeMailBox:
-    """Shared across sessions of one test, like a server."""
+    """One fake server, shared by every session of a test.
+
+    ``calls`` records what the client asked, e.g. ``("select", "INBOX",
+    True)`` or ``("fetch", ("3", "1"), "header")``.
+    """
 
     def __init__(self, password: str = "secret") -> None:
         self.password = password
@@ -173,24 +74,18 @@ class FakeMailBox:
         self.selected = "INBOX"
         self.calls: list[tuple[Any, ...]] = []
         self.logins = 0
+        # Raised one by one by the next searches.
         self.failures: list[Exception] = []
-        self.folder = _FolderManager(self)
-        self.client = _Client(self)
-        self.idle = _Idle(self)
-        self.idle_script: list[list[bytes]] = []
-        self.capabilities = ["IMAP4REV1", "IDLE", "UIDPLUS"]
-        self.uid_last = False
-        self.error = RuntimeError
-
-    def move(self, source: str, uid: int, target: str, new_uid: int) -> None:
-        """Another client moves a message."""
-        entry = self.folders[source].messages.pop(uid)
-        self.add(target, new_uid, *entry)
+        # IDLE answers, one list of parsed responses per idle_check.
+        self.idle_script: list[list[tuple[Any, ...]]] = []
+        self.announced = ["IMAP4REV1", "ID", "IDLE", "UIDPLUS"]
 
     # the factory signature ImapSession expects
     def __call__(self, server: Any, timeout: float) -> FakeMailBox:
         self.calls.append(("connect", server.host, server.port, server.security))
         return self
+
+    # --- test helpers ---------------------------------------------------------------
 
     def add(
         self, folder: str, uid: int, raw: bytes, flags: tuple[str, ...] = ()
@@ -199,66 +94,134 @@ class FakeMailBox:
         target.messages[uid] = (raw, flags)
         target.highest_uid = max(target.highest_uid, uid)
 
-    def login(
-        self, username: str, password: str, initial_folder: str | None = None
-    ) -> None:
+    def move(self, source: str, uid: int, target: str, new_uid: int) -> None:
+        """Another client moves a message."""
+        entry = self.folders[source].messages.pop(uid)
+        self.add(target, new_uid, *entry)
+
+    # --- IMAPClient ---------------------------------------------------------------
+
+    def capabilities(self) -> tuple[bytes, ...]:
+        return tuple(c.encode() for c in self.announced)
+
+    def id_(self, parameters: dict[str, str]) -> dict[bytes, bytes]:
+        self.calls.append(("id", parameters))
+        return {}
+
+    def login(self, username: str, password: str) -> bytes:
         self.calls.append(("login", username))
         if password != self.password:
-            raise MailboxLoginError(("NO", [b"authentication failed"]), "OK")
+            raise LoginError("b'[AUTHENTICATIONFAILED] Authentication failed.'")
         self.logins += 1
+        return b"Logged in"
 
-    def xoauth2(
-        self, username: str, token: str, initial_folder: str | None = None
-    ) -> None:
+    def oauth2_login(self, username: str, token: str) -> bytes:
         self.calls.append(("xoauth2", username))
         if token != self.password:
-            raise MailboxLoginError(("NO", [b"invalid token"]), "OK")
+            raise LoginError("b'invalid token'")
         self.logins += 1
+        return b"Logged in"
 
-    def logout(self) -> None:
+    def logout(self) -> bytes:
         self.calls.append(("logout",))
+        return b"Logging out"
 
-    def uids(self, query: Any, charset: str | None = None) -> list[str]:
+    def list_folders(self) -> list[tuple[tuple[bytes, ...], bytes, str]]:
+        return [
+            (tuple(f.encode() for f in folder.flags), self.delimiter.encode(), name)
+            for name, folder in self.folders.items()
+        ]
+
+    def select_folder(self, name: str, readonly: bool = False) -> dict[bytes, Any]:
+        self.calls.append(("select", name, readonly))
+        if name not in self.folders:
+            raise imaplib.IMAP4.error("select failed: no such folder")
+        self.selected = name
+        folder = self.folders[name]
+        return {
+            b"UIDVALIDITY": folder.uidvalidity,
+            b"UIDNEXT": folder.uidnext,
+            b"EXISTS": len(folder.messages),
+            b"READ-ONLY": [b""] if readonly else None,
+        }
+
+    def folder_status(self, name: str, what: list[str]) -> dict[bytes, int]:
+        self.calls.append(("status", name, tuple(what)))
+        folder = self.folders[name]
+        values = {
+            "UIDVALIDITY": folder.uidvalidity,
+            "UIDNEXT": folder.uidnext,
+            "MESSAGES": len(folder.messages),
+        }
+        return {k.encode(): v for k, v in values.items() if k in what}
+
+    def search(self, criteria: Any, charset: str | None = None) -> list[int]:
         if self.failures:
             raise self.failures.pop(0)
-        self.calls.append(("search", str(query), charset))
-        folder = self.folders[self.selected]
-        text = str(query)
-        result = []
-        for uid, (raw, flags) in folder.messages.items():
-            if "UNSEEN" in text and "\\Seen" in flags:
-                continue
-            if re.search(r"(?<!UN)SEEN", text) and "\\Seen" not in flags:
-                continue
-            match = re.search(r'TEXT "([^"]*)"', text)
-            if (
-                match
-                and match.group(1).lower() not in raw.decode(errors="replace").lower()
-            ):
-                continue
-            result.append(str(uid))
-        return result
-
-    def fetch(
-        self,
-        uid_list: list[str],
-        headers_only: bool = False,
-        mark_seen: bool = True,
-        bulk: bool = False,
-        **_: Any,
-    ) -> list[MailMessage]:
-        assert mark_seen is False, "a read must never set \\Seen"
-        self.calls.append(("fetch", tuple(uid_list), headers_only))
-        folder = self.folders[self.selected]
+        words = [criteria] if isinstance(criteria, str) else list(criteria)
+        self.calls.append(("search", tuple(words), charset))
+        text = words[words.index("TEXT") + 1].lower() if "TEXT" in words else None
         found = []
-        for uid in uid_list:
-            entry = folder.messages.get(int(uid))
+        for uid, (raw, flags) in self.folders[self.selected].messages.items():
+            if "UNSEEN" in words and "\\Seen" in flags:
+                continue
+            if "SEEN" in words and "\\Seen" not in flags:
+                continue
+            if text and text not in raw.decode(errors="replace").lower():
+                continue
+            found.append(uid)
+        return found
+
+    def fetch(self, uids: list[int], items: list[str]) -> dict[int, dict[bytes, Any]]:
+        for item in items:
+            assert "BODY" not in item or "PEEK" in item, "a read must never set \\Seen"
+        kind = (
+            "message-id"
+            if any("MESSAGE-ID" in i for i in items)
+            else "header"
+            if "BODY.PEEK[HEADER]" in items
+            else "full"
+        )
+        self.calls.append(("fetch", tuple(str(u) for u in uids), kind))
+        folder = self.folders[self.selected]
+        found: dict[int, dict[bytes, Any]] = {}
+        for number, uid in enumerate(int(u) for u in uids):
+            entry = folder.messages.get(uid)
             if entry is None:
                 continue
             raw, flags = entry
-            if headers_only:
-                raw = raw.split(b"\n\n", 1)[0] + b"\n\n"
-            flag_text = " ".join(flags)
-            head = f"1 (UID {uid} FLAGS ({flag_text}) BODY[] {{{len(raw)}}}".encode()
-            found.append(MailMessage([(head, raw), b")"]))
+            head = raw.split(b"\n\n", 1)[0] + b"\n\n"
+            data: dict[bytes, Any] = {b"SEQ": number + 1}
+            if "FLAGS" in items:
+                data[b"FLAGS"] = tuple(f.encode() for f in flags)
+            if kind == "message-id":
+                data[b"BODY[HEADER.FIELDS (MESSAGE-ID)]"] = _message_id_block(head)
+            elif kind == "header":
+                data[b"BODY[HEADER]"] = head
+            else:
+                data[b"BODY[]"] = raw
+            found[uid] = data
         return found
+
+    def idle(self) -> None:
+        self.calls.append(("idle", self.selected))
+
+    def idle_check(self, timeout: float | None = None) -> list[tuple[Any, ...]]:
+        return self.idle_script.pop(0) if self.idle_script else []
+
+    def idle_done(self) -> tuple[bytes, list[Any]]:
+        self.calls.append(("done",))
+        return (b"Idle completed", [])
+
+
+def _message_id_block(head: bytes) -> bytes:
+    """The Message-ID header with the lines folded into it, as a server
+    answers ``BODY[HEADER.FIELDS (MESSAGE-ID)]``."""
+    block = b""
+    inside = False
+    for line in head.split(b"\n"):
+        if not line[:1].isspace():
+            inside = line.lower().startswith(b"message-id:")
+        if inside:
+            block += line + b"\r\n"
+    return block + b"\r\n"

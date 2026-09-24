@@ -1,14 +1,14 @@
-"""One IMAP session. The only module that imports ``imap_tools``.
+"""One IMAP session. The only module that imports ``imapclient``.
 
 Synchronous, like the library. The adapter runs it in a worker thread and
 never calls it from two threads at once. Every library error leaves this
-module as a ``MailboxApiError``.
+module as a ``MailboxApiError``. What is fetched of a message is parsed in
+``parse``; this module only speaks the protocol.
 """
 
 from __future__ import annotations
 
 import imaplib
-import re
 import ssl
 import time
 from collections.abc import Callable, Iterator
@@ -17,21 +17,22 @@ from dataclasses import dataclass
 from email.parser import BytesHeaderParser
 from typing import Any
 
-from imap_tools import (
-    AND,
-    ImapToolsError,
-    MailBox,
-    MailboxLoginError,
-    MailBoxStartTls,
-    MailMessage,
-)
+from imapclient import IMAPClient
+from imapclient.exceptions import LoginError
 
 from ....errors import ProviderAuthError, ProviderError, ProviderUnavailableError
+from .parse import FetchedMessage
 
-MailBoxFactory = Callable[..., Any]
+ClientFactory = Callable[..., Any]
 
 # How often a waiting IDLE looks whether it should stop. Costs no traffic.
 IDLE_STEP = 5.0
+
+_HEADER = "BODY.PEEK[HEADER]"
+_WHOLE = "BODY.PEEK[]"
+_MESSAGE_ID = "BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]"
+# What an untagged response during IDLE says changed.
+_CHANGES = {b"EXISTS", b"EXPUNGE", b"FETCH", b"VANISHED"}
 
 
 @dataclass(frozen=True)
@@ -55,13 +56,15 @@ class SearchCriteria:
     before_uid: int | None = None
 
 
-def _default_mailbox(server: ImapServer, timeout: float) -> Any:
+def _default_client(server: ImapServer, timeout: float) -> Any:
     context = ssl.create_default_context()
     if server.security == "starttls":
-        return MailBoxStartTls(
-            server.host, server.port, timeout=timeout, ssl_context=context
-        )
-    return MailBox(server.host, server.port, timeout=timeout, ssl_context=context)
+        client = IMAPClient(server.host, server.port, ssl=False, timeout=timeout)
+        client.starttls(context)
+        return client
+    return IMAPClient(
+        server.host, server.port, ssl=True, ssl_context=context, timeout=timeout
+    )
 
 
 class ImapSession:
@@ -69,51 +72,52 @@ class ImapSession:
         self,
         server: ImapServer,
         timeout: float = 30.0,
-        mailbox_factory: MailBoxFactory = _default_mailbox,
+        client_factory: ClientFactory = _default_client,
         client_id: tuple[str, str] | None = None,
     ) -> None:
         self._server = server
         self._timeout = timeout
-        self._factory = mailbox_factory
+        self._factory = client_factory
         self._client_id = client_id
-        self._mailbox: Any = None
+        self._client: Any = None
 
     @property
     def connected(self) -> bool:
-        return self._mailbox is not None
+        return self._client is not None
 
     def login(self, username: str, password: str) -> None:
         with _errors():
-            mailbox = self._connect()
+            client = self._connect()
             try:
-                mailbox.login(username, password, initial_folder=None)
-            except MailboxLoginError:
+                client.login(username, password)
+            except LoginError:
+                _quietly_logout(client)
                 raise ProviderAuthError("the server rejected the login") from None
-            self._mailbox = mailbox
+            self._client = client
 
     def login_oauth(self, username: str, access_token: str) -> None:
         with _errors():
-            mailbox = self._connect()
+            client = self._connect()
             try:
-                mailbox.xoauth2(username, access_token, initial_folder=None)
-            except MailboxLoginError:
+                client.oauth2_login(username, access_token)
+            except LoginError:
+                _quietly_logout(client)
                 raise ProviderAuthError("the server rejected the token") from None
-            self._mailbox = mailbox
+            self._client = client
 
     def _connect(self) -> Any:
-        mailbox = self._factory(self._server, self._timeout)
+        client = self._factory(self._server, self._timeout)
         if self._client_id is not None:
-            self._send_id(mailbox, *self._client_id)
-        return mailbox
+            self._send_id(client, *self._client_id)
+        return client
 
     @staticmethod
-    def _send_id(mailbox: Any, name: str, version: str) -> None:
+    def _send_id(client: Any, name: str, version: str) -> None:
         """RFC 2971 ID, where the server offers it. Some servers require it."""
-        client = mailbox.client
-        if "ID" not in getattr(client, "capabilities", ()):
+        if b"ID" not in client.capabilities():
             return
         try:
-            client.xatom("ID", f'("name" "{name}" "version" "{version}")')
+            client.id_({"name": name, "version": version})
         except (imaplib.IMAP4.error, OSError):
             pass
 
@@ -121,125 +125,99 @@ class ImapSession:
         """Connect without logging in and return what the server announces
         after TLS or STARTTLS. Sends no credential."""
         with _errors():
-            mailbox = self._factory(self._server, self._timeout)
+            client = self._factory(self._server, self._timeout)
             try:
-                return frozenset(str(c).upper() for c in mailbox.client.capabilities)
+                return _capabilities(client)
             finally:
-                _quietly_logout(mailbox)
+                _quietly_logout(client)
+
+    def server_capabilities(self) -> frozenset[str]:
+        """What the server announces now, after the login."""
+        with _errors():
+            return _capabilities(self._require())
 
     def logout(self) -> None:
-        mailbox, self._mailbox = self._mailbox, None
-        if mailbox is not None:
-            _quietly_logout(mailbox)
+        client, self._client = self._client, None
+        if client is not None:
+            _quietly_logout(client)
 
     def list_folders(self) -> list[RawFolder]:
         with _errors():
             return [
-                RawFolder(f.name, f.delim, tuple(f.flags))
-                for f in self._require().folder.list()
+                RawFolder(
+                    str(name),
+                    _text(delimiter) if delimiter else None,
+                    tuple(_text(flag) for flag in flags),
+                )
+                for flags, delimiter, name in self._require().list_folders()
             ]
 
     def select(self, folder: str) -> int:
         """Select a folder read-only, return its UIDVALIDITY."""
         with _errors():
-            mailbox = self._require()
-            mailbox.folder.set(folder, readonly=True)
-            status = mailbox.folder.status(folder, ["UIDVALIDITY"])
-            return int(status["UIDVALIDITY"])
-
-    def search(self, criteria: SearchCriteria) -> list[int]:
-        """UIDs in the selected folder, ascending."""
-        conditions: dict[str, Any] = {}
-        if criteria.text:
-            conditions["text"] = criteria.text
-        if criteria.unread is not None:
-            conditions["seen"] = not criteria.unread
-        query: Any = AND(**conditions) if conditions else "ALL"
-        charset = "UTF-8" if criteria.text and not criteria.text.isascii() else None
-        with _errors():
-            uids = [int(u) for u in self._require().uids(query, charset=charset)]
-        uids.sort()
-        if criteria.before_uid is not None:
-            uids = [u for u in uids if u < criteria.before_uid]
-        return uids
-
-    def fetch_headers(self, uids: list[int]) -> list[MailMessage]:
-        if not uids:
-            return []
-        with _errors():
-            return list(
-                self._require().fetch(
-                    uid_list=[str(u) for u in uids],
-                    headers_only=True,
-                    mark_seen=False,
-                    bulk=True,
-                )
-            )
-
-    def fetch_message(self, uid: int) -> MailMessage | None:
-        with _errors():
-            found = list(self._require().fetch(uid_list=[str(uid)], mark_seen=False))
-        return found[0] if found else None
-
-    def fetch_raw(self, uid: int) -> bytes | None:
-        with _errors():
-            status, data = self._require().client.uid(
-                "fetch", str(uid), "(BODY.PEEK[])"
-            )
-        if status != "OK":
-            raise ProviderError("the server refused to hand out the message")
-        for part in data:
-            if isinstance(part, tuple) and len(part) == 2:
-                return bytes(part[1])
-        return None
+            answer = self._require().select_folder(folder, readonly=True)
+        return int(answer[b"UIDVALIDITY"])
 
     def folder_state(self, folder: str) -> tuple[int, int, int]:
         """UIDVALIDITY, UIDNEXT and MESSAGES of a folder, without selecting
         it. Together they change whenever a message arrives or leaves."""
         with _errors():
-            status = self._require().folder.status(
+            status = self._require().folder_status(
                 folder, ["UIDVALIDITY", "UIDNEXT", "MESSAGES"]
             )
         return (
-            int(status["UIDVALIDITY"]),
-            int(status.get("UIDNEXT", 0)),
-            int(status.get("MESSAGES", 0)),
+            int(status[b"UIDVALIDITY"]),
+            int(status.get(b"UIDNEXT", 0)),
+            int(status.get(b"MESSAGES", 0)),
         )
+
+    def search(self, criteria: SearchCriteria) -> list[int]:
+        """UIDs in the selected folder, ascending."""
+        query: list[str] = []
+        if criteria.text:
+            query += ["TEXT", criteria.text]
+        if criteria.unread is not None:
+            query.append("UNSEEN" if criteria.unread else "SEEN")
+        charset = "UTF-8" if criteria.text and not criteria.text.isascii() else None
+        with _errors():
+            uids = sorted(
+                int(u) for u in self._require().search(query or "ALL", charset)
+            )
+        if criteria.before_uid is not None:
+            uids = [u for u in uids if u < criteria.before_uid]
+        return uids
+
+    def fetch_headers(self, uids: list[int]) -> list[FetchedMessage]:
+        """Flags and headers. Never sets ``\\Seen``."""
+        return [
+            FetchedMessage(uid, _flags(data), _part(data, b"BODY[HEADER]"))
+            for uid, data in self._fetch(uids, ["FLAGS", _HEADER]).items()
+        ]
+
+    def fetch_message(self, uid: int) -> FetchedMessage | None:
+        found = self._fetch([uid], ["FLAGS", _WHOLE]).get(uid)
+        if found is None:
+            return None
+        return FetchedMessage(uid, _flags(found), _part(found, b"BODY[]"))
+
+    def fetch_raw(self, uid: int) -> bytes | None:
+        found = self._fetch([uid], [_WHOLE]).get(uid)
+        return _part(found, b"BODY[]") if found is not None else None
 
     def fetch_message_ids(self, uids: list[int]) -> dict[int, str | None]:
         """The ``Message-ID`` header of each UID in the selected folder. Reads
         only that header and never sets ``\\Seen``."""
+        return {
+            uid: _message_id(_part(data, b"BODY[HEADER.FIELDS"))
+            for uid, data in self._fetch(uids, [_MESSAGE_ID]).items()
+        }
+
+    def _fetch(self, uids: list[int], items: list[str]) -> dict[int, dict[bytes, Any]]:
         if not uids:
             return {}
         with _errors():
-            status, data = self._require().client.uid(
-                "fetch",
-                ",".join(str(u) for u in uids),
-                "(UID BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])",
-            )
-        if status != "OK":
-            raise ProviderError("the server refused to hand out message headers")
-        found: dict[int, str | None] = {}
-        for index, part in enumerate(data):
-            if not (isinstance(part, tuple) and len(part) == 2):
-                continue
-            # The UID comes before the header, or after it in the next part.
-            match = _UID.search(part[0])
-            if match is None and index + 1 < len(data):
-                following = data[index + 1]
-                if isinstance(following, bytes):
-                    match = _UID.search(following)
-            if match is not None:
-                found[int(match.group(1))] = _message_id(part[1])
-        return found
-
-    def server_capabilities(self) -> frozenset[str]:
-        """What the server announces now, after the login."""
-        with _errors():
-            status, data = self._require().client.capability()
-        if status != "OK" or not data or not isinstance(data[0], bytes):
-            return frozenset()
-        return frozenset(data[0].decode(errors="replace").upper().split())
+            found = self._require().fetch(uids, items)
+        return {int(uid): data for uid, data in found.items()}
 
     def idle(
         self,
@@ -252,39 +230,55 @@ class ImapSession:
         ``timeout`` passes or ``stopped`` says so. Looks at ``stopped`` every
         ``step`` seconds, which costs no traffic. True on a change."""
         with _errors():
-            idle = self._require().idle
-            idle.start()
+            client = self._require()
+            client.idle()
             try:
                 deadline = clock() + timeout
                 while not stopped():
                     remaining = deadline - clock()
                     if remaining <= 0:
                         return False
-                    lines = idle.poll(timeout=min(step, remaining))
-                    if any(_BYE.match(line) for line in lines):
+                    responses = client.idle_check(timeout=min(step, remaining))
+                    if any(r and r[0] == b"BYE" for r in responses):
                         raise ProviderUnavailableError(
                             "the mail server ended the connection"
                         )
-                    if any(_CHANGE.search(line) for line in lines):
+                    if any(_CHANGES.intersection(r[:2]) for r in responses):
                         return True
                 return False
             finally:
-                if self._mailbox is not None:
+                if self._client is not None:
                     try:
-                        idle.stop()
-                    except (ImapToolsError, imaplib.IMAP4.error, OSError):
+                        client.idle_done()
+                    except (imaplib.IMAP4.error, OSError):
                         # The connection is spoiled. Start afresh next time.
                         self.logout()
 
     def _require(self) -> Any:
-        if self._mailbox is None:
+        if self._client is None:
             raise ProviderError("not connected")
-        return self._mailbox
+        return self._client
 
 
-_UID = re.compile(rb"UID (\d+)")
-_CHANGE = re.compile(rb"^\* \d+ (EXISTS|EXPUNGE|FETCH)\b|^\* VANISHED\b", re.I)
-_BYE = re.compile(rb"^\* BYE\b", re.I)
+def _text(value: bytes | str) -> str:
+    return value.decode(errors="replace") if isinstance(value, bytes) else value
+
+
+def _capabilities(client: Any) -> frozenset[str]:
+    return frozenset(_text(c).upper() for c in client.capabilities())
+
+
+def _flags(data: dict[bytes, Any]) -> tuple[str, ...]:
+    return tuple(_text(flag) for flag in data.get(b"FLAGS", ()))
+
+
+def _part(data: dict[bytes, Any], key: bytes) -> bytes:
+    """A fetched body section. Servers may spell the key a little
+    differently, so the start is enough."""
+    for name, value in data.items():
+        if isinstance(name, bytes) and name.startswith(key):
+            return bytes(value or b"")
+    return b""
 
 
 def _message_id(header_block: bytes) -> str | None:
@@ -295,10 +289,10 @@ def _message_id(header_block: bytes) -> str | None:
     return "".join(str(value).split()) or None
 
 
-def _quietly_logout(mailbox: Any) -> None:
+def _quietly_logout(client: Any) -> None:
     try:
-        mailbox.logout()
-    except (ImapToolsError, imaplib.IMAP4.error, OSError):
+        client.logout()
+    except (imaplib.IMAP4.error, OSError):
         pass
 
 
@@ -318,7 +312,7 @@ def _errors() -> Iterator[None]:
         raise ProviderUnavailableError(
             f"the mail server dropped the connection: {exc}"
         ) from None
-    except (ImapToolsError, imaplib.IMAP4.error) as exc:
+    except imaplib.IMAP4.error as exc:
         raise ProviderError(f"the mail server answered with an error: {exc}") from None
     except OSError as exc:
         raise ProviderUnavailableError(

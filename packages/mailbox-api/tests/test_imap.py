@@ -87,7 +87,7 @@ def provider(
         {**SETTINGS, **overrides},
         credentials,
         session_factory=lambda s: ImapSession(
-            s, mailbox_factory=box, client_id=("benethos-mailbox-api", "1.0")
+            s, client_factory=box, client_id=("benethos-mailbox-api", "1.0")
         ),
         clock=time.clock,
         sleep=time.sleep,
@@ -170,7 +170,7 @@ async def test_summary_fields(server: FakeMailBox) -> None:
     assert oldest.unread is False
     assert oldest.date == datetime(2026, 9, 1, 10, 0, tzinfo=UTC)
     # Headers only, and never marking anything read.
-    assert ("fetch", ("9", "5", "4", "3", "2", "1"), True) in server.calls
+    assert ("fetch", ("9", "5", "4", "3", "2", "1"), "header") in server.calls
 
 
 async def test_filters(server: FakeMailBox) -> None:
@@ -397,10 +397,9 @@ async def test_requests_are_paced(server: FakeMailBox) -> None:
 async def test_the_client_says_who_it_is_before_login(server: FakeMailBox) -> None:
     await provider(server).list_folders()
     names = [c[0] for c in server.calls]
-    assert names.index("xatom") < names.index("login")
-    xatom = next(c for c in server.calls if c[0] == "xatom")
-    assert xatom[1] == "ID"
-    assert "benethos-mailbox-api" in xatom[2]
+    assert names.index("id") < names.index("login")
+    sent = next(c for c in server.calls if c[0] == "id")
+    assert sent[1]["name"] == "benethos-mailbox-api"
 
 
 # --- pure mappers ---------------------------------------------------------------

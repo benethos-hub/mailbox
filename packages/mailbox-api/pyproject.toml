@@ -56,6 +56,7 @@ dependencies = [
     "defusedxml>=0.7",
     # Autodiscovery: where a domain ends. Ships its own copy of the list.
     "publicsuffixlist>=1.0",
+    "imapclient>=4.1.0",
 ]
 
 [project.scripts]
