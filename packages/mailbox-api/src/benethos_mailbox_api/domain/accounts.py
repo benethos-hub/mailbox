@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import builtins
-import uuid
 from collections.abc import Awaitable, Mapping
 from typing import TypeVar
 
 from pydantic import SecretStr
 
+from ..data.ids import new_id
 from ..data.models import Account, AccountStatus, ProviderType
 from ..data.providers import (
     CredentialReader,
@@ -69,7 +69,7 @@ class AccountService:
         if secrets:
             self._vault.require_ready()
         account = Account(
-            id=f"acc_{uuid.uuid4().hex[:12]}",
+            id=new_id("acc"),
             provider=provider,
             email=email,
             display_name=display_name,

@@ -6,13 +6,11 @@ messages are read by attribute (``uid``, ``flags``, ``from_values``, ...).
 
 from __future__ import annotations
 
-import base64
-import binascii
-import json
 from datetime import UTC, datetime
 from typing import Any
 
 from ....errors import BadRequestError, NotFoundError, NotSupportedError
+from ... import opaque
 from ...models import (
     Address,
     Attachment,
@@ -78,17 +76,13 @@ LOCALISED_NAMES: dict[FolderRole, tuple[str, ...]] = {
 
 
 def _encode(prefix: str, *parts: object) -> str:
-    raw = json.dumps(parts, separators=(",", ":"), ensure_ascii=False).encode()
-    return prefix + base64.urlsafe_b64encode(raw).decode().rstrip("=")
+    return opaque.encode(prefix, parts)
 
 
 def _decode(prefix: str, value: str, what: str) -> list[Any]:
-    if not value.startswith(prefix):
-        raise NotFoundError(f"{what} {value} not found")
-    text = value[len(prefix) :]
     try:
-        parts = json.loads(base64.urlsafe_b64decode(text + "=" * (-len(text) % 4)))
-    except (binascii.Error, ValueError, UnicodeDecodeError):
+        parts = opaque.decode(prefix, value)
+    except ValueError:
         raise NotFoundError(f"{what} {value} not found") from None
     if not isinstance(parts, list):
         raise NotFoundError(f"{what} {value} not found")

@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import base64
-import binascii
-import json
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, TypeVar
 
-from ..data import mime
+from ..data import mime, opaque
 from ..data.models import (
     AccountFailure,
     AttachmentContent,
@@ -645,21 +642,17 @@ def _failure(account_id: str, error: MailboxApiError) -> AccountFailure:
 
 def _encode_cursor(positions: dict[str, _Position]) -> str:
     state = {a: [p.folder_id, p.cursor, p.offset, p.done] for a, p in positions.items()}
-    raw = json.dumps(state, separators=(",", ":")).encode()
-    return _CURSOR_PREFIX + base64.urlsafe_b64encode(raw).decode().rstrip("=")
+    return opaque.encode(_CURSOR_PREFIX, state)
 
 
 def _decode_cursor(value: str) -> dict[str, _Position]:
-    if not value.startswith(_CURSOR_PREFIX):
-        raise BadRequestError("invalid cursor")
-    text = value[len(_CURSOR_PREFIX) :]
     try:
-        state = json.loads(base64.urlsafe_b64decode(text + "=" * (-len(text) % 4)))
+        state = opaque.decode(_CURSOR_PREFIX, value)
         return {
             account_id: _Position(folder_id, cursor, int(offset), bool(done))
             for account_id, (folder_id, cursor, offset, done) in state.items()
         }
-    except (binascii.Error, ValueError, TypeError, AttributeError):
+    except (ValueError, TypeError, AttributeError):
         raise BadRequestError("invalid cursor") from None
 
 

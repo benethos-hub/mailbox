@@ -97,6 +97,8 @@ packages/
                           #   accounts, users, folders, messages, batch,
                           #   sending, paging, discovery
         mime.py           # outgoing messages as RFC 5322 bytes (email)
+        opaque.py         # opaque ids and cursors: prefix + base64 JSON
+        ids.py            # ids of own records: acc_, usr_, msg_, ...
         providers/        # registry in __init__.py, base.py protocol,
                           #   one directory per provider: memory/, imap/, ...
                           #   imap/client.py (IMAPClient), imap/parse.py

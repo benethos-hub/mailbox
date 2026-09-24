@@ -6,11 +6,11 @@ only manage a user whose rights it holds itself.
 
 from __future__ import annotations
 
-import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 
+from ..data.ids import new_id
 from ..data.models import ApiToken, Grant, Role, User
 from ..data.storage import RoleRepository, TokenRepository, UserRepository
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
@@ -64,7 +64,7 @@ class UserService:
         """A user with every right, and a token for it. For the command line
         on the host only: it checks no caller."""
         user = User(
-            id=f"usr_{uuid.uuid4().hex[:12]}",
+            id=new_id("usr"),
             name=name,
             grants=[Grant(accounts=["*"], allow=[permissions.ADMIN])],
         )
@@ -90,9 +90,7 @@ class UserService:
         grants: list[Grant],
     ) -> User:
         access.require("create_user")
-        user = User(
-            id=f"usr_{uuid.uuid4().hex[:12]}", name=name, roles=roles, grants=grants
-        )
+        user = User(id=new_id("usr"), name=name, roles=roles, grants=grants)
         self._check_grantable(access, user.roles, user.grants)
         self._users.save(user)
         return user
