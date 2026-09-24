@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Drafts · {{ account.email }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}Drafts{% endblock %}
+{% block subheading %}<div class="sub"><a href="/ui/accounts/{{ account.id }}/mail">{{ account.email }}</a></div>{% endblock %}
+{% block actions %}
+{% if can_write %}<a class="btn primary" href="/ui/accounts/{{ account.id }}/compose">Write</a>{% endif %}
+{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="body tight">{% include "partials/message_list.html" %}</div>
+</section>
+{% endblock %}

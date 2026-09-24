@@ -1,10 +1,15 @@
 {# A page of messages. ``emails``: the account column, for lists across
-   accounts; without it, one account's list. #}
+   accounts; without it, one account's list. ``selectable``: a tick box
+   per message for the form ``batch``. ``open_as="drafts"``: links open
+   the draft editor. #}
+{% set opens = open_as if open_as is defined else "mail" %}
+{% set ticks = selectable is defined and selectable %}
 {% if messages %}
 <div class="table-scroll">
   <table>
     <thead>
       <tr>
+        {% if ticks %}<th class="tick"><span class="sr">Select</span></th>{% endif %}
         {% if emails is defined %}<th>Account</th>{% endif %}
         <th>From</th><th>Subject</th><th>Date</th><th></th>
       </tr>
@@ -12,10 +17,11 @@
     <tbody>
       {% for m in messages %}
       <tr class="{{ 'unread' if m.unread }}">
+        {% if ticks %}<td class="tick"><input type="checkbox" name="ids" value="{{ m.id }}" form="batch" aria-label="Select {{ m.subject | or_missing }}" /></td>{% endif %}
         {% if emails is defined %}<td class="muted">{{ emails.get(m.account_id, m.account_id) }}</td>{% endif %}
         <td>{{ m.sender | address }}</td>
         <td class="name">
-          <a href="/ui/accounts/{{ m.account_id }}/mail/{{ m.id }}">{{ m.subject | or_missing }}</a>
+          <a href="/ui/accounts/{{ m.account_id }}/{{ opens }}/{{ m.id }}">{{ m.subject | or_missing }}</a>
           <span class="sub">{{ m.snippet | or_missing }}</span>
         </td>
         <td>{{ m.date | when }}</td>

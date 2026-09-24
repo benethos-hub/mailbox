@@ -63,7 +63,9 @@ done. Update the roadmap in the same commit that finishes an item.
   `uv run python live/mcp_http.py` checks it over streamable HTTP behind
   its bearer token, read-only.
 - The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a token.
-  `uv run python live/ui.py` checks it against the test accounts.
+  `uv run python live/ui.py` checks it against the test accounts; it sends
+  one mail from the first test account to the second and deletes it for
+  good on both sides.
 
 ## Project layout
 

@@ -135,8 +135,9 @@ Everything real mail will depend on, before any real mailbox is connected.
   - **users, roles and their grants, tokens**, done
   - **reading mail: every inbox, folders, search, a message, attachments**,
     done
-  - pages for the rest of the REST API: writing and sending, the audit of
-    sends
+  - **writing: flags, moving, deleting, folders, compose, reply, forward,
+    drafts, sending**, done
+  - the audit of sends
   - with the new providers: the OAuth round trip; recovery key, status
 - Threads (6.3): for IMAP built across folders from the id mapping,
   which then also keeps `In-Reply-To` and `References`
