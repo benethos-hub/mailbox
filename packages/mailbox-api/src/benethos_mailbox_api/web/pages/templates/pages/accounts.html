@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import empty, action with context %}
+{% block title %}Accounts · {{ APP_NAME }}{% endblock %}
+{% block heading %}Accounts{% endblock %}
+{% block subheading %}<div class="sub">The mailboxes this service connects</div>{% endblock %}
+{% block actions %}
+{% if can_create %}<a class="btn primary" href="/ui/accounts/new">Connect an account</a>{% endif %}
+{% endblock %}
+{% block content %}
+{% if accounts %}
+<section class="card">
+  <div class="body tight">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Address</th><th>Provider</th><th>Status</th><th>Credentials</th><th></th></tr></thead>
+        <tbody>
+          {% for account in accounts %}
+          <tr>
+            <td class="name">
+              <a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a>
+              <span class="sub">{{ account.display_name | or_missing }}</span>
+            </td>
+            <td>{{ account.provider.value }}</td>
+            <td>{% include "partials/account_status.html" %}</td>
+            <td>
+              {% for credential in account.credentials %}
+              <span class="sub">{{ credential.field }}, {{ credential.updated_at | when }}</span>
+              {% else %}—{% endfor %}
+            </td>
+            <td class="actions"><a class="btn small" href="/ui/accounts/{{ account.id }}">Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% else %}
+{{ empty("No account yet, or none you may see.") }}
+{% endif %}
+{% endblock %}

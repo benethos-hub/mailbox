@@ -20,12 +20,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from . import home, login
+from . import accounts, home, login
 from .deps import CsrfRefused
 from .session import PATH, SessionStore, SignInRequired
 from .templates import STATIC_DIR, is_htmx, render
 
-AREAS = (login, home)
+AREAS = (login, home, accounts)
 
 # No inline script or style, no framing, nothing loaded from elsewhere.
 SECURITY_HEADERS = [

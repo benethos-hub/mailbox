@@ -1,0 +1,5 @@
+{% set status = account.status.value %}
+{% if status == "connected" %}<span class="tag ok">connected</span>
+{% elif status == "needs_reauth" %}<span class="tag bad">needs new credentials</span>
+{% elif status == "unreachable" %}<span class="tag warn">unreachable</span>
+{% else %}<span class="tag">{{ status }}</span>{% endif %}

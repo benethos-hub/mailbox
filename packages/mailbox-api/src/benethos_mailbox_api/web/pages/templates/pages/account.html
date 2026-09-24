@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import action, csrf_field with context %}
+{% from "components/connection.html" import connection_fields %}
+{% block title %}{{ account.email }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}{{ account.email }}{% endblock %}
+{% block subheading %}<div class="sub">{{ account.display_name | or_missing }}</div>{% endblock %}
+{% block actions %}
+{% if can_verify %}{{ action("/ui/accounts/" ~ account.id ~ "/verify", "Verify", cls="") }}{% endif %}
+{% endblock %}
+{% block content %}
+<section class="card">
+  <header><h2>Account</h2></header>
+  <div class="body">
+    <dl class="facts">
+      <dt>Id</dt><dd class="mono">{{ account.id }}</dd>
+      <dt>Provider</dt><dd>{{ account.provider.value }}</dd>
+      <dt>Status</dt><dd>{% include "partials/account_status.html" %}</dd>
+      <dt>Credentials</dt>
+      <dd>
+        {% for credential in account.credentials %}{{ credential.field }}, changed {{ credential.updated_at | when }}{% if not loop.last %}<br />{% endif %}
+        {% else %}—{% endfor %}
+      </dd>
+    </dl>
+  </div>
+</section>
+
+{% if can_update %}
+<section class="card">
+  <header><h2>Change</h2><span class="meta">A new password or new servers are tried first; nothing is stored unless the provider accepts them.</span></header>
+  <div class="body">
+    <form method="post" action="/ui/accounts/{{ account.id }}">
+      {{ csrf_field() }}
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-display_name">Display name</label>
+          <input id="f-display_name" name="display_name" value="{{ account.display_name or '' }}" />
+        </div>
+        <div class="field">
+          <label for="f-password">New password</label>
+          <input id="f-password" name="password" type="password" autocomplete="new-password" />
+          <span class="hint">Empty: unchanged.</span>
+        </div>
+      </div>
+      <details class="fold">
+        <summary>Servers</summary>
+        {{ connection_fields({}, security, keep=True) }}
+      </details>
+      <div class="form-actions"><button class="primary" type="submit">Save</button></div>
+    </form>
+  </div>
+</section>
+{% endif %}
+
+{% if can_delete %}
+<section class="card">
+  <header><h2>Remove</h2></header>
+  <div class="body toolbar">
+    <span class="muted grow">Removes the account and its stored credentials from this service. The mailbox at the provider stays as it is.</span>
+    {{ action("/ui/accounts/" ~ account.id ~ "/delete", "Remove account", confirm="Remove " ~ account.email ~ " from the service?", cls="danger") }}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

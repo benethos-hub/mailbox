@@ -130,8 +130,10 @@ Everything real mail will depend on, before any real mailbox is connected.
 - Configuration UI under `/ui` (1.1), brought forward on 2026-09-24:
   - **frame: sign-in with an API token, server-side session, CSRF,
     security headers, layout**, done
-  - pages for everything the REST API does: accounts, users, roles and
-    tokens, reading mail, writing and sending, the audit of sends
+  - **accounts: connect through autodiscovery or by hand, change, verify,
+    remove**, done
+  - pages for the rest of the REST API: users, roles and tokens, reading
+    mail, writing and sending, the audit of sends
   - with the new providers: the OAuth round trip; recovery key, status
 - Threads (6.3): for IMAP built across folders from the id mapping,
   which then also keeps `In-Reply-To` and `References`

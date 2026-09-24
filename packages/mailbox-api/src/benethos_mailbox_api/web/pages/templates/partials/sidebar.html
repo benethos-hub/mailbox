@@ -2,6 +2,8 @@
   <div class="brand"><span class="mark">✉</span> {{ APP_NAME }}</div>
   <nav class="nav">
     <a href="/ui" class="{{ 'active' if page == 'home' }}"><span class="icon">◫</span> Overview</a>
+    <div class="section">Service</div>
+    <a href="/ui/accounts" class="{{ 'active' if page == 'accounts' }}"><span class="icon">▤</span> Accounts</a>
   </nav>
   <div class="spacer"></div>
   {% if me %}
