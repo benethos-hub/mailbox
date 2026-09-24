@@ -56,6 +56,16 @@ class ConflictError(MailboxApiError):
     code = "conflict"
 
 
+class RateLimitedError(MailboxApiError):
+    """The caller asked too often. ``retry_after`` is in seconds."""
+
+    code = "rate_limited"
+
+    def __init__(self, message: str, retry_after: int) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
 class NotSupportedError(MailboxApiError):
     """The provider behind an account cannot do what was asked."""
 

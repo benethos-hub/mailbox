@@ -17,7 +17,8 @@ from fastapi.routing import APIRoute
 
 from . import __version__
 from .config import Settings
-from .data.providers import ProviderFactory, build_provider
+from .data.discovery import SafeFetcher, default_sources, preset_hosts
+from .data.providers import ProviderFactory, build_provider, probe_server
 from .data.secrets import (
     CredentialVault,
     EnvKeyProvider,
@@ -48,6 +49,7 @@ from .data.storage import (
 )
 from .domain.accounts import AccountService
 from .domain.auth import AuthService
+from .domain.discovery import DiscoveryService
 from .domain.mailbox import MailboxService
 from .domain.users import UserService
 from .web import include_routes
@@ -60,6 +62,7 @@ class Services:
     auth: AuthService
     users: UserService
     mailbox: MailboxService
+    discovery: DiscoveryService
     vault: CredentialVault
     database: Database | None = None
 
@@ -69,7 +72,9 @@ class Services:
 
 
 def build_services(
-    settings: Settings, provider_factory: ProviderFactory = build_provider
+    settings: Settings,
+    provider_factory: ProviderFactory = build_provider,
+    discovery: DiscoveryService | None = None,
 ) -> Services:
     account_repo: AccountRepository
     user_repo: UserRepository
@@ -102,8 +107,19 @@ def build_services(
         auth=auth,
         users=UserService(user_repo, role_repo, token_repo, accounts, auth),
         mailbox=MailboxService(accounts),
+        discovery=discovery or build_discovery(settings),
         vault=vault,
         database=db,
+    )
+
+
+def build_discovery(settings: Settings) -> DiscoveryService:
+    fetcher = SafeFetcher(internal_hosts=settings.discovery_internal_hosts)
+    return DiscoveryService(
+        default_sources(fetcher, ispdb=settings.discovery_ispdb),
+        probe=probe_server,
+        check_host=fetcher.checked_address,
+        trusted_hosts=preset_hosts(),
     )
 
 
@@ -157,6 +173,7 @@ def create_app(
     app.state.auth = services.auth
     app.state.users = services.users
     app.state.mailbox = services.mailbox
+    app.state.discovery = services.discovery
 
     include_routes(app)
     install_error_handlers(app)

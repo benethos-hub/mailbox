@@ -2099,6 +2099,134 @@
         "x-permission": "accounts.manage"
       }
     },
+    "/v1/discovery": {
+      "post": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Discover Account",
+        "description": "Ways to connect an address, best first. Looks up only, sends no\ncredential. POST so the address stays out of access logs.",
+        "operationId": "discover_account",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Discovery"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a valid email address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many discoveries, see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-permission": "accounts.manage"
+      }
+    },
     "/v1/messages": {
       "get": {
         "tags": [
@@ -3151,6 +3279,85 @@
         ],
         "title": "Attachment"
       },
+      "Candidate": {
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/ProviderType"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "credential": {
+            "$ref": "#/components/schemas/CredentialKind"
+          },
+          "oauth_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Provider"
+          },
+          "servers": {
+            "items": {
+              "$ref": "#/components/schemas/MailServer"
+            },
+            "type": "array",
+            "title": "Servers"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/Hint"
+            },
+            "type": "array",
+            "title": "Hints"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DiscoverySourceName"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed",
+            "default": false
+          },
+          "settings": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Settings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "credential",
+          "source"
+        ],
+        "title": "Candidate",
+        "description": "One way to connect an address, as found by one source."
+      },
       "CredentialInfo": {
         "properties": {
           "field": {
@@ -3170,6 +3377,81 @@
         ],
         "title": "CredentialInfo",
         "description": "That a credential is stored, never its value."
+      },
+      "CredentialKind": {
+        "type": "string",
+        "enum": [
+          "password",
+          "app_password",
+          "oauth"
+        ],
+        "title": "CredentialKind",
+        "description": "What to ask the person for."
+      },
+      "Discovery": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/Hint"
+            },
+            "type": "array",
+            "title": "Hints"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceReport"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "domain"
+        ],
+        "title": "Discovery",
+        "description": "Ranked ways to connect an address, best first."
+      },
+      "DiscoveryRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "title": "Email",
+            "description": "The address to be connected."
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "DiscoveryRequest"
+      },
+      "DiscoverySourceName": {
+        "type": "string",
+        "enum": [
+          "preset",
+          "autoconfig",
+          "ispdb",
+          "mx"
+        ],
+        "title": "DiscoverySourceName"
       },
       "ErrorDetail": {
         "properties": {
@@ -3314,6 +3596,86 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "Hint": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "Hint",
+        "description": "Something the person has to know or do, with a help page if known."
+      },
+      "MailServer": {
+        "properties": {
+          "protocol": {
+            "$ref": "#/components/schemas/ServerProtocol"
+          },
+          "host": {
+            "type": "string",
+            "title": "Host"
+          },
+          "port": {
+            "type": "integer",
+            "title": "Port"
+          },
+          "security": {
+            "$ref": "#/components/schemas/Security"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "reachable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reachable"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "protocol",
+          "host",
+          "port",
+          "security"
+        ],
+        "title": "MailServer"
       },
       "Me": {
         "properties": {
@@ -3788,6 +4150,59 @@
         },
         "type": "object",
         "title": "RoleReplace"
+      },
+      "Security": {
+        "type": "string",
+        "enum": [
+          "tls",
+          "starttls"
+        ],
+        "title": "Security",
+        "description": "Encryption of a mail server connection. Plain text is never offered."
+      },
+      "ServerProtocol": {
+        "type": "string",
+        "enum": [
+          "imap",
+          "smtp"
+        ],
+        "title": "ServerProtocol"
+      },
+      "SourceOutcome": {
+        "type": "string",
+        "enum": [
+          "found",
+          "nothing",
+          "failed"
+        ],
+        "title": "SourceOutcome"
+      },
+      "SourceReport": {
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/DiscoverySourceName"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/SourceOutcome"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "outcome"
+        ],
+        "title": "SourceReport"
       },
       "TokenCreate": {
         "properties": {

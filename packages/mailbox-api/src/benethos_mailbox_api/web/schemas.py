@@ -27,6 +27,10 @@ class AccountCreate(BaseModel):
     )
 
 
+class DiscoveryRequest(BaseModel):
+    email: str = Field(max_length=254, description="The address to be connected.")
+
+
 class ErrorDetail(BaseModel):
     code: str
     message: str

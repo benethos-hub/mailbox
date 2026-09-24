@@ -13,6 +13,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `POST /v1/discovery` with `{"email": ...}` returns ways to connect the
+  address, best first: servers with port and encryption, the credential to
+  ask for, hints, whether the answer is `confirmed`, and `settings` for
+  `POST /v1/accounts`. Sources: built-in presets, the domain's autoconfig
+  file, Thunderbird's ISPDB, the MX record. IMAP servers are asked for their
+  capabilities without a login. `sources` reports what each source found.
+  Right: `discover_account` (`accounts.manage`) on every account.
+- `MAILBOX_API_DISCOVERY_ISPDB=false` switches ISPDB off,
+  `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS` (a JSON list) allows hosts with
+  private addresses.
+- `429 rate_limited` with `Retry-After`: more than 10 discoveries per minute
+  by one user.
 - Creating an account logs in first. Nothing is stored unless the provider
   accepts the credential: a rejected login answers `502
   provider_auth_failed`, a missing credential `400`.
