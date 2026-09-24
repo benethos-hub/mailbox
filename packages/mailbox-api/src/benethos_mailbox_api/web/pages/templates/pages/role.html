@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import action, csrf_field with context %}
+{% from "components/grants.html" import grant_editor, grant_summary %}
+{% block title %}{{ role.id }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}Role {{ role.id }}{% endblock %}
+{% block content %}
+<section class="card">
+  <header><h2>Rights</h2></header>
+  <div class="body">
+    <dl class="facts">
+      <dt>Grants</dt>
+      <dd>{% for grant in role.grants %}{{ grant_summary(grant, names) }}{% else %}—{% endfor %}</dd>
+      {% if holders is not none %}
+      <dt>Users</dt>
+      <dd>{% for user in holders %}<a class="tag" href="/ui/users/{{ user.id }}">{{ user.name }}</a> {% else %}—{% endfor %}</dd>
+      {% endif %}
+    </dl>
+  </div>
+</section>
+
+{% if can_update %}
+<form method="post" action="/ui/roles/{{ role.id | segment }}">
+  {{ csrf_field() }}
+  <section class="card">
+    <header><h2>Change</h2><span class="meta">Takes effect at once for every user with this role.</span></header>
+    <div class="body">
+      {{ grant_editor(rows, account_choices, groups, group_ops) }}
+      <div class="form-actions"><button class="primary" type="submit">Save</button></div>
+    </div>
+  </section>
+</form>
+{% endif %}
+
+{% if can_delete %}
+<section class="card">
+  <header><h2>Delete</h2></header>
+  <div class="body toolbar">
+    <span class="muted grow">Only a role no user holds can be deleted.</span>
+    {{ action("/ui/roles/" ~ (role.id | segment) ~ "/delete", "Delete role", confirm="Delete the role " ~ role.id ~ "?", cls="danger") }}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

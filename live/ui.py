@@ -5,8 +5,9 @@
 Starts a service of its own with a throwaway database, as mcp_stdio.py
 does, adds the first test account through the API, and then uses the UI
 the way a browser does: signs in with the admin key, connects the second
-test account through discovery and the form, opens the pages and follows
-their forms. Nothing in the mailboxes is written. Credentials and mail
+test account through discovery and the form, makes a user, a role and a
+token and signs in with that token, opens the pages and follows their
+forms. Nothing in the mailboxes is written. Credentials and mail
 content are never printed.
 """
 
@@ -126,6 +127,81 @@ def check_accounts(
     return account_id
 
 
+def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> None:
+    """A reader of the first test account made through the pages, its
+    token, a sign-in with it, and the token revoked."""
+    csrf = csrf_of(browser.get("/ui/users").text)
+    role = browser.post(
+        "/ui/roles",
+        data={
+            "csrf_token": csrf,
+            "id": "ui-live-reader",
+            "grants": "1",
+            "g0_accounts": account_id,
+            "g0_allow": ["accounts.read", "mail.read"],
+        },
+    )
+    run.check("create a role", "Role ui-live-reader created." in role.text)
+    created = browser.post(
+        "/ui/users",
+        data={
+            "csrf_token": csrf,
+            "name": "ui-live-reader",
+            "roles": "ui-live-reader",
+            "grants": "1",
+            "g0_accounts": account_id,
+            "g0_allow": "send",
+            "g0_recipients": "*@example.invalid",
+            "g0_max": "1",
+        },
+    )
+    user_path = created.url.path
+    if not run.check(
+        "create a user with a role and a narrowed grant",
+        "ui-live-reader created." in created.text and "/ui/users/usr_" in user_path,
+    ):
+        return
+    page = browser.post(
+        f"{user_path}/tokens", data={"csrf_token": csrf, "name": "live", "days": "1"}
+    ).text
+    shown = re.search(r'<code class="secret">([^<]+)</code>', page)
+    run.check("the new token is shown once", shown is not None)
+    run.check(
+        "and never again",
+        shown is not None and shown.group(1) not in browser.get(user_path).text,
+    )
+    if shown is None:
+        return
+    with httpx.Client(base_url=url, timeout=60, follow_redirects=True) as other:
+        run.check("sign in with the new token", sign_in(other, shown.group(1)))
+        home = other.get("/ui").text
+        run.check(
+            "it sees the first test account and may read and send",
+            "mail.read" in home and "send" in home,
+        )
+        run.check(
+            "its sending is narrowed, so no warning",
+            "reads and sends anywhere" not in home,
+        )
+        token_id = re.search(
+            r"/tokens/(tok_[0-9a-f]+)/revoke", browser.get(user_path).text
+        )
+        if token_id is None:
+            run.check("the token can be revoked", False)
+            return
+        browser.post(
+            f"{user_path}/tokens/{token_id.group(1)}/revoke", data={"csrf_token": csrf}
+        )
+        run.check(
+            "a revoked token is signed out at once",
+            "/ui/login" in str(other.get("/ui").url),
+        )
+    deleted = browser.post(f"{user_path}/delete", data={"csrf_token": csrf})
+    run.check("delete the user", "User deleted" in deleted.text)
+    gone = browser.post("/ui/roles/ui-live-reader/delete", data={"csrf_token": csrf})
+    run.check("delete the role", "Role ui-live-reader deleted." in gone.text)
+
+
 def main() -> int:
     env = read_env(ENV_FILE)
     test_accounts = accounts(env)[:2]
@@ -150,6 +226,9 @@ def main() -> int:
                 return 1
             print("\n== accounts")
             check_accounts(run, browser, env, test_accounts[1], admin_key)
+            print("\n== users, tokens, roles")
+            assert account_id is not None
+            check_users(run, browser, url, account_id)
             print("\n== the frame")
             check_frame(run, browser, [a["email"].lower() for a in test_accounts])
     finally:

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import csrf_field, empty with context %}
+{% from "components/grants.html" import grant_editor, grant_summary %}
+{% block title %}Roles · {{ APP_NAME }}{% endblock %}
+{% block heading %}Roles{% endblock %}
+{% block subheading %}<div class="sub">Named sets of grants that users share</div>{% endblock %}
+{% block content %}
+{% if roles %}
+<section class="card">
+  <div class="body tight">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Role</th><th>Grants</th><th class="num">Users</th><th></th></tr></thead>
+        <tbody>
+          {% for role in roles %}
+          <tr>
+            <td class="name"><a href="/ui/roles/{{ role.id | segment }}">{{ role.id }}</a></td>
+            <td>{% for grant in role.grants %}{{ grant_summary(grant, names) }}{% else %}—{% endfor %}</td>
+            <td class="num">{{ used.get(role.id) | or_missing }}</td>
+            <td class="actions"><a class="btn small" href="/ui/roles/{{ role.id | segment }}">Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% else %}
+{{ empty("No role yet.") }}
+{% endif %}
+
+{% if can_create %}
+<form method="post" action="/ui/roles">
+  {{ csrf_field() }}
+  <section class="card">
+    <header><h2>New role</h2><span class="meta">You can hand out only rights you hold yourself.</span></header>
+    <div class="body">
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-id">Name</label>
+          <input id="f-id" name="id" required placeholder="e.g. reader" />
+          <span class="hint">Cannot be changed later.</span>
+        </div>
+      </div>
+      <div class="fold">{{ grant_editor(rows, account_choices, groups, group_ops) }}</div>
+      <div class="form-actions"><button class="primary" type="submit">Create role</button></div>
+    </div>
+  </section>
+</form>
+{% endif %}
+{% endblock %}

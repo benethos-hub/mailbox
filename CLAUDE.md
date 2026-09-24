@@ -108,6 +108,7 @@ packages/
           deps.py         # who is signed in, the CSRF check
           session.py      # sign-in with a token, server-side sessions
           templates.py    # Jinja2: filters, render, Post/Redirect/Get
+          grants.py       # the grant editor's rows, read back into grants
           errors.py       # errors as a page
           routes/         # one module per area
           templates/      # base, partials, components (macros), pages

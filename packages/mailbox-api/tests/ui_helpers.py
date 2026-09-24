@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import httpx
 from fastapi.testclient import TestClient
@@ -31,7 +32,7 @@ def csrf_of(html: str) -> str:
 def post(
     client: TestClient,
     url: str,
-    data: dict[str, str] | None = None,
+    data: dict[str, Any] | None = None,
     follow_redirects: bool = True,
 ) -> httpx.Response:
     """A form post from a page of the UI, with the session's CSRF token."""
