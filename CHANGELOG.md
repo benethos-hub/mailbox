@@ -13,6 +13,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `GET /v1/messages` lists messages across accounts, newest first, with the
+  same filters as one account plus `accounts` and a folder role. Accounts the
+  caller may not read are left out. An account that fails is named in
+  `incomplete` and keeps its place for the next page.
+- Every message carries its `account_id`.
 - IMAP special folders without SPECIAL-USE flags are recognised by their
   German or English name (Gesendet, Entwürfe, Papierkorb, Spam, Archiv, ...).
 - Internationalised domains in addresses are returned in Unicode. A `Date`

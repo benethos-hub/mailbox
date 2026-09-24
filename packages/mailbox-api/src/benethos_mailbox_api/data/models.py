@@ -108,6 +108,7 @@ class Folder(BaseModel):
 
 class MessageSummary(BaseModel):
     id: str
+    account_id: str | None = None
     thread_id: str | None = None
     folder_ids: list[str] = Field(default_factory=list)
     subject: str | None = None
@@ -157,3 +158,18 @@ class Page(BaseModel, Generic[T]):
 
     items: list[T]
     next_cursor: str | None = None
+
+
+class AccountFailure(BaseModel):
+    """An account that could not answer, in a list across accounts."""
+
+    account_id: str
+    code: str
+    message: str
+
+
+class MessagePage(Page[MessageSummary]):
+    """Messages across accounts. ``incomplete`` names the accounts that did
+    not answer; their messages are missing from this page."""
+
+    incomplete: list[AccountFailure] = Field(default_factory=list)
