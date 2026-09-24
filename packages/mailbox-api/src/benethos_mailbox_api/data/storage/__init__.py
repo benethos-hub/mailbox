@@ -11,11 +11,18 @@ from .credentials import (
     KeyRepository,
     WrappedKey,
 )
+from .index import (
+    IndexChanges,
+    IndexEntry,
+    InMemoryMessageIndexRepository,
+    MessageIndexRepository,
+)
 from .sqlite import (
     Database,
     SqliteAccountRepository,
     SqliteCredentialRepository,
     SqliteKeyRepository,
+    SqliteMessageIndexRepository,
     SqliteRoleRepository,
     SqliteTokenRepository,
     SqliteUserRepository,
@@ -31,6 +38,11 @@ from .users import (
 )
 
 __all__ = [
+    "IndexChanges",
+    "IndexEntry",
+    "InMemoryMessageIndexRepository",
+    "MessageIndexRepository",
+    "SqliteMessageIndexRepository",
     "CredentialRepository",
     "EncryptedCredential",
     "InMemoryCredentialRepository",
