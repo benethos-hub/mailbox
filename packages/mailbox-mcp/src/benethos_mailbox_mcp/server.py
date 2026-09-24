@@ -534,11 +534,18 @@ def build_server(operations: Iterable[str]) -> MCPServer:
 
 
 async def allowed_operations() -> set[str]:
-    """Every operation the token may call on at least one account."""
+    """Every operation the token may call on at least one account. Warns in
+    the log where it may read mail and send it to any address."""
     me = await client().me()
     found = set(me.get("operations", []))
     for account in me.get("accounts", []):
         found.update(account.get("operations", []))
+        if "read_and_send_anywhere" in account.get("warnings", []):
+            logger.warning(
+                "%s: this token can read mail and send it to any address; "
+                "narrow sending with a grant's recipients",
+                account.get("email") or account["id"],
+            )
     return found
 
 

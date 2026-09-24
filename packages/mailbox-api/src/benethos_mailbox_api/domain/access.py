@@ -130,6 +130,15 @@ class Access:
             and (rule.accounts is None or account_id in rule.accounts)
         ]
 
+    def sends_anywhere(self, account_id: str) -> bool:
+        """Whether a grant lets the caller send from the account to any
+        address, however often."""
+        return any(
+            limit.recipients is None
+            for operation in SEND_OPERATIONS
+            for limit in self.send_limits(operation, account_id)
+        )
+
     def covers(self, grants: Iterable[Grant]) -> bool:
         """Whether every right in ``grants`` is one this caller holds itself,
         sending no wider than its own grants allow."""

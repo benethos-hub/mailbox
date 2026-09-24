@@ -1104,6 +1104,10 @@ What applies in both modes:
 5. **A warning, not a block.** A user that may read mail and send to anyone
    is flagged in `/v1/me`, in the configuration UI and in the MCP server's
    start log: "can read mail and send it to any address".
+   Built in phase 3: an account in `/v1/me` carries the warning
+   `read_and_send_anywhere` when the caller may `get_message` there and a
+   grant lets it send without `recipients` (or with `*`); a send limit
+   does not lift it.
 6. **Audit.** Every send is logged with user, credential, account and
    recipients, never content, so it can be reviewed afterwards.
 7. **Deleting** permanently is its own right (`mail.delete`), since an
