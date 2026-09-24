@@ -82,10 +82,10 @@ the tools that fit:
 | `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), or into the trash |
 | `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
 | `list_drafts` | `drafts` | the drafts of an account |
-| `create_draft` | `drafts` | a draft with plain text, recipients optional; with `original_id` a reply, reply to all or forward |
+| `create_draft` | `drafts` | a draft in plain text or HTML, recipients optional; with `original_id` a reply, reply to all or forward |
 | `update_draft` | `drafts` | replaces a draft as a whole, the id stays |
 | `delete_draft` | `drafts` | deletes a draft for good; reaches drafts only |
-| `send_message` | `send` | sends a mail at once, plain text; with `original_id` a reply, reply to all or forward |
+| `send_message` | `send` | sends a mail at once, plain text or HTML; with `original_id` a reply, reply to all or forward |
 | `send_draft` | `send` | sends a stored draft |
 
 Each send carries an `Idempotency-Key` derived from the call: the same

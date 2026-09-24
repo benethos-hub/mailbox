@@ -118,6 +118,7 @@ packages/
           compose.py      # outgoing messages as bytes (email)
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
           convert.py      # a parsed message to Message / MessageSummary
+          text.py         # the text part of an HTML-only mail
         providers/        # registry in __init__.py, base.py protocol
           protocols/      # wire protocols, one library each:
                           #   imap.py (IMAPClient), smtp.py (smtplib)

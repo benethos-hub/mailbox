@@ -5634,7 +5634,8 @@
                 "type": "null"
               }
             ],
-            "title": "Text"
+            "title": "Text",
+            "description": "Plain text. Left out beside `html`: made from the HTML."
           },
           "html": {
             "anyOf": [
@@ -5645,7 +5646,8 @@
                 "type": "null"
               }
             ],
-            "title": "Html"
+            "title": "Html",
+            "description": "HTML, sent beside a text part (multipart/alternative)."
           },
           "attachments": {
             "items": {
@@ -6644,7 +6646,8 @@
                 "type": "null"
               }
             ],
-            "title": "Text"
+            "title": "Text",
+            "description": "Plain text. Left out beside `html`: made from the HTML."
           },
           "html": {
             "anyOf": [
@@ -6655,7 +6658,8 @@
                 "type": "null"
               }
             ],
-            "title": "Html"
+            "title": "Html",
+            "description": "HTML, sent beside a text part (multipart/alternative)."
           },
           "attachments": {
             "items": {

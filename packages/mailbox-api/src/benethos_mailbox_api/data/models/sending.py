@@ -58,8 +58,14 @@ class DraftMessage(BaseModel):
     )
     reply_to: list[Recipient] = Field(default_factory=list)
     subject: str = Field(default="", pattern=_ONE_LINE, max_length=998)
-    text: str | None = None
-    html: str | None = None
+    text: str | None = Field(
+        default=None,
+        description="Plain text. Left out beside `html`: made from the HTML.",
+    )
+    html: str | None = Field(
+        default=None,
+        description="HTML, sent beside a text part (multipart/alternative).",
+    )
     attachments: list[OutgoingAttachment] = Field(default_factory=list)
 
     @model_validator(mode="after")

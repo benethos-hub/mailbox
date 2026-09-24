@@ -10,12 +10,12 @@ tools. A second user may also write: with it the check creates a folder in
 the first test account, stars, moves and trashes the newest inbox message
 there, and puts everything back as it was. A third user may write drafts:
 it writes, replaces and deletes a reply draft; nothing is sent. A fourth
-user may send: it sends one mail twice with the same call and one draft,
-from the first test account to the second only, and deletes both for good
-afterwards. Two more users check that a grant's recipients and send limit
-stop a mail, again only between the test accounts, and that the audit
-names each attempt. The throwaway database is deleted at the end. Credentials and
-mail content are never printed.
+user may send: it sends one mail twice with the same call, one draft and
+one HTML mail, from the first test account to the second only, and
+deletes them for good afterwards. Two more users check that a grant's
+recipients and send limit stop a mail, again only between the test
+accounts, and that the audit names each attempt. The throwaway database is
+deleted at the end. Credentials and mail content are never printed.
 """
 
 from __future__ import annotations
@@ -438,7 +438,7 @@ async def check_sending(
     good afterwards, in the inbox and in the sent folder."""
     sender, receiver = ids
     subject = f"mailbox-api MCP send check {secrets.token_hex(4)}"
-    subjects = [subject, f"{subject} draft"]
+    subjects = [subject, f"{subject} draft", f"{subject} html"]
     try:
         async with mcp_session(url, token) as session:
             tools = {tool.name for tool in (await session.list_tools()).tools}
@@ -470,11 +470,32 @@ async def check_sending(
                 not sent.is_error and (sent.structured_content or {}).get("sent"),
                 text_of(sent) if sent.is_error else "",
             )
+            html = await session.call_tool(
+                "send_message",
+                {
+                    "account_id": sender,
+                    "to": [to],
+                    "subject": subjects[2],
+                    "html": '<p>Hello <b style="color:#0a6">HTML</b></p>',
+                },
+            )
+            run.check("send_message sends HTML", not html.is_error)
         received = arrived(admin, receiver, subject)
         run.check(
             "the mail arrived once", len(received) == 1, f"{len(received)} copies"
         )
         run.check("the sent draft arrived", bool(arrived(admin, receiver, subjects[1])))
+        found = arrived(admin, receiver, subjects[2])
+        body = (
+            admin.get(f"/v1/accounts/{receiver}/messages/{found[0]['id']}").json()
+            if found
+            else {}
+        )
+        run.check(
+            "the HTML mail arrived with both parts, the text made from the HTML",
+            "<b" in (body.get("html_body") or "")
+            and (body.get("text_body") or "").strip() == "Hello HTML",
+        )
     finally:
         delete_test_mails(admin, ids, subjects)
 

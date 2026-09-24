@@ -30,6 +30,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A mail or draft with `html` and without `text` gets a text part made
+  from the HTML, without its hidden parts. Before, the text part was empty.
+- MCP server: `send_message`, `create_draft` and `update_draft` take
+  `html` besides `text`.
+
 - Grants take `recipients` (addresses, `*@domain`, `*`) and
   `max_sends_per_day`, which narrow `send_message` and `send_draft`:
   `403 recipient_not_allowed`, `429 send_limit_reached` with
