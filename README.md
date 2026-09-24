@@ -7,8 +7,9 @@ an MCP server on top so an AI assistant can work with them too.
 > address: reading (folders, messages, search, attachments, raw source,
 > across accounts), stable message ids kept by a background sync, changing
 > and moving messages, folders, drafts, and sending over SMTP with reply,
-> forward and `Idempotency-Key`. The MCP server's tools are next. What
-> comes next and in which order:
+> forward and `Idempotency-Key`. The MCP server reads mail over stdio
+> (search, messages, attachments with PDF pages as images); its writing
+> and sending tools are next. What comes next and in which order:
 > [docs/ROADMAP.md](docs/ROADMAP.md). The design behind it:
 > [docs/CONCEPT.md](docs/CONCEPT.md).
 
