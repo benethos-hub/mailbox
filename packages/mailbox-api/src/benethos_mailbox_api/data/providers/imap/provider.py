@@ -43,6 +43,8 @@ from ...models import (
 )
 from ..base import Capability, CredentialReader
 from ..ratelimit import Clock, Sleep, TokenBucket, backoff
+from ..smtp import DEFAULT_PORTS as SMTP_PORTS
+from ..smtp import SmtpLogin, SmtpServer, SmtpSession
 from . import mappers
 from .client import ImapServer, ImapSession, SearchCriteria
 
@@ -50,6 +52,7 @@ T = TypeVar("T")
 R = TypeVar("R")
 
 SessionFactory = Callable[[ImapServer], ImapSession]
+SmtpFactory = Callable[[SmtpServer], SmtpSession]
 
 DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
@@ -101,6 +104,7 @@ class ImapProvider:
         clock: Clock = time.monotonic,
         sleep: Sleep = time.sleep,
         jitter: Callable[[float, float], float] | None = None,
+        smtp_factory: SmtpFactory = SmtpSession,
     ) -> None:
         host = settings.get("host")
         if not host:
@@ -125,6 +129,8 @@ class ImapProvider:
         self._username = str(username)
         self._auth = str(auth)
         self._credentials = credentials
+        self._smtp = _smtp_session(settings, smtp_factory)
+        self._smtp_username = str(settings.get("smtp_username") or username)
         self._session = session_factory(self._server)
         self._lock = threading.Lock()
         # IDLE blocks its connection, so it gets one of its own.
@@ -575,6 +581,8 @@ class ImapProvider:
             self._session.logout()
             try:
                 self._login(self._session)
+                if self._smtp is not None:
+                    self._smtp.verify(self._smtp_login())
             except ProviderAuthError:
                 self._login_rejected = True
                 raise
@@ -639,6 +647,14 @@ class ImapProvider:
         pause = min(LONGEST_PAUSE, FIRST_PAUSE * 2 ** (self._failures - 1))
         self._paused_until = self._clock() + pause
 
+    def _smtp_login(self) -> SmtpLogin:
+        """The same credential as IMAP, decrypted for this one use."""
+        if self._auth == "xoauth2":
+            secret = self._credentials("access_token")
+        else:
+            secret = self._credentials("password")
+        return SmtpLogin(self._smtp_username, secret.get_secret_value(), self._auth)
+
     def _login(self, session: ImapSession) -> None:
         if self._auth == "xoauth2":
             token = self._credentials("access_token")
@@ -653,3 +669,19 @@ def _missing(
 ) -> dict[int, MessageSummary | MailboxApiError]:
     """``NotFoundError`` for every UID the folder no longer holds."""
     return {uid: NotFoundError("message not found") for uid in uids if uid not in found}
+
+
+def _smtp_session(settings: Any, factory: SmtpFactory) -> SmtpSession | None:
+    """The SMTP server for sending, from ``smtp_host``, ``smtp_port`` and
+    ``smtp_security``. None when the account has none: it cannot send."""
+    host = settings.get("smtp_host")
+    if not host:
+        return None
+    security = settings.get("smtp_security", "tls")
+    if security not in SMTP_PORTS:
+        raise BadRequestError(
+            "settings.smtp_security must be 'tls' or 'starttls': "
+            "SMTP without encryption is not supported"
+        )
+    port = int(settings.get("smtp_port") or SMTP_PORTS[security])
+    return factory(SmtpServer(host=str(host), port=port, security=str(security)))

@@ -182,6 +182,10 @@ async def test_preset_is_confirmed_and_ready_to_use() -> None:
         "security": "tls",
         "username": "Me@Firma.example",
         "auth": "password",
+        # Sending: the SMTP server, with the same login.
+        "smtp_host": "smtp.x",
+        "smtp_port": 465,
+        "smtp_security": "tls",
     }
     assert [(r.source, r.outcome) for r in result.sources] == [(PRESET, "found")]
     assert network.probed == ["imap.bigmail.example"]

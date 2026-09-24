@@ -89,6 +89,12 @@ def imap_settings(
             settings["port"] = int(env["LIVE_IMAP_PORT"])
         if "LIVE_IMAP_SECURITY" in env:
             settings["security"] = env["LIVE_IMAP_SECURITY"]
+        # Sending: from LIVE_SMTP_* where set, else what discovery found.
+        for key in ("smtp_host", "smtp_port", "smtp_security", "smtp_username"):
+            if f"LIVE_{key.upper()}" in env:
+                settings[key] = env[f"LIVE_{key.upper()}"]
+            elif key in discovered:
+                settings[key] = discovered[key]
     settings["username"] = account["username"]
     return settings
 
@@ -145,7 +151,9 @@ def smoke_account(
         },
     )
     if not run.check(
-        "connect (verify, then store)",
+        "connect (IMAP and SMTP verified, then stored)"
+        if "smtp_host" in settings
+        else "connect (verify, then store)",
         created.status_code == 201,
         f"{created.status_code} {created.json().get('error', {}).get('code', '')}",
     ):

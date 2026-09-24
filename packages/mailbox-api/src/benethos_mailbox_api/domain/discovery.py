@@ -317,6 +317,13 @@ def _with_settings(candidate: Candidate, query: Query) -> Candidate:
             if candidate.credential is CredentialKind.OAUTH
             else "password",
         }
+        smtp = next((s for s in servers if s.protocol is ServerProtocol.SMTP), None)
+        if smtp is not None:
+            settings["smtp_host"] = smtp.host
+            settings["smtp_port"] = smtp.port
+            settings["smtp_security"] = str(smtp.security)
+            if smtp.username and smtp.username != settings["username"]:
+                settings["smtp_username"] = smtp.username
     return candidate.model_copy(update={"servers": servers, "settings": settings})
 
 

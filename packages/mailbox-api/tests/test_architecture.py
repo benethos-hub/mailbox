@@ -35,6 +35,7 @@ LIBRARY_HOMES = {
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
     "imapclient": f"{PACKAGE}.data.providers.imap.client",
     "imap_tools": f"{PACKAGE}.data.providers.imap.parse",
+    "smtplib": f"{PACKAGE}.data.providers.smtp",
     "httpx": f"{PACKAGE}.data.discovery.fetch",
     "dns": f"{PACKAGE}.data.discovery.dns",
     "defusedxml": f"{PACKAGE}.data.discovery.autoconfig",

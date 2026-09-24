@@ -40,6 +40,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "accounts.manage": (
         "discover_account",
         "create_account",
+        "update_account",
         "delete_account",
         "verify_account",
     ),
