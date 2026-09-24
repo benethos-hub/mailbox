@@ -108,8 +108,10 @@ Everything real mail will depend on, before any real mailbox is connected.
   MCP start log**, done
 - Policy file, nothing enabled by default
 - Bearer guard for the MCP server's HTTP transport
-- Container image and compose file for the service, bound to the loopback
-  address (8.1)
+- **Container image and compose file for the service, bound to the loopback
+  address (8.1)**, done: `containers/`, the workflow
+  `.github/workflows/container.yml`. The image is not built by the
+  workflow yet: the repository has no GitHub remote so far.
 
 ## Phase 4 – Change feed and webhooks
 

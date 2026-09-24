@@ -305,6 +305,30 @@ def test_keys_init_and_import_commands(
     assert FileKeyProvider(key_file).load() == decode_recovery(recovery)
 
 
+def test_a_generated_key_as_a_container_secret(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """``keys generate`` prints a key and stores nothing; saved as the key
+    file, ``keys init`` uses it and only adds the data key."""
+    monkeypatch.setenv("MAILBOX_API_DATA_DIR", str(tmp_path / "data"))
+    assert main(["keys", "generate"]) == 0
+    generated = capsys.readouterr().out.strip()
+    assert not (tmp_path / "data").exists()
+    key_file = tmp_path / "secrets" / "master_key"
+    key_file.parent.mkdir()
+    key_file.write_text(generated + "\n", encoding="utf-8")
+    key_file.chmod(0o400)  # a secret is mounted read-only
+    monkeypatch.setenv("MAILBOX_API_STORAGE", "sqlite")
+    monkeypatch.setenv("MAILBOX_API_KEY_PROVIDER", "file")
+    monkeypatch.setenv("MAILBOX_API_KEY_FILE", str(key_file))
+    assert main(["keys", "init"]) == 0
+    assert capsys.readouterr().out.strip() == generated
+    assert main(["keys", "generate"]) == 0
+    assert capsys.readouterr().out.strip() != generated
+
+
 class _Stdin:
     def __init__(self, text: str) -> None:
         self._text = text

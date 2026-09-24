@@ -1,0 +1,39 @@
+# The service as a container, bound to the loopback address of the host
+# (CONCEPT 8.1). See README.md in this folder for the first start.
+#
+# MAILBOX_API_IMAGE names the image to run, e.g. from the GitHub container
+# registry: ghcr.io/<owner>/benethos-mailbox-api:<version>. Without it, the
+# image is built from this repository.
+
+name: benethos-mailbox
+
+services:
+  mailbox-api:
+    image: ${MAILBOX_API_IMAGE:-benethos-mailbox-api:local}
+    build:
+      context: ..
+      dockerfile: containers/benethos-mailbox-api/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILBOX_API_PORT:-8080}:8080"
+    volumes:
+      - data:/data
+    secrets:
+      - master_key
+    environment:
+      MAILBOX_API_LOG_LEVEL: ${MAILBOX_API_LOG_LEVEL:-INFO}
+      MAILBOX_API_SYNC_INTERVAL: ${MAILBOX_API_SYNC_INTERVAL:-300}
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+secrets:
+  master_key:
+    file: ./secrets/master_key
+
+volumes:
+  data:

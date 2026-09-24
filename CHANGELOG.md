@@ -30,6 +30,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Container image of the service (`containers/benethos-mailbox-api/`), for
+  `linux/amd64` and `linux/arm64`, with a compose file that publishes the
+  port on `127.0.0.1` only, and a GitHub workflow that pushes it to the
+  GitHub container registry. See `containers/README.md`.
+- `benethos-mailbox-api keys generate` prints a new master key for a key
+  file or container secret and stores nothing.
+
 - `GET /v1/me`: each account carries `warnings`; `read_and_send_anywhere`
   where the caller may read mail and send it to any address. The MCP
   server logs it at start.

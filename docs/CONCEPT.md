@@ -1227,6 +1227,18 @@ Principles:
   the loopback address) or as a background
   service on the host (`serve`, started at login).
 
+**Decided 2026-09-24, container:** the image is built by GitHub Actions for
+`linux/amd64` and `linux/arm64` and pushed to the GitHub container
+registry. The master key reaches the container as a file secret. Image
+files and the compose file live in `containers/`, one folder per image.
+
+Rules of the implementation (phase 3): the image holds the service package
+only, installed from the lockfile, and runs as a non-root user on a
+read-only root file system; configuration comes from the environment, the
+database from the volume `/data`. `keys generate` prints a new master key
+for the secret file, and `keys init` then adds the data key. The compose
+file publishes the port on `127.0.0.1` only. See `containers/README.md`.
+
 Why the REST server cannot be spawned per session like an MCP server:
 
 1. **Background fetching.** New mail, the change feed, `whats_new` and
