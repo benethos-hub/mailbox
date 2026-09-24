@@ -33,14 +33,17 @@ from .data.storage import (
     InMemoryAccountRepository,
     InMemoryCredentialRepository,
     InMemoryKeyRepository,
+    InMemoryMessageIndexRepository,
     InMemoryRoleRepository,
     InMemoryTokenRepository,
     InMemoryUserRepository,
     KeyRepository,
+    MessageIndexRepository,
     RoleRepository,
     SqliteAccountRepository,
     SqliteCredentialRepository,
     SqliteKeyRepository,
+    SqliteMessageIndexRepository,
     SqliteRoleRepository,
     SqliteTokenRepository,
     SqliteUserRepository,
@@ -51,6 +54,7 @@ from .domain.accounts import AccountService
 from .domain.auth import AuthService
 from .domain.discovery import DiscoveryService
 from .domain.mailbox import MailboxService
+from .domain.sync import SyncService
 from .domain.users import UserService
 from .web import include_routes
 from .web.errors import install_error_handlers
@@ -63,6 +67,7 @@ class Services:
     users: UserService
     mailbox: MailboxService
     discovery: DiscoveryService
+    sync: SyncService
     vault: CredentialVault
     database: Database | None = None
 
@@ -82,6 +87,7 @@ def build_services(
     token_repo: TokenRepository
     key_repo: KeyRepository
     credential_repo: CredentialRepository
+    index_repo: MessageIndexRepository
     db: Database | None = None
     if settings.storage == "memory":
         account_repo = InMemoryAccountRepository()
@@ -90,6 +96,7 @@ def build_services(
         token_repo = InMemoryTokenRepository()
         key_repo = InMemoryKeyRepository()
         credential_repo = InMemoryCredentialRepository()
+        index_repo = InMemoryMessageIndexRepository()
     else:
         db = Database(settings.database_path)
         account_repo = SqliteAccountRepository(db)
@@ -98,16 +105,19 @@ def build_services(
         token_repo = SqliteTokenRepository(db)
         key_repo = SqliteKeyRepository(db)
         credential_repo = SqliteCredentialRepository(db)
+        index_repo = SqliteMessageIndexRepository(db)
     vault = CredentialVault(key_repo, credential_repo, key_provider(settings))
     admin_key = settings.api_key.get_secret_value() if settings.api_key else None
-    accounts = AccountService(account_repo, vault, provider_factory)
+    accounts = AccountService(account_repo, vault, provider_factory, index_repo)
+    sync = SyncService(accounts, index_repo)
     auth = AuthService(user_repo, role_repo, token_repo, admin_key=admin_key)
     return Services(
         accounts=accounts,
         auth=auth,
         users=UserService(user_repo, role_repo, token_repo, accounts, auth),
-        mailbox=MailboxService(accounts),
+        mailbox=MailboxService(accounts, sync),
         discovery=discovery or build_discovery(settings),
+        sync=sync,
         vault=vault,
         database=db,
     )
