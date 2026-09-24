@@ -111,8 +111,10 @@ Everything real mail will depend on, before any real mailbox is connected.
   own container image**, done
 - **Container image and compose file for the service, bound to the loopback
   address (8.1)**, done: `containers/`, the workflow
-  `.github/workflows/container.yml`. The image is not built by the
-  workflow yet: the repository has no GitHub remote so far.
+  `.github/workflows/container.yml`. Both images built and run locally
+  for amd64 with the compose file, as `containers/README.md` describes;
+  arm64 and the workflow not yet run: the repository has no GitHub remote
+  so far.
 
 ## Phase 4 – Change feed and webhooks
 
