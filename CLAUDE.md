@@ -51,6 +51,11 @@ A uv workspace with two distributions and one lockfile.
 
 ```
 pyproject.toml            # workspace root: members, dev group, tool config
+config/                   # one folder per package: .env.example versioned,
+                          #   .env and key files local
+data/                     # one folder per package, created when missing;
+                          #   only .gitkeep is versioned
+live/                     # manual checks against the test accounts
 docs/
   CONCEPT.md              # design
   ROADMAP.md              # phases and their state

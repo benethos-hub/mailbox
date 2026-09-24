@@ -29,11 +29,17 @@ Thumbs.db
 
 # Local configuration and secrets
 .env
-config/*/.env
+# config/: per package, only the templates are versioned
+config/*/*
+!config/*/.env.example
 *.token.json
 
-# Service data: the database holds encrypted credentials, backups the same
-data/
+# Service data: the database holds encrypted credentials, backups the same.
+# data/: per package, only the folders are versioned (.gitkeep)
+data/*
+!data/*/
+data/*/*
+!data/*/.gitkeep
 *.db
 *.db-journal
 *.db-wal
