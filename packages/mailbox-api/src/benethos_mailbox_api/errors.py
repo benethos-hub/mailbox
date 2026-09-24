@@ -34,6 +34,12 @@ class ForbiddenError(MailboxApiError):
     code = "forbidden"
 
 
+class SetupRequiredError(MailboxApiError):
+    """The service has no way to authenticate anyone yet."""
+
+    code = "setup_required"
+
+
 class ConflictError(MailboxApiError):
     code = "conflict"
 

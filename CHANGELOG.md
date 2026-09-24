@@ -6,8 +6,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Without `MAILBOX_API_KEY` and without any user, `/v1` answers
+  `503 setup_required`.
+
 ### Added
 
+- Rights are checked on every `/v1` request, per account and per operation.
+  An account without a grant answers `404`, a missing right `403 forbidden`.
+  `list_accounts` returns only the accounts the caller may read.
 - Every `/v1` operation carries its required right as `x-permission` in the
   OpenAPI document.
 - Two distributions in one uv workspace: `benethos-mailbox-api` (the service)

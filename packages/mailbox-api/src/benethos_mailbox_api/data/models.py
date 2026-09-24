@@ -75,6 +75,19 @@ class Role(BaseModel):
     grants: list[Grant] = Field(default_factory=list)
 
 
+class ApiToken(BaseModel):
+    """An API token of a user. Only the SHA-256 hash of the token is kept."""
+
+    id: str
+    user_id: str
+    name: str
+    token_hash: str
+    created_at: datetime
+    expires_at: datetime | None = None
+    last_used_at: datetime | None = None
+    revoked_at: datetime | None = None
+
+
 class Folder(BaseModel):
     id: str
     name: str

@@ -12,6 +12,7 @@ from ..data.providers import (
     build_provider,
 )
 from ..data.storage import AccountRepository
+from .access import Access
 
 
 class AccountService:
@@ -26,19 +27,26 @@ class AccountService:
         self._provider_factory = provider_factory
         self._providers: dict[str, MailProvider] = {}
 
-    def list(self) -> list[Account]:
-        return self._repository.list()
+    def list(self, access: Access) -> list[Account]:
+        return [
+            account
+            for account in self._repository.list()
+            if access.allows("list_accounts", account.id)
+        ]
 
-    def get(self, account_id: str) -> Account:
+    def get(self, access: Access, account_id: str) -> Account:
+        access.require("get_account", account_id)
         return self._repository.get(account_id)
 
     def create(
         self,
+        access: Access,
         provider: ProviderType,
         email: str,
         display_name: str | None = None,
         settings: ProviderSettings | None = None,
     ) -> Account:
+        access.require("create_account")
         account = Account(
             id=f"acc_{uuid.uuid4().hex[:12]}",
             provider=provider,
@@ -51,12 +59,14 @@ class AccountService:
         self._providers[account.id] = adapter
         return account
 
-    async def delete(self, account_id: str) -> None:
+    async def delete(self, access: Access, account_id: str) -> None:
+        access.require("delete_account", account_id)
         self._repository.delete(account_id)
         adapter = self._providers.pop(account_id, None)
         if adapter is not None:
             await adapter.close()
 
     def provider(self, account_id: str) -> MailProvider:
+        """The adapter of an account. Internal: callers check rights first."""
         self._repository.get(account_id)
         return self._providers[account_id]

@@ -104,7 +104,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -199,7 +199,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -312,7 +312,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -411,7 +411,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -523,7 +523,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -711,7 +711,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -828,7 +828,7 @@
             }
           },
           "503": {
-            "description": "The API key is not configured on the server",
+            "description": "No user and no admin key exist yet",
             "content": {
               "application/json": {
                 "schema": {

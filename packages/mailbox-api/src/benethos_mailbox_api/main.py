@@ -13,8 +13,14 @@ from fastapi.routing import APIRoute
 
 from . import __version__
 from .config import Settings
-from .data.storage import InMemoryAccountRepository
+from .data.storage import (
+    InMemoryAccountRepository,
+    InMemoryRoleRepository,
+    InMemoryTokenRepository,
+    InMemoryUserRepository,
+)
 from .domain.accounts import AccountService
+from .domain.auth import AuthService
 from .domain.mailbox import MailboxService
 from .web import include_routes
 from .web.errors import install_error_handlers
@@ -30,7 +36,9 @@ def _operation_id(route: APIRoute) -> str:
 
 
 def create_app(
-    settings: Settings | None = None, accounts: AccountService | None = None
+    settings: Settings | None = None,
+    accounts: AccountService | None = None,
+    auth: AuthService | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="Mailbox API",
@@ -38,8 +46,17 @@ def create_app(
         description="Unified REST API for several mail providers and accounts.",
         generate_unique_id_function=_operation_id,
     )
+    settings = settings or Settings()
     accounts = accounts or AccountService(InMemoryAccountRepository())
-    app.state.settings = settings or Settings()
+    admin_key = settings.api_key.get_secret_value() if settings.api_key else None
+    auth = auth or AuthService(
+        InMemoryUserRepository(),
+        InMemoryRoleRepository(),
+        InMemoryTokenRepository(),
+        admin_key=admin_key,
+    )
+    app.state.settings = settings
+    app.state.auth = auth
     app.state.accounts = accounts
     app.state.mailbox = MailboxService(accounts)
 

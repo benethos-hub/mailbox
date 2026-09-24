@@ -17,8 +17,15 @@ from benethos_mailbox_api.data.providers import (
     build_provider,
 )
 from benethos_mailbox_api.data.providers.memory import MemoryProvider
-from benethos_mailbox_api.data.storage import InMemoryAccountRepository
+from benethos_mailbox_api.data.storage import (
+    InMemoryAccountRepository,
+    InMemoryRoleRepository,
+    InMemoryTokenRepository,
+    InMemoryUserRepository,
+)
+from benethos_mailbox_api.domain.access import Access
 from benethos_mailbox_api.domain.accounts import AccountService
+from benethos_mailbox_api.domain.auth import AuthService
 from benethos_mailbox_api.main import create_app
 
 API_KEY = "test-key"
@@ -71,12 +78,33 @@ def accounts(messages: list[Message]) -> AccountService:
     return AccountService(InMemoryAccountRepository(), provider_factory=factory)
 
 
+ADMIN = Access.admin("usr_test_admin", "test admin")
+
+
 @pytest.fixture
 def account_id(accounts: AccountService) -> str:
-    return accounts.create(ProviderType.MEMORY, "me@example.com").id
+    return accounts.create(ADMIN, ProviderType.MEMORY, "me@example.com").id
 
 
 @pytest.fixture
-def client(settings: Settings, accounts: AccountService) -> TestClient:
-    app = create_app(settings, accounts)
+def auth(settings: Settings) -> AuthService:
+    return AuthService(
+        InMemoryUserRepository(),
+        InMemoryRoleRepository(),
+        InMemoryTokenRepository(),
+        admin_key=API_KEY,
+    )
+
+
+@pytest.fixture
+def app_client(settings: Settings, accounts: AccountService, auth: AuthService):
+    """A client without credentials, for tests that bring their own token."""
+    return TestClient(create_app(settings, accounts, auth))
+
+
+@pytest.fixture
+def client(
+    settings: Settings, accounts: AccountService, auth: AuthService
+) -> TestClient:
+    app = create_app(settings, accounts, auth)
     return TestClient(app, headers={"Authorization": f"Bearer {API_KEY}"})
