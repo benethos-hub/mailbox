@@ -11,6 +11,11 @@ from .credentials import (
     KeyRepository,
     WrappedKey,
 )
+from .idempotency import (
+    IdempotencyRepository,
+    InMemoryIdempotencyRepository,
+    StoredResult,
+)
 from .index import (
     IndexChanges,
     IndexEntry,
@@ -21,6 +26,7 @@ from .sqlite import (
     Database,
     SqliteAccountRepository,
     SqliteCredentialRepository,
+    SqliteIdempotencyRepository,
     SqliteKeyRepository,
     SqliteMessageIndexRepository,
     SqliteRoleRepository,
@@ -38,6 +44,10 @@ from .users import (
 )
 
 __all__ = [
+    "IdempotencyRepository",
+    "InMemoryIdempotencyRepository",
+    "SqliteIdempotencyRepository",
+    "StoredResult",
     "IndexChanges",
     "IndexEntry",
     "InMemoryMessageIndexRepository",

@@ -56,6 +56,12 @@ class ConflictError(MailboxApiError):
     code = "conflict"
 
 
+class IdempotencyConflictError(ConflictError):
+    """An Idempotency-Key used again with a different request."""
+
+    code = "idempotency_conflict"
+
+
 class RateLimitedError(MailboxApiError):
     """The caller asked too often. ``retry_after`` is in seconds."""
 

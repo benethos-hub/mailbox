@@ -25,6 +25,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   copy in the sent folder; the answer names both and any refused
   recipients. Right: `send_message` (`send`). An account without an SMTP
   server answers `409`.
+- `Idempotency-Key` on `POST .../send`: the same key within 24 hours
+  returns the first result instead of sending again; with a different
+  message it answers `409 idempotency_conflict`.
 - `PATCH /v1/accounts/{account_id}` changes the display name, settings
   (merged, `null` removes one) or credentials. New settings or credentials
   are tried first. Right: `update_account` (`accounts.manage`).

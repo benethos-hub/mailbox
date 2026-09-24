@@ -18,6 +18,7 @@ from typing import Any
 from ...errors import NotFoundError
 from ..models import Account, AccountStatus, ApiToken, Grant, Role, User
 from .credentials import EncryptedCredential, WrappedKey
+from .idempotency import StoredResult
 from .index import IndexChanges, IndexEntry
 
 SettingsDict = dict[str, str | int | bool]
@@ -91,6 +92,19 @@ MIGRATIONS: list[str] = [
         state TEXT NOT NULL,
         PRIMARY KEY (account_id, folder_id)
     );
+    """,
+    # 4: results of requests with an Idempotency-Key
+    """
+    CREATE TABLE idempotency (
+        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        key TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        request_hash TEXT NOT NULL,
+        result TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (account_id, key)
+    );
+    CREATE INDEX idempotency_created ON idempotency (created_at);
     """,
 ]
 
@@ -628,3 +642,44 @@ def _entry(row: sqlite3.Row) -> IndexEntry:
         folder_id=row["folder_id"],
         header=row["header"],
     )
+
+
+class SqliteIdempotencyRepository:
+    def __init__(self, db: Database) -> None:
+        self._db = db
+
+    def get(self, account_id: str, key: str) -> StoredResult | None:
+        rows = self._db.query(
+            "SELECT * FROM idempotency WHERE account_id = ? AND key = ?",
+            (account_id, key),
+        )
+        if not rows:
+            return None
+        row = rows[0]
+        return StoredResult(
+            operation=row["operation"],
+            request_hash=row["request_hash"],
+            result=row["result"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+        )
+
+    def put(self, account_id: str, key: str, stored: StoredResult) -> None:
+        with self._db.transaction() as db:
+            db.execute(
+                "INSERT OR REPLACE INTO idempotency (account_id, key, operation,"
+                " request_hash, result, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    account_id,
+                    key,
+                    stored.operation,
+                    stored.request_hash,
+                    stored.result,
+                    stored.created_at.isoformat(),
+                ),
+            )
+
+    def purge(self, before: datetime) -> None:
+        with self._db.transaction() as db:
+            db.execute(
+                "DELETE FROM idempotency WHERE created_at < ?", (before.isoformat(),)
+            )

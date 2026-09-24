@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Header, Query, Response
 
 from ...data.models import (
     BatchResult,
@@ -105,12 +105,28 @@ async def update_message(
 
 @router.post("/send")
 async def send_message(
-    account_id: str, message: OutgoingMessage, caller: Caller, mailbox: Mailbox
+    account_id: str,
+    message: OutgoingMessage,
+    caller: Caller,
+    mailbox: Mailbox,
+    idempotency_key: Annotated[
+        str | None,
+        Header(
+            alias="Idempotency-Key",
+            min_length=1,
+            max_length=200,
+            description=(
+                "Sent again with the same key within 24 hours, the request "
+                "returns the first result instead of sending twice. The same "
+                "key with a different message answers `409`."
+            ),
+        ),
+    ] = None,
 ) -> SendResult:
     """Send from the account's address. The service sets From, Date and
     Message-ID and keeps a read copy in the sent folder. `200` means the
     mail server accepted the message; it cannot be taken back."""
-    return await mailbox.send_message(caller, account_id, message)
+    return await mailbox.send_message(caller, account_id, message, idempotency_key)
 
 
 @router.post("/messages/batch")
