@@ -13,6 +13,8 @@ The sources in ``data/discovery`` only look up. Decided here:
   then the order of the sources. Duplicates are merged into the first.
 - **Limits.** Per user a number of discoveries per minute, and each domain's
   findings are cached for a day.
+- **What can be connected.** Which candidates this service connects today,
+  and which sign in with an OAuth app the deployment has.
 """
 
 from __future__ import annotations
@@ -24,7 +26,13 @@ from dataclasses import dataclass
 
 import anyio
 
-from ..data.discovery import DiscoverySource, Finding, Query, registrable_domain
+from ..data.discovery import (
+    DiscoverySource,
+    Finding,
+    Query,
+    placeholders,
+    registrable_domain,
+)
 from ..data.http import HostCheck
 from ..data.models import (
     Candidate,
@@ -38,7 +46,7 @@ from ..data.models import (
     SourceOutcome,
     SourceReport,
 )
-from ..data.providers import ServerProbe
+from ..data.providers import ServerProbe, settings_from_servers
 from ..errors import BadRequestError, MailboxApiError, RateLimitedError
 from .access import Access
 
@@ -299,41 +307,40 @@ def _key(candidate: Candidate) -> tuple[object, ...]:
 def _with_settings(candidate: Candidate, query: Query) -> Candidate:
     """Fill in the login name and the settings for POST /v1/accounts."""
     servers = [
-        s.model_copy(update={"username": _username(s.username, query)})
+        s.model_copy(update={"username": _username(s.username, query.email)})
         for s in candidate.servers
     ]
-    settings: dict[str, str | int | bool] = {}
-    imap = next((s for s in servers if s.protocol is ServerProtocol.IMAP), None)
-    if candidate.provider is ProviderType.IMAP and imap is not None:
-        settings = {
-            "host": imap.host,
-            "port": imap.port,
-            "security": str(imap.security),
-            "username": imap.username or query.email,
-            "auth": "xoauth2"
-            if candidate.credential is CredentialKind.OAUTH
-            else "password",
-        }
-        smtp = next((s for s in servers if s.protocol is ServerProtocol.SMTP), None)
-        if smtp is not None:
-            settings["smtp_host"] = smtp.host
-            settings["smtp_port"] = smtp.port
-            settings["smtp_security"] = str(smtp.security)
-            if smtp.username and smtp.username != settings["username"]:
-                settings["smtp_username"] = smtp.username
+    settings = settings_from_servers(
+        candidate.provider, servers, candidate.credential, query.email
+    )
     return candidate.model_copy(update={"servers": servers, "settings": settings})
 
 
-def _username(template: str | None, query: Query) -> str:
-    if template is None:
-        return query.email
-    local = query.email.rpartition("@")[0]
-    domain = query.email.rpartition("@")[2]
-    return (
-        template.replace("%EMAILADDRESS%", query.email)
-        .replace("%EMAILLOCALPART%", local)
-        .replace("%EMAILDOMAIN%", domain)
-    )
+def _username(template: str | None, email: str) -> str:
+    """The login name a source names, filled in; the address without one."""
+    return placeholders.fill(template, email) if template is not None else email
+
+
+def connectable(candidates: list[Candidate]) -> list[Candidate]:
+    """What this service can connect today: IMAP with a password."""
+    return [
+        c
+        for c in candidates
+        if c.provider is ProviderType.IMAP
+        and c.credential in (CredentialKind.PASSWORD, CredentialKind.APP_PASSWORD)
+    ]
+
+
+def sign_ins(candidates: list[Candidate], configured: Iterable[str]) -> list[Candidate]:
+    """Candidates that sign in with a provider this deployment has an OAuth
+    app for, one per provider."""
+    apps = set(configured)
+    found: dict[str, Candidate] = {}
+    for candidate in candidates:
+        name = candidate.oauth_provider
+        if candidate.credential is CredentialKind.OAUTH and name in apps:
+            found.setdefault(name, candidate)
+    return list(found.values())
 
 
 def _report(result: _Result) -> SourceReport:

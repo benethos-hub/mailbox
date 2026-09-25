@@ -15,6 +15,7 @@ from ..data.providers import (
     CredentialReader,
     ProviderSettings,
     Tokens,
+    hosts_in,
     settings_defaults,
 )
 from ..data.secrets import CredentialVault
@@ -212,20 +213,13 @@ class AccountService:
         any other ``*_host``. Without a check, every host passes."""
         if self._check_host is None:
             return
-        for key, value in settings.items():
-            if not (key == "host" or key.endswith("_host")):
-                continue
-            if not isinstance(value, str) or not value:
-                continue
-            port = settings.get(key[: -len("host")] + "port")
+        for key, host, port in hosts_in(settings):
             try:
-                address = await self._check_host(
-                    value, port if isinstance(port, int) else 0
-                )
+                address = await self._check_host(host, port)
             except MailboxApiError as exc:
                 raise BadRequestError(exc.message) from None
             if address is None:
-                raise BadRequestError(f"{key}: {value} does not resolve")
+                raise BadRequestError(f"{key}: {host} does not resolve")
 
     def _with_credentials(self, account: Account) -> Account:
         """The account as callers see it: which credentials are stored, and

@@ -10,7 +10,7 @@ whatever the provider.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from typing import TypeVar
 
 from ...errors import (
@@ -77,6 +77,21 @@ def encrypted(settings: ProviderSettings, key: str, protocol: str) -> str:
 
 def port_of(settings: ProviderSettings, key: str, default: int) -> int:
     return int(settings.get(key) or default)
+
+
+def hosts_in(settings: Mapping[str, object]) -> list[tuple[str, str, int]]:
+    """Every server the settings name, as (key, host, port): ``host`` with
+    ``port``, ``smtp_host`` with ``smtp_port``, and any other ``*_host``.
+    Port 0 where none is set."""
+    found = []
+    for key, value in settings.items():
+        if not (key == "host" or key.endswith("_host")):
+            continue
+        if not isinstance(value, str) or not value:
+            continue
+        port = settings.get(key[: -len("host")] + "port")
+        found.append((key, value, port if isinstance(port, int) else 0))
+    return found
 
 
 async def per_id(

@@ -27,6 +27,7 @@ from ..models import (
     Security,
     ServerProtocol,
 )
+from . import placeholders
 from .base import Finding
 
 _SECURITY = {"SSL": Security.TLS, "TLS": Security.TLS, "STARTTLS": Security.STARTTLS}
@@ -113,7 +114,7 @@ def _server(
 def _host(value: str | None, domain: str) -> str | None:
     if not value:
         return None
-    value = value.replace("%EMAILDOMAIN%", domain).lower().rstrip(".")
+    value = placeholders.fill_domain(value, domain).lower().rstrip(".")
     try:
         value = value.encode("idna").decode("ascii")
     except UnicodeError:

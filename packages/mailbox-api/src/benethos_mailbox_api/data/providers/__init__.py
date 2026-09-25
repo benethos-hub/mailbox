@@ -13,7 +13,7 @@ from collections.abc import Awaitable, Callable
 from typing import Protocol
 
 from ...errors import NotSupportedError
-from ..models import ProviderType, Security, ServerProtocol
+from ..models import CredentialKind, MailServer, ProviderType, Security, ServerProtocol
 from .base import (
     Capability,
     CredentialReader,
@@ -23,6 +23,7 @@ from .base import (
 )
 from .imap import ImapProvider
 from .imap import probe as probe_imap
+from .imap import settings_from as imap_settings
 from .memory import MemoryProvider
 from .microsoft import MicrosoftProvider
 from .microsoft import endpoints as microsoft_endpoints
@@ -35,6 +36,7 @@ from .protocols.oauth import (
     authorize_url,
     new_pkce,
 )
+from .rules import hosts_in
 
 
 class ProviderFactory(Protocol):
@@ -86,6 +88,28 @@ def settings_defaults(kind: ProviderType, email: str) -> dict[str, str | int | b
     """The settings of ``kind`` that follow from the address alone."""
     make = _DEFAULTS.get(kind)
     return make(email) if make is not None else {}
+
+
+# The settings of an account of a provider from the servers autodiscovery
+# found, as the adapter reads them.
+_FROM_SERVERS: dict[
+    ProviderType,
+    Callable[[list[MailServer], CredentialKind, str], dict[str, str | int | bool]],
+] = {
+    ProviderType.IMAP: imap_settings,
+}
+
+
+def settings_from_servers(
+    kind: ProviderType,
+    servers: list[MailServer],
+    credential: CredentialKind,
+    email: str,
+) -> dict[str, str | int | bool]:
+    """The settings for ``POST /v1/accounts`` from discovered servers. Empty
+    for a provider that needs none, or none of these."""
+    make = _FROM_SERVERS.get(kind)
+    return make(servers, credential, email) if make is not None else {}
 
 
 def sign_in(kind: ProviderType, tenant: str | None = None) -> Endpoints:
@@ -143,8 +167,10 @@ __all__ = [
     "Tokens",
     "authorize_url",
     "build_provider",
+    "hosts_in",
     "new_pkce",
     "probe_server",
     "settings_defaults",
+    "settings_from_servers",
     "sign_in",
 ]

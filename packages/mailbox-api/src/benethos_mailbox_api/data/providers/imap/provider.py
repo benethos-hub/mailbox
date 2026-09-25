@@ -34,14 +34,17 @@ from ...mail import convert
 from ...mail.parse import ParsedMessage
 from ...models import (
     AttachmentContent,
+    CredentialKind,
     Folder,
     FolderRole,
+    MailServer,
     Message,
     MessageFilter,
     MessageSummary,
     MessageUpdate,
     Page,
     SentMessage,
+    ServerProtocol,
 )
 from .. import rules
 from ..base import Capability, CredentialReader, ProviderSettings
@@ -76,6 +79,31 @@ HEADER_BATCH = 200
 
 def default_session(server: ImapServer) -> ImapSession:
     return ImapSession(server, client_id=CLIENT_ID)
+
+
+def settings_from(
+    servers: list[MailServer], credential: CredentialKind, email: str
+) -> dict[str, str | int | bool]:
+    """The settings of an IMAP account from discovered servers, as
+    ``ImapProvider`` reads them. Empty without an IMAP server."""
+    imap = next((s for s in servers if s.protocol is ServerProtocol.IMAP), None)
+    if imap is None:
+        return {}
+    settings: dict[str, str | int | bool] = {
+        "host": imap.host,
+        "port": imap.port,
+        "security": str(imap.security),
+        "username": imap.username or email,
+        "auth": "xoauth2" if credential is CredentialKind.OAUTH else "password",
+    }
+    smtp = next((s for s in servers if s.protocol is ServerProtocol.SMTP), None)
+    if smtp is not None:
+        settings["smtp_host"] = smtp.host
+        settings["smtp_port"] = smtp.port
+        settings["smtp_security"] = str(smtp.security)
+        if smtp.username and smtp.username != settings["username"]:
+            settings["smtp_username"] = smtp.username
+    return settings
 
 
 def probe_session(server: ImapServer) -> ImapSession:

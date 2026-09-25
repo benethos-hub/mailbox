@@ -8,7 +8,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
-from ....data.models import Candidate, ProviderType
+from ....data.models import ProviderType
+from ....domain.discovery import connectable, sign_ins
 from ...services import Accounts, Discoverer, get_oauth
 from ..deps import Actor, Viewer
 from ..forms import failing
@@ -111,29 +112,10 @@ async def discover(request: Request, caller: Actor, discovery: Discoverer) -> Re
         page="accounts",
         email=email,
         discovery=found,
-        usable=[c for c in found.candidates if _usable(c)],
-        sign_ins=_sign_ins(found.candidates, _oauth_providers(request)),
+        usable=connectable(found.candidates),
+        sign_ins=sign_ins(found.candidates, _oauth_providers(request)),
         security=SECURITY,
         oauth_providers=_oauth_providers(request),
-    )
-
-
-def _sign_ins(candidates: list[Candidate], configured: list[str]) -> list[Candidate]:
-    """Candidates that sign in with a provider this deployment has an OAuth
-    app for, one per provider."""
-    found: dict[str, Candidate] = {}
-    for candidate in candidates:
-        name = candidate.oauth_provider
-        if candidate.credential == "oauth" and name in configured:
-            found.setdefault(str(name), candidate)
-    return list(found.values())
-
-
-def _usable(candidate: Candidate) -> bool:
-    """What this service can connect today: IMAP with a password."""
-    return candidate.provider is ProviderType.IMAP and candidate.credential in (
-        "password",
-        "app_password",
     )
 
 
