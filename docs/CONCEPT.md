@@ -281,6 +281,12 @@ an app password is the credential to ask for.
   other system keywords have no place and are not stored. A next-page
   cursor is a Graph path below `/me/` and never leaves the Graph host.
   No push yet.
+- Seen live with a personal account: `$search` ignores the preference for
+  immutable ids, a message fetched by such an id comes back under it
+  again, and `translateExchangeIds` is refused. A list filtered by
+  `internetMessageId` answers with immutable ids, so the adapter looks
+  search results up that way, in their own folder, twenty to a JSON
+  batch. Outlook.com took several minutes to deliver a sent mail.
 - Each deployment registers its own app in Entra ID (delegated
   `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `openid`, `email`,
   `profile` for the address that signed in). Change-notification

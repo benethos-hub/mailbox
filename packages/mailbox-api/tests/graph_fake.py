@@ -16,6 +16,8 @@ from urllib.parse import parse_qs, unquote, urlsplit
 import httpx
 
 TOKEN = "good-token"
+# How the fake marks an id that is not immutable.
+REST = "rest-"
 WELL_KNOWN = ("inbox", "sentitems", "drafts", "deleteditems", "junkemail")
 
 
@@ -83,6 +85,8 @@ class FakeGraph:
             return _error(401, "InvalidAuthenticationToken", "expired")
         url = urlsplit(str(request.url))
         assert url.netloc == "graph.microsoft.com", url.netloc
+        if url.path == "/v1.0/$batch":
+            return self._batch(request)
         path = [unquote(p) for p in url.path.removeprefix("/v1.0/me/").split("/")]
         query = {k: v[0] for k, v in parse_qs(url.query).items()}
         method = request.method
@@ -94,6 +98,26 @@ class FakeGraph:
             self.sent.append(base64.b64decode(request.content))
             return httpx.Response(202)
         return _error(400, "BadRequest", f"unknown call {method} {url.path}")
+
+    def _batch(self, request: httpx.Request) -> httpx.Response:
+        """JSON batching; each request is answered as on its own."""
+        replies = []
+        for one in json.loads(request.content)["requests"]:
+            assert len(json.loads(request.content)["requests"]) <= 20
+            inner = httpx.Request(
+                one["method"],
+                f"https://graph.microsoft.com/v1.0{one['url']}",
+                headers={**request.headers, **one.get("headers", {})},
+            )
+            answer = self(inner)
+            immutable = 'IdType="ImmutableId"' in inner.headers.get("prefer", "")
+            body = answer.json() if answer.content else None
+            if isinstance(body, dict) and immutable and "id" in body:
+                body = {**body, "id": str(body["id"]).removeprefix(REST)}
+            replies.append(
+                {"id": one["id"], "status": answer.status_code, "body": body}
+            )
+        return _json(200, {"responses": replies})
 
     # --- folders --------------------------------------------------------------------
 
@@ -181,6 +205,9 @@ class FakeGraph:
     ) -> httpx.Response:
         if "$filter" in query and "isRead eq false" in query["$filter"]:
             found = [m for m in found if not m["isRead"]]
+        if "$filter" in query and query["$filter"].startswith("internetMessageId eq '"):
+            header = query["$filter"].split("'", 1)[1][:-1].replace("''", "'")
+            found = [m for m in found if m["internetMessageId"] == header]
         if "$search" in query:
             words = query["$search"].strip('"').lower()
             found = [
@@ -193,7 +220,11 @@ class FakeGraph:
         found = sorted(found, key=lambda m: m["receivedDateTime"], reverse=True)
         skip = int(query.get("$skip", "0"))
         top = int(query.get("$top", "10"))
-        body: dict[str, Any] = {"value": found[skip : skip + top]}
+        page = found[skip : skip + top]
+        if "$search" in query:
+            # As seen live: search ignores the immutable id preference.
+            page = [{**m, "id": REST + m["id"]} for m in page]
+        body: dict[str, Any] = {"value": page}
         if skip + top < len(found):
             body["@odata.nextLink"] = (
                 f"https://graph.microsoft.com{path}?%24top={top}&%24skip={skip + top}"
@@ -211,7 +242,7 @@ class FakeGraph:
             if method == "POST":
                 return self._draft(base64.b64decode(request.content))
             return self._page(list(self.messages.values()), query, "/v1.0/me/messages")
-        message = self.messages.get(path[0])
+        message = self.messages.get(path[0].removeprefix(REST))
         if message is None:
             return _error(
                 404, "ErrorItemNotFound", "The specified object was not found"

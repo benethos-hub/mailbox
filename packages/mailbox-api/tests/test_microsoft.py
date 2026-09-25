@@ -385,3 +385,40 @@ def test_connect_read_and_send_through_the_api(
     assert draft.status_code == 201, draft.text
     listed_drafts: Any = client.get(f"{base}/drafts").json()
     assert [d["id"] for d in listed_drafts["items"]] == [draft.json()["id"]]
+
+
+async def test_search_results_come_under_immutable_ids(graph: FakeGraph) -> None:
+    wanted = graph.add_message(subject="Invoice 7")
+    graph.add_message(subject="Other")
+    provider = adapter(graph)
+    page = await provider.list_messages(
+        graph.well_known["inbox"],
+        limit=10,
+        cursor=None,
+        search=MessageFilter(subject="invoice"),
+    )
+    assert [m.id for m in page.items] == [wanted]
+    batches = [r for r in graph.requests if r.url.path.endswith("/$batch")]
+    assert len(batches) == 1
+
+
+async def test_many_search_results_go_in_batches_of_twenty(graph: FakeGraph) -> None:
+    wanted = {graph.add_message(subject=f"Invoice {n}") for n in range(25)}
+    page = await adapter(graph).list_messages(
+        None, limit=30, cursor=None, search=MessageFilter(subject="invoice")
+    )
+    assert {m.id for m in page.items} == wanted
+    assert len([r for r in graph.requests if r.url.path.endswith("/$batch")]) == 2
+
+
+async def test_a_search_result_in_two_folders_keeps_its_own(graph: FakeGraph) -> None:
+    """The same Message-ID in Sent Items and the inbox, e.g. a mail to
+    oneself: each result is looked up in its own folder."""
+    header = "<same@example.com>"
+    inbox = graph.add_message(subject="To me", internetMessageId=header)
+    sent = graph.add_message("sentitems", subject="To me", internetMessageId=header)
+    provider = adapter(graph)
+    found = await provider.list_messages(
+        None, limit=10, cursor=None, search=MessageFilter(subject="to me")
+    )
+    assert {m.id for m in found.items} == {inbox, sent}

@@ -216,7 +216,8 @@ def check(
     )
     if not run.check("send", sent.status_code == 200, str(sent.status_code)):
         return
-    arrived = _find(client, bot_id, "inbox", subject, tries=12)
+    # Outlook.com may take minutes to deliver, seen live.
+    arrived = _find(client, bot_id, "inbox", subject, tries=60)
     if run.check("it arrives", arrived is not None):
         client.delete(
             f"/v1/accounts/{bot_id}/messages/{arrived}", params={"permanent": "true"}
@@ -225,8 +226,21 @@ def check(
     if run.check("the copy in Sent Items", copy is not None):
         moved = client.delete(f"{base}/messages/{copy}")
         run.check("to the trash", moved.status_code == 204)
-        purged = client.delete(f"{base}/messages/{copy}", params={"permanent": "true"})
-        run.check("deleted for good", purged.status_code == 204)
+        # Right after the move Exchange may not find the message yet: the
+        # first answer is shown, then two more tries.
+        for attempt in range(3):
+            purged = client.delete(
+                f"{base}/messages/{copy}", params={"permanent": "true"}
+            )
+            if purged.status_code == 204:
+                break
+            error = purged.json().get("error", {})
+            code, text = error.get("code"), error.get("message")
+            print(f"      try {attempt + 1}: {purged.status_code} {code}: {text}")
+            time.sleep(3)
+        run.check(
+            "deleted for good", purged.status_code == 204, f"after {attempt + 1} tries"
+        )
 
 
 def main() -> int:

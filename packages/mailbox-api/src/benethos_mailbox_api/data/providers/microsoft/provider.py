@@ -11,7 +11,9 @@ draft is created from MIME and replaced by creating a new one. Graph cannot
 change a draft's MIME in place.
 
 Details Graph's documentation leaves open are marked **(unverified)**
-until a live check against a Microsoft account confirms them.
+until a live check against a Microsoft account confirms them. Seen live:
+search results come under ids that change on a move, despite the
+preference; the adapter looks their immutable ids up.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from email.parser import BytesHeaderParser
 from email.policy import default
 from email.utils import getaddresses
 from typing import Any
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, unquote, urlencode, urlsplit
 
 from ....errors import (
     BadRequestError,
@@ -53,6 +55,8 @@ GRAPH = "https://graph.microsoft.com"
 VERSION = "/v1.0"
 # A page of folders or of message ids, as many as Graph hands out at once.
 BATCH = 250
+# Requests in one JSON batch, Graph's limit.
+BATCH_SIZE = 20
 
 
 class MicrosoftProvider:
@@ -208,12 +212,64 @@ class MicrosoftProvider:
             )
             params = {"$select": mappers.SUMMARY_FIELDS, "$top": str(limit), **query}
             body = await self._json("GET", path, params=params)
-        items = [mappers.summary(item) for item in body.get("value") or []]
+        found = body.get("value") or []
+        if "$search" in query or (cursor and "search=" in unquote(cursor)):
+            found = await self._immutable(found)
+        items = [mappers.summary(item) for item in found]
         link = body.get("@odata.nextLink")
         return Page[MessageSummary](
             items=[item for item in items if mappers.keeps(item, rest)],
             next_cursor=_own_path(link) if link else None,
         )
+
+    async def _immutable(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Search results under their immutable ids.
+
+        Seen live: Graph's search ignores the preference for immutable ids,
+        a message fetched by such an id comes back under it again, and
+        ``translateExchangeIds`` is refused for personal accounts. A list
+        filtered by ``internetMessageId`` does answer with immutable ids:
+        so each result is looked up by its Message-ID, twenty to a JSON
+        batch, in the folder it was found in. One that cannot be looked
+        up keeps the id the search gave.
+        """
+        ids: dict[str, str] = {}
+        wanted = [item for item in items if item.get("internetMessageId")]
+        for start in range(0, len(wanted), BATCH_SIZE):
+            chunk = wanted[start : start + BATCH_SIZE]
+            requests = []
+            for n, item in enumerate(chunk):
+                header = str(item["internetMessageId"]).replace("'", "''")
+                query = urlencode(
+                    {
+                        "$select": "id,parentFolderId",
+                        "$filter": f"internetMessageId eq '{header}'",
+                    }
+                )
+                requests.append(
+                    {
+                        "id": str(n),
+                        "method": "GET",
+                        "url": f"/me/messages?{query}",
+                        "headers": {"Prefer": 'IdType="ImmutableId"'},
+                    }
+                )
+            answer = await self._json(
+                "POST", "/$batch", json_body={"requests": requests}
+            )
+            for reply in answer.get("responses") or []:
+                if reply.get("status") != 200:
+                    continue
+                item = chunk[int(reply["id"])]
+                found = (reply.get("body") or {}).get("value") or []
+                same = [
+                    f
+                    for f in found
+                    if f.get("parentFolderId") == item.get("parentFolderId")
+                ]
+                if len(same) == 1:
+                    ids[item["id"]] = str(same[0]["id"])
+        return [{**item, "id": ids.get(item["id"], item["id"])} for item in items]
 
     async def get_message(self, message_id: str) -> Message:
         path = f"/me/messages/{_id(message_id)}"

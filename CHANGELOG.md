@@ -52,7 +52,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   Graph, connected by OAuth. Folders, lists and search, messages,
   attachments, the source, flags, categories as keywords, moving,
   deleting, drafts and sending; message ids stay the same when a message
-  moves. Not yet checked against a live Microsoft account.
+  moves, search results included.
 
 - A draft read with `get_message` carries its `reference`. A reference
   with `quote: false` keeps the link to the original without adding its

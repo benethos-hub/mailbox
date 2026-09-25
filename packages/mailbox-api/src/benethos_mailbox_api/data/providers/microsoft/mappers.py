@@ -36,11 +36,10 @@ WELL_KNOWN: dict[str, FolderRole] = {
 
 SUMMARY_FIELDS = (
     "id,conversationId,parentFolderId,subject,from,toRecipients,"
-    "receivedDateTime,bodyPreview,isRead,flag,categories,hasAttachments,isDraft"
+    "receivedDateTime,bodyPreview,isRead,flag,categories,hasAttachments,isDraft,"
+    "internetMessageId"
 )
-MESSAGE_FIELDS = (
-    f"{SUMMARY_FIELDS},ccRecipients,bccRecipients,replyTo,internetMessageId,body"
-)
+MESSAGE_FIELDS = f"{SUMMARY_FIELDS},ccRecipients,bccRecipients,replyTo,body"
 FOLDER_FIELDS = (
     "id,displayName,parentFolderId,totalItemCount,unreadItemCount,childFolderCount"
 )
@@ -157,8 +156,8 @@ def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter |
     Without text: ``$filter`` and ``$orderby``, newest first. Graph wants
     the ordered property first in the filter, hence the always-true date.
     With text: ``$search``, which allows no ``$filter`` or ``$orderby``;
-    its results come newest first. Read state and star are then checked
-    here **(unverified: the exact rules of Graph's search)**.
+    its results come newest first, under ids the adapter translates. Read
+    state and star are then checked here.
     """
     search = search or MessageFilter()
     texts = []
