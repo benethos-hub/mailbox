@@ -13,12 +13,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   `mail.read`) name each message created, updated or deleted since a
   `state`, oldest first, ids only. Without `since` the answer holds only
   the current state. `more` says to ask again at once. A state the feed no
-  longer knows answers `410 changes_expired`. IMAP changes come from the
-  sync and from the API. Other providers report changes made through the
-  API for now.
+  longer knows answers `410 changes_expired`. Changes come from the sync
+  (IMAP), from Graph delta queries (Microsoft) and from the API.
 - `MAILBOX_SERVICE_CHANGES_DAYS`: days a change is kept, 7 by default.
 - On an IMAP server with CONDSTORE, flags another mail client changes
   reach the change feed as `message.updated`.
+- Microsoft accounts reach the change feed: the sync worker now polls
+  them too, at `MAILBOX_SERVICE_SYNC_INTERVAL`, with one Graph delta query
+  per folder.
 - The MCP tool `whats_new`: mail created, updated or deleted since the
   `state` of an earlier call, in one account or all. A token with
   `mail.read` gets it.

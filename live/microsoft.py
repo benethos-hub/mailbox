@@ -18,8 +18,10 @@ admin key live beside it, readable by the owner only.
 connected through the UI. The check then reads folders and mail, makes a
 folder and a reply draft and removes them, and sends one mail from the
 Microsoft test account to the first test account, which it deletes for
-good on both sides afterwards. Credentials and mail content are never
-printed.
+good on both sides afterwards. The change feed must name the copy in
+Sent Items, which the service learns of through Graph delta queries only.
+For that the worker polls every 20 seconds while the check runs, without
+IMAP IDLE. Credentials and mail content are never printed.
 """
 
 from __future__ import annotations
@@ -47,6 +49,7 @@ from _common import (
 
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
+SYNC_INTERVAL = 20
 DATA = Path("data/live-microsoft")
 PORT = 8080
 URL = f"http://localhost:{PORT}"
@@ -77,7 +80,28 @@ def microsoft_env(env: dict[str, str], admin_key: str) -> dict[str, str]:
         ),
         "MAILBOX_SERVICE_OAUTH_MICROSOFT_TENANT": env.get("LIVE_MICROSOFT_TENANT")
         or "common",
+        # The change feed learns of the copy in Sent Items from the worker.
+        "MAILBOX_SERVICE_SYNC_INTERVAL": str(SYNC_INTERVAL),
+        "MAILBOX_SERVICE_SYNC_IDLE": "false",
     }
+
+
+def feed_types(
+    client: httpx.Client, account_id: str, since: str, message_id: str, wait: float
+) -> list[str]:
+    """The types the change feed names for a message since ``since``,
+    asked until it names one or ``wait`` seconds have passed."""
+    deadline = time.monotonic() + wait
+    while True:
+        answer = client.get(
+            f"/v1/accounts/{account_id}/changes", params={"since": since, "limit": 200}
+        )
+        types = [
+            c["type"] for c in answer.json().get("changes", []) if c["id"] == message_id
+        ]
+        if types or time.monotonic() > deadline:
+            return types
+        time.sleep(5)
 
 
 def microsoft_account(client: httpx.Client, email: str) -> dict[str, Any] | None:
@@ -176,6 +200,7 @@ def check(
                 run.check("delete it", deleted.status_code == 204)
 
     print("\n== sending, to the first test account only")
+    since = client.get(f"{base}/changes").json()["state"]
     subject = f"mailbox-service microsoft live check {secrets.token_hex(4)}"
     sent = client.post(
         f"{base}/send",
@@ -194,6 +219,13 @@ def check(
             f"/v1/accounts/{bot_id}/messages/{arrived}", params={"permanent": "true"}
         )
     copy = _find(client, ms_id, "sent", subject, tries=6)
+    if copy is not None:
+        types = feed_types(client, ms_id, since, copy, wait=4 * SYNC_INTERVAL)
+        run.check(
+            "the change feed names the copy in Sent Items (Graph delta)",
+            "message.created" in types,
+            " ".join(types) or "nothing",
+        )
     if run.check("the copy in Sent Items", copy is not None):
         # Deleted for good straight from Sent Items: the adapter goes through
         # the trash, since Graph's delete outside it only moves there. Right

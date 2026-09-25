@@ -46,7 +46,7 @@ from ...models import (
     ServerProtocol,
 )
 from .. import rules
-from ..base import Capability, CredentialReader, ProviderSettings
+from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
 from ..guard import Guard
 from ..protocols.imap import (
     DEFAULT_PORTS,
@@ -319,6 +319,9 @@ class ImapProvider:
                     )
                 )
         return found
+
+    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+        raise NotSupportedError("IMAP folders are compared by their state")
 
     async def wait_for_change(self, timeout: float) -> bool:
         return await anyio.to_thread.run_sync(

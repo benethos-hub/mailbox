@@ -71,7 +71,9 @@ done. Update the roadmap in the same commit that finishes an item.
   `uv run python live/microsoft.py --connect` once (a person signs in in
   the browser), then `uv run python live/microsoft.py` checks the adapter
   against the Microsoft test account in `live/.env`. It sends one mail
-  from it to the first test account and deletes it for good on both sides.
+  from it to the first test account and deletes it for good on both sides,
+  and checks that the change feed learns of the sent copy through Graph
+  delta queries.
 
 ## Project layout
 

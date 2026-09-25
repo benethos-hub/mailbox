@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
+from datetime import datetime
 from enum import StrEnum
 from typing import Protocol
 
@@ -56,6 +58,28 @@ class Capability(StrEnum):
     # A message keeps its id when it is moved. Without it the domain keeps an
     # id mapping (CONCEPT 4.1).
     STABLE_IDS = "stable_ids"
+    # Reports what changed in a folder since a token, folder_changes (for
+    # Microsoft: Graph delta queries).
+    DELTA = "delta"
+
+
+@dataclass(frozen=True)
+class ChangedMessage:
+    """A message a folder reports as new or changed."""
+
+    id: str
+    created: datetime | None = None
+
+
+@dataclass(frozen=True)
+class FolderChanges:
+    """What changed in one folder since a token, and the token to ask
+    from next time."""
+
+    token: str
+    changed: list[ChangedMessage] = field(default_factory=list)
+    # Deleted, or moved out of the folder.
+    removed: list[str] = field(default_factory=list)
 
 
 class MailProvider(Protocol):
@@ -171,6 +195,12 @@ class MailProvider(Protocol):
         """Those of ``message_ids``, all in the folder, whose flags changed
         since the folder had the state ``since``. Empty where the provider
         cannot tell."""
+        ...
+
+    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+        """What changed in the folder since ``token``. Without a token every
+        message counts as changed. Only with ``DELTA``. A token the provider
+        no longer knows raises ``ChangesExpiredError``."""
         ...
 
     async def wait_for_change(self, timeout: float) -> bool:

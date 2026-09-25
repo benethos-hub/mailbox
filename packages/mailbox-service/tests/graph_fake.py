@@ -39,6 +39,13 @@ class FakeGraph:
         self.tokens = {TOKEN}
         # Given once to the next request instead of an answer of its own.
         self.next_answer: httpx.Response | None = None
+        # Delta queries: every change bumps a message's version. A deltaLink
+        # remembers the folder, the version and the messages it held then.
+        self.version = 0
+        self.versions: dict[str, int] = {}
+        self.delta_links: dict[str, tuple[str, int, frozenset[str]]] = {}
+        # Messages per page of a delta answer.
+        self.delta_page = 50
 
     # --- setting up -----------------------------------------------------------------
 
@@ -75,7 +82,22 @@ class FakeGraph:
             f"Message-ID: <{message_id}@example.com>\r\nSubject: "
             f"{self.messages[message_id]['subject']}\r\n\r\nHi there\r\n"
         ).encode()
+        self.messages[message_id].setdefault("createdDateTime", self.now())
+        self.touch(message_id)
         return message_id
+
+    def now(self) -> str:
+        """Graph's clock, which a test may set."""
+        return getattr(self, "clock", "2026-09-26T10:00:00Z")
+
+    def touch(self, message_id: str) -> None:
+        self.version += 1
+        self.versions[message_id] = self.version
+
+    def other_client_changes(self, message_id: str, **fields: Any) -> None:
+        """Another client changes a message, e.g. isRead or parentFolderId."""
+        self.messages[message_id].update(fields)
+        self.touch(message_id)
 
     # --- the transport --------------------------------------------------------------
 
@@ -194,6 +216,8 @@ class FakeGraph:
             assert target is not None
             folder["parentFolderId"] = target["id"]
             return _json(201, self._folder_json(folder))
+        if rest == ["messages", "delta"]:
+            return self._delta(folder["id"], query)
         if rest == ["messages"]:
             found = [
                 m for m in self.messages.values() if m["parentFolderId"] == folder["id"]
@@ -202,6 +226,50 @@ class FakeGraph:
                 found, query, f"/v1.0/me/mailFolders/{folder['id']}/messages"
             )
         return _error(400, "BadRequest", "unknown folder call")
+
+    # --- delta queries --------------------------------------------------------------
+
+    def _delta(self, folder_id: str, query: dict[str, str]) -> httpx.Response:
+        """A delta query: the first call answers every message, a call with
+        a deltatoken what changed since, with @removed for those gone."""
+        token = query.get("$deltatoken")
+        inside = {
+            m["id"] for m in self.messages.values() if m["parentFolderId"] == folder_id
+        }
+        if token is None:
+            items = [self._delta_item(i) for i in sorted(inside)]
+        else:
+            if token not in self.delta_links:
+                return _error(410, "SyncStateNotFound", "the sync state is gone")
+            folder, version, held = self.delta_links[token]
+            assert folder == folder_id
+            items = [
+                self._delta_item(i)
+                for i in sorted(inside)
+                if i not in held or self.versions.get(i, 0) > version
+            ]
+            items += [
+                {"id": i, "@removed": {"reason": "deleted"}}
+                for i in sorted(held - inside)
+            ]
+        skip = int(query.get("$skiptoken", "0"))
+        page = items[skip : skip + self.delta_page]
+        base = f"https://graph.microsoft.com/v1.0/me/mailFolders/{folder_id}"
+        body: dict[str, Any] = {"value": page}
+        if skip + self.delta_page < len(items):
+            again = f"$deltatoken={token}&" if token else ""
+            body["@odata.nextLink"] = (
+                f"{base}/messages/delta?{again}$skiptoken={skip + self.delta_page}"
+            )
+        else:
+            new = f"dt{len(self.delta_links) + 1}"
+            self.delta_links[new] = (folder_id, self.version, frozenset(inside))
+            body["@odata.deltaLink"] = f"{base}/messages/delta?$deltatoken={new}"
+        return _json(200, body)
+
+    def _delta_item(self, message_id: str) -> dict[str, Any]:
+        message = self.messages[message_id]
+        return {"id": message_id, "createdDateTime": message["createdDateTime"]}
 
     # --- messages -------------------------------------------------------------------
 
@@ -258,6 +326,7 @@ class FakeGraph:
                 return _json(200, message)
             if method == "PATCH":
                 message.update(json.loads(request.content))
+                self.touch(message["id"])
                 return _json(200, message)
             if method == "DELETE":
                 # As Graph does: outside the trash, a delete moves the
@@ -265,6 +334,7 @@ class FakeGraph:
                 trash = self.well_known["deleteditems"]
                 if message["parentFolderId"] != trash:
                     message["parentFolderId"] = trash
+                    self.touch(message["id"])
                 else:
                     del self.messages[message["id"]]
                 return httpx.Response(204)
@@ -275,6 +345,7 @@ class FakeGraph:
             if target is None:
                 return _error(404, "ErrorItemNotFound", "folder not found")
             message["parentFolderId"] = target["id"]
+            self.touch(message["id"])
             return _json(201, message)
         if rest[0] == "attachments":
             items = self.attachments.get(message["id"], [])

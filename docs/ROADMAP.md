@@ -129,8 +129,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **The MCP tool `whats_new` (8)**, done, live-checked in `live/mcp_stdio.py`
 - **IMAP: CONDSTORE where the server offers it, so flag changes from other
   clients reach the feed (6.5)**, done, live-checked
-- Microsoft: Graph delta queries in the worker, so the feed covers
-  Microsoft accounts (5.4, 6.5)
+- **Microsoft: Graph delta queries in the worker, so the feed covers
+  Microsoft accounts (5.4, 6.5)**, done, live-checked in `live/microsoft.py`
 - Webhooks: register, sign with HMAC-SHA256, deliver with retries (6.5)
 - decided 2026-09-25: IMAP and Microsoft in this phase, CONDSTORE, 7 days
   by default (CONCEPT 6.5)

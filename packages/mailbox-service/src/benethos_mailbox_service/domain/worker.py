@@ -115,7 +115,7 @@ class SyncWorker:
     def _wanted(self, account_id: str) -> bool:
         return self._adapters.status(
             account_id
-        ) is not AccountStatus.NEEDS_REAUTH and self._sync.mapped(account_id)
+        ) is not AccountStatus.NEEDS_REAUTH and self._sync.watched(account_id)
 
     def _push_for(self, account_id: str) -> bool:
         return (

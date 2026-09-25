@@ -27,6 +27,7 @@ from urllib.parse import quote, unquote, urlencode, urlsplit
 
 from ....errors import (
     BadRequestError,
+    ChangesExpiredError,
     ConflictError,
     MailboxServiceError,
     NotFoundError,
@@ -50,7 +51,7 @@ from ...models import (
     SentMessage,
 )
 from .. import rules
-from ..base import Capability, TokenSource
+from ..base import Capability, ChangedMessage, FolderChanges, TokenSource
 from . import mappers
 
 GRAPH = "https://graph.microsoft.com"
@@ -70,6 +71,7 @@ class MicrosoftProvider:
             Capability.DRAFTS,
             Capability.SERVER_SEARCH,
             Capability.STABLE_IDS,
+            Capability.DELTA,
         }
     )
 
@@ -498,6 +500,36 @@ class MicrosoftProvider:
                 found[chunk[int(reply["id"])]] = body.get("internetMessageId")
         return found
 
+    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+        """A delta query of the folder's messages. The token is Graph's
+        deltaLink, below ``/v1.0``. A message moved out of the folder comes
+        as removed, one moved in as changed, under the same immutable id."""
+        if token is None:
+            body = await self._json(
+                "GET",
+                f"/me/mailFolders/{_id(folder_id)}/messages/delta",
+                params={"$select": "id,createdDateTime"},
+            )
+        else:
+            body = await self._json("GET", _own_path(token))
+        changed: list[ChangedMessage] = []
+        removed: list[str] = []
+        while True:
+            for item in body.get("value") or []:
+                if "@removed" in item:
+                    removed.append(str(item["id"]))
+                else:
+                    created = mappers.when(item.get("createdDateTime"))
+                    changed.append(ChangedMessage(str(item["id"]), created))
+            link = body.get("@odata.nextLink")
+            if link:
+                body = await self._json("GET", _own_path(link))
+                continue
+            delta = body.get("@odata.deltaLink")
+            if not delta:
+                raise ProviderError("microsoft answered a delta query without a link")
+            return FolderChanges(_own_path(delta), changed, removed)
+
     async def wait_for_change(self, timeout: float) -> bool:
         """No push yet: Graph's change notifications need a public endpoint
         (CONCEPT 5.4)."""
@@ -552,6 +584,9 @@ def _failure(answer: Answer) -> MailboxServiceError:
         return NotFoundError(text)
     if answer.status == 409:
         return ConflictError(text)
+    if answer.status == 410:
+        # A delta token Graph no longer keeps.
+        return ChangesExpiredError(text)
     if answer.status == 400:
         return BadRequestError(text)
     if answer.status in (429, 502, 503, 504):

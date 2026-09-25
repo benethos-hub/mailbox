@@ -16,7 +16,9 @@ from ...errors import NotSupportedError
 from ..models import CredentialKind, MailServer, ProviderType, Security, ServerProtocol
 from .base import (
     Capability,
+    ChangedMessage,
     CredentialReader,
+    FolderChanges,
     MailProvider,
     ProviderSettings,
     TokenSource,
@@ -156,7 +158,9 @@ async def probe_server(
 __all__ = [
     "App",
     "Capability",
+    "ChangedMessage",
     "CredentialReader",
+    "FolderChanges",
     "Endpoints",
     "MailProvider",
     "OAuthClient",

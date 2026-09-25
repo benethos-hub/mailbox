@@ -1374,6 +1374,13 @@ folders whose state changed. It does **not** mirror mailboxes. List, search
 and get still go to the provider live, unless the local cache of open
 question 5 is decided.
 
+A Microsoft account keeps no id mapping. At the same interval the worker
+asks each of its folders with a Graph delta query what changed since the
+last pass. A message that left one folder and came into another moved.
+One that is new to a folder counts as created when Graph dates its
+creation after the last pass, else as updated. A message that arrives
+while a pass runs may therefore count as updated.
+
 **Fallback without the service**, for development and tests only:
 a test harness can run the service app and the MCP client in one process
 via `httpx.ASGITransport`. The REST contract stays the same, there is just
