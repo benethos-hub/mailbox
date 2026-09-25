@@ -223,11 +223,22 @@ class _UsageError(Exception):
 
 
 def _expected() -> tuple[type[BaseException], ...]:
+    """What a command reports as an error and a return code, not a trace:
+    its own usage, a key or backup that cannot be read, the service's
+    errors, and settings that do not validate."""
+    from pydantic import ValidationError
+
     from .data.secrets import KeyProviderError
     from .data.secrets.backup import BackupError
     from .errors import MailboxApiError
 
-    return (_UsageError, BackupError, KeyProviderError, MailboxApiError, ValueError)
+    return (
+        _UsageError,
+        BackupError,
+        KeyProviderError,
+        MailboxApiError,
+        ValidationError,
+    )
 
 
 def _message(exc: BaseException) -> str:

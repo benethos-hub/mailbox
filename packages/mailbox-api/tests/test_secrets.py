@@ -90,7 +90,7 @@ def test_recovery_key_round_trip() -> None:
 
 @pytest.mark.parametrize("text", ["not base32!", "ABCD-EFGH"])
 def test_recovery_key_rejects_garbage(text: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyProviderError, match="not a recovery key"):
         decode_recovery(text)
 
 
@@ -143,7 +143,7 @@ def test_key_provider_from_settings(tmp_path: Path) -> None:
         FileKeyProvider,
     )
     assert isinstance(key_provider(Settings(key_provider="env")), EnvKeyProvider)
-    with pytest.raises(ValueError, match="KEY_FILE"):
+    with pytest.raises(KeyProviderError, match="KEY_FILE"):
         key_provider(Settings(key_provider="file"))
 
 

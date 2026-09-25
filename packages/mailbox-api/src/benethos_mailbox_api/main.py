@@ -34,6 +34,7 @@ from .data.secrets import (
     EnvKeyProvider,
     FileKeyProvider,
     KeyProvider,
+    KeyProviderError,
     KeyringKeyProvider,
 )
 from .data.storage import Database, open_repositories
@@ -171,7 +172,7 @@ def key_provider(settings: Settings) -> KeyProvider:
         return EnvKeyProvider(value)
     if settings.key_provider == "file":
         if settings.key_file is None:
-            raise ValueError(
+            raise KeyProviderError(
                 "MAILBOX_API_KEY_FILE must be set for the file key provider"
             )
         return FileKeyProvider(settings.key_file)

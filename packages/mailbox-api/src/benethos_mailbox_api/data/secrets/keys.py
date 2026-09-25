@@ -45,9 +45,9 @@ def decode_recovery(text: str) -> bytes:
     try:
         key = base64.b32decode(compact)
     except ValueError:
-        raise ValueError("not a recovery key") from None
+        raise KeyProviderError("not a recovery key") from None
     if len(key) != KEY_BYTES:
-        raise ValueError("not a recovery key")
+        raise KeyProviderError("not a recovery key")
     return key
 
 
