@@ -51,6 +51,23 @@ class Settings(BaseSettings):
     # Sync worker: watch the inbox over IMAP IDLE, which needs a second
     # connection per account.
     sync_idle: bool = True
+    # OAuth for Microsoft accounts: the app the operator registered in
+    # Microsoft Entra ID. Without a client id, Microsoft accounts cannot be
+    # connected. The secret from a file (a container secret) or from the
+    # environment.
+    oauth_microsoft_client_id: str | None = None
+    oauth_microsoft_client_secret: SecretStr | None = None
+    oauth_microsoft_client_secret_file: Path | None = None
+    # Who may sign in: common (personal and work or school accounts),
+    # consumers, organizations, or one tenant's id or domain.
+    oauth_microsoft_tenant: str = "common"
+
+    def oauth_microsoft_secret(self) -> SecretStr | None:
+        """The client secret, from its file if one is named."""
+        if self.oauth_microsoft_client_secret_file is not None:
+            text = self.oauth_microsoft_client_secret_file.read_text(encoding="utf-8")
+            return SecretStr(text.strip())
+        return self.oauth_microsoft_client_secret
 
     @property
     def database_path(self) -> Path:

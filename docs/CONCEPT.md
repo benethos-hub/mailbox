@@ -272,7 +272,8 @@ an app password is the credential to ask for.
   `sendMail`, not SMTP.
 - Outlook.com has accepted no basic auth since 2024-09-16.
 - Each deployment registers its own app in Entra ID (delegated
-  `Mail.ReadWrite`, `Mail.Send`, `offline_access`). Change-notification
+  `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `openid`, `email`,
+  `profile` for the address that signed in). Change-notification
   subscriptions expire after a few days and are renewed by the worker
   **(unverified: exact lifetime)**.
 

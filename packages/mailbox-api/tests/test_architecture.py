@@ -42,7 +42,7 @@ LIBRARY_HOMES = {
     "imapclient": f"{PACKAGE}.data.providers.protocols.imap",
     "imap_tools": f"{PACKAGE}.data.mail.parse",
     "smtplib": f"{PACKAGE}.data.providers.protocols.smtp",
-    "httpx": f"{PACKAGE}.data.discovery.fetch",
+    "httpx": f"{PACKAGE}.data.http",
     "dns": f"{PACKAGE}.data.discovery.dns",
     "defusedxml": f"{PACKAGE}.data.discovery.autoconfig",
     "publicsuffixlist": f"{PACKAGE}.data.discovery.suffix",

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -19,6 +19,9 @@ from fastapi.routing import APIRoute
 from . import __version__, web
 from .config import Settings
 from .data.discovery import SafeFetcher, default_sources, preset_hosts
+from .data.http import ApiClient
+from .data.models import ProviderType
+from .data.oauth import App, OAuthClient, microsoft
 from .data.providers import ProviderFactory, build_provider, probe_server
 from .data.secrets import (
     CredentialVault,
@@ -62,6 +65,7 @@ from .domain.auth import AuthService
 from .domain.discovery import DiscoveryService
 from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
+from .domain.oauth import OAuthService
 from .domain.sending import SendControl
 from .domain.sync import SyncService
 from .domain.users import UserService
@@ -77,6 +81,7 @@ class Services:
     discovery: DiscoveryService
     sync: SyncService
     vault: CredentialVault
+    oauth: OAuthService
     worker: SyncWorker | None = None
     database: Database | None = None
 
@@ -89,6 +94,7 @@ def build_services(
     settings: Settings,
     provider_factory: ProviderFactory = build_provider,
     discovery: DiscoveryService | None = None,
+    oauth_clients: Mapping[ProviderType, OAuthClient] | None = None,
 ) -> Services:
     account_repo: AccountRepository
     user_repo: UserRepository
@@ -123,7 +129,10 @@ def build_services(
         send_repo = SqliteSendLogRepository(db)
     vault = CredentialVault(key_repo, credential_repo, key_provider(settings))
     admin_key = settings.api_key.get_secret_value() if settings.api_key else None
-    accounts = AccountService(account_repo, vault, provider_factory, index_repo)
+    clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
+    accounts = AccountService(
+        account_repo, vault, provider_factory, index_repo, oauth=clients
+    )
     sync = SyncService(accounts, index_repo)
     auth = AuthService(user_repo, role_repo, token_repo, admin_key=admin_key)
     return Services(
@@ -143,8 +152,22 @@ def build_services(
             else None
         ),
         vault=vault,
+        oauth=OAuthService(accounts, clients),
         database=db,
     )
+
+
+def build_oauth(settings: Settings) -> dict[ProviderType, OAuthClient]:
+    """The OAuth apps the settings name, one per provider."""
+    clients: dict[ProviderType, OAuthClient] = {}
+    if settings.oauth_microsoft_client_id:
+        app = App(
+            endpoints=microsoft(settings.oauth_microsoft_tenant),
+            client_id=settings.oauth_microsoft_client_id,
+            client_secret=settings.oauth_microsoft_secret(),
+        )
+        clients[ProviderType.MICROSOFT] = OAuthClient(app, ApiClient())
+    return clients
 
 
 def build_discovery(settings: Settings) -> DiscoveryService:
@@ -217,6 +240,7 @@ def create_app(
     app.state.users = services.users
     app.state.mailbox = services.mailbox
     app.state.discovery = services.discovery
+    app.state.oauth = services.oauth
 
     web.install(app)
     return app

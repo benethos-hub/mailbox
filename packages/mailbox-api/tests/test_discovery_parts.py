@@ -12,15 +12,15 @@ import httpx
 import pytest
 
 from benethos_mailbox_api.data.discovery import autoconfig
-from benethos_mailbox_api.data.discovery.dns import (
-    host_addresses,
-    is_public_address,
-    mx_hosts,
-)
-from benethos_mailbox_api.data.discovery.fetch import SafeFetcher
+from benethos_mailbox_api.data.discovery.dns import mx_hosts
 from benethos_mailbox_api.data.discovery.suffix import (
     is_public_suffix,
     registrable_domain,
+)
+from benethos_mailbox_api.data.http import (
+    SafeFetcher,
+    host_addresses,
+    is_public_address,
 )
 from benethos_mailbox_api.data.models import (
     CredentialKind,

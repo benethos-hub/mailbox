@@ -119,6 +119,7 @@ packages/
           static/         # app.css, app.js, vendored htmx
       domain/             # BUSINESS LOGIC: decides, knows no HTTP
         accounts.py       # AccountService: accounts and their live adapters
+        oauth.py          # OAuthService: connect or sign in again by OAuth
         mailbox.py        # MailboxService: folders and messages, the facade
         calls.py          # provider calls under our stable ids, many at once
         outgoing.py       # sending and drafts, reached through MailboxService
@@ -148,6 +149,9 @@ packages/
           guard.py        # pacing, retries, blocked logins, for any adapter
           sender.py       # SmtpSender: sending for IMAP, POP3, ...
           imap/, memory/  # one directory per provider (adapter)
+        http/             # httpx: safe.py (hosts users typed, SSRF guard),
+                          #   api.py (JSON to a provider's known hosts)
+        oauth.py          # OAuth 2.0 with PKCE, refresh, the token source
         storage/          # own records, one module per subject
         secrets/          # envelope encryption, key providers, backup
         discovery/        # autodiscovery sources and their helpers
@@ -242,6 +246,8 @@ noticing. Every change is measured against that.
 | Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX; planned: JMAP well-known, Microsoft realm, SRV, guessing | any further lookup, or one switched off |
+| HTTP | `data/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
+| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/oauth.py` | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token | password + TOTP, OAuth client credentials |
 | MCP ↔ service | the REST API, `docs/openapi.json` | httpx client in `client.py` | a generated client |

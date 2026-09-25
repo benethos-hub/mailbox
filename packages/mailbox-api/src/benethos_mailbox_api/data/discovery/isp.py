@@ -9,10 +9,10 @@ from __future__ import annotations
 from urllib.parse import quote
 
 from ...errors import MailboxApiError
+from ..http import SafeFetcher
 from ..models import DiscoverySourceName
 from . import autoconfig
 from .base import Finding, Query
-from .fetch import SafeFetcher
 
 
 class IspAutoconfigSource:
