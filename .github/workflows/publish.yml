@@ -1,12 +1,17 @@
 name: Publish
 
-# Publishes both packages to PyPI when a GitHub release is published, via
-# Trusted Publishing (OIDC, no stored token). Both carry the same version,
-# and the release tag must name it: v0.0.2 publishes 0.0.2 of each.
+# Publishes a release when a GitHub release is published:
+#   * both packages to PyPI, via Trusted Publishing (OIDC, no stored token)
+#   * both container images to ghcr.io, via the automatic GITHUB_TOKEN
+# Everything carries the same version, and the release tag must name it:
+# v0.0.2 publishes 0.0.2 of each package and image.
 #
-# One job per package, so a failure in one does not withhold the other.
-# A version can be uploaded to PyPI only once, so the checks run first and
-# each wheel is inspected before its upload.
+# One job per package and per image, so a failure in one does not withhold
+# the others. A version can be uploaded to PyPI only once, so the checks
+# run first and each wheel is inspected before its upload.
+#
+# `workflow_dispatch` builds the images alone and tags them `edge`. PyPI is
+# skipped there: a manual run carries no release tag to take a version from.
 #
 # One-time setup on PyPI: a (pending) publisher per project with this
 # repository's owner and name and the workflow filename publish.yml, with
@@ -14,10 +19,16 @@ name: Publish
 # benethos-mailbox-mcp. PyPI takes a pending publisher (repository,
 # workflow, environment) for one project only, hence one environment each.
 # On GitHub: both environments under Settings, Environments.
+#
+# One-time setup on ghcr.io, possible only after the first push: a new
+# package is private even when its repository is public. Each image is
+# switched under the organisation's Packages, Package settings, Change
+# visibility, Public.
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -46,7 +57,9 @@ jobs:
           uv run pytest -q
 
   pypi-publish:
-    name: Build and publish ${{ matrix.package }}
+    name: PyPI ${{ matrix.package }}
+    # A manual run has no version to publish, and PyPI rejects a re-upload.
+    if: github.event_name == 'release'
     needs: checks
     runs-on: ubuntu-latest
     strategy:
@@ -100,3 +113,130 @@ jobs:
 
       - name: Publish to PyPI (Trusted Publishing)
         run: uv publish --trusted-publishing always dist/*
+
+  ghcr-publish:
+    name: Image ${{ matrix.image }}
+    needs: checks
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: benethos-mailbox-api
+            package: packages/mailbox-api
+            description: "Mailbox API: one REST API for several mail providers and accounts."
+          - image: benethos-mailbox-mcp
+            package: packages/mailbox-mcp
+            description: "MCP server for the Mailbox API over streamable HTTP. Reaches mail through that REST API only."
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io as the GITHUB_TOKEN identity
+    steps:
+      - uses: actions/checkout@v7
+
+      # The image carries the package's version; a release must name the
+      # same one, as for PyPI.
+      - name: The release names the package version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          PYPROJECT: ${{ matrix.package }}/pyproject.toml
+        run: |
+          set -euo pipefail
+          version=$(python3 -c "import sys, tomllib; print(tomllib.load(open(sys.argv[1], 'rb'))['project']['version'])" "$PYPROJECT")
+          if [ "v${version}" != "${TAG}" ]; then
+            echo "::error::the release ${TAG} does not match the package version ${version}"
+            exit 1
+          fi
+
+      # arm64 is emulated on the amd64 runner. The dependencies ship
+      # aarch64 wheels, so nothing is compiled from source.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tags from the release tag (v0.4.0 -> 0.4.0, 0.4, latest), and the
+      # OCI labels, among them org.opencontainers.image.source, which links
+      # the package to this repository. The description is per image, not
+      # the repository's.
+      - name: Derive image tags, labels and annotations
+        id: meta
+        uses: docker/metadata-action@v6
+        env:
+          # The GitHub package page reads the index of a multi-arch image,
+          # not its manifests, so both are annotated.
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
+            type=raw,value=edge,enable=${{ github.event_name == 'workflow_dispatch' }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image }}
+            org.opencontainers.image.description=${{ matrix.description }}
+          annotations: |
+            org.opencontainers.image.title=${{ matrix.image }}
+            org.opencontainers.image.description=${{ matrix.description }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: containers/${{ matrix.image }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      # Read the published index back instead of trusting that the
+      # annotations arrived: the package page shows only what the index
+      # carries.
+      - name: The published index carries both platforms and the description
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          ref=$(printf '%s\n' "$TAGS" | head -1)
+          echo "inspecting ${ref}"
+          docker buildx imagetools inspect "$ref" --raw > /tmp/index.json
+          python3 - <<'PY'
+          import json
+
+          index = json.load(open("/tmp/index.json"))
+          annotations = index.get("annotations") or {}
+          # unknown/unknown entries are the provenance attestations.
+          platforms = sorted(
+              f"{m['platform']['os']}/{m['platform']['architecture']}"
+              for m in index.get("manifests", [])
+              if m.get("platform", {}).get("architecture") != "unknown"
+          )
+          missing = [
+              key
+              for key in (
+                  "org.opencontainers.image.description",
+                  "org.opencontainers.image.source",
+                  "org.opencontainers.image.version",
+              )
+              if not annotations.get(key)
+          ]
+          assert not missing, f"the index carries no {missing}"
+          assert "linux/amd64" in platforms, f"amd64 is missing: {platforms}"
+          assert "linux/arm64" in platforms, f"arm64 is missing: {platforms}"
+          print("OK:", ", ".join(platforms))
+          print("   ", annotations["org.opencontainers.image.description"])
+          PY
