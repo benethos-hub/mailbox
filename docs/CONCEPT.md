@@ -517,8 +517,8 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | PATCH | `/v1/accounts/{account_id}` | display name, settings, new password |
 | DELETE | `/v1/accounts/{account_id}` | remove, credentials deleted |
 | POST | `/v1/accounts/{account_id}/verify` | test the connection now |
-| GET | `/v1/oauth/{provider}/authorize` | start OAuth for Gmail / Microsoft, returns the redirect URL |
-| GET | `/v1/oauth/{provider}/callback` | OAuth callback, creates or re-authorizes the account |
+| POST | `/v1/oauth/{provider}/start` | start OAuth for Microsoft (later Gmail): the provider's sign-in URL, to connect an account or, with `account_id`, sign it in again |
+| GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back: a UI page, not part of the API. The person is signed in to the UI as the user who started; the account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
 | GET | `/v1/providers` | the built-in presets, the same data discovery uses first |
 

@@ -10,7 +10,7 @@ from pydantic import SecretStr
 
 from ....data.models import Candidate, ProviderType
 from ....errors import MailboxApiError
-from ...services import get_accounts, get_discovery
+from ...services import get_accounts, get_discovery, get_oauth
 from ..deps import Actor, Viewer
 from ..templates import back, render
 
@@ -86,7 +86,13 @@ async def new_account(request: Request, caller: Viewer) -> HTMLResponse:
         email="",
         discovery=None,
         security=SECURITY,
+        oauth_providers=_oauth_providers(request),
     )
+
+
+def _oauth_providers(request: Request) -> list[str]:
+    """The providers an account can sign in with here, e.g. microsoft."""
+    return [p.value for p in get_oauth(request).providers()]
 
 
 @router.post("/accounts/discover")
@@ -107,8 +113,21 @@ async def discover(request: Request, caller: Actor) -> Response:
         email=email,
         discovery=found,
         usable=[c for c in found.candidates if _usable(c)],
+        sign_ins=_sign_ins(found.candidates, _oauth_providers(request)),
         security=SECURITY,
+        oauth_providers=_oauth_providers(request),
     )
+
+
+def _sign_ins(candidates: list[Candidate], configured: list[str]) -> list[Candidate]:
+    """Candidates that sign in with a provider this deployment has an OAuth
+    app for, one per provider."""
+    found: dict[str, Candidate] = {}
+    for candidate in candidates:
+        name = candidate.oauth_provider
+        if candidate.credential == "oauth" and name in configured:
+            found.setdefault(str(name), candidate)
+    return list(found.values())
 
 
 def _usable(candidate: Candidate) -> bool:
@@ -145,16 +164,18 @@ async def create_account(request: Request, caller: Actor) -> Response:
 
 @router.get("/accounts/{account_id}")
 async def account(request: Request, caller: Viewer, account_id: str) -> HTMLResponse:
+    found = get_accounts(request).get(caller, account_id)
     return render(
         request,
         "pages/account.html",
         page="accounts",
-        account=get_accounts(request).get(caller, account_id),
+        account=found,
         can_read=caller.allows("list_messages", account_id),
         can_audit=caller.allows("list_sends", account_id),
         can_update=caller.allows("update_account", account_id),
         can_verify=caller.allows("verify_account", account_id),
         can_delete=caller.allows("delete_account", account_id),
+        signs_in_with_oauth=get_accounts(request).signs_in_with_oauth(found.provider),
         security=SECURITY,
     )
 

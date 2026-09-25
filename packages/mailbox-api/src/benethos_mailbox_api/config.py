@@ -24,6 +24,10 @@ class Settings(BaseSettings):
 
     host: str = "127.0.0.1"
     port: int = 8080
+    # The address people reach the service at, e.g. https://mail.example.org
+    # behind a proxy. Builds the OAuth redirect address, which the provider
+    # must know. Empty: taken from each request.
+    public_url: str | None = None
     # The built-in admin key. Read from MAILBOX_API_KEY, not the prefixed
     # MAILBOX_API_API_KEY.
     api_key: SecretStr | None = Field(default=None, validation_alias="MAILBOX_API_KEY")

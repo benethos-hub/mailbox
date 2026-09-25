@@ -23,6 +23,7 @@ import secrets
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from urllib.parse import urlsplit
 
 from ..common.clock import utc_now
 from ..data.models import Account, ProviderType
@@ -144,6 +145,19 @@ class OAuthService:
             name,
             credentials=credentials,
             signed_in=tokens,
+        )
+
+    def cancel(self, state: str) -> None:
+        """The provider sent back an error instead of a code."""
+        self._pending.pop(state, None)
+
+    def sign_in_hosts(self) -> list[str]:
+        """The hosts a browser is sent to for a sign-in."""
+        return sorted(
+            {
+                urlsplit(client.app.endpoints.authorize_url).netloc
+                for client in self._clients.values()
+            }
         )
 
     def _client(self, provider: ProviderType) -> OAuthClient:

@@ -122,4 +122,8 @@ def test_operations_on_an_account() -> None:
         "delete_account",
         "verify_account",
     }
-    assert a.general_operations() == {"create_account", "discover_account"}
+    assert a.general_operations() == {
+        "create_account",
+        "discover_account",
+        "start_oauth",
+    }

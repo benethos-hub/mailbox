@@ -39,6 +39,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Accounts can connect by OAuth once the operator sets up an app for the
+  provider (`MAILBOX_API_OAUTH_MICROSOFT_CLIENT_ID`, `_CLIENT_SECRET` or
+  `_CLIENT_SECRET_FILE`, `_TENANT`). `POST /v1/oauth/{provider}/start`
+  returns the provider's sign-in URL, to connect an account or, with
+  `account_id`, sign it in again; the browser comes back to
+  `/ui/oauth/{provider}/callback`. Only the refresh token is stored. The
+  configuration UI offers "Sign in with Microsoft" when connecting and
+  "Sign in again" on the account page. `MAILBOX_API_PUBLIC_URL` sets the
+  address the redirect is built from. Microsoft accounts need the
+  `microsoft` adapter, which is not there yet.
+
 - A draft read with `get_message` carries its `reference`. A reference
   with `quote: false` keeps the link to the original without adding its
   quote, forwarded original or attachments again, so a draft can be
