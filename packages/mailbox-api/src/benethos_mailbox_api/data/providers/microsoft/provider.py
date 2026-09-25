@@ -2,8 +2,8 @@
 
 Every call carries the account's access token from its ``TokenSource`` and
 asks for immutable ids, so a message keeps its id when it moves
-(``STABLE_IDS``). A refused token is renewed once; refused again, the
-account needs a new sign-in.
+(``STABLE_IDS``). A refused token is renewed once. If it is refused
+again, the account needs a new sign-in.
 
 Sending and drafts go as MIME, composed by ``data.mail.compose`` like for
 any other provider: ``sendMail`` sends and keeps the copy in Sent Items, a
@@ -13,7 +13,7 @@ change a draft's MIME in place.
 Details Graph's documentation leaves open are marked **(unverified)**
 until a live check against a Microsoft account confirms them. Seen live:
 search results come under ids that change on a move, despite the
-preference; the adapter looks their immutable ids up.
+preference. The adapter looks their immutable ids up.
 """
 
 from __future__ import annotations
@@ -466,7 +466,7 @@ def _own_path(link: str) -> str:
     parts = urlsplit(link)
     if (parts.scheme or parts.netloc) and f"{parts.scheme}://{parts.netloc}" != GRAPH:
         raise BadRequestError("invalid cursor")
-    # A full link names the version; a cursor handed out before does not.
+    # A full link names the version, but a cursor handed out before does not.
     rest = parts.path.removeprefix(VERSION) if parts.netloc else parts.path
     if not rest.startswith("/me/") or ".." in rest:
         raise BadRequestError("invalid cursor")

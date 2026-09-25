@@ -1,8 +1,8 @@
 """Sending and drafts: a message composed from the account's address, a
 reply or forward made from its original, drafts kept until they are sent.
 
-``MailboxService`` hands its sending and draft operations to ``Outgoing``;
-callers keep using the mailbox service.
+``MailboxService`` hands its sending and draft operations to ``Outgoing``.
+Callers keep using the mailbox service.
 """
 
 from __future__ import annotations
@@ -188,7 +188,7 @@ class Outgoing:
         reference: MessageReference,
         original: Message,
     ) -> tuple[M, compose.Extras]:
-        """Fetch what the reply or forward needs of the original; ``replies``
+        """Fetch what the reply or forward needs of the original. ``replies``
         makes it."""
         raw = await self._calls.on_message(
             account_id, reference.message_id, lambda p, native: p.get_raw(native)
@@ -294,7 +294,7 @@ class Outgoing:
         idempotency_key: str | None = None,
     ) -> SendResult:
         """Send a draft as it is stored, dated now, then delete it. Its own
-        right, like ``send_message``; the draft was written by whoever may
+        right, like ``send_message``. The draft was written by whoever may
         write drafts. With an ``idempotency_key`` a retry returns the first
         result."""
         access.require("send_draft", account_id)

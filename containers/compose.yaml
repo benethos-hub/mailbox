@@ -51,7 +51,7 @@ services:
       MAILBOX_API_URL: http://mailbox-api:8080
       MAILBOX_API_TOKEN: ${MAILBOX_MCP_API_TOKEN:-}
       MAILBOX_MCP_BEARER_TOKEN: ${MAILBOX_MCP_BEARER_TOKEN:-}
-      # The Host values clients use; the port as published on the host.
+      # The Host values clients use: the port as published on the host.
       MAILBOX_MCP_ALLOWED_HOSTS: ${MAILBOX_MCP_ALLOWED_HOSTS:-127.0.0.1:8000,localhost:8000}
       MAILBOX_MCP_LOG_LEVEL: ${MAILBOX_MCP_LOG_LEVEL:-INFO}
     read_only: true

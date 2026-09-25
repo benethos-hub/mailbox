@@ -10,8 +10,8 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
 One REST API for all your mailboxes, whichever provider they are at, and
-an MCP server on top, so that scripts, tools and AI assistants can work
-with your mail through one door you control.
+an MCP server on top. Scripts, tools and AI assistants work with your
+mail through one door you control.
 
 > **Status: pre-alpha, version 0.1.0.** Not ready for production use: the
 > API, the stored data and the configuration may change without notice.
@@ -21,34 +21,34 @@ with your mail through one door you control.
 Most people and small companies have more than one mail account: a
 personal address at GMX or web.de, a company mailbox at Microsoft 365, an
 info@ address at some hoster, maybe a Gmail account. Each speaks its own
-dialect, IMAP here, Microsoft Graph there, and every tool that wants to
-work with mail has to learn all of them, and has to be given the passwords.
+dialect: IMAP here, Microsoft Graph there. Every tool that wants to work
+with mail has to learn all of them and has to be given the passwords.
 
 Mailbox API turns that around. One service, running on your own machine
 or server, holds the connections to all accounts. Everything else talks
 to that service only, through one REST API that looks the same for every
-provider. The service decides who may do what: a script, an app or an AI
-assistant gets a token of its own, and that token opens exactly the
-accounts and operations it was given, nothing more.
+provider. The service decides who may do what. A script, an app or an AI
+assistant gets a token of its own. That token opens exactly the accounts
+and operations it was given, nothing more.
 
 That makes a few things simple that are hard otherwise:
 
 - **Automation across accounts.** A script files invoices into a folder,
   archives newsletters, forwards order confirmations or reports what came
-  in overnight, the same way for every account. It never sees a mail
+  in overnight. It works the same way for every account. It never sees a mail
   password, only its own token.
 - **An AI assistant for your mail.** Through the MCP server, Claude or
   another assistant can search and read mail, summarize threads, sort
-  messages and write replies. Whether it may send on its own or only
-  prepare drafts for a person to send is a right you give or withhold.
+  messages and write replies. You decide by its rights whether it may
+  send on its own or only prepare drafts for a person to send.
 - **Controlled access.** A bookkeeping tool reads the invoice folder of one
   account and nothing else. A newsletter job sends from info@, to a fixed
   list of recipients, at most a few times a day. Every send is recorded.
 - **One inbox for your own tools.** A dashboard or a small internal app
   lists, searches and answers mail from every account with one client.
-- **Self-hosted.** Credentials are stored encrypted by the service, and
-  mail goes straight from the provider to you, never through a third
-  party's cloud.
+- **Self-hosted.** The service stores the credentials encrypted. Mail
+  goes straight from the provider to you, never through a third party's
+  cloud.
 
 ## What it can do today
 
@@ -73,9 +73,9 @@ That makes a few things simple that are hard otherwise:
 - **Operation:** encrypted backup and restore, container images, a
   compose file.
 
-Planned next: a change feed and webhooks, so automation can react to new
-mail instead of asking for it; Gmail; JMAP. The order is in
-[docs/ROADMAP.md](docs/ROADMAP.md).
+Planned next: a change feed and webhooks, Gmail, JMAP. With a change feed
+and webhooks, automation can react to new mail instead of asking for it.
+The order is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Providers
 
@@ -105,9 +105,9 @@ provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
 ```
 
 A release publishes both to PyPI and as container images on ghcr.io,
-under the same version. How to install, start and configure each of them
-is in its own README, the container images and the compose file
-included.
+under the same version. Each package has its own README. It explains how
+to install, start and configure it, with the container image and the
+compose file.
 
 ## Getting started
 
@@ -125,7 +125,7 @@ included.
   model
 - [docs/ROADMAP.md](docs/ROADMAP.md): the phases and what is done
 - [docs/microsoft.md](docs/microsoft.md): connecting Microsoft accounts
-- [docs/openapi.json](docs/openapi.json): the API contract; a running
+- [docs/openapi.json](docs/openapi.json): the API contract. A running
   service shows it at `/docs`
 - [CHANGELOG.md](CHANGELOG.md)
 - [SECURITY.md](SECURITY.md): how to report a vulnerability

@@ -1,6 +1,6 @@
 """Results of requests sent with an ``Idempotency-Key`` (CONCEPT 6.4).
 
-Stores; the domain decides what a key means and how long it counts.
+It only stores. The domain decides what a key means and how long it counts.
 """
 
 from __future__ import annotations

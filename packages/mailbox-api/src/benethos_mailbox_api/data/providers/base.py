@@ -25,13 +25,13 @@ from ..models import (
 CredentialReader = Callable[[str], SecretStr]
 
 # An account's connection settings: host, port, security and the like.
-# Never a secret; those come through the ``CredentialReader``.
+# Never a secret: those come through the ``CredentialReader``.
 ProviderSettings = Mapping[str, str | int | bool]
 
 
 class TokenSource(Protocol):
     """Hands an OAuth adapter a valid access token, refreshed when it runs
-    out. The token lives in memory only; what keeps it valid is stored by
+    out. The token lives in memory only. What keeps it valid is stored by
     whoever made the source."""
 
     async def access_token(self) -> SecretStr:
@@ -89,7 +89,7 @@ class MailProvider(Protocol):
         cursor: str | None,
         search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
-        """Newest first. ``search`` narrows the list; a cursor belongs to
+        """Newest first. ``search`` narrows the list. A cursor belongs to
         the same folder and search."""
         ...
 
@@ -120,7 +120,7 @@ class MailProvider(Protocol):
 
     async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
         """Store a composed draft, then remove the draft it ``replaces``.
-        The draft as stored; its id may differ from ``replaces``."""
+        The draft as stored. Its id may differ from ``replaces``."""
         ...
 
     async def get_draft(self, draft_id: str) -> bytes:

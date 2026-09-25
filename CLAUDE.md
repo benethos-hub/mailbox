@@ -51,25 +51,25 @@ done. Update the roadmap in the same commit that finishes an item.
   `MAILBOX_API_TOKEN=... uv run python live/register.py` adds the test
   accounts to a running service over its API and checks them.
 - Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`
-  (stdio; `--transport streamable-http` for HTTP);
-  for Claude Code and Claude Desktop see `packages/mailbox-mcp/README.md`.
+  (stdio, `--transport streamable-http` for HTTP).
+  For Claude Code and Claude Desktop see `packages/mailbox-mcp/README.md`.
   `uv run python live/mcp_stdio.py` checks it over stdio against the test
-  accounts, with a service and database of its own; the write tools create
+  accounts, with a service and database of its own. The write tools create
   a folder and star, move and trash a message of the first test account,
-  then put everything back; the draft tools write, replace and delete a
-  reply draft there; the send tools send two mails from the first test
-  account to the second and delete them for good; grants with recipients
+  then put everything back. The draft tools write, replace and delete a
+  reply draft there. The send tools send two mails from the first test
+  account to the second and delete them for good. Grants with recipients
   and a send limit stop mails, and the audit names each attempt.
   `uv run python live/mcp_http.py` checks it over streamable HTTP behind
   its bearer token, read-only.
 - The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a token.
-  `uv run python live/ui.py` checks it against the test accounts; it sends
+  `uv run python live/ui.py` checks it against the test accounts. It sends
   one mail from the first test account to the second and deletes it for
   good on both sides.
 - Microsoft accounts: `docs/microsoft.md` sets up the app registration.
   `uv run python live/microsoft.py --connect` once (a person signs in in
   the browser), then `uv run python live/microsoft.py` checks the adapter
-  against the Microsoft test account in `live/.env`; it sends one mail
+  against the Microsoft test account in `live/.env`. It sends one mail
   from it to the first test account and deletes it for good on both sides.
 
 ## Project layout
@@ -80,12 +80,12 @@ A uv workspace with two distributions and one lockfile.
 pyproject.toml            # workspace root: members, dev group, tool config
 config/                   # one folder per package: .env.example versioned,
                           #   .env and key files local
-data/                     # one folder per package, created when missing;
+data/                     # one folder per package, created when missing,
                           #   only .gitkeep is versioned
 live/                     # manual checks against the test accounts
-containers/               # one folder per image, compose.yaml, README.md;
+containers/               # one folder per image, compose.yaml, README.md,
                           #   secrets/ local (the master key)
-.github/workflows/        # ci.yml: checks, fresh install, images;
+.github/workflows/        # ci.yml: checks, fresh install, images,
                           #   publish.yml: on a release both packages to
                           #   PyPI and both images to GHCR
 docs/
@@ -121,7 +121,7 @@ packages/
           templates.py    # Jinja2: filters, render, Post/Redirect/Get
           grants.py       # the grant editor's rows, read back into grants
           mailform.py     # the mail form: fields to a message, shown again
-          forms.py        # form errors; failing: back with the message
+          forms.py        # form errors, failing: back with the message
           rights.py       # what the mail pages offer, by the rights on an account
           errors.py       # errors as a page
           routes/         # one module per area
@@ -164,12 +164,12 @@ packages/
           guard.py        # pacing, retries, blocked logins, for any adapter
           sender.py       # SmtpSender: sending for IMAP, POP3, ...
           imap/, memory/, # one directory per provider (adapter)
-          microsoft/      #   microsoft: Graph over data/http; signin.py
+          microsoft/      #   microsoft: Graph over data/http, signin.py
                           #   its endpoints and the scopes it needs
         http/             # httpx: base.py (the client, the capped read),
                           #   safe.py (hosts users typed, SSRF guard),
                           #   api.py (JSON to a provider's known hosts)
-        storage/          # own records, one module per subject; table.py
+        storage/          # own records, one module per subject, table.py
                           #   for the in-memory ones, sqlite/ the database
         secrets/          # envelope encryption, key providers, backup
         files.py          # files for the owner alone (0600): database, backup, key
@@ -261,13 +261,13 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, microsoft; planned: gmail, pop3 | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, microsoft (planned: gmail, pop3) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/providers/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
-| Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
+| Web layer | `web/` | FastAPI, later templates for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`) | in-memory, SQLite | another database |
-| Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX; planned: JMAP well-known, Microsoft realm, SRV, guessing | any further lookup, or one switched off |
+| Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX (planned: JMAP well-known, Microsoft realm, SRV, guessing) | any further lookup, or one switched off |
 | HTTP | `data/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
-| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/providers/protocols/oauth.py`; each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
+| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/providers/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token | password + TOTP, OAuth client credentials |
 | MCP ↔ service | the REST API, `docs/openapi.json` | httpx client in `client.py` | a generated client |
@@ -310,7 +310,7 @@ rule 1.
 
 - Commit only when the user asks. Clear, descriptive messages.
 - Ship changes on a branch, one branch per work stream.
-- A release is a GitHub release tagged `v<version>`; both packages carry
+- A release is a GitHub release tagged `v<version>`. Both packages carry
   that version, and `publish.yml` uploads them to PyPI and their images to
   GHCR.
 - End commit messages with

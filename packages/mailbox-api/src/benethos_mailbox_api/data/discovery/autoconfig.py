@@ -41,7 +41,7 @@ async def fetch(
     fetcher: SafeFetcher, url: str, domain: str, source: DiscoverySourceName
 ) -> Finding | None:
     """The finding an autoconfig file at ``url`` gives, marked as coming
-    from ``source``; None when nothing is there."""
+    from ``source``. None when nothing is there."""
     fetched = await fetcher.get(url)
     if fetched is None:
         return None

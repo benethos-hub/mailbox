@@ -134,7 +134,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The image carries the package's version; a release must name the
+      # The image carries the package's version. A release must name the
       # same one, as for PyPI.
       - name: The release names the package version
         if: github.event_name == 'release'

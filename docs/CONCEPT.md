@@ -1,10 +1,10 @@
 # Concept — Mailbox API
 
-> **Status: draft, 2026-09-24; the software is pre-alpha, version 0.1.0.**
-> Describes the target design. What is built
-> today is marked in [ROADMAP.md](ROADMAP.md). Facts about third-party
-> products were taken from their public documentation on 2026-09-24; items
-> marked **(to verify)** could not be confirmed there.
+> **Status: draft, 2026-09-24. The software is pre-alpha, version 0.1.0.**
+> Describes the target design. What is built today is marked in
+> [ROADMAP.md](ROADMAP.md). Facts about third-party products were taken
+> from their public documentation on 2026-09-24. Items marked
+> **(to verify)** could not be confirmed there.
 
 ## 1. Purpose
 
@@ -73,7 +73,7 @@ REST client can do too.
 
   **Decided 2026-09-24:** the UI comes before the new providers and covers
   everything the REST API does. A person signs in with an API token of its
-  user (or the admin key); password with TOTP can follow as a credential
+  user (or the admin key). Password with TOTP can follow as a credential
   kind of its own. Its texts are English. Built with Jinja2 templates,
   htmx and one stylesheet, without a build step.
 
@@ -129,7 +129,7 @@ The decisions that shape every endpoint.
 | Resource | Notes |
 |---|---|
 | **Account** | one mailbox at one provider. `id` is ours (`acc_…`). Carries `provider`, `email`, `status` (`connected`, `needs_reauth`, `disabled`), `capabilities`. |
-| **Folder** | `id`, `name`, `role` (RFC 6154 special use: inbox, sent, drafts, trash, junk, archive, all), `parent_id`, counts, `subscribed` (IMAP; decided 2026-09-24). Gmail labels are folders. |
+| **Folder** | `id`, `name`, `role` (RFC 6154 special use: inbox, sent, drafts, trash, junk, archive, all), `parent_id`, counts, `subscribed` (IMAP, decided 2026-09-24). Gmail labels are folders. |
 | **Message** | summary (list) and full form (get). `folder_ids` is an array. `unread`, `starred` as booleans, further flags as `keywords`. |
 | **Thread** | where the provider supports it (Gmail, Graph conversations), otherwise built from `References` / `In-Reply-To`. |
 | **Attachment** | metadata on the message, content via its own download route. |
@@ -194,19 +194,19 @@ client can tell in advance.
 **Decided 2026-09-24:** the protocol goes through **IMAPClient**, in
 `providers/protocols/imap.py`. It parses every server answer and returns
 any FETCH item as a dict, which the sync (4.1) and phase 2 (`COPYUID`,
-`MOVE`, `QRESYNC`) need. Phase 1b started on imap-tools, which offered nothing for fetching
-only the `Message-ID` header, so raw `imaplib` answers had to be parsed by
-hand.
+`MOVE`, `QRESYNC`) need. Phase 1b started on imap-tools. It offered
+nothing for fetching only the `Message-ID` header, so raw `imaplib`
+answers had to be parsed by hand.
 
 Fetched messages are parsed by the mail parser of **imap-tools**, in
 `data/mail/parse.py`, shared by every adapter that sees raw messages:
-subject, addresses, dates, text and HTML with broken
-charsets, attachments. It saves writing a MIME parser. Replacing it, e.g.
-with the standard library's `email`, rewrites that one module.
+subject, addresses, dates, text and HTML with broken charsets,
+attachments. It saves writing a MIME parser. Replacing it, e.g. with the
+standard library's `email`, rewrites that one module.
 
-Both are **synchronous**, while the API is async.
-Solution: one connection per account, owned by the adapter, guarded by a
-lock, every call run via `anyio.to_thread.run_sync`. IMAP connections are
+Both are **synchronous**, while the API is async. Solution: one connection
+per account, owned by the adapter, guarded by a lock, every call run via
+`anyio.to_thread.run_sync`. IMAP connections are
 stateful (selected folder) and per account anyway, so this costs little.
 
 The alternative is **aioimaplib** (async, but raw responses with no
@@ -274,11 +274,11 @@ an app password is the credential to ask for.
 - Outlook.com has accepted no basic auth since 2024-09-16.
 - Rules of the implementation (phase 5): every call asks for immutable ids
   (`Prefer: IdType="ImmutableId"`), so the domain keeps no id mapping.
-  Sending and drafts go as MIME, composed as for every provider:
-  `sendMail` keeps the copy in Sent Items itself; a draft is created from
+  Sending and drafts go as MIME, composed as for every provider.
+  `sendMail` keeps the copy in Sent Items itself. A draft is created from
   MIME and replaced by a new one, since Graph cannot change a draft's MIME.
   Bcc recipients travel in a Bcc header **(unverified: that Exchange takes
-  it out before delivery)**. Keywords are categories; `$answered` and the
+  it out before delivery)**. Keywords are categories. `$answered` and the
   other system keywords have no place and are not stored. A next-page
   cursor is a Graph path below `/me/` and never leaves the Graph host.
   No push yet.
@@ -292,7 +292,7 @@ an app password is the credential to ask for.
   `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `openid`, `email`,
   `profile` for the address that signed in).
 - **Decided 2026-09-25:** the tenant is `common` by default, so personal
-  and work or school accounts can sign in; `consumers`, `organizations` or
+  and work or school accounts can sign in. `consumers`, `organizations` or
   one tenant narrow it. The app must then be registered for all Microsoft
   account users. A work tenant may require its administrator's consent
   before its users can sign in. The provider sends the browser back to
@@ -302,12 +302,12 @@ an app password is the credential to ask for.
   accounts without registering an app of their own. It is a public client
   (registered for mobile and desktop applications): no secret, PKCE
   alone, since a secret shipped with the software would not be secret.
-  Such a client can only be sent back to `localhost`; a service on a
+  Such a client can only be sent back to `localhost`. A service on a
   server signs in with the device code flow instead (a code entered at
   Microsoft's device login page). An app of the deployment's own, with a
   secret as today, stays the option for organisations that want or need
   one. Work tenants often admit apps of unverified publishers only with
-  their administrator's consent; publisher verification needs membership
+  their administrator's consent. Publisher verification needs membership
   in Microsoft's partner programme.
 - Change-notification subscriptions expire after a few days and are
   renewed by the worker **(unverified: exact lifetime)**.
@@ -555,7 +555,7 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | DELETE | `/v1/accounts/{account_id}` | remove, credentials deleted |
 | POST | `/v1/accounts/{account_id}/verify` | test the connection now |
 | POST | `/v1/oauth/{provider}/start` | start OAuth for Microsoft (later Gmail): the provider's sign-in URL, to connect an account or, with `account_id`, sign it in again |
-| GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back: a UI page, not part of the API. The person is signed in to the UI as the user who started; the account is created or signed in again |
+| GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
 | GET | `/v1/providers` | the built-in presets, the same data discovery uses first |
 
@@ -587,9 +587,9 @@ Rules of the implementation (phase 2):
 |---|---|---|
 | GET | `/v1/messages` | list and search **across accounts** (6.6) |
 | GET | `{acc}/messages` | list and search in one account (6.6) |
-| GET | `{acc}/messages/{id}` | full message; `?body=text\|html\|both\|none` |
+| GET | `{acc}/messages/{id}` | full message, `?body=text\|html\|both\|none` |
 | PATCH | `{acc}/messages/{id}` | `unread`, `starred`, `keywords`, `folder_ids` (a move is a change of `folder_ids`) |
-| DELETE | `{acc}/messages/{id}` | to trash; `?permanent=true` expunges |
+| DELETE | `{acc}/messages/{id}` | to trash, `?permanent=true` expunges |
 | GET | `{acc}/messages/{id}/raw` | RFC 822 source (`message/rfc822`) |
 | GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, streamed |
 | POST | `{acc}/messages/batch` | bulk `update` / `move` / `delete` for up to 100 ids, per-id result |
@@ -644,7 +644,7 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
   original as `message/rfc822`). Ignored for replies.
 
 Rules of the implementation (phase 2): a reply without recipients goes to
-the original's `Reply-To`, else its sender; `reply_all` adds everyone in
+the original's `Reply-To`, else its sender. `reply_all` adds everyone in
 `To` and `Cc` except the account itself. Named recipients and a subject
 win over these. A `reference` needs `get_message` besides `send_message`:
 a reply quotes the original and a forward passes it on, so a user who may
@@ -659,7 +659,7 @@ Rules of the implementation for drafts (phase 2):
   draft routes reach only messages in the drafts folder: any other id
   answers `404`, so the right `drafts` cannot touch other mail.
 - `PUT` replaces the whole draft. IMAP cannot change a stored message, so
-  the new one is appended and the old one deleted; the id follows through
+  the new one is appended and the old one deleted. The id follows through
   the id mapping (4.1).
 - A draft keeps its Bcc recipients, and its `reference` in the header
   `X-Mailbox-Api-Reference`, until it is sent. Both are removed before it
@@ -673,7 +673,7 @@ Rules of the implementation for drafts (phase 2):
   sender's.
 - A deleted draft is gone for good, not moved to the trash.
 - `send_draft` sends the draft as stored, with the date of the send, and
-  then deletes it; the sent folder gets its read copy as with `send`. The
+  then deletes it. The sent folder gets its read copy as with `send`. The
   reference a draft kept marks its original. A draft without recipients
   answers `400`. It needs only `send_draft`: the draft was written by
   whoever may write drafts.
@@ -770,13 +770,13 @@ One envelope for every error the API raises itself:
 | 400 | `bad_request` | semantically invalid input |
 | 401 | `unauthorized` | missing, wrong, expired or revoked credential, or disabled user |
 | 403 | `forbidden` | the user has a grant for the account but not for this operation (7.5) |
-| 404 | `not_found` | account, folder, message; also an account the user has no grant for |
+| 404 | `not_found` | account, folder, message, also an account the user has no grant for |
 | 409 | `conflict`, `idempotency_conflict`, `credential_missing` | the last: the account has no credential of the kind its sign-in needs |
 | 422 | FastAPI validation format | schema violation |
 | 429 | `rate_limited` | with `Retry-After` |
 | 501 | `not_supported` | capability missing |
 | 500 | `credential_unreadable` | a stored credential cannot be decrypted |
-| 502 | `provider_error`, `provider_auth_failed`, `provider_unavailable` | upstream failed; auth failure sets the account to `needs_reauth`, an unreachable server to `unreachable` |
+| 502 | `provider_error`, `provider_auth_failed`, `provider_unavailable` | upstream failed. An auth failure sets the account to `needs_reauth`, an unreachable server to `unreachable` |
 | 503 | `setup_required` | neither a user nor `MAILBOX_API_KEY` exists yet |
 
 ### 6.8 OpenAPI
@@ -784,8 +784,8 @@ One envelope for every error the API raises itself:
 The API is OpenAPI 3.1, generated by FastAPI from the pydantic models.
 Rules, all built and tested:
 
-- `docs/openapi.json` is checked in, a test fails when it differs from the
-  code. Regenerate with `benethos-mailbox-api openapi > docs/openapi.json`.
+- `docs/openapi.json` is checked in. A test fails when it differs from
+  the code. Regenerate with `benethos-mailbox-api openapi > docs/openapi.json`.
 - `operationId` is the route function name (`list_messages`,
   `send_message`), unique and stable. Client generators and the MCP server
   depend on it.
@@ -898,10 +898,11 @@ the data, rather than a readable file.
   ciphertext does not linger in the file.
 - **Files:** the database sits in `data/benethos-mailbox-api/` in the
   working directory, moved with `MAILBOX_API_DATA_DIR`. Decided 2026-09-24:
-  one folder per package under `data/` and under `config/`;
+  one folder per package under `data/` and under `config/`.
   `data/benethos-mailbox-mcp/` is meant for what the MCP server stores, e.g.
-  downloaded attachments. A missing data folder is created. The database is created with owner-only
-  permissions (0600, on Windows an ACL for the user only).
+  downloaded attachments. A missing data folder is created. The database is
+  created with owner-only permissions (0600, on Windows an ACL for the user
+  only).
 - **Credential kinds per provider:** always the one that is not the main
   password. Per provider in the table of 5.3. In short: OAuth for Google
   and Microsoft, an API token for Fastmail, an app password everywhere
@@ -1036,7 +1037,7 @@ with the role
   later.
 
   **Decided 2026-09-24:** `recipients` takes addresses, `*@domain` and `*`
-  (anyone), without regard to case; a subdomain is named on its own.
+  (anyone), without regard to case. A subdomain is named on its own.
   Constraints count per grant: a send is allowed when one grant that allows
   it on the account accepts every recipient and its limit is not reached.
   `max_sends_per_day` counts mails, whatever their number of recipients,
@@ -1045,7 +1046,7 @@ with the role
   Rules of the implementation (phase 3):
   - Null means no constraint. Recipients are checked once the mail is
     composed: To, Cc and Bcc, and for a reply the recipients taken from the
-    original; `send_draft` checks the stored draft.
+    original. `send_draft` checks the stored draft.
   - A refused recipient answers `403 recipient_not_allowed`, a reached
     limit `429 send_limit_reached` with `Retry-After`. A retry with its
     `Idempotency-Key` returns the stored result and is not counted again.
@@ -1064,8 +1065,8 @@ with the role
   - Per token: `name`, `created_at`, `expires_at` (optional),
     `last_used_at`, `revoked_at`.
   - A token carries the rights of its user, no more. Narrowing a single
-    token below its user is left
-    open, since a second user with fewer rights does the same job.
+    token below its user is left open, since a second user with fewer
+    rights does the same job.
 - **Later:** password + TOTP or passkey for signing in to the configuration
   UI, OAuth 2.0 client credentials for machines. Which credential kinds a
   user holds decides where it can sign in. There is deliberately no "person"
@@ -1161,7 +1162,7 @@ What applies in both modes:
    start log: "can read mail and send it to any address".
    Built in phase 3: an account in `/v1/me` carries the warning
    `read_and_send_anywhere` when the caller may `get_message` there and a
-   grant lets it send without `recipients` (or with `*`); a send limit
+   grant lets it send without `recipients` (or with `*`). A send limit
    does not lift it.
 6. **Audit.** Every send is logged with user, credential, account and
    recipients, never content, so it can be reviewed afterwards.
@@ -1214,9 +1215,8 @@ It reads `MAILBOX_API_URL` and `MAILBOX_API_TOKEN` and calls the REST API with
 httpx. It runs over stdio or streamable HTTP. Over HTTP a bearer guard
 admits clients with one shared token (`MAILBOX_MCP_BEARER_TOKEN`), which
 is not passed on: the server acts as the user of its own API token, for
-every client alike. Host and Origin are checked against DNS rebinding.
-At start it
-asks `/v1/me` what its user may do, and only those tools exist
+every client alike. Host and Origin are checked against DNS rebinding. At
+start it asks `/v1/me` what its user may do, and only those tools exist
 (7.5).
 
 Tools are hand-written, not generated from OpenAPI: generated tools mirror
@@ -1245,17 +1245,17 @@ one or two `operationId`s.
 as images, the pages of a PDF as PNG images (a page range, a few pages at
 a time), text types as text inside the foreign-content marker, and other
 types by name, type and size only. The conversion happens in the MCP
-server; the API keeps handing out the attachment as it is. A PDF sent as
+server. The API keeps handing out the attachment as it is. A PDF sent as
 an embedded resource was refused by claude.ai in a test: it takes such a
 blob for an image.
 
 **Decided 2026-09-24:** sending a new mail and sending a draft are two
 tools, `send_message` and `send_draft`. The model may create folders
 (`create_folder`). Text from PDF attachments comes later. The policy file
-stays as designed; the first tools go by the token's rights alone.
+stays as designed. The first tools go by the token's rights alone.
 
 **Decided 2026-09-25:** no policy file. The token's rights, its grants and
-their constraints decide which tools exist; the idea waits in IDEAS.md.
+their constraints decide which tools exist. The idea waits in IDEAS.md.
 
 Principles:
 
@@ -1281,12 +1281,12 @@ Principles:
    └─ SQLite: accounts, credentials, id mapping, sync state
 ```
 
-- **The MCP server runs on demand:** a client spawns it
-  over stdio, and it ends with the client. Streamable HTTP stays available
+- **The MCP server runs on demand:** a client spawns it over stdio, and it
+  ends with the client. Streamable HTTP stays available
   for clients that connect to a URL instead.
 - **The REST server runs permanently.** As a container (compose, bound to
-  the loopback address) or as a background
-  service on the host (`serve`, started at login).
+  the loopback address) or as a background service on the host (`serve`,
+  started at login).
 
 **Decided 2026-09-24, container:** the image is built by GitHub Actions for
 `linux/amd64` and `linux/arm64` and pushed to the GitHub container
@@ -1295,7 +1295,7 @@ files and the compose file live in `containers/`, one folder per image.
 
 Rules of the implementation (phase 3): the image holds the service package
 only, installed from the lockfile, and runs as a non-root user on a
-read-only root file system; configuration comes from the environment, the
+read-only root file system. Configuration comes from the environment, the
 database from the volume `/data`. `keys generate` prints a new master key
 for the secret file, and `keys init` then adds the data key. The compose
 file publishes the port on `127.0.0.1` only. See the "Container" sections
@@ -1323,9 +1323,9 @@ What the worker does and does not do: it keeps sync state, the id mapping
 **Decided 2026-09-24:** the worker watches the inbox of an IMAP account
 over IDLE and polls the other folders, every 5 minutes by default,
 configurable. A poll asks each folder for its state and reads only the
-folders whose state changed. It does **not** mirror mailboxes. List, search and get still
-go to the provider live, unless the local cache of open question 5 is
-decided.
+folders whose state changed. It does **not** mirror mailboxes. List, search
+and get still go to the provider live, unless the local cache of open
+question 5 is decided.
 
 **Fallback without the service**, for development and tests only:
 a test harness can run the service app and the MCP client in one process

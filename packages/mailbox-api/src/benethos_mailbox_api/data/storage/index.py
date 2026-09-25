@@ -3,8 +3,8 @@
 Holds per message only our id, the provider's own id of its current place
 (for IMAP folder, UIDVALIDITY and UID), the folder and the ``Message-ID``
 header, and per folder an opaque state. No subject, sender or content.
-The repository stores; which entry belongs to which message the domain
-decides.
+The repository only stores. The domain decides which entry belongs to
+which message.
 """
 
 from __future__ import annotations

@@ -163,7 +163,7 @@ async def create_token(
     expires_at = utc_now() + timedelta(days=int(days)) if days else None
     with failing(here):
         _, plain = users.create_token(caller, user_id, name, expires_at)
-    # Shown on the next page, once; never in the URL.
+    # Shown on the next page, once, and never in the URL.
     show_once(request, f"token:{user_id}", plain)
     return back(here)
 
@@ -251,5 +251,5 @@ async def delete_role(caller: Actor, role_id: str, users: Users) -> Response:
 
 
 def _role_path(role_id: str) -> str:
-    """A role's page; its name is free text."""
+    """A role's page. Its name is free text."""
     return f"/ui/roles/{quote(role_id, safe='')}"

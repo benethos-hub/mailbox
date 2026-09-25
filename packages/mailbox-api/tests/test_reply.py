@@ -166,7 +166,8 @@ Sender = Callable[..., Awaitable[EmailMessage]]
 
 @pytest.fixture
 def send(services: Services, smtp: FakeSmtpServer, account_id: str) -> Sender:
-    """Send through the service; the message as the SMTP server got it."""
+    """Sends through the service. The result is the message as the SMTP server
+    got it."""
 
     async def run(reference: MessageReference, **fields: object) -> EmailMessage:
         await services.mailbox.send_message(

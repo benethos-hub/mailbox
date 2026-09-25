@@ -100,7 +100,7 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX idempotency_created ON idempotency (created_at);
     """,
-    # 5: the audit of sends; outlives its account and user, so no references
+    # 5: the audit of sends. It outlives its account and user, so no references
     """
     CREATE TABLE sends (
         id TEXT PRIMARY KEY,
@@ -165,7 +165,7 @@ class Database:
             return row
 
     def execute(self, sql: str, params: tuple[Any, ...] = ()) -> int:
-        """One statement in a transaction of its own; the rows it changed."""
+        """One statement in a transaction of its own. Returns the rows it changed."""
         with self.transaction() as db:
             return db.execute(sql, params).rowcount
 
@@ -214,7 +214,7 @@ class Database:
 
 def _owner_only(path: Path) -> None:
     """The file readable by its owner alone (0600): it holds the encrypted
-    credentials and the token hashes. Created so when missing; an existing
+    credentials and the token hashes. Created so when missing. An existing
     one that others may read is narrowed. SQLite gives its journal files
     the mode of the database. Windows has no such modes."""
     if not path.exists():

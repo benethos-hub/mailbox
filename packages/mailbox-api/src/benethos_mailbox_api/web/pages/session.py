@@ -8,7 +8,7 @@ changed rights take effect at once, as on the API. A restart signs
 everyone out.
 
 Forms carry a CSRF token of the session, checked on every request that
-changes something; the cookie is ``HttpOnly`` and ``SameSite=Strict`` too.
+changes something. The cookie is ``HttpOnly`` and ``SameSite=Strict`` too.
 """
 
 from __future__ import annotations

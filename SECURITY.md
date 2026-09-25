@@ -13,8 +13,8 @@ GitHub: on this repository, **Security → Report a vulnerability**
 Helpful in a report:
 
 - what an attacker can reach or do, and from where (the network, a token
-  with which rights, a mail that arrives, the configuration UI);
-- the steps or a request that shows it, and the version or commit;
+  with which rights, a mail that arrives, the configuration UI)
+- the steps or a request that shows it, and the version or commit
 - no real credentials, tokens or mail content: redact them.
 
 Please give time for a fix before publishing details. The advisory can
@@ -23,7 +23,7 @@ name you, if you like.
 ## Versions
 
 The project is pre-alpha. Fixes go into the latest release and `main`
-only; older versions do not get them.
+only. Older versions do not get them.
 
 ## What counts
 

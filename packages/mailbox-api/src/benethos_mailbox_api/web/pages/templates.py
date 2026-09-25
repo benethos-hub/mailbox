@@ -130,7 +130,7 @@ def back(path: str, message: str | None = None, error: str | None = None) -> Res
 
 def local_path(value: str | None, fallback: str) -> str:
     """Where to go after a form: a page of this UI, never another site.
-    A message the earlier redirect carried is dropped; the next replaces it."""
+    A message the earlier redirect carried is dropped. The next replaces it."""
     parts = urlsplit(value or "")
     inside = parts.path == PATH or parts.path.startswith(PATH + "/")
     if parts.scheme or parts.netloc or not inside:

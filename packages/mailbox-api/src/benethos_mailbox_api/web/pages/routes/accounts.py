@@ -33,7 +33,7 @@ SECURITY = ("tls", "starttls")
 
 
 def _settings(form: Any) -> dict[str, str | int | bool]:
-    """The filled-in connection fields; empty ones are left out."""
+    """The filled-in connection fields. Empty ones are left out."""
     found: dict[str, str | int | bool] = {}
     for key in SETTING_FIELDS:
         value = str(form.get(key) or "").strip()

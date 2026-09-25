@@ -5,7 +5,7 @@ The hosts come from this code or the operator's settings, never from what
 a user typed, so the forgery guards of ``safe`` are not needed here. Still:
 HTTPS only, certificates verified, no proxy from the environment, a
 timeout and a size limit. Failures to reach the host become
-``ProviderUnavailableError``; any answer, whatever its status, goes back to
+``ProviderUnavailableError``. Any answer, whatever its status, goes back to
 the caller, which knows what the provider means by it.
 """
 
@@ -37,7 +37,7 @@ class Answer:
         return 200 <= self.status < 300
 
     def json(self) -> Any:
-        """The body as JSON; ``ProviderError`` when it is none."""
+        """The body as JSON, or ``ProviderError`` when it is none."""
         try:
             return json.loads(self.body) if self.body else None
         except ValueError:

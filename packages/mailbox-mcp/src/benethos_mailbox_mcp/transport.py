@@ -32,7 +32,7 @@ LOCALHOST_BINDS = frozenset({"127.0.0.1", "localhost", "::1", ""})
 
 
 def token_from_env() -> str | None:
-    """The bearer token; unset or blank means no guard."""
+    """The bearer token. Unset or blank means no guard."""
     return (os.environ.get(ENV_VAR) or "").strip() or None
 
 
@@ -48,7 +48,7 @@ def bearer_middleware(app: ASGIApp, token: str) -> ASGIApp:
             return
         headers = dict(scope.get("headers") or [])
         scheme, _, provided = headers.get(b"authorization", b"").partition(b" ")
-        # The scheme is case-insensitive (RFC 7235) and no secret; only the
+        # The scheme is case-insensitive (RFC 7235) and no secret. Only the
         # token needs the constant-time comparison.
         if scheme.lower() != b"bearer" or not hmac.compare_digest(
             provided.strip(), expected
@@ -83,8 +83,8 @@ async def _unauthorized(send: Send) -> None:
 def transport_security(
     host: str, allowed_hosts: list[str], allowed_origins: list[str]
 ) -> TransportSecuritySettings:
-    """Host and Origin checks against DNS rebinding. An explicit list wins;
-    a loopback bind admits the loopback names; any other bind without a list
+    """Host and Origin checks against DNS rebinding. An explicit list wins.
+    A loopback bind admits the loopback names. Any other bind without a list
     checks nothing, or every remote client would get 421."""
     if allowed_hosts or allowed_origins:
         origins = allowed_origins or [

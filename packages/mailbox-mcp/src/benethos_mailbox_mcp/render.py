@@ -194,7 +194,7 @@ def warnings_of(me: Me) -> list[str]:
     address from: what an injected instruction needs to carry data out."""
     return [
         f"{account.email or account.id}: this token can read mail and send it "
-        "to any address; narrow sending with a grant's recipients"
+        "to any address. Narrow sending with a grant's recipients."
         for account in me.accounts
         if "read_and_send_anywhere" in account.warnings
     ]

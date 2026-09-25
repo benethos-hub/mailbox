@@ -4,7 +4,7 @@ Graph's query parameters. Pure functions.
 Graph names flags differently: ``isRead`` is the inverse of ``unread``, a
 star is ``flag.flagStatus == "flagged"``, keywords are ``categories``, and
 a draft carries ``isDraft``. Keywords with ``$`` are this project's system
-keywords; Graph has no place for them, so they are not stored.
+keywords. Graph has no place for them, so they are not stored.
 """
 
 from __future__ import annotations
@@ -165,8 +165,8 @@ def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter |
 
     Without text: ``$filter`` and ``$orderby``, newest first. Graph wants
     the ordered property first in the filter, hence the always-true date.
-    With text: ``$search``, which allows no ``$filter`` or ``$orderby``;
-    its results come newest first, under ids the adapter translates. Read
+    With text: ``$search``, which allows no ``$filter`` or ``$orderby``.
+    Its results come newest first, under ids the adapter translates. Read
     state and star are then checked here.
     """
     search = search or MessageFilter()

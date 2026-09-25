@@ -1,15 +1,16 @@
 """The configuration UI under ``/ui`` (CONCEPT 1): server-rendered pages.
 
 A page calls the domain directly, as a route does, and so goes through the
-same rights checks; it is not a client of the API over HTTP. The pages stay
+same rights checks. It is not a client of the API over HTTP. The pages stay
 out of the OpenAPI document. ``routes`` holds one module per area, each
-with a ``router``; ``deps`` who is signed in and the CSRF check,
+with a ``router``. ``deps`` holds who is signed in and the CSRF check,
 ``session`` the sessions, ``templates`` rendering, ``errors`` the error
 page.
 
 Recipe for a page: ``routes/<area>.py`` with its routes, a template in
-``templates/pages/``, the router added to ``AREAS`` below. Forms post, and answer with a
-303 to a page (Post/Redirect/Get); what a view shows lives in its URL.
+``templates/pages/``, the router added to ``AREAS`` below. Forms post,
+and answer with a 303 to a page (Post/Redirect/Get). What a view shows
+lives in its URL.
 """
 
 from __future__ import annotations
@@ -57,7 +58,7 @@ AREAS = (
 
 def security_headers(sign_in_hosts: list[str]) -> list[tuple[bytes, bytes]]:
     """No inline script or style, no framing, nothing loaded from elsewhere.
-    Forms post here only; the one exception is the redirect of an OAuth
+    Forms post here only. The one exception is the redirect of an OAuth
     sign-in to its provider's ``sign_in_hosts``."""
     form_action = " ".join(["'self'", *(f"https://{h}" for h in sign_in_hosts)])
     policy = (

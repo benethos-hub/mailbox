@@ -2,9 +2,9 @@
 messages, a message, its attachments and its original.
 
 Mail is foreign content. A body is shown as text, escaped like everything
-else; an HTML-only mail as the text made from its HTML, never as HTML. An
-attachment or the original is only ever downloaded, never shown on this
-origin.
+else. An HTML-only mail shows as the text made from its HTML, never as
+HTML. An attachment or the original is only ever downloaded, never shown
+on this origin.
 """
 
 from __future__ import annotations

@@ -3,7 +3,7 @@
 Synchronous, like the library. The adapter runs it in a worker thread and
 never calls it from two threads at once. Every library error leaves this
 module as a ``MailboxApiError``. What is fetched of a message is parsed in
-``data.mail.parse``; this module only speaks the protocol.
+``data.mail.parse``. This module only speaks the protocol.
 """
 
 from __future__ import annotations
@@ -201,7 +201,7 @@ class ImapSession:
 
     def select_writable(self, folder: str) -> tuple[int, frozenset[str]]:
         """Select a folder read-write. Returns its UIDVALIDITY and the flags
-        the server keeps (``PERMANENTFLAGS``); ``\\*`` means any keyword."""
+        the server keeps (``PERMANENTFLAGS``). ``\\*`` means any keyword."""
         with _errors():
             answer = self._select_folder(folder, readonly=False)
         if b"READ-ONLY" in answer:
@@ -512,7 +512,7 @@ def _uid_set(text: str) -> list[int]:
 def _with_code(client: Any, code: str, command: Callable[[], Any]) -> list[Any]:
     """Run a command and return the response code it produced, e.g. the
     ``[COPYUID ...]`` of a move, or else the command's own answer. imaplib
-    files such codes in the client's untagged responses; this is the one
+    files such codes in the client's untagged responses. This is the one
     place that reaches into it."""
     codes = client._imap.untagged_responses
     codes.pop(code, None)

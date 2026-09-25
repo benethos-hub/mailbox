@@ -1,6 +1,6 @@
 """Connecting an account by OAuth: the sign-in at the provider, and back.
 
-``start`` gives the address to send the browser to; the provider sends it
+``start`` gives the address to send the browser to. The provider sends it
 back with a code, and ``finish`` turns the code into a connected account,
 or signs an existing one in again. The web layer only carries the browser
 there and back.
@@ -13,7 +13,7 @@ Rules:
   on that account, as with a password.
 - Signing in again must bring back the same address: otherwise another
   mailbox would slip in under an existing account.
-- Only the refresh token is stored, in the vault; the access token stays
+- Only the refresh token is stored, in the vault. The access token stays
   in memory (CONCEPT 7.3).
 """
 
@@ -34,7 +34,7 @@ from .accounts import AccountService
 from .adapters import REFRESH_TOKEN, Adapters
 
 VALID_FOR = timedelta(minutes=10)
-# Sign-ins a user may have open at once; older ones are dropped.
+# Sign-ins a user may have open at once. Older ones are dropped.
 OPEN_PER_USER = 5
 
 
@@ -45,7 +45,7 @@ class _Pending:
     verifier: str
     redirect_uri: str
     started: datetime
-    # Signing in again: the account; None to connect a new one.
+    # The account when signing in again, None to connect a new one.
     account_id: str | None
 
 

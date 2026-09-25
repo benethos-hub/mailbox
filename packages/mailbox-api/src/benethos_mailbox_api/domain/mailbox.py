@@ -1,7 +1,7 @@
 """Folders and messages: of one account, and across accounts.
 
 The service callers use for mail. Provider calls under our ids are
-``calls``; sending and drafts are ``outgoing``, reached through this
+``calls``. Sending and drafts are ``outgoing``, reached through this
 service.
 """
 
@@ -56,7 +56,7 @@ class MailboxService:
     ) -> None:
         self._calls = Calls(adapters, sync)
         self._outgoing = Outgoing(self._calls, idempotency, sends)
-        # Sending and drafts live in ``Outgoing``; callers reach them here.
+        # Sending and drafts live in ``Outgoing``. Callers reach them here.
         self.send_message = self._outgoing.send_message
         self.list_sends = self._outgoing.list_sends
         self.list_drafts = self._outgoing.list_drafts
@@ -192,7 +192,7 @@ class MailboxService:
         access.require("get_message", account_id)
         message = await self._calls.message(account_id, message_id)
         if message.reference is not None and DRAFT_KEYWORD not in message.keywords:
-            # Only a draft of this service carries one; in a received mail
+            # Only a draft of this service carries one. In a received mail
             # the header is the sender's.
             message = message.model_copy(update={"reference": None})
         return public(message, message_id, account_id)

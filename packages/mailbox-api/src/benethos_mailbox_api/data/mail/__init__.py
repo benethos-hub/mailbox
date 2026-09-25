@@ -2,5 +2,5 @@
 
 ``compose`` builds an outgoing message, ``parse`` reads one, ``convert``
 turns a parsed message into the neutral model. IMAP, POP3 and any adapter
-that sees raw messages share them; the domain uses ``compose`` for replies.
+that sees raw messages share them. The domain uses ``compose`` for replies.
 """

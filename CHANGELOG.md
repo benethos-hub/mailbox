@@ -29,7 +29,7 @@ stored data and the configuration may change without notice.
   `input` and `ctx`. Before, a wrong `POST /v1/accounts` returned the
   provider password it was sent, where proxies and client logs keep it.
 
-- The database file is created readable by its owner alone (`0600`); an
+- The database file is created readable by its owner alone (`0600`). An
   existing one that others may read is narrowed on start. On POSIX
   systems only.
 
@@ -92,7 +92,7 @@ stored data and the configuration may change without notice.
   provider (`MAILBOX_API_OAUTH_MICROSOFT_CLIENT_ID`, `_CLIENT_SECRET` or
   `_CLIENT_SECRET_FILE`, `_TENANT`). `POST /v1/oauth/{provider}/start`
   returns the provider's sign-in URL, to connect an account or, with
-  `account_id`, sign it in again; the browser comes back to
+  `account_id`, sign it in again. The browser comes back to
   `/ui/oauth/{provider}/callback`. Only the refresh token is stored. The
   configuration UI offers "Sign in with Microsoft" when connecting and
   "Sign in again" on the account page. `MAILBOX_API_PUBLIC_URL` sets the
@@ -100,7 +100,7 @@ stored data and the configuration may change without notice.
 - The `microsoft` adapter: Outlook.com and Microsoft 365 over Microsoft
   Graph, connected by OAuth. Folders, lists and search, messages,
   attachments, the source, flags, categories as keywords, moving,
-  deleting, drafts and sending; message ids stay the same when a message
+  deleting, drafts and sending. Message ids stay the same when a message
   moves, search results included.
 
 - A draft read with `get_message` carries its `reference`. A reference
@@ -109,17 +109,20 @@ stored data and the configuration may change without notice.
   replaced as a whole and stay in its thread. The configuration UI edits
   reply and forward drafts that way.
 
-- Configuration UI under `/ui`: sign in with an API token or the admin
-  key, an overview of your accounts, rights and warnings; accounts:
-  connect through autodiscovery or by hand, change, verify, remove; users,
-  roles and their grants (with `recipients` and `max_sends_per_day`),
-  tokens created (shown once) and revoked; mail: every inbox together,
-  folders, search, a message as text, attachments and the original as
-  downloads; flags, moving and deleting, one message or the ticked ones;
-  folders created, renamed, moved and deleted; writing, replying and
-  forwarding with attachments, drafts saved, changed and sent, each send
-  form with its own idempotency key; the send audit of one account or of
-  every account together. Not part of the OpenAPI document.
+- Configuration UI under `/ui`. Not part of the OpenAPI document.
+  - Sign in with an API token or the admin key. An overview of your
+    accounts, rights and warnings.
+  - Accounts: connect through autodiscovery or by hand, change, verify,
+    remove.
+  - Users, roles and their grants (with `recipients` and
+    `max_sends_per_day`), tokens created (shown once) and revoked.
+  - Mail: every inbox together, folders, search, a message as text,
+    attachments and the original as downloads. Flags, moving and
+    deleting, one message or the ticked ones. Folders created, renamed,
+    moved and deleted. Writing, replying and forwarding with attachments,
+    drafts saved, changed and sent, each send form with its own
+    idempotency key.
+  - The send audit of one account or of every account together.
 
 - MCP server over streamable HTTP (`--transport streamable-http`, or
   `MAILBOX_MCP_*` in the environment), behind a bearer token
@@ -134,8 +137,9 @@ stored data and the configuration may change without notice.
 - `benethos-mailbox-api keys generate` prints a new master key for a key
   file or container secret and stores nothing.
 
-- `GET /v1/me`: each account carries `warnings`; `read_and_send_anywhere`
-  where the caller may read mail and send it to any address. The MCP
+- `GET /v1/me`: each account carries `warnings`, among them
+  `read_and_send_anywhere` where the caller may read mail and send it to
+  any address. The MCP
   server logs it at start.
 
 - A mail or draft with `html` and without `text` gets a text part made
@@ -160,9 +164,10 @@ stored data and the configuration may change without notice.
 - MCP server: `get_attachment` hands images over as images, PDF pages as
   PNG images, text types as text and other types by name, type and size.
 - MCP server: `update_messages` marks read or unread, stars, moves (by
-  folder id or role) and trashes up to 100 messages; `create_folder`.
+  folder id or role) and trashes up to 100 messages. `create_folder`
+  creates a folder.
 - MCP server: `list_drafts`, `create_draft`, `update_draft` and
-  `delete_draft`. Drafts take plain text; a reply, reply to all or
+  `delete_draft`. Drafts take plain text. A reply, reply to all or
   forward names its original with `original_id`.
 - MCP server: `send_message` and `send_draft`, each with an
   `Idempotency-Key` derived from the call.
@@ -176,7 +181,7 @@ stored data and the configuration may change without notice.
 - `POST /v1/accounts/{account_id}/send` sends a message: `to`, `cc`,
   `bcc`, `reply_to`, `subject`, `text`, `html`, `attachments` (base64, 25 MB
   in all). The service sets From, Date and Message-ID and keeps a read
-  copy in the sent folder; the answer names both and any refused
+  copy in the sent folder. The answer names both and any refused
   recipients. Right: `send_message` (`send`). An account without an SMTP
   server answers `409`.
 - `reference` on `POST .../send` replies to (`reply`, `reply_all`) or
@@ -186,20 +191,21 @@ stored data and the configuration may change without notice.
   original `$answered` or `$forwarded`. Needs `get_message` as well.
 - Drafts: `GET`, `POST /v1/accounts/{account_id}/drafts`, `PUT` and
   `DELETE .../drafts/{draft_id}`. A draft takes the body of `send`,
-  recipients optional, and is stored in the drafts folder; its id is a
+  recipients optional, and is stored in the drafts folder. Its id is a
   message id and stays when the draft is replaced. Ids of other messages
-  answer `404`. Right: `drafts`; a `reference` needs `get_message` as well.
+  answer `404`. Right: `drafts`. A `reference` needs `get_message` as
+  well.
 - `POST /v1/accounts/{account_id}/drafts/{draft_id}/send` sends a draft as
-  stored, dated now, then deletes it; a reply or forward marks its
+  stored, dated now, then deletes it. A reply or forward marks its
   original. Takes `Idempotency-Key`. Right: `send_draft` (`send`).
 - `Idempotency-Key` on `POST .../send`: the same key within 24 hours
-  returns the first result instead of sending again; with a different
+  returns the first result instead of sending again. With a different
   message it answers `409 idempotency_conflict`.
 - `PATCH /v1/accounts/{account_id}` changes the display name, settings
   (merged, `null` removes one) or credentials. New settings or credentials
   are tried first. Right: `update_account` (`accounts.manage`).
 - IMAP accounts take an SMTP server for sending: `smtp_host`, `smtp_port`,
-  `smtp_security` (`tls` or `starttls`), optionally `smtp_username`; the
+  `smtp_security` (`tls` or `starttls`), optionally `smtp_username`. The
   password is the IMAP one. Discovery fills them in, and creating or
   verifying an account logs in over SMTP too.
 - `POST /v1/accounts/{account_id}/folders` creates a folder, subscribed,
@@ -277,7 +283,7 @@ stored data and the configuration may change without notice.
   `restore FILE`: encrypted backups of the whole database, opened with the
   master key or, with `--recovery-key`, the recovery key.
 - Accounts take `credentials` on creation. They are stored encrypted and
-  never returned; an account lists only which credentials it has.
+  never returned. An account lists only which credentials it has.
 - `benethos-mailbox-api keys init` creates the keys and prints the recovery
   key once, `keys import` stores the master key from a recovery key.
 - Master key providers: the OS credential store (default), a key file, or

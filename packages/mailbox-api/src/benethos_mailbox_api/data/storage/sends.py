@@ -1,5 +1,5 @@
-"""The audit of sends (CONCEPT 7.7). Stores; the domain decides what a
-record says and what counts against a send limit."""
+"""The audit of sends (CONCEPT 7.7). It only stores. The domain decides
+what a record says and what counts against a send limit."""
 
 from __future__ import annotations
 

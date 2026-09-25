@@ -1,6 +1,6 @@
 """The live adapter of each account, and calls through it.
 
-Records live in the repository, credentials in the vault; this holds the
+Records live in the repository, credentials in the vault. This holds the
 one adapter per account, builds it on first use and keeps the account's
 status in step with how each call went. It checks no rights: the services
 that use it do, and hand it accounts the caller may act on.
@@ -125,9 +125,10 @@ class Adapters:
         store_refresh: Callable[[SecretStr], None],
         signed_in: Tokens | None = None,
     ) -> MailProvider:
-        """An adapter; for an OAuth provider with a token source that keeps
-        its access token valid and stores a new refresh token. ``signed_in``:
-        the tokens of a sign-in just made, used before the first refresh."""
+        """An adapter. For an OAuth provider it comes with a token source that
+        keeps its access token valid and stores a new refresh token.
+        ``signed_in``: the tokens of a sign-in just made, used before the
+        first refresh."""
         client = self._oauth.get(provider)
         if client is None:
             return self._provider_factory(provider, settings, read)

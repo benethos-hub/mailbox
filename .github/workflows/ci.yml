@@ -137,7 +137,7 @@ jobs:
                   print(f"OK: {name} publishes {host_ip}:{port.get('published')}")
           PY
 
-      # The release publishes linux/arm64 as well; build it here so that an
+      # The release publishes linux/arm64 as well. Build it here so that an
       # arm64-only break does not first surface in a release. Nothing is
       # loaded or pushed.
       - name: Set up QEMU
@@ -182,7 +182,7 @@ jobs:
 
           code=000
           for _ in $(seq 1 30); do
-            # On a connection failure curl prints 000 and exits non-zero; the
+            # On a connection failure curl prints 000 and exits non-zero. The
             # fallback is an assignment outside the substitution.
             code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/health) || code=000
             if [ "$code" != "000" ]; then

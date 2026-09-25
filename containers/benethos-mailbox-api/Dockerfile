@@ -20,7 +20,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 WORKDIR /src
-# The workspace needs every member's pyproject.toml; the lockfile pins all.
+# The workspace needs every member's pyproject.toml. The lockfile pins all.
 COPY pyproject.toml uv.lock ./
 COPY packages packages
 RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-api
@@ -36,7 +36,7 @@ RUN useradd --system --uid 10001 --user-group --home-dir /app \
 COPY --from=build /opt/venv /opt/venv
 
 # Configuration comes from the environment only. Inside the container the
-# service listens on every interface; the compose file publishes the port on
+# service listens on every interface. The compose file publishes the port on
 # the host's loopback address alone (CONCEPT 8.1). The master key is a file,
 # mounted as a secret.
 ENV PATH=/opt/venv/bin:$PATH \

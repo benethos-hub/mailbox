@@ -2,7 +2,7 @@
 
 Two front ends on one domain: ``api`` serves the JSON API under ``/v1``
 (and ``/health``), ``pages`` the configuration UI under ``/ui``. Both check
-input, call the domain and answer; neither decides what a caller may do.
+input, call the domain and answer. Neither decides what a caller may do.
 FastAPI is imported here and nowhere below. May import ``domain`` and
 ``data``.
 

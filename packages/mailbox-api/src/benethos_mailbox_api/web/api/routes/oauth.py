@@ -1,4 +1,4 @@
-"""Connecting an account by OAuth. The API starts the sign-in; the browser
+"""Connecting an account by OAuth. The API starts the sign-in. The browser
 comes back to the configuration UI, which finishes it."""
 
 from __future__ import annotations

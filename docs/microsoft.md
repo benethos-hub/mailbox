@@ -3,16 +3,16 @@
 > **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
 > the stored data and the configuration may change without notice.
 
-Outlook.com, Hotmail, Live and Microsoft 365 accounts connect by OAuth:
-the person signs in at Microsoft, and the service keeps a refresh token,
-encrypted, never a password. For that, each deployment registers an app
-of its own in Microsoft Entra ID and gives the service its client id and
-secret. This guide walks through it. The design is in
+Outlook.com, Hotmail, Live and Microsoft 365 accounts connect by OAuth.
+The person signs in at Microsoft. The service keeps an encrypted refresh
+token, never a password. For this, each deployment registers an app of
+its own in Microsoft Entra ID. It gives the service the app's client id
+and secret. This guide walks through the steps. The design is in
 [CONCEPT.md](CONCEPT.md), section 5.4.
 
-A client id of the project, shipped with the service so that no one has
-to register an app, is planned (CONCEPT 5.4). Until then, the steps below
-are the way.
+A client id of the project, shipped with the service, is planned
+(CONCEPT 5.4). Then no one has to register an app. Until then, follow the
+steps below.
 
 ## Overview
 
@@ -29,44 +29,43 @@ Everything in steps 1 to 4 is free.
 
 ## 1. A directory for the app
 
-App registrations live in an Entra ID directory, a *tenant*. Which one it
-is does not limit whose mail the app can reach: an app in any tenant can
-let in personal accounts and accounts of other organisations.
+App registrations live in an Entra ID directory, a *tenant*. The choice
+of tenant does not limit whose mail the app can reach. An app in any
+tenant can let in personal accounts and accounts of other organisations.
 
 - **You have a Microsoft 365 organisation** that you administer, or in
-  which you may register apps: use it, and go on with step 2.
+  which you may register apps. Use it, and go on with step 2.
 - **You have only a personal Microsoft account** (Outlook.com, Hotmail,
-  Xbox, ...): it has no directory of its own. Signing in to the Entra admin
-  center with it ends in an error saying there is no tenant for the
-  account (for example that the tenant "Microsoft Services" does not
-  exist). Create one with a **free Azure account** at
+  Xbox, ...). It has no directory of its own. If you sign in to the Entra
+  admin center with it, you get an error: there is no tenant for the
+  account (for example, the tenant "Microsoft Services" does not exist).
+  Create a directory with a **free Azure account** at
   <https://azure.microsoft.com/free>:
-  - sign in with the personal account;
-  - the sign-up asks for a phone number and a credit card to confirm who
-    you are; app registrations cost nothing, and the free account does not
-    turn into a paid one on its own;
-  - for private use, pick the personal / individual option where it asks.
+  - Sign in with the personal account.
+  - The sign-up asks for a phone number and a credit card to confirm who
+    you are. App registrations cost nothing. The free account does not
+    turn into a paid one on its own.
+  - For private use, pick the personal / individual option where it asks.
 
   The sign-up creates a directory named **Default Directory**, with your
   account as its administrator.
 
-It is a good idea to keep the account that administers the app apart
-from the mailboxes you will connect, and to use a separate mailbox for
-trying things out.
+Keep the account that administers the app apart from the mailboxes you
+will connect. Use a separate mailbox for trying things out.
 
 ## 2. Register the app
 
-Open the Microsoft Entra admin center, <https://entra.microsoft.com>
-(or in the Azure portal, <https://portal.azure.com>, the service
-*Microsoft Entra ID*). Check at the top right that the directory from
-step 1 is selected, then: **Identity → Applications → App registrations →
-New registration**.
+Open the Microsoft Entra admin center, <https://entra.microsoft.com>.
+(In the Azure portal, <https://portal.azure.com>, it is the service
+*Microsoft Entra ID*.) Check at the top right that the directory from
+step 1 is selected. Then go to **Identity → Applications → App
+registrations → New registration**.
 
 - **Name:** anything, e.g. the name of your deployment. People see it when
   they sign in.
 - **Supported account types:** *Accounts in any organizational directory
-  and personal Microsoft accounts* (newer versions of the page call it
-  *Any Microsoft account user* or similar). This fits the service's
+  and personal Microsoft accounts*. (Newer versions of the page call it
+  *Any Microsoft account user* or similar.) This fits the service's
   default tenant `common`. For one organisation only, choose *this
   organizational directory only* and set the tenant in step 5.
 - **Redirect URI:** platform **Web**, and the address the browser comes
@@ -80,9 +79,9 @@ New registration**.
   - behind a proxy: `https://mail.example.org/ui/oauth/microsoft/callback`
 
   It must match `MAILBOX_API_PUBLIC_URL` (step 5) character for
-  character. Plain `http` is allowed for `localhost` only, and
-  `localhost` is not the same as `127.0.0.1`: open the UI under the
-  address registered here. More addresses can be added later under
+  character. Plain `http` is allowed for `localhost` only. `localhost` is
+  not the same as `127.0.0.1`, so open the UI under the address
+  registered here. You can add more addresses later under
   **Authentication**.
 
 **Register.** The app's **Overview** page shows three ids:
@@ -107,7 +106,7 @@ Delegated permissions**, and tick:
 
 `User.Read`, which a new app has already, may stay. Delegated means the
 app acts for the person who signs in, only in that person's mailbox.
-Personal accounts need no administrator consent; an organisation may
+Personal accounts need no administrator consent. An organisation may
 require it (see "Work and school accounts" below).
 
 ## 4. A client secret
@@ -123,18 +122,18 @@ The list now shows two values for the new secret:
 | **Value** | the secret itself, about 40 characters, often with a `~` | **yes**: it goes into the service |
 | Secret ID | an id of the secret, shaped like a GUID | no |
 
-Copy the **Value** at once: it is shown only now. If it was missed,
+Copy the **Value** at once. It is shown only now. If you missed it,
 delete the secret and create a new one.
 
-Treat it like a password: never in a repository, a ticket or a chat.
-Note its expiry date, see "When the secret expires".
+Treat it like a password. Never put it in a repository, a ticket or a
+chat. Note its expiry date (see "When the secret expires").
 
 ## 5. Configure the service
 
 Put the secret into a file that only the account running the service may
-read, e.g. `config/benethos-mailbox-api/microsoft_client_secret` (the
-`config/` folder keeps it out of the repository). Then, in
-`config/benethos-mailbox-api/.env` or the service's environment:
+read, e.g. `config/benethos-mailbox-api/microsoft_client_secret`. (The
+`config/` folder keeps it out of the repository.) Then set the following
+in `config/benethos-mailbox-api/.env` or the service's environment:
 
 ```
 MAILBOX_API_PUBLIC_URL=http://localhost:8080
@@ -149,12 +148,13 @@ MAILBOX_API_OAUTH_MICROSOFT_CLIENT_SECRET_FILE=config/benethos-mailbox-api/micro
   environment, which process listings and `docker inspect` show. In a
   container, mount it as a secret like the master key.
 - **Who may sign in:** `MAILBOX_API_OAUTH_MICROSOFT_TENANT` is `common` by
-  default. `consumers` lets in personal accounts only, `organizations`
-  work and school accounts only, and a tenant id or domain one
-  organisation only. It must fit the supported account types of step 2.
+  default. `consumers` lets in personal accounts only. `organizations`
+  lets in work and school accounts only. A tenant id or domain lets in
+  one organisation only. The value must fit the supported account types
+  of step 2.
 
-Restart the service. The UI now offers **Sign in with Microsoft**; without
-a client id the button does not appear.
+Restart the service. The UI now offers **Sign in with Microsoft**.
+Without a client id the button does not appear.
 
 ## 6. Connect an account
 
@@ -165,7 +165,7 @@ Outlook.com address and follow its sign-in.
 
 Microsoft asks the person to sign in and to allow the app the permissions
 of step 3. The browser is signed in to Microsoft with one account at a
-time: to connect a different mailbox than the one you administer the app
+time. To connect a mailbox other than the one you administer the app
 with, use a private browser window.
 
 After the sign-in the browser returns to the UI and the account is
@@ -173,16 +173,16 @@ connected. Its page offers **Sign in again** when Microsoft stops
 accepting the token, e.g. after a password change.
 
 Over the API, `POST /v1/oauth/microsoft/start` returns the sign-in URL for
-a browser; the browser comes back to the UI, where the same user finishes
-the sign-in.
+a browser. The browser comes back to the UI, and the same user finishes
+the sign-in there.
 
 ## Work and school accounts
 
 With `common`, accounts of any Microsoft 365 organisation may sign in, as
 far as their organisation allows. Many organisations let their people
-consent only to apps of verified publishers; the sign-in then asks for an
-administrator's approval, and an administrator of that organisation has
-to consent once for the app. Publisher verification needs membership in
+consent only to apps of verified publishers. The sign-in then asks for an
+administrator's approval. An administrator of that organisation has to
+consent once for the app. Publisher verification needs membership in
 Microsoft's partner programme. In a tenant you administer yourself, you
 can consent for everyone under **API permissions → Grant admin consent**.
 
@@ -191,14 +191,14 @@ can consent for everyone under **API permissions → Grant admin consent**.
 A secret stops working on its expiry date. From then on every token
 refresh fails with "microsoft refused this service's app
 (invalid_client): check the client id and secret", and Microsoft accounts
-cannot be reached. To replace it, best before the date:
+cannot be reached. Replace it, best before the date:
 
-1. Create a new secret (step 4); the old one keeps working until it
+1. Create a new secret (step 4). The old one keeps working until it
    expires, so both are valid for a while.
 2. Write the new value into the secret file and restart the service.
 3. Delete the old secret in the app.
 
-The connected accounts need no new sign-in: their refresh tokens belong
+The connected accounts need no new sign-in. Their refresh tokens belong
 to the app, not to the secret.
 
 ## Troubleshooting

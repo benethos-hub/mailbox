@@ -1,6 +1,6 @@
 """What every adapter answers the same way.
 
-The contract in ``base`` says what an adapter does; this says how the
+The contract in ``base`` says what an adapter does. This says how the
 adapters agree on the situations each of them meets: a folder with a role
 the account lacks, a cursor the caller made up, a move to several folders,
 and the outcome per id of a batch. An adapter uses these instead of

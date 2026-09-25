@@ -9,7 +9,7 @@ API, and makes a user that may only read them. Then it starts
 tools. A second user may also write: with it the check creates a folder in
 the first test account, stars, moves and trashes the newest inbox message
 there, and puts everything back as it was. A third user may write drafts:
-it writes, replaces and deletes a reply draft; nothing is sent. A fourth
+it writes, replaces and deletes a reply draft. Nothing is sent. A fourth
 user may send: it sends one mail twice with the same call, one draft and
 one HTML mail, from the first test account to the second only, and
 deletes them for good afterwards. Two more users check that a grant's
@@ -332,7 +332,7 @@ async def check_writing(
 async def check_drafts(
     run: Run, url: str, token: str, admin: httpx.Client, account_id: str, to: str
 ) -> None:
-    """A reply draft written, listed, replaced, read and deleted; nothing is
+    """A reply draft written, listed, replaced, read and deleted. Nothing is
     sent."""
     newest = admin.get(
         f"/v1/accounts/{account_id}/messages", params={"folder": "inbox", "limit": 1}
