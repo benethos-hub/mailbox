@@ -11,6 +11,7 @@ from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
 from .sends import SqliteSendLogRepository
 from .users import SqliteRoleRepository, SqliteTokenRepository, SqliteUserRepository
+from .webhooks import SqliteWebhookRepository
 
 __all__ = [
     "SCHEMA_VERSION",
@@ -25,5 +26,6 @@ __all__ = [
     "SqliteSendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",
+    "SqliteWebhookRepository",
     "inspect_snapshot",
 ]

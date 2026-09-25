@@ -49,6 +49,7 @@ from .domain.oauth import OAuthService
 from .domain.sending import SendControl
 from .domain.sync import SyncService
 from .domain.users import UserService
+from .domain.webhooks import WebhookService
 from .domain.worker import SyncWorker
 
 
@@ -65,6 +66,7 @@ class Services:
     changes: ChangeFeed
     vault: CredentialVault
     oauth: OAuthService
+    webhooks: WebhookService
     worker: SyncWorker | None = None
     database: Database | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
@@ -138,6 +140,7 @@ def build_services(
         ),
         vault=vault,
         oauth=OAuthService(accounts, adapters, clients),
+        webhooks=WebhookService(repos.webhooks, vault, changes),
         database=repos.database,
         oauth_clients=clients,
     )

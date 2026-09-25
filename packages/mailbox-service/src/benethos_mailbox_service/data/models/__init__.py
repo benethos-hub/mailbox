@@ -51,6 +51,7 @@ from .sending import (
     SentMessage,
 )
 from .users import ApiToken, Grant, Role, User
+from .webhooks import EVENT_TYPES, CreatedWebhook, Webhook, WebhookCreate
 
 __all__ = [
     "Account",
@@ -104,4 +105,8 @@ __all__ = [
     "SourceOutcome",
     "SourceReport",
     "User",
+    "EVENT_TYPES",
+    "CreatedWebhook",
+    "Webhook",
+    "WebhookCreate",
 ]

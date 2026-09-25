@@ -21,6 +21,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Microsoft accounts reach the change feed: the sync worker now polls
   them too, at `MAILBOX_SERVICE_SYNC_INTERVAL`, with one Graph delta query
   per folder.
+- Webhooks: `POST /v1/webhooks` registers a URL for events,
+  `GET /v1/webhooks` lists the caller's own, `DELETE
+  /v1/webhooks/{webhook_id}` removes one, all under the new right
+  `webhooks.manage`. The answer to `POST` holds the signing secret, the
+  only time it is shown. A host in the local network is allowed. Events:
+  `message.created`, `message.updated`, `message.deleted`, `message.sent`
+  and `account.needs_reauth`. Posting them follows in the next step.
 - The MCP tool `whats_new`: mail created, updated or deleted since the
   `state` of an earlier call, in one account or all. A token with
   `mail.read` gets it.

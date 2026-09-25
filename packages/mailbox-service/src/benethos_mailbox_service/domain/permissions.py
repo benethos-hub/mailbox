@@ -73,11 +73,16 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "replace_role",
         "delete_role",
     ),
+    # Webhooks hear of the accounts their creator may read, checked when
+    # they are posted.
+    "webhooks.manage": ("list_webhooks", "create_webhook", "delete_webhook"),
 }
 
 # Operations that do not act on one account. A grant allows them regardless
 # of the accounts it names.
-ACCOUNT_FREE: frozenset[str] = frozenset(GROUPS["users.manage"])
+ACCOUNT_FREE: frozenset[str] = frozenset(
+    GROUPS["users.manage"] + GROUPS["webhooks.manage"]
+)
 
 # Operations that act on accounts which may not exist yet. They need a grant
 # on every account ("*").

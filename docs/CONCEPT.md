@@ -743,6 +743,22 @@ records no changes: the messages already there are not new. The feed may
 name a change more than once, e.g. a flag set through the API and seen
 again through CONDSTORE. A client treats a repeated entry as harmless.
 
+**Webhooks, decided 2026-09-26:** a webhook may point into the local
+network, e.g. to an automation server, since it is registered on purpose.
+How often and how long a failed post is repeated has defaults and is
+configurable. Webhooks get their pages in the UI with the rework of
+phase 4b.
+
+A webhook belongs to the user who creates it, and each user sees and
+removes only their own. It hears of the accounts that user may read with
+`list_changes`, checked again at every post, so a right taken away also
+stops the webhook. `accounts` narrows that further. The signing secret
+starts with `whsec_`, is shown once, when the webhook is created, and is
+kept sealed with the data key. A new webhook hears of what happens from
+then on. The events come from the same log as the change feed, which also
+holds `message.sent` (the copy in the sent folder, or else the Message-ID
+header) and `account.needs_reauth` (the account id).
+
 ### 6.6 Listing, search and pagination
 
 `GET {acc}/messages` parameters:
@@ -1044,7 +1060,7 @@ with the role
   | `send` | `send_message`, `send_draft` |
   | `audit` | `list_sends` |
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
-  | `webhooks.manage` | webhook routes |
+  | `webhooks.manage` | `list_webhooks`, `create_webhook`, `delete_webhook`. Not account-bound |
   | `users.manage` | users, their tokens, roles. Not account-bound |
   | `admin` | everything |
 

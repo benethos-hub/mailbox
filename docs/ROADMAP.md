@@ -132,6 +132,9 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **Microsoft: Graph delta queries in the worker, so the feed covers
   Microsoft accounts (5.4, 6.5)**, done, live-checked in `live/microsoft.py`
 - Webhooks: register, sign with HMAC-SHA256, deliver with retries (6.5)
+  - **register, list and remove, the secret sealed, the right
+    `webhooks.manage`**, done
+  - delivery
 - decided 2026-09-25: IMAP and Microsoft in this phase, CONDSTORE, 7 days
   by default (CONCEPT 6.5)
 

@@ -44,6 +44,7 @@ from .sqlite import (
     SqliteSendLogRepository,
     SqliteTokenRepository,
     SqliteUserRepository,
+    SqliteWebhookRepository,
     inspect_snapshot,
 )
 from .users import (
@@ -53,6 +54,13 @@ from .users import (
     RoleRepository,
     TokenRepository,
     UserRepository,
+)
+from .webhooks import (
+    Delivery,
+    InMemoryWebhookRepository,
+    Sealed,
+    WebhookRecord,
+    WebhookRepository,
 )
 
 
@@ -70,6 +78,7 @@ class Repositories:
     idempotency: IdempotencyRepository
     sends: SendLogRepository
     changes: ChangeLogRepository
+    webhooks: WebhookRepository
     # The database behind them, for backups and for closing. None in memory.
     database: Database | None = None
 
@@ -93,6 +102,7 @@ def open_repositories(
             idempotency=InMemoryIdempotencyRepository(),
             sends=InMemorySendLogRepository(),
             changes=InMemoryChangeLogRepository(),
+            webhooks=InMemoryWebhookRepository(),
         )
     db = Database(database_path)
     return Repositories(
@@ -106,6 +116,7 @@ def open_repositories(
         idempotency=SqliteIdempotencyRepository(db),
         sends=SqliteSendLogRepository(db),
         changes=SqliteChangeLogRepository(db),
+        webhooks=SqliteWebhookRepository(db),
         database=db,
     )
 
@@ -117,6 +128,12 @@ __all__ = [
     "InMemoryChangeLogRepository",
     "LoggedChange",
     "SqliteChangeLogRepository",
+    "Delivery",
+    "InMemoryWebhookRepository",
+    "Sealed",
+    "SqliteWebhookRepository",
+    "WebhookRecord",
+    "WebhookRepository",
     "IdempotencyRepository",
     "InMemoryIdempotencyRepository",
     "SqliteIdempotencyRepository",
