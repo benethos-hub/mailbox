@@ -6,7 +6,9 @@ The schema is versioned in ``meta`` and migrated forward on open.
 
 from __future__ import annotations
 
+import os
 import sqlite3
+import stat
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -123,6 +125,7 @@ class Database:
     def __init__(self, path: Path | str) -> None:
         if isinstance(path, Path):
             path.parent.mkdir(parents=True, exist_ok=True)
+            _owner_only(path)
         self._connection = sqlite3.connect(
             str(path), check_same_thread=False, isolation_level=None
         )
@@ -194,6 +197,17 @@ class Database:
                     " VALUES ('schema_version', ?)",
                     (str(version + 1),),
                 )
+
+
+def _owner_only(path: Path) -> None:
+    """The file readable by its owner alone (0600): it holds the encrypted
+    credentials and the token hashes. Created so when missing; an existing
+    one that others may read is narrowed. SQLite gives its journal files
+    the mode of the database. Windows has no such modes."""
+    if not path.exists():
+        os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+    if os.name == "posix" and stat.S_IMODE(path.stat().st_mode) & 0o077:
+        path.chmod(0o600)
 
 
 def inspect_snapshot(data: bytes) -> int:
