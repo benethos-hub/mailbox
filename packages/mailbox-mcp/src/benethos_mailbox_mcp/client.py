@@ -78,6 +78,16 @@ class Page:
 
 
 @dataclass(frozen=True)
+class Changes:
+    """Changes after a point in the change feed, oldest first: type, id,
+    account_id and at, ids only."""
+
+    changes: list[dict[str, str]]
+    state: str
+    more: bool
+
+
+@dataclass(frozen=True)
 class Outcome:
     """A batch: the ids done, and per failed id why not."""
 
@@ -230,6 +240,22 @@ class MailboxApiClient:
             },
         )
         return _page(found)
+
+    async def list_changes(
+        self, account_id: str | None, *, since: str | None, limit: int
+    ) -> Changes:
+        """The changes of one account, or with ``account_id`` None, of every
+        account the caller may read, after the point ``since``."""
+        path = _path("accounts", account_id, "changes") if account_id else "/v1/changes"
+        found = await self.request("GET", path, params={"since": since, "limit": limit})
+        return Changes(
+            changes=[
+                {key: str(change[key]) for key in ("type", "id", "account_id", "at")}
+                for change in found.get("changes", [])
+            ],
+            state=str(found["state"]),
+            more=bool(found.get("more")),
+        )
 
     async def get_message(self, account_id: str, message_id: str) -> dict[str, Any]:
         result: dict[str, Any] = await self.request(

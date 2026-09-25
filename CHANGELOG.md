@@ -17,6 +17,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   sync and from the API. Other providers report changes made through the
   API for now.
 - `MAILBOX_SERVICE_CHANGES_DAYS`: days a change is kept, 7 by default.
+- The MCP tool `whats_new`: mail created, updated or deleted since the
+  `state` of an earlier call, in one account or all. A token with
+  `mail.read` gets it.
 
 ### Changed
 

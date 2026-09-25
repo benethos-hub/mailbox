@@ -126,7 +126,7 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **`GET {acc}/changes` and `GET /v1/changes` with an opaque state (6.5)**,
   done: paged with `more`, `410 changes_expired` for a state the feed no
   longer knows, live-checked in `live/changes.py`
-- The MCP tool `whats_new` (8)
+- **The MCP tool `whats_new` (8)**, done, live-checked in `live/mcp_stdio.py`
 - IMAP: CONDSTORE where the server offers it, so flag changes from other
   clients reach the feed (6.5)
 - Microsoft: Graph delta queries in the worker, so the feed covers

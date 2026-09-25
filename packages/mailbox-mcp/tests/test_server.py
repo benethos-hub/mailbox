@@ -137,6 +137,64 @@ async def test_search_in_one_account(api: Callable) -> None:
     }
 
 
+async def test_whats_new_across_accounts(api: Callable) -> None:
+    change = {
+        "type": "message.created",
+        "id": "msg_1",
+        "account_id": "acc_1",
+        "at": "2026-09-25T10:00:00Z",
+    }
+    handler = api(
+        routes={"/v1/changes": {"changes": [change], "state": "chs_Mg", "more": True}}
+    )
+    result = await server.whats_new(since="chs_MQ")
+    [call] = handler.calls
+    assert call.params == {"since": "chs_MQ", "limit": "50"}
+    assert result == {
+        "changes": [change],
+        "state": "chs_Mg",
+        "more": True,
+        "note": render.CHANGES_NOTE,
+    }
+
+
+async def test_whats_new_first_call_and_one_account(api: Callable) -> None:
+    handler = api(
+        routes={
+            "/v1/accounts/acc_1/changes": {
+                "changes": [],
+                "state": "chs_MA",
+                "more": False,
+            }
+        }
+    )
+    result = await server.whats_new(account_id="acc_1", limit=5)
+    [call] = handler.calls
+    assert call.params == {"limit": "5"}
+    assert result["state"] == "chs_MA"
+    assert result["changes"] == []
+
+
+async def test_whats_new_needs_a_change_right() -> None:
+    assert "whats_new" not in await names(READ)
+    assert "whats_new" in await names(["list_all_changes"])
+    assert "whats_new" in await names(["list_changes"])
+
+
+async def test_an_expired_state_is_a_tool_error(api: Callable) -> None:
+    api(
+        status=410,
+        answer={
+            "error": {
+                "code": "changes_expired",
+                "message": "this state is unknown or older than the changes kept",
+            }
+        },
+    )
+    with pytest.raises(ToolError, match="older than the changes kept"):
+        await server.whats_new(since="chs_MQ")
+
+
 async def test_get_message_is_marked_foreign(api: Callable) -> None:
     message = {
         "id": "msg_1",
@@ -252,6 +310,7 @@ HINTS = {
     "list_folders": ("List folders", True, None, None, True),
     "search_messages": ("Search mail", True, None, None, True),
     "get_message": ("Read a message", True, None, None, True),
+    "whats_new": ("What is new", True, None, None, True),
     "get_attachment": ("Get an attachment", True, None, None, True),
     "update_messages": ("Change messages", False, True, True, True),
     "create_folder": ("Create a folder", False, False, False, True),
