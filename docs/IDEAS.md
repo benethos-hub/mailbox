@@ -44,6 +44,14 @@ its mail parser in `data/mail/parse.py`. The standard library's `email` module
 could take that over and drop the dependency. It would have to handle the
 encoding traps of CONCEPT 5.10 as well, which the fixtures check.
 
+## A policy file for the MCP server
+
+A file beside the MCP server that names the tools it offers, nothing
+enabled by default. It would matter only where a user may do more than
+its MCP server should offer, e.g. may send but the model should only
+draft. An option of the MCP server, such as leaving out the send tools,
+would do the same with less.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

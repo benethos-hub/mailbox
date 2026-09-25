@@ -10,7 +10,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [1b](#phase-1b--imap-reading-and-autodiscovery) | IMAP reading and autodiscovery | **done** |
 | [1c](#phase-1c--stable-ids-and-sync-worker) | Stable ids and sync worker | **done** |
 | [2](#phase-2--writing-and-sending) | Writing and sending | **done** |
-| [3](#phase-3--mcp-server-and-container) | MCP server and container | in progress |
+| [3](#phase-3--mcp-server-and-container) | MCP server and container | **done** |
 | [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
 
@@ -106,7 +106,6 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **Prompt injection measures (7.7): mail content marked as foreign, hidden
   HTML dropped, send audit, the read-and-send warning in `/v1/me` and the
   MCP start log**, done
-- Policy file, nothing enabled by default
 - **The MCP server over streamable HTTP, behind a bearer guard, with its
   own container image**, done
 - **Container image and compose file for the service, bound to the loopback
@@ -114,7 +113,7 @@ Everything real mail will depend on, before any real mailbox is connected.
   `.github/workflows/container.yml`. Both images built and run locally
   for amd64 with the compose file, as `containers/README.md` describes;
   arm64 and the workflow not yet run: the repository has no GitHub remote
-  so far.
+  so far. Running the workflow is deferred (decided 2026-09-25).
 
 ## Phase 4 – Change feed and webhooks
 
@@ -123,8 +122,7 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 5 – More providers and the configuration UI
 
-- `microsoft` adapter over Graph with OAuth (5.4), next, prepared step by
-  step so that it can be tested once the prerequisites exist:
+- **`microsoft` adapter over Graph with OAuth (5.4)**, done, in steps:
   1. **OAuth core for every provider: authorization code with PKCE,
      `state` bound to the user, refresh token in the vault, access token in
      memory, rotation, `invalid_grant` to `needs_reauth`; client id, tenant
@@ -136,12 +134,8 @@ Everything real mail will depend on, before any real mailbox is connected.
      drafts, `sendMail`, immutable ids**, done
   4. **a live check against a Microsoft test account**, done with a
      personal Outlook.com account (`live/microsoft.py`, `docs/microsoft.md`)
-  - open, to be decided: who may sign in (`common` proposed), where the
-    callback ends (`/ui/oauth/{provider}/callback` proposed, CONCEPT has
-    it under `/v1`)
-  - needed before step 4, by the operator: an app registration in Entra ID
-    (delegated `Mail.ReadWrite`, `Mail.Send`, `offline_access`, redirect
-    URI, client secret) and a Microsoft test account
+  - decided 2026-09-25: tenant `common` by default, the callback at
+    `/ui/oauth/{provider}/callback` (CONCEPT 5.4)
 - `gmail` adapter with OAuth, own Google Cloud client per deployment (5.5)
 - Gmail history and Graph delta in the worker
 - `jmap` adapter for Fastmail and JMAP servers (5.6)
