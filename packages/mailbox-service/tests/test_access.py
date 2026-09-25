@@ -66,6 +66,14 @@ def test_require_hides_unseen_accounts_as_not_found() -> None:
         a.require("list_messages", "acc_b")
 
 
+def test_a_right_on_accounts_to_come_shows_no_account() -> None:
+    a = access(Grant(accounts=["*"], allow=["discover_account", "create_account"]))
+    assert not a.sees("acc_a")
+    with pytest.raises(NotFoundError):
+        a.require("list_messages", "acc_a")
+    assert a.allows("create_account")
+
+
 def test_require_names_the_missing_right() -> None:
     a = access(Grant(accounts=["acc_a"], allow=["accounts.read"]))
     with pytest.raises(ForbiddenError, match="list_messages on account acc_a"):

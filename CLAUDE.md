@@ -161,7 +161,8 @@ packages/
         providers/        # registry in __init__.py (also sign_in), base.py
           protocols/      # wire protocols, one library each: imap.py
                           #   (IMAPClient), smtp.py (smtplib), oauth.py
-                          #   (OAuth 2.0 with PKCE, refresh, token source)
+                          #   (OAuth 2.0 with PKCE, refresh, token source),
+                          #   transport.py: the failures below every library
           guard.py        # pacing, retries, blocked logins, for any adapter
           sender.py       # SmtpSender: sending for IMAP, POP3, ...
           imap/, memory/, # one directory per provider (adapter)

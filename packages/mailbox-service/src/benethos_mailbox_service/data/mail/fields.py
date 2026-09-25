@@ -14,6 +14,15 @@ def message_id(value: object) -> str | None:
     return text or None
 
 
+def ascii_domain(email: str) -> str:
+    """An address with its domain in punycode, as the wire wants it. The
+    local part stays as written: only SMTPUTF8 carries one in Unicode."""
+    local, at, domain = email.rpartition("@")
+    if not at or domain.isascii():
+        return email
+    return f"{local}@{domain.encode('idna').decode('ascii')}"
+
+
 def unicode_address(email: str) -> str:
     """An address with an internationalised domain in Unicode: on the wire it
     travels as punycode (``xn--``), the API shows it as people write it."""

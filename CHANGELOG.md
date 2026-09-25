@@ -11,15 +11,132 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- `PATCH /v1/accounts/{account_id}/folders/{folder_id}` takes a role
+  such as `archive` as the new `parent_id`, as creating a folder does.
+- The start page of the configuration UI shows a right that covers only
+  part of a group as that operation, as the user page does. Before, one
+  operation showed as its whole group.
+- `PATCH /v1/accounts/{account_id}` logs in to the provider only when
+  the settings sent differ from the stored ones. Before, any `settings`
+  in the body logged in, the same values included.
+- A Microsoft account's keywords come back in lower case, as the other
+  providers answer them. Renaming a top-level folder there no longer
+  moves it. A move of a batch to several folders is refused per message,
+  as on the other providers, not for the batch as a whole.
+- A Microsoft account is left alone for as long as Graph's `Retry-After`
+  asks, and a refresh token the provider refused is not sent again until
+  the account is signed in anew.
+- The next page of an IMAP folder asks the server for the older messages
+  only, instead of reading every match and cutting the page here.
+- A message of a Microsoft account deleted with `permanent=true`, and a
+  draft there that is deleted or replaced, are gone for good. Before,
+  one not in Deleted Items was only moved there, since that is what
+  Graph's delete does outside the trash.
+- A draft saved or a sent copy stored over a connection the IMAP server
+  dropped right after the APPEND is stored once: the retry finds it by
+  its Message-ID instead of storing it again.
+- A connection dropped by the IMAP server during the login answers `502`
+  (`provider_unavailable`) and is tried again on the next call. Before,
+  it counted as a rejected credential and blocked the account until
+  `verify`.
+- Sending to an internationalised domain puts it in punycode on the SMTP
+  envelope. An address with a local part beyond ASCII is sent with
+  SMTPUTF8 where the server supports it, else refused with `400`. Before,
+  both failed with `500`.
+- Outgoing messages are composed 7bit clean: a body beyond ASCII is
+  encoded, since the service asks no SMTP server for 8BITMIME.
+- Keywords are set on an IMAP server that lists them in PERMANENTFLAGS or
+  sends no PERMANENTFLAGS at all. Before, only `\*` counted, and such
+  servers answered `501`.
+- A credential encrypted with a key the service does not hold answers
+  `500` (`credential_unreadable`) naming that key, instead of a failed
+  decryption with the active one.
+- Deleting an account forgets its `Idempotency-Key` results in the
+  in-memory storage as well, as the database did.
+- The sign-in page of the configuration UI leads back to the page that
+  was asked for, with its query. After a posted form it leads to the
+  start page. Before, it led to the path alone, and to a `405` after a
+  form.
+- A token's days valid on the configuration UI are bound to 3650. A
+  larger number answered `500`.
+- A reply's recipients are counted against the limit of 100 once they are
+  taken from the original, not before.
+- Cancelling an OAuth sign-in on the UI ends only a sign-in the caller
+  started.
+- Idle sessions of the configuration UI are swept at each sign-in.
+- A missing attachment, draft or folder on an IMAP account answers `404`
+  for that. Before, it was taken for a moved message: a sync ran and the
+  answer said the message was not found.
+- A list across accounts ends once every account still open has failed.
+  An account that fails keeps its place while others deliver, as before,
+  but no longer keeps the `next_cursor` alive forever with empty pages.
+- The OAuth callback of a sign-in again needs the right that started it
+  (`accounts.manage`), not the right to read the account.
+- The configuration UI lists under a user's rights the limits of every
+  grant that allows sending, `send_draft` included. Before, only `send`
+  grants counted.
+- Changing an account stores the new credentials before the record, so a
+  failure between the two cannot leave settings without the credentials
+  they need.
+- The background watcher of an account ends as soon as the account is
+  deleted, instead of logging a failure and waiting a minute first.
+- `backup verify` without a file says how to use it. Before, it wrote a
+  backup to a file named `verify`.
+- `restore` moves a journal file left beside the old database along
+  with it, so SQLite cannot roll it into the restored file.
+- A truncated encrypted record, a key file that cannot be read and a
+  credential store that does not answer are reported as what they are,
+  instead of failing with a traceback.
+- Autodiscovery keeps a mail server under an internationalised top-level
+  domain such as `.рф`. Before, its punycode form was dropped as no host.
+- A failure of the service's own database answers `500` with the code
+  `storage_error` and the reason, a violated constraint `409`
+  (`conflict`). Before, both were unhandled and the background sync
+  stopped for good when an account was deleted during its sync.
+- The MCP server's `--allowed-origins` without `--allowed-hosts` admits
+  the hosts of those origins. Before, it answered every request with
+  `421`, since no host was allowed.
+- The MCP server tells the model what a `422` was about: the field and
+  the reason, as `validation_error`. An answer that is not JSON is
+  reported as `unexpected_response` instead of failing the tool.
+- The MCP server reads an attachment only up to its limit of 10 MB and
+  stops there. A PDF page is rendered within a budget of 4 million
+  pixels, whatever size its MediaBox declares. An attachment with a
+  charset Python does not know is read as UTF-8.
+- The MCP server's bearer guard closes a websocket instead of passing it
+  through unchecked.
 - The MCP server quotes the ids a model hands it before they go into
   an API path.
 
 ### Security
 
+- An `Idempotency-Key` belongs to the caller: the same key from another
+  user answers `409` (`idempotency_conflict`) instead of the first
+  caller's result.
+- A source locked out after failed sign-ins stays locked out for its
+  fifteen minutes. Before, a flood of failures from other addresses could
+  push the lockout out of memory.
+- A right on accounts that may not exist yet (`discover_account`,
+  `create_account`, `start_oauth`) no longer makes every account visible:
+  an account the caller has no other right on answers `404`, not `403`.
+- The findings autodiscovery caches and the callers it counts are capped
+  in memory.
+- A NAT64 address (`64:ff9b::/96`) counts as public only when the IPv4
+  address it carries is. Before, `64:ff9b::10.0.0.1` passed the check
+  of autodiscovery and of an account's hosts as a public address.
+- The MCP server puts the sender's words inside the `<mail-content>`
+  marker in full: a message's date, from, to, cc, subject and attachment
+  names as much as its body, and an attachment's filename. A list of
+  messages carries a `note` that `from` and `subject` are the sender's.
+  Before, only the body sat inside the marker.
+- An HTML body cannot end a hidden element with an end tag of another
+  name: `<div style="display:none">...</span> text</div>` kept `text`
+  hidden in a mail client but the MCP server showed it. Now an end tag
+  closes the innermost open element of its own name, and a stray one
+  closes nothing.
 - Listing the tokens of a user needs the rights that user holds, as
   creating and revoking them already did. Before, `users.manage` alone
   listed the token names and dates of any user, an admin's included.
-
 - Guessed credentials are slowed down: a client address that fails to
   sign in ten times within fifteen minutes is locked out for fifteen
   minutes. On the API every request from it answers `429 rate_limited`
@@ -28,14 +145,12 @@ stored data and the configuration may change without notice.
   `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` to the proxy's address, so the
   client address is read from `X-Forwarded-For`. Without it, every client
   behind the proxy counts as one.
-
 - Every line break is refused in a header field of an outgoing message,
   not only CR and LF: `422` for a subject, a recipient name or an
   attachment name with a vertical tab, a form feed, NEL (U+0085) or a
   Unicode line or paragraph separator. A reply or a forward folds what the
   original carried in its subject or attachment names onto one line.
   Before, both answered `500`.
-
 - The hosts in an account's settings (`host`, `smtp_host`) pass the same
   check as autodiscovery when the account is created or changed, before
   the first connection: a host that resolves to a private, loopback or
@@ -43,16 +158,13 @@ stored data and the configuration may change without notice.
   `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS`. Before, anyone who could create
   or change an account could make the service connect into its own
   network. A host that does not resolve is refused with `400` as well.
-
 - A request that fails validation (`422`) no longer comes back in the
   answer: `detail` carries `type`, `loc` and `msg` only, not FastAPI's
   `input` and `ctx`. Before, a wrong `POST /v1/accounts` returned the
   provider password it was sent, where proxies and client logs keep it.
-
 - The database file is created readable by its owner alone (`0600`). An
   existing one that others may read is narrowed on start. On POSIX
   systems only.
-
 - Search text with a line break or another control character is refused
   (`422`). Before, `q` could carry further IMAP commands into the
   account's session.
@@ -79,8 +191,8 @@ stored data and the configuration may change without notice.
 - An IMAP account's `username` defaults to its address when left out, on
   create and when it is removed.
 - The keywords `$seen`, `$flagged`, `$deleted` and `$recent` are refused
-  with `422` on every provider: use `unread`, `starred` or `DELETE`. Before,
-  IMAP answered `400` and other providers stored them.
+  with `422` on every provider: use `unread`, `starred` or a delete.
+  Before, IMAP answered `400` and other providers stored them.
 - A cursor that names no page answers `400` (`bad_request`) on every
   provider. Before, IMAP answered `404` and the memory provider failed.
 - A missing drafts or trash folder answers `409` on every provider.
@@ -92,10 +204,8 @@ stored data and the configuration may change without notice.
   `smtp_*`), never a secret. Settings whose name looks like a secret
   (`password`, `secret`, `token`, `api_key`, ...) are refused with `400`:
   secrets go in `credentials`.
-
 - Grants in responses carry `recipients` and `max_sends_per_day`, null
   where not set.
-
 - `GET /v1/me` lists `accounts` as objects with `id`, `email`,
   `display_name` and `operations`, instead of a map from id to operations.
 - New ids of accounts, users, tokens, keys and messages carry 64 random
@@ -109,6 +219,9 @@ stored data and the configuration may change without notice.
 
 ### Added
 
+- `PUT /v1/accounts/{account_id}/drafts/{draft_id}` takes
+  `keep_attachments`, the ids of attachments of the stored draft that go
+  into the new one. The MCP tool `update_draft` passes it on.
 - Configuration UI: the grant editor shows the rights the MCP server uses
   (`mail.read`, `mail.write`, `drafts`, `send`) apart from the others. The
   tooltip of each group names the MCP tools it opens.
@@ -142,13 +255,11 @@ stored data and the configuration may change without notice.
   attachments, the source, flags, categories as keywords, moving,
   deleting, drafts and sending. Message ids stay the same when a message
   moves, search results included.
-
 - A draft read with `get_message` carries its `reference`. A reference
   with `quote: false` keeps the link to the original without adding its
   quote, forwarded original or attachments again, so a draft can be
   replaced as a whole and stay in its thread. The configuration UI edits
   reply and forward drafts that way.
-
 - Configuration UI under `/ui`. Not part of the OpenAPI document.
   - Sign in with an API token or the admin key. An overview of your
     accounts, rights and warnings.
@@ -163,30 +274,25 @@ stored data and the configuration may change without notice.
     drafts saved, changed and sent, each send form with its own
     idempotency key.
   - The send audit of one account or of every account together.
-
 - MCP server over streamable HTTP (`--transport streamable-http`, or
   `MAILBOX_MCP_*` in the environment), behind a bearer token
   (`MAILBOX_MCP_BEARER_TOKEN`, else `401`) and a Host/Origin check against
   DNS rebinding. Its container image `benethos-mailbox-mcp` is built with
   the service's and runs in compose with the profile `mcp`.
-
 - Container image of the service (`containers/benethos-mailbox-service/`), for
   `linux/amd64` and `linux/arm64`, with a compose file that publishes the
   port on `127.0.0.1` only, and a GitHub workflow that pushes it to the
   GitHub container registry. See `containers/README.md`.
 - `benethos-mailbox-service keys generate` prints a new master key for a key
   file or container secret and stores nothing.
-
 - `GET /v1/me`: each account carries `warnings`, among them
   `read_and_send_anywhere` where the caller may read mail and send it to
   any address. The MCP
   server logs it at start.
-
 - A mail or draft with `html` and without `text` gets a text part made
   from the HTML, without its hidden parts. Before, the text part was empty.
 - MCP server: `send_message`, `create_draft` and `update_draft` take
   `html` besides `text`.
-
 - Grants take `recipients` (addresses, `*@domain`, `*`) and
   `max_sends_per_day`, which narrow `send_message` and `send_draft`:
   `403 recipient_not_allowed`, `429 send_limit_reached` with
@@ -195,7 +301,6 @@ stored data and the configuration may change without notice.
 - `GET /v1/accounts/{account_id}/sends`: every attempt to send, with user,
   token, recipients and outcome, never content. Right `list_sends`, group
   `audit`.
-
 - MCP server: `list_folders`, `search_messages` and `get_message` besides
   `list_accounts`, which now says what may be done on each account. Only
   the tools the token's rights allow are offered. Mail content comes back

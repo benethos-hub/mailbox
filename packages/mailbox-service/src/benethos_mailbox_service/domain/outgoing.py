@@ -80,6 +80,7 @@ class Outgoing:
             message,
             lambda: self._send(access, account_id, message),
             SendResult,
+            user_id=access.user_id,
         )
 
     async def _send(
@@ -245,7 +246,8 @@ class Outgoing:
         """Store a draft in the drafts folder, composed like a message to
         send. A reference is filled in now and remembered for the send."""
         _require(access, "create_draft", account_id, draft)
-        raw, _, _, _ = await self._compose(account_id, draft, draft=True)
+        raw, _, composed, _ = await self._compose(account_id, draft, draft=True)
+        _limited(composed.recipients())
         saved = await self._calls.call(account_id, lambda p: p.save_draft(raw, None))
         return await self._calls.published_one(account_id, saved)
 
@@ -269,7 +271,8 @@ class Outgoing:
                 for attachment_id in keep_attachments
             ]
             draft = draft.model_copy(update={"attachments": kept + draft.attachments})
-        raw, _, _, _ = await self._compose(account_id, draft, draft=True)
+        raw, _, composed, _ = await self._compose(account_id, draft, draft=True)
+        _limited(composed.recipients())
         saved = await self._calls.on_message(
             account_id, draft_id, lambda p, native: p.save_draft(raw, native)
         )
@@ -305,6 +308,7 @@ class Outgoing:
             _DraftToSend(draft_id=draft_id),
             lambda: self._send_draft(access, account_id, draft_id),
             SendResult,
+            user_id=access.user_id,
         )
 
     async def _send_draft(
@@ -367,14 +371,20 @@ def _require(
 ) -> None:
     """The operation's right and, with a reference, the right to read: a
     reply quotes the original and a forward passes it on. Whoever may only
-    send or write drafts must not get at mail this way. Then the limits."""
+    send or write drafts must not get at mail this way. Then the size."""
     access.require(operation, account_id)
     if message.reference is not None:
         access.require("get_message", account_id)
-    if len(message.recipients()) > MAX_RECIPIENTS:
-        raise BadRequestError(f"at most {MAX_RECIPIENTS} recipients")
     if sum(len(a.data) for a in message.attachments) > MAX_ATTACHMENT_BYTES:
         raise BadRequestError("the attachments exceed 25 MB")
+
+
+def _limited(recipients: list[str]) -> list[str]:
+    """No more recipients than the service carries. Checked once composed:
+    a reply takes its recipients from the original."""
+    if len(recipients) > MAX_RECIPIENTS:
+        raise BadRequestError(f"at most {MAX_RECIPIENTS} recipients")
+    return recipients
 
 
 def _addressed(recipients: list[str]) -> list[str]:
@@ -382,4 +392,4 @@ def _addressed(recipients: list[str]) -> list[str]:
     in the original, a forward or a plain message brings its own."""
     if not recipients:
         raise BadRequestError("a message needs at least one recipient")
-    return recipients
+    return _limited(recipients)

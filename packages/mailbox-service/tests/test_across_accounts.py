@@ -141,6 +141,15 @@ def test_rights_filter_without_a_word(world) -> None:  # type: ignore[no-untyped
     assert body["incomplete"] == []
 
 
+def test_a_failing_account_does_not_keep_the_cursor_alive(world) -> None:  # type: ignore[no-untyped-def]
+    _, client, ids, adapters = world
+    adapters[1].fail = True
+    # The failed account keeps its place while the others deliver. Once
+    # nothing but failed accounts is left, the list ends.
+    pages = _walk(client, limit=50)
+    assert pages == [["a9", "a7", "c6", "a5", "c4", "a3", "a1"], []]
+
+
 def test_a_failing_account_leaves_the_page_incomplete(world) -> None:  # type: ignore[no-untyped-def]
     _, client, ids, adapters = world
     adapters[1].fail = True

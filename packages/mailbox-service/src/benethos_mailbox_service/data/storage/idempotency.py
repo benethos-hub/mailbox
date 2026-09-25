@@ -27,6 +27,10 @@ class IdempotencyRepository(Protocol):
         """Forget every result created before ``before``."""
         ...
 
+    def forget_account(self, account_id: str) -> None:
+        """The account is gone, and so are its keys."""
+        ...
+
 
 class InMemoryIdempotencyRepository:
     def __init__(self) -> None:
@@ -40,4 +44,8 @@ class InMemoryIdempotencyRepository:
 
     def purge(self, before: datetime) -> None:
         for item in [k for k, v in self._items.items() if v.created_at < before]:
+            del self._items[item]
+
+    def forget_account(self, account_id: str) -> None:
+        for item in [k for k in self._items if k[0] == account_id]:
             del self._items[item]

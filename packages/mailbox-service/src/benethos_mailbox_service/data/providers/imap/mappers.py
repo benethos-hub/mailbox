@@ -1,8 +1,8 @@
 """IMAP data to the neutral model: ids, folders and flags. Pure functions,
 testable offline. What the message itself says comes from ``data.mail.convert``.
 
-Works on the objects ``client`` hands out without importing the library:
-messages are read by attribute (``uid``, ``flags``, ``from_values``, ...).
+Works on the parsed messages ``data.mail.parse`` hands out, read by
+attribute (``uid``, ``flags``, ``date``, ...), without any library of its own.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....common import opaque
-from ....errors import NotFoundError, NotSupportedError
+from ....errors import MessageNotFoundError, NotFoundError, NotSupportedError
 from ...mail import convert
 from ...models import (
     Folder,
@@ -105,13 +105,26 @@ def message_id(folder: str, uidvalidity: int, uid: int) -> str:
 
 
 def parse_message_id(value: str) -> tuple[str, int, int]:
-    parts = _decode("m_", value, "message")
+    place = _triple("m_", value)
+    if place is None:
+        raise MessageNotFoundError(f"message {value} not found")
+    return place
+
+
+def _triple(prefix: str, value: str) -> tuple[str, int, int] | None:
+    """A folder, UIDVALIDITY and UID behind ``prefix``, None for anything
+    else: an id and a cursor of this adapter are both made of these."""
+    try:
+        parts = opaque.decode(prefix, value)
+    except ValueError:
+        return None
     if (
-        len(parts) != 3
+        not isinstance(parts, list)
+        or len(parts) != 3
         or not isinstance(parts[0], str)
         or not all(isinstance(p, int) for p in parts[1:])
     ):
-        raise NotFoundError(f"message {value} not found")
+        return None
     return parts[0], parts[1], parts[2]
 
 
@@ -120,18 +133,10 @@ def cursor(folder: str, uidvalidity: int, before_uid: int) -> str:
 
 
 def parse_cursor(value: str) -> tuple[str, int, int]:
-    try:
-        parts = opaque.decode("c_", value)
-    except ValueError:
-        raise rules.invalid_cursor() from None
-    if (
-        not isinstance(parts, list)
-        or len(parts) != 3
-        or not isinstance(parts[0], str)
-        or not all(isinstance(p, int) for p in parts[1:])
-    ):
+    place = _triple("c_", value)
+    if place is None:
         raise rules.invalid_cursor()
-    return parts[0], parts[1], parts[2]
+    return place
 
 
 # --- folders ------------------------------------------------------------------
@@ -249,6 +254,16 @@ def imap_flag(keyword: str) -> str:
     return _IMAP_SPELLING.get(lowered, keyword)
 
 
+def _kept(flags: list[str], permanent: frozenset[str]) -> bool:
+    """Whether the server keeps these flags: it said so with ``\\*``, it
+    lists the flag itself, or it sent no PERMANENTFLAGS at all, which
+    means every flag is permanent (RFC 3501)."""
+    if not permanent or "\\*" in permanent:
+        return True
+    listed = {f.lower() for f in permanent}
+    return all(f.startswith("\\") or f.lower() in listed for f in flags)
+
+
 def flag_changes(
     current: Any, changes: MessageUpdate, permanent: frozenset[str]
 ) -> tuple[list[str], list[str]]:
@@ -268,7 +283,7 @@ def flag_changes(
             for keyword in keywords([flag]):
                 present[keyword] = str(flag)
         new = [imap_flag(wanted[k]) for k in wanted if k not in present]
-        if any(not f.startswith("\\") for f in new) and "\\*" not in permanent:
+        if not _kept(new, permanent):
             raise NotSupportedError("the mail server keeps no new keywords")
         add += new
         remove += [flag for k, flag in present.items() if k not in wanted]

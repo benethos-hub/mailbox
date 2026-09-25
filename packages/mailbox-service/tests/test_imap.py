@@ -304,6 +304,21 @@ async def test_xoauth2(server: FakeMailBox) -> None:
     assert ("xoauth2", "me@example.com") in server.calls
 
 
+async def test_the_next_page_asks_the_server_for_older_uids_only(
+    server: FakeMailBox,
+) -> None:
+    imap = provider(server)
+    first = await imap.list_messages(None, limit=2, cursor=None, search=None)
+    assert first.next_cursor is not None
+    second = await imap.list_messages(
+        None, limit=2, cursor=first.next_cursor, search=None
+    )
+    assert len(second.items) == 2
+    assert not {m.id for m in first.items} & {m.id for m in second.items}
+    searches = [c[1] for c in server.calls if c[0] == "search"]
+    assert searches[-1][0] == "UID" and searches[-1][1].startswith("1:")
+
+
 async def test_a_dropped_connection_is_retried_in_the_same_call(
     server: FakeMailBox,
 ) -> None:
@@ -367,6 +382,20 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
         await imap.list_messages(None, limit=1, cursor=None, search=None)
     with pytest.raises(ProviderUnavailableError, match="next attempt in 30s"):
         await imap.list_folders()  # the success in between reset the count
+
+
+async def test_a_dropped_connection_during_the_login_is_no_rejection(
+    server: FakeMailBox,
+) -> None:
+    server.login_failure = imaplib.IMAP4.abort("socket error: EOF")
+    imap = provider(server)
+    # Unavailable, so the guard tries again, and the second login succeeds.
+    # A rejected credential would have been raised and blocked the account.
+    await imap.list_folders()
+    logins = [c for c in server.calls if c[0] == "login"]
+    assert logins == [("login", "me@example.com")] * 2
+    assert ("logout",) in server.calls
+    assert server.logins == 1
 
 
 async def test_a_rejected_login_is_not_tried_again(server: FakeMailBox) -> None:

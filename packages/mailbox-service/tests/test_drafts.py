@@ -211,6 +211,41 @@ def test_a_draft_through_its_life(client: TestClient, account_id: str) -> None:
     assert client.get(drafts_url(account_id)).json()["items"] == []
 
 
+def test_replacing_a_draft_keeps_the_attachments_named(
+    client: TestClient, account_id: str
+) -> None:
+    created = client.post(
+        drafts_url(account_id),
+        json={
+            "subject": "Files",
+            "attachments": [
+                {"filename": "a.txt", "content_type": "text/plain", "data": "YQ=="},
+                {"filename": "b.txt", "content_type": "text/plain", "data": "Yg=="},
+            ],
+        },
+    )
+    draft_id = created.json()["id"]
+    stored = client.get(f"/v1/accounts/{account_id}/messages/{draft_id}").json()
+    kept, dropped = (a["id"] for a in stored["attachments"])
+    replaced = client.put(
+        drafts_url(account_id, draft_id),
+        json={
+            "subject": "Files, fewer",
+            "keep_attachments": [kept],
+            "attachments": [
+                {"filename": "c.txt", "content_type": "text/plain", "data": "Yw=="}
+            ],
+        },
+    )
+    assert replaced.status_code == 200
+    now = client.get(f"/v1/accounts/{account_id}/messages/{draft_id}").json()
+    assert [a["filename"] for a in now["attachments"]] == ["a.txt", "c.txt"]
+    # Without the field, every stored attachment is gone.
+    client.put(drafts_url(account_id, draft_id), json={"subject": "Files, none"})
+    now = client.get(f"/v1/accounts/{account_id}/messages/{draft_id}").json()
+    assert now["attachments"] == []
+
+
 def test_a_reply_draft_keeps_its_reference(client: TestClient, account_id: str) -> None:
     created = client.post(
         drafts_url(account_id),
@@ -277,6 +312,26 @@ def on_imap(box: FakeMailBox, monkeypatch: pytest.MonkeyPatch) -> tuple[Services
         credentials={"password": SecretStr("secret")},
     )
     return services, account.id
+
+
+async def test_a_retried_save_stores_the_draft_once(
+    box: FakeMailBox, on_imap: tuple[Services, str]
+) -> None:
+    """The connection drops right after the APPEND. The guard retries the
+    step, which finds the stored draft instead of storing it again."""
+    services, account_id = on_imap
+    box.copyuid = False  # no APPENDUID: the draft is found by its Message-ID
+    box.failures = [None, OSError("connection reset")]
+    draft = await services.mailbox.create_draft(
+        ADMIN, account_id, DraftMessage(subject="Once", text="x")
+    )
+    assert list(box.folders["Drafts"].messages) == [1]
+    assert [c for c in box.calls if c[0] == "append"] == [
+        ("append", "Drafts", ("\\Draft", "\\Seen"))
+    ]
+    assert (
+        await services.mailbox.get_message(ADMIN, account_id, draft.id)
+    ).subject == "Once"
 
 
 async def test_a_replaced_draft_keeps_its_id(

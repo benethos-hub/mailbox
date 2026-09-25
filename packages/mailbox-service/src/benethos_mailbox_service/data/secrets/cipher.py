@@ -14,7 +14,7 @@ NONCE_BYTES = 12
 
 
 class DecryptionError(Exception):
-    """Wrong key, wrong associated data, or tampered ciphertext."""
+    """Wrong key, wrong associated data, tampered or truncated ciphertext."""
 
 
 def new_key() -> bytes:
@@ -28,9 +28,11 @@ def encrypt(key: bytes, plaintext: bytes, aad: bytes) -> tuple[bytes, bytes]:
 
 
 def decrypt(key: bytes, nonce: bytes, ciphertext: bytes, aad: bytes) -> bytes:
+    # A nonce or a ciphertext of the wrong length is a ValueError to the
+    # library, a damaged record to us.
     try:
         return AESGCM(key).decrypt(nonce, ciphertext, aad)
-    except InvalidTag:
+    except (InvalidTag, ValueError):
         raise DecryptionError("decryption failed") from None
 
 

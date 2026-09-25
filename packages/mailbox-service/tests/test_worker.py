@@ -14,7 +14,7 @@ from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import AccountStatus, ProviderType
 from benethos_mailbox_service.domain import worker as worker_module
 from benethos_mailbox_service.domain.worker import SyncWorker
-from benethos_mailbox_service.errors import ProviderAuthError
+from benethos_mailbox_service.errors import NotFoundError, ProviderAuthError
 from benethos_mailbox_service.main import Services, create_app
 
 from .conftest import ADMIN
@@ -151,6 +151,26 @@ def test_no_worker_when_the_interval_is_zero(
     services: Services,  # noqa: F811
 ) -> None:
     assert services.worker is None
+
+
+async def test_a_deleted_account_ends_the_watcher_at_once(
+    services: Services,  # noqa: F811
+    account_id: str,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    slept: list[float] = []
+
+    async def note(seconds: float) -> None:
+        slept.append(seconds)
+        raise AssertionError("the watcher paused instead of ending")
+
+    async def gone(*args: object) -> None:
+        raise NotFoundError(f"account {account_id} not found")
+
+    monkeypatch.setattr(services.adapters, "call", gone)
+    w = SyncWorker(services.adapters, services.sync, interval=300, sleep=note)
+    await w.watch(account_id)
+    assert slept == []
 
 
 async def test_a_rejected_login_ends_the_watcher(

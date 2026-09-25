@@ -32,6 +32,7 @@ from ....errors import (
 )
 from ...mail import fields
 from ...mail.parse import ParsedMessage
+from .transport import transport_errors
 
 ClientFactory = Callable[..., Any]
 
@@ -132,9 +133,19 @@ class ImapSession:
             client = self._connect()
             try:
                 authenticate(client)
-            except LoginError:
+            except LoginError as exc:
                 _quietly_logout(client)
+                # imapclient wraps whatever the login raised. A dropped
+                # connection is not a rejected credential.
+                cause = exc.__context__
+                if isinstance(cause, imaplib.IMAP4.abort | OSError):
+                    raise ProviderUnavailableError(
+                        f"the mail server dropped the connection during the {what}"
+                    ) from None
                 raise ProviderAuthError(f"the server rejected the {what}") from None
+            except BaseException:
+                _quietly_logout(client)
+                raise
             self._client = client
 
     def _connect(self) -> Any:
@@ -197,7 +208,7 @@ class ImapSession:
         """Select a folder read-only, return its UIDVALIDITY."""
         with _errors():
             answer = self._select_folder(folder, readonly=True)
-        return int(answer[b"UIDVALIDITY"])
+        return _uidvalidity(answer)
 
     def select_writable(self, folder: str) -> tuple[int, frozenset[str]]:
         """Select a folder read-write. Returns its UIDVALIDITY and the flags
@@ -207,7 +218,7 @@ class ImapSession:
         if b"READ-ONLY" in answer:
             raise ProviderError(f"the folder {folder} is read-only on the server")
         permanent = answer.get(b"PERMANENTFLAGS", ())
-        return int(answer[b"UIDVALIDITY"]), frozenset(_text(f) for f in permanent)
+        return _uidvalidity(answer), frozenset(_text(f) for f in permanent)
 
     def store_flags(self, uids: list[int], add: list[str], remove: list[str]) -> None:
         """Set and clear the same flags on messages of the selected folder."""
@@ -327,6 +338,11 @@ class ImapSession:
         if criteria.mixed is not None:
             mixed = ["HEADER", "Content-Type", "multipart/mixed"]
             query += mixed if criteria.mixed else ["NOT", *mixed]
+        if criteria.before_uid is not None:
+            # The server leaves out what an earlier page delivered.
+            if criteria.before_uid <= 1:
+                return []
+            query += ["UID", f"1:{criteria.before_uid - 1}"]
         wide = any(v and not v.isascii() for v in texts.values())
         with _errors():
             uids = sorted(
@@ -335,8 +351,6 @@ class ImapSession:
                     query or "ALL", "UTF-8" if wide else None
                 )
             )
-        if criteria.before_uid is not None:
-            uids = [u for u in uids if u < criteria.before_uid]
         return uids
 
     def fetch_headers(self, uids: list[int]) -> list[FetchedMessage]:
@@ -536,6 +550,15 @@ def _quietly(command: Callable[[], Any]) -> None:
         pass
 
 
+def _uidvalidity(answer: Any) -> int:
+    """What SELECT reported. A server must report it (RFC 3501), and
+    without it no id of this adapter can be made."""
+    value = answer.get(b"UIDVALIDITY")
+    if value is None:
+        raise ProviderError("the mail server reported no UIDVALIDITY")
+    return int(value)
+
+
 def _quietly_logout(client: Any) -> None:
     try:
         client.logout()
@@ -545,23 +568,16 @@ def _quietly_logout(client: Any) -> None:
 
 @contextmanager
 def _errors() -> Iterator[None]:
-    try:
-        yield
-    except (ProviderAuthError, ProviderError, NotSupportedError, NotFoundError):
-        raise
-    except TimeoutError:
-        raise ProviderUnavailableError(
-            "the mail server did not answer in time"
-        ) from None
-    except (ssl.SSLError, ssl.CertificateError) as exc:
-        raise ProviderError(f"TLS with the mail server failed: {exc}") from None
-    except imaplib.IMAP4.abort as exc:
-        raise ProviderUnavailableError(
-            f"the mail server dropped the connection: {exc}"
-        ) from None
-    except imaplib.IMAP4.error as exc:
-        raise ProviderError(f"the mail server answered with an error: {exc}") from None
-    except OSError as exc:
-        raise ProviderUnavailableError(
-            f"the mail server is not reachable: {exc}"
-        ) from None
+    with transport_errors():
+        try:
+            yield
+        except (ProviderAuthError, ProviderError, NotSupportedError, NotFoundError):
+            raise
+        except imaplib.IMAP4.abort as exc:
+            raise ProviderUnavailableError(
+                f"the mail server dropped the connection: {exc}"
+            ) from None
+        except imaplib.IMAP4.error as exc:
+            raise ProviderError(
+                f"the mail server answered with an error: {exc}"
+            ) from None

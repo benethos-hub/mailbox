@@ -72,13 +72,15 @@ class FakeMailBox:
 
     def __init__(self, password: str = "secret") -> None:
         self.password = password
+        # Raised by the next login, wrapped as imapclient wraps it.
+        self.login_failure: Exception | None = None
         self.delimiter = "/"
         self.folders: dict[str, FakeFolder] = {"INBOX": FakeFolder()}
         self.selected = "INBOX"
         self.calls: list[tuple[Any, ...]] = []
         self.logins = 0
-        # Raised one by one by the next searches.
-        self.failures: list[Exception] = []
+        # Raised one by one by the next searches. None: that search passes.
+        self.failures: list[Exception | None] = []
         # IDLE answers, one list of parsed responses per idle_check.
         self.idle_script: list[list[tuple[Any, ...]]] = []
         self.announced = ["IMAP4REV1", "ID", "IDLE", "UIDPLUS", "MOVE"]
@@ -128,6 +130,12 @@ class FakeMailBox:
 
     def login(self, username: str, password: str) -> bytes:
         self.calls.append(("login", username))
+        if self.login_failure is not None:
+            failure, self.login_failure = self.login_failure, None
+            try:
+                raise failure
+            except Exception as exc:
+                raise LoginError(str(exc))  # noqa: B904 - as imapclient does
         if password != self.password:
             raise LoginError("b'[AUTHENTICATIONFAILED] Authentication failed.'")
         self.logins += 1
@@ -295,12 +303,14 @@ class FakeMailBox:
         """SEARCH with the keys the adapter uses, compared the way servers
         do: case-insensitive substrings, dates by day."""
         if self.failures:
-            raise self.failures.pop(0)
+            failure = self.failures.pop(0)
+            if failure is not None:
+                raise failure
         words = [criteria] if isinstance(criteria, str) else list(criteria)
         self.calls.append(("search", tuple(words), charset))
         found = []
         for uid, (raw, flags) in self.folders[self.selected].messages.items():
-            if _matches(words, raw, flags):
+            if _matches(words, raw, flags, uid):
                 found.append(uid)
         return found
 
@@ -359,7 +369,9 @@ def _message_id_block(head: bytes) -> bytes:
     return block + b"\r\n"
 
 
-def _matches(words: list[Any], raw: bytes, flags: tuple[str, ...]) -> bool:
+def _matches(
+    words: list[Any], raw: bytes, flags: tuple[str, ...], uid: int = 0
+) -> bool:
     mail = BytesParser(policy=default).parsebytes(raw)
     position = 0
     negate = False
@@ -388,6 +400,10 @@ def _matches(words: list[Any], raw: bytes, flags: tuple[str, ...]) -> bool:
                 ok = value.encode() in _message_id_block(raw)
             else:
                 ok = value.lower() in str(mail.get(name, "")).lower()
+        elif key == "UID":
+            low, _, high = str(words[position]).partition(":")
+            position += 1
+            ok = int(low) <= uid and (high == "*" or uid <= int(high))
         elif key in ("SINCE", "BEFORE"):
             day = words[position]
             position += 1

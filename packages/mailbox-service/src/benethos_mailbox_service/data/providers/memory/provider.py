@@ -5,6 +5,7 @@ from __future__ import annotations
 from ....errors import (
     ConflictError,
     MailboxServiceError,
+    MessageNotFoundError,
     NotFoundError,
     NotSupportedError,
 )
@@ -80,7 +81,7 @@ class MemoryProvider:
         for message in self.messages:
             if message.id == message_id:
                 return message
-        raise NotFoundError(f"message {message_id} not found")
+        raise MessageNotFoundError(f"message {message_id} not found")
 
     async def get_attachment(
         self, message_id: str, attachment_id: str

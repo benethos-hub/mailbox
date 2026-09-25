@@ -90,12 +90,36 @@ def test_success_clears_the_source(throttle: SignInThrottle) -> None:
 
 
 def test_the_number_of_sources_is_capped(throttle: SignInThrottle) -> None:
-    for _ in range(3):
+    for _ in range(2):
         throttle.failed("a")
     throttle.failed("b")
     throttle.failed("c")
-    # The oldest source was forgotten, lock included.
+    # The failures of the oldest source were forgotten: one more does not
+    # lock it.
+    throttle.failed("a")
     throttle.check("a")
+
+
+def test_a_flood_of_sources_frees_no_locked_one(
+    throttle: SignInThrottle, clock: Clock
+) -> None:
+    for _ in range(3):
+        throttle.failed("a")
+    for source in "bcdef":
+        throttle.failed(source)
+    with pytest.raises(RateLimitedError):
+        throttle.check("a")
+    # Lockouts are capped as well: those that ran out go first.
+    clock.tick(minutes=16)
+    for source in "xy":
+        for _ in range(3):
+            throttle.failed(source)
+    for source in "xy":
+        with pytest.raises(RateLimitedError):
+            throttle.check(source)
+    for _ in range(3):
+        throttle.failed("z")
+    assert set(throttle._locked) == {"y", "z"}
 
 
 def test_a_bad_limit_is_refused() -> None:

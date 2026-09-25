@@ -48,7 +48,7 @@ class InMemoryAccountRepository:
         return self._accounts.get(account_id)
 
     def add(self, account: Account, settings: SettingsDict | None = None) -> None:
-        self._accounts.put(account.id, account)
+        self._accounts.add(account.id, account)
         self._settings[account.id] = dict(settings or {})
 
     def settings(self, account_id: str) -> SettingsDict:

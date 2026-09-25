@@ -33,7 +33,12 @@ from .base import Finding
 _SECURITY = {"SSL": Security.TLS, "TLS": Security.TLS, "STARTTLS": Security.STARTTLS}
 _PASSWORD = {"password-cleartext", "password-encrypted", "plain", "secure"}
 _OAUTH = "oauth2"
-_HOST = re.compile(r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
+# A host name in ASCII: labels, and a top-level label that is letters or
+# an internationalised one in punycode (xn--).
+_HOST = re.compile(
+    r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+"
+    r"([a-z]{2,63}|xn--[a-z0-9-]{1,59})$"
+)
 _USERNAME_TEMPLATE = re.compile(r"^[^\s<>]{1,256}$")
 
 

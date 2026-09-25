@@ -154,7 +154,8 @@ claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
   rights decide which tools exist, for every client alike.
 - **Host check.** Against DNS rebinding the server checks the `Host` and
   `Origin` headers. On a loopback bind it admits `127.0.0.1`, `localhost`
-  and `[::1]`. With `--allowed-hosts` it admits exactly those. A bind such
+  and `[::1]`. With `--allowed-hosts` it admits exactly those, and
+  `--allowed-origins` alone admits the hosts of those origins. A bind such
   as `0.0.0.0` without a list checks nothing, so set the list there. A
   refused host gets `421`.
 - Beyond your own machine, put a TLS reverse proxy in front.
@@ -224,7 +225,7 @@ the tools that fit:
 | `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
 | `list_drafts` | `drafts` | the drafts of an account |
 | `create_draft` | `drafts` | a draft in plain text or HTML, recipients optional. With `original_id` a reply, reply to all or forward. |
-| `update_draft` | `drafts` | replaces a draft as a whole, the id stays |
+| `update_draft` | `drafts` | replaces a draft as a whole, the id stays, `keep_attachments` keeps stored files |
 | `delete_draft` | `drafts` | deletes a draft for good, reaches drafts only |
 | `send_message` | `send` | sends a mail at once, plain text or HTML. With `original_id` a reply, reply to all or forward. |
 | `send_draft` | `send` | sends a stored draft |
@@ -247,6 +248,8 @@ call repeated within 24 hours sends nothing and returns the first result.
 Give a user `send` only if the model may send without a person looking at
 the mail first. With `drafts` alone it writes drafts for a person to send.
 
-Mail content comes back inside `<mail-content>` markers. Strangers wrote
-it, so it is data, not instructions. HTML is turned into text without
+Mail content comes back inside `<mail-content>` markers, the headers and
+attachment names as much as the body. Strangers wrote it, so it is data,
+not instructions. A list of messages, which is JSON, carries a `note`
+saying the same of `from` and `subject`. HTML is turned into text without
 its hidden parts.

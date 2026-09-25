@@ -23,7 +23,7 @@ import anyio
 import httpx
 
 from ...errors import ProviderError
-from .base import new_client, read_capped, unreachable
+from .base import new_client, parse_url, read_capped, unreachable
 
 TIMEOUT = 5.0
 MAX_BYTES = 256 * 1024
@@ -49,12 +49,20 @@ async def host_addresses(host: str, port: int) -> list[str]:
     return list(seen)
 
 
+# The NAT64 prefix (RFC 6052) carries an IPv4 address in its last 32 bits.
+# Python judges 6to4 and Teredo by theirs, not this one.
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+
+
 def is_public_address(address: str) -> bool:
     """False for private, loopback, link-local, shared, reserved and multicast
     addresses, including IPv4 addresses wrapped in IPv6."""
     ip = ipaddress.ip_address(address.split("%", 1)[0])
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
-        ip = ip.ipv4_mapped
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None:
+            ip = ip.ipv4_mapped
+        elif ip in _NAT64:
+            ip = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
     return ip.is_global and not ip.is_multicast
 
 
@@ -86,7 +94,7 @@ class SafeFetcher:
         """The body of a ``200`` answer. None when there is nothing to find:
         the host does not resolve, or the answer is not ``200``."""
         async with new_client(self._transport, self._timeout) as client:
-            target = httpx.URL(url)
+            target = parse_url(url)
             for _ in range(MAX_REDIRECTS + 1):
                 if target.scheme != "https":
                     raise ProviderError(f"refused to fetch {target}: HTTPS only")
@@ -98,7 +106,7 @@ class SafeFetcher:
                     response = await self._send(client, target, host, address)
                 except httpx.HTTPError as exc:
                     raise unreachable(exc, host) from None
-                if isinstance(response, httpx.URL):
+                if isinstance(response, str):
                     target = target.join(response)
                     continue
                 if response is None:
@@ -123,7 +131,7 @@ class SafeFetcher:
 
     async def _send(
         self, client: httpx.AsyncClient, target: httpx.URL, host: str, address: str
-    ) -> bytes | httpx.URL | None:
+    ) -> bytes | str | None:
         """The body, the next location of a redirect, or None."""
         pinned = target.copy_with(host=address)
         request = client.build_request(
@@ -135,8 +143,7 @@ class SafeFetcher:
         response = await client.send(request, stream=True)
         try:
             if response.is_redirect:
-                location = response.headers.get("location")
-                return httpx.URL(location) if location else None
+                return response.headers.get("location") or None
             if response.status_code != 200:
                 return None
             return await read_capped(response, host, self._max_bytes)

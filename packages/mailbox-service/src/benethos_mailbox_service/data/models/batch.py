@@ -10,7 +10,8 @@ from .messages import MessageSummary, MessageUpdate
 
 
 class MessageBatch(BaseModel):
-    """One action for up to 100 messages of one account."""
+    """One action for up to 100 messages of one account. An id given
+    twice counts once."""
 
     ids: list[str] = Field(min_length=1, max_length=100)
     action: Literal["update", "delete"]
@@ -45,6 +46,6 @@ class BatchItemResult(BaseModel):
 
 
 class BatchResult(BaseModel):
-    """One result per id, in the order of the request."""
+    """One result per id, in the order of the request, a repeated id once."""
 
     results: list[BatchItemResult]

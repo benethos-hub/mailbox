@@ -8,6 +8,7 @@ nothing above it spells out a path, a query name or a field of the API.
 
 from __future__ import annotations
 
+import codecs
 import os
 import re
 from collections.abc import Mapping
@@ -29,10 +30,14 @@ Recipient = tuple[str, str | None]
 
 @dataclass(frozen=True)
 class Attachment:
+    """An attachment's bytes, as far as the caller's limit allowed: with
+    ``complete`` False, ``data`` stops at that limit."""
+
     data: bytes
     content_type: str
-    charset: str | None
+    charset: str | None  # one Python knows, else None
     filename: str | None
+    complete: bool = True
 
 
 @dataclass(frozen=True)
@@ -124,19 +129,27 @@ class MailboxApiClient:
         )
         if response.status_code == 204:
             return None
-        return response.json()
+        try:
+            return response.json()
+        except ValueError:
+            raise ApiError(
+                response.status_code, "unexpected_response", "the answer is not JSON"
+            ) from None
 
     async def _send(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
             response = await self._http.request(method, path, **kwargs)
         except httpx.TransportError:
-            raise ServiceUnavailableError(
-                f"The mailbox service is not reachable at {self.base_url}. "
-                "Start it with `benethos-mailbox-service serve`."
-            ) from None
+            raise self._unreachable() from None
         if response.is_error:
             raise _api_error(response)
         return response
+
+    def _unreachable(self) -> ServiceUnavailableError:
+        return ServiceUnavailableError(
+            f"The mailbox service is not reachable at {self.base_url}. "
+            "Start it with `benethos-mailbox-service serve`."
+        )
 
     # --- the caller and the accounts --------------------------------------------------
 
@@ -229,20 +242,29 @@ class MailboxApiClient:
         return result
 
     async def get_attachment(
-        self, account_id: str, message_id: str, attachment_id: str
+        self, account_id: str, message_id: str, attachment_id: str, max_bytes: int
     ) -> Attachment:
-        """The attachment's bytes, with its type, charset and file name."""
-        response = await self._send(
-            "GET",
-            _path(
-                "accounts",
-                account_id,
-                "messages",
-                message_id,
-                "attachments",
-                attachment_id,
-            ),
+        """The attachment's bytes up to ``max_bytes``, with its type, charset
+        and file name. Reading stops where the limit is passed."""
+        path = _path(
+            "accounts", account_id, "messages", message_id, "attachments", attachment_id
         )
+        try:
+            async with self._http.stream("GET", path) as response:
+                if response.is_error:
+                    await response.aread()
+                    raise _api_error(response)
+                chunks: list[bytes] = []
+                read = 0
+                complete = True
+                async for chunk in response.aiter_bytes():
+                    chunks.append(chunk)
+                    read += len(chunk)
+                    if read > max_bytes:
+                        complete = False
+                        break
+        except httpx.TransportError:
+            raise self._unreachable() from None
         media, _, options = response.headers.get(
             "content-type", "application/octet-stream"
         ).partition(";")
@@ -252,10 +274,11 @@ class MailboxApiClient:
             response.headers.get("content-disposition", ""),
         )
         return Attachment(
-            data=response.content,
+            data=b"".join(chunks)[:max_bytes],
             content_type=media.strip().lower(),
-            charset=charset.group(1) if charset else None,
+            charset=_known_charset(charset.group(1)) if charset else None,
             filename=unquote(name.group(1)) if name else None,
+            complete=complete,
         )
 
     async def update_messages(
@@ -318,10 +341,18 @@ class MailboxApiClient:
         return result
 
     async def update_draft(
-        self, account_id: str, draft_id: str, message: dict[str, Any]
+        self,
+        account_id: str,
+        draft_id: str,
+        message: dict[str, Any],
+        keep_attachments: list[str] | None = None,
     ) -> dict[str, Any]:
+        """``keep_attachments``: ids of the stored draft's attachments that
+        stay. None or empty: none of them."""
         result: dict[str, Any] = await self.request(
-            "PUT", _path("accounts", account_id, "drafts", draft_id), json=message
+            "PUT",
+            _path("accounts", account_id, "drafts", draft_id),
+            json={**message, "keep_attachments": keep_attachments or None},
         )
         return result
 
@@ -422,10 +453,34 @@ def _sent(found: dict[str, Any]) -> Sent:
 
 
 def _api_error(response: httpx.Response) -> ApiError:
+    """The error envelope as an ApiError. A validation failure (422) has no
+    envelope but a list of what was wrong where, which is what the model
+    needs to correct the call."""
     try:
-        error = response.json()["error"]
-        return ApiError(response.status_code, error["code"], error["message"])
-    except (ValueError, KeyError, TypeError):
-        return ApiError(
-            response.status_code, "unexpected_response", response.reason_phrase
-        )
+        body = response.json()
+    except ValueError:
+        body = None
+    if isinstance(body, dict) and isinstance(body.get("error"), dict):
+        error = body["error"]
+        if "code" in error and "message" in error:
+            code, message = str(error["code"]), str(error["message"])
+            return ApiError(response.status_code, code, message)
+    if isinstance(body, dict) and isinstance(body.get("detail"), list):
+        reasons = [
+            f"{'.'.join(str(p) for p in item.get('loc', ()) if p != 'body')}: "
+            f"{item.get('msg', '')}"
+            for item in body["detail"]
+            if isinstance(item, dict)
+        ]
+        if reasons:
+            reason = "; ".join(reasons)
+            return ApiError(response.status_code, "validation_error", reason)
+    return ApiError(response.status_code, "unexpected_response", response.reason_phrase)
+
+
+def _known_charset(name: str) -> str | None:
+    try:
+        codecs.lookup(name)
+    except LookupError:
+        return None
+    return name

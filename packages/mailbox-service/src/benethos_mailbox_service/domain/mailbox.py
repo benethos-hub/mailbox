@@ -8,8 +8,11 @@ service.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
+from ..common.clock import utc_now
 from ..data.models import (
     AccountFailure,
     AttachmentContent,
@@ -53,9 +56,10 @@ class MailboxService:
         sync: SyncService,
         idempotency: Idempotency,
         sends: SendControl,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._calls = Calls(adapters, sync)
-        self._outgoing = Outgoing(self._calls, idempotency, sends)
+        self._outgoing = Outgoing(self._calls, idempotency, sends, clock)
         # Sending and drafts live in ``Outgoing``. Callers reach them here.
         self.send_message = self._outgoing.send_message
         self.list_sends = self._outgoing.list_sends
@@ -89,7 +93,11 @@ class MailboxService:
         access.require("update_folder", account_id)
         folder, _ = await self._own_folder(account_id, folder_id)
         name = changes.name or folder.name
-        parent = changes.parent_id if changes.moves else folder.parent_id
+        parent = (
+            await self._folder_by_role(account_id, changes.parent_id)
+            if changes.moves
+            else folder.parent_id
+        )
         updated = await self._calls.call(
             account_id, lambda p: p.update_folder(folder_id, name, parent)
         )
@@ -282,6 +290,15 @@ class MailboxService:
             lambda a: self._window(a, positions[a], search, limit),
             failures,
         )
+        # An account that failed is named in ``failures`` and keeps its place
+        # while others deliver, to join again later. Once every account
+        # still open has failed, the list ends: a cursor that promises more
+        # from accounts that do not answer would promise it forever.
+        if not chunks:
+            positions = {
+                a: merge.Position(p.folder_id, None, 0, done=True)
+                for a, p in positions.items()
+            }
 
         merged = [
             (item, account_id)

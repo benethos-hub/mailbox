@@ -103,7 +103,14 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-        target.replace(target.with_name(f"{target.name}.before-restore-{stamp}"))
+        kept = target.with_name(f"{target.name}.before-restore-{stamp}")
+        target.replace(kept)
+        # A journal left by a crash belongs to the old file. Beside the
+        # restored one, SQLite would roll it into that.
+        for suffix in ("-journal", "-wal", "-shm"):
+            journal = target.with_name(target.name + suffix)
+            if journal.exists():
+                journal.replace(kept.with_name(kept.name + suffix))
     create_private(target, data)
     # Opening migrates an older schema forward.
     Database(target).close()

@@ -18,6 +18,7 @@ from typing import NamedTuple
 from pydantic import ValidationError
 
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
+from .fields import ascii_domain
 from .fields import message_id as one_message_id
 from .text import from_html
 
@@ -75,7 +76,9 @@ def message(
 
     A ``draft`` keeps its Bcc recipients, and ``reference`` in a header of
     its own. ``outgoing`` takes both out again before the draft is sent."""
-    mail = EmailMessage(policy=SMTP)
+    # 7bit: a body beyond ASCII is encoded, since the message is handed to
+    # SMTP servers without asking for 8BITMIME.
+    mail = EmailMessage(policy=SMTP.clone(cte_type="7bit"))
     mail["From"] = _address(sender)
     # Values that came out of another message, the original of a reply or a
     # forward, are folded onto one line here. What a caller wrote was checked
@@ -218,9 +221,7 @@ def quoted_html(original: Message, html: str, heading: str) -> str:
 
 
 def _who(address: Address | None) -> str:
-    if address is None:
-        return "unknown"
-    return formataddr((address.name or "", address.email))
+    return _formatted(address.name, address.email) if address else "unknown"
 
 
 def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
@@ -234,11 +235,16 @@ def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
             [str(v) for n in ("To", "Cc", "Bcc") for v in headers.get_all(n, [])]
         )
     }
-    hidden = [r for r in recipients if r.lower() not in named]
+    hidden = [ascii_domain(r) for r in recipients if r.lower() not in named]
     if not hidden:
         return raw
     return head + b"\r\nBcc: " + ", ".join(hidden).encode() + separator + body
 
 
 def _address(recipient: Recipient) -> str:
-    return formataddr((one_line(recipient.name or ""), recipient.email))
+    return _formatted(recipient.name, recipient.email)
+
+
+def _formatted(name: str | None, email: str) -> str:
+    """``Name <address>``, the name on one line whatever message it came from."""
+    return formataddr((one_line(name or ""), email))

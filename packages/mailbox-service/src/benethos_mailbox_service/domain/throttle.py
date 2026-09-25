@@ -50,8 +50,9 @@ class SignInThrottle:
         self._lockout = lockout
         self._max_sources = max_sources
         self._clock = clock
-        # Per source: when it failed, oldest first, and until when it is
-        # locked. Ordered by last use, so the least recent is dropped first.
+        # Per source: when it failed, oldest first, ordered by last use so
+        # the least recent is dropped first. A locked source is in
+        # ``_locked`` alone, until when.
         self._failures: OrderedDict[str, deque[datetime]] = OrderedDict()
         self._locked: dict[str, datetime] = {}
 
@@ -80,12 +81,23 @@ class SignInThrottle:
             failures.popleft()
         failures.append(now)
         self._failures[source] = failures
+        # Failures of the least recent source are forgotten, never a
+        # lockout: a flood of spoofed sources must not free a locked one.
         while len(self._failures) > self._max_sources:
-            oldest, _ = self._failures.popitem(last=False)
-            self._locked.pop(oldest, None)
+            self._failures.popitem(last=False)
         if len(failures) >= self._limit:
             self._locked[source] = now + self._lockout
-            failures.clear()
+            del self._failures[source]
+            self._trim_locks(now)
+
+    def _trim_locks(self, now: datetime) -> None:
+        """Lockouts that ran out go first, then those ending soonest."""
+        if len(self._locked) <= self._max_sources:
+            return
+        for source in [s for s, until in self._locked.items() if until <= now]:
+            del self._locked[source]
+        while len(self._locked) > self._max_sources:
+            del self._locked[min(self._locked, key=lambda s: self._locked[s])]
 
     def succeeded(self, source: str) -> None:
         """A successful sign-in clears the source."""

@@ -253,6 +253,27 @@ async def test_a_rejected_token_is_fetched_anew() -> None:
     assert (await source.access_token()).get_secret_value() == "at-1"
 
 
+async def test_a_refused_refresh_is_not_asked_again() -> None:
+    endpoint = TokenEndpoint((400, {"error": "invalid_grant"}), granted())
+    source = RefreshingTokens(
+        client(endpoint), lambda: SecretStr("rt"), lambda _: None, lambda: NOW
+    )
+    for _ in range(2):
+        with pytest.raises(ProviderAuthError, match="sign in again"):
+            await source.access_token()
+    assert len(endpoint.forms) == 1
+
+
+async def test_a_gateway_page_instead_of_json() -> None:
+    def gateway(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(502, text="<html>bad gateway</html>")
+
+    app = App(microsoft_endpoints(), "client-1", SecretStr("app-secret"))
+    oauth = OAuthClient(app, ApiClient(transport=httpx.MockTransport(gateway)))
+    with pytest.raises(ProviderError, match="502"):
+        await oauth.refresh(SecretStr("rt"))
+
+
 async def test_refreshes_at_once_share_one_request() -> None:
     endpoint = TokenEndpoint(granted())
     source = RefreshingTokens(
@@ -343,6 +364,17 @@ async def test_a_state_expires() -> None:
         await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
 
 
+async def test_only_the_starter_cancels_a_sign_in() -> None:
+    services = services_with(TokenEndpoint(granted(id_token=id_token(email="a@b.c"))))
+    state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
+    services.oauth.cancel(Access.admin("usr_other", "other admin"), state)
+    await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
+    state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
+    services.oauth.cancel(ADMIN, state)
+    with pytest.raises(BadRequestError, match="unknown or expired"):
+        await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
+
+
 async def test_a_sign_in_belongs_to_who_started_it() -> None:
     services = services_with(TokenEndpoint())
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
@@ -393,6 +425,24 @@ async def test_sign_in_again_with_the_same_address_only() -> None:
     url = oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT, account_id=account.id)
     await oauth.finish(ADMIN, ProviderType.MICROSOFT, state_of(url), "c")
     assert services.vault.read(account.id, REFRESH_TOKEN).get_secret_value() == "rt-3"
+
+
+async def test_sign_in_again_needs_no_read_right() -> None:
+    endpoint = TokenEndpoint(
+        granted("at-1", "rt-1", id_token=id_token(email="me@example.org")),
+        granted("at-2", "rt-2", id_token=id_token(email="me@example.org")),
+    )
+    services = services_with(endpoint)
+    state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
+    account = await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
+    manager = Access(
+        "usr_m", "manager", [Grant(accounts=[account.id], allow=["accounts.manage"])]
+    )
+    url = services.oauth.start(
+        manager, ProviderType.MICROSOFT, REDIRECT, account_id=account.id
+    )
+    await services.oauth.finish(manager, ProviderType.MICROSOFT, state_of(url), "c")
+    assert services.vault.read(account.id, REFRESH_TOKEN).get_secret_value() == "rt-2"
 
 
 async def test_a_connected_account_refreshes_and_keeps_the_rotation() -> None:

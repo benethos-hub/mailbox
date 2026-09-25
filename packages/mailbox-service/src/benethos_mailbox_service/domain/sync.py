@@ -10,7 +10,6 @@ guessed: the old id is dropped and the new place gets a new one.
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import replace
 from typing import TypeVar
@@ -18,8 +17,9 @@ from typing import TypeVar
 from ..common.ids import new_id
 from ..data.providers import Capability, MailProvider
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
-from ..errors import MailboxServiceError, NotFoundError
+from ..errors import MailboxServiceError, MessageNotFoundError
 from .adapters import Adapters
+from .locks import KeyedLocks
 
 T = TypeVar("T")
 
@@ -38,7 +38,7 @@ class SyncService:
         self._adapters = adapters
         self._index = index
         self._new_id = new_id
-        self._locks: dict[str, asyncio.Lock] = {}
+        self._locks: KeyedLocks[str] = KeyedLocks()
 
     def mapped(self, account_id: str) -> bool:
         """Whether the account's ids go through the index."""
@@ -75,17 +75,18 @@ class SyncService:
         operation: Callable[[str], Awaitable[T]],
     ) -> T:
         """Run ``operation`` with the provider's id of a message. If the
-        provider no longer finds it there, sync once and try its new place."""
+        provider no longer finds the message there, sync once and try its
+        new place. Anything else it does not find is not ours to follow."""
         if not self.mapped(account_id):
             return await operation(message_id)
         native = self._native(account_id, message_id)
         try:
             return await operation(native)
-        except NotFoundError:
+        except MessageNotFoundError:
             await self.sync_account(account_id)
             entry = self._index.get(account_id, message_id)
             if entry is None or entry.native_id == native:
-                raise NotFoundError(f"message {message_id} not found") from None
+                raise MessageNotFoundError(f"message {message_id} not found") from None
             return await operation(entry.native_id)
 
     def relocate(
@@ -136,7 +137,7 @@ class SyncService:
     def _native(self, account_id: str, message_id: str) -> str:
         entry = self._index.get(account_id, message_id)
         if entry is None:
-            raise NotFoundError(f"message {message_id} not found")
+            raise MessageNotFoundError(f"message {message_id} not found")
         return entry.native_id
 
     # --- sync -------------------------------------------------------------------------
@@ -146,7 +147,7 @@ class SyncService:
         whose state changed. A failure changes nothing."""
         if not self.mapped(account_id):
             return
-        lock = self._locks.setdefault(account_id, asyncio.Lock())
+        lock = self._locks.get(account_id)
         async with lock:
             await self._sync(account_id)
 

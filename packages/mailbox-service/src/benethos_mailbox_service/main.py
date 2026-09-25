@@ -101,7 +101,12 @@ def build_services(
     )
     adapters = Adapters(repos.accounts, vault, provider_factory, oauth=clients)
     accounts = AccountService(
-        repos.accounts, vault, adapters, repos.index, check_host=fetcher.checked_address
+        repos.accounts,
+        vault,
+        adapters,
+        repos.index,
+        check_host=fetcher.checked_address,
+        idempotency=repos.idempotency,
     )
     sync = SyncService(adapters, repos.index)
     auth = AuthService(repos.users, repos.roles, repos.tokens, admin_key=admin_key)

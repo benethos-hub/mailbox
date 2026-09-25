@@ -178,7 +178,7 @@ async def test_a_message(graph: FakeGraph) -> None:
     provider = adapter(graph)
     message = await provider.get_message(message_id)
     assert message.sender is not None and message.sender.email == "alice@example.com"
-    assert message.unread and message.starred and message.keywords == ["Work"]
+    assert message.unread and message.starred and message.keywords == ["work"]
     assert message.html_body == "<p>Hi</p>" and message.text_body is None
     assert [a.filename for a in message.attachments] == ["offer.pdf"]
     content = await provider.get_attachment(message_id, "att1")
@@ -218,6 +218,54 @@ async def test_trash_then_for_good(graph: FakeGraph) -> None:
     assert isinstance(again, ConflictError)
     [gone] = (await provider.delete_messages([message_id], permanent=True)).values()
     assert gone is None and message_id not in graph.messages
+
+
+async def test_message_headers_come_in_one_batch(graph: FakeGraph) -> None:
+    ids = [graph.add_message(subject=f"m{n}") for n in range(3)]
+    provider = adapter(graph)
+    before = len(graph.requests)  # the fake answers a batch through itself
+    found = await provider.message_headers([*ids, "AAMk999="])
+    posted = [r for r in graph.requests[before:] if r.method == "POST"]
+    assert [r.url.path for r in posted] == ["/v1.0/$batch"]
+    assert set(found) == set(ids)
+    assert all(v is not None and v.startswith("<") for v in found.values())
+
+
+async def test_for_good_from_the_inbox(graph: FakeGraph) -> None:
+    message_id = graph.add_message()
+    provider = adapter(graph)
+    [gone] = (await provider.delete_messages([message_id], permanent=True)).values()
+    assert gone is None and message_id not in graph.messages
+
+
+async def test_a_top_level_rename_does_not_move(graph: FakeGraph) -> None:
+    provider = adapter(graph)
+    top = await provider.create_folder("Work", None)
+    await provider.update_folder(top.id, "Working", None)
+    moves = [r for r in graph.requests if r.url.path.endswith("/move")]
+    assert moves == []
+
+
+async def test_graph_asking_to_wait_is_left_alone(graph: FakeGraph) -> None:
+    now = [0.0]
+    provider = MicrosoftProvider(
+        Tokens(TOKEN),
+        ApiClient(transport=httpx.MockTransport(graph)),
+        clock=lambda: now[0],
+    )
+    graph.next_answer = httpx.Response(
+        429,
+        json={"error": {"code": "TooManyRequests", "message": "slow down"}},
+        headers={"Retry-After": "30"},
+    )
+    with pytest.raises(ProviderUnavailableError, match="retry after 30s"):
+        await provider.list_folders()
+    before = len(graph.requests)  # the fake answers a batch through itself
+    with pytest.raises(ProviderUnavailableError, match="next attempt in 30s"):
+        await provider.list_folders()
+    assert len(graph.requests) == before
+    now[0] += 31
+    await provider.list_folders()
 
 
 async def test_folders_are_created_renamed_moved_deleted(graph: FakeGraph) -> None:

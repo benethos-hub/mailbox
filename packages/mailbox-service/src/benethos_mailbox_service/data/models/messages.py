@@ -59,7 +59,12 @@ class MessageSummary(BaseModel):
             "`$draft`, and the provider's own keywords."
         ),
     )
-    has_attachments: bool = False
+    has_attachments: bool = Field(
+        default=False,
+        description="In a list of an IMAP account, whether the message is "
+        "multipart/mixed, which a list can tell without reading the message. "
+        "The message itself says whether it has attachments.",
+    )
 
     model_config = {"populate_by_name": True, "serialize_by_alias": True}
 
@@ -153,6 +158,6 @@ class MessageUpdate(BaseModel):
         reserved = sorted({k.lower() for k in keywords or []} & RESERVED_KEYWORDS)
         if reserved:
             raise ValueError(
-                f"{', '.join(reserved)}: use unread, starred or DELETE instead"
+                f"{', '.join(reserved)}: use unread, starred or a delete instead"
             )
         return keywords

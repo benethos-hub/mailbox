@@ -22,6 +22,11 @@ class NotFoundError(MailboxServiceError):
     code = "not_found"
 
 
+class MessageNotFoundError(NotFoundError):
+    """The message itself is not where it was said to be. The sync of ids
+    acts on this alone, not on a missing attachment, draft or folder."""
+
+
 class BadRequestError(MailboxServiceError):
     """The request is well-formed but makes no sense, e.g. an unknown right."""
 
@@ -65,6 +70,9 @@ class CredentialMissingError(CredentialError):
 
 
 class ConflictError(MailboxServiceError):
+    """The record collides with what is stored: an id or a unique value
+    taken, or a reference to a record that is gone."""
+
     code = "conflict"
 
 
@@ -88,6 +96,12 @@ class SendLimitError(RateLimitedError):
     """The caller has sent as many mails in 24 hours as its grants allow."""
 
     code = "send_limit_reached"
+
+
+class StorageError(MailboxServiceError):
+    """The service's own storage failed: busy, damaged or unreadable."""
+
+    code = "storage_error"
 
 
 class NotSupportedError(MailboxServiceError):

@@ -44,3 +44,7 @@ class SqliteIdempotencyRepository:
         self._db.execute(
             "DELETE FROM idempotency WHERE created_at < ?", (before.isoformat(),)
         )
+
+    def forget_account(self, account_id: str) -> None:
+        # ON DELETE CASCADE does this as well. Said here, so both stores agree.
+        self._db.execute("DELETE FROM idempotency WHERE account_id = ?", (account_id,))

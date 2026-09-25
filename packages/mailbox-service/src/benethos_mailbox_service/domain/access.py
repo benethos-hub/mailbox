@@ -106,10 +106,12 @@ class Access:
         return False
 
     def sees(self, account_id: str) -> bool:
-        """Whether the account exists for this caller at all."""
+        """Whether the account exists for this caller at all: some right on
+        it that is about existing accounts."""
+        about_accounts = permissions.ACCOUNT_FREE | permissions.ALL_ACCOUNTS
         return any(
             (rule.accounts is None or account_id in rule.accounts)
-            and rule.operations - permissions.ACCOUNT_FREE
+            and rule.operations - about_accounts
             for rule in self._rules
         )
 
@@ -133,13 +135,21 @@ class Access:
             and (rule.accounts is None or account_id in rule.accounts)
         ]
 
+    def sending_limits(self, account_id: str) -> list[SendLimit]:
+        """The limits of every grant that allows any kind of sending on the
+        account, each grant once."""
+        return [
+            rule.limit
+            for rule in self._rules
+            if rule.operations & SEND_OPERATIONS
+            and (rule.accounts is None or account_id in rule.accounts)
+        ]
+
     def sends_anywhere(self, account_id: str) -> bool:
         """Whether a grant lets the caller send from the account to any
         address, however often."""
         return any(
-            limit.recipients is None
-            for operation in SEND_OPERATIONS
-            for limit in self.send_limits(operation, account_id)
+            limit.recipients is None for limit in self.sending_limits(account_id)
         )
 
     def covers(self, grants: Iterable[Grant]) -> bool:

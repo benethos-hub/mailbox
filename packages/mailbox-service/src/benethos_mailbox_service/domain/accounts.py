@@ -19,7 +19,11 @@ from ..data.providers import (
     settings_defaults,
 )
 from ..data.secrets import CredentialVault
-from ..data.storage import AccountRepository, MessageIndexRepository
+from ..data.storage import (
+    AccountRepository,
+    IdempotencyRepository,
+    MessageIndexRepository,
+)
 from ..errors import BadRequestError, MailboxServiceError
 from .access import Access
 from .adapters import REFRESH_TOKEN, Adapters
@@ -36,11 +40,13 @@ class AccountService:
         adapters: Adapters,
         index: MessageIndexRepository | None = None,
         check_host: HostCheck | None = None,
+        idempotency: IdempotencyRepository | None = None,
     ) -> None:
         self._repository = repository
         self._vault = vault
         self._adapters = adapters
         self._index = index
+        self._idempotency = idempotency
         # Every host in an account's settings passes this before the first
         # connection: the service must not be pointed into its own network.
         self._check_host = check_host
@@ -125,27 +131,30 @@ class AccountService:
     ) -> Account:
         """Change the display name, settings (``None`` removes one) or
         credentials. A change of settings or credentials logs in first, as on
-        create: nothing is stored unless the provider accepts it."""
+        create: nothing is stored unless the provider accepts it. Settings
+        sent as they are stored change nothing and log in nowhere."""
         access.require("update_account", account_id)
         _no_secrets_in(settings)
         account = self._repository.get(account_id)
-        merged: dict[str, str | int | bool] = dict(
-            self._repository.settings(account_id)
-        )
+        defaults = settings_defaults(account.provider, account.email)
+        # A setting removed falls back to what the provider assumes.
+        before = {**defaults, **self._repository.settings(account_id)}
+        merged: dict[str, str | int | bool] = dict(before)
         for key, value in (settings or {}).items():
             if value is None:
                 merged.pop(key, None)
+                if key in defaults:
+                    merged[key] = defaults[key]
             else:
                 merged[key] = value
-        # A setting removed falls back to what the provider assumes.
-        for key, value in settings_defaults(account.provider, account.email).items():
-            merged.setdefault(key, value)
+        changed = merged != before
         secrets = dict(credentials or {})
-        if secrets:
+        # An OAuth probe may hand back a refresh token to store.
+        if secrets or self.signs_in_with_oauth(account.provider):
             self._vault.require_ready()
-        if settings:
+        if changed:
             await self._check_hosts(merged)
-        if settings or secrets:
+        if changed or secrets:
 
             def read(field: str) -> SecretStr:
                 if field in secrets:
@@ -155,10 +164,13 @@ class AccountService:
             await self._probe(account.provider, merged, read, secrets, signed_in)
         if rename:
             account = account.model_copy(update={"display_name": display_name})
-        self._repository.update(account, merged)
+        # The credentials first: a record that names settings the stored
+        # credentials do not match would be a broken account, the reverse
+        # only a credential the next probe confirms again.
         for field, secret in secrets.items():
             self._vault.store(account_id, field, secret)
-        if settings or secrets:
+        self._repository.update(account, merged)
+        if changed or secrets:
             # The live adapter still has the old settings: the next use
             # builds a new one.
             await self._adapters.drop(account_id)
@@ -177,6 +189,8 @@ class AccountService:
         self._vault.delete(account_id)
         if self._index is not None:
             self._index.forget_account(account_id)
+        if self._idempotency is not None:
+            self._idempotency.forget_account(account_id)
         self._repository.delete(account_id)
         await self._adapters.drop(account_id)
 

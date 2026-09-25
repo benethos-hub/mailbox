@@ -76,7 +76,7 @@ async def finish(
     if kind is None:
         return back("/ui/accounts", error=f"Unknown provider: {provider}")
     if query.get("error"):
-        oauth.cancel(state)
+        oauth.cancel(caller, state)
         reason = query.get("error_description") or query["error"]
         return back("/ui/accounts", error=f"{kind.value} did not sign in: {reason}")
     with failing("/ui/accounts"):

@@ -56,7 +56,9 @@ class FolderUpdate(BaseModel):
 
     name: str | None = Field(default=None, pattern=FOLDER_NAME_PATTERN)
     parent_id: str | None = Field(
-        default=None, description="The new parent. `null` moves it to the top."
+        default=None,
+        description="The new parent, a folder id or a role such as `archive`. "
+        "`null` moves it to the top.",
     )
 
     @property

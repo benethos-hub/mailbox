@@ -99,6 +99,17 @@ def contents_calls(server: FakeMailBox) -> int:
     return sum(1 for c in server.calls if c[0] == "search")
 
 
+async def test_a_missing_attachment_is_not_a_moved_message(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    message_id = (await ids_by_subject(services, account_id))["Mail 1"]
+    before = contents_calls(server)
+    with pytest.raises(NotFoundError, match="attachment att_9 not found"):
+        await services.mailbox.get_attachment(ADMIN, account_id, message_id, "att_9")
+    # No sync was triggered: the message is where the index says.
+    assert contents_calls(server) == before
+
+
 async def test_ids_are_ours_and_stay_the_same(
     services: Services, account_id: str
 ) -> None:

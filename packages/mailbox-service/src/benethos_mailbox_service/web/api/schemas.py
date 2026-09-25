@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, SecretStr
 
-from ...data.models import ApiToken, Grant, ProviderType
+from ...data.models import ApiToken, DraftMessage, Grant, ProviderType
 
 
 class AccountCreate(BaseModel):
@@ -42,6 +42,20 @@ class AccountUpdate(BaseModel):
     credentials: dict[str, SecretStr] = Field(
         default_factory=dict,
         description="New secrets such as `password`. Stored encrypted, never returned.",
+    )
+
+
+class DraftReplacement(DraftMessage):
+    """A draft as `create_draft` takes it, and which attachments of the
+    stored draft to keep."""
+
+    keep_attachments: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Ids of attachments of the stored draft that go into the new one, "
+            "before those `attachments` brings. Any other stored attachment "
+            "is gone afterwards."
+        ),
     )
 
 

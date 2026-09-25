@@ -34,7 +34,7 @@ from benethos_mailbox_service.data.storage import (
     TokenRepository,
     UserRepository,
 )
-from benethos_mailbox_service.errors import NotFoundError
+from benethos_mailbox_service.errors import ConflictError, NotFoundError
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -96,6 +96,14 @@ def test_accounts_round_trip(stores: Stores) -> None:
             call()
 
 
+def test_an_account_id_is_taken_once(stores: Stores) -> None:
+    account = Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
+    stores.accounts.add(account)
+    with pytest.raises(ConflictError):
+        stores.accounts.add(account.model_copy(update={"email": "b@example.com"}))
+    assert stores.accounts.get("acc_1").email == "a@example.com"
+
+
 def test_users_round_trip(stores: Stores) -> None:
     repo = stores.users
     user = User(
@@ -152,3 +160,22 @@ def test_tokens_round_trip(stores: Stores) -> None:
     assert repo.list_for_user("usr_1") == []
     with pytest.raises(NotFoundError):
         repo.get("tok_1")
+
+
+def test_a_token_hash_is_held_once_and_a_save_replaces_the_whole(
+    stores: Stores,
+) -> None:
+    stores.users.save(User(id="usr_1", name="u"))
+    stores.users.save(User(id="usr_2", name="v"))
+    repo = stores.tokens
+    token = ApiToken(
+        id="tok_1", user_id="usr_1", name="t", token_hash="h", created_at=NOW
+    )
+    repo.save(token)
+    with pytest.raises(ConflictError):
+        repo.save(token.model_copy(update={"id": "tok_2"}))
+    moved = token.model_copy(update={"user_id": "usr_2", "token_hash": "h2"})
+    repo.save(moved)
+    assert repo.get("tok_1") == moved
+    assert repo.find_by_hash("h") is None
+    assert repo.list_for_user("usr_2") == [moved]

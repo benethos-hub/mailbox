@@ -29,6 +29,9 @@ from ..templates import back, render
 
 router = APIRouter()
 
+# Longer than that is a token without an end: leave the field empty for one.
+MAX_TOKEN_DAYS = 3650
+
 
 def _account_names(request: Request, caller: Access) -> dict[str, str]:
     """Emails of the accounts the caller sees, to show a grant readably."""
@@ -163,8 +166,10 @@ async def create_token(
     here = f"/ui/users/{user_id}"
     name = str(form.get("name") or "").strip()
     days = str(form.get("days") or "").strip()
-    if days and not days.isdigit():
-        return back(here, error="Days valid must be a whole number.")
+    if days and not (days.isdigit() and int(days) <= MAX_TOKEN_DAYS):
+        return back(
+            here, error=f"Days valid must be a whole number up to {MAX_TOKEN_DAYS}."
+        )
     expires_at = utc_now() + timedelta(days=int(days)) if days else None
     with failing(here):
         _, plain = users.create_token(caller, user_id, name, expires_at)

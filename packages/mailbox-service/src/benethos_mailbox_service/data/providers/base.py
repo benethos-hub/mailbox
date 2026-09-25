@@ -90,7 +90,9 @@ class MailProvider(Protocol):
         search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
         """Newest first. ``search`` narrows the list. A cursor belongs to
-        the same folder and search."""
+        the same folder and search. Without a folder: every folder of the
+        account where the provider can list across them (Microsoft), else
+        the inbox (IMAP)."""
         ...
 
     async def get_message(self, message_id: str) -> Message: ...

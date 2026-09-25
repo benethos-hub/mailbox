@@ -53,9 +53,14 @@ class SessionStore:
         self._clock = clock
 
     def create(self, token: str) -> str:
+        now = self._clock()
+        # Sessions nobody came back to would hold their token for the life
+        # of the process. Each sign-in sweeps them.
+        for stale in [s for s, v in self._sessions.items() if now - v.last_seen > IDLE]:
+            del self._sessions[stale]
         session_id = secrets.token_urlsafe(32)
         self._sessions[session_id] = UiSession(
-            token=token, csrf=secrets.token_urlsafe(32), last_seen=self._clock()
+            token=token, csrf=secrets.token_urlsafe(32), last_seen=now
         )
         return session_id
 

@@ -45,18 +45,19 @@ class SqliteMessageIndexRepository:
     def in_folders(
         self, account_id: str, folder_ids: Iterable[str]
     ) -> list[IndexEntry]:
-        found: list[IndexEntry] = []
+        # In the order the entries came, across the chunks of the query.
+        found: list[tuple[int, IndexEntry]] = []
         for chunk in _chunks(list(dict.fromkeys(folder_ids))):
             marks = ", ".join("?" * len(chunk))
             found += [
-                _entry(row)
+                (row["rowid"], _entry(row))
                 for row in self._db.query(
-                    "SELECT * FROM message_index WHERE account_id = ?"
-                    f" AND folder_id IN ({marks}) ORDER BY rowid",
+                    "SELECT rowid, * FROM message_index WHERE account_id = ?"
+                    f" AND folder_id IN ({marks})",
                     (account_id, *chunk),
                 )
             ]
-        return found
+        return [entry for _, entry in sorted(found, key=lambda pair: pair[0])]
 
     def add(self, account_id: str, entries: Iterable[IndexEntry]) -> None:
         with self._db.transaction() as db:

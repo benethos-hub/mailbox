@@ -91,7 +91,11 @@ def start(env: dict[str, str]) -> subprocess.Popen[bytes]:
             [command, "keys", "init"], env=env, check=True, capture_output=True
         )
     process = subprocess.Popen(
-        [command, "serve"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+        [command, "serve"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        # Nobody reads it: a pipe would fill up and block the service.
+        stderr=subprocess.DEVNULL,
     )
     for _ in range(60):
         try:
@@ -224,10 +228,9 @@ def check(
         )
     copy = _find(client, ms_id, "sent", subject, tries=6)
     if run.check("the copy in Sent Items", copy is not None):
-        moved = client.delete(f"{base}/messages/{copy}")
-        run.check("to the trash", moved.status_code == 204)
-        # Right after the move Exchange may not find the message yet: the
-        # first answer is shown, then two more tries.
+        # Deleted for good straight from Sent Items: the adapter goes through
+        # the trash, since Graph's delete outside it only moves there. Right
+        # after a move Exchange may not find the message yet, so three tries.
         for attempt in range(3):
             purged = client.delete(
                 f"{base}/messages/{copy}", params={"permanent": "true"}
@@ -240,6 +243,10 @@ def check(
             time.sleep(3)
         run.check(
             "deleted for good", purged.status_code == 204, f"after {attempt + 1} tries"
+        )
+        run.check(
+            "and not in the trash",
+            _find(client, ms_id, "trash", subject, tries=1) is None,
         )
 
 

@@ -8,6 +8,8 @@ writes down is also what an environment variable or a key file holds.
 from __future__ import annotations
 
 import base64
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol
 
@@ -77,14 +79,20 @@ class FileKeyProvider:
         self._path = path
 
     def load(self) -> bytes | None:
-        if not self._path.exists():
-            return None
-        return decode_recovery(self._path.read_text(encoding="utf-8"))
+        try:
+            if not self._path.exists():
+                return None
+            return decode_recovery(self._path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            raise KeyProviderError(f"cannot read {self._path}: {exc}") from None
 
     def store(self, key: bytes) -> None:
         if self._path.exists():
             raise KeyProviderError(f"{self._path} exists, refusing to overwrite it")
-        create_private(self._path, (encode_recovery(key) + "\n").encode("utf-8"))
+        try:
+            create_private(self._path, (encode_recovery(key) + "\n").encode("utf-8"))
+        except OSError as exc:
+            raise KeyProviderError(f"cannot write {self._path}: {exc}") from None
 
     def describe(self) -> str:
         return f"the key file {self._path}"
@@ -96,13 +104,29 @@ class KeyringKeyProvider:
     def load(self) -> bytes | None:
         import keyring
 
-        value = keyring.get_password(KEYRING_SERVICE, KEYRING_USERNAME)
+        with _keyring_failures("read"):
+            value = keyring.get_password(KEYRING_SERVICE, KEYRING_USERNAME)
         return decode_recovery(value) if value else None
 
     def store(self, key: bytes) -> None:
         import keyring
 
-        keyring.set_password(KEYRING_SERVICE, KEYRING_USERNAME, encode_recovery(key))
+        with _keyring_failures("write"):
+            value = encode_recovery(key)
+            keyring.set_password(KEYRING_SERVICE, KEYRING_USERNAME, value)
 
     def describe(self) -> str:
         return "the operating system's credential store"
+
+
+@contextmanager
+def _keyring_failures(action: str) -> Iterator[None]:
+    """keyring has one backend per platform, each failing in its own way:
+    no backend at all, a locked store, a bus that does not answer. Every one
+    is the same to us: the key provider is not usable."""
+    try:
+        yield
+    except Exception as exc:
+        raise KeyProviderError(
+            f"cannot {action} the operating system's credential store: {exc}"
+        ) from None

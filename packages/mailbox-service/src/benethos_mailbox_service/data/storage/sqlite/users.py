@@ -111,7 +111,8 @@ class SqliteTokenRepository:
         self._db.execute(
             "INSERT INTO tokens (id, user_id, name, token_hash, created_at,"
             " expires_at, last_used_at, revoked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-            " ON CONFLICT(id) DO UPDATE SET name = excluded.name,"
+            " ON CONFLICT(id) DO UPDATE SET user_id = excluded.user_id,"
+            " name = excluded.name, token_hash = excluded.token_hash,"
             " expires_at = excluded.expires_at,"
             " last_used_at = excluded.last_used_at,"
             " revoked_at = excluded.revoked_at",

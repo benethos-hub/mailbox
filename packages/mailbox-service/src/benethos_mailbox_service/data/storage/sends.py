@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Protocol
 
+from ...errors import ConflictError
 from ..models import SendOutcome, SendRecord
 
 
@@ -31,6 +32,8 @@ class InMemorySendLogRepository:
         self._records: list[SendRecord] = []
 
     def add(self, record: SendRecord) -> None:
+        if any(r.id == record.id for r in self._records):
+            raise ConflictError(f"send {record.id} exists already")
         self._records.append(record)
 
     def sent_since(

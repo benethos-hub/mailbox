@@ -19,7 +19,9 @@ preference. The adapter looks their immutable ids up.
 from __future__ import annotations
 
 import base64
-from collections.abc import Mapping
+import math
+import time
+from collections.abc import Callable, Mapping
 from typing import Any
 from urllib.parse import quote, unquote, urlencode, urlsplit
 
@@ -71,10 +73,19 @@ class MicrosoftProvider:
         }
     )
 
-    def __init__(self, tokens: TokenSource, http: ApiClient | None = None) -> None:
+    def __init__(
+        self,
+        tokens: TokenSource,
+        http: ApiClient | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._tokens = tokens
         self._http = http or ApiClient()
+        self._clock = clock
         self._roles: dict[str, FolderRole] | None = None
+        self._root: str | None = None
+        # Until when Graph asked to be left alone (Retry-After).
+        self._rest_until = 0.0
 
     # --- the wire -------------------------------------------------------------------
 
@@ -88,7 +99,13 @@ class MicrosoftProvider:
         content: bytes | None = None,
         content_type: str | None = None,
     ) -> Answer:
-        """One Graph request. ``path`` below ``/v1.0``, e.g. ``/me/messages``."""
+        """One Graph request. ``path`` below ``/v1.0``, e.g. ``/me/messages``.
+        While Graph asked to be left alone, nothing is sent."""
+        wait = self._rest_until - self._clock()
+        if wait > 0:
+            raise ProviderUnavailableError(
+                f"microsoft asked to wait: next attempt in {math.ceil(wait)}s"
+            )
         for attempt in (1, 2):
             token = await self._tokens.access_token()
             headers = {
@@ -111,6 +128,7 @@ class MicrosoftProvider:
                 self._tokens.reject()
                 continue
             if not answer.ok:
+                self._rest_until = self._clock() + _retry_after(answer)
                 raise _failure(answer)
             return answer
         raise AssertionError("unreachable")  # pragma: no cover
@@ -182,13 +200,20 @@ class MicrosoftProvider:
     ) -> Folder:
         path = f"/me/mailFolders/{_id(folder_id)}"
         item = await self._json("PATCH", path, json_body={"displayName": name})
-        if item.get("parentFolderId") != parent_id:
-            # The top of the folder tree is the mailbox's root folder.
-            target = parent_id or "msgfolderroot"
+        # The top of the folder tree is the mailbox's root folder, which
+        # Graph names as the parent of a top-level folder.
+        root = await self._root_id()
+        if (item.get("parentFolderId") or root) != (parent_id or root):
             item = await self._json(
-                "POST", f"{path}/move", json_body={"destinationId": target}
+                "POST", f"{path}/move", json_body={"destinationId": parent_id or root}
             )
         return mappers.folder(item, await self._folder_roles())
+
+    async def _root_id(self) -> str:
+        if self._root is None:
+            item = await self._json("GET", "/me/mailFolders/msgfolderroot")
+            self._root = str(item["id"])
+        return self._root
 
     async def delete_folder(self, folder_id: str) -> None:
         await self._call("DELETE", f"/me/mailFolders/{_id(folder_id)}")
@@ -340,7 +365,7 @@ class MicrosoftProvider:
             content_type="text/plain",
         )
         if replaces is not None:
-            await self._call("DELETE", f"/me/messages/{_id(replaces)}")
+            await self._delete_for_good(replaces)
         return mappers.summary(item)
 
     async def get_draft(self, draft_id: str) -> bytes:
@@ -349,7 +374,7 @@ class MicrosoftProvider:
 
     async def delete_draft(self, draft_id: str) -> None:
         await self._draft(draft_id)
-        await self._call("DELETE", f"/me/messages/{_id(draft_id)}")
+        await self._delete_for_good(draft_id)
 
     async def _draft(self, draft_id: str) -> None:
         """Only drafts: any other id is not found, so the draft operations
@@ -369,9 +394,10 @@ class MicrosoftProvider:
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxServiceError]:
         body = mappers.changes(changes.unread, changes.starred, changes.keywords)
-        target = rules.move_target(changes, self.capabilities)
 
         async def one(message_id: str) -> MessageSummary:
+            # Judged per id, as the other adapters answer it.
+            target = rules.move_target(changes, self.capabilities)
             path = f"/me/messages/{_id(message_id)}"
             item = None
             if body:
@@ -391,18 +417,16 @@ class MicrosoftProvider:
     async def delete_messages(
         self, message_ids: list[str], permanent: bool
     ) -> dict[str, MessageSummary | None | MailboxServiceError]:
-        trash = None
-        if not permanent:
-            try:
-                trash = await self._role_id(FolderRole.TRASH)
-            except ConflictError as exc:
-                return dict.fromkeys(message_ids, exc)
+        try:
+            trash = await self._role_id(FolderRole.TRASH)
+        except ConflictError as exc:
+            return dict.fromkeys(message_ids, exc)
 
         async def one(message_id: str) -> MessageSummary | None:
-            path = f"/me/messages/{_id(message_id)}"
-            if trash is None:
-                await self._call("DELETE", path)
+            if permanent:
+                await self._delete_for_good(message_id, trash)
                 return None
+            path = f"/me/messages/{_id(message_id)}"
             where = await self._json("GET", path, params={"$select": "parentFolderId"})
             if where.get("parentFolderId") == trash:
                 raise rules.in_trash_already()
@@ -413,11 +437,28 @@ class MicrosoftProvider:
 
         return await rules.per_id(message_ids, one)
 
+    async def _delete_for_good(self, message_id: str, trash: str | None = None) -> None:
+        """Graph's DELETE outside the trash only moves the message there.
+        For good means: into the trash, then deleted from it."""
+        if trash is None:
+            trash = await self._role_id(FolderRole.TRASH)
+        path = f"/me/messages/{_id(message_id)}"
+        where = await self._json("GET", path, params={"$select": "parentFolderId"})
+        if where.get("parentFolderId") != trash:
+            item = await self._json(
+                "POST", f"{path}/move", json_body={"destinationId": trash}
+            )
+            path = f"/me/messages/{_id(str(item['id']))}"
+        await self._call("DELETE", path)
+
     # --- for the sync worker ------------------------------------------------------
     # Ids are stable: the domain keeps no id mapping for this provider, so
     # these serve checks such as "is the folder empty".
 
     async def folder_states(self) -> dict[str, str]:
+        """Graph reports no UIDNEXT: the counts stand in. A message that
+        arrives read while another leaves goes unnoticed until the next
+        change, which the sync then catches up on."""
         return {f.id: f"{f.total}:{f.unread}" for f in await self.list_folders()}
 
     async def folder_contents(self, folder_id: str) -> list[str]:
@@ -428,17 +469,27 @@ class MicrosoftProvider:
         return [str(item["id"]) for item in items]
 
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+        """Twenty to a JSON batch. A message that is gone is left out."""
         found: dict[str, str | None] = {}
-        for message_id in message_ids:
-            try:
-                item = await self._json(
-                    "GET",
-                    f"/me/messages/{_id(message_id)}",
-                    params={"$select": "internetMessageId"},
-                )
-            except NotFoundError:
-                continue
-            found[message_id] = item.get("internetMessageId")
+        for start in range(0, len(message_ids), BATCH_SIZE):
+            chunk = message_ids[start : start + BATCH_SIZE]
+            requests = [
+                {
+                    "id": str(n),
+                    "method": "GET",
+                    "url": f"/me/messages/{_id(message_id)}?$select=internetMessageId",
+                    "headers": {"Prefer": IMMUTABLE_IDS},
+                }
+                for n, message_id in enumerate(chunk)
+            ]
+            answer = await self._json(
+                "POST", "/$batch", json_body={"requests": requests}
+            )
+            for reply in answer.get("responses") or []:
+                if reply.get("status") != 200:
+                    continue
+                body = reply.get("body") or {}
+                found[chunk[int(reply["id"])]] = body.get("internetMessageId")
         return found
 
     async def wait_for_change(self, timeout: float) -> bool:
@@ -471,6 +522,14 @@ def _own_path(link: str) -> str:
     if not rest.startswith("/me/") or ".." in rest:
         raise BadRequestError("invalid cursor")
     return f"{rest}?{parts.query}" if parts.query else rest
+
+
+def _retry_after(answer: Answer) -> float:
+    """The seconds Graph asks to wait, 0 when it asks nothing."""
+    if answer.status not in (429, 503):
+        return 0.0
+    value = answer.headers.get("retry-after", "")
+    return float(value) if value.isdigit() else 0.0
 
 
 def _failure(answer: Answer) -> MailboxServiceError:

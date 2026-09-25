@@ -105,7 +105,15 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(SignInRequired)
     async def _sign_in(request: Request, _: SignInRequired) -> Response:
-        target = f"{PATH}/login?next={quote(request.url.path)}"
+        """To the sign-in page, and after it back to the page asked for, with
+        its query. A form that was posted cannot be repeated by a redirect,
+        so after a POST the sign-in lands on the start page."""
+        target = f"{PATH}/login"
+        if request.method == "GET":
+            page = request.url.path
+            if request.url.query:
+                page += f"?{request.url.query}"
+            target += f"?next={quote(page, safe='/')}"
         if is_htmx(request):
             return Response(status_code=204, headers={"HX-Redirect": target})
         return RedirectResponse(target, status_code=303)

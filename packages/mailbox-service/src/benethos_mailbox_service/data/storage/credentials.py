@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
+from ...errors import ConflictError
+
 
 @dataclass(frozen=True)
 class WrappedKey:
@@ -48,6 +50,8 @@ class InMemoryKeyRepository:
         return self._keys[-1] if self._keys else None
 
     def add(self, key: WrappedKey) -> None:
+        if any(k.key_id == key.key_id for k in self._keys):
+            raise ConflictError(f"key {key.key_id} exists already")
         self._keys.append(key)
 
 

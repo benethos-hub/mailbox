@@ -3292,10 +3292,10 @@
                   "type": "null"
                 }
               ],
-              "description": "A folder id, or a role such as inbox",
+              "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft account, the inbox on IMAP.",
               "title": "Folder"
             },
-            "description": "A folder id, or a role such as inbox"
+            "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft account, the inbox on IMAP."
           },
           {
             "name": "limit",
@@ -4483,7 +4483,7 @@
           "mailbox"
         ],
         "summary": "Update Draft",
-        "description": "Replace a draft as a whole. Its id stays. An id that names no draft\nanswers `404`.",
+        "description": "Replace a draft as a whole. Its id stays. Stored attachments are\ngone unless `keep_attachments` names them. An id that names no draft\nanswers `404`.",
         "operationId": "update_draft",
         "security": [
           {
@@ -4515,7 +4515,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DraftMessage"
+                "$ref": "#/components/schemas/DraftReplacement"
               }
             }
           }
@@ -5537,7 +5537,7 @@
           "results"
         ],
         "title": "BatchResult",
-        "description": "One result per id, in the order of the request."
+        "description": "One result per id, in the order of the request, a repeated id once."
       },
       "Candidate": {
         "properties": {
@@ -5797,6 +5797,98 @@
         "title": "DraftMessage",
         "description": "A draft: a message that may still lack recipients. The service sets\nFrom, Date and Message-ID."
       },
+      "DraftReplacement": {
+        "properties": {
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "to": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "To"
+          },
+          "cc": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "Cc"
+          },
+          "bcc": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "Bcc",
+            "description": "Receive it, but appear in no header."
+          },
+          "reply_to": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "Reply To"
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 998,
+            "pattern": "^[^\\r\\n\\x0b\\x0c\\x1c-\\x1e\\x85\\u2028\\u2029]*$",
+            "title": "Subject",
+            "default": ""
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Plain text. Left out beside `html`: made from the HTML."
+          },
+          "html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html",
+            "description": "HTML, sent beside a text part (multipart/alternative)."
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/OutgoingAttachment"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "keep_attachments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keep Attachments",
+            "description": "Ids of attachments of the stored draft that go into the new one, before those `attachments` brings. Any other stored attachment is gone afterwards."
+          }
+        },
+        "type": "object",
+        "title": "DraftReplacement",
+        "description": "A draft as `create_draft` takes it, and which attachments of the\nstored draft to keep."
+      },
       "ErrorDetail": {
         "properties": {
           "code": {
@@ -5965,7 +6057,7 @@
               }
             ],
             "title": "Parent Id",
-            "description": "The new parent. `null` moves it to the top."
+            "description": "The new parent, a folder id or a role such as `archive`. `null` moves it to the top."
           }
         },
         "type": "object",
@@ -6329,6 +6421,7 @@
           "has_attachments": {
             "type": "boolean",
             "title": "Has Attachments",
+            "description": "In a list of an IMAP account, whether the message is multipart/mixed, which a list can tell without reading the message. The message itself says whether it has attachments.",
             "default": false
           },
           "cc": {
@@ -6464,7 +6557,7 @@
           "action"
         ],
         "title": "MessageBatch",
-        "description": "One action for up to 100 messages of one account."
+        "description": "One action for up to 100 messages of one account. An id given\ntwice counts once."
       },
       "MessagePage": {
         "properties": {
@@ -6648,6 +6741,7 @@
           "has_attachments": {
             "type": "boolean",
             "title": "Has Attachments",
+            "description": "In a list of an IMAP account, whether the message is multipart/mixed, which a list can tell without reading the message. The message itself says whether it has attachments.",
             "default": false
           }
         },

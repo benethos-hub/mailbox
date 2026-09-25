@@ -31,14 +31,14 @@ def no_folder(role: FolderRole) -> ConflictError:
     happen until it does."""
     if role is FolderRole.TRASH:
         return ConflictError(
-            "the account has no trash folder: delete with permanent=true"
+            "the account has no trash folder: a message can only be deleted for good"
         )
     return ConflictError(f"the account has no {role} folder")
 
 
 def in_trash_already() -> ConflictError:
     return ConflictError(
-        "the message is in the trash already: delete with permanent=true"
+        "the message is in the trash already: only a delete for good removes it"
     )
 
 
@@ -94,6 +94,11 @@ def hosts_in(settings: Mapping[str, object]) -> list[tuple[str, str, int]]:
     return found
 
 
+# Failures that stop a batch as a whole: the connection or the login, not
+# one message.
+FATAL = (ProviderAuthError, ProviderUnavailableError)
+
+
 async def per_id(
     ids: list[str], one: Callable[[str], Awaitable[R]]
 ) -> dict[str, R | MailboxServiceError]:
@@ -104,7 +109,7 @@ async def per_id(
     for message_id in ids:
         try:
             results[message_id] = await one(message_id)
-        except (ProviderAuthError, ProviderUnavailableError):
+        except FATAL:
             raise
         except MailboxServiceError as exc:
             results[message_id] = exc
