@@ -289,9 +289,15 @@ an app password is the credential to ask for.
   batch. Outlook.com took several minutes to deliver a sent mail.
 - Each deployment registers its own app in Entra ID (delegated
   `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `openid`, `email`,
-  `profile` for the address that signed in). Change-notification
-  subscriptions expire after a few days and are renewed by the worker
-  **(unverified: exact lifetime)**.
+  `profile` for the address that signed in).
+- **Decided 2026-09-25:** the tenant is `common` by default, so personal
+  and work or school accounts can sign in; `consumers`, `organizations` or
+  one tenant narrow it. The app must then be registered for all Microsoft
+  account users. A work tenant may require its administrator's consent
+  before its users can sign in. The provider sends the browser back to
+  `/ui/oauth/{provider}/callback`, a UI page.
+- Change-notification subscriptions expire after a few days and are
+  renewed by the worker **(unverified: exact lifetime)**.
 
 ### 5.5 Google: the verification question
 
@@ -1095,9 +1101,7 @@ right `list_sends` (group `audit`).
   `mail.read`, `mail.write` and `drafts` on chosen accounts. It never gets
   `accounts.manage` or `users.manage`.
 - At start it calls `/v1/me` and registers **only the tools its user can
-  use**. Together with the policy file this gives two locks: the user's
-  rights decide what is possible, the policy file what is offered to the
-  model.
+  use**. The user's rights decide what is offered to the model.
 
 ### 7.6 Other rules
 
@@ -1105,7 +1109,7 @@ right `list_sends` (group `audit`).
   only behind a TLS reverse proxy.
 - **Logging:** no message bodies. Addresses and subjects only at `DEBUG`.
 - **Sending is the dangerous verb:** separate right, idempotency key, and
-  in the MCP server off until the policy file enables it, like every tool
+  in the MCP server offered only to a user with the `send` group
   (section 8, 7.7).
 
 ### 7.7 Mail content is untrusted: prompt injection
@@ -1119,9 +1123,9 @@ user, the MCP server has all three.
 
 **Both ways of working stay open (decided 2026-09-24).** Whether the model
 sends mail itself or only writes drafts for a person to send is decided by
-the rights of its user (the `send` group) and by the policy file. The
-service has no built-in preference. The documentation explains the
-trade-off, the configuration makes it visible.
+the rights of its user (the `send` group). The service has no built-in
+preference. The documentation explains the trade-off, the configuration
+makes it visible.
 
 What applies in both modes:
 
@@ -1235,11 +1239,14 @@ tools, `send_message` and `send_draft`. The model may create folders
 (`create_folder`). Text from PDF attachments comes later. The policy file
 stays as designed; the first tools go by the token's rights alone.
 
+**Decided 2026-09-25:** no policy file. The token's rights, its grants and
+their constraints decide which tools exist; the idea waits in IDEAS.md.
+
 Principles:
 
-- A **policy file** decides which tools exist, nothing is enabled by
-  default. Whether the model may send or only draft is the operator's
-  choice, both are supported equally (7.7).
+- The **rights of the token** decide which tools exist (`/v1/me`).
+  Whether the model may send or only draft is the operator's choice, both
+  are supported equally (7.7).
 - Mail content in tool output is marked as foreign content (7.7).
 - Descriptions under 700 characters, compact output (no headers the model
   does not need, bodies truncated, HTML converted to text).
@@ -1366,7 +1373,7 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
 3. **Gmail / Microsoft priority:** are they needed early, or are GMX / web.de
    / T-Online over IMAP the main use?
 4. **Sending from the MCP server:** decided 2026-09-24, both stay open,
-   governed by rights and the policy file (7.7).
+   governed by rights (7.7).
 5. **Local cache:** list and search go straight to the provider in the
    design above. A local index (SQLite FTS) would make search across all
    accounts fast, at the cost of a sync engine. Decide after phase 3.
