@@ -22,11 +22,11 @@ class SqliteMessageIndexRepository:
         self._db = db
 
     def get(self, account_id: str, message_id: str) -> IndexEntry | None:
-        rows = self._db.query(
+        row = self._db.one(
             "SELECT * FROM message_index WHERE account_id = ? AND id = ?",
             (account_id, message_id),
         )
-        return _entry(rows[0]) if rows else None
+        return _entry(row) if row is not None else None
 
     def by_native(
         self, account_id: str, native_ids: Iterable[str]
@@ -83,11 +83,10 @@ class SqliteMessageIndexRepository:
             _update(db, account_id, entry)
 
     def drop(self, account_id: str, message_id: str) -> None:
-        with self._db.transaction() as db:
-            db.execute(
-                "DELETE FROM message_index WHERE account_id = ? AND id = ?",
-                (account_id, message_id),
-            )
+        self._db.execute(
+            "DELETE FROM message_index WHERE account_id = ? AND id = ?",
+            (account_id, message_id),
+        )
 
     def folder_states(self, account_id: str) -> dict[str, str]:
         rows = self._db.query(
@@ -103,7 +102,14 @@ class SqliteMessageIndexRepository:
 
 
 def _update(db: sqlite3.Connection, account_id: str, entry: IndexEntry) -> None:
-    """The entry's new place; another entry holding that place gives it up."""
+    """The entry's new place; another entry holding that place gives it up.
+    An id the index does not know changes nothing."""
+    known = db.execute(
+        "SELECT 1 FROM message_index WHERE account_id = ? AND id = ?",
+        (account_id, entry.id),
+    ).fetchone()
+    if known is None:
+        return
     db.execute(
         "DELETE FROM message_index WHERE account_id = ? AND native_id = ? AND id <> ?",
         (account_id, entry.native_id, entry.id),

@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from ....errors import NotFoundError
 from ...models import Account, AccountStatus
 from ..accounts import SettingsDict
+from ..table import missing
 from .database import Database
 
 
@@ -21,61 +21,51 @@ class SqliteAccountRepository:
         ]
 
     def get(self, account_id: str) -> Account:
-        rows = self._db.query("SELECT * FROM accounts WHERE id = ?", (account_id,))
-        if not rows:
-            raise NotFoundError(f"account {account_id} not found")
-        return _account(rows[0])
+        return _account(self._row(account_id))
 
     def add(self, account: Account, settings: SettingsDict | None = None) -> None:
-        with self._db.transaction() as db:
-            db.execute(
-                "INSERT INTO accounts"
-                " (id, provider, email, display_name, status, settings)"
-                " VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    account.id,
-                    account.provider.value,
-                    account.email,
-                    account.display_name,
-                    account.status.value,
-                    json.dumps(settings or {}),
-                ),
-            )
+        self._db.execute(
+            "INSERT INTO accounts"
+            " (id, provider, email, display_name, status, settings)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                account.id,
+                account.provider.value,
+                account.email,
+                account.display_name,
+                account.status.value,
+                json.dumps(settings or {}),
+            ),
+        )
 
     def settings(self, account_id: str) -> SettingsDict:
-        rows = self._db.query(
-            "SELECT settings FROM accounts WHERE id = ?", (account_id,)
-        )
-        if not rows:
-            raise NotFoundError(f"account {account_id} not found")
-        result: SettingsDict = json.loads(rows[0]["settings"])
+        result: SettingsDict = json.loads(self._row(account_id)["settings"])
         return result
 
     def set_status(self, account_id: str, status: AccountStatus) -> None:
-        with self._db.transaction() as db:
-            updated = db.execute(
-                "UPDATE accounts SET status = ? WHERE id = ?",
-                (status.value, account_id),
-            ).rowcount
-            if updated == 0:
-                raise NotFoundError(f"account {account_id} not found")
+        changed = self._db.execute(
+            "UPDATE accounts SET status = ? WHERE id = ?", (status.value, account_id)
+        )
+        if not changed:
+            raise missing("account", account_id)
 
     def update(self, account: Account, settings: SettingsDict) -> None:
-        with self._db.transaction() as db:
-            updated = db.execute(
-                "UPDATE accounts SET display_name = ?, settings = ? WHERE id = ?",
-                (account.display_name, json.dumps(settings), account.id),
-            ).rowcount
-            if updated == 0:
-                raise NotFoundError(f"account {account.id} not found")
+        changed = self._db.execute(
+            "UPDATE accounts SET display_name = ?, settings = ? WHERE id = ?",
+            (account.display_name, json.dumps(settings), account.id),
+        )
+        if not changed:
+            raise missing("account", account.id)
 
     def delete(self, account_id: str) -> None:
-        with self._db.transaction() as db:
-            if (
-                db.execute("DELETE FROM accounts WHERE id = ?", (account_id,)).rowcount
-                == 0
-            ):
-                raise NotFoundError(f"account {account_id} not found")
+        if not self._db.execute("DELETE FROM accounts WHERE id = ?", (account_id,)):
+            raise missing("account", account_id)
+
+    def _row(self, account_id: str) -> sqlite3.Row:
+        row = self._db.one("SELECT * FROM accounts WHERE id = ?", (account_id,))
+        if row is None:
+            raise missing("account", account_id)
+        return row
 
 
 def _account(row: sqlite3.Row) -> Account:

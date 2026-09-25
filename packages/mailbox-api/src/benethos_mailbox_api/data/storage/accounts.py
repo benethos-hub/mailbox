@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ...errors import NotFoundError
 from ..models import Account, AccountStatus
+from .table import Table
 
 SettingsDict = dict[str, str | int | bool]
 
@@ -38,20 +38,17 @@ class InMemoryAccountRepository:
     """For tests and ``storage = memory``."""
 
     def __init__(self) -> None:
-        self._accounts: dict[str, Account] = {}
+        self._accounts: Table[Account] = Table("account")
         self._settings: dict[str, SettingsDict] = {}
 
     def list(self) -> list[Account]:
-        return list(self._accounts.values())
+        return self._accounts.list()
 
     def get(self, account_id: str) -> Account:
-        try:
-            return self._accounts[account_id]
-        except KeyError:
-            raise NotFoundError(f"account {account_id} not found") from None
+        return self._accounts.get(account_id)
 
     def add(self, account: Account, settings: SettingsDict | None = None) -> None:
-        self._accounts[account.id] = account
+        self._accounts.put(account.id, account)
         self._settings[account.id] = dict(settings or {})
 
     def settings(self, account_id: str) -> SettingsDict:
@@ -60,16 +57,16 @@ class InMemoryAccountRepository:
 
     def set_status(self, account_id: str, status: AccountStatus) -> None:
         account = self.get(account_id)
-        self._accounts[account_id] = account.model_copy(update={"status": status})
+        self._accounts.put(account_id, account.model_copy(update={"status": status}))
 
     def update(self, account: Account, settings: SettingsDict) -> None:
         current = self.get(account.id)
-        self._accounts[account.id] = current.model_copy(
-            update={"display_name": account.display_name}
+        self._accounts.put(
+            account.id,
+            current.model_copy(update={"display_name": account.display_name}),
         )
         self._settings[account.id] = dict(settings)
 
     def delete(self, account_id: str) -> None:
-        self.get(account_id)
-        del self._accounts[account_id]
+        self._accounts.delete(account_id)
         del self._settings[account_id]

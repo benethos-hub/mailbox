@@ -15,25 +15,24 @@ class SqliteSendLogRepository:
         self._db = db
 
     def add(self, record: SendRecord) -> None:
-        with self._db.transaction() as db:
-            db.execute(
-                "INSERT INTO sends (id, created_at, user_id, credential_id,"
-                " account_id, operation, recipients, outcome, error, refused,"
-                " message_id_header) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    record.id,
-                    record.created_at.isoformat(),
-                    record.user_id,
-                    record.credential_id,
-                    record.account_id,
-                    record.operation,
-                    json.dumps(record.recipients),
-                    record.outcome,
-                    record.error,
-                    json.dumps(record.refused),
-                    record.message_id_header,
-                ),
-            )
+        self._db.execute(
+            "INSERT INTO sends (id, created_at, user_id, credential_id,"
+            " account_id, operation, recipients, outcome, error, refused,"
+            " message_id_header) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                record.id,
+                record.created_at.isoformat(),
+                record.user_id,
+                record.credential_id,
+                record.account_id,
+                record.operation,
+                json.dumps(record.recipients),
+                record.outcome,
+                record.error,
+                json.dumps(record.refused),
+                record.message_id_header,
+            ),
+        )
 
     def sent_since(
         self, user_id: str, account_id: str, since: datetime

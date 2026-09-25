@@ -6,8 +6,8 @@ import json
 import sqlite3
 from datetime import datetime
 
-from ....errors import NotFoundError
 from ...models import ApiToken, Grant, Role, User
+from ..table import missing
 from .database import Database
 
 
@@ -19,32 +19,30 @@ class SqliteUserRepository:
         return [_user(r) for r in self._db.query("SELECT * FROM users ORDER BY rowid")]
 
     def get(self, user_id: str) -> User:
-        rows = self._db.query("SELECT * FROM users WHERE id = ?", (user_id,))
-        if not rows:
-            raise NotFoundError(f"user {user_id} not found")
-        return _user(rows[0])
+        row = self._db.one("SELECT * FROM users WHERE id = ?", (user_id,))
+        if row is None:
+            raise missing("user", user_id)
+        return _user(row)
 
     def save(self, user: User) -> None:
-        with self._db.transaction() as db:
-            db.execute(
-                "INSERT INTO users (id, name, roles, grants, disabled)"
-                " VALUES (?, ?, ?, ?, ?)"
-                " ON CONFLICT(id) DO UPDATE SET name = excluded.name,"
-                " roles = excluded.roles, grants = excluded.grants,"
-                " disabled = excluded.disabled",
-                (
-                    user.id,
-                    user.name,
-                    json.dumps(user.roles),
-                    _grants_json(user.grants),
-                    int(user.disabled),
-                ),
-            )
+        self._db.execute(
+            "INSERT INTO users (id, name, roles, grants, disabled)"
+            " VALUES (?, ?, ?, ?, ?)"
+            " ON CONFLICT(id) DO UPDATE SET name = excluded.name,"
+            " roles = excluded.roles, grants = excluded.grants,"
+            " disabled = excluded.disabled",
+            (
+                user.id,
+                user.name,
+                json.dumps(user.roles),
+                _grants_json(user.grants),
+                int(user.disabled),
+            ),
+        )
 
     def delete(self, user_id: str) -> None:
-        with self._db.transaction() as db:
-            if db.execute("DELETE FROM users WHERE id = ?", (user_id,)).rowcount == 0:
-                raise NotFoundError(f"user {user_id} not found")
+        if not self._db.execute("DELETE FROM users WHERE id = ?", (user_id,)):
+            raise missing("user", user_id)
 
     def count(self) -> int:
         return int(self._db.query("SELECT COUNT(*) FROM users")[0][0])
@@ -68,23 +66,21 @@ class SqliteRoleRepository:
         return [_role(r) for r in self._db.query("SELECT * FROM roles ORDER BY rowid")]
 
     def get(self, role_id: str) -> Role:
-        rows = self._db.query("SELECT * FROM roles WHERE id = ?", (role_id,))
-        if not rows:
-            raise NotFoundError(f"role {role_id} not found")
-        return _role(rows[0])
+        row = self._db.one("SELECT * FROM roles WHERE id = ?", (role_id,))
+        if row is None:
+            raise missing("role", role_id)
+        return _role(row)
 
     def save(self, role: Role) -> None:
-        with self._db.transaction() as db:
-            db.execute(
-                "INSERT INTO roles (id, grants) VALUES (?, ?)"
-                " ON CONFLICT(id) DO UPDATE SET grants = excluded.grants",
-                (role.id, _grants_json(role.grants)),
-            )
+        self._db.execute(
+            "INSERT INTO roles (id, grants) VALUES (?, ?)"
+            " ON CONFLICT(id) DO UPDATE SET grants = excluded.grants",
+            (role.id, _grants_json(role.grants)),
+        )
 
     def delete(self, role_id: str) -> None:
-        with self._db.transaction() as db:
-            if db.execute("DELETE FROM roles WHERE id = ?", (role_id,)).rowcount == 0:
-                raise NotFoundError(f"role {role_id} not found")
+        if not self._db.execute("DELETE FROM roles WHERE id = ?", (role_id,)):
+            raise missing("role", role_id)
 
 
 def _role(row: sqlite3.Row) -> Role:
@@ -102,41 +98,37 @@ class SqliteTokenRepository:
         return [_token(r) for r in rows]
 
     def get(self, token_id: str) -> ApiToken:
-        rows = self._db.query("SELECT * FROM tokens WHERE id = ?", (token_id,))
-        if not rows:
-            raise NotFoundError(f"token {token_id} not found")
-        return _token(rows[0])
+        row = self._db.one("SELECT * FROM tokens WHERE id = ?", (token_id,))
+        if row is None:
+            raise missing("token", token_id)
+        return _token(row)
 
     def find_by_hash(self, token_hash: str) -> ApiToken | None:
-        rows = self._db.query(
-            "SELECT * FROM tokens WHERE token_hash = ?", (token_hash,)
-        )
-        return _token(rows[0]) if rows else None
+        row = self._db.one("SELECT * FROM tokens WHERE token_hash = ?", (token_hash,))
+        return _token(row) if row is not None else None
 
     def save(self, token: ApiToken) -> None:
-        with self._db.transaction() as db:
-            db.execute(
-                "INSERT INTO tokens (id, user_id, name, token_hash, created_at,"
-                " expires_at, last_used_at, revoked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-                " ON CONFLICT(id) DO UPDATE SET name = excluded.name,"
-                " expires_at = excluded.expires_at,"
-                " last_used_at = excluded.last_used_at,"
-                " revoked_at = excluded.revoked_at",
-                (
-                    token.id,
-                    token.user_id,
-                    token.name,
-                    token.token_hash,
-                    _dt(token.created_at),
-                    _dt(token.expires_at),
-                    _dt(token.last_used_at),
-                    _dt(token.revoked_at),
-                ),
-            )
+        self._db.execute(
+            "INSERT INTO tokens (id, user_id, name, token_hash, created_at,"
+            " expires_at, last_used_at, revoked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            " ON CONFLICT(id) DO UPDATE SET name = excluded.name,"
+            " expires_at = excluded.expires_at,"
+            " last_used_at = excluded.last_used_at,"
+            " revoked_at = excluded.revoked_at",
+            (
+                token.id,
+                token.user_id,
+                token.name,
+                token.token_hash,
+                _dt(token.created_at),
+                _dt(token.expires_at),
+                _dt(token.last_used_at),
+                _dt(token.revoked_at),
+            ),
+        )
 
     def delete_for_user(self, user_id: str) -> None:
-        with self._db.transaction() as db:
-            db.execute("DELETE FROM tokens WHERE user_id = ?", (user_id,))
+        self._db.execute("DELETE FROM tokens WHERE user_id = ?", (user_id,))
 
 
 def _token(row: sqlite3.Row) -> ApiToken:
