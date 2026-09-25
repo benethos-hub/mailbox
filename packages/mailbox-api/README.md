@@ -1,5 +1,11 @@
 # benethos-mailbox-api
 
+[![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/benethos-mailbox-api?label=PyPI)](https://pypi.org/project/benethos-mailbox-api/)
+[![Container](https://img.shields.io/badge/ghcr.io-mailbox--api-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-api)
+[![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-api)](https://pypi.org/project/benethos-mailbox-api/)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
+
 > **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
 > the stored data and the configuration may change without notice.
 

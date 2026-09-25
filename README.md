@@ -1,5 +1,14 @@
 # Mailbox API
 
+[![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
+[![PyPI api](https://img.shields.io/pypi/v/benethos-mailbox-api?label=PyPI%20api)](https://pypi.org/project/benethos-mailbox-api/)
+[![PyPI mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
+[![Container](https://img.shields.io/badge/ghcr.io-mailbox--api-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-api)
+[![Container](https://img.shields.io/badge/ghcr.io-mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
+[![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-api)](https://pypi.org/project/benethos-mailbox-api/)
+[![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
+
 One REST API for all your mailboxes, whichever provider they are at, and
 an MCP server on top, so that scripts, tools and AI assistants can work
 with your mail through one door you control.
