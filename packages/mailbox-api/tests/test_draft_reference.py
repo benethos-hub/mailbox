@@ -12,7 +12,7 @@ from benethos_mailbox_api.main import Services
 
 
 def _adapter(services: Services, account_id: str) -> MemoryProvider:
-    adapter = services.accounts.provider(account_id)
+    adapter = services.adapters.get(account_id)
     assert isinstance(adapter, MemoryProvider)
     return adapter
 

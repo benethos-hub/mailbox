@@ -41,7 +41,7 @@ from benethos_mailbox_api.data.providers.protocols.oauth import (
 )
 from benethos_mailbox_api.data.secrets import cipher, encode_recovery
 from benethos_mailbox_api.domain.access import Access
-from benethos_mailbox_api.domain.accounts import REFRESH_TOKEN
+from benethos_mailbox_api.domain.adapters import REFRESH_TOKEN
 from benethos_mailbox_api.errors import (
     BadRequestError,
     ForbiddenError,
@@ -370,7 +370,7 @@ async def test_no_refresh_token_no_account() -> None:
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
     with pytest.raises(BadRequestError, match="offline_access"):
         await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
-    assert services.accounts.all_ids() == []
+    assert services.adapters.ids() == []
 
 
 async def test_sign_in_again_with_the_same_address_only() -> None:
@@ -404,7 +404,7 @@ async def test_a_connected_account_refreshes_and_keeps_the_rotation() -> None:
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
     account = await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
     # After a restart the adapter has only the stored refresh token.
-    adapter = services.accounts.provider(account.id)
+    adapter = services.adapters.get(account.id)
     assert isinstance(adapter, SignedInProvider)
     await services.accounts.verify(ADMIN, account.id)
     assert endpoint.forms[1]["refresh_token"] == "rt-1"
@@ -421,7 +421,7 @@ async def test_a_revoked_sign_in_needs_a_new_one() -> None:
     account = await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
     with pytest.raises(ProviderAuthError):
         await services.accounts.verify(ADMIN, account.id)
-    assert services.accounts.status(account.id).value == "needs_reauth"
+    assert services.adapters.status(account.id).value == "needs_reauth"
 
 
 def test_the_client_secret_from_a_file(tmp_path: Any) -> None:

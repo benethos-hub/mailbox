@@ -90,9 +90,9 @@ def test_connect_an_account(ui: TestClient, services: Services) -> None:
     page = ui.get(location).text
     assert "added@example.org connected." in page
     [account] = [
-        services.accounts.record(i)
-        for i in services.accounts.all_ids()
-        if services.accounts.record(i).email == "added@example.org"
+        services.adapters.record(i)
+        for i in services.adapters.ids()
+        if services.adapters.record(i).email == "added@example.org"
     ]
     assert account.display_name == "Added"
 

@@ -375,7 +375,7 @@ def main() -> int:
             str(wrong.status_code),
         )
 
-    anyio.run(services.accounts.close)
+    anyio.run(services.adapters.close)
     services.close()
     print(f"\n{run.failures} failed" if run.failures else "\nall passed")
     return 1 if run.failures else 0

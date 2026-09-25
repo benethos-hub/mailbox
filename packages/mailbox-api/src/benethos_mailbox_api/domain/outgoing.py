@@ -45,7 +45,7 @@ class Outgoing:
         self, calls: Calls, idempotency: Idempotency, sends: SendControl
     ) -> None:
         self._calls = calls
-        self._accounts = calls.accounts
+        self._adapters = calls.adapters
         self._sync = calls.sync
         self._idempotency = idempotency
         self._sends = sends
@@ -79,7 +79,7 @@ class Outgoing:
     async def _send(
         self, access: Access, account_id: str, message: OutgoingMessage
     ) -> SendResult:
-        account = self._accounts.record(account_id)
+        account = self._adapters.record(account_id)
         raw, message_id, message, original = await self._compose(
             account_id, message, draft=False
         )
@@ -127,7 +127,7 @@ class Outgoing:
         Date and Message-ID. A reference is filled in from the original.
         Returns the bytes, the Message-ID, the message as filled in and the
         original, if any."""
-        account = self._accounts.record(account_id)
+        account = self._adapters.record(account_id)
         extras = compose.Extras()
         original: Message | None = None
         reference = message.reference
@@ -281,7 +281,7 @@ class Outgoing:
     async def _send_draft(
         self, access: Access, account_id: str, draft_id: str
     ) -> SendResult:
-        account = self._accounts.record(account_id)
+        account = self._adapters.record(account_id)
         stored = await self._calls.on_message(
             account_id, draft_id, lambda p, native: p.get_draft(native)
         )

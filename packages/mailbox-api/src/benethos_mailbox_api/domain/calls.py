@@ -14,7 +14,7 @@ from typing import Any, TypeVar
 from ..data.models import MessageSummary, MessageUpdate
 from ..data.providers import MailProvider
 from ..errors import MailboxApiError, NotFoundError
-from .accounts import AccountService
+from .adapters import Adapters
 from .sync import SyncService
 
 T = TypeVar("T")
@@ -22,8 +22,8 @@ S = TypeVar("S", bound=MessageSummary)
 
 
 class Calls:
-    def __init__(self, accounts: AccountService, sync: SyncService) -> None:
-        self.accounts = accounts
+    def __init__(self, adapters: Adapters, sync: SyncService) -> None:
+        self.adapters = adapters
         self.sync = sync
 
     async def call(
@@ -31,9 +31,7 @@ class Calls:
     ) -> T:
         """Run one provider operation and keep the account's status in step
         with how it went."""
-        return await self.accounts.observe(
-            account_id, operation(self.accounts.provider(account_id))
-        )
+        return await self.adapters.call(account_id, operation)
 
     async def on_message(
         self,

@@ -163,7 +163,7 @@ def test_everything_survives_a_restart(tmp_path: Path) -> None:
     assert access.user_id == user.id
     assert second.accounts.get(access, account.id) == account
     # The adapter is rebuilt from the stored record on first use.
-    assert second.accounts.provider(account.id) is second.accounts.provider(account.id)
+    assert second.adapters.get(account.id) is second.adapters.get(account.id)
     second.close()
 
 

@@ -67,6 +67,7 @@ from .data.storage import (
     UserRepository,
 )
 from .domain.accounts import AccountService
+from .domain.adapters import Adapters
 from .domain.auth import AuthService
 from .domain.discovery import DiscoveryService
 from .domain.idempotency import Idempotency
@@ -81,6 +82,7 @@ from .domain.worker import SyncWorker
 @dataclass(frozen=True)
 class Services:
     accounts: AccountService
+    adapters: Adapters
     auth: AuthService
     users: UserService
     mailbox: MailboxService
@@ -145,34 +147,35 @@ def build_services(
         resolve=resolve or host_addresses,
         internal_hosts=settings.discovery_internal_hosts,
     )
+    adapters = Adapters(account_repo, vault, provider_factory, oauth=clients)
     accounts = AccountService(
         account_repo,
         vault,
-        provider_factory,
+        adapters,
         index_repo,
-        oauth=clients,
         check_host=fetcher.checked_address,
     )
-    sync = SyncService(accounts, index_repo)
+    sync = SyncService(adapters, index_repo)
     auth = AuthService(user_repo, role_repo, token_repo, admin_key=admin_key)
     return Services(
         accounts=accounts,
+        adapters=adapters,
         auth=auth,
-        users=UserService(user_repo, role_repo, token_repo, accounts, auth),
+        users=UserService(user_repo, role_repo, token_repo, adapters, auth),
         mailbox=MailboxService(
-            accounts, sync, Idempotency(idempotency_repo), SendControl(send_repo)
+            adapters, sync, Idempotency(idempotency_repo), SendControl(send_repo)
         ),
         discovery=discovery or build_discovery(settings, fetcher),
         sync=sync,
         worker=(
             SyncWorker(
-                accounts, sync, interval=settings.sync_interval, push=settings.sync_idle
+                adapters, sync, interval=settings.sync_interval, push=settings.sync_idle
             )
             if settings.sync_interval
             else None
         ),
         vault=vault,
-        oauth=OAuthService(accounts, clients),
+        oauth=OAuthService(accounts, adapters, clients),
         database=db,
     )
 
@@ -243,7 +246,7 @@ def create_app(
                 # The worker first, so it opens nothing new while the
                 # adapters close.
                 background.cancel_scope.cancel()
-        await services.accounts.close()
+        await services.adapters.close()
         services.close()
 
     app = FastAPI(

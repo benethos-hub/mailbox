@@ -321,7 +321,7 @@ async def test_a_draft_id_that_left_the_drafts_folder(
 
 
 def memory_of(services: Services, account_id: str) -> MemoryProvider:
-    provider = services.accounts.provider(account_id)
+    provider = services.adapters.get(account_id)
     assert isinstance(provider, MemoryProvider)
     return provider
 

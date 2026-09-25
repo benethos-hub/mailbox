@@ -16,7 +16,7 @@ from ..data.storage import RoleRepository, TokenRepository, UserRepository
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from . import permissions
 from .access import Access
-from .accounts import AccountService
+from .adapters import Adapters
 from .auth import AuthService
 
 
@@ -45,23 +45,23 @@ class UserService:
         users: UserRepository,
         roles: RoleRepository,
         tokens: TokenRepository,
-        accounts: AccountService,
+        adapters: Adapters,
         auth: AuthService,
     ) -> None:
         self._users = users
         self._roles = roles
         self._tokens = tokens
-        self._accounts = accounts
+        self._adapters = adapters
         self._auth = auth
 
     # --- the caller itself --------------------------------------------------
 
     def me(self, access: Access) -> EffectiveRights:
         accounts = []
-        for account_id in self._accounts.all_ids():
+        for account_id in self._adapters.ids():
             operations = access.operations_on(account_id)
             if operations:
-                account = self._accounts.record(account_id)
+                account = self._adapters.record(account_id)
                 accounts.append(
                     AccountRights(
                         account.id,

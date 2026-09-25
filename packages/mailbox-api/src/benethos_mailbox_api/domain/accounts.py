@@ -1,71 +1,47 @@
-"""Connected accounts and the live adapter behind each."""
+"""Connected accounts: create, change, verify, delete, under the caller's
+rights. The live adapter of each is ``adapters``."""
 
 from __future__ import annotations
 
 import builtins
 from collections.abc import Awaitable, Callable, Mapping
-from typing import TypeVar
 
 from pydantic import SecretStr
 
 from ..common.ids import new_id
 from ..data.models import Account, AccountStatus, ProviderType
-from ..data.providers import (
-    CredentialReader,
-    MailProvider,
-    OAuthClient,
-    ProviderFactory,
-    ProviderSettings,
-    RefreshingTokens,
-    Tokens,
-    TokenSource,
-    build_provider,
-)
+from ..data.providers import CredentialReader, ProviderSettings, Tokens
 from ..data.secrets import CredentialVault
 from ..data.storage import AccountRepository, MessageIndexRepository
-from ..errors import (
-    BadRequestError,
-    MailboxApiError,
-    ProviderAuthError,
-    ProviderUnavailableError,
-)
+from ..errors import BadRequestError, MailboxApiError
 from .access import Access
-
-T = TypeVar("T")
+from .adapters import REFRESH_TOKEN, Adapters
 
 # The address a host resolves to, None when it does not resolve. Raises when
 # the host may not be connected to (CONCEPT 5.8, rule 6). Shared with
 # discovery, so both apply the same rule and the same allow-list.
 HostCheck = Callable[[str, int], Awaitable[str | None]]
 
-# The credential of an OAuth account: its refresh token.
-REFRESH_TOKEN = "refresh_token"
-
 
 class AccountService:
-    """Owns the one adapter per account. Records live in the repository,
-    credentials in the vault."""
+    """Records live in the repository, credentials in the vault, the live
+    adapters in ``adapters``. Every method checks the caller's right."""
 
     def __init__(
         self,
         repository: AccountRepository,
         vault: CredentialVault,
-        provider_factory: ProviderFactory = build_provider,
+        adapters: Adapters,
         index: MessageIndexRepository | None = None,
-        oauth: Mapping[ProviderType, OAuthClient] | None = None,
         check_host: HostCheck | None = None,
     ) -> None:
         self._repository = repository
         self._vault = vault
-        self._provider_factory = provider_factory
+        self._adapters = adapters
         self._index = index
         # Every host in an account's settings passes this before the first
         # connection: the service must not be pointed into its own network.
         self._check_host = check_host
-        # The OAuth app of each provider that signs in with OAuth, where the
-        # operator registered one.
-        self._oauth = dict(oauth or {})
-        self._providers: dict[str, MailProvider] = {}
 
     def list(self, access: Access) -> builtins.list[Account]:
         return [
@@ -76,6 +52,13 @@ class AccountService:
 
     def get(self, access: Access, account_id: str) -> Account:
         access.require("get_account", account_id)
+        return self._with_credentials(self._repository.get(account_id))
+
+    def visible(self, access: Access, account_id: str) -> Account:
+        """The account as whoever may do anything on it sees it, as in
+        ``/v1/me``: whoever may only write drafts there sees its address."""
+        if not access.operations_on(account_id):
+            access.require("get_account", account_id)
         return self._with_credentials(self._repository.get(account_id))
 
     async def create(
@@ -106,18 +89,13 @@ class AccountService:
         # A throwaway adapter that reads the credential from the request. An
         # unsupported provider or bad settings fail here, before anything is
         # stored.
-        probe = self._build(
+        await self._probe(
             provider,
             settings or {},
             lambda field: _pending(secrets, field),
-            lambda value: secrets.__setitem__(REFRESH_TOKEN, value),
+            secrets,
             signed_in,
         )
-        try:
-            await probe.verify()
-        finally:
-            await probe.close()
-
         self._repository.add(account, dict(settings or {}))
         try:
             for field, value in secrets.items():
@@ -165,17 +143,7 @@ class AccountService:
                     return secrets[field]
                 return self._vault.read(account_id, field)
 
-            probe = self._build(
-                account.provider,
-                merged,
-                read,
-                lambda value: secrets.__setitem__(REFRESH_TOKEN, value),
-                signed_in,
-            )
-            try:
-                await probe.verify()
-            finally:
-                await probe.close()
+            await self._probe(account.provider, merged, read, secrets, signed_in)
         if rename:
             account = account.model_copy(update={"display_name": display_name})
         self._repository.update(account, merged)
@@ -184,17 +152,15 @@ class AccountService:
         if settings or secrets:
             # The live adapter still has the old settings: the next use
             # builds a new one.
-            adapter = self._providers.pop(account_id, None)
-            if adapter is not None:
-                await adapter.close()
-            self._set_status(account_id, AccountStatus.CONNECTED)
+            await self._adapters.drop(account_id)
+            self._adapters.set_status(account_id, AccountStatus.CONNECTED)
         return self._with_credentials(self._repository.get(account_id))
 
     async def verify(self, access: Access, account_id: str) -> Account:
         """Log in afresh, e.g. after the credential was changed at the
         provider. Clears a rejected login and updates the status."""
         access.require("verify_account", account_id)
-        await self.observe(account_id, self.provider(account_id).verify())
+        await self._adapters.call(account_id, lambda p: p.verify())
         return self._with_credentials(self._repository.get(account_id))
 
     async def delete(self, access: Access, account_id: str) -> None:
@@ -203,90 +169,34 @@ class AccountService:
         if self._index is not None:
             self._index.forget_account(account_id)
         self._repository.delete(account_id)
-        adapter = self._providers.pop(account_id, None)
-        if adapter is not None:
-            await adapter.close()
-
-    async def close(self) -> None:
-        """Close every adapter, e.g. when the service stops."""
-        adapters, self._providers = list(self._providers.values()), {}
-        for adapter in adapters:
-            await adapter.close()
-
-    def record(self, account_id: str) -> Account:
-        """Internal: callers check rights first."""
-        return self._repository.get(account_id)
-
-    def status(self, account_id: str) -> AccountStatus:
-        """Internal: callers check rights first."""
-        return self._repository.get(account_id).status
-
-    def all_ids(self) -> builtins.list[str]:
-        """Every account id. Internal: callers filter by rights themselves."""
-        return [account.id for account in self._repository.list()]
-
-    def provider(self, account_id: str) -> MailProvider:
-        """The adapter of an account, built on first use after a restart.
-        Internal: callers check rights first."""
-        account = self._repository.get(account_id)
-        adapter = self._providers.get(account_id)
-        if adapter is None:
-            adapter = self._build(
-                account.provider,
-                self._repository.settings(account_id),
-                self._reader(account_id),
-                lambda value: self._vault.store(account_id, REFRESH_TOKEN, value),
-            )
-            self._providers[account_id] = adapter
-        return adapter
-
-    async def observe(self, account_id: str, operation: Awaitable[T]) -> T:
-        """Await a provider operation and record what it says about the
-        account: a rejected login needs a new credential, an unreachable
-        server is marked as such, and success clears both."""
-        try:
-            result = await operation
-        except ProviderAuthError:
-            self._set_status(account_id, AccountStatus.NEEDS_REAUTH)
-            raise
-        except ProviderUnavailableError:
-            self._set_status(account_id, AccountStatus.UNREACHABLE)
-            raise
-        self._set_status(account_id, AccountStatus.CONNECTED)
-        return result
-
-    def _set_status(self, account_id: str, status: AccountStatus) -> None:
-        if self._repository.get(account_id).status is not status:
-            self._repository.set_status(account_id, status)
+        await self._adapters.drop(account_id)
 
     def signs_in_with_oauth(self, provider: ProviderType) -> bool:
         """Whether accounts of ``provider`` connect through an OAuth app of
         this deployment."""
-        return provider in self._oauth
+        return self._adapters.signs_in_with_oauth(provider)
 
-    def _build(
+    async def _probe(
         self,
         provider: ProviderType,
         settings: ProviderSettings,
         read: CredentialReader,
-        store_refresh: Callable[[SecretStr], None],
+        secrets: dict[str, SecretStr],
         signed_in: Tokens | None = None,
-    ) -> MailProvider:
-        """An adapter; for an OAuth provider with a token source that keeps
-        its access token valid and stores a new refresh token."""
-        client = self._oauth.get(provider)
-        if client is None:
-            return self._provider_factory(provider, settings, read)
-        tokens: TokenSource = RefreshingTokens(
-            client,
-            lambda: read(REFRESH_TOKEN),
-            store_refresh,
-            current=signed_in,
+    ) -> None:
+        """Log in once with a throwaway adapter. A refresh token it is
+        handed lands in ``secrets``, to be stored with the rest."""
+        probe = self._adapters.build(
+            provider,
+            settings,
+            read,
+            lambda value: secrets.__setitem__(REFRESH_TOKEN, value),
+            signed_in,
         )
-        return self._provider_factory(provider, settings, read, tokens=tokens)
-
-    def _reader(self, account_id: str) -> CredentialReader:
-        return lambda field: self._vault.read(account_id, field)
+        try:
+            await probe.verify()
+        finally:
+            await probe.close()
 
     async def _check_hosts(self, settings: Mapping[str, object]) -> None:
         """Refuse settings that point the service at a host it may not

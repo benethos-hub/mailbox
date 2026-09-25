@@ -32,7 +32,7 @@ from ..data.models import (
 from ..errors import ConflictError, MailboxApiError, NotFoundError
 from . import merge
 from .access import Access
-from .accounts import AccountService
+from .adapters import Adapters
 from .calls import Calls, public
 from .idempotency import Idempotency
 from .outgoing import Outgoing
@@ -54,14 +54,14 @@ class MailboxService:
 
     def __init__(
         self,
-        accounts: AccountService,
+        adapters: Adapters,
         sync: SyncService,
         idempotency: Idempotency,
         sends: SendControl,
     ) -> None:
-        self._accounts = accounts
+        self._adapters = adapters
         self._sync = sync
-        self._calls = Calls(accounts, sync)
+        self._calls = Calls(adapters, sync)
         self._outgoing = Outgoing(self._calls, idempotency, sends)
         # Sending and drafts live in ``Outgoing``; callers reach them here.
         self.send_message = self._outgoing.send_message
@@ -187,8 +187,8 @@ class MailboxService:
         ``list_accounts``. An account that fails leaves the page incomplete,
         it does not fail the request.
         """
-        existing = set(self._accounts.all_ids())
-        wanted = account_ids or self._accounts.all_ids()
+        existing = self._adapters.ids()
+        wanted = account_ids or existing
         visible = [
             a
             for a in dict.fromkeys(wanted)

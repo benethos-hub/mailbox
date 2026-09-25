@@ -22,7 +22,7 @@ from ..errors import (
     NotSupportedError,
     ProviderAuthError,
 )
-from .accounts import AccountService
+from .adapters import Adapters
 from .sync import SyncService
 
 # RFC 2177: IDLE is to be renewed before 29 minutes.
@@ -39,14 +39,14 @@ log = logging.getLogger(__name__)
 class SyncWorker:
     def __init__(
         self,
-        accounts: AccountService,
+        adapters: Adapters,
         sync: SyncService,
         *,
         interval: float,
         push: bool = True,
         sleep: Sleep = anyio.sleep,
     ) -> None:
-        self._accounts = accounts
+        self._adapters = adapters
         self._sync = sync
         self._interval = interval
         self._push = push
@@ -63,7 +63,7 @@ class SyncWorker:
 
     async def poll(self, watchers: TaskGroup | None = None) -> None:
         """One round over every account, one after the other."""
-        for account_id in self._accounts.all_ids():
+        for account_id in self._adapters.ids():
             try:
                 if not self._wanted(account_id):
                     continue
@@ -81,10 +81,9 @@ class SyncWorker:
         failures = 0
         try:
             while self._wanted(account_id):
-                provider = self._accounts.provider(account_id)
                 try:
-                    changed = await self._accounts.observe(
-                        account_id, provider.wait_for_change(IDLE_RENEW)
+                    changed = await self._adapters.call(
+                        account_id, lambda p: p.wait_for_change(IDLE_RENEW)
                     )
                     failures = 0
                     if changed:
@@ -111,7 +110,7 @@ class SyncWorker:
             self._watching.discard(account_id)
 
     def _wanted(self, account_id: str) -> bool:
-        return self._accounts.status(
+        return self._adapters.status(
             account_id
         ) is not AccountStatus.NEEDS_REAUTH and self._sync.mapped(account_id)
 
@@ -120,5 +119,5 @@ class SyncWorker:
             self._push
             and account_id not in self._watching
             and account_id not in self._no_push
-            and Capability.PUSH in self._accounts.provider(account_id).capabilities
+            and Capability.PUSH in self._adapters.capabilities(account_id)
         )

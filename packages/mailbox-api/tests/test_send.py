@@ -179,7 +179,7 @@ def body() -> dict[str, object]:
 
 
 def memory_of(services: Services, account_id: str) -> MemoryProvider:
-    provider = services.accounts.provider(account_id)
+    provider = services.adapters.get(account_id)
     assert isinstance(provider, MemoryProvider)
     return provider
 
@@ -229,4 +229,4 @@ def test_sending_is_its_own_right(
 
 
 def test_the_account_kind_is_memory(services: Services, account_id: str) -> None:
-    assert services.accounts.record(account_id).provider is ProviderType.MEMORY
+    assert services.adapters.record(account_id).provider is ProviderType.MEMORY

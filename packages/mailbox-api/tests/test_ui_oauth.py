@@ -121,7 +121,7 @@ def test_back_through_the_bounce_page(browser: tuple[TestClient, Services]) -> N
     assert "dropped" not in bounce.text
     finished = _round_trip(client)
     assert "me@example.org signed in." in finished.text
-    [account_id] = services.accounts.all_ids()
+    [account_id] = services.adapters.ids()
     assert finished.url.path == f"/ui/accounts/{account_id}"
     assert "Sign in again" in finished.text and "New password" not in finished.text
 
@@ -154,13 +154,13 @@ def test_the_provider_refused(browser: tuple[TestClient, Services]) -> None:
         "/ui/oauth/microsoft/finish", params={"state": state, "code": "c"}
     )
     assert "unknown or expired" in again.text
-    assert services.accounts.all_ids() == []
+    assert services.adapters.ids() == []
 
 
 def test_sign_in_again(browser: tuple[TestClient, Services]) -> None:
     client, services = browser
     _round_trip(client)
-    [account_id] = services.accounts.all_ids()
+    [account_id] = services.adapters.ids()
     location = _start(client, account_id=account_id).headers["location"]
     assert parse_qs(urlsplit(location).query)["login_hint"] == ["me@example.org"]
 

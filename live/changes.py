@@ -399,7 +399,7 @@ def main() -> int:
         assert account_id is not None and sender_id is not None
         anyio.run(services.sync.sync_account, account_id)
 
-        provider = services.accounts.provider(account_id)
+        provider = services.adapters.get(account_id)
         answer: dict[str, Any] = {}
 
         send_url = f"/v1/accounts/{sender_id}/send"
@@ -663,7 +663,7 @@ def main() -> int:
             )
         else:
             clean_up(env, receiver, sender, other, base, subject)
-        anyio.run(services.accounts.close)
+        anyio.run(services.adapters.close)
         services.close()
 
     print(f"\n{run.failures} failed" if run.failures else "\nall passed")

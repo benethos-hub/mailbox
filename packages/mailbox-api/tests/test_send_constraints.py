@@ -37,7 +37,7 @@ def mail(*to: str, subject: str = "Hi") -> dict[str, object]:
 
 
 def outbox(services: Services, account_id: str) -> list[list[str]]:
-    provider = services.accounts.provider(account_id)
+    provider = services.adapters.get(account_id)
     assert isinstance(provider, MemoryProvider)
     return [recipients for _, recipients, _ in provider.outbox]
 
