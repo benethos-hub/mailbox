@@ -86,7 +86,10 @@ async def delete_user(user_id: str, caller: Caller, users: Users) -> None:
 
 @router.get("/users/{user_id}/tokens")
 async def list_tokens(user_id: str, caller: Caller, users: Users) -> list[TokenInfo]:
-    return [TokenInfo.of(t) for t in users.list_tokens(caller, user_id)]
+    return [
+        TokenInfo.of(t, users.token_state(t))
+        for t in users.list_tokens(caller, user_id)
+    ]
 
 
 @router.post("/users/{user_id}/tokens", status_code=status.HTTP_201_CREATED)
@@ -94,14 +97,16 @@ async def create_token(
     user_id: str, data: TokenCreate, caller: Caller, users: Users
 ) -> TokenCreated:
     token, plain = users.create_token(caller, user_id, data.name, data.expires_at)
-    return TokenCreated(**TokenInfo.of(token).model_dump(), token=plain)
+    info = TokenInfo.of(token, users.token_state(token))
+    return TokenCreated(**info.model_dump(), token=plain)
 
 
 @router.delete("/users/{user_id}/tokens/{token_id}")
 async def revoke_token(
     user_id: str, token_id: str, caller: Caller, users: Users
 ) -> TokenInfo:
-    return TokenInfo.of(users.revoke_token(caller, user_id, token_id))
+    token = users.revoke_token(caller, user_id, token_id)
+    return TokenInfo.of(token, users.token_state(token))
 
 
 @router.get("/roles")

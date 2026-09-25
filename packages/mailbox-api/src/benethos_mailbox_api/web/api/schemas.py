@@ -7,6 +7,7 @@ are. What lives here is what only a caller of the API sends or receives.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, SecretStr
 
@@ -143,14 +144,19 @@ class TokenInfo(BaseModel):
     id: str
     user_id: str
     name: str
+    state: Literal["active", "expired", "revoked"] = Field(
+        description="Whether the token authenticates now"
+    )
     created_at: datetime
     expires_at: datetime | None = None
     last_used_at: datetime | None = None
     revoked_at: datetime | None = None
 
     @classmethod
-    def of(cls, token: ApiToken) -> TokenInfo:
-        return cls.model_validate(token.model_dump(exclude={"token_hash"}))
+    def of(cls, token: ApiToken, state: str) -> TokenInfo:
+        return cls.model_validate(
+            {**token.model_dump(exclude={"token_hash"}), "state": state}
+        )
 
 
 class TokenCreated(TokenInfo):

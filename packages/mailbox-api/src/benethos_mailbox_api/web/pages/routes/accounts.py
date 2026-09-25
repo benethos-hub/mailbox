@@ -143,7 +143,6 @@ async def create_account(request: Request, caller: Actor) -> Response:
     form = await request.form()
     email = str(form.get("email") or "").strip()
     settings = _settings(form)
-    settings.setdefault("username", email)
     try:
         provider = ProviderType(str(form.get("provider") or ProviderType.IMAP))
     except ValueError:
@@ -193,8 +192,6 @@ async def update_account(request: Request, caller: Actor, account_id: str) -> Re
     try:
         existing = get_accounts(request).get(caller, account_id)
         settings = _changed(existing.settings, _settings(form), set(form.keys()))
-        if "username" in settings and settings["username"] is None:
-            settings["username"] = existing.email  # as the hint says
         await get_accounts(request).update(
             caller,
             account_id,

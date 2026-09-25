@@ -10,7 +10,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
 from ....common.clock import utc_now
-from ....data.models import ApiToken, Grant, Role
+from ....data.models import Grant, Role
 from ....domain import permissions
 from ....domain.access import Access
 from ....errors import MailboxApiError
@@ -55,14 +55,6 @@ def _role_choices(request: Request, caller: Access, held: list[str]) -> list[str
     return sorted(known | set(held))
 
 
-def _state(token: ApiToken) -> str:
-    if token.revoked_at is not None:
-        return "revoked"
-    if token.expires_at is not None and token.expires_at <= utc_now():
-        return "expired"
-    return "active"
-
-
 # --- users ----------------------------------------------------------------------
 
 
@@ -93,13 +85,10 @@ async def new_user(request: Request, caller: Viewer) -> HTMLResponse:
 @router.post("/users")
 async def create_user(request: Request, caller: Actor) -> Response:
     form = await request.form()
-    name = str(form.get("name") or "").strip()
-    if not name:
-        return back("/ui/users/new", error="A user needs a name.")
     try:
         user = get_users(request).create_user(
             caller,
-            name,
+            str(form.get("name") or "").strip(),
             [str(role) for role in form.getlist("roles")],
             read_grants(form),
         )
@@ -120,7 +109,7 @@ async def user(request: Request, caller: Viewer, user_id: str) -> HTMLResponse:
         "pages/user.html",
         page="users",
         user=found,
-        tokens=[(token, _state(token)) for token in tokens or []],
+        tokens=[(token, users.token_state(token)) for token in tokens or []],
         can_list_tokens=tokens is not None,
         new_token=take_once(request, f"token:{user_id}"),
         role_choices=_role_choices(request, caller, found.roles),
@@ -170,10 +159,8 @@ async def create_token(request: Request, caller: Actor, user_id: str) -> Respons
     here = f"/ui/users/{user_id}"
     name = str(form.get("name") or "").strip()
     days = str(form.get("days") or "").strip()
-    if not name:
-        return back(here, error="A token needs a name.")
-    if days and not (days.isdigit() and int(days) > 0):
-        return back(here, error="Days valid must be a whole number above 0.")
+    if days and not days.isdigit():
+        return back(here, error="Days valid must be a whole number.")
     expires_at = utc_now() + timedelta(days=int(days)) if days else None
     try:
         _, plain = get_users(request).create_token(caller, user_id, name, expires_at)
@@ -219,16 +206,14 @@ def _used_by(request: Request, caller: Access, roles: list[Role]) -> dict[str, i
     """How many users hold each role, if the caller may list users."""
     if not caller.allows("list_users"):
         return {}
-    holders = get_users(request).list_users(caller)
-    return {role.id: sum(role.id in user.roles for user in holders) for role in roles}
+    users = get_users(request)
+    return {role.id: len(users.holders_of(caller, role.id)) for role in roles}
 
 
 @router.post("/roles")
 async def create_role(request: Request, caller: Actor) -> Response:
     form = await request.form()
     role_id = str(form.get("id") or "").strip()
-    if not role_id:
-        return back("/ui/roles", error="A role needs a name.")
     try:
         role = get_users(request).create_role(caller, role_id, read_grants(form))
     except (MailboxApiError, GrantFormError) as exc:
@@ -240,7 +225,7 @@ async def create_role(request: Request, caller: Actor) -> Response:
 async def role(request: Request, caller: Viewer, role_id: str) -> HTMLResponse:
     found = get_users(request).get_role(caller, role_id)
     holders = (
-        [u for u in get_users(request).list_users(caller) if role_id in u.roles]
+        get_users(request).holders_of(caller, role_id)
         if caller.allows("list_users")
         else None
     )

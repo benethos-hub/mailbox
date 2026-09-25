@@ -34,6 +34,10 @@ stored data and the configuration may change without notice.
 
 ### Changed
 
+- A blank name for a user, a role or a token is refused with `400`, and
+  so is a token `expires_at` that lies in the past.
+- An IMAP account's `username` defaults to its address when left out, on
+  create and when it is removed.
 - The keywords `$seen`, `$flagged`, `$deleted` and `$recent` are refused
   with `422` on every provider: use `unread`, `starred` or `DELETE`. Before,
   IMAP answered `400` and other providers stored them.
@@ -65,6 +69,7 @@ stored data and the configuration may change without notice.
 
 ### Added
 
+- A token carries its `state`: `active`, `expired` or `revoked`.
 - Each release publishes both packages to PyPI and both container images
   to `ghcr.io`, for `linux/amd64` and `linux/arm64`, under the same
   version.

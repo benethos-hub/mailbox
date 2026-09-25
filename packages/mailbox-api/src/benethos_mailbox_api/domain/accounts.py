@@ -10,7 +10,12 @@ from pydantic import SecretStr
 
 from ..common.ids import new_id
 from ..data.models import Account, AccountStatus, ProviderType
-from ..data.providers import CredentialReader, ProviderSettings, Tokens
+from ..data.providers import (
+    CredentialReader,
+    ProviderSettings,
+    Tokens,
+    settings_defaults,
+)
 from ..data.secrets import CredentialVault
 from ..data.storage import AccountRepository, MessageIndexRepository
 from ..errors import BadRequestError, MailboxApiError
@@ -76,7 +81,8 @@ class AccountService:
         the check instead of a refresh."""
         access.require("create_account")
         _no_secrets_in(settings)
-        await self._check_hosts(settings or {})
+        settings = {**settings_defaults(provider, email), **(settings or {})}
+        await self._check_hosts(settings)
         secrets = dict(credentials or {})
         if secrets:
             self._vault.require_ready()
@@ -91,12 +97,12 @@ class AccountService:
         # stored.
         await self._probe(
             provider,
-            settings or {},
+            settings,
             lambda field: _pending(secrets, field),
             secrets,
             signed_in,
         )
-        self._repository.add(account, dict(settings or {}))
+        self._repository.add(account, dict(settings))
         try:
             for field, value in secrets.items():
                 self._vault.store(account.id, field, value)
@@ -131,6 +137,9 @@ class AccountService:
                 merged.pop(key, None)
             else:
                 merged[key] = value
+        # A setting removed falls back to what the provider assumes.
+        for key, value in settings_defaults(account.provider, account.email).items():
+            merged.setdefault(key, value)
         secrets = dict(credentials or {})
         if secrets:
             self._vault.require_ready()

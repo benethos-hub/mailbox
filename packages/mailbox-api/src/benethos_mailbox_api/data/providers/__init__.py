@@ -71,6 +71,19 @@ _SIGN_IN: dict[ProviderType, Callable[[str | None], Endpoints]] = {
 }
 
 
+# What an adapter assumes where the settings say nothing, given the
+# account's address: IMAP logs in with the address unless told otherwise.
+_DEFAULTS: dict[ProviderType, Callable[[str], dict[str, str | int | bool]]] = {
+    ProviderType.IMAP: lambda email: {"username": email},
+}
+
+
+def settings_defaults(kind: ProviderType, email: str) -> dict[str, str | int | bool]:
+    """The settings of ``kind`` that follow from the address alone."""
+    make = _DEFAULTS.get(kind)
+    return make(email) if make is not None else {}
+
+
 def sign_in(kind: ProviderType, tenant: str | None = None) -> Endpoints:
     """Where accounts of ``kind`` sign in, and what the adapter asks for."""
     try:
@@ -128,5 +141,6 @@ __all__ = [
     "build_provider",
     "new_pkce",
     "probe_server",
+    "settings_defaults",
     "sign_in",
 ]

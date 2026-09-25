@@ -123,7 +123,8 @@ def test_create_a_user_with_a_constrained_grant(
 
 def test_a_user_without_a_name_is_refused(ui: TestClient) -> None:
     answer = post(ui, "/ui/users", {"name": " "}, follow_redirects=False)
-    assert "err=A+user+needs+a+name" in answer.headers["location"]
+    # The domain refuses it; the page shows its words.
+    assert "err=a+user+needs+a+name" in answer.headers["location"]
 
 
 def test_change_disable_and_delete_a_user(ui: TestClient, services: Services) -> None:
