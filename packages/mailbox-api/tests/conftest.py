@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_api import main
 from benethos_mailbox_api.config import Settings
 from benethos_mailbox_api.data.models import (
     Account,
@@ -33,6 +34,11 @@ from benethos_mailbox_api.main import Services, build_services, create_app
 
 API_KEY = "test-key"
 
+
+async def resolve_to_public(host: str, port: int) -> list[str]:
+    return ["93.184.215.14"]
+
+
 ADMIN = Access.admin("usr_test_admin", "test admin")
 
 
@@ -53,6 +59,10 @@ def no_configuration_from_this_machine(
     monkeypatch.setenv("MAILBOX_API_KEY_PROVIDER", "env")
     # No background worker. Tests that want one build it.
     monkeypatch.setenv("MAILBOX_API_SYNC_INTERVAL", "0")
+    # No DNS: every host name in a test resolves to one public address, so
+    # the host check of accounts and discovery passes without the network.
+    # Tests of the check itself hand ``build_services`` a table.
+    monkeypatch.setattr(main, "host_addresses", resolve_to_public)
 
 
 @pytest.fixture

@@ -8,12 +8,13 @@ as an OAuth token endpoint.
 from __future__ import annotations
 
 from .api import Answer, ApiClient
-from .safe import Fetched, SafeFetcher, host_addresses, is_public_address
+from .safe import Fetched, Resolve, SafeFetcher, host_addresses, is_public_address
 
 __all__ = [
     "Answer",
     "ApiClient",
     "Fetched",
+    "Resolve",
     "SafeFetcher",
     "host_addresses",
     "is_public_address",

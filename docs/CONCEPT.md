@@ -453,7 +453,9 @@ registered that domain.
    connect to addresses derived from user input, which is how server-side
    request forgery works. Hosts resolving to private, loopback or
    link-local addresses are refused, unless an operator allows a list of
-   internal mail servers in the settings.
+   internal mail servers in the settings. The same check runs on the
+   hosts in an account's settings (`host`, `smtp_host`) when the account
+   is created or changed, before the first connection: `400`.
 7. **Safe XML.** Autoconfig files are parsed with `defusedxml`, never the
    plain standard-library parser, so a hostile file cannot expand entities
    or read local files.

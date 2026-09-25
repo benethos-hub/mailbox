@@ -46,8 +46,9 @@ class Settings(BaseSettings):
     # Autodiscovery: whether to ask Thunderbird's ISPDB, which tells Mozilla
     # the domain being set up.
     discovery_ispdb: bool = True
-    # Autodiscovery: host names that may resolve to private addresses, e.g.
-    # an internal mail server. A JSON list.
+    # Host names that may resolve to private addresses, e.g. an internal
+    # mail server: autodiscovery may look them up and accounts may use them
+    # (CONCEPT 5.8, rule 6). A JSON list.
     discovery_internal_hosts: list[str] = Field(default_factory=list)
     # Sync worker: seconds between two polls of every folder. 0 switches the
     # worker off.
