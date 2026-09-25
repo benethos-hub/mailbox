@@ -78,6 +78,11 @@ def test_lifespan_passes() -> None:
     assert call([], scope_type="lifespan")["reached"] is True
 
 
+def test_a_websocket_is_closed_unseen() -> None:
+    answer = call([(b"authorization", f"Bearer {TOKEN}".encode())], "websocket")
+    assert answer["reached"] is False
+
+
 def test_token_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(transport.ENV_VAR, raising=False)
     assert transport.token_from_env() is None
@@ -102,6 +107,17 @@ def test_an_explicit_list_wins() -> None:
     assert security.allowed_origins == [
         "http://mcp.example.org:443",
         "https://mcp.example.org:443",
+    ]
+
+
+def test_origins_alone_admit_their_hosts() -> None:
+    security = transport.transport_security(
+        "0.0.0.0", [], ["https://mcp.example.org", "http://box.local:8000"]
+    )
+    assert security.allowed_hosts == ["mcp.example.org", "box.local:8000"]
+    assert security.allowed_origins == [
+        "https://mcp.example.org",
+        "http://box.local:8000",
     ]
 
 

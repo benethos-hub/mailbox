@@ -11,6 +11,19 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- The MCP server's `--allowed-origins` without `--allowed-hosts` admits
+  the hosts of those origins. Before, it answered every request with
+  `421`, since no host was allowed.
+- The MCP server tells the model what a `422` was about: the field and
+  the reason, as `validation_error`. An answer that is not JSON is
+  reported as `unexpected_response` instead of failing the tool.
+- The MCP server reads an attachment only up to its limit of 10 MB and
+  stops there. A PDF page is rendered within a budget of 4 million
+  pixels, whatever size its MediaBox declares. An attachment with a
+  charset Python does not know is read as UTF-8.
+- The MCP server's bearer guard closes a websocket instead of passing it
+  through unchecked.
+
 - The MCP server quotes the ids a model hands it before they go into
   an API path.
 

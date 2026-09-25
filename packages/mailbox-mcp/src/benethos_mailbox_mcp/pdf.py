@@ -16,6 +16,10 @@ import pypdfium2 as pdfium
 from .errors import ToolError
 
 DPI = 150
+# Pixels per page at most. A page's MediaBox decides its size, and a
+# hostile PDF can declare one of metres, so a page larger than this is
+# rendered smaller, never in more pixels.
+MAX_PIXELS = 4_000_000
 
 
 @dataclass(frozen=True)
@@ -39,7 +43,7 @@ def render(data: bytes, first: int, count: int, dpi: int = DPI) -> Pages:
         for number in range(first, min(first + count, total + 1)):
             page = document[number - 1]
             try:
-                bitmap = page.render(scale=dpi / 72, rev_byteorder=True)
+                bitmap = page.render(scale=_scale(page, dpi), rev_byteorder=True)
                 images.append(
                     _png(
                         bytes(bitmap.buffer),
@@ -54,6 +58,15 @@ def render(data: bytes, first: int, count: int, dpi: int = DPI) -> Pages:
         return Pages(images, first, total)
     finally:
         document.close()
+
+
+def _scale(page: pdfium.PdfPage, dpi: int) -> float:
+    """``dpi`` as a scale on the page's points, reduced so that the page
+    stays within MAX_PIXELS."""
+    width, height = page.get_size()
+    scale = dpi / 72
+    pixels = max(width, 1.0) * max(height, 1.0) * scale * scale
+    return scale if pixels <= MAX_PIXELS else scale * (MAX_PIXELS / pixels) ** 0.5
 
 
 def _png(pixels: bytes, width: int, height: int, stride: int, channels: int) -> bytes:

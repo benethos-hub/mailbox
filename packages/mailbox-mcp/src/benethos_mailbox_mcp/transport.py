@@ -15,6 +15,7 @@ import hmac
 import logging
 import os
 from typing import Any
+from urllib.parse import urlsplit
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
@@ -28,7 +29,7 @@ ENV_VAR = "MAILBOX_MCP_BEARER_TOKEN"
 _REFUSED = b'{"error":{"code":"unauthorized","message":"bearer token required"}}'
 
 # Binds only this machine can reach.
-LOCALHOST_BINDS = frozenset({"127.0.0.1", "localhost", "::1", ""})
+LOCALHOST_BINDS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
 def token_from_env() -> str | None:
@@ -42,9 +43,13 @@ def bearer_middleware(app: ASGIApp, token: str) -> ASGIApp:
     expected = token.encode()
 
     async def guarded(scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
-            # lifespan must pass, or the session manager never starts.
+        if scope["type"] == "lifespan":
+            # It must pass, or the session manager never starts.
             await app(scope, receive, send)
+            return
+        if scope["type"] != "http":
+            # A websocket or anything else: nothing here speaks it.
+            await send({"type": f"{scope['type']}.close", "code": 1008})
             return
         headers = dict(scope.get("headers") or [])
         scheme, _, provided = headers.get(b"authorization", b"").partition(b" ")
@@ -83,16 +88,20 @@ async def _unauthorized(send: Send) -> None:
 def transport_security(
     host: str, allowed_hosts: list[str], allowed_origins: list[str]
 ) -> TransportSecuritySettings:
-    """Host and Origin checks against DNS rebinding. An explicit list wins.
-    A loopback bind admits the loopback names. Any other bind without a list
-    checks nothing, or every remote client would get 421."""
+    """Host and Origin checks against DNS rebinding. An explicit list wins:
+    hosts alone admit both schemes as origins, origins alone admit their
+    hosts. A loopback bind admits the loopback names. Any other bind
+    without a list checks nothing, or every remote client would get 421."""
     if allowed_hosts or allowed_origins:
         origins = allowed_origins or [
             f"{scheme}://{h}" for h in allowed_hosts for scheme in ("http", "https")
         ]
+        hosts = allowed_hosts or [
+            urlsplit(origin).netloc or origin for origin in allowed_origins
+        ]
         return TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
-            allowed_hosts=allowed_hosts,
+            allowed_hosts=hosts,
             allowed_origins=origins,
         )
     if host in LOCALHOST_BINDS:

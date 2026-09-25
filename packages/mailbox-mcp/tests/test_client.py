@@ -44,6 +44,43 @@ async def test_unexpected_error_body(make_client: Callable) -> None:
     await client.aclose()
 
 
+async def test_a_validation_failure_names_what_was_wrong(make_client: Callable) -> None:
+    client = make_client(
+        lambda _: httpx.Response(
+            422,
+            json={
+                "detail": [
+                    {"type": "missing", "loc": ["body", "to"], "msg": "Field required"},
+                    {"type": "x", "loc": ["query", "limit"], "msg": "too big"},
+                ]
+            },
+        )
+    )
+    with pytest.raises(ApiError, match=r"to: Field required; query.limit: too big"):
+        await client.request("POST", "/v1/accounts/x/send", json={})
+    await client.aclose()
+
+
+async def test_an_answer_that_is_not_json(make_client: Callable) -> None:
+    client = make_client(lambda _: httpx.Response(200, text="<html>proxy</html>"))
+    with pytest.raises(ApiError, match="not JSON"):
+        await client.request("GET", "/v1/accounts")
+    await client.aclose()
+
+
+async def test_an_attachment_is_read_up_to_the_limit(make_client: Callable) -> None:
+    client = make_client(
+        lambda _: httpx.Response(
+            200, content=b"x" * 100, headers={"content-type": "text/plain; charset=z"}
+        )
+    )
+    found = await client.get_attachment("acc_1", "msg_1", "att_0", max_bytes=10)
+    assert (len(found.data), found.complete, found.charset) == (10, False, None)
+    whole = await client.get_attachment("acc_1", "msg_1", "att_0", max_bytes=100)
+    assert (len(whole.data), whole.complete) == (100, True)
+    await client.aclose()
+
+
 async def test_no_content(make_client: Callable) -> None:
     client = make_client(lambda _: httpx.Response(204))
     assert await client.request("DELETE", "/v1/accounts/x") is None

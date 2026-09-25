@@ -154,7 +154,8 @@ claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
   rights decide which tools exist, for every client alike.
 - **Host check.** Against DNS rebinding the server checks the `Host` and
   `Origin` headers. On a loopback bind it admits `127.0.0.1`, `localhost`
-  and `[::1]`. With `--allowed-hosts` it admits exactly those. A bind such
+  and `[::1]`. With `--allowed-hosts` it admits exactly those, and
+  `--allowed-origins` alone admits the hosts of those origins. A bind such
   as `0.0.0.0` without a list checks nothing, so set the list there. A
   refused host gets `421`.
 - Beyond your own machine, put a TLS reverse proxy in front.

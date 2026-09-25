@@ -17,7 +17,7 @@ from benethos_mailbox_mcp.errors import ToolError
 URL = "/v1/accounts/acc_1/messages/msg_1/attachments/att_0"
 
 
-def make_pdf(pages: int) -> bytes:
+def make_pdf(pages: int, width: int = 612, height: int = 792) -> bytes:
     """A small valid PDF with ``pages`` pages of text."""
     kids = b" ".join(b"%d 0 R" % (3 + 2 * i) for i in range(pages))
     font = 3 + 2 * pages
@@ -28,9 +28,9 @@ def make_pdf(pages: int) -> bytes:
     for i in range(pages):
         text = b"BT /F1 24 Tf 72 700 Td (Page %d) Tj ET" % (i + 1)
         objects.append(
-            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] "
             b"/Contents %d 0 R /Resources << /Font << /F1 %d 0 R >> >> >>"
-            % (4 + 2 * i, font)
+            % (width, height, 4 + 2 * i, font)
         )
         objects.append(b"<< /Length %d >>\nstream\n%s\nendstream" % (len(text), text))
     objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
@@ -160,6 +160,22 @@ async def test_too_large(
     make_client(serving(b"x" * 11, "text/plain"))
     with pytest.raises(ToolError, match="more than the 10"):
         await call()
+    make_client(serving(b"x" * 11, "application/zip", "big.zip"))
+    [text] = await call()
+    assert "over 10 bytes" in text.text  # type: ignore[attr-defined]
+
+
+async def test_a_charset_python_does_not_know(make_client: Callable) -> None:
+    make_client(serving("Grüße".encode(), "text/plain; charset=x-unknown"))
+    [text] = await call()
+    assert "Grüße" in text.text  # type: ignore[attr-defined]
+
+
+def test_a_huge_page_is_rendered_within_the_budget() -> None:
+    picture = pdf.render(make_pdf(1, width=20000, height=20000), first=1, count=1)
+    width, height = png_size(picture.images[0])
+    assert width * height <= pdf.MAX_PIXELS
+    assert width > 1000
 
 
 async def test_registered_with_the_right() -> None:
