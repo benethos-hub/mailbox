@@ -715,7 +715,7 @@ HMAC-SHA256 in a header. The source is IMAP IDLE / polling, Gmail
 
 | Parameter | Meaning |
 |---|---|
-| `folder` | folder id, or a role such as `inbox` |
+| `folder` | folder id, or a role such as `inbox`. Left out: every folder on a Microsoft account, the inbox on IMAP |
 | `q` | free text (subject, addresses, body where the provider can) |
 | `from`, `to`, `subject` | structured filters |
 | `after`, `before` | date range, ISO 8601 |

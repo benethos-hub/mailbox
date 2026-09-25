@@ -22,6 +22,7 @@ from ....errors import (
     ProviderUnavailableError,
 )
 from ...mail.fields import ascii_domain
+from .transport import transport_errors
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}
 
@@ -141,36 +142,27 @@ def _on_the_wire(address: str) -> str:
 
 @contextmanager
 def _errors() -> Iterator[None]:
-    try:
-        yield
-    except (BadRequestError, ProviderAuthError, ProviderError):
-        raise
-    except UnicodeError as exc:
-        raise BadRequestError(f"an address cannot go on the wire: {exc}") from None
-    except smtplib.SMTPAuthenticationError:
-        raise ProviderAuthError("the mail server rejected the login") from None
-    except smtplib.SMTPServerDisconnected as exc:
-        raise ProviderUnavailableError(
-            f"the mail server dropped the connection: {exc}"
-        ) from None
-    except (smtplib.SMTPDataError, smtplib.SMTPResponseException) as exc:
-        text = (
-            exc.smtp_error.decode(errors="replace")
-            if isinstance(exc.smtp_error, bytes)
-            else str(exc.smtp_error)
-        )
-        raise ProviderError(
-            f"the mail server answered {exc.smtp_code}: {text}"
-        ) from None
-    except smtplib.SMTPException as exc:
-        raise ProviderError(f"the mail server failed: {exc}") from None
-    except TimeoutError:
-        raise ProviderUnavailableError(
-            "the mail server did not answer in time"
-        ) from None
-    except (ssl.SSLError, ssl.CertificateError) as exc:
-        raise ProviderError(f"TLS with the mail server failed: {exc}") from None
-    except OSError as exc:
-        raise ProviderUnavailableError(
-            f"the mail server is not reachable: {exc}"
-        ) from None
+    with transport_errors():
+        try:
+            yield
+        except (BadRequestError, ProviderAuthError, ProviderError):
+            raise
+        except UnicodeError as exc:
+            raise BadRequestError(f"an address cannot go on the wire: {exc}") from None
+        except smtplib.SMTPAuthenticationError:
+            raise ProviderAuthError("the mail server rejected the login") from None
+        except smtplib.SMTPServerDisconnected as exc:
+            raise ProviderUnavailableError(
+                f"the mail server dropped the connection: {exc}"
+            ) from None
+        except (smtplib.SMTPDataError, smtplib.SMTPResponseException) as exc:
+            text = (
+                exc.smtp_error.decode(errors="replace")
+                if isinstance(exc.smtp_error, bytes)
+                else str(exc.smtp_error)
+            )
+            raise ProviderError(
+                f"the mail server answered {exc.smtp_code}: {text}"
+            ) from None
+        except smtplib.SMTPException as exc:
+            raise ProviderError(f"the mail server failed: {exc}") from None

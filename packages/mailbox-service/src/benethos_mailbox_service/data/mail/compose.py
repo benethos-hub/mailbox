@@ -221,9 +221,7 @@ def quoted_html(original: Message, html: str, heading: str) -> str:
 
 
 def _who(address: Address | None) -> str:
-    if address is None:
-        return "unknown"
-    return formataddr((address.name or "", address.email))
+    return _formatted(address.name, address.email) if address else "unknown"
 
 
 def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
@@ -244,4 +242,9 @@ def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
 
 
 def _address(recipient: Recipient) -> str:
-    return formataddr((one_line(recipient.name or ""), recipient.email))
+    return _formatted(recipient.name, recipient.email)
+
+
+def _formatted(name: str | None, email: str) -> str:
+    """``Name <address>``, the name on one line whatever message it came from."""
+    return formataddr((one_line(name or ""), email))

@@ -19,7 +19,9 @@ preference. The adapter looks their immutable ids up.
 from __future__ import annotations
 
 import base64
-from collections.abc import Mapping
+import math
+import time
+from collections.abc import Callable, Mapping
 from typing import Any
 from urllib.parse import quote, unquote, urlencode, urlsplit
 
@@ -71,10 +73,19 @@ class MicrosoftProvider:
         }
     )
 
-    def __init__(self, tokens: TokenSource, http: ApiClient | None = None) -> None:
+    def __init__(
+        self,
+        tokens: TokenSource,
+        http: ApiClient | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._tokens = tokens
         self._http = http or ApiClient()
+        self._clock = clock
         self._roles: dict[str, FolderRole] | None = None
+        self._root: str | None = None
+        # Until when Graph asked to be left alone (Retry-After).
+        self._rest_until = 0.0
 
     # --- the wire -------------------------------------------------------------------
 
@@ -88,7 +99,13 @@ class MicrosoftProvider:
         content: bytes | None = None,
         content_type: str | None = None,
     ) -> Answer:
-        """One Graph request. ``path`` below ``/v1.0``, e.g. ``/me/messages``."""
+        """One Graph request. ``path`` below ``/v1.0``, e.g. ``/me/messages``.
+        While Graph asked to be left alone, nothing is sent."""
+        wait = self._rest_until - self._clock()
+        if wait > 0:
+            raise ProviderUnavailableError(
+                f"microsoft asked to wait: next attempt in {math.ceil(wait)}s"
+            )
         for attempt in (1, 2):
             token = await self._tokens.access_token()
             headers = {
@@ -111,6 +128,7 @@ class MicrosoftProvider:
                 self._tokens.reject()
                 continue
             if not answer.ok:
+                self._rest_until = self._clock() + _retry_after(answer)
                 raise _failure(answer)
             return answer
         raise AssertionError("unreachable")  # pragma: no cover
@@ -182,13 +200,20 @@ class MicrosoftProvider:
     ) -> Folder:
         path = f"/me/mailFolders/{_id(folder_id)}"
         item = await self._json("PATCH", path, json_body={"displayName": name})
-        if item.get("parentFolderId") != parent_id:
-            # The top of the folder tree is the mailbox's root folder.
-            target = parent_id or "msgfolderroot"
+        # The top of the folder tree is the mailbox's root folder, which
+        # Graph names as the parent of a top-level folder.
+        root = await self._root_id()
+        if (item.get("parentFolderId") or root) != (parent_id or root):
             item = await self._json(
-                "POST", f"{path}/move", json_body={"destinationId": target}
+                "POST", f"{path}/move", json_body={"destinationId": parent_id or root}
             )
         return mappers.folder(item, await self._folder_roles())
+
+    async def _root_id(self) -> str:
+        if self._root is None:
+            item = await self._json("GET", "/me/mailFolders/msgfolderroot")
+            self._root = str(item["id"])
+        return self._root
 
     async def delete_folder(self, folder_id: str) -> None:
         await self._call("DELETE", f"/me/mailFolders/{_id(folder_id)}")
@@ -369,9 +394,10 @@ class MicrosoftProvider:
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxServiceError]:
         body = mappers.changes(changes.unread, changes.starred, changes.keywords)
-        target = rules.move_target(changes, self.capabilities)
 
         async def one(message_id: str) -> MessageSummary:
+            # Judged per id, as the other adapters answer it.
+            target = rules.move_target(changes, self.capabilities)
             path = f"/me/messages/{_id(message_id)}"
             item = None
             if body:
@@ -483,6 +509,14 @@ def _own_path(link: str) -> str:
     if not rest.startswith("/me/") or ".." in rest:
         raise BadRequestError("invalid cursor")
     return f"{rest}?{parts.query}" if parts.query else rest
+
+
+def _retry_after(answer: Answer) -> float:
+    """The seconds Graph asks to wait, 0 when it asks nothing."""
+    if answer.status not in (429, 503):
+        return 0.0
+    value = answer.headers.get("retry-after", "")
+    return float(value) if value.isdigit() else 0.0
 
 
 def _failure(answer: Answer) -> MailboxServiceError:

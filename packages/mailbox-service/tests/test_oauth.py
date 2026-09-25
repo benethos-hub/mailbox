@@ -253,6 +253,27 @@ async def test_a_rejected_token_is_fetched_anew() -> None:
     assert (await source.access_token()).get_secret_value() == "at-1"
 
 
+async def test_a_refused_refresh_is_not_asked_again() -> None:
+    endpoint = TokenEndpoint((400, {"error": "invalid_grant"}), granted())
+    source = RefreshingTokens(
+        client(endpoint), lambda: SecretStr("rt"), lambda _: None, lambda: NOW
+    )
+    for _ in range(2):
+        with pytest.raises(ProviderAuthError, match="sign in again"):
+            await source.access_token()
+    assert len(endpoint.forms) == 1
+
+
+async def test_a_gateway_page_instead_of_json() -> None:
+    def gateway(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(502, text="<html>bad gateway</html>")
+
+    app = App(microsoft_endpoints(), "client-1", SecretStr("app-secret"))
+    oauth = OAuthClient(app, ApiClient(transport=httpx.MockTransport(gateway)))
+    with pytest.raises(ProviderError, match="502"):
+        await oauth.refresh(SecretStr("rt"))
+
+
 async def test_refreshes_at_once_share_one_request() -> None:
     endpoint = TokenEndpoint(granted())
     source = RefreshingTokens(

@@ -11,6 +11,15 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- A Microsoft account's keywords come back in lower case, as the other
+  providers answer them. Renaming a top-level folder there no longer
+  moves it. A move of a batch to several folders is refused per message,
+  as on the other providers, not for the batch as a whole.
+- A Microsoft account is left alone for as long as Graph's `Retry-After`
+  asks, and a refresh token the provider refused is not sent again until
+  the account is signed in anew.
+- The next page of an IMAP folder asks the server for the older messages
+  only, instead of reading every match and cutting the page here.
 - A message of a Microsoft account deleted with `permanent=true`, and a
   draft there that is deleted or replaced, are gone for good. Before,
   one not in Deleted Items was only moved there, since that is what

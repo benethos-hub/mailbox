@@ -310,7 +310,7 @@ class FakeMailBox:
         self.calls.append(("search", tuple(words), charset))
         found = []
         for uid, (raw, flags) in self.folders[self.selected].messages.items():
-            if _matches(words, raw, flags):
+            if _matches(words, raw, flags, uid):
                 found.append(uid)
         return found
 
@@ -369,7 +369,9 @@ def _message_id_block(head: bytes) -> bytes:
     return block + b"\r\n"
 
 
-def _matches(words: list[Any], raw: bytes, flags: tuple[str, ...]) -> bool:
+def _matches(
+    words: list[Any], raw: bytes, flags: tuple[str, ...], uid: int = 0
+) -> bool:
     mail = BytesParser(policy=default).parsebytes(raw)
     position = 0
     negate = False
@@ -398,6 +400,10 @@ def _matches(words: list[Any], raw: bytes, flags: tuple[str, ...]) -> bool:
                 ok = value.encode() in _message_id_block(raw)
             else:
                 ok = value.lower() in str(mail.get(name, "")).lower()
+        elif key == "UID":
+            low, _, high = str(words[position]).partition(":")
+            position += 1
+            ok = int(low) <= uid and (high == "*" or uid <= int(high))
         elif key in ("SINCE", "BEFORE"):
             day = words[position]
             position += 1

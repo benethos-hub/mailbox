@@ -304,6 +304,21 @@ async def test_xoauth2(server: FakeMailBox) -> None:
     assert ("xoauth2", "me@example.com") in server.calls
 
 
+async def test_the_next_page_asks_the_server_for_older_uids_only(
+    server: FakeMailBox,
+) -> None:
+    imap = provider(server)
+    first = await imap.list_messages(None, limit=2, cursor=None, search=None)
+    assert first.next_cursor is not None
+    second = await imap.list_messages(
+        None, limit=2, cursor=first.next_cursor, search=None
+    )
+    assert len(second.items) == 2
+    assert not {m.id for m in first.items} & {m.id for m in second.items}
+    searches = [c[1] for c in server.calls if c[0] == "search"]
+    assert searches[-1][0] == "UID" and searches[-1][1].startswith("1:")
+
+
 async def test_a_dropped_connection_is_retried_in_the_same_call(
     server: FakeMailBox,
 ) -> None:

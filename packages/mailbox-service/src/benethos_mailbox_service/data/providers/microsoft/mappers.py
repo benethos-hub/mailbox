@@ -79,7 +79,8 @@ def _when(value: Any) -> datetime | None:
 
 
 def keywords(item: dict[str, Any]) -> list[str]:
-    found = [str(c) for c in item.get("categories") or []]
+    """Lower case, as the other adapters answer keywords."""
+    found = [str(c).lower() for c in item.get("categories") or []]
     if item.get("isDraft"):
         found.append(DRAFT_KEYWORD)
     return found
@@ -155,7 +156,8 @@ def _day(value: date) -> str:
 
 
 def _quoted(value: str) -> str:
-    """A value for Graph's search syntax, inside double quotes."""
+    """A value for Graph's search syntax, quoted. ``query`` turns the
+    double quotes into single ones inside the whole ``$search`` string."""
     return '"' + value.replace('"', " ").replace("\\", " ").strip() + '"'
 
 

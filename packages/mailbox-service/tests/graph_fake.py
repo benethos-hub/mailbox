@@ -37,6 +37,8 @@ class FakeGraph:
         self.requests: list[httpx.Request] = []
         # Tokens the fake accepts. Any other answers 401.
         self.tokens = {TOKEN}
+        # Given once to the next request instead of an answer of its own.
+        self.next_answer: httpx.Response | None = None
 
     # --- setting up -----------------------------------------------------------------
 
@@ -79,6 +81,9 @@ class FakeGraph:
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        if self.next_answer is not None:
+            answer, self.next_answer = self.next_answer, None
+            return answer
         if request.headers.get("authorization") not in {
             f"Bearer {t}" for t in self.tokens
         }:
@@ -122,7 +127,7 @@ class FakeGraph:
     # --- folders --------------------------------------------------------------------
 
     def _folder(self, key: str) -> dict[str, Any] | None:
-        if key == "msgfolderroot":
+        if key in ("msgfolderroot", self.root):
             return {"id": self.root}
         folder_id = self.well_known.get(key, key)
         return self.folders.get(folder_id)

@@ -88,7 +88,13 @@ async def list_messages(
     mailbox: Mailbox,
     search: Search,
     folder: Annotated[
-        str | None, Query(description="A folder id, or a role such as inbox")
+        str | None,
+        Query(
+            description=(
+                "A folder id, or a role such as inbox. Left out: every folder "
+                "on a Microsoft account, the inbox on IMAP."
+            )
+        ),
     ] = None,
     limit: Limit = 50,
     cursor: str | None = None,

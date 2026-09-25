@@ -154,7 +154,10 @@ class OAuthClient:
         answer = await self._http.request(
             "POST", self.app.endpoints.token_url, form=form
         )
-        body = answer.json()
+        try:
+            body = answer.json()
+        except ProviderError:
+            body = None  # a gateway's HTML page: the status says enough
         if not answer.ok or not isinstance(body, dict):
             raise _refused(self.app.endpoints.provider, answer.status, body)
         return self._tokens(body)
@@ -228,9 +231,13 @@ class RefreshingTokens:
         self._clock = clock or client.clock
         self._current = current
         self._lock = anyio.Lock()
+        # A refresh the provider refused: asked no more with this token.
+        self._refused: ProviderAuthError | None = None
 
     async def access_token(self) -> SecretStr:
         async with self._lock:
+            if self._refused is not None:
+                raise self._refused
             if self._current is None or self._spent(self._current):
                 self._current = await self._renew()
             return self._current.access_token
@@ -243,7 +250,11 @@ class RefreshingTokens:
 
     async def _renew(self) -> Tokens:
         old = self._read()
-        tokens = await self._client.refresh(old)
+        try:
+            tokens = await self._client.refresh(old)
+        except ProviderAuthError as exc:
+            self._refused = exc
+            raise
         new = tokens.refresh_token
         if new is not None and new.get_secret_value() != old.get_secret_value():
             self._store(new)

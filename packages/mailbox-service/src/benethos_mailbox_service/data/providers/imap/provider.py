@@ -27,9 +27,7 @@ from ....errors import (
     MessageNotFoundError,
     NotFoundError,
     NotSupportedError,
-    ProviderAuthError,
     ProviderError,
-    ProviderUnavailableError,
 )
 from ...mail import convert
 from ...mail.parse import ParsedMessage
@@ -174,6 +172,8 @@ class ImapProvider:
             self.capabilities = self.capabilities | {Capability.SEND}
         self._session = session_factory(self._server)
         self._lock = threading.Lock()
+        # The folders as listed once in the current step, see _role_folder.
+        self._folders: list[Folder] | None = None
         # IDLE blocks its connection, so it gets one of its own.
         self._idle_session = session_factory(self._server)
         self._idle_lock = threading.Lock()
@@ -210,8 +210,7 @@ class ImapProvider:
     async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
         if self._smtp is None:
             raise ConflictError(
-                "the account has no SMTP server: set settings.smtp_host with "
-                "PATCH /v1/accounts/{account_id}"
+                "the account has no SMTP server: its settings name no smtp_host"
             )
         refused = await anyio.to_thread.run_sync(
             self._smtp.send, raw, sender, recipients
@@ -282,7 +281,7 @@ class ImapProvider:
         for (folder, validity), by_uid in folders.items():
             try:
                 done = await self._run(partial(work, folder, validity, list(by_uid)))
-            except (ProviderAuthError, ProviderUnavailableError):
+            except rules.FATAL:
                 raise
             except MailboxServiceError as exc:
                 done = dict.fromkeys(by_uid, exc)
@@ -522,9 +521,13 @@ class ImapProvider:
         return found or self._session.personal_namespace()[1]
 
     def _role_folder(self, role: FolderRole) -> str | None:
-        """The server's name of the folder with ``role``, if there is one."""
+        """The server's name of the folder with ``role``, if there is one.
+        The folders are listed once per step: a draft save asks for the
+        drafts folder several times."""
+        if self._folders is None:
+            self._folders = self._list_folders()
         return next(
-            (mappers.folder_name(f.id) for f in self._list_folders() if f.role is role),
+            (mappers.folder_name(f.id) for f in self._folders if f.role is role),
             None,
         )
 
@@ -718,6 +721,7 @@ class ImapProvider:
 
     def _locked(self, operation: Callable[[], T]) -> T:
         def step() -> T:
+            self._folders = None
             if not self._session.connected:
                 self._login(self._session)
             return operation()

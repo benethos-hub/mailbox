@@ -3292,10 +3292,10 @@
                   "type": "null"
                 }
               ],
-              "description": "A folder id, or a role such as inbox",
+              "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft account, the inbox on IMAP.",
               "title": "Folder"
             },
-            "description": "A folder id, or a role such as inbox"
+            "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft account, the inbox on IMAP."
           },
           {
             "name": "limit",
