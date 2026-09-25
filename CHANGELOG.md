@@ -16,6 +16,10 @@ stored data and the configuration may change without notice.
 
 ### Security
 
+- Listing the tokens of a user needs the rights that user holds, as
+  creating and revoking them already did. Before, `users.manage` alone
+  listed the token names and dates of any user, an admin's included.
+
 - Guessed credentials are slowed down: a client address that fails to
   sign in ten times within fifteen minutes is locked out for fifteen
   minutes. On the API every request from it answers `429 rate_limited`
