@@ -6,10 +6,10 @@ switched off (CONCEPT 5.8, rule 9).
 
 from __future__ import annotations
 
+from ..http import SafeFetcher
 from ..models import DiscoverySourceName
 from . import autoconfig
 from .base import Finding, Query
-from .fetch import SafeFetcher
 
 ISPDB_URL = "https://autoconfig.thunderbird.net/v1.1/"
 

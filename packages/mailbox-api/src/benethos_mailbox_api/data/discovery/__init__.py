@@ -9,8 +9,8 @@ merged is decided in ``domain/discovery.py``. Helpers each wrap one library:
 
 from __future__ import annotations
 
+from ..http import SafeFetcher
 from .base import DiscoverySource, Finding, Query
-from .fetch import SafeFetcher
 from .isp import IspAutoconfigSource
 from .ispdb import IspdbSource
 from .mx import MxSource

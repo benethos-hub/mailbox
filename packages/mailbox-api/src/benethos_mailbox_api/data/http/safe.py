@@ -1,5 +1,5 @@
-"""HTTPS lookups for autodiscovery. The only module of the service that
-imports ``httpx``.
+"""HTTPS lookups at hosts built from what a user typed, e.g. for
+autodiscovery.
 
 The URLs are built from what a user typed, so every request is treated as a
 possible request forgery (CONCEPT 5.8, rules 3, 6 and 8):
@@ -14,19 +14,42 @@ possible request forgery (CONCEPT 5.8, rules 3, 6 and 8):
 
 from __future__ import annotations
 
+import ipaddress
+import socket
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 
+import anyio
 import httpx
 
 from ...errors import ProviderError, ProviderUnavailableError
-from .dns import host_addresses, is_public_address
 
 TIMEOUT = 5.0
 MAX_BYTES = 256 * 1024
 MAX_REDIRECTS = 3
 
 Resolve = Callable[[str, int], Awaitable[list[str]]]
+
+
+async def host_addresses(host: str, port: int) -> list[str]:
+    """Every address a host resolves to. Empty when it does not resolve."""
+    try:
+        infos = await anyio.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except (socket.gaierror, UnicodeError):
+        return []
+    seen: dict[str, None] = {}
+    for info in infos:
+        seen[str(info[4][0])] = None
+    return list(seen)
+
+
+def is_public_address(address: str) -> bool:
+    """False for private, loopback, link-local, shared, reserved and multicast
+    addresses, including IPv4 addresses wrapped in IPv6."""
+    ip = ipaddress.ip_address(address.split("%", 1)[0])
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+        ip = ip.ipv4_mapped
+    return ip.is_global and not ip.is_multicast
 
 
 @dataclass(frozen=True)

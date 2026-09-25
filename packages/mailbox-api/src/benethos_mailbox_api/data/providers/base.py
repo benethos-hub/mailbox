@@ -25,6 +25,21 @@ from ..models import (
 CredentialReader = Callable[[str], SecretStr]
 
 
+class TokenSource(Protocol):
+    """Hands an OAuth adapter a valid access token, refreshed when it runs
+    out. The token lives in memory only; what keeps it valid is stored by
+    whoever made the source."""
+
+    async def access_token(self) -> SecretStr:
+        """A token valid for at least another minute."""
+        ...
+
+    def reject(self) -> None:
+        """The provider refused the token before it ran out, e.g. after a
+        revocation: the next call fetches a new one."""
+        ...
+
+
 class Capability(StrEnum):
     """What an adapter can do beyond the read-only core."""
 

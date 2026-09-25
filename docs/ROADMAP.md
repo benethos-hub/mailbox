@@ -125,10 +125,10 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 - `microsoft` adapter over Graph with OAuth (5.4), next, prepared step by
   step so that it can be tested once the prerequisites exist:
-  1. OAuth core for every provider: authorization code with PKCE, `state`
-     bound to the user, refresh token in the vault, access token in memory,
-     rotation, `invalid_grant` to `needs_reauth`; client id, tenant and
-     secret per deployment
+  1. **OAuth core for every provider: authorization code with PKCE,
+     `state` bound to the user, refresh token in the vault, access token in
+     memory, rotation, `invalid_grant` to `needs_reauth`; client id, tenant
+     and secret per deployment**, done
   2. the OAuth round trip in the API and the UI: sign in with Microsoft
      when connecting, sign in again on the account page
   3. the `microsoft` adapter behind `MailProvider`: folders, list and

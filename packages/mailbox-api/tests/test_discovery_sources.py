@@ -6,7 +6,6 @@ import httpx
 import pytest
 
 from benethos_mailbox_api.data.discovery import Finding, Query
-from benethos_mailbox_api.data.discovery.fetch import SafeFetcher
 from benethos_mailbox_api.data.discovery.isp import IspAutoconfigSource
 from benethos_mailbox_api.data.discovery.ispdb import IspdbSource
 from benethos_mailbox_api.data.discovery.mx import MxLookup, MxSource
@@ -15,6 +14,7 @@ from benethos_mailbox_api.data.discovery.suffix import (
     is_public_suffix,
     registrable_domain,
 )
+from benethos_mailbox_api.data.http import SafeFetcher
 from benethos_mailbox_api.data.models import (
     CredentialKind,
     DiscoverySourceName,

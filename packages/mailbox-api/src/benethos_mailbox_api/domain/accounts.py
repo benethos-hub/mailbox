@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 import builtins
-from collections.abc import Awaitable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from typing import TypeVar
 
 from pydantic import SecretStr
 
 from ..common.ids import new_id
 from ..data.models import Account, AccountStatus, ProviderType
+from ..data.oauth import OAuthClient, RefreshingTokens, Tokens
 from ..data.providers import (
     CredentialReader,
     MailProvider,
     ProviderFactory,
     ProviderSettings,
+    TokenSource,
     build_provider,
 )
 from ..data.secrets import CredentialVault
@@ -23,6 +25,9 @@ from ..errors import BadRequestError, ProviderAuthError, ProviderUnavailableErro
 from .access import Access
 
 T = TypeVar("T")
+
+# The credential of an OAuth account: its refresh token.
+REFRESH_TOKEN = "refresh_token"
 
 
 class AccountService:
@@ -35,11 +40,15 @@ class AccountService:
         vault: CredentialVault,
         provider_factory: ProviderFactory = build_provider,
         index: MessageIndexRepository | None = None,
+        oauth: Mapping[ProviderType, OAuthClient] | None = None,
     ) -> None:
         self._repository = repository
         self._vault = vault
         self._provider_factory = provider_factory
         self._index = index
+        # The OAuth app of each provider that signs in with OAuth, where the
+        # operator registered one.
+        self._oauth = dict(oauth or {})
         self._providers: dict[str, MailProvider] = {}
 
     def list(self, access: Access) -> builtins.list[Account]:
@@ -61,9 +70,11 @@ class AccountService:
         display_name: str | None = None,
         settings: ProviderSettings | None = None,
         credentials: Mapping[str, SecretStr] | None = None,
+        signed_in: Tokens | None = None,
     ) -> Account:
         """Verify, then store: nothing is kept unless the provider accepts the
-        credential."""
+        credential. ``signed_in``: the tokens of an OAuth sign-in, used for
+        the check instead of a refresh."""
         access.require("create_account")
         _no_secrets_in(settings)
         secrets = dict(credentials or {})
@@ -78,8 +89,12 @@ class AccountService:
         # A throwaway adapter that reads the credential from the request. An
         # unsupported provider or bad settings fail here, before anything is
         # stored.
-        probe = self._provider_factory(
-            provider, settings or {}, lambda field: _pending(secrets, field)
+        probe = self._build(
+            provider,
+            settings or {},
+            lambda field: _pending(secrets, field),
+            lambda value: secrets.__setitem__(REFRESH_TOKEN, value),
+            signed_in,
         )
         try:
             await probe.verify()
@@ -105,6 +120,7 @@ class AccountService:
         rename: bool,
         settings: Mapping[str, str | int | bool | None] | None = None,
         credentials: Mapping[str, SecretStr] | None = None,
+        signed_in: Tokens | None = None,
     ) -> Account:
         """Change the display name, settings (``None`` removes one) or
         credentials. A change of settings or credentials logs in first, as on
@@ -130,7 +146,13 @@ class AccountService:
                     return secrets[field]
                 return self._vault.read(account_id, field)
 
-            probe = self._provider_factory(account.provider, merged, read)
+            probe = self._build(
+                account.provider,
+                merged,
+                read,
+                lambda value: secrets.__setitem__(REFRESH_TOKEN, value),
+                signed_in,
+            )
             try:
                 await probe.verify()
             finally:
@@ -190,10 +212,11 @@ class AccountService:
         account = self._repository.get(account_id)
         adapter = self._providers.get(account_id)
         if adapter is None:
-            adapter = self._provider_factory(
+            adapter = self._build(
                 account.provider,
                 self._repository.settings(account_id),
                 self._reader(account_id),
+                lambda value: self._vault.store(account_id, REFRESH_TOKEN, value),
             )
             self._providers[account_id] = adapter
         return adapter
@@ -216,6 +239,32 @@ class AccountService:
     def _set_status(self, account_id: str, status: AccountStatus) -> None:
         if self._repository.get(account_id).status is not status:
             self._repository.set_status(account_id, status)
+
+    def signs_in_with_oauth(self, provider: ProviderType) -> bool:
+        """Whether accounts of ``provider`` connect through an OAuth app of
+        this deployment."""
+        return provider in self._oauth
+
+    def _build(
+        self,
+        provider: ProviderType,
+        settings: ProviderSettings,
+        read: CredentialReader,
+        store_refresh: Callable[[SecretStr], None],
+        signed_in: Tokens | None = None,
+    ) -> MailProvider:
+        """An adapter; for an OAuth provider with a token source that keeps
+        its access token valid and stores a new refresh token."""
+        client = self._oauth.get(provider)
+        if client is None:
+            return self._provider_factory(provider, settings, read)
+        tokens: TokenSource = RefreshingTokens(
+            client,
+            lambda: read(REFRESH_TOKEN),
+            store_refresh,
+            current=signed_in,
+        )
+        return self._provider_factory(provider, settings, read, tokens=tokens)
 
     def _reader(self, account_id: str) -> CredentialReader:
         return lambda field: self._vault.read(account_id, field)

@@ -14,6 +14,7 @@ from ..domain.accounts import AccountService
 from ..domain.auth import AuthService
 from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
+from ..domain.oauth import OAuthService
 from ..domain.users import UserService
 
 
@@ -35,6 +36,11 @@ def get_discovery(request: Request) -> DiscoveryService:
 def get_users(request: Request) -> UserService:
     users: UserService = request.app.state.users
     return users
+
+
+def get_oauth(request: Request) -> OAuthService:
+    oauth: OAuthService = request.app.state.oauth
+    return oauth
 
 
 def get_auth(request: Request) -> AuthService:

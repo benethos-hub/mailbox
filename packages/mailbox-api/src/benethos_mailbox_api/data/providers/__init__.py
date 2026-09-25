@@ -10,18 +10,33 @@ through :func:`build_provider`, never by importing a provider module.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Mapping
+from typing import Protocol
 
 from ...errors import NotSupportedError
 from ..models import ProviderType, Security, ServerProtocol
-from .base import Capability, CredentialReader, MailProvider
+from .base import Capability, CredentialReader, MailProvider, TokenSource
 from .imap import ImapProvider
 from .imap import probe as probe_imap
 from .memory import MemoryProvider
 
 ProviderSettings = Mapping[str, str | int | bool]
-ProviderFactory = Callable[
-    [ProviderType, ProviderSettings, CredentialReader], MailProvider
-]
+
+
+class ProviderFactory(Protocol):
+    """Makes the adapter of one account. ``tokens`` only for a provider that
+    signs in with OAuth."""
+
+    def __call__(
+        self,
+        kind: ProviderType,
+        settings: ProviderSettings,
+        credentials: CredentialReader,
+        /,
+        *,
+        tokens: TokenSource | None = None,
+    ) -> MailProvider: ...
+
+
 ServerProbe = Callable[[ServerProtocol, str, int, Security], Awaitable[frozenset[str]]]
 
 _REGISTRY: dict[
@@ -33,7 +48,12 @@ _REGISTRY: dict[
 
 
 def build_provider(
-    kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
+    kind: ProviderType,
+    settings: ProviderSettings,
+    credentials: CredentialReader,
+    /,
+    *,
+    tokens: TokenSource | None = None,
 ) -> MailProvider:
     """A new adapter for one account."""
     try:
@@ -60,6 +80,7 @@ __all__ = [
     "ProviderFactory",
     "ProviderSettings",
     "ServerProbe",
+    "TokenSource",
     "build_provider",
     "probe_server",
 ]
