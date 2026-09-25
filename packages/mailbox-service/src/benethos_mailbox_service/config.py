@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     # Sync worker: watch the inbox over IMAP IDLE, which needs a second
     # connection per account.
     sync_idle: bool = True
+    # Change feed: days a change is kept. A client that asks from an older
+    # point starts again from the current state.
+    changes_days: int = Field(default=7, ge=1)
     # OAuth for Microsoft accounts: the app the operator registered in
     # Microsoft Entra ID. Without a client id, Microsoft accounts cannot be
     # connected. The secret from a file (a container secret) or from the

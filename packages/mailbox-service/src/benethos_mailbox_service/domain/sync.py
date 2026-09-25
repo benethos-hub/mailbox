@@ -6,6 +6,10 @@ index. A sync pass compares the provider's folders with the index: a message
 that left one folder and one with the same ``Message-ID`` that arrived in
 another is the same message and keeps its id. Anything ambiguous is not
 guessed: the old id is dropped and the new place gets a new one.
+
+What a pass finds goes into the change feed: new messages as created,
+moved ones as updated, vanished ones as deleted. The first pass of an
+account records nothing, since the messages already there are not new.
 """
 
 from __future__ import annotations
@@ -15,10 +19,12 @@ from dataclasses import replace
 from typing import TypeVar
 
 from ..common.ids import new_id
+from ..data.models import ChangeType
 from ..data.providers import Capability, MailProvider
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ..errors import MailboxServiceError, MessageNotFoundError
 from .adapters import Adapters
+from .changes import ChangeFeed
 from .locks import KeyedLocks
 
 T = TypeVar("T")
@@ -34,10 +40,12 @@ class SyncService:
         adapters: Adapters,
         index: MessageIndexRepository,
         new_id: Callable[[], str] = new_message_id,
+        feed: ChangeFeed | None = None,
     ) -> None:
         self._adapters = adapters
         self._index = index
         self._new_id = new_id
+        self._feed = feed if feed is not None else ChangeFeed()
         self._locks: KeyedLocks[str] = KeyedLocks()
 
     def mapped(self, account_id: str) -> bool:
@@ -60,12 +68,21 @@ class SyncService:
         missing = [(n, f) for n, f in dict(places).items() if n not in known]
         if missing:
             headers = await self._headers(account_id, [n for n, _ in missing])
-            self._index.add(
-                account_id,
-                [IndexEntry(self._new_id(), n, f, headers.get(n)) for n, f in missing],
-            )
+            added = [
+                IndexEntry(self._new_id(), n, f, headers.get(n)) for n, f in missing
+            ]
+            # Before the first sync, every message is still unknown.
+            synced = bool(self._index.folder_states(account_id))
+            self._index.add(account_id, added)
             # Read back: a sync may have added the same place meanwhile.
             known = self._index.by_native(account_id, natives)
+            if synced:
+                ours = {e.id for e in added}
+                self.changed(
+                    account_id,
+                    "message.created",
+                    [e.id for e in known.values() if e.id in ours],
+                )
         return [known[native].id for native in natives]
 
     async def resolve(
@@ -105,6 +122,12 @@ class SyncService:
         """A message is gone for good: its id answers 404 from now on."""
         if self.mapped(account_id):
             self._index.drop(account_id, message_id)
+
+    def changed(
+        self, account_id: str, type: ChangeType, message_ids: Iterable[str]
+    ) -> None:
+        """Record changes to messages in the change feed."""
+        self._feed.record(account_id, type, message_ids)
 
     async def _contents(self, account_id: str, folder_id: str) -> list[str]:
         return await self._adapters.call(
@@ -195,6 +218,10 @@ class SyncService:
             if n not in taken
         ]
         self._index.apply(account_id, changes)
+        if before:
+            self.changed(account_id, "message.created", [e.id for e in changes.added])
+            self.changed(account_id, "message.updated", [e.id for e in moved])
+            self.changed(account_id, "message.deleted", changes.removed)
 
 
 def _moves(

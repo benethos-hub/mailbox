@@ -41,6 +41,7 @@ from .data.storage import Database, MessageIndexRepository, open_repositories
 from .domain.accounts import AccountService
 from .domain.adapters import Adapters
 from .domain.auth import AuthService
+from .domain.changes import ChangeFeed
 from .domain.discovery import DiscoveryService
 from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
@@ -61,6 +62,7 @@ class Services:
     discovery: DiscoveryService
     sync: SyncService
     index: MessageIndexRepository  # the store behind sync
+    changes: ChangeFeed
     vault: CredentialVault
     oauth: OAuthService
     worker: SyncWorker | None = None
@@ -101,6 +103,7 @@ def build_services(
         internal_hosts=settings.discovery_internal_hosts,
     )
     adapters = Adapters(repos.accounts, vault, provider_factory, oauth=clients)
+    changes = ChangeFeed(repos.changes, days=settings.changes_days)
     accounts = AccountService(
         repos.accounts,
         vault,
@@ -108,8 +111,9 @@ def build_services(
         repos.index,
         check_host=fetcher.checked_address,
         idempotency=repos.idempotency,
+        changes=changes,
     )
-    sync = SyncService(adapters, repos.index)
+    sync = SyncService(adapters, repos.index, feed=changes)
     auth = AuthService(repos.users, repos.roles, repos.tokens, admin_key=admin_key)
     return Services(
         accounts=accounts,
@@ -122,6 +126,7 @@ def build_services(
         discovery=discovery or build_discovery(settings, fetcher),
         sync=sync,
         index=repos.index,
+        changes=changes,
         worker=(
             SyncWorker(
                 adapters, sync, interval=settings.sync_interval, push=settings.sync_idle

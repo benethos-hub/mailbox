@@ -140,6 +140,7 @@ packages/
         replies.py        # replies and forwards made from the original
         discovery.py      # DiscoveryService: trust, ranking, cache, limits
         sync.py           # SyncService: stable message ids, the sync pass
+        changes.py        # ChangeFeed: records created, updated, deleted
         worker.py         # SyncWorker: polling and IDLE in the background
         idempotency.py    # Idempotency-Key: a retried send returns its result
         locks.py          # KeyedLocks: one asyncio lock per key, for the services
