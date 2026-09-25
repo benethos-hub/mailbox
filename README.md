@@ -3,13 +3,17 @@
 One REST API for all your mailboxes, whichever provider they are at, with
 an MCP server on top so an AI assistant can work with them too.
 
-> **Status: 0.1.0, pre-alpha.** IMAP accounts with autodiscovery from the
-> address: reading (folders, messages, search, attachments, raw source,
-> across accounts), stable message ids kept by a background sync, changing
-> and moving messages, folders, drafts, and sending over SMTP with reply,
-> forward and `Idempotency-Key`. The MCP server reads mail over stdio
-> (search, messages, attachments with PDF pages as images); its writing
-> and sending tools are next. What comes next and in which order:
+> **Status: pre-alpha, version 0.0.1.** Not ready for production use: the
+> API, the stored data and the configuration may change without notice.
+>
+> IMAP accounts with autodiscovery from the address, and Microsoft
+> accounts (Outlook.com, Microsoft 365) over Graph with OAuth: reading
+> (folders, messages, search, attachments, raw source, across accounts),
+> stable message ids, changing and moving messages, folders, drafts, and
+> sending with reply, forward and `Idempotency-Key`. Users, roles and
+> grants with send limits and a send audit. The MCP server reads, writes
+> and sends over stdio or streamable HTTP, offering what its token may do.
+> A configuration UI under `/ui`. What comes next and in which order:
 > [docs/ROADMAP.md](docs/ROADMAP.md). The design behind it:
 > [docs/CONCEPT.md](docs/CONCEPT.md).
 

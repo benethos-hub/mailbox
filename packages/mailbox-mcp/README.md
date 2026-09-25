@@ -1,5 +1,8 @@
 # benethos-mailbox-mcp
 
+> **Pre-alpha, version 0.0.1.** Not ready for production use: the API,
+> the stored data and the configuration may change without notice.
+
 MCP server for the Mailbox API. It reaches mail only through that REST
 API, so the service `benethos-mailbox-api` has to be running. It runs over
 stdio, where the MCP client starts it and it ends with the client, or over

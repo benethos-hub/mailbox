@@ -1,5 +1,8 @@
 # Connecting Microsoft accounts
 
+> **Pre-alpha, version 0.0.1.** Not ready for production use: the API,
+> the stored data and the configuration may change without notice.
+
 Outlook.com, Hotmail and Microsoft 365 accounts connect by OAuth: the
 person signs in at Microsoft, and the service keeps a refresh token,
 encrypted, never a password. For that, each deployment registers an app of
