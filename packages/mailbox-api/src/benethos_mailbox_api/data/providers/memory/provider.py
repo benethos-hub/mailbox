@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from email.parser import BytesHeaderParser
-
 from ....errors import (
     ConflictError,
     MailboxApiError,
@@ -142,11 +140,12 @@ class MemoryProvider:
         sent = next((f.id for f in self.folders if f.role is FolderRole.SENT), None)
         if sent is None:
             return SentMessage()
+        parsed = ParsedMessage(raw)
         copy = Message(
             id=f"sent_{len(self.outbox)}",
             folder_ids=[sent],
-            subject=_header(raw, "Subject"),
-            message_id_header=_header(raw, "Message-ID"),
+            subject=parsed.subject,
+            message_id_header=parsed.message_id,
         )
         self.messages.append(copy)
         return SentMessage(sent_copy=MessageSummary.model_validate(copy.model_dump()))
@@ -268,11 +267,6 @@ class MemoryProvider:
 
     async def close(self) -> None:
         return None
-
-
-def _header(raw: bytes, name: str) -> str | None:
-    value = BytesHeaderParser().parsebytes(raw).get(name)
-    return str(value) if value is not None else None
 
 
 def _matches(message: Message, search: MessageFilter) -> bool:

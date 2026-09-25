@@ -153,6 +153,8 @@ packages/
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
           convert.py      # a parsed message to Message / MessageSummary
           text.py         # the text part of an HTML-only mail
+          fields.py       # one header field: a Message-ID as one token,
+                          #   an address in Unicode
         providers/        # registry in __init__.py (also sign_in), base.py
           protocols/      # wire protocols, one library each: imap.py
                           #   (IMAPClient), smtp.py (smtplib), oauth.py
@@ -162,10 +164,13 @@ packages/
           imap/, memory/, # one directory per provider (adapter)
           microsoft/      #   microsoft: Graph over data/http; signin.py
                           #   its endpoints and the scopes it needs
-        http/             # httpx: safe.py (hosts users typed, SSRF guard),
+        http/             # httpx: base.py (the client, the capped read),
+                          #   safe.py (hosts users typed, SSRF guard),
                           #   api.py (JSON to a provider's known hosts)
-        storage/          # own records, one module per subject
+        storage/          # own records, one module per subject; table.py
+                          #   for the in-memory ones, sqlite/ the database
         secrets/          # envelope encryption, key providers, backup
+        files.py          # files for the owner alone (0600): database, backup, key
         discovery/        # autodiscovery sources and their helpers
     tests/
       test_architecture.py  # checks the layering on every run

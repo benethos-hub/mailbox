@@ -20,7 +20,7 @@ from ...models import (
     MessageUpdate,
 )
 from .. import rules
-from ..protocols.imap import RawFolder
+from ..protocols.imap import FetchedMessage, RawFolder
 
 INBOX = "INBOX"
 
@@ -185,13 +185,13 @@ def role_of(name: str, flags: set[str]) -> FolderRole | None:
 # --- messages -----------------------------------------------------------------
 
 
-def to_summary(msg: Any, folder: str, uidvalidity: int) -> MessageSummary:
+def to_summary(msg: FetchedMessage, folder: str, uidvalidity: int) -> MessageSummary:
     return MessageSummary.model_validate(
         {**convert.summary_fields(msg), **_imap_fields(msg, folder, uidvalidity)}
     )
 
 
-def to_message(msg: Any, folder: str, uidvalidity: int) -> Message:
+def to_message(msg: FetchedMessage, folder: str, uidvalidity: int) -> Message:
     return Message.model_validate(
         {
             **convert.summary_fields(msg),
@@ -201,7 +201,7 @@ def to_message(msg: Any, folder: str, uidvalidity: int) -> Message:
     )
 
 
-def _imap_fields(msg: Any, folder: str, uidvalidity: int) -> dict[str, Any]:
+def _imap_fields(msg: FetchedMessage, folder: str, uidvalidity: int) -> dict[str, Any]:
     """What only IMAP knows of a message: its id, folder and flags."""
     flags = {flag.lower() for flag in msg.flags}
     return {

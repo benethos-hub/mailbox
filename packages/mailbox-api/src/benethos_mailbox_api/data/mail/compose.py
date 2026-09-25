@@ -18,6 +18,7 @@ from typing import NamedTuple
 from pydantic import ValidationError
 
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
+from .fields import message_id as one_message_id
 from .text import from_html
 
 # Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
@@ -137,7 +138,7 @@ def outgoing(draft: bytes, date: datetime, message_id: str) -> Outgoing:
     del mail[REFERENCE_HEADER]
     del mail["Date"]
     mail["Date"] = format_datetime(date)
-    kept = _one_id(mail.get("Message-ID"))
+    kept = one_message_id(mail.get("Message-ID"))
     if kept is None:
         mail["Message-ID"] = message_id
     return Outgoing(
@@ -155,7 +156,7 @@ def references(original_raw: bytes) -> tuple[str | None, tuple[str, ...]]:
     """The original's Message-ID, and the References a reply carries: the
     original's own, then its Message-ID (RFC 5322 3.6.4)."""
     headers = BytesHeaderParser(policy=default).parsebytes(original_raw)
-    message_id = _one_id(headers.get("Message-ID"))
+    message_id = one_message_id(headers.get("Message-ID"))
     chain = tuple(str(headers.get("References") or "").split())
     if not chain:
         chain = tuple(str(headers.get("In-Reply-To") or "").split()[:1])
@@ -210,9 +211,21 @@ def _who(address: Address | None) -> str:
     return formataddr((address.name or "", address.email))
 
 
-def _one_id(value: object) -> str | None:
-    text = "".join(str(value or "").split())
-    return text or None
+def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
+    """``raw`` with a Bcc header for the recipients no header names, for a
+    provider that reads the recipients from the message itself."""
+    head, separator, body = raw.partition(b"\r\n\r\n")
+    headers = BytesHeaderParser(policy=default).parsebytes(head + separator)
+    named = {
+        address.lower()
+        for _, address in getaddresses(
+            [str(v) for n in ("To", "Cc", "Bcc") for v in headers.get_all(n, [])]
+        )
+    }
+    hidden = [r for r in recipients if r.lower() not in named]
+    if not hidden:
+        return raw
+    return head + b"\r\nBcc: " + ", ".join(hidden).encode() + separator + body
 
 
 def _address(recipient: Recipient) -> str:

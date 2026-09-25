@@ -376,7 +376,7 @@ class ImapProvider:
         uid = self._session.append(folder, raw, flags)
         validity = self._session.select(folder)
         if uid is None:
-            header = convert.message_id_header(ParsedMessage(raw))
+            header = ParsedMessage(raw).message_id
             matches = self._session.search_message_id(header) if header else []
             uid = matches[-1] if matches else None
         found = self._session.fetch_headers([uid]) if uid else []
@@ -576,7 +576,7 @@ class ImapProvider:
         new_uids = self._session.move(list(found), target)
         target_validity = self._session.select(target)
         for uid, message in found.items():
-            header = convert.message_id_header(message)
+            header = message.message_id
             if uid not in new_uids and header:
                 # No COPYUID: find it by its Message-ID, if that is unambiguous.
                 matches = self._session.search_message_id(header)

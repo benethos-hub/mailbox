@@ -12,9 +12,11 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from typing import Any
 
+from ...mail.fields import OCTET_STREAM, unicode_address
 from ...models import (
     Address,
     Attachment,
+    AttachmentContent,
     Folder,
     FolderRole,
     Message,
@@ -62,7 +64,7 @@ def _address(value: Any) -> Address | None:
     address = email.get("address")
     if not address:
         return None
-    return Address(email=str(address), name=email.get("name") or None)
+    return Address(email=unicode_address(str(address)), name=email.get("name") or None)
 
 
 def _addresses(values: Any) -> list[Address]:
@@ -120,9 +122,17 @@ def attachment(item: dict[str, Any]) -> Attachment:
     return Attachment(
         id=str(item["id"]),
         filename=item.get("name") or None,
-        content_type=item.get("contentType") or "application/octet-stream",
+        content_type=item.get("contentType") or OCTET_STREAM,
         size=int(item.get("size") or 0),
         inline=bool(item.get("isInline")),
+    )
+
+
+def attachment_content(item: dict[str, Any], data: bytes) -> AttachmentContent:
+    return AttachmentContent(
+        filename=item.get("name") or None,
+        content_type=item.get("contentType") or OCTET_STREAM,
+        data=data,
     )
 
 

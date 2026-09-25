@@ -20,9 +20,6 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Mapping
-from email.parser import BytesHeaderParser
-from email.policy import default
-from email.utils import getaddresses
 from typing import Any
 from urllib.parse import quote, unquote, urlencode, urlsplit
 
@@ -37,7 +34,8 @@ from ....errors import (
     ProviderUnavailableError,
 )
 from ...http import Answer, ApiClient
-from ...mail import compose
+from ...mail import compose, convert
+from ...mail.parse import ParsedMessage
 from ...models import (
     AttachmentContent,
     Folder,
@@ -285,16 +283,11 @@ class MicrosoftProvider:
         found = mappers.message(item, attachments)
         if item.get("isDraft"):
             # What a draft answers lives in its MIME only.
-            headers = BytesHeaderParser(policy=default).parsebytes(
-                await self.get_raw(message_id)
+            thread = convert.thread_fields(
+                ParsedMessage(await self.get_raw(message_id))
             )
             found = found.model_copy(
-                update={
-                    "reference": compose.read_reference(
-                        headers.get(compose.REFERENCE_HEADER)
-                    ),
-                    "in_reply_to": headers.get("In-Reply-To"),
-                }
+                update={k: thread[k] for k in ("reference", "in_reply_to")}
             )
         return found
 
@@ -309,11 +302,7 @@ class MicrosoftProvider:
             if content
             else (await self._call("GET", f"{path}/$value")).body
         )
-        return AttachmentContent(
-            filename=item.get("name") or None,
-            content_type=item.get("contentType") or "application/octet-stream",
-            data=data,
-        )
+        return mappers.attachment_content(item, data)
 
     async def get_raw(self, message_id: str) -> bytes:
         return (await self._call("GET", f"/me/messages/{_id(message_id)}/$value")).body
@@ -326,7 +315,7 @@ class MicrosoftProvider:
         await self._call(
             "POST",
             "/me/sendMail",
-            content=base64.b64encode(_with_bcc(raw, recipients)),
+            content=base64.b64encode(compose.with_bcc(raw, recipients)),
             content_type="text/plain",
         )
         return SentMessage()
@@ -480,22 +469,6 @@ def _own_path(link: str) -> str:
     if not rest.startswith("/me/") or ".." in rest:
         raise BadRequestError("invalid cursor")
     return f"{rest}?{parts.query}" if parts.query else rest
-
-
-def _with_bcc(raw: bytes, recipients: list[str]) -> bytes:
-    """``raw`` with a Bcc header for the recipients no header names."""
-    head, separator, body = raw.partition(b"\r\n\r\n")
-    headers = BytesHeaderParser(policy=default).parsebytes(head + separator)
-    named = {
-        address.lower()
-        for _, address in getaddresses(
-            [str(v) for n in ("To", "Cc", "Bcc") for v in headers.get_all(n, [])]
-        )
-    }
-    hidden = [r for r in recipients if r.lower() not in named]
-    if not hidden:
-        return raw
-    return head + b"\r\nBcc: " + ", ".join(hidden).encode() + separator + body
 
 
 def _failure(answer: Answer) -> MailboxApiError:

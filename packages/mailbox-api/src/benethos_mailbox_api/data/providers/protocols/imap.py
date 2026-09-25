@@ -29,6 +29,7 @@ from ....errors import (
     ProviderError,
     ProviderUnavailableError,
 )
+from ...mail import fields
 from ...mail.parse import ParsedMessage
 
 ClientFactory = Callable[..., Any]
@@ -501,11 +502,9 @@ def _uid_set(text: str) -> list[int]:
 
 
 def _message_id(header_block: bytes) -> str | None:
-    value = BytesHeaderParser().parsebytes(header_block).get("Message-ID")
-    if not value:
-        return None
-    # Folded headers keep their line breaks. The id itself has no spaces.
-    return "".join(str(value).split()) or None
+    return fields.message_id(
+        BytesHeaderParser().parsebytes(header_block).get("Message-ID")
+    )
 
 
 def _quietly(command: Callable[[], Any]) -> None:
