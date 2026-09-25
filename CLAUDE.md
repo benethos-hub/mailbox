@@ -85,7 +85,8 @@ data/                     # one folder per package, created when missing;
 live/                     # manual checks against the test accounts
 containers/               # one folder per image, compose.yaml, README.md;
                           #   secrets/ local (the master key)
-.github/workflows/        # container.yml: checks, then the image to GHCR
+.github/workflows/        # ci.yml: checks; container.yml: images to GHCR,
+                          #   by hand only
 docs/
   CONCEPT.md              # design
   ROADMAP.md              # phases and their state

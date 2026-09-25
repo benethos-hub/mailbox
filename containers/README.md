@@ -18,13 +18,9 @@ containers/
 The images of `benethos-mailbox-api` and `benethos-mailbox-mcp` are built
 for `linux/amd64` and `linux/arm64` by the GitHub workflow
 `.github/workflows/container.yml` and pushed to the GitHub container
-registry as `ghcr.io/<owner>/<image>`:
-
-| Event | Tags |
-|---|---|
-| tag `v1.2.3` | `1.2.3`, `1.2`, `latest` |
-| push to `main` | `main`, `sha-<commit>` |
-| pull request | built, not pushed |
+registry as `ghcr.io/<owner>/<image>`. The workflow runs only when started
+by hand (Actions, container, Run workflow) and tags the images with the
+branch and the commit: `main`, `sha-<commit>`.
 
 A client that starts the MCP server over stdio needs no image; the image
 serves it over streamable HTTP.
