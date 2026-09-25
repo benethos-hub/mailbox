@@ -296,3 +296,31 @@ def test_answering_needs_the_right_to_read(services: Services, account_id: str) 
         headers=both,
     )
     assert answer.status_code == 200
+
+
+async def test_a_reply_without_quote_keeps_the_thread(
+    send: Sender, services: Services, account_id: str, box: FakeMailBox
+) -> None:
+    message_id = await original_id(services, account_id)
+    mail = await send(
+        MessageReference(message_id=message_id, action="reply", quote=False),
+        text="Danke!\n\n> quoted before",
+    )
+    assert mail["Subject"] == "Re: Angebot"
+    assert mail["In-Reply-To"] == f"<{abs(hash('Angebot'))}@example.com>"
+    assert plain(mail) == "Danke!\n\n> quoted before\n"
+    assert "\\Answered" in box.folders["INBOX"].messages[1][1]
+
+
+async def test_a_forward_without_quote_adds_nothing_of_the_original(
+    send: Sender, services: Services, account_id: str
+) -> None:
+    message_id = await original_id(services, account_id)
+    mail = await send(
+        MessageReference(message_id=message_id, action="forward", quote=False),
+        to=[Recipient(email="dave@example.com")],
+        text="Mine",
+    )
+    assert mail["Subject"] == "Fwd: Angebot"
+    assert "Forwarded message" not in plain(mail)
+    assert list(mail.iter_attachments()) == []

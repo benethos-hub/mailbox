@@ -6284,6 +6284,17 @@
             },
             "type": "array",
             "title": "Attachments"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Of a draft: the message it answers or forwards, used when it is sent. To change the draft as a whole and keep this link, pass it back to `update_draft` with `quote: false`."
           }
         },
         "type": "object",
@@ -6396,6 +6407,12 @@
             "title": "Forward As",
             "description": "`inline`: quoted with its headers, its attachments attached. `attachment`: the unchanged original as `message/rfc822`. Ignored for replies.",
             "default": "inline"
+          },
+          "quote": {
+            "type": "boolean",
+            "title": "Quote",
+            "description": "`false`: the text holds the quote already, e.g. a stored draft edited as a whole. The link to the original stays (In-Reply-To, References, the mark on the original after sending), but nothing of the original is added: no quote, no forwarded original, none of its attachments.",
+            "default": true
           }
         },
         "type": "object",

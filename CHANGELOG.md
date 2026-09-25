@@ -35,6 +35,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A draft read with `get_message` carries its `reference`. A reference
+  with `quote: false` keeps the link to the original without adding its
+  quote, forwarded original or attachments again, so a draft can be
+  replaced as a whole and stay in its thread. The configuration UI edits
+  reply and forward drafts that way.
+
 - Configuration UI under `/ui`: sign in with an API token or the admin
   key, an overview of your accounts, rights and warnings; accounts:
   connect through autodiscovery or by hand, change, verify, remove; users,

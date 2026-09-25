@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from typing import Any, TypeVar
 
-from pydantic import ValidationError
-
 from ..data.mail import compose
 from ..data.models import DraftMessage, Message, MessageReference, Recipient
 from ..errors import BadRequestError
@@ -28,14 +26,17 @@ def reply(
     original: Message,
     raw: bytes,
     own_address: str,
+    quote: bool = True,
 ) -> tuple[M, compose.Extras]:
-    """``reply`` or ``reply_all``, in the original's thread."""
+    """``reply`` or ``reply_all``, in the original's thread. Without
+    ``quote`` the text is left as it is."""
     in_reply_to, chain = compose.references(raw)
     changes: dict[str, Any] = {
         "subject": message.subject or compose.prefixed("Re:", original.subject),
-        "text": compose.quoted(original, compose.body_text(message) or None),
     }
-    if message.html is not None:
+    if quote:
+        changes["text"] = compose.quoted(original, compose.body_text(message) or None)
+    if quote and message.html is not None:
         changes["html"] = compose.quoted_html(
             original, message.html, "Original message"
         )
@@ -53,12 +54,16 @@ def forward(
     original: Message,
     raw: bytes,
     files: list[AttachedFile],
+    quote: bool = True,
 ) -> tuple[M, compose.Extras]:
     """``inline``: quoted with its headers, ``files`` attached.
-    ``attachment``: the unchanged original as ``message/rfc822``."""
+    ``attachment``: the unchanged original as ``message/rfc822``. Without
+    ``quote`` nothing of the original is added."""
     changes: dict[str, Any] = {
         "subject": message.subject or compose.prefixed("Fwd:", original.subject)
     }
+    if not quote:
+        return message.model_copy(update=changes), compose.Extras()
     if forward_as == "attachment":
         return message.model_copy(update=changes), compose.Extras(attached_message=raw)
     changes["text"] = compose.forwarded(original, compose.body_text(message) or None)
@@ -67,22 +72,6 @@ def forward(
             original, message.html, "Forwarded message"
         )
     return message.model_copy(update=changes), compose.Extras(attachments=tuple(files))
-
-
-def reference_header(reference: MessageReference) -> str:
-    """What a draft keeps of its reference until it is sent: the action and
-    the original's id, e.g. ``reply msg_...``."""
-    return f"{reference.action} {reference.message_id}"
-
-
-def reference_from_header(value: str) -> MessageReference | None:
-    """The reference a draft kept. None for anything else, such as a header
-    another mail client changed."""
-    action, _, message_id = value.strip().partition(" ")
-    try:
-        return MessageReference(action=action, message_id=message_id.strip())
-    except ValidationError:
-        return None
 
 
 def answered_keyword(reference: MessageReference) -> str:

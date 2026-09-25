@@ -3,9 +3,36 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
+
+
+class MessageReference(BaseModel):
+    """Reply to or forward a message of the same account. The service sets
+    the recipients of a reply where none are given, the subject prefix,
+    In-Reply-To, References and the quote."""
+
+    message_id: str
+    action: Literal["reply", "reply_all", "forward"]
+    forward_as: Literal["inline", "attachment"] = Field(
+        default="inline",
+        description=(
+            "`inline`: quoted with its headers, its attachments attached. "
+            "`attachment`: the unchanged original as `message/rfc822`. "
+            "Ignored for replies."
+        ),
+    )
+    quote: bool = Field(
+        default=True,
+        description=(
+            "`false`: the text holds the quote already, e.g. a stored draft "
+            "edited as a whole. The link to the original stays (In-Reply-To, "
+            "References, the mark on the original after sending), but nothing "
+            "of the original is added: no quote, no forwarded original, none "
+            "of its attachments."
+        ),
+    )
 
 
 class Address(BaseModel):
@@ -62,6 +89,14 @@ class Message(MessageSummary):
     text_body: str | None = None
     html_body: str | None = None
     attachments: list[Attachment] = Field(default_factory=list)
+    reference: MessageReference | None = Field(
+        default=None,
+        description=(
+            "Of a draft: the message it answers or forwards, used when it is "
+            "sent. To change the draft as a whole and keep this link, pass it "
+            "back to `update_draft` with `quote: false`."
+        ),
+    )
 
 
 # Search text on one line: a line break would end the IMAP command and start

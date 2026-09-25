@@ -1,23 +1,25 @@
 {% extends "base.html" %}
-{% set action_name = {"reply": "Reply", "reply_all": "Reply to all", "forward": "Forward"}.get(values.get("action", ""), "") %}
+{% set verb = stored.reference.action if stored is not none and stored.reference is not none else values.get("action", "") %}
+{% set action_name = {"reply": "Reply", "reply_all": "Reply to all", "forward": "Forward"}.get(verb, "") %}
 {% set title = ("Draft" if draft_id else (action_name or "New message")) %}
 {% block title %}{{ title }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ title }}{% endblock %}
 {% block subheading %}<div class="sub">From <a href="/ui/accounts/{{ account.id }}/mail">{{ account.email }}</a>{% if draft_id %} · <a href="/ui/accounts/{{ account.id }}/drafts">all drafts</a>{% endif %}</div>{% endblock %}
 {% block content %}
 {% if error %}<div class="notice err" role="alert">{{ error }}</div>{% endif %}
-{% if stored is not none and stored.in_reply_to %}
-<div class="notice warn">This draft answers a message. Sent unchanged, it stays in that thread; saved with changes, it becomes a new message outside the thread.</div>
-{% endif %}
 
 {% if original is not none %}
 <section class="card">
   <header><h2>{{ action_name }}: {{ original.subject | or_missing }}</h2><span class="meta">{{ original.sender | address }}, {{ original.date | when }}</span></header>
   <div class="body">
+    {% if draft_id %}
+    <p class="muted">The draft holds its {{ "forward" if verb == "forward" else "quote" }} already. Saved or sent, it stays linked to this message{% if verb != "forward" %} and in its thread{% endif %}.</p>
+    {% else %}
     <p class="muted">
       {% if values.action == "forward" %}The original goes along below your text, with its attachments.{% else %}Your text comes first; the original is quoted below it.{% endif %}
       Empty fields are filled in from the original: {% if values.action == "forward" %}the subject.{% else %}recipients and subject.{% endif %}
     </p>
+    {% endif %}
   </div>
 </section>
 {% endif %}

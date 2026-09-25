@@ -15,6 +15,7 @@ content are never printed.
 
 from __future__ import annotations
 
+import html
 import re
 import secrets
 import shutil
@@ -314,6 +315,50 @@ def check_writing(
     run.check("change it", "Draft saved." in edited.text and "Changed." in edited.text)
     gone = browser.post(str(draft.url.path), data={"csrf_token": csrf, "do": "delete"})
     run.check("delete it", "Draft deleted." in gone.text)
+
+    inbox = browser.get(f"{base}/mail").text
+    original = re.search(rf'href="{base}/mail/(msg_[0-9a-f]+)"', inbox)
+    if run.check("a message to answer", original is not None):
+        assert original is not None
+        reply = browser.post(
+            f"{base}/compose",
+            data={
+                "csrf_token": csrf,
+                "original": original.group(1),
+                "action": "reply",
+                "text": "A reply draft of the UI live check.",
+                "do": "save",
+            },
+        )
+        run.check("save a reply draft", "stays linked" in reply.text)
+        to = re.search(r'name="to" value="([^"]*)"', reply.text)
+        text = re.search(r'name="text" rows="14">([^<]*)</textarea>', reply.text)
+        subject = re.search(r'name="subject" value="([^"]*)"', reply.text)
+        changed = browser.post(
+            str(reply.url.path),
+            data={
+                "csrf_token": csrf,
+                "to": html.unescape(to.group(1)) if to else "",
+                "subject": html.unescape(subject.group(1)) if subject else "",
+                "text": html.unescape(text.group(1)).replace(
+                    "A reply", "Changed: a reply", 1
+                )
+                if text
+                else "",
+                "do": "save",
+            },
+        )
+        run.check(
+            "change it as a whole: still linked, quoted once",
+            "Draft saved." in changed.text
+            and "stays linked" in changed.text
+            and "Changed: a reply" in changed.text
+            and html.unescape(changed.text).count("wrote:") == 1,
+        )
+        gone = browser.post(
+            str(reply.url.path), data={"csrf_token": csrf, "do": "delete"}
+        )
+        run.check("delete it", "Draft deleted." in gone.text)
 
     form = browser.get(f"{base}/compose").text
     key = re.search(r'name="idempotency_key" value="([^"]+)"', form)

@@ -233,6 +233,8 @@ async def _again(
             )
         except MailboxApiError:
             original = None
+    if original is None:
+        original = await _original_of(request, caller, account.id, stored)
     message = exc.message if isinstance(exc, MailboxApiError) else str(exc)
     return _page(
         request,
@@ -304,7 +306,22 @@ async def draft(
         _stored_values(stored),
         draft_id=draft_id,
         stored=stored,
+        original=await _original_of(request, caller, account_id, stored),
     )
+
+
+async def _original_of(
+    request: Request, caller: Access, account_id: str, stored: Message | None
+) -> Message | None:
+    """The message a draft answers or forwards, if it can still be read."""
+    if stored is None or stored.reference is None:
+        return None
+    try:
+        return await _mailbox(request).get_message(
+            caller, account_id, stored.reference.message_id
+        )
+    except MailboxApiError:
+        return None
 
 
 def _unchanged(form: Any, stored: Message) -> bool:
@@ -364,6 +381,11 @@ async def draft_submit(
         stored = await mailbox.get_message(caller, account_id, draft_id)
         if not _unchanged(form, stored):
             fields = await _read(form)
+            # The text holds the quote already: keep the link, add nothing.
+            if stored.reference is not None:
+                fields["reference"] = stored.reference.model_copy(
+                    update={"quote": False}
+                )
             fields["attachments"] = [
                 *await _kept_attachments(request, caller, account_id, stored, form),
                 *fields["attachments"],
