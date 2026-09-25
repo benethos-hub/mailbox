@@ -1,5 +1,5 @@
 # The service as a container, bound to the loopback address of the host
-# (CONCEPT 8.1). See README.md in this folder for the first start.
+# (CONCEPT 8.1). The first start: packages/mailbox-api/README.md, "Container".
 #
 # MAILBOX_API_IMAGE names the image to run, e.g. from the GitHub container
 # registry: ghcr.io/<owner>/benethos-mailbox-api:<version>. Without it, the

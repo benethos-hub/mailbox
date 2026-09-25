@@ -4,12 +4,198 @@
 > the stored data and the configuration may change without notice.
 
 The Mailbox API service: one REST API (OpenAPI 3.1) for several mail
-providers and accounts. It runs permanently, owns the account store and the
-provider connections, and fetches in the background.
+providers and accounts, with a configuration UI in the browser. It runs
+permanently, holds the connections to the accounts, keeps their
+credentials encrypted and syncs in the background. Scripts, apps and the
+MCP server [`benethos-mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp)
+reach mail only through it, each with a token of its own.
 
-```
-MAILBOX_API_KEY=change-me benethos-mailbox-api serve
+What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
+
+## Install
+
+From PyPI, with [uv](https://docs.astral.sh/uv/) or pip:
+
+```sh
+uv tool install benethos-mailbox-api      # or: pipx install benethos-mailbox-api
+benethos-mailbox-api --version
 ```
 
-Interactive API docs at `http://127.0.0.1:8080/docs`. The MCP server for it
-is the separate package `benethos-mailbox-mcp`.
+`uvx benethos-mailbox-api ...` runs it without installing. From a clone of
+the repository, every command below also works as
+`uv run benethos-mailbox-api ...`.
+
+The container image is `ghcr.io/benethos-hub/benethos-mailbox-api`, see
+[Container](#container).
+
+## First start
+
+```sh
+benethos-mailbox-api keys init              # once: the keys; prints the recovery key
+benethos-mailbox-api users create-admin     # once: a user with every right; prints its token
+benethos-mailbox-api serve
+```
+
+- `keys init` creates the master key in the operating system's credential
+  store and the data key in the database. It prints a **recovery key**
+  once: keep it apart from the machine and its backups. Without it, a
+  database cannot be opened on another machine.
+- `users create-admin` prints an API token once. It signs in to the UI and
+  goes into `Authorization: Bearer <token>` for the API.
+- `serve` listens on `http://127.0.0.1:8080`:
+  - `/ui`: the configuration UI, sign in with the token
+  - `/docs`: the interactive API documentation
+  - `/health`: open, for health checks
+
+Then connect accounts in the UI (Accounts, Connect an account) or with
+`POST /v1/accounts`. An IMAP account needs its address and an app
+password; the servers are looked up from the address. Microsoft accounts
+sign in with OAuth and need an app registration first:
+[docs/microsoft.md](https://github.com/benethos-hub/mailbox/blob/main/docs/microsoft.md).
+
+## Where things live
+
+The service works from the folder it is started in:
+
+| What | Where |
+|---|---|
+| settings | the environment, or `config/benethos-mailbox-api/.env`; the environment wins |
+| the database | `data/benethos-mailbox-api/mailbox.db`, readable by its owner only |
+| the master key | the OS credential store (keyring), or a file or variable, see `MAILBOX_API_KEY_PROVIDER` |
+
+A template for the settings file with every option:
+[config/benethos-mailbox-api/.env.example](https://github.com/benethos-hub/mailbox/blob/main/config/benethos-mailbox-api/.env.example).
+
+## Settings
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `MAILBOX_API_HOST`, `MAILBOX_API_PORT` | `127.0.0.1`, `8080` | where the service listens; `serve --host/--port` win |
+| `MAILBOX_API_PUBLIC_URL` | from each request | the address people reach the service at, e.g. behind a proxy; builds the OAuth redirect address |
+| `MAILBOX_API_LOG_LEVEL` | `INFO` | |
+| `MAILBOX_API_DATA_DIR` | `data/benethos-mailbox-api` | where the database lives |
+| `MAILBOX_API_STORAGE` | `sqlite` | or `memory`, which keeps nothing |
+| `MAILBOX_API_KEY_PROVIDER` | `keyring` | where the master key lives: `keyring`, `file` or `env` |
+| `MAILBOX_API_KEY_FILE` | | the key file, for `file` |
+| `MAILBOX_API_MASTER_KEY` | | the recovery key, for `env` |
+| `MAILBOX_API_KEY` | | optional built-in admin key, for containers and tests |
+| `MAILBOX_API_SYNC_INTERVAL` | `300` | seconds between two polls of every folder; `0` switches the sync off |
+| `MAILBOX_API_SYNC_IDLE` | `true` | watch the inbox over IMAP IDLE, with a second connection per account |
+| `MAILBOX_API_DISCOVERY_ISPDB` | `true` | whether autodiscovery asks Thunderbird's ISPDB (tells Mozilla the domain) |
+| `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS` | `[]` | JSON list of hosts autodiscovery may reach on private addresses |
+| `MAILBOX_API_OAUTH_MICROSOFT_CLIENT_ID` | | the Entra app for Microsoft accounts; without it they cannot be connected |
+| `MAILBOX_API_OAUTH_MICROSOFT_CLIENT_SECRET` | | its client secret, or better: |
+| `MAILBOX_API_OAUTH_MICROSOFT_CLIENT_SECRET_FILE` | | a file holding it |
+| `MAILBOX_API_OAUTH_MICROSOFT_TENANT` | `common` | who may sign in: `common`, `consumers`, `organizations` or one tenant |
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `serve [--host H] [--port P]` | runs the service |
+| `keys init` | creates the keys, prints the recovery key once |
+| `keys import` | stores the master key from a recovery key read from stdin, e.g. on a new machine |
+| `keys generate` | prints a new master key for a key file or a container secret; stores nothing |
+| `users create-admin` | creates a user with every right and prints its token |
+| `backup FILE` | writes an encrypted backup, while the service runs |
+| `backup verify FILE [--recovery-key]` | checks a backup |
+| `restore FILE [--recovery-key]` | replaces the database with a backup; stop the service first |
+| `openapi` | prints the OpenAPI document |
+
+A backup holds accounts, users, rights, token hashes and the encrypted
+credentials, never mail. It is encrypted as a whole and opens only with
+the master key or the recovery key, which are not in it. `restore` keeps
+the previous database beside the restored one; with `--recovery-key` it
+reads the recovery key from stdin, for a new machine.
+
+## Users, rights and tokens
+
+Every route under `/v1` needs `Authorization: Bearer <token>`; only
+`/health` is open. A token belongs to a user, and the user's grants decide
+what it may do, per account and per operation, for example read mail,
+write drafts, send, manage accounts. Grants can limit sending to certain
+recipients and to a number of mails per day, and every send is recorded
+in an audit. `GET /v1/me` shows what a token may do.
+
+Users, roles and tokens are managed in the UI (Users, Roles) or under
+`/v1/users` and `/v1/roles`. A token is shown once, when it is created.
+Give each script and each assistant its own user with only the rights it
+needs. With neither a user nor `MAILBOX_API_KEY`, the API answers
+`503 setup_required`.
+
+## Container
+
+The image `ghcr.io/benethos-hub/benethos-mailbox-api` runs as an
+unprivileged user on a read-only root file system. It takes its settings
+from the environment only and sets `MAILBOX_API_HOST=0.0.0.0`,
+`MAILBOX_API_DATA_DIR=/data`, `MAILBOX_API_KEY_PROVIDER=file` and
+`MAILBOX_API_KEY_FILE=/run/secrets/master_key`. The database lives in the
+volume at `/data`; the master key is a file mounted at
+`/run/secrets/master_key`. Tags: the version (`0.1.0`), the minor version
+(`0.1`) and `latest`.
+
+### With docker run
+
+```sh
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-api:0.1.0
+
+# once: a master key file, the keys in the database, the first user
+docker run --rm "$IMAGE" keys generate > master_key
+chmod 400 master_key
+sudo chown 10001 master_key  # Linux: the container user (uid 10001) reads it
+docker volume create mailbox-data
+docker run --rm -v mailbox-data:/data -v "$PWD/master_key:/run/secrets/master_key:ro" "$IMAGE" keys init
+docker run --rm -v mailbox-data:/data -v "$PWD/master_key:/run/secrets/master_key:ro" "$IMAGE" users create-admin
+
+# the service, on the loopback address of the host only
+docker run -d --name mailbox-api --restart unless-stopped \
+  -p 127.0.0.1:8080:8080 --read-only --tmpfs /tmp \
+  -v mailbox-data:/data -v "$PWD/master_key:/run/secrets/master_key:ro" \
+  "$IMAGE"
+```
+
+The file `master_key` holds the recovery key: whoever has it and a backup
+has the credentials. Keep a copy apart from the host.
+
+### With compose
+
+The repository's
+[containers/compose.yaml](https://github.com/benethos-hub/mailbox/blob/main/containers/compose.yaml)
+runs the service, and the MCP server over HTTP with the profile `mcp`,
+both on `127.0.0.1` only. From the folder that holds it:
+
+```sh
+export MAILBOX_API_IMAGE=ghcr.io/benethos-hub/benethos-mailbox-api:0.1.0
+
+mkdir -p secrets
+docker run --rm "$MAILBOX_API_IMAGE" keys generate > secrets/master_key
+chmod 400 secrets/master_key
+sudo chown 10001 secrets/master_key          # Linux: the container user reads it
+
+docker compose run --rm mailbox-api keys init
+docker compose run --rm mailbox-api users create-admin
+docker compose up -d
+curl http://127.0.0.1:8080/health
+```
+
+Without `MAILBOX_API_IMAGE`, compose builds the image from a clone of the
+repository. Settings go into the `environment` of the service in the
+compose file.
+
+Operation:
+
+```sh
+docker compose logs -f mailbox-api
+docker compose pull && docker compose up -d                        # update
+docker compose exec mailbox-api benethos-mailbox-api backup /data/backup.mbx
+docker compose cp mailbox-api:/data/backup.mbx .
+
+# restore, into a stopped service
+docker compose stop mailbox-api
+docker compose cp backup.mbx mailbox-api:/data/backup.mbx
+docker compose run --rm mailbox-api restore /data/backup.mbx
+docker compose up -d
+```
+
+Beyond your own machine, put a TLS reverse proxy in front and set
+`MAILBOX_API_PUBLIC_URL` to the address it serves.

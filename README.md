@@ -1,97 +1,130 @@
 # Mailbox API
 
-One REST API for all your mailboxes, whichever provider they are at, with
-an MCP server on top so an AI assistant can work with them too.
+One REST API for all your mailboxes, whichever provider they are at, and
+an MCP server on top, so that scripts, tools and AI assistants can work
+with your mail through one door you control.
 
 > **Status: pre-alpha, version 0.1.0.** Not ready for production use: the
 > API, the stored data and the configuration may change without notice.
->
-> IMAP accounts with autodiscovery from the address, and Microsoft
-> accounts (Outlook.com, Microsoft 365) over Graph with OAuth: reading
-> (folders, messages, search, attachments, raw source, across accounts),
-> stable message ids, changing and moving messages, folders, drafts, and
-> sending with reply, forward and `Idempotency-Key`. Users, roles and
-> grants with send limits and a send audit. The MCP server reads, writes
-> and sends over stdio or streamable HTTP, offering what its token may do.
-> A configuration UI under `/ui`. What comes next and in which order:
-> [docs/ROADMAP.md](docs/ROADMAP.md). The design behind it:
-> [docs/CONCEPT.md](docs/CONCEPT.md).
 
-## What it is
+## What it is for
 
-Most people and small companies have several mail accounts: a personal
-GMX or web.de address, a company mailbox at Microsoft 365, a Gmail account,
-an info@ address at some hoster. Each speaks its own dialect, IMAP here,
-Microsoft Graph there, the Gmail API elsewhere.
+Most people and small companies have more than one mail account: a
+personal address at GMX or web.de, a company mailbox at Microsoft 365, an
+info@ address at some hoster, maybe a Gmail account. Each speaks its own
+dialect, IMAP here, Microsoft Graph there, and every tool that wants to
+work with mail has to learn all of them, and has to be given the passwords.
 
-**Mailbox API** puts one service in front of all of them:
+Mailbox API turns that around. One service, running on your own machine
+or server, holds the connections to all accounts. Everything else talks
+to that service only, through one REST API that looks the same for every
+provider. The service decides who may do what: a script, an app or an AI
+assistant gets a token of its own, and that token opens exactly the
+accounts and operations it was given, nothing more.
 
-- **one API** for reading, searching, sorting and sending mail, the same for
-  every provider (OpenAPI 3.1)
-- **many accounts** connected once, credentials stored encrypted
-- **its own users and rights**: every caller gets exactly the accounts and
-  operations it needs, for example "read account A, write drafts in account
-  B, never send"
-- **running in the background**, so it notices new mail while no client is
-  open
+That makes a few things simple that are hard otherwise:
 
-On top of it, **Mailbox MCP** makes the same mailboxes available to AI
-assistants such as Claude, limited to what its user may do.
+- **Automation across accounts.** A script files invoices into a folder,
+  archives newsletters, forwards order confirmations or reports what came
+  in overnight, the same way for every account. It never sees a mail
+  password, only its own token.
+- **An AI assistant for your mail.** Through the MCP server, Claude or
+  another assistant can search and read mail, summarize threads, sort
+  messages and write replies. Whether it may send on its own or only
+  prepare drafts for a person to send is a right you give or withhold.
+- **Controlled access.** A bookkeeping tool reads the invoice folder of one
+  account and nothing else. A newsletter job sends from info@, to a fixed
+  list of recipients, at most a few times a day. Every send is recorded.
+- **One inbox for your own tools.** A dashboard or a small internal app
+  lists, searches and answers mail from every account with one client.
+- **Self-hosted.** Credentials are stored encrypted by the service, and
+  mail goes straight from the provider to you, never through a third
+  party's cloud.
 
-## Name
+## What it can do today
 
-| | |
-|---|---|
-| Project | Mailbox API |
-| Service | `benethos-mailbox-api` |
-| MCP server | `benethos-mailbox-mcp` |
-| Environment prefix | `MAILBOX_API_` |
+- **Accounts:** IMAP with SMTP for sending, set up from the address alone
+  (autodiscovery), and Microsoft accounts (Outlook.com, Microsoft 365)
+  over Microsoft Graph with OAuth sign-in. Credentials are encrypted
+  (AES-256-GCM) under a master key kept outside the database.
+- **Reading:** folders, lists and search, one account or all at once,
+  messages as text and HTML, attachments, the raw source. Message ids stay
+  the same when a message moves, kept by a background sync.
+- **Writing:** flags, moving, deleting, folders, drafts, and sending with
+  reply, reply to all and forward. A retried send is not sent twice
+  (`Idempotency-Key`).
+- **Users and rights:** users, roles and grants per account and per
+  operation, API tokens, limits on sending (allowed recipients, sends per
+  day) and an audit of every send.
+- **MCP server:** reads, sorts, writes drafts and sends over stdio or
+  streamable HTTP, offering only the tools its token may use. Mail content
+  reaches the model marked as foreign text.
+- **Configuration UI** in the browser under `/ui`: accounts, users,
+  rights, tokens, reading and writing mail, the send audit.
+- **Operation:** encrypted backup and restore, container images, a
+  compose file.
 
-## Use cases
+Planned next: a change feed and webhooks, so automation can react to new
+mail instead of asking for it; Gmail; JMAP. The order is in
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
-- **An assistant for your inbox.** "What came in today across all my
-  accounts?", "Summarize the thread with the tax advisor", "Draft a reply
-  to the landlord" - via the MCP server, with drafts only if you want a
-  person to press send.
-- **One inbox for tools.** A dashboard, a CRM or a script reads and files
-  mail from every account through one interface instead of three.
-- **Automation.** Sort invoices into a folder, forward order confirmations,
-  archive newsletters, triggered by new-mail events.
-- **Controlled access.** A bookkeeping tool may read the invoice folder of
-  one account and nothing else. A newsletter job may send from info@ and do
-  nothing else.
-- **Self-hosted.** Runs on your own machine or server. Credentials and mail
-  never pass through a third-party cloud.
+## Providers
 
-## Supported providers (planned)
+| Provider | Connected via | Credential | State |
+|---|---|---|---|
+| GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, own mail servers | IMAP + SMTP | app password | available |
+| Microsoft 365, Outlook.com | Microsoft Graph | OAuth ([setup](docs/microsoft.md)) | available |
+| Proton Mail | IMAP + SMTP through Proton Mail Bridge | Bridge password | IMAP, not tested |
+| Gmail / Google Workspace | Gmail API | OAuth, with your own Google Cloud client | planned |
+| Fastmail, Stalwart, other JMAP servers | JMAP | API token | planned |
+| legacy mailboxes | POP3, reduced functionality | password | planned |
 
-| Provider | Connected via | Credential |
-|---|---|---|
-| Gmail / Google Workspace | Gmail API | OAuth, with your own Google Cloud client |
-| Microsoft 365, Outlook.com | Microsoft Graph | OAuth |
-| Fastmail, Stalwart, other JMAP servers | JMAP | API token |
-| GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, own mail servers | IMAP + SMTP | app password |
-| Proton Mail | IMAP + SMTP through Proton Mail Bridge | Bridge password |
-| legacy mailboxes | POP3, reduced functionality | password |
+Not supportable: Tuta, which offers no IMAP and no API. Details per
+provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
 
-Not supportable: Tuta, which offers no IMAP and no API. Details per provider
-in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
+## The two packages
 
-## Parts
-
-| Package | What it is | Runs |
-|---|---|---|
-| [`benethos-mailbox-api`](packages/mailbox-api) | the service: REST API, users and rights, mail accounts, encrypted credentials, provider adapters, background fetching | permanently |
-| [`benethos-mailbox-mcp`](packages/mailbox-mcp) | the MCP server, a client of the REST API only | per client over stdio, or over HTTP |
+| Package | What it is | Runs | Read more |
+|---|---|---|---|
+| `benethos-mailbox-api` | the service: REST API, configuration UI, users and rights, accounts, encrypted credentials, provider adapters, background sync | permanently | [packages/mailbox-api](packages/mailbox-api/README.md) |
+| `benethos-mailbox-mcp` | the MCP server, a client of the REST API only | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
 
 ```
  AI assistant ──MCP──► benethos-mailbox-mcp ──┐
- scripts, apps ───────────────────────────────┼─REST──► benethos-mailbox-api ──► IMAP / Gmail / Graph
+ scripts, apps ───────────────────────────────┼─REST──► benethos-mailbox-api ──► IMAP / Graph / ...
+ browser ─────────────────────────────── /ui ─┘
 ```
 
-One uv workspace, one lockfile, two distributions.
+A release publishes both to PyPI and as container images on ghcr.io,
+under the same version. How to install, start and configure each of them
+is in its own README, the container images and the compose file
+included.
+
+## Getting started
+
+1. Start the service and create the first user:
+   [packages/mailbox-api](packages/mailbox-api/README.md#first-start).
+2. Open `http://127.0.0.1:8080/ui`, sign in with the token and connect
+   your accounts.
+3. Give your scripts or your assistant a user with the rights they need,
+   and for an assistant, add the MCP server to it:
+   [packages/mailbox-mcp](packages/mailbox-mcp/README.md).
+
+## Documentation
+
+- [docs/CONCEPT.md](docs/CONCEPT.md): the design, the API, the security
+  model
+- [docs/ROADMAP.md](docs/ROADMAP.md): the phases and what is done
+- [docs/microsoft.md](docs/microsoft.md): connecting Microsoft accounts
+- [docs/openapi.json](docs/openapi.json): the API contract; a running
+  service shows it at `/docs`
+- [CHANGELOG.md](CHANGELOG.md)
+- [containers/](containers/README.md): the Dockerfiles and the compose
+  file
 
 ## Development
+
+One uv workspace, one lockfile, two distributions.
 
 ```
 uv sync
@@ -100,81 +133,10 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
 
-Live checks against test accounts, outside the test suite:
-`uv run python live/smoke.py` reads only, `uv run python live/changes.py`
-sends one test mail between two test accounts, moves it and deletes it.
-`live/register.py` adds the test accounts to a running service through its
-API, with `MAILBOX_API_TOKEN` set. All are configured in `live/.env`
-(template `live/.env.example`).
-
-## Running
-
-```
-uv run benethos-mailbox-api keys init              # once: prints the recovery key
-uv run benethos-mailbox-api users create-admin     # once: prints an admin token
-uv run benethos-mailbox-api serve
-MAILBOX_API_TOKEN=<token> uv run benethos-mailbox-mcp
-```
-
-The API documentation is at `http://127.0.0.1:8080/docs`. Data is kept in a
-SQLite database in `data/benethos-mailbox-api/`. Settings come from the
-environment or from `config/benethos-mailbox-api/.env`; copy the
-`.env.example` beside it to start. Both paths count from the working
-directory, normally the repository root.
-
-| Setting | Meaning |
-|---|---|
-| `MAILBOX_API_KEY` | optional built-in admin key, for containers and tests |
-| `MAILBOX_API_DATA_DIR` | where the database lives, default `data/benethos-mailbox-api` in the working directory |
-| `MAILBOX_API_STORAGE` | `sqlite` (default) or `memory`, which keeps nothing |
-| `MAILBOX_API_HOST`, `MAILBOX_API_PORT` | where the API listens, default `127.0.0.1:8080` |
-| `MAILBOX_API_KEY_PROVIDER` | where the master key lives: `keyring` (default), `file` or `env` |
-| `MAILBOX_API_KEY_FILE` | the key file, for `file` |
-| `MAILBOX_API_MASTER_KEY` | the recovery key, for `env` |
-| `MAILBOX_API_DISCOVERY_ISPDB` | `true` (default) or `false`: whether autodiscovery asks Thunderbird's ISPDB |
-| `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS` | JSON list of hosts autodiscovery may reach on private addresses |
-| `MAILBOX_API_SYNC_INTERVAL` | seconds between two polls of every folder by the sync worker, default `300`, `0` switches it off |
-| `MAILBOX_API_SYNC_IDLE` | `true` (default) or `false`: whether the sync worker watches the inbox over IMAP IDLE, with a second connection per account |
-
-Mail credentials are stored encrypted (AES-256-GCM). The master key stays
-out of the database, in the key provider. `keys init` prints a recovery key
-once: keep it apart from backups. `keys import` reads it back into the key
-provider, for example on a new machine.
-
-### Backup and restore
-
-```
-uv run benethos-mailbox-api backup mailbox.bak          # while the service runs
-uv run benethos-mailbox-api backup verify mailbox.bak
-uv run benethos-mailbox-api restore mailbox.bak         # service stopped
-uv run benethos-mailbox-api restore mailbox.bak --recovery-key   # on a new machine
-```
-
-A backup holds accounts, users, rights, token hashes and the encrypted
-credentials, never mail. The whole file is encrypted, and it opens only with
-the master key or the recovery key, which are not in it. `restore` keeps the
-previous database beside the restored one.
-
-### Authentication
-
-**Every route under `/v1` requires authentication.** Nothing is served
-anonymously, only `/health` is open. How a caller authenticates is a
-separate question from what it may do:
-
-- **Who is calling** is proven by a credential of a user of the service.
-  The first kind is an API token, sent as `Authorization: Bearer <token>`.
-  Further kinds are planned without changing the rights model: password
-  with TOTP or a passkey for the configuration UI, OAuth 2.0 client
-  credentials for machines.
-- **What the caller may do** follows from the user's rights, per account and
-  per API operation, checked on every request. `GET /v1/me` shows them.
-
-Users, roles and tokens are managed under `/v1/users` and `/v1/roles`. A
-token is shown once, when it is created. With neither a user nor
-`MAILBOX_API_KEY`, the API answers `503 setup_required`.
-
-See [docs/CONCEPT.md](docs/CONCEPT.md), section 7.5.
+The tests run offline. Manual checks against real test accounts live in
+`live/` and are described in [CLAUDE.md](CLAUDE.md), which also holds the
+working rules for this repository.
 
 ## Licence
 
-MIT
+MIT, see [LICENSE](LICENSE).
