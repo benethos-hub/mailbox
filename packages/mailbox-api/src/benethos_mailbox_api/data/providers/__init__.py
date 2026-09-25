@@ -36,6 +36,7 @@ from .protocols.oauth import (
     authorize_url,
     new_pkce,
 )
+from .ratelimit import backoff
 from .rules import hosts_in
 
 
@@ -166,6 +167,7 @@ __all__ = [
     "TokenSource",
     "Tokens",
     "authorize_url",
+    "backoff",
     "build_provider",
     "hosts_in",
     "new_pkce",

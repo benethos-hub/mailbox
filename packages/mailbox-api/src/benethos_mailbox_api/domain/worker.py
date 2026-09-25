@@ -15,7 +15,7 @@ import anyio
 from anyio.abc import TaskGroup
 
 from ..data.models import AccountStatus
-from ..data.providers import Capability
+from ..data.providers import Capability, backoff
 from ..errors import (
     MailboxApiError,
     NotFoundError,
@@ -27,7 +27,8 @@ from .sync import SyncService
 
 # RFC 2177: IDLE is to be renewed before 29 minutes.
 IDLE_RENEW = 25 * 60.0
-# A watcher that failed waits, doubling up to the longest pause.
+# A watcher that failed waits, doubling up to the longest pause, with
+# jitter so that many accounts do not retry in step.
 FIRST_RETRY = 60.0
 LONGEST_RETRY = 900.0
 
@@ -96,7 +97,7 @@ class SyncWorker:
                     return  # _wanted is false now, until the account is verified
                 except MailboxApiError as exc:
                     failures += 1
-                    pause = min(LONGEST_RETRY, FIRST_RETRY * 2 ** (failures - 1))
+                    pause = backoff(failures - 1, FIRST_RETRY, LONGEST_RETRY)
                     log.warning(
                         "watching %s failed, next try in %.0fs: %s",
                         account_id,
