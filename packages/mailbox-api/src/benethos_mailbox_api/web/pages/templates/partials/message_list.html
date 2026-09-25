@@ -1,3 +1,4 @@
+{% from "components/ui.html" import pager %}
 {# A page of messages. ``emails``: the account column, for lists across
    accounts; without it, one account's list. ``selectable``: a tick box
    per message for the form ``batch``. ``open_as="drafts"``: links open
@@ -38,11 +39,4 @@
 {% else %}
 <div class="empty">No messages{{ " match the search" if fields else "" }}.</div>
 {% endif %}
-{% set more, first = pages %}
-{% if more or first %}
-<div class="body toolbar">
-  {% if first %}<a class="btn small" href="{{ first }}">Newest</a>{% endif %}
-  <span class="grow"></span>
-  {% if more %}<a class="btn small" href="{{ more }}">Older</a>{% endif %}
-</div>
-{% endif %}
+{{ pager(pages) }}

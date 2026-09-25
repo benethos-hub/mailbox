@@ -5,6 +5,36 @@
 {% block heading %}Connect an account{% endblock %}
 {% block subheading %}<div class="sub">Look up how to reach an address, then sign in with its password</div>{% endblock %}
 {% block content %}
+{# Connect with a password: ``settings`` fill the server fields, a
+   ``provider`` names the candidate's, ``suffix`` keeps ids apart. #}
+{% macro connect_form(email, settings, suffix="", provider=None, password_label="Password", hint=None, folded=True, primary=True) %}
+{% set ids = "-" ~ suffix if suffix else "" %}
+<form method="post" action="/ui/accounts">
+  {{ csrf_field() }}
+  <input type="hidden" name="email" value="{{ email }}" />
+  {% if provider %}<input type="hidden" name="provider" value="{{ provider }}" />{% endif %}
+  <div class="form-grid">
+    <div class="field">
+      <label for="f-display_name{{ ids }}">Display name</label>
+      <input id="f-display_name{{ ids }}" name="display_name" placeholder="optional" />
+    </div>
+    <div class="field">
+      <label for="f-password{{ ids }}">{{ password_label }}</label>
+      <input id="f-password{{ ids }}" name="password" type="password" autocomplete="new-password" required />
+      {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+    </div>
+  </div>
+  {% if folded %}
+  <details class="fold">
+    <summary>Servers</summary>
+    {{ connection_fields(settings, security) }}
+  </details>
+  {% else %}
+  <div class="fold">{{ connection_fields(settings, security) }}</div>
+  {% endif %}
+  <div class="form-actions"><button{% if primary %} class="primary"{% endif %} type="submit">Connect</button></div>
+</form>
+{% endmacro %}
 {% macro sign_in_form(provider, hint="") %}
 <form class="inline" method="post" action="/ui/oauth/{{ provider }}/start">
   {{ csrf_field() }}
@@ -67,27 +97,7 @@
     {% for hint in candidate.hints %}
     <p class="muted">{{ hint.text }}{% if hint.url %} <a href="{{ hint.url }}" rel="noreferrer">More</a>{% endif %}</p>
     {% endfor %}
-    <form method="post" action="/ui/accounts">
-      {{ csrf_field() }}
-      <input type="hidden" name="email" value="{{ discovery.email }}" />
-      <input type="hidden" name="provider" value="{{ candidate.provider.value }}" />
-      <div class="form-grid">
-        <div class="field">
-          <label for="f-display_name-{{ loop.index }}">Display name</label>
-          <input id="f-display_name-{{ loop.index }}" name="display_name" placeholder="optional" />
-        </div>
-        <div class="field">
-          <label for="f-password-{{ loop.index }}">{{ "App password" if candidate.credential.value == "app_password" else "Password" }}</label>
-          <input id="f-password-{{ loop.index }}" name="password" type="password" autocomplete="new-password" required />
-          <span class="hint">Tried against the provider first, then stored encrypted. Never shown again.</span>
-        </div>
-      </div>
-      <details class="fold">
-        <summary>Servers</summary>
-        {{ connection_fields(candidate.settings, security) }}
-      </details>
-      <div class="form-actions"><button class="primary" type="submit">Connect</button></div>
-    </form>
+    {{ connect_form(discovery.email, candidate.settings, suffix=loop.index, provider=candidate.provider.value, password_label="App password" if candidate.credential.value == "app_password" else "Password", hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
   </div>
 </section>
 {% endfor %}
@@ -96,22 +106,7 @@
   <header><h2>{{ "Or set it up by hand" if usable or sign_ins else "2. Set it up by hand" }}</h2></header>
   <div class="body">
     {% if not usable and not sign_ins %}<p class="muted">No way to connect {{ discovery.email }} over IMAP was found. Enter your provider's servers.</p>{% endif %}
-    <form method="post" action="/ui/accounts">
-      {{ csrf_field() }}
-      <input type="hidden" name="email" value="{{ discovery.email }}" />
-      <div class="form-grid">
-        <div class="field">
-          <label for="f-display_name">Display name</label>
-          <input id="f-display_name" name="display_name" placeholder="optional" />
-        </div>
-        <div class="field">
-          <label for="f-password">Password</label>
-          <input id="f-password" name="password" type="password" autocomplete="new-password" required />
-        </div>
-      </div>
-      <div class="fold">{{ connection_fields({}, security) }}</div>
-      <div class="form-actions"><button type="submit">Connect</button></div>
-    </form>
+    {{ connect_form(discovery.email, {}, folded=False, primary=False) }}
   </div>
 </section>
 

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import csrf_field with context %}
 {% set verb = stored.reference.action if stored is not none and stored.reference is not none else values.get("action", "") %}
 {% set action_name = {"reply": "Reply", "reply_all": "Reply to all", "forward": "Forward"}.get(verb, "") %}
 {% set title = ("Draft" if draft_id else (action_name or "New message")) %}
@@ -29,7 +30,7 @@
 {% endif %}
 
 <form method="post" enctype="multipart/form-data" action="{{ '/ui/accounts/' ~ account.id ~ ('/drafts/' ~ draft_id if draft_id else '/compose') }}">
-  <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+  {{ csrf_field() }}
   <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}" />
   {% if values.get("original") %}
   <input type="hidden" name="original" value="{{ values.original }}" />

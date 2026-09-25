@@ -1,3 +1,4 @@
+{% from "components/ui.html" import csrf_field with context %}
 <aside class="sidebar">
   <div class="brand"><span class="mark">✉</span> {{ APP_NAME }}</div>
   <nav class="nav">
@@ -15,7 +16,7 @@
   <div class="foot">
     Signed in as <strong>{{ me.name }}</strong>
     <form method="post" action="/ui/logout">
-      <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+      {{ csrf_field() }}
       <button class="small ghost" type="submit">Sign out</button>
     </form>
   </div>

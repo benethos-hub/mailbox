@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import action, csrf_field with context %}
-{% from "components/grants.html" import grant_editor, grant_summary %}
+{% from "components/grants.html" import grant_editor, grants_of %}
 {% block title %}{{ role.id }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}Role {{ role.id }}{% endblock %}
 {% block content %}
@@ -9,7 +9,7 @@
   <div class="body">
     <dl class="facts">
       <dt>Grants</dt>
-      <dd>{% for grant in role.grants %}{{ grant_summary(grant, names) }}{% else %}—{% endfor %}</dd>
+      <dd>{{ grants_of(role.grants, names) }}</dd>
       {% if holders is not none %}
       <dt>Users</dt>
       <dd>{% for user in holders %}<a class="tag" href="/ui/users/{{ user.id }}">{{ user.name }}</a> {% else %}—{% endfor %}</dd>

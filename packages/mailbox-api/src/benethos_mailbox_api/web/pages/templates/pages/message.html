@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action with context %}
+{% from "components/ui.html" import action, csrf_field, folder_options with context %}
 {% block title %}{{ message.subject | or_missing }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ message.subject | or_missing }}{% endblock %}
 {% block subheading %}<div class="sub"><a href="/ui/accounts/{{ account.id }}/mail">{{ account.email }}</a>{% for folder_id in message.folder_ids %} · <a href="/ui/accounts/{{ account.id }}/mail?{{ [('folder', folder_id)] | urlencode }}">{{ folder_names.get(folder_id, folder_id) }}</a>{% endfor %}</div>{% endblock %}
@@ -40,9 +40,9 @@
     {{ action(url ~ "/flags", "Unstar" if message.starred else "Star", fields={"starred": "0" if message.starred else "1"}, cls="") }}
     {% if tree %}
     <form class="inline toolbar" method="post" action="{{ url }}/move">
-      <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+      {{ csrf_field() }}
       <select name="folder" aria-label="Move to folder">
-        {% for folder, depth in tree %}{% if folder.id not in message.folder_ids %}<option value="{{ folder.id }}">{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
+        {{ folder_options(tree, message.folder_ids) }}
       </select>
       <button type="submit">Move</button>
     </form>

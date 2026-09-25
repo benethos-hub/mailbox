@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import csrf_field with context %}
-{% from "components/grants.html" import grant_editor %}
+{% from "components/grants.html" import grant_editor, role_checks %}
 {% block title %}New user · {{ APP_NAME }}{% endblock %}
 {% block heading %}New user{% endblock %}
 {% block subheading %}<div class="sub">A user acts with its roles and grants; it signs in with a token you create next</div>{% endblock %}
@@ -16,14 +16,7 @@
           <input id="f-name" name="name" required placeholder="e.g. claude-desktop" />
         </div>
       </div>
-      {% if role_choices %}
-      <div class="field">
-        <span class="label">Roles</span>
-        <div class="checks">
-          {% for role in role_choices %}<label class="check"><input type="checkbox" name="roles" value="{{ role }}" /> {{ role }}</label>{% endfor %}
-        </div>
-      </div>
-      {% endif %}
+      {% if role_choices %}{{ role_checks(role_choices, []) }}{% endif %}
     </div>
   </section>
   <section class="card">
