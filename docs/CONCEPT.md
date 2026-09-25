@@ -297,6 +297,18 @@ an app password is the credential to ask for.
   account users. A work tenant may require its administrator's consent
   before its users can sign in. The provider sends the browser back to
   `/ui/oauth/{provider}/callback`, a UI page.
+- **Planned (decided 2026-09-25):** a client id of the project, shipped
+  with the service, as the default, so that people can connect Microsoft
+  accounts without registering an app of their own. It is a public client
+  (registered for mobile and desktop applications): no secret, PKCE
+  alone, since a secret shipped with the software would not be secret.
+  Such a client can only be sent back to `localhost`; a service on a
+  server signs in with the device code flow instead (a code entered at
+  Microsoft's device login page). An app of the deployment's own, with a
+  secret as today, stays the option for organisations that want or need
+  one. Work tenants often admit apps of unverified publishers only with
+  their administrator's consent; publisher verification needs membership
+  in Microsoft's partner programme.
 - Change-notification subscriptions expire after a few days and are
   renewed by the worker **(unverified: exact lifetime)**.
 
