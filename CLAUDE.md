@@ -126,7 +126,8 @@ packages/
           templates/      # base, partials, components (macros), pages
           static/         # app.css, app.js, vendored htmx
       domain/             # BUSINESS LOGIC: decides, knows no HTTP
-        accounts.py       # AccountService: accounts and their live adapters
+        accounts.py       # AccountService: accounts under the caller's rights
+        adapters.py       # Adapters: the live adapter per account, calls through it
         oauth.py          # OAuthService: connect or sign in again by OAuth
         mailbox.py        # MailboxService: folders and messages, the facade
         calls.py          # provider calls under our stable ids, many at once
@@ -137,6 +138,7 @@ packages/
         sync.py           # SyncService: stable message ids, the sync pass
         worker.py         # SyncWorker: polling and IDLE in the background
         idempotency.py    # Idempotency-Key: a retried send returns its result
+        locks.py          # KeyedLocks: one asyncio lock per key, for the services
         sending.py        # SendControl: grant constraints on sending, send audit
         permissions.py    # the catalogue of rights and groups
         access.py         # Access: what one caller may do

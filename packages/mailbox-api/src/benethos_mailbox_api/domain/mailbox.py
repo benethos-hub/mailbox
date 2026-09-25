@@ -8,14 +8,13 @@ service.
 from __future__ import annotations
 
 import logging
-from typing import Any, TypeVar
+from typing import Any
 
 from ..data.models import (
     AccountFailure,
     AttachmentContent,
     BatchItemResult,
     BatchResult,
-    DraftMessage,
     Folder,
     FolderCreate,
     FolderRole,
@@ -39,10 +38,6 @@ from .outgoing import Outgoing
 from .sending import SendControl
 from .sync import SyncService
 
-T = TypeVar("T")
-S = TypeVar("S", bound=MessageSummary)
-M = TypeVar("M", bound=DraftMessage)
-
 # The keyword of a draft, \Draft on IMAP.
 DRAFT_KEYWORD = "$draft"
 
@@ -59,8 +54,6 @@ class MailboxService:
         idempotency: Idempotency,
         sends: SendControl,
     ) -> None:
-        self._adapters = adapters
-        self._sync = sync
         self._calls = Calls(adapters, sync)
         self._outgoing = Outgoing(self._calls, idempotency, sends)
         # Sending and drafts live in ``Outgoing``; callers reach them here.
@@ -72,9 +65,11 @@ class MailboxService:
         self.send_draft = self._outgoing.send_draft
         self.delete_draft = self._outgoing.delete_draft
 
+    # --- folders ----------------------------------------------------------------------
+
     async def list_folders(self, access: Access, account_id: str) -> list[Folder]:
         access.require("list_folders", account_id)
-        return await self._calls.call(account_id, lambda p: p.list_folders())
+        return await self._folders(account_id)
 
     async def create_folder(
         self, access: Access, account_id: str, new: FolderCreate
@@ -90,7 +85,7 @@ class MailboxService:
         """Rename or move. Folders with a role stay where mail clients expect
         them. The messages inside keep their ids: a sync follows them."""
         access.require("update_folder", account_id)
-        folder = await self._own_folder(account_id, folder_id)
+        folder, _ = await self._own_folder(account_id, folder_id)
         name = changes.name or folder.name
         parent = changes.parent_id if changes.moves else folder.parent_id
         updated = await self._calls.call(
@@ -98,7 +93,7 @@ class MailboxService:
         )
         if updated.id != folder_id:
             try:
-                await self._sync.sync_account(account_id)
+                await self._calls.resync(account_id)
             except MailboxApiError:
                 pass  # the next sync, or the next lookup, follows them
         return updated
@@ -109,8 +104,7 @@ class MailboxService:
         """Only an empty folder without subfolders: deleting a folder takes
         its messages with it on many servers, and they cannot be taken back."""
         access.require("delete_folder", account_id)
-        folder = await self._own_folder(account_id, folder_id)
-        folders = await self._calls.call(account_id, lambda p: p.list_folders())
+        folder, folders = await self._own_folder(account_id, folder_id)
         if any(f.parent_id == folder_id for f in folders):
             raise ConflictError(f"the folder {folder.name} has subfolders")
         contents = await self._calls.call(
@@ -123,9 +117,15 @@ class MailboxService:
             )
         await self._calls.call(account_id, lambda p: p.delete_folder(folder_id))
 
-    async def _own_folder(self, account_id: str, folder_id: str) -> Folder:
-        """A folder the user made: one with a role is refused."""
-        folders = await self._calls.call(account_id, lambda p: p.list_folders())
+    async def _folders(self, account_id: str) -> list[Folder]:
+        return await self._calls.call(account_id, lambda p: p.list_folders())
+
+    async def _own_folder(
+        self, account_id: str, folder_id: str
+    ) -> tuple[Folder, list[Folder]]:
+        """A folder the user made, and all the account's folders: one with
+        a role is refused."""
+        folders = await self._folders(account_id)
         folder = next((f for f in folders if f.id == folder_id), None)
         if folder is None:
             raise NotFoundError(f"folder {folder_id} not found")
@@ -134,7 +134,20 @@ class MailboxService:
                 f"the folder {folder.name} is the account's {folder.role}: "
                 "it stays as it is"
             )
-        return folder
+        return folder, folders
+
+    async def _folder_by_role(self, account_id: str, folder: str | None) -> str | None:
+        """A folder id, or the id of the folder with that role."""
+        if folder is None or folder not in FolderRole.__members__.values():
+            return folder
+        match = next(
+            (f for f in await self._folders(account_id) if f.role == folder), None
+        )
+        if match is None:
+            raise NotFoundError(f"the account has no {folder} folder")
+        return match.id
+
+    # --- messages of one account ------------------------------------------------------
 
     async def list_messages(
         self,
@@ -156,20 +169,65 @@ class MailboxService:
                 folder, limit=limit, cursor=cursor, search=search
             ),
         )
-        return Page[MessageSummary](
-            items=await self._calls.published(account_id, page.items),
-            next_cursor=page.next_cursor,
+        return await self._calls.published_page(account_id, page)
+
+    async def get_message(
+        self, access: Access, account_id: str, message_id: str
+    ) -> Message:
+        access.require("get_message", account_id)
+        message = await self._calls.message(account_id, message_id)
+        if message.reference is not None and DRAFT_KEYWORD not in message.keywords:
+            # Only a draft of this service carries one; in a received mail
+            # the header is the sender's.
+            message = message.model_copy(update={"reference": None})
+        return public(message, message_id, account_id)
+
+    async def update_message(
+        self,
+        access: Access,
+        account_id: str,
+        message_id: str,
+        changes: MessageUpdate,
+    ) -> MessageSummary:
+        access.require("update_message", account_id)
+        return await self._calls.update_one(account_id, message_id, changes)
+
+    async def delete_message(
+        self, access: Access, account_id: str, message_id: str, permanent: bool
+    ) -> None:
+        """Into the trash, or for good: then its own right (CONCEPT 7.5)."""
+        access.require(_delete_right(permanent), account_id)
+        await self._calls.delete_one(account_id, message_id, permanent)
+
+    async def batch_messages(
+        self, access: Access, account_id: str, batch: MessageBatch
+    ) -> BatchResult:
+        """One action for many messages. The rights are those of the single
+        operation, checked once for the whole batch."""
+        access.require("batch_messages", account_id)
+        outcomes: dict[str, Any]
+        if batch.action == "update":
+            access.require("update_message", account_id)
+            assert batch.changes is not None
+            outcomes = await self._calls.update(account_id, batch.ids, batch.changes)
+        else:
+            access.require(_delete_right(batch.permanent), account_id)
+            outcomes = await self._calls.delete(account_id, batch.ids, batch.permanent)
+        return BatchResult(results=[_item(i, outcomes[i]) for i in batch.ids])
+
+    async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:
+        access.require("get_message_raw", account_id)
+        return await self._calls.on_message(
+            account_id, message_id, lambda p, native: p.get_raw(native)
         )
 
-    async def _folder_by_role(self, account_id: str, folder: str | None) -> str | None:
-        """A folder id, or the id of the folder with that role."""
-        if folder is None or folder not in FolderRole.__members__.values():
-            return folder
-        folders = await self._calls.call(account_id, lambda p: p.list_folders())
-        match = next((f for f in folders if f.role == folder), None)
-        if match is None:
-            raise NotFoundError(f"the account has no {folder} folder")
-        return match.id
+    async def get_attachment(
+        self, access: Access, account_id: str, message_id: str, attachment_id: str
+    ) -> AttachmentContent:
+        access.require("get_attachment", account_id)
+        return await self._calls.attachment(account_id, message_id, attachment_id)
+
+    # --- across accounts ---------------------------------------------------------
 
     async def list_all_messages(
         self,
@@ -187,7 +245,7 @@ class MailboxService:
         ``list_accounts``. An account that fails leaves the page incomplete,
         it does not fail the request.
         """
-        existing = self._adapters.ids()
+        existing = self._calls.ids()
         wanted = account_ids or existing
         visible = [
             a
@@ -232,75 +290,6 @@ class MailboxService:
             incomplete=failures,
         )
 
-    async def get_message(
-        self, access: Access, account_id: str, message_id: str
-    ) -> Message:
-        access.require("get_message", account_id)
-        message = await self._calls.on_message(
-            account_id, message_id, lambda p, native: p.get_message(native)
-        )
-        if message.reference is not None and DRAFT_KEYWORD not in message.keywords:
-            # Only a draft of this service carries one; in a received mail
-            # the header is the sender's.
-            message = message.model_copy(update={"reference": None})
-        return public(message, message_id, account_id)
-
-    async def update_message(
-        self,
-        access: Access,
-        account_id: str,
-        message_id: str,
-        changes: MessageUpdate,
-    ) -> MessageSummary:
-        access.require("update_message", account_id)
-        outcome = (await self._calls.update(account_id, [message_id], changes))[
-            message_id
-        ]
-        if isinstance(outcome, MailboxApiError):
-            raise outcome
-        return outcome
-
-    async def delete_message(
-        self, access: Access, account_id: str, message_id: str, permanent: bool
-    ) -> None:
-        """Into the trash, or for good: then its own right (CONCEPT 7.5)."""
-        access.require(_delete_right(permanent), account_id)
-        outcome = (await self._calls.delete(account_id, [message_id], permanent))[
-            message_id
-        ]
-        if isinstance(outcome, MailboxApiError):
-            raise outcome
-
-    async def batch_messages(
-        self, access: Access, account_id: str, batch: MessageBatch
-    ) -> BatchResult:
-        """One action for many messages. The rights are those of the single
-        operation, checked once for the whole batch."""
-        access.require("batch_messages", account_id)
-        outcomes: dict[str, Any]
-        if batch.action == "update":
-            access.require("update_message", account_id)
-            assert batch.changes is not None
-            outcomes = await self._calls.update(account_id, batch.ids, batch.changes)
-        else:
-            access.require(_delete_right(batch.permanent), account_id)
-            outcomes = await self._calls.delete(account_id, batch.ids, batch.permanent)
-        return BatchResult(results=[_item(i, outcomes[i]) for i in batch.ids])
-
-    async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:
-        access.require("get_message_raw", account_id)
-        return await self._calls.on_message(
-            account_id, message_id, lambda p, native: p.get_raw(native)
-        )
-
-    async def get_attachment(
-        self, access: Access, account_id: str, message_id: str, attachment_id: str
-    ) -> AttachmentContent:
-        access.require("get_attachment", account_id)
-        return await self._outgoing.attachment(account_id, message_id, attachment_id)
-
-    # --- across accounts ---------------------------------------------------------
-
     async def _start(
         self,
         account_ids: list[str],
@@ -309,11 +298,7 @@ class MailboxService:
     ) -> dict[str, merge.Position]:
         if role is None:
             return {a: merge.Position(None, None, 0) for a in account_ids}
-        folders = await merge.per_account(
-            account_ids,
-            lambda a: self._calls.call(a, lambda p: p.list_folders()),
-            failures,
-        )
+        folders = await merge.per_account(account_ids, self._folders, failures)
         positions = {}
         for account_id, found in folders.items():
             match = next((f for f in found if f.role is role), None)

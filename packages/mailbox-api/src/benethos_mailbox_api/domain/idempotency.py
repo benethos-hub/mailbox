@@ -10,10 +10,8 @@ result. A request that fails stores nothing: it may be tried again.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
-import weakref
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import TypeVar
@@ -23,6 +21,7 @@ from pydantic import BaseModel
 from ..common.clock import utc_now
 from ..data.storage import IdempotencyRepository, StoredResult
 from ..errors import IdempotencyConflictError
+from .locks import KeyedLocks
 
 R = TypeVar("R", bound=BaseModel)
 
@@ -37,9 +36,7 @@ class Idempotency:
     ) -> None:
         self._store = store
         self._clock = clock
-        self._locks: weakref.WeakValueDictionary[tuple[str, str], asyncio.Lock] = (
-            weakref.WeakValueDictionary()
-        )
+        self._locks: KeyedLocks[tuple[str, str]] = KeyedLocks()
 
     async def run(
         self,
@@ -54,11 +51,7 @@ class Idempotency:
         if key is None:
             return await action()
         fingerprint = _fingerprint(operation, request)
-        lock = self._locks.get((account_id, key))
-        if lock is None:
-            lock = asyncio.Lock()
-            self._locks[(account_id, key)] = lock
-        async with lock:
+        async with self._locks.get((account_id, key)):
             now = self._clock()
             self._store.purge(now - KEEP)
             stored = self._store.get(account_id, key)

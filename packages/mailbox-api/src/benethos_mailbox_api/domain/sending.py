@@ -9,9 +9,7 @@ sent, denied or failed, with its recipients and never its content.
 
 from __future__ import annotations
 
-import asyncio
 import math
-import weakref
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import Literal
@@ -28,6 +26,7 @@ from ..errors import (
     SendLimitError,
 )
 from .access import Access
+from .locks import KeyedLocks
 
 WINDOW = timedelta(hours=24)
 CURSOR = "s_"
@@ -45,9 +44,7 @@ class SendControl:
         self._clock = clock
         # One send at a time per user and account, so two cannot both pass
         # the limit.
-        self._locks: weakref.WeakValueDictionary[tuple[str, str], asyncio.Lock] = (
-            weakref.WeakValueDictionary()
-        )
+        self._locks: KeyedLocks[tuple[str, str]] = KeyedLocks()
 
     async def send(
         self,
@@ -60,12 +57,7 @@ class SendControl:
     ) -> SentMessage:
         """``action``'s result, if the grants allow sending to
         ``recipients``; recorded either way."""
-        lock_key = (access.user_id, account_id)
-        lock = self._locks.get(lock_key)
-        if lock is None:
-            lock = asyncio.Lock()
-            self._locks[lock_key] = lock
-        async with lock:
+        async with self._locks.get((access.user_id, account_id)):
 
             def record(outcome: SendOutcome, **fields: object) -> None:
                 self._store.add(
