@@ -6,8 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-Pre-alpha, version 0.1.0. Not ready for production use: the API, the
-stored data and the configuration may change without notice.
+## [0.1.0] - 2026-09-25
+
+Pre-alpha. Not ready for production use: the API, the stored data and
+the configuration may change without notice.
 
 ### Fixed
 
@@ -467,3 +469,6 @@ stored data and the configuration may change without notice.
   and `docs/openapi.json` holds the current version.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
+
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/benethos-hub/mailbox/releases/tag/v0.1.0
