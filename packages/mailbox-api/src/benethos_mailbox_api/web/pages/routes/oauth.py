@@ -16,10 +16,10 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from ....data.models import ProviderType
-from ....errors import MailboxApiError
 from ...services import OAuth
 from ...urls import oauth_callback
 from ..deps import Actor, Viewer
+from ..forms import failing
 from ..templates import back, local_path, render
 
 router = APIRouter()
@@ -43,7 +43,7 @@ async def start(
     kind = _provider(provider)
     if kind is None:
         return back(here, error=f"Unknown provider: {provider}")
-    try:
+    with failing(here):
         url = oauth.start(
             caller,
             kind,
@@ -51,8 +51,6 @@ async def start(
             account_id=account_id,
             login_hint=str(form.get("login_hint") or "").strip() or None,
         )
-    except MailboxApiError as exc:
-        return back(here, error=exc.message)
     return RedirectResponse(url, status_code=303)
 
 
@@ -81,8 +79,6 @@ async def finish(
         oauth.cancel(state)
         reason = query.get("error_description") or query["error"]
         return back("/ui/accounts", error=f"{kind.value} did not sign in: {reason}")
-    try:
+    with failing("/ui/accounts"):
         account = await oauth.finish(caller, kind, state, query.get("code", ""))
-    except MailboxApiError as exc:
-        return back("/ui/accounts", error=exc.message)
     return back(f"/ui/accounts/{account.id}", f"{account.email} signed in.")

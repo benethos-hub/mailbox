@@ -7,9 +7,9 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 
 from ....data.models import MessageBatch, MessageUpdate
-from ....errors import MailboxApiError
 from ...services import Mailbox
 from ..deps import Actor
+from ..forms import failing
 from ..templates import back, local_path
 
 router = APIRouter()
@@ -35,10 +35,8 @@ async def set_flags(
         unread=form["unread"] == "1" if "unread" in form else None,
         starred=form["starred"] == "1" if "starred" in form else None,
     )
-    try:
+    with failing(here):
         await mailbox.update_message(caller, account_id, message_id, changes)
-    except MailboxApiError as exc:
-        return back(here, error=exc.message)
     return back(here)
 
 
@@ -51,12 +49,10 @@ async def move(
     folder = str(form.get("folder") or "")
     if not folder:
         return back(here, error="Choose a folder.")
-    try:
+    with failing(here):
         await mailbox.update_message(
             caller, account_id, message_id, MessageUpdate(folder_ids=[folder])
         )
-    except MailboxApiError as exc:
-        return back(here, error=exc.message)
     # The id stays when a message moves.
     return back(here, "Moved.")
 
@@ -68,10 +64,8 @@ async def delete(
     form = await request.form()
     permanent = form.get("permanent") == "1"
     listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
-    try:
+    with failing(f"/ui/accounts/{account_id}/mail/{message_id}"):
         await mailbox.delete_message(caller, account_id, message_id, permanent)
-    except MailboxApiError as exc:
-        return back(f"/ui/accounts/{account_id}/mail/{message_id}", error=exc.message)
     return back(listing, "Deleted for good." if permanent else "Moved to the trash.")
 
 
@@ -108,10 +102,8 @@ async def batch(
             return back(listing, error="Choose an action.")
     except ValidationError:
         return back(listing, error="At most 100 messages at a time.")
-    try:
+    with failing(listing):
         result = await mailbox.batch_messages(caller, account_id, request_batch)
-    except MailboxApiError as exc:
-        return back(listing, error=exc.message)
     failed = [r for r in result.results if not r.ok]
     done = len(result.results) - len(failed)
     if failed:

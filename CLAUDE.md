@@ -121,6 +121,8 @@ packages/
           templates.py    # Jinja2: filters, render, Post/Redirect/Get
           grants.py       # the grant editor's rows, read back into grants
           mailform.py     # the mail form: fields to a message, shown again
+          forms.py        # form errors; failing: back with the message
+          rights.py       # what the signed-in user may see of the UI
           errors.py       # errors as a page
           routes/         # one module per area
           templates/      # base, partials, components (macros), pages

@@ -9,9 +9,9 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
 from ....data.models import Candidate, ProviderType
-from ....errors import MailboxApiError
 from ...services import Accounts, Discoverer, get_oauth
 from ..deps import Actor, Viewer
+from ..forms import failing
 from ..templates import back, render
 
 router = APIRouter()
@@ -103,10 +103,8 @@ async def discover(request: Request, caller: Actor, discovery: Discoverer) -> Re
     access logs, answered with the page itself: a lookup changes nothing."""
     form = await request.form()
     email = str(form.get("email") or "").strip()
-    try:
+    with failing("/ui/accounts/new"):
         found = await discovery.discover(caller, email)
-    except MailboxApiError as exc:
-        return back("/ui/accounts/new", error=exc.message)
     return render(
         request,
         "pages/account_new.html",
@@ -150,7 +148,7 @@ async def create_account(
         provider = ProviderType(str(form.get("provider") or ProviderType.IMAP))
     except ValueError:
         return back("/ui/accounts/new", error="Unknown provider.")
-    try:
+    with failing("/ui/accounts/new", f"{email}: "):
         account = await accounts.create(
             caller,
             provider,
@@ -159,8 +157,6 @@ async def create_account(
             settings,
             _password(form),
         )
-    except MailboxApiError as exc:
-        return back("/ui/accounts/new", error=f"{email}: {exc.message}")
     return back(f"/ui/accounts/{account.id}", f"{account.email} connected.")
 
 
@@ -196,7 +192,7 @@ async def update_account(
             "display_name": str(form.get("display_name") or "").strip() or None,
             "rename": True,
         }
-    try:
+    with failing(here):
         existing = accounts.get(caller, account_id)
         settings = _changed(existing.settings, _settings(form), set(form.keys()))
         await accounts.update(
@@ -206,8 +202,6 @@ async def update_account(
             credentials=_password(form),
             **changes,
         )
-    except MailboxApiError as exc:
-        return back(here, error=exc.message)
     return back(here, "Saved.")
 
 
@@ -216,10 +210,8 @@ async def verify_account(
     caller: Actor, account_id: str, accounts: Accounts
 ) -> Response:
     here = f"/ui/accounts/{account_id}"
-    try:
+    with failing(here, "Not reachable: "):
         checked = await accounts.verify(caller, account_id)
-    except MailboxApiError as exc:
-        return back(here, error=f"Not reachable: {exc.message}")
     return back(here, f"Signed in to the provider. Status: {checked.status.value}.")
 
 
@@ -227,8 +219,6 @@ async def verify_account(
 async def delete_account(
     caller: Actor, account_id: str, accounts: Accounts
 ) -> Response:
-    try:
+    with failing(f"/ui/accounts/{account_id}"):
         await accounts.delete(caller, account_id)
-    except MailboxApiError as exc:
-        return back(f"/ui/accounts/{account_id}", error=exc.message)
     return back("/ui/accounts", "Account removed from the service.")

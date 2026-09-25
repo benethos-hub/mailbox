@@ -13,10 +13,10 @@ from ....common.clock import utc_now
 from ....data.models import Grant, Role
 from ....domain import permissions
 from ....domain.access import Access
-from ....errors import MailboxApiError
 from ...services import Users, get_accounts, get_users
 from ..deps import Actor, Viewer
-from ..grants import GROUP_NAMES, GrantFormError, account_choices, read_grants, rows_of
+from ..forms import failing
+from ..grants import GROUP_NAMES, account_choices, read_grants, rows_of
 from ..session import show_once, take_once
 from ..templates import back, render
 
@@ -85,15 +85,13 @@ async def new_user(request: Request, caller: Viewer) -> HTMLResponse:
 @router.post("/users")
 async def create_user(request: Request, caller: Actor, users: Users) -> Response:
     form = await request.form()
-    try:
+    with failing("/ui/users/new"):
         user = users.create_user(
             caller,
             str(form.get("name") or "").strip(),
             [str(role) for role in form.getlist("roles")],
             read_grants(form),
         )
-    except (MailboxApiError, GrantFormError) as exc:
-        return back("/ui/users/new", error=exc.message)
     return back(f"/ui/users/{user.id}", f"{user.name} created.")
 
 
@@ -130,7 +128,7 @@ async def update_user(
 ) -> Response:
     form = await request.form()
     here = f"/ui/users/{user_id}"
-    try:
+    with failing(here):
         users.update_user(
             caller,
             user_id,
@@ -139,17 +137,13 @@ async def update_user(
             grants=read_grants(form),
             disabled="disabled" in form,
         )
-    except (MailboxApiError, GrantFormError) as exc:
-        return back(here, error=exc.message)
     return back(here, "Saved.")
 
 
 @router.post("/users/{user_id}/delete")
 async def delete_user(caller: Actor, user_id: str, users: Users) -> Response:
-    try:
+    with failing(f"/ui/users/{user_id}"):
         users.delete_user(caller, user_id)
-    except MailboxApiError as exc:
-        return back(f"/ui/users/{user_id}", error=exc.message)
     return back("/ui/users", "User deleted, and its tokens with it.")
 
 
@@ -167,10 +161,8 @@ async def create_token(
     if days and not days.isdigit():
         return back(here, error="Days valid must be a whole number.")
     expires_at = utc_now() + timedelta(days=int(days)) if days else None
-    try:
+    with failing(here):
         _, plain = users.create_token(caller, user_id, name, expires_at)
-    except MailboxApiError as exc:
-        return back(here, error=exc.message)
     # Shown on the next page, once; never in the URL.
     show_once(request, f"token:{user_id}", plain)
     return back(here)
@@ -181,10 +173,8 @@ async def revoke_token(
     caller: Actor, user_id: str, token_id: str, users: Users
 ) -> Response:
     here = f"/ui/users/{user_id}"
-    try:
+    with failing(here):
         token = users.revoke_token(caller, user_id, token_id)
-    except MailboxApiError as exc:
-        return back(here, error=exc.message)
     return back(here, f"Token {token.name} revoked.")
 
 
@@ -218,10 +208,8 @@ def _used_by(request: Request, caller: Access, roles: list[Role]) -> dict[str, i
 async def create_role(request: Request, caller: Actor, users: Users) -> Response:
     form = await request.form()
     role_id = str(form.get("id") or "").strip()
-    try:
+    with failing("/ui/roles"):
         role = users.create_role(caller, role_id, read_grants(form))
-    except (MailboxApiError, GrantFormError) as exc:
-        return back("/ui/roles", error=exc.message)
     return back(_role_path(role.id), f"Role {role.id} created.")
 
 
@@ -250,19 +238,15 @@ async def replace_role(
 ) -> Response:
     form = await request.form()
     here = _role_path(role_id)
-    try:
+    with failing(here):
         users.replace_role(caller, role_id, read_grants(form))
-    except (MailboxApiError, GrantFormError) as exc:
-        return back(here, error=exc.message)
     return back(here, "Saved.")
 
 
 @router.post("/roles/{role_id}/delete")
 async def delete_role(caller: Actor, role_id: str, users: Users) -> Response:
-    try:
+    with failing(_role_path(role_id)):
         users.delete_role(caller, role_id)
-    except MailboxApiError as exc:
-        return back(_role_path(role_id), error=exc.message)
     return back("/ui/roles", f"Role {role_id} deleted.")
 
 

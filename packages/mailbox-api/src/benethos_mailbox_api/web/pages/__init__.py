@@ -23,6 +23,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from .deps import CsrfRefused
 from .errors import error_page
+from .forms import Failed
 from .routes import (
     accounts,
     compose,
@@ -37,7 +38,7 @@ from .routes import (
     users,
 )
 from .session import PATH, SessionStore, SignInRequired
-from .templates import STATIC_DIR, is_htmx
+from .templates import STATIC_DIR, back, is_htmx
 
 AREAS = (
     login,
@@ -107,6 +108,10 @@ def install(app: FastAPI) -> None:
         if is_htmx(request):
             return Response(status_code=204, headers={"HX-Redirect": target})
         return RedirectResponse(target, status_code=303)
+
+    @app.exception_handler(Failed)
+    async def _failed(_: Request, exc: Failed) -> Response:
+        return back(exc.path, error=exc.error)
 
     @app.exception_handler(CsrfRefused)
     async def _csrf(request: Request, _: CsrfRefused) -> HTMLResponse:
