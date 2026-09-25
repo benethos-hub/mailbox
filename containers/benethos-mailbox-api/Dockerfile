@@ -8,12 +8,12 @@
 # Only the service package goes into the image, installed from the lockfile
 # without the development tools. The MCP server is not part of it.
 
-ARG PYTHON_VERSION=3.13
+# Base images are named in FROM directly, so Dependabot can update them.
 
 FROM ghcr.io/astral-sh/uv:0.12.5 AS uv
 
 # --- build: a virtual environment with the service and its dependencies -------
-FROM python:${PYTHON_VERSION}-slim AS build
+FROM python:3.13-slim AS build
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -26,7 +26,7 @@ COPY packages packages
 RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-api
 
 # --- runtime -------------------------------------------------------------------
-FROM python:${PYTHON_VERSION}-slim
+FROM python:3.13-slim
 
 RUN useradd --system --uid 10001 --user-group --home-dir /app \
         --shell /usr/sbin/nologin mailbox \

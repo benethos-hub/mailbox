@@ -13,3 +13,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+
+  # The base images of both Dockerfiles (python, uv). A stale base builds
+  # and runs without complaint, and ships unpatched packages.
+  - package-ecosystem: "docker"
+    directories:
+      - "/containers/benethos-mailbox-api"
+      - "/containers/benethos-mailbox-mcp"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

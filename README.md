@@ -128,6 +128,7 @@ included.
 - [docs/openapi.json](docs/openapi.json): the API contract; a running
   service shows it at `/docs`
 - [CHANGELOG.md](CHANGELOG.md)
+- [SECURITY.md](SECURITY.md): how to report a vulnerability
 - [containers/](containers/README.md): the Dockerfiles and the compose
   file
 
