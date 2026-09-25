@@ -30,9 +30,9 @@ from ....data.models import (
     SendResult,
 )
 from ....domain.access import Access
-from ....domain.mailbox import MailboxService
 from ....errors import MailboxApiError
 from ...api.errors import status_of
+from ...services import get_mailbox
 from ..deps import Actor, Viewer, account_of
 from ..templates import back, render
 
@@ -45,11 +45,6 @@ TEXT_FIELDS = ("subject", "text", "html")
 
 class ComposeError(ValueError):
     """What the form holds is not a message yet."""
-
-
-def _mailbox(request: Request) -> MailboxService:
-    mailbox: MailboxService = request.app.state.mailbox
-    return mailbox
 
 
 def _account(request: Request, caller: Access, account_id: str) -> Account:
@@ -184,7 +179,7 @@ async def compose(request: Request, caller: Viewer, account_id: str) -> HTMLResp
     wanted = request.query_params.get("original")
     action = request.query_params.get("action", "")
     if wanted and action in ACTIONS:
-        original = await _mailbox(request).get_message(caller, account_id, wanted)
+        original = await get_mailbox(request).get_message(caller, account_id, wanted)
         values.update(original=wanted, action=action, forward_as="inline")
     return _page(request, caller, account, values, original=original)
 
@@ -193,7 +188,7 @@ async def compose(request: Request, caller: Viewer, account_id: str) -> HTMLResp
 async def compose_submit(request: Request, caller: Actor, account_id: str) -> Response:
     form = await request.form()
     account = _account(request, caller, account_id)
-    mailbox = _mailbox(request)
+    mailbox = get_mailbox(request)
     sending = form.get("do") == "send"
     try:
         fields = {**await _read(form), "reference": _reference(form)}
@@ -228,7 +223,7 @@ async def _again(
     original = None
     if values["original"] and values["action"] in ACTIONS:
         try:
-            original = await _mailbox(request).get_message(
+            original = await get_mailbox(request).get_message(
                 caller, account.id, values["original"]
             )
         except MailboxApiError:
@@ -255,7 +250,7 @@ async def _again(
 @router.get("/accounts/{account_id}/drafts")
 async def drafts(request: Request, caller: Viewer, account_id: str) -> HTMLResponse:
     account = _account(request, caller, account_id)
-    page = await _mailbox(request).list_drafts(
+    page = await get_mailbox(request).list_drafts(
         caller, account_id, limit=50, cursor=request.query_params.get("cursor")
     )
     more = (
@@ -298,7 +293,7 @@ async def draft(
     request: Request, caller: Viewer, account_id: str, draft_id: str
 ) -> HTMLResponse:
     account = _account(request, caller, account_id)
-    stored = await _mailbox(request).get_message(caller, account_id, draft_id)
+    stored = await get_mailbox(request).get_message(caller, account_id, draft_id)
     return _page(
         request,
         caller,
@@ -317,7 +312,7 @@ async def _original_of(
     if stored is None or stored.reference is None:
         return None
     try:
-        return await _mailbox(request).get_message(
+        return await get_mailbox(request).get_message(
             caller, account_id, stored.reference.message_id
         )
     except MailboxApiError:
@@ -350,7 +345,7 @@ async def _kept_attachments(
     for attachment in stored.attachments:
         if attachment.id in dropped:
             continue
-        content = await _mailbox(request).get_attachment(
+        content = await get_mailbox(request).get_attachment(
             caller, account_id, stored.id, attachment.id
         )
         kept.append(
@@ -370,7 +365,7 @@ async def draft_submit(
     """Save the draft, save and send it, or delete it."""
     form = await request.form()
     account = _account(request, caller, account_id)
-    mailbox = _mailbox(request)
+    mailbox = get_mailbox(request)
     here = f"/ui/accounts/{account_id}/drafts/{draft_id}"
     doing = str(form.get("do") or "save")
     stored: Message | None = None

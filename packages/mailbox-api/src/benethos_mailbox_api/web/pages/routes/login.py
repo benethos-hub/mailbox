@@ -9,8 +9,8 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse, Response
 
-from ....domain.auth import AuthService
 from ....errors import MailboxApiError
+from ...services import get_auth
 from ..deps import Actor
 from ..session import COOKIE, PATH, SignInRequired, current, store_of
 from ..templates import back, render
@@ -61,7 +61,7 @@ async def login(
     expected = request.cookies.get(LOGIN_COOKIE) or ""
     if not expected or not hmac.compare_digest(nonce.encode(), expected.encode()):
         return back(f"{PATH}/login", error="The sign-in form expired. Try again.")
-    auth: AuthService = request.app.state.auth
+    auth = get_auth(request)
     token = token.strip()
     try:
         auth.authenticate(token)

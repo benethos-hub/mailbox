@@ -101,6 +101,7 @@ packages/
         clock.py          # utc_now, the default clock of the services
       web/                # PRESENTATION: HTTP only, FastAPI lives here
         __init__.py       # install: both front ends, errors to the right one
+        services.py       # the domain services as dependencies, for both
         api/              # the JSON API: /health open, the rest under /v1
           deps.py         # bearer authentication, services per request
           schemas.py      # shapes that exist only at the HTTP boundary

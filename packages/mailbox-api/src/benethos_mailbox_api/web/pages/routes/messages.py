@@ -10,8 +10,8 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 
 from ....data.models import MessageBatch, MessageUpdate
-from ....domain.mailbox import MailboxService
 from ....errors import MailboxApiError
+from ...services import get_mailbox
 from ..deps import Actor
 from ..templates import back
 
@@ -26,11 +26,6 @@ BATCH_ACTIONS: dict[str, tuple[str, MessageUpdate | None, bool]] = {
     "trash": ("delete", None, False),
     "delete": ("delete", None, True),
 }
-
-
-def _mailbox(request: Request) -> MailboxService:
-    mailbox: MailboxService = request.app.state.mailbox
-    return mailbox
 
 
 def _return_to(form: Any, fallback: str) -> str:
@@ -57,7 +52,9 @@ async def set_flags(
         starred=form["starred"] == "1" if "starred" in form else None,
     )
     try:
-        await _mailbox(request).update_message(caller, account_id, message_id, changes)
+        await get_mailbox(request).update_message(
+            caller, account_id, message_id, changes
+        )
     except MailboxApiError as exc:
         return back(here, error=exc.message)
     return back(here)
@@ -73,7 +70,7 @@ async def move(
     if not folder:
         return back(here, error="Choose a folder.")
     try:
-        await _mailbox(request).update_message(
+        await get_mailbox(request).update_message(
             caller, account_id, message_id, MessageUpdate(folder_ids=[folder])
         )
     except MailboxApiError as exc:
@@ -90,7 +87,7 @@ async def delete(
     permanent = form.get("permanent") == "1"
     listing = _return_to(form, f"/ui/accounts/{account_id}/mail")
     try:
-        await _mailbox(request).delete_message(
+        await get_mailbox(request).delete_message(
             caller, account_id, message_id, permanent
         )
     except MailboxApiError as exc:
@@ -130,7 +127,7 @@ async def batch(request: Request, caller: Actor, account_id: str) -> Response:
     except ValidationError:
         return back(listing, error="At most 100 messages at a time.")
     try:
-        result = await _mailbox(request).batch_messages(
+        result = await get_mailbox(request).batch_messages(
             caller, account_id, request_batch
         )
     except MailboxApiError as exc:

@@ -8,7 +8,7 @@ from fastapi import Depends, Request
 
 from ...data.models import Account
 from ...domain.access import Access
-from ...domain.accounts import AccountService
+from ..services import get_accounts
 from .session import CSRF_FIELD, CSRF_HEADER, csrf_ok, current
 
 
@@ -40,7 +40,7 @@ def account_of(request: Request, caller: Access, account_id: str) -> Account:
     ``/v1/me``: whoever may only write drafts there sees its address too."""
     if not caller.operations_on(account_id):
         caller.require("get_account", account_id)
-    accounts: AccountService = request.app.state.accounts
+    accounts = get_accounts(request)
     return accounts.record(account_id)
 
 

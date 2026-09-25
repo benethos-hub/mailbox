@@ -9,9 +9,7 @@ from fastapi.responses import HTMLResponse
 
 from ....data.models import SendRecord
 from ....domain.access import Access
-from ....domain.accounts import AccountService
-from ....domain.mailbox import MailboxService
-from ....domain.users import UserService
+from ...services import get_accounts, get_mailbox, get_users
 from ..deps import Viewer, account_of
 from ..templates import render
 
@@ -22,16 +20,11 @@ PAGE_SIZE = 50
 LATEST = 20
 
 
-def _mailbox(request: Request) -> MailboxService:
-    mailbox: MailboxService = request.app.state.mailbox
-    return mailbox
-
-
 def _user_names(request: Request, caller: Access) -> dict[str, str]:
     """Names of the users who sent, where the caller may see users."""
     names = {caller.user_id: caller.name}
     if caller.allows("list_users"):
-        users: UserService = request.app.state.users
+        users = get_users(request)
         names.update({user.id: user.name for user in users.list_users(caller)})
     return names
 
@@ -39,7 +32,7 @@ def _user_names(request: Request, caller: Access) -> dict[str, str]:
 @router.get("/sends")
 async def all_sends(request: Request, caller: Viewer) -> HTMLResponse:
     """The latest sends of every account the caller may audit."""
-    accounts: AccountService = request.app.state.accounts
+    accounts = get_accounts(request)
     audited = [
         account
         for account in accounts.list(caller)
@@ -47,7 +40,7 @@ async def all_sends(request: Request, caller: Viewer) -> HTMLResponse:
     ]
     records: list[SendRecord] = []
     for account in audited:
-        page = _mailbox(request).list_sends(
+        page = get_mailbox(request).list_sends(
             caller, account.id, limit=LATEST, cursor=None
         )
         records.extend(page.items)
@@ -71,7 +64,7 @@ async def account_sends(
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
     cursor = request.query_params.get("cursor")
-    page = _mailbox(request).list_sends(
+    page = get_mailbox(request).list_sends(
         caller, account_id, limit=PAGE_SIZE, cursor=cursor
     )
     here = f"/ui/accounts/{account_id}/sends"

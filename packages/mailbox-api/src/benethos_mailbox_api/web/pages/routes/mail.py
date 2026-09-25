@@ -19,8 +19,7 @@ from pydantic import ValidationError
 from ....data.mail.text import from_html
 from ....data.models import Folder, FolderRole, Message, MessageFilter
 from ....domain.access import Access
-from ....domain.accounts import AccountService
-from ....domain.mailbox import MailboxService
+from ...services import get_accounts, get_mailbox
 from ..deps import Viewer, account_of
 from ..errors import error_page
 from ..templates import render
@@ -31,11 +30,6 @@ PAGE_SIZE = 50
 # The search form: its fields and the filter each fills.
 SEARCH_FIELDS = ("q", "sender", "subject", "after", "before")
 SEARCH_FLAGS = ("unread", "starred", "has_attachments")
-
-
-def _mailbox(request: Request) -> MailboxService:
-    mailbox: MailboxService = request.app.state.mailbox
-    return mailbox
 
 
 def _search(request: Request) -> tuple[MessageFilter | None, dict[str, str], str]:
@@ -94,7 +88,7 @@ def _tree(folders: list[Folder]) -> list[tuple[Folder, int]]:
 
 
 def _readable(caller: Access, request: Request) -> list[Any]:
-    accounts: AccountService = request.app.state.accounts
+    accounts = get_accounts(request)
     return [
         account
         for account in accounts.list(caller)
@@ -113,7 +107,7 @@ async def all_mail(request: Request, caller: Viewer) -> HTMLResponse:
         role, problem = FolderRole.INBOX, f"Unknown folder: {role_name}"
     chosen = request.query_params.getlist("account")
     accounts = _readable(caller, request)
-    page = await _mailbox(request).list_all_messages(
+    page = await get_mailbox(request).list_all_messages(
         caller,
         account_ids=chosen or None,
         folder_role=role,
@@ -145,7 +139,7 @@ async def account_mail(
 ) -> HTMLResponse:
     """One folder of one account, beside the account's folders."""
     account = account_of(request, caller, account_id)
-    mailbox = _mailbox(request)
+    mailbox = get_mailbox(request)
     folders = await mailbox.list_folders(caller, account_id)
     wanted = request.query_params.get("folder") or FolderRole.INBOX.value
     current = next(
@@ -210,9 +204,9 @@ async def message(
     request: Request, caller: Viewer, account_id: str, message_id: str
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
-    found = await _mailbox(request).get_message(caller, account_id, message_id)
+    found = await get_mailbox(request).get_message(caller, account_id, message_id)
     folders = (
-        await _mailbox(request).list_folders(caller, account_id)
+        await get_mailbox(request).list_folders(caller, account_id)
         if caller.allows("list_folders", account_id)
         else []
     )
@@ -245,7 +239,7 @@ def _body(message: Message) -> str:
 async def raw(
     request: Request, caller: Viewer, account_id: str, message_id: str
 ) -> Response:
-    data = await _mailbox(request).get_raw(caller, account_id, message_id)
+    data = await get_mailbox(request).get_raw(caller, account_id, message_id)
     return _download(data, f"{message_id}.eml", "message/rfc822")
 
 
@@ -257,7 +251,7 @@ async def attachment(
     message_id: str,
     attachment_id: str,
 ) -> Response:
-    found = await _mailbox(request).get_attachment(
+    found = await get_mailbox(request).get_attachment(
         caller, account_id, message_id, attachment_id
     )
     # Never rendered here, whatever type the sender claims.

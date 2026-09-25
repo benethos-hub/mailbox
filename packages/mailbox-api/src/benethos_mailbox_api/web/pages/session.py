@@ -23,8 +23,8 @@ from fastapi import Request
 
 from ...common.clock import utc_now
 from ...domain.access import Access
-from ...domain.auth import AuthService
 from ...errors import MailboxApiError
+from ..services import get_auth
 
 COOKIE = "mailbox_ui_session"
 PATH = "/ui"
@@ -86,7 +86,7 @@ def current(request: Request) -> tuple[UiSession, Access]:
     session = store_of(request).get(request.cookies.get(COOKIE))
     if session is None:
         raise SignInRequired
-    auth: AuthService = request.app.state.auth
+    auth = get_auth(request)
     try:
         access = auth.authenticate(session.token)
     except MailboxApiError:
