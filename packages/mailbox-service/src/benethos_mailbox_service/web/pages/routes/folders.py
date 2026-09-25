@@ -14,7 +14,8 @@ from pydantic import ValidationError
 
 from ....data.models import FolderCreate, FolderUpdate
 from ....domain.access import Access
-from ...services import Mailbox, get_mailbox
+from ....domain.mailbox import MailboxService
+from ...services import Mailbox
 from ..deps import Actor
 from ..forms import failing
 from ..templates import back
@@ -43,26 +44,30 @@ async def create_folder(
 
 
 @router.post("/accounts/{account_id}/folders/rename")
-async def rename_folder(request: Request, caller: Actor, account_id: str) -> Response:
+async def rename_folder(
+    request: Request, caller: Actor, account_id: str, mailbox: Mailbox
+) -> Response:
     form = await request.form()
     folder_id = str(form.get("folder") or "")
     try:
         changes = FolderUpdate(name=str(form.get("name") or "").strip())
     except ValidationError:
         return back(_folder_page(account_id, folder_id), error=_bad_name())
-    return await _update(request, caller, account_id, folder_id, changes, "Renamed.")
+    return await _update(mailbox, caller, account_id, folder_id, changes, "Renamed.")
 
 
 @router.post("/accounts/{account_id}/folders/move")
-async def move_folder(request: Request, caller: Actor, account_id: str) -> Response:
+async def move_folder(
+    request: Request, caller: Actor, account_id: str, mailbox: Mailbox
+) -> Response:
     form = await request.form()
     folder_id = str(form.get("folder") or "")
     changes = FolderUpdate(parent_id=str(form.get("parent") or "") or None)
-    return await _update(request, caller, account_id, folder_id, changes, "Moved.")
+    return await _update(mailbox, caller, account_id, folder_id, changes, "Moved.")
 
 
 async def _update(
-    request: Request,
+    mailbox: MailboxService,
     caller: Access,
     account_id: str,
     folder_id: str,
@@ -70,9 +75,7 @@ async def _update(
     done: str,
 ) -> Response:
     with failing(_folder_page(account_id, folder_id)):
-        folder = await get_mailbox(request).update_folder(
-            caller, account_id, folder_id, changes
-        )
+        folder = await mailbox.update_folder(caller, account_id, folder_id, changes)
     # On IMAP the id follows the name.
     return back(_folder_page(account_id, folder.id), done)
 

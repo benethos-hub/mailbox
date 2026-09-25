@@ -42,6 +42,24 @@
 {% for folder, depth in tree %}{% if folder.id not in exclude %}<option value="{{ folder.id }}"{% if folder.id == selected %} selected{% endif %}>{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
 {% endmacro %}
 
+{# The tag beside an account whose user may read mail there and send it
+   to any address: what an injected instruction needs to carry data out. #}
+{% macro anywhere_tag() %}<span class="tag warn" title="This user may read mail here and send it to any address. A mail with injected instructions could use that to carry data out. Narrow sending with a grant's recipients.">reads and sends anywhere</span>{% endmacro %}
+
+{# The stored credentials of an account, one per line. #}
+{% macro credentials(stored) %}{% for credential in stored %}{{ credential.field }}, changed {{ credential.updated_at | when }}{% if not loop.last %}<br />{% endif %}{% else %}—{% endfor %}{% endmacro %}
+
+{# The card at the end of a page whose one button removes the thing. #}
+{% macro danger_card(title, text, url, label, confirm) %}
+<section class="card">
+  <header><h2>{{ title }}</h2></header>
+  <div class="body toolbar">
+    <span class="muted grow">{{ text }}</span>
+    {{ action(url, label, confirm=confirm, cls="danger") }}
+  </div>
+</section>
+{% endmacro %}
+
 {# A native dialog for a form loaded into #modal. #}
 {% macro modal(title) %}
 <dialog class="modal">

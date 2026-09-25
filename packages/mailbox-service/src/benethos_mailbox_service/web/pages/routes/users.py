@@ -13,7 +13,7 @@ from ....common.clock import utc_now
 from ....data.models import Grant, Role
 from ....domain.access import Access
 from ...services import Users, get_accounts, get_users
-from ..deps import Actor, Viewer
+from ..deps import Actor, Viewer, emails_of
 from ..effective import view_of
 from ..forms import failing
 from ..grants import (
@@ -35,8 +35,7 @@ MAX_TOKEN_DAYS = 3650
 
 def _account_names(request: Request, caller: Access) -> dict[str, str]:
     """Emails of the accounts the caller sees, to show a grant readably."""
-    accounts = get_accounts(request)
-    return {account.id: account.email for account in accounts.list(caller)}
+    return emails_of(get_accounts(request).list(caller))
 
 
 def _editor(request: Request, caller: Access, grants: list[Grant]) -> dict[str, Any]:

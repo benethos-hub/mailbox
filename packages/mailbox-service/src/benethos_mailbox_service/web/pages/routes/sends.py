@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 
 from ....domain.access import Access
 from ...services import Accounts, Mailbox, get_users
-from ..deps import Viewer, account_of
+from ..deps import Viewer, account_of, emails_of
 from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
@@ -37,7 +37,7 @@ async def all_sends(
         page="sends",
         account=None,
         accounts=audited,
-        emails={account.id: account.email for account in audited},
+        emails=emails_of(audited),
         records=records,
         names=_user_names(request, caller),
         pages=(None, None),
@@ -57,7 +57,7 @@ async def account_sends(
         page="sends",
         account=account,
         accounts=[],
-        emails={account.id: account.email},
+        emails=emails_of([account]),
         records=page.items,
         names=_user_names(request, caller),
         pages=page_links(request, page.next_cursor),

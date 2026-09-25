@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, csrf_field, empty with context %}
+{% from "components/ui.html" import action, anywhere_tag, csrf_field, danger_card, empty with context %}
 {% from "components/grants.html" import grant_editor, grants_of, role_checks, role_tags %}
 {% block title %}{{ user.name }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ user.name }}{% endblock %}
@@ -46,7 +46,7 @@
         <tbody>
           {% for row in effective.accounts %}
           <tr>
-            <td class="name">{{ row.email }}{% for warning in row.warnings %}<span class="sub"><span class="tag warn" title="It may read mail here and send it to any address. A mail with injected instructions could use that to carry data out.">reads and sends anywhere</span></span>{% endfor %}</td>
+            <td class="name">{{ row.email }}{% for warning in row.warnings %}<span class="sub">{{ anywhere_tag() }}</span>{% endfor %}</td>
             <td>{% for group in row.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for operation in row.operations %}<span class="tag mono">{{ operation }}</span> {% endfor %}</td>
             <td>
               {% for limit in row.sending %}
@@ -136,12 +136,6 @@
 {% endif %}
 
 {% if can_delete %}
-<section class="card">
-  <header><h2>Delete</h2></header>
-  <div class="body toolbar">
-    <span class="muted grow">Deletes the user and all its tokens. What it sent stays in the send audit.</span>
-    {{ action("/ui/users/" ~ user.id ~ "/delete", "Delete user", confirm="Delete " ~ user.name ~ " and its tokens?", cls="danger") }}
-  </div>
-</section>
+{{ danger_card("Delete", "Deletes the user and all its tokens. What it sent stays in the send audit.", "/ui/users/" ~ user.id ~ "/delete", "Delete user", "Delete " ~ user.name ~ " and its tokens?") }}
 {% endif %}
 {% endblock %}

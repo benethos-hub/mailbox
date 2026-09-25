@@ -22,7 +22,7 @@ from ....domain.mailbox import find_folder
 from ...responses import download
 from ...search import FIELDS, FLAGS, filter_from
 from ...services import Mailbox, get_accounts
-from ..deps import Viewer, account_of
+from ..deps import Viewer, account_of, emails_of
 from ..errors import error_page
 from ..forms import first_problem
 from ..rights import mail_rights
@@ -98,7 +98,7 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
         incomplete=page.incomplete,
         pages=page_links(request, page.next_cursor),
         accounts=accounts,
-        emails={account.id: account.email for account in accounts},
+        emails=emails_of(accounts),
         chosen=chosen,
         keep=[("folder", role.value), *(("account", a) for a in chosen)],
         roles=[r.value for r in FolderRole],

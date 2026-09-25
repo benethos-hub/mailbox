@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import empty, action with context %}
+{% from "components/ui.html" import credentials, empty with context %}
 {% block title %}Accounts · {{ APP_NAME }}{% endblock %}
 {% block heading %}Accounts{% endblock %}
 {% block subheading %}<div class="sub">The mailboxes this service connects</div>{% endblock %}
@@ -22,11 +22,7 @@
             </td>
             <td>{{ account.provider.value }}</td>
             <td>{% include "partials/account_status.html" %}</td>
-            <td>
-              {% for credential in account.credentials %}
-              <span class="sub">{{ credential.field }}, {{ credential.updated_at | when }}</span>
-              {% else %}—{% endfor %}
-            </td>
+            <td><span class="sub">{{ credentials(account.credentials) }}</span></td>
             <td class="actions"><a class="btn small" href="/ui/accounts/{{ account.id }}">Open</a></td>
           </tr>
           {% endfor %}
