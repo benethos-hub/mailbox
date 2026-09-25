@@ -310,9 +310,30 @@ rule 1.
 ## Git and commits
 
 - Commit only when the user asks. Clear, descriptive messages.
-- Ship changes on a branch, one branch per work stream.
-- A release is a GitHub release tagged `v<version>`. Both packages carry
-  that version, and `publish.yml` uploads them to PyPI and their images to
-  GHCR.
+- `main` is protected: no direct push, no force push, a linear history,
+  and every CI job must pass. Every change reaches `main` as a pull
+  request.
+- The flow: a branch per work stream, created before the first edit.
+  Commit, push the branch, open the pull request with `gh pr create`.
+  The user merges it on GitHub as a squash merge. Afterwards pull `main`
+  with `git pull --ff-only` and delete the local branch.
+- Dependabot opens its own pull requests. The user merges them as well.
 - End commit messages with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+
+## Releasing
+
+A release is its own `release/X.Y.Z` branch and pull request. Both
+packages carry the same version.
+
+1. `uv lock --upgrade --dry-run`. If it moves anything, run
+   `uv lock --upgrade` as a commit of its own, then all checks.
+2. Set `version` in both packages' `pyproject.toml`, then `uv lock` and
+   `uv sync`. `test_packaging.py` checks that both carry the same version.
+3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`.
+4. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
+   then `gh release create vX.Y.Z --verify-tag` with the changelog section
+   as the notes. The published release starts `publish.yml`, which
+   uploads both packages to PyPI and both images to GHCR.
+5. Check what shipped: both packages on PyPI, and each image's tags
+   `X.Y.Z`, `X.Y` and `latest` on the same revision.
