@@ -22,6 +22,11 @@ class NotFoundError(MailboxServiceError):
     code = "not_found"
 
 
+class MessageNotFoundError(NotFoundError):
+    """The message itself is not where it was said to be. The sync of ids
+    acts on this alone, not on a missing attachment, draft or folder."""
+
+
 class BadRequestError(MailboxServiceError):
     """The request is well-formed but makes no sense, e.g. an unknown right."""
 

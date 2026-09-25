@@ -18,7 +18,7 @@ from typing import TypeVar
 from ..common.ids import new_id
 from ..data.providers import Capability, MailProvider
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
-from ..errors import MailboxServiceError, NotFoundError
+from ..errors import MailboxServiceError, MessageNotFoundError
 from .adapters import Adapters
 
 T = TypeVar("T")
@@ -75,17 +75,18 @@ class SyncService:
         operation: Callable[[str], Awaitable[T]],
     ) -> T:
         """Run ``operation`` with the provider's id of a message. If the
-        provider no longer finds it there, sync once and try its new place."""
+        provider no longer finds the message there, sync once and try its
+        new place. Anything else it does not find is not ours to follow."""
         if not self.mapped(account_id):
             return await operation(message_id)
         native = self._native(account_id, message_id)
         try:
             return await operation(native)
-        except NotFoundError:
+        except MessageNotFoundError:
             await self.sync_account(account_id)
             entry = self._index.get(account_id, message_id)
             if entry is None or entry.native_id == native:
-                raise NotFoundError(f"message {message_id} not found") from None
+                raise MessageNotFoundError(f"message {message_id} not found") from None
             return await operation(entry.native_id)
 
     def relocate(
@@ -136,7 +137,7 @@ class SyncService:
     def _native(self, account_id: str, message_id: str) -> str:
         entry = self._index.get(account_id, message_id)
         if entry is None:
-            raise NotFoundError(f"message {message_id} not found")
+            raise MessageNotFoundError(f"message {message_id} not found")
         return entry.native_id
 
     # --- sync -------------------------------------------------------------------------

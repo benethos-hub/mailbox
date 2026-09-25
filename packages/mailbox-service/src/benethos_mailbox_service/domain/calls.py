@@ -20,7 +20,7 @@ from ..data.models import (
     Page,
 )
 from ..data.providers import MailProvider
-from ..errors import MailboxServiceError, NotFoundError
+from ..errors import MailboxServiceError, MessageNotFoundError
 from .adapters import Adapters
 from .sync import SyncService
 
@@ -189,10 +189,12 @@ class Calls:
         second try. Returns the outcome per id and the provider id used."""
         natives = {i: n for i, n in self._sync.natives(account_id, ids).items() if n}
         outcomes: dict[str, Any] = {
-            i: NotFoundError(f"message {i} not found") for i in ids if i not in natives
+            i: MessageNotFoundError(f"message {i} not found")
+            for i in ids
+            if i not in natives
         }
         outcomes.update(await self._run_on(account_id, natives, run))
-        missing = [i for i in natives if isinstance(outcomes[i], NotFoundError)]
+        missing = [i for i in natives if isinstance(outcomes[i], MessageNotFoundError)]
         if missing and self._sync.mapped(account_id):
             await self._sync.sync_account(account_id)
             moved = {
@@ -203,8 +205,10 @@ class Calls:
             outcomes.update(await self._run_on(account_id, moved, run))
             natives.update(moved)
         for message_id, outcome in outcomes.items():
-            if isinstance(outcome, NotFoundError):
-                outcomes[message_id] = NotFoundError(f"message {message_id} not found")
+            if isinstance(outcome, MessageNotFoundError):
+                outcomes[message_id] = MessageNotFoundError(
+                    f"message {message_id} not found"
+                )
         return outcomes, natives
 
     async def _run_on(
@@ -218,7 +222,7 @@ class Calls:
         by_native = await self.call(
             account_id, lambda p: run(p, list(natives.values()))
         )
-        missing = NotFoundError("message not found")
+        missing = MessageNotFoundError("message not found")
         return {i: by_native.get(n, missing) for i, n in natives.items()}
 
 

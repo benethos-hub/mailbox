@@ -24,6 +24,7 @@ from ....errors import (
     BadRequestError,
     ConflictError,
     MailboxServiceError,
+    MessageNotFoundError,
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
@@ -365,14 +366,14 @@ class ImapProvider:
         """Select the message's folder: its folder, UIDVALIDITY and UID."""
         folder, validity, uid = mappers.parse_message_id(message_id)
         if self._session.select(folder) != validity:
-            raise NotFoundError(f"message {message_id} not found")
+            raise MessageNotFoundError(f"message {message_id} not found")
         return folder, validity, uid
 
     def _fetch(self, message_id: str) -> tuple[Any, str, int]:
         folder, validity, uid = self._select_message(message_id)
         message = self._session.fetch_message(uid)
         if message is None:
-            raise NotFoundError(f"message {message_id} not found")
+            raise MessageNotFoundError(f"message {message_id} not found")
         return message, folder, validity
 
     def _get_message(self, message_id: str) -> Message:
@@ -632,7 +633,7 @@ class ImapProvider:
         _, _, uid = self._select_message(message_id)
         raw = self._session.fetch_raw(uid)
         if raw is None:
-            raise NotFoundError(f"message {message_id} not found")
+            raise MessageNotFoundError(f"message {message_id} not found")
         return raw
 
     def _folder_states(self) -> dict[str, str]:
@@ -753,7 +754,11 @@ def _missing(
     uids: list[int], found: dict[int, Any]
 ) -> dict[int, MessageSummary | MailboxServiceError]:
     """``NotFoundError`` for every UID the folder no longer holds."""
-    return {uid: NotFoundError("message not found") for uid in uids if uid not in found}
+    return {
+        uid: MessageNotFoundError("message not found")
+        for uid in uids
+        if uid not in found
+    }
 
 
 def _criteria(search: MessageFilter, before_uid: int | None) -> SearchCriteria:

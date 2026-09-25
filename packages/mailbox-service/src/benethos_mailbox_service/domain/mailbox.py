@@ -282,6 +282,15 @@ class MailboxService:
             lambda a: self._window(a, positions[a], search, limit),
             failures,
         )
+        # An account that failed is named in ``failures`` and keeps its place
+        # while others deliver, to join again later. Once every account
+        # still open has failed, the list ends: a cursor that promises more
+        # from accounts that do not answer would promise it forever.
+        if not chunks:
+            positions = {
+                a: merge.Position(p.folder_id, None, 0, done=True)
+                for a, p in positions.items()
+            }
 
         merged = [
             (item, account_id)

@@ -395,6 +395,24 @@ async def test_sign_in_again_with_the_same_address_only() -> None:
     assert services.vault.read(account.id, REFRESH_TOKEN).get_secret_value() == "rt-3"
 
 
+async def test_sign_in_again_needs_no_read_right() -> None:
+    endpoint = TokenEndpoint(
+        granted("at-1", "rt-1", id_token=id_token(email="me@example.org")),
+        granted("at-2", "rt-2", id_token=id_token(email="me@example.org")),
+    )
+    services = services_with(endpoint)
+    state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
+    account = await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
+    manager = Access(
+        "usr_m", "manager", [Grant(accounts=[account.id], allow=["accounts.manage"])]
+    )
+    url = services.oauth.start(
+        manager, ProviderType.MICROSOFT, REDIRECT, account_id=account.id
+    )
+    await services.oauth.finish(manager, ProviderType.MICROSOFT, state_of(url), "c")
+    assert services.vault.read(account.id, REFRESH_TOKEN).get_secret_value() == "rt-2"
+
+
 async def test_a_connected_account_refreshes_and_keeps_the_rotation() -> None:
     endpoint = TokenEndpoint(
         granted("at-1", "rt-1", id_token=id_token(email="me@example.org")),

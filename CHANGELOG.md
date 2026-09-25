@@ -11,6 +11,21 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- A missing attachment, draft or folder on an IMAP account answers `404`
+  for that. Before, it was taken for a moved message: a sync ran and the
+  answer said the message was not found.
+- A list across accounts ends once every account still open has failed.
+  An account that fails keeps its place while others deliver, as before,
+  but no longer keeps the `next_cursor` alive forever with empty pages.
+- The OAuth callback of a sign-in again needs the right that started it
+  (`accounts.manage`), not the right to read the account.
+- The configuration UI lists under a user's rights the limits of every grant that
+  allows sending, `send_draft` included. Before, only `send` grants counted.
+- Changing an account stores the new credentials before the record, so a
+  failure between the two cannot leave settings without the credentials
+  they need.
+- The background watcher of an account ends as soon as the account is
+  deleted, instead of logging a failure and waiting a minute first.
 - `backup verify` without a file says how to use it. Before, it wrote a
   backup to a file named `verify`.
 - `restore` moves a journal file left beside the old database along

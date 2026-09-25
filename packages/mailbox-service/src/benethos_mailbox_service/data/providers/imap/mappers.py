@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....common import opaque
-from ....errors import NotFoundError, NotSupportedError
+from ....errors import MessageNotFoundError, NotFoundError, NotSupportedError
 from ...mail import convert
 from ...models import (
     Folder,
@@ -105,13 +105,16 @@ def message_id(folder: str, uidvalidity: int, uid: int) -> str:
 
 
 def parse_message_id(value: str) -> tuple[str, int, int]:
-    parts = _decode("m_", value, "message")
+    try:
+        parts = _decode("m_", value, "message")
+    except NotFoundError:
+        raise MessageNotFoundError(f"message {value} not found") from None
     if (
         len(parts) != 3
         or not isinstance(parts[0], str)
         or not all(isinstance(p, int) for p in parts[1:])
     ):
-        raise NotFoundError(f"message {value} not found")
+        raise MessageNotFoundError(f"message {value} not found")
     return parts[0], parts[1], parts[2]
 
 

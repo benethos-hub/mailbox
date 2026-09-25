@@ -141,7 +141,8 @@ class AccountService:
         for key, value in settings_defaults(account.provider, account.email).items():
             merged.setdefault(key, value)
         secrets = dict(credentials or {})
-        if secrets:
+        # An OAuth probe may hand back a refresh token to store.
+        if secrets or self.signs_in_with_oauth(account.provider):
             self._vault.require_ready()
         if settings:
             await self._check_hosts(merged)
@@ -155,9 +156,12 @@ class AccountService:
             await self._probe(account.provider, merged, read, secrets, signed_in)
         if rename:
             account = account.model_copy(update={"display_name": display_name})
-        self._repository.update(account, merged)
+        # The credentials first: a record that names settings the stored
+        # credentials do not match would be a broken account, the reverse
+        # only a credential the next probe confirms again.
         for field, secret in secrets.items():
             self._vault.store(account_id, field, secret)
+        self._repository.update(account, merged)
         if settings or secrets:
             # The live adapter still has the old settings: the next use
             # builds a new one.

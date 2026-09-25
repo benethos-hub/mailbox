@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.domain import permissions
+from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.main import Services
 
 from .conftest import bearer_for, create_account
@@ -80,6 +81,24 @@ def test_no_warning_when_sending_is_narrowed_or_blind(
     assert warnings_of(app_client, services, narrowed) == []
     blind = Grant(accounts=[account_id], allow=["send", "drafts"])
     assert warnings_of(app_client, services, blind) == []
+
+
+def test_me_lists_the_limits_of_every_sending_grant(
+    services: Services, account_id: str
+) -> None:
+    access = Access(
+        "usr_x",
+        "x",
+        [
+            Grant(accounts=[account_id], allow=["send_draft"], recipients=["*@a.org"]),
+            Grant(accounts=[account_id], allow=["send"], max_sends_per_day=2),
+        ],
+    )
+    [account] = services.users.me(access).accounts
+    assert [(s.recipients, s.max_per_day) for s in account.sending] == [
+        (("*@a.org",), None),
+        (None, 2),
+    ]
 
 
 def test_the_admin_key_is_warned(client: TestClient, account_id: str) -> None:

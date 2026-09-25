@@ -95,6 +95,8 @@ class SyncWorker:
                     return
                 except ProviderAuthError:
                     return  # _wanted is false now, until the account is verified
+                except NotFoundError:
+                    return  # deleted meanwhile
                 except MailboxServiceError as exc:
                     failures += 1
                     pause = backoff(failures - 1, FIRST_RETRY, LONGEST_RETRY)

@@ -85,7 +85,7 @@ class UserService:
                         display_name=account.display_name,
                         operations=sorted(operations),
                         warnings=_warnings(access, account_id, operations),
-                        sending=access.send_limits("send_message", account_id),
+                        sending=access.sending_limits(account_id),
                     )
                 )
         return EffectiveRights(

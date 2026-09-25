@@ -126,7 +126,9 @@ class OAuthService:
             raise BadRequestError(f"{provider} did not say which address signed in")
         credentials = {REFRESH_TOKEN: tokens.refresh_token}
         if pending.account_id is not None:
-            existing = self._accounts.get(access, pending.account_id)
+            # The start checked update_account. The record is read the same
+            # way, not through a read right the caller may lack.
+            existing = self._adapters.record(pending.account_id)
             if existing.email.lower() != email:
                 raise BadRequestError(
                     f"signed in as {email}, but the account is {existing.email}: "
