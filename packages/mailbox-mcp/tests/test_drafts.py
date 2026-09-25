@@ -1,4 +1,4 @@
-"""Draft tools: list, create, replace and delete drafts; nothing is sent."""
+"""Draft tools: list, create, replace and delete drafts. Nothing is sent."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ SUMMARY = {
 def api(
     answer: Any = None, status: int = 200
 ) -> Callable[[httpx.Request], httpx.Response]:
-    """Answers every request with ``answer``; records method, path, params, body."""
+    """Answers every request with ``answer``. Records method, path, params, body."""
 
     def handle(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content) if request.content else None

@@ -127,7 +127,7 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **`microsoft` adapter over Graph with OAuth (5.4)**, done, in steps:
   1. **OAuth core for every provider: authorization code with PKCE,
      `state` bound to the user, refresh token in the vault, access token in
-     memory, rotation, `invalid_grant` to `needs_reauth`; client id, tenant
+     memory, rotation, `invalid_grant` to `needs_reauth`, client id, tenant
      and secret per deployment**, done
   2. **the OAuth round trip in the API and the UI: sign in with Microsoft
      when connecting, sign in again on the account page**, done
@@ -139,8 +139,8 @@ Everything real mail will depend on, before any real mailbox is connected.
   - decided 2026-09-25: tenant `common` by default, the callback at
     `/ui/oauth/{provider}/callback` (CONCEPT 5.4)
   - planned: the project's own client id as the default, a public client
-    without a secret; sign-in through `localhost` or the device code flow;
-    an app of the deployment's own stays the option (CONCEPT 5.4)
+    without a secret. Sign-in through `localhost` or the device code flow.
+    An app of the deployment's own stays the option (CONCEPT 5.4)
 - `gmail` adapter with OAuth, own Google Cloud client per deployment (5.5)
 - Gmail history and Graph delta in the worker
 - `jmap` adapter for Fastmail and JMAP servers (5.6)
@@ -155,7 +155,8 @@ Everything real mail will depend on, before any real mailbox is connected.
   - **writing: flags, moving, deleting, folders, compose, reply, forward,
     drafts, sending**, done
   - **the audit of sends**, done
-  - with the new providers: the OAuth round trip; recovery key, status
+  - with the new providers: the OAuth round trip
+  - recovery key, status
 - Threads (6.3): for IMAP built across folders from the id mapping,
   which then also keeps `In-Reply-To` and `References`
 - Grant constraint `folders` (7.5)

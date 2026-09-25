@@ -1,7 +1,7 @@
 """HTTP, the one home of ``httpx``.
 
 ``safe`` fetches from hosts built from what a user typed, guarded against
-request forgery; ``api`` talks JSON to the known hosts of a provider, such
+request forgery. ``api`` talks JSON to the known hosts of a provider, such
 as an OAuth token endpoint.
 """
 

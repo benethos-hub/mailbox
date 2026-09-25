@@ -66,7 +66,7 @@ class Access:
     ) -> None:
         self.user_id = user_id
         self.name = name
-        # The token the caller presented; None for the admin key.
+        # The token the caller presented, or None for the admin key.
         self.credential_id = credential_id
         self._rules = tuple(_rule(grant) for grant in grants)
 

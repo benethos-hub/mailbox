@@ -3,14 +3,14 @@
     uv run python live/ui.py
 
 Starts a service of its own with a throwaway database, as mcp_stdio.py
-does, adds the first test account through the API, and then uses the UI
-the way a browser does: signs in with the admin key, connects the second
-test account through discovery and the form, makes a user, a role and a
-token and signs in with that token, reads mail, opens the pages and
-follows their forms. It writes on the test accounts only: a folder and a
-draft on the first, which it removes again, and one mail from the first
-to the second, deleted for good on both sides. Credentials and mail
-content are never printed.
+does, and adds the first test account through the API. Then it uses the
+UI the way a browser does. It signs in with the admin key and connects the
+second test account through discovery and the form. It makes a user, a
+role and a token and signs in with that token. It reads mail, opens the
+pages and follows their forms. It writes on the test accounts only: a
+folder and a draft on the first, which it removes again, and one mail
+from the first to the second, deleted for good on both sides. Credentials
+and mail content are never printed.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ def check_accounts(
     account: dict[str, str],
     admin_key: str,
 ) -> str | None:
-    """The second test account, connected through the UI; its id."""
+    """Connects the second test account through the UI, returns its id."""
     csrf = csrf_of(browser.get("/ui/accounts").text)
     found = browser.post(
         "/ui/accounts/discover", data={"csrf_token": csrf, "email": account["email"]}
@@ -209,7 +209,7 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
 
 def check_mail(run: Run, browser: httpx.Client, account_id: str) -> None:
     """Every inbox, one account's folders, a message and its original. Only
-    reads; nothing of the mail is printed."""
+    reads. Nothing of the mail is printed."""
     together = browser.get("/ui/mail")
     run.check(
         "every inbox together",

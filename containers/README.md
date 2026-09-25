@@ -8,7 +8,7 @@ One folder per image, and a compose file for running them.
 ```
 containers/
   compose.yaml                   # the service, and the MCP server with the
-                                 #   profile mcp; ports on 127.0.0.1 only
+                                 #   profile mcp, ports on 127.0.0.1 only
   benethos-mailbox-api/
     Dockerfile                   # build context: the repository root
   benethos-mailbox-mcp/
@@ -35,7 +35,7 @@ version as the PyPI packages:
 
 - Only the one package goes into each image, installed from `uv.lock`
   without the development tools.
-- They run as user `mailbox` (uid 10001); the compose file adds a
+- They run as user `mailbox` (uid 10001). The compose file adds a
   read-only root file system, no capabilities and `no-new-privileges`.
 - Settings come from the environment only.
 - Both have a health check: the service on `GET /health`, the MCP server
@@ -48,6 +48,6 @@ docker build -f containers/benethos-mailbox-api/Dockerfile -t benethos-mailbox-a
 docker build -f containers/benethos-mailbox-mcp/Dockerfile -t benethos-mailbox-mcp:local .
 ```
 
-`ci.yml` builds both on every push, for arm64 as well, checks that the
-compose file keeps every port on the loopback address and starts the
+`ci.yml` builds both on every push, for arm64 as well. It checks that the
+compose file keeps every port on the loopback address. It also starts the
 service until its health check reports healthy.

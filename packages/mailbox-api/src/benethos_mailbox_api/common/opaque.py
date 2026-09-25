@@ -1,7 +1,7 @@
 """Opaque values handed to callers: ids and cursors that carry a little JSON.
 
 A prefix names the kind, the rest is URL-safe base64 without padding. Only
-the code that made a value reads it back; to a caller it is a string.
+the code that made a value reads it back. To a caller it is a string.
 """
 
 from __future__ import annotations

@@ -153,7 +153,7 @@ class FakeMailBox:
     def append(
         self, folder: str, msg: bytes, flags: Any = (), msg_time: Any = None
     ) -> bytes:
-        """Stores the message; reports APPENDUID like a server with UIDPLUS
+        """Stores the message and reports APPENDUID like a server with UIDPLUS
         (``copyuid`` False: none), or fails with ``append_failure``."""
         self.calls.append(("append", folder, tuple(flags)))
         if self.append_failure is not None:

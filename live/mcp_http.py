@@ -5,8 +5,8 @@
 Starts a service of its own with a throwaway database, as mcp_stdio.py
 does, adds the first two test accounts and makes a user that may only read
 them. Then it starts ``benethos-mailbox-mcp --transport streamable-http`` on
-a free port with that user's API token and a bearer token of its own, and
-checks that a request without the bearer token is refused and that the
+a free port with that user's API token and a bearer token of its own. It
+checks that a request without the bearer token is refused, and that the
 tools answer with it. Nothing in the mailboxes is written. Credentials and
 mail content are never printed.
 """

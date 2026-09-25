@@ -123,7 +123,7 @@ class Calls:
     async def update(
         self, account_id: str, ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxApiError]:
-        """Change messages; the outcome per id."""
+        """Change messages. Returns the outcome per id."""
         outcomes, natives = await self._on_messages(
             account_id, ids, lambda p, n: p.update_messages(n, changes)
         )
@@ -148,7 +148,7 @@ class Calls:
     async def delete(
         self, account_id: str, ids: list[str], permanent: bool
     ) -> dict[str, None | MailboxApiError]:
-        """Into the trash, or for good; the outcome per id."""
+        """Into the trash, or for good. Returns the outcome per id."""
         outcomes, natives = await self._on_messages(
             account_id, ids, lambda p, n: p.delete_messages(n, permanent)
         )

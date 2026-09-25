@@ -2,7 +2,7 @@
 
 imap-tools is used here for its mail parser only: headers decoded, addresses,
 dates, text and HTML bodies with broken charsets handled, attachments. It
-speaks no protocol here; the bytes come from IMAP, POP3 or anywhere else.
+speaks no protocol here: the bytes come from IMAP, POP3 or anywhere else.
 ``ParsedMessage`` answers in this project's types, so replacing the parser,
 e.g. with the standard library's ``email``, rewrites this module and
 nothing else.

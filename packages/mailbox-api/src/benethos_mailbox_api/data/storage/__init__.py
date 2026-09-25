@@ -67,7 +67,7 @@ class Repositories:
     index: MessageIndexRepository
     idempotency: IdempotencyRepository
     sends: SendLogRepository
-    # The database behind them, for backups and for closing; None in memory.
+    # The database behind them, for backups and for closing. None in memory.
     database: Database | None = None
 
     def close(self) -> None:

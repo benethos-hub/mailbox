@@ -1,7 +1,7 @@
 """Assembly: builds the app from its layers. Decides nothing else.
 
-The one place that chooses implementations - which repositories, which
-provider factory - so tests and deployments swap them here.
+The one place that chooses implementations (which repositories, which
+provider factory), so tests and deployments swap them here.
 """
 
 from __future__ import annotations
@@ -88,7 +88,7 @@ def build_services(
     resolve: Resolve | None = None,
 ) -> Services:
     """``resolve`` answers DNS for the host check that autodiscovery and the
-    hosts of an account pass (CONCEPT 5.8, rule 6); tests hand in a table."""
+    hosts of an account pass (CONCEPT 5.8, rule 6). Tests hand in a table."""
     repos = open_repositories(settings.storage, settings.database_path)
     vault = CredentialVault(repos.keys, repos.credentials, key_provider(settings))
     admin_key = settings.api_key.get_secret_value() if settings.api_key else None

@@ -82,7 +82,7 @@ def answered_keyword(reference: MessageReference) -> str:
 def _recipients(
     original: Message, action: str, own_address: str
 ) -> dict[str, list[Recipient]]:
-    """To the original's Reply-To, else its sender; for reply_all also to
+    """To the original's Reply-To, else its sender. For reply_all also to
     everyone it went to, except this account."""
     first = original.reply_to or ([original.sender] if original.sender else [])
     to = [Recipient(email=a.email, name=a.name) for a in first]

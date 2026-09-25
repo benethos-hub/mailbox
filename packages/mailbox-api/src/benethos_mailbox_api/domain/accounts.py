@@ -46,7 +46,7 @@ class AccountService:
         self._check_host = check_host
 
     def list(self, access: Access, *, may: str | None = None) -> builtins.list[Account]:
-        """The accounts the caller may list; with ``may``, those it may do
+        """The accounts the caller may list. With ``may``, those it may do
         that operation on as well."""
         return [
             self._with_credentials(account)
@@ -232,7 +232,7 @@ class AccountService:
         )
 
 
-# Settings are returned to callers; a secret belongs in the credentials,
+# Settings are returned to callers. A secret belongs in the credentials,
 # which never are.
 _SECRET_WORDS = ("password", "secret", "token", "credential", "apikey", "api_key")
 

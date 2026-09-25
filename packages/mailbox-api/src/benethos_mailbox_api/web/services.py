@@ -1,7 +1,7 @@
 """The domain services, for both front ends.
 
 ``main.create_app`` puts them on ``app.state.services``, one object with
-one attribute per service; a route or page gets a service here, as a
+one attribute per service. A route or page gets a service here, as a
 FastAPI dependency or, in a helper, from the request.
 """
 

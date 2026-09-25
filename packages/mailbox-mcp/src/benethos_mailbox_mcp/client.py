@@ -1,7 +1,7 @@
 """The one place that talks to the Mailbox API: its paths, the shapes it
 takes and the shapes it answers with.
 
-The tools in ``server`` name what they want in their own terms; this
+The tools in ``server`` name what they want in their own terms. This
 module turns that into requests and the answers into small records, so
 nothing above it spells out a path, a query name or a field of the API.
 """
@@ -169,7 +169,7 @@ class MailboxApiClient:
     async def create_folder(
         self, account_id: str, name: str, parent_id: str | None
     ) -> Folder:
-        """A new folder; ``parent_id`` may be a role such as ``archive``."""
+        """A new folder. ``parent_id`` may be a role such as ``archive``."""
         item = await self.request(
             "POST",
             _path("accounts", account_id, "folders"),
@@ -197,8 +197,8 @@ class MailboxApiClient:
         cursor: str | None = None,
     ) -> Page:
         """One account's messages, or with ``account_id`` None, those of
-        every account the caller may read. ``folder`` is an id or a role;
-        across accounts, a role."""
+        every account the caller may read. ``folder`` is an id or a role.
+        Across accounts it must be a role."""
         path = (
             _path("accounts", account_id, "messages") if account_id else "/v1/messages"
         )
@@ -267,8 +267,8 @@ class MailboxApiClient:
         starred: bool | None = None,
         folder_id: str | None = None,
     ) -> Outcome:
-        """Flags and a move for many messages at once; ``folder_id`` may
-        be a role such as ``archive``."""
+        """Flags and a move for many messages at once. ``folder_id`` may be
+        a role such as ``archive``."""
         changes: dict[str, Any] = {"unread": unread, "starred": starred}
         if folder_id is not None:
             changes["folder_ids"] = [folder_id]
@@ -310,7 +310,8 @@ class MailboxApiClient:
     async def create_draft(
         self, account_id: str, message: dict[str, Any]
     ) -> dict[str, Any]:
-        """``message`` as ``message_body`` makes it; the draft's summary."""
+        """Takes ``message`` as ``message_body`` makes it. Answers the draft's
+        summary."""
         result: dict[str, Any] = await self.request(
             "POST", _path("accounts", account_id, "drafts"), json=message
         )

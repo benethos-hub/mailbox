@@ -311,7 +311,7 @@ def test_a_generated_key_as_a_container_secret(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """``keys generate`` prints a key and stores nothing; saved as the key
+    """``keys generate`` prints a key and stores nothing. Saved as the key
     file, ``keys init`` uses it and only adds the data key."""
     monkeypatch.setenv("MAILBOX_API_DATA_DIR", str(tmp_path / "data"))
     assert main(["keys", "generate"]) == 0

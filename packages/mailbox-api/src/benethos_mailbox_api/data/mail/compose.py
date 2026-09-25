@@ -65,7 +65,7 @@ def message(
     sender: Recipient,
     date: datetime,
     message_id: str,
-    extras: Extras = Extras(),  # noqa: B008 - frozen, shared safely
+    extras: Extras = Extras(),  # noqa: B008 (frozen, shared safely)
     *,
     draft: bool = False,
     reference: str | None = None,
@@ -74,7 +74,7 @@ def message(
     Bcc recipients appear in no header.
 
     A ``draft`` keeps its Bcc recipients, and ``reference`` in a header of
-    its own; ``outgoing`` takes both out again before the draft is sent."""
+    its own. ``outgoing`` takes both out again before the draft is sent."""
     mail = EmailMessage(policy=SMTP)
     mail["From"] = _address(sender)
     if message.to:

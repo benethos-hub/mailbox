@@ -3,7 +3,7 @@
 The session cookie is ``SameSite=Strict``, so the browser leaves it out
 when the provider sends it back. ``callback`` therefore needs no session:
 it only bounces the browser on to ``finish``, a navigation from this site
-that carries the cookie again. ``finish`` needs the session; the sign-in's
+that carries the cookie again. ``finish`` needs the session. The sign-in's
 ``state`` belongs to the user who started it, so a code slipped to someone
 else is refused.
 """

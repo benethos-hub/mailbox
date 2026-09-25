@@ -105,7 +105,7 @@ SEARCH_TEXT_PATTERN = r"^[^\x00-\x1f\x7f]{1,200}$"
 
 
 class MessageFilter(BaseModel):
-    """What a list keeps. Fields left out do not filter; several narrow it
+    """What a list keeps. Fields left out do not filter. Several narrow it
     down together."""
 
     text: str | None = Field(default=None, pattern=SEARCH_TEXT_PATTERN)

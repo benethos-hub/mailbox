@@ -2,7 +2,7 @@
 with PKCE, refreshing, and a token source that keeps an adapter's access
 token valid.
 
-Provider-neutral; what differs per provider is an ``Endpoints`` value,
+Provider-neutral. What differs per provider is an ``Endpoints`` value,
 which each adapter that signs in with OAuth brings, e.g.
 ``microsoft/signin.py``. Nothing here decides who may sign in or where a
 token is kept: the caller hands in how to read and store the refresh token.
@@ -116,7 +116,7 @@ class OAuthClient:
     ) -> None:
         self.app = app
         self._http = http
-        # Stamps ``expires_at``; a token source judges expiry by the same clock.
+        # Stamps ``expires_at``. A token source judges expiry by the same clock.
         self.clock = clock
 
     async def close(self) -> None:
@@ -135,7 +135,7 @@ class OAuthClient:
 
     async def refresh(self, refresh_token: SecretStr) -> Tokens:
         """New tokens for a refresh token. The provider may hand out a new
-        refresh token too; the old one may then stop working."""
+        refresh token too. The old one may then stop working."""
         return await self._token(
             {
                 "grant_type": "refresh_token",
@@ -176,7 +176,7 @@ class OAuthClient:
 
 
 def identity_of(id_token: str) -> Identity | None:
-    """The address and name an ID token carries; None if it is unreadable."""
+    """The address and name an ID token carries, or None if it is unreadable."""
     try:
         payload = id_token.split(".")[1]
         padded = payload + "=" * (-len(payload) % 4)

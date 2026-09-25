@@ -41,7 +41,7 @@ class MailServer(BaseModel):
     host: str
     port: int
     security: Security
-    # The login name. In a candidate the address is filled in; sources may
+    # The login name. In a candidate the address is filled in. Sources may
     # hand in a template with %EMAILADDRESS%, %EMAILLOCALPART%, %EMAILDOMAIN%.
     username: str | None = None
     # Whether an anonymous connection succeeded. None: not tried.

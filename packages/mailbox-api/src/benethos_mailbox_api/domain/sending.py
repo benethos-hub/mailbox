@@ -57,7 +57,7 @@ class SendControl:
         message_id_header: str,
     ) -> SentMessage:
         """``action``'s result, if the grants allow sending to
-        ``recipients``; recorded either way."""
+        ``recipients``. Recorded either way."""
         async with self._locks.get((access.user_id, account_id)):
 
             def record(outcome: SendOutcome, **fields: object) -> None:
@@ -115,7 +115,7 @@ class SendControl:
             return
         cap = max(cap for cap in caps if cap is not None)
         now = self._clock()
-        # Only what went out counts; a denied or failed attempt sent nothing.
+        # Only what went out counts. A denied or failed attempt sent nothing.
         sent = self._store.sent_since(
             access.user_id, account_id, now - WINDOW, outcome="sent"
         )

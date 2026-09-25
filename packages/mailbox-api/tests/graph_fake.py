@@ -35,7 +35,7 @@ class FakeGraph:
         self.attachments: dict[str, list[dict[str, Any]]] = {}
         self.sent: list[bytes] = []
         self.requests: list[httpx.Request] = []
-        # Tokens the fake accepts; any other answers 401.
+        # Tokens the fake accepts. Any other answers 401.
         self.tokens = {TOKEN}
 
     # --- setting up -----------------------------------------------------------------
@@ -100,7 +100,7 @@ class FakeGraph:
         return _error(400, "BadRequest", f"unknown call {method} {url.path}")
 
     def _batch(self, request: httpx.Request) -> httpx.Response:
-        """JSON batching; each request is answered as on its own."""
+        """JSON batching. Each request is answered as on its own."""
         replies = []
         for one in json.loads(request.content)["requests"]:
             assert len(json.loads(request.content)["requests"]) <= 20

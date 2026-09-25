@@ -9,7 +9,7 @@ import re
 from ....errors import BadRequestError
 from ..protocols.oauth import Endpoints
 
-# Who may sign in; a tenant id or domain names one organisation.
+# Who may sign in. A tenant id or domain names one organisation.
 AUDIENCES = ("common", "consumers", "organizations")
 _TENANT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]{0,254}$")
 
@@ -20,7 +20,8 @@ SCOPES = (
     "profile",
     # A refresh token, so the service keeps access.
     "offline_access",
-    # What the adapter does: read, flag, move, delete, draft; send.
+    # What the adapter does. Mail.ReadWrite: read, flag, move, delete, draft.
+    # Mail.Send: send.
     "https://graph.microsoft.com/Mail.ReadWrite",
     "https://graph.microsoft.com/Mail.Send",
 )

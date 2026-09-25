@@ -14,10 +14,10 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
    stays,
 6. moves it back the way another mail client would: the id still answers,
 7. replies and forwards through the API, back to account 2 only, and
-   checks the flags on the original; renames and deletes the folder,
-   runs a batch, stores, replaces and deletes a reply draft, sends a
-   draft to account 2,
-8. deletes the mail through the API, into the trash, then for good, and
+   checks the flags on the original,
+8. renames and deletes the folder, runs a batch, stores, replaces and
+   deletes a reply draft, and sends a draft to account 2,
+9. deletes the mail through the API, into the trash, then for good, and
    the sent copy. With ``--keep`` the mail stays in the inbox and the copy
    in the sent folder, to look at in a mail client.
 

@@ -3025,7 +3025,7 @@
           "mailbox"
         ],
         "summary": "Update Folder",
-        "description": "Rename or move a folder. On IMAP its id follows its name and changes;\nthe messages inside keep theirs. Folders with a role answer `409`.",
+        "description": "Rename or move a folder. On IMAP its id follows its name and changes,\nbut the messages inside keep theirs. Folders with a role answer `409`.",
         "operationId": "update_folder",
         "security": [
           {
@@ -3943,7 +3943,7 @@
           "mailbox"
         ],
         "summary": "Send Message",
-        "description": "Send from the account's address. The service sets From, Date and\nMessage-ID and keeps a read copy in the sent folder. `200` means the\nmail server accepted the message; it cannot be taken back.",
+        "description": "Send from the account's address. The service sets From, Date and\nMessage-ID and keeps a read copy in the sent folder. `200` means the\nmail server accepted the message. It cannot be taken back.",
         "operationId": "send_message",
         "security": [
           {
@@ -4720,7 +4720,7 @@
           "mailbox"
         ],
         "summary": "Send Draft",
-        "description": "Send a draft as it is stored, dated now; then it is deleted and a\nread copy kept in the sent folder. A reply or forward marks its\noriginal. Right: `send_draft` (`send`); it cannot be taken back.",
+        "description": "Send a draft as it is stored, dated now. Then it is deleted and a\nread copy kept in the sent folder. A reply or forward marks its\noriginal. Right: `send_draft` (`send`). It cannot be taken back.",
         "operationId": "send_draft",
         "security": [
           {
@@ -6499,7 +6499,7 @@
           "items"
         ],
         "title": "MessagePage",
-        "description": "Messages across accounts. ``incomplete`` names the accounts that did\nnot answer; their messages are missing from this page."
+        "description": "Messages across accounts. ``incomplete`` names the accounts that did\nnot answer. Their messages are missing from this page."
       },
       "MessageReference": {
         "properties": {

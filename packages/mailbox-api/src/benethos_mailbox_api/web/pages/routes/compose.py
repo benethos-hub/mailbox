@@ -1,5 +1,5 @@
-"""Writing mail: a new message, a reply, a forward; sent at once or saved
-as a draft. The form is ``mailform``."""
+"""Writing mail: a new message, a reply, a forward. It is sent at once or
+saved as a draft. The form is ``mailform``."""
 
 from __future__ import annotations
 

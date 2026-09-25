@@ -15,7 +15,7 @@ SENT = {"message_id_header": "<m1@example.com>", "sent_copy_id": "msg_s", "refus
 
 
 def api(answer: Any = SENT) -> Callable[[httpx.Request], httpx.Response]:
-    """Answers every request with ``answer``; records path, key and body."""
+    """Answers every request with ``answer``. Records path, key and body."""
 
     def handle(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content) if request.content else None

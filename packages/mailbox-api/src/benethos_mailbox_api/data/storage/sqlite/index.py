@@ -102,7 +102,7 @@ class SqliteMessageIndexRepository:
 
 
 def _update(db: sqlite3.Connection, account_id: str, entry: IndexEntry) -> None:
-    """The entry's new place; another entry holding that place gives it up.
+    """The entry's new place. Another entry holding that place gives it up.
     An id the index does not know changes nothing."""
     known = db.execute(
         "SELECT 1 FROM message_index WHERE account_id = ? AND id = ?",

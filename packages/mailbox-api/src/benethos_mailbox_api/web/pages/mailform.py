@@ -50,7 +50,7 @@ def addresses_text(values: list[Address]) -> str:
 
 
 def recipients(field: str, value: str) -> list[Recipient]:
-    """``Name <a@example.org>, b@example.org``; a semicolon separates too."""
+    """``Name <a@example.org>, b@example.org``. A semicolon separates too."""
     value = value.replace(";", ",").strip()
     if not value:
         return []
@@ -104,7 +104,7 @@ def reference_of(form: Any) -> MessageReference | None:
 
 
 def build(model: type[DraftMessage], fields: dict[str, Any]) -> Any:
-    """``model`` from the fields; what is wrong, as a ``ComposeError``."""
+    """``model`` from the fields. What is wrong raises a ``ComposeError``."""
     try:
         return model(**fields)
     except ValidationError as exc:
@@ -128,7 +128,7 @@ def show(
     error: str = "",
     status_code: int = 200,
 ) -> HTMLResponse:
-    """The form with ``values``; for a stored draft, with its id."""
+    """The form with ``values``, and for a stored draft with its id."""
     account_id = account.id
     return render(
         request,

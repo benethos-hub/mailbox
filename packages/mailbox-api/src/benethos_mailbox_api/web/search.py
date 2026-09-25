@@ -1,6 +1,6 @@
 """The search a message list takes, by the names a query or a form uses.
 
-The JSON API declares each parameter for its schema in ``api.deps``; the
+The JSON API declares each parameter for its schema in ``api.deps``. The
 names and the flags are the same there and here.
 """
 

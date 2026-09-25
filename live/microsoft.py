@@ -11,7 +11,7 @@ confirms it as a test account (CLAUDE.md, golden rule 1). See
 docs/microsoft.md.
 
 The service runs with a database of its own in data/live-microsoft/, which
-keeps the encrypted refresh token between runs; the master key and the
+keeps the encrypted refresh token between runs. The master key and the
 admin key live beside it, readable by the owner only.
 
 ``--connect`` starts the service and waits until the test account is
@@ -47,7 +47,7 @@ WAIT = 600
 
 
 def _secret_file(name: str, make: Any) -> str:
-    """A value kept in DATA, readable by the owner only; made once."""
+    """A value kept in DATA, readable by the owner only, made once."""
     path = DATA / name
     if not path.exists():
         DATA.mkdir(parents=True, exist_ok=True)
@@ -82,7 +82,7 @@ def service_env(env: dict[str, str], admin_key: str) -> dict[str, str]:
 
 
 def start(env: dict[str, str]) -> subprocess.Popen[bytes]:
-    """The service on its own database; the keys are made on the first run."""
+    """The service on its own database. The keys are made on the first run."""
     command = shutil.which("benethos-mailbox-api")
     if command is None:
         sys.exit("benethos-mailbox-api not found: run this with uv run")

@@ -21,7 +21,7 @@ BATCH = "/v1/accounts/acc_1/messages/batch"
 
 
 def api(answer: Any = None) -> Callable[[httpx.Request], httpx.Response]:
-    """Folders on GET, ``answer`` on POST; records every request's body."""
+    """Folders on GET, ``answer`` on POST. Records every request's body."""
 
     def handle(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content) if request.content else None

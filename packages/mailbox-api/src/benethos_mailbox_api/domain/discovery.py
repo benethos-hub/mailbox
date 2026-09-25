@@ -7,7 +7,7 @@ The sources in ``data/discovery`` only look up. Decided here:
   confirmed only when every server lies in the address's registrable domain
   or is a server of a preset. What MX points to is never confirmed.
 - **Safety.** Before a server is probed, its host must resolve to public
-  addresses; a candidate whose server does not is dropped. The probe
+  addresses. A candidate whose server does not is dropped. The probe
   connects anonymously and sends no credential.
 - **Ranking.** Confirmed before unconfirmed, reachable before unreachable,
   then the order of the sources. Duplicates are merged into the first.
@@ -317,7 +317,7 @@ def _with_settings(candidate: Candidate, query: Query) -> Candidate:
 
 
 def _username(template: str | None, email: str) -> str:
-    """The login name a source names, filled in; the address without one."""
+    """The login name a source names, filled in. Without one, the address."""
     return placeholders.fill(template, email) if template is not None else email
 
 

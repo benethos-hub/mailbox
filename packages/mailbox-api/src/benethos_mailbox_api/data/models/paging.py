@@ -28,6 +28,6 @@ class AccountFailure(BaseModel):
 
 class MessagePage(Page[MessageSummary]):
     """Messages across accounts. ``incomplete`` names the accounts that did
-    not answer; their messages are missing from this page."""
+    not answer. Their messages are missing from this page."""
 
     incomplete: list[AccountFailure] = Field(default_factory=list)

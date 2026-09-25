@@ -87,7 +87,7 @@ class Guard:
 
     def attempts(self, step: Callable[[], T], drop: Callable[[], None]) -> T:
         """Run ``step`` with retries while the server is unreachable. After
-        any failure ``drop`` discards the connection; after the last attempt
+        any failure ``drop`` discards the connection. After the last attempt
         the server gets a pause."""
         self.check()
         last: ProviderUnavailableError | None = None

@@ -29,7 +29,7 @@ __all__ = [
     "authenticate",
 ]
 
-# How many items a list answers with at most; 50 without a say.
+# How many items a list answers with at most. The default is 50.
 Limit = Annotated[int, Query(ge=1, le=200)]
 
 _bearer = HTTPBearer(auto_error=False, scheme_name="bearerAuth")

@@ -36,7 +36,7 @@ async def changing(request: Request) -> Access:
 
 
 def account_of(request: Request, caller: Access, account_id: str) -> Account:
-    """The account a mail page is about; the domain decides who sees it."""
+    """The account a mail page is about. The domain decides who sees it."""
     return get_accounts(request).visible(caller, account_id)
 
 

@@ -67,8 +67,8 @@ async def update_folder(
     caller: Caller,
     mailbox: Mailbox,
 ) -> Folder:
-    """Rename or move a folder. On IMAP its id follows its name and changes;
-    the messages inside keep theirs. Folders with a role answer `409`."""
+    """Rename or move a folder. On IMAP its id follows its name and changes,
+    but the messages inside keep theirs. Folders with a role answer `409`."""
     return await mailbox.update_folder(caller, account_id, folder_id, changes)
 
 
@@ -148,7 +148,7 @@ async def send_message(
 ) -> SendResult:
     """Send from the account's address. The service sets From, Date and
     Message-ID and keeps a read copy in the sent folder. `200` means the
-    mail server accepted the message; it cannot be taken back."""
+    mail server accepted the message. It cannot be taken back."""
     return await mailbox.send_message(caller, account_id, message, idempotency_key)
 
 
@@ -210,9 +210,9 @@ async def send_draft(
     mailbox: Mailbox,
     idempotency_key: IdempotencyKey = None,
 ) -> SendResult:
-    """Send a draft as it is stored, dated now; then it is deleted and a
+    """Send a draft as it is stored, dated now. Then it is deleted and a
     read copy kept in the sent folder. A reply or forward marks its
-    original. Right: `send_draft` (`send`); it cannot be taken back."""
+    original. Right: `send_draft` (`send`). It cannot be taken back."""
     return await mailbox.send_draft(caller, account_id, draft_id, idempotency_key)
 
 

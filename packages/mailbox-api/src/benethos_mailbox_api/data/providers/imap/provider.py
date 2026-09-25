@@ -274,7 +274,7 @@ class ImapProvider:
         work: Callable[[str, int, list[int]], dict[int, T | MailboxApiError]],
     ) -> dict[str, T | MailboxApiError]:
         """Run ``work`` once per folder, each under the lock. A failure of
-        the connection or the login stops everything; any other failure
+        the connection or the login stops everything. Any other failure
         answers for that folder's messages only."""
         folders, unknown = _by_folder(message_ids)
         results: dict[str, T | MailboxApiError] = dict(unknown)
@@ -397,7 +397,7 @@ class ImapProvider:
         self, folder: str, raw: bytes, flags: list[str]
     ) -> MessageSummary | None:
         """Store ``raw`` in ``folder``. The stored message, found by its UID
-        from APPENDUID or else by its Message-ID; None if neither finds it."""
+        from APPENDUID or else by its Message-ID. None if neither finds it."""
         uid = self._session.append(folder, raw, flags)
         validity = self._session.select(folder)
         if uid is None:
@@ -445,7 +445,7 @@ class ImapProvider:
         return drafts
 
     def _draft_place(self, draft_id: str, drafts: str) -> tuple[int, int]:
-        """UIDVALIDITY and UID of a draft id; not found unless it names a
+        """UIDVALIDITY and UID of a draft id. Not found unless it names a
         message in the drafts folder."""
         missing = NotFoundError(f"draft {draft_id} not found")
         try:
@@ -730,7 +730,7 @@ class ImapProvider:
 def _by_folder(
     message_ids: list[str],
 ) -> tuple[dict[tuple[str, int], dict[int, str]], dict[str, NotFoundError]]:
-    """The ids by folder and UIDVALIDITY, as UID -> id; and those that are
+    """The ids by folder and UIDVALIDITY, as UID -> id, and those that are
     no id of this adapter."""
     folders: dict[tuple[str, int], dict[int, str]] = {}
     unknown: dict[str, NotFoundError] = {}

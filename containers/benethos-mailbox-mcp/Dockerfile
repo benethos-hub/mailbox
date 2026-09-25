@@ -20,7 +20,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 WORKDIR /src
-# The workspace needs every member's pyproject.toml; the lockfile pins all.
+# The workspace needs every member's pyproject.toml. The lockfile pins all.
 COPY pyproject.toml uv.lock ./
 COPY packages packages
 RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-mcp
@@ -34,7 +34,7 @@ RUN useradd --system --uid 10001 --user-group --home-dir /app \
 
 COPY --from=build /opt/venv /opt/venv
 
-# Streamable HTTP on every interface inside the container; the compose file
+# Streamable HTTP on every interface inside the container. The compose file
 # publishes the port on the host's loopback address alone. Set
 # MAILBOX_MCP_BEARER_TOKEN, and MAILBOX_MCP_ALLOWED_HOSTS to the Host values
 # clients use. MAILBOX_API_TOKEN is the token of the user the server acts as.
