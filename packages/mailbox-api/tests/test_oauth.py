@@ -144,13 +144,13 @@ def test_a_tenant_cannot_change_the_host() -> None:
 
 
 def test_identity_from_the_id_token() -> None:
-    who = identity_of(id_token(preferred_username="Me@Outlook.com", name="Me"))
-    assert who is not None and who.email == "me@outlook.com" and who.name == "Me"
+    who = identity_of(id_token(preferred_username="Me@Example.org", name="Me"))
+    assert who is not None and who.email == "me@example.org" and who.name == "Me"
     assert identity_of("not a token") is None
 
 
 async def test_the_code_is_exchanged() -> None:
-    endpoint = TokenEndpoint(granted(id_token=id_token(email="me@outlook.com")))
+    endpoint = TokenEndpoint(granted(id_token=id_token(email="me@example.org")))
     tokens = await client(endpoint).exchange("the-code", REDIRECT, "the-verifier")
     [form] = endpoint.forms
     assert form["grant_type"] == "authorization_code"
@@ -160,7 +160,7 @@ async def test_the_code_is_exchanged() -> None:
     assert tokens.access_token.get_secret_value() == "at-1"
     assert tokens.refresh_token is not None
     assert tokens.expires_at == NOW + timedelta(hours=1)
-    assert tokens.identity is not None and tokens.identity.email == "me@outlook.com"
+    assert tokens.identity is not None and tokens.identity.email == "me@example.org"
 
 
 @pytest.mark.parametrize(
@@ -309,14 +309,14 @@ def state_of(url: str) -> str:
 
 async def test_connect_an_account() -> None:
     endpoint = TokenEndpoint(
-        granted("at-1", "rt-1", id_token=id_token(email="Me@Outlook.com", name="Me"))
+        granted("at-1", "rt-1", id_token=id_token(email="Me@Example.org", name="Me"))
     )
     services = services_with(endpoint)
     url = services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT)
     account = await services.oauth.finish(
         ADMIN, ProviderType.MICROSOFT, state_of(url), "the-code"
     )
-    assert account.email == "me@outlook.com" and account.display_name == "Me"
+    assert account.email == "me@example.org" and account.display_name == "Me"
     assert account.provider is ProviderType.MICROSOFT
     assert [c.field for c in account.credentials] == [REFRESH_TOKEN]
     assert services.vault.read(account.id, REFRESH_TOKEN).get_secret_value() == "rt-1"
@@ -375,9 +375,9 @@ async def test_no_refresh_token_no_account() -> None:
 
 async def test_sign_in_again_with_the_same_address_only() -> None:
     endpoint = TokenEndpoint(
-        granted("at-1", "rt-1", id_token=id_token(email="me@outlook.com")),
-        granted("at-2", "rt-2", id_token=id_token(email="other@outlook.com")),
-        granted("at-3", "rt-3", id_token=id_token(email="me@outlook.com")),
+        granted("at-1", "rt-1", id_token=id_token(email="me@example.org")),
+        granted("at-2", "rt-2", id_token=id_token(email="other@example.org")),
+        granted("at-3", "rt-3", id_token=id_token(email="me@example.org")),
     )
     services = services_with(endpoint)
     oauth = services.oauth
@@ -385,7 +385,7 @@ async def test_sign_in_again_with_the_same_address_only() -> None:
     account = await oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
 
     url = oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT, account_id=account.id)
-    assert parse_qs(urlsplit(url).query)["login_hint"] == ["me@outlook.com"]
+    assert parse_qs(urlsplit(url).query)["login_hint"] == ["me@example.org"]
     with pytest.raises(BadRequestError, match="sign in with that address"):
         await oauth.finish(ADMIN, ProviderType.MICROSOFT, state_of(url), "c")
     assert services.vault.read(account.id, REFRESH_TOKEN).get_secret_value() == "rt-1"
@@ -397,7 +397,7 @@ async def test_sign_in_again_with_the_same_address_only() -> None:
 
 async def test_a_connected_account_refreshes_and_keeps_the_rotation() -> None:
     endpoint = TokenEndpoint(
-        granted("at-1", "rt-1", id_token=id_token(email="me@outlook.com")),
+        granted("at-1", "rt-1", id_token=id_token(email="me@example.org")),
         granted("at-2", "rt-2"),
     )
     services = services_with(endpoint)
@@ -413,7 +413,7 @@ async def test_a_connected_account_refreshes_and_keeps_the_rotation() -> None:
 
 async def test_a_revoked_sign_in_needs_a_new_one() -> None:
     endpoint = TokenEndpoint(
-        granted("at-1", "rt-1", id_token=id_token(email="me@outlook.com")),
+        granted("at-1", "rt-1", id_token=id_token(email="me@example.org")),
         (400, {"error": "invalid_grant"}),
     )
     services = services_with(endpoint)
