@@ -63,6 +63,12 @@ dependencies = [
     "imapclient>=4.1.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-api#readme"
+Repository = "https://github.com/benethos-hub/mailbox"
+Issues = "https://github.com/benethos-hub/mailbox/issues"
+Changelog = "https://github.com/benethos-hub/mailbox/blob/main/CHANGELOG.md"
+
 [project.scripts]
 benethos-mailbox-api = "benethos_mailbox_api.__main__:main"
 

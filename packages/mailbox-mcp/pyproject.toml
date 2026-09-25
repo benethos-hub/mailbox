@@ -44,6 +44,12 @@ dependencies = [
     "uvicorn>=0.31",
 ]
 
+[project.urls]
+Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp#readme"
+Repository = "https://github.com/benethos-hub/mailbox"
+Issues = "https://github.com/benethos-hub/mailbox/issues"
+Changelog = "https://github.com/benethos-hub/mailbox/blob/main/CHANGELOG.md"
+
 [project.scripts]
 benethos-mailbox-mcp = "benethos_mailbox_mcp.server:main"
 
