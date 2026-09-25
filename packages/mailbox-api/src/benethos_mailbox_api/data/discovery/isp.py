@@ -30,15 +30,14 @@ class IspAutoconfigSource:
         errors: list[MailboxApiError] = []
         for url in urls:
             try:
-                fetched = await self._fetcher.get(url)
-                if fetched is None:
-                    continue
-                candidates = autoconfig.parse(fetched.body, query.domain, self.name)
+                found = await autoconfig.fetch(
+                    self._fetcher, url, query.domain, self.name
+                )
             except MailboxApiError as exc:
                 errors.append(exc)
                 continue
-            if candidates:
-                return Finding(candidates=tuple(candidates), answered_by=fetched.host)
+            if found is not None and found.candidates:
+                return found
         if errors:
             raise errors[0]
         return Finding()

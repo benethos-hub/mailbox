@@ -9,6 +9,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 Pre-alpha, version 0.1.0. Not ready for production use: the API, the
 stored data and the configuration may change without notice.
 
+### Fixed
+
+- The MCP server quotes the ids a model hands it before they go into
+  an API path.
+
 ### Security
 
 - The hosts in an account's settings (`host`, `smtp_host`) pass the same

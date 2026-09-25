@@ -26,8 +26,7 @@ class IspdbSource:
 
     async def for_domain(self, domain: str, source: DiscoverySourceName) -> Finding:
         """The entry of one domain, marked as coming from ``source``."""
-        fetched = await self._fetcher.get(self._base_url + domain)
-        if fetched is None:
-            return Finding()
-        candidates = autoconfig.parse(fetched.body, domain, source)
-        return Finding(candidates=tuple(candidates), answered_by=fetched.host)
+        found = await autoconfig.fetch(
+            self._fetcher, self._base_url + domain, domain, source
+        )
+        return found if found is not None else Finding()

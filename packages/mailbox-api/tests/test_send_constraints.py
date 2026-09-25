@@ -446,7 +446,7 @@ def test_sqlite_send_log(tmp_path: object) -> None:
         assert records[0].credential_id == "tok_1"
         assert records[0].operation == "send_draft"
         since = clock.now - timedelta(minutes=1, seconds=30)
-        assert len(store.sent_since("usr_1", "acc_1", since)) == 2
-        assert store.sent_since("usr_2", "acc_1", since) == []
+        assert len(store.sent_since("usr_1", "acc_1", since, outcome="sent")) == 2
+        assert store.sent_since("usr_2", "acc_1", since, outcome="sent") == []
     finally:
         db.close()

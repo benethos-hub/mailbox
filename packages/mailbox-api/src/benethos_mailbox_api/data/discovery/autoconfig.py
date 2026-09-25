@@ -16,6 +16,7 @@ from defusedxml import DefusedXmlException
 from defusedxml.ElementTree import fromstring
 
 from ...errors import ProviderError
+from ..http import SafeFetcher
 from ..models import (
     Candidate,
     CredentialKind,
@@ -26,12 +27,25 @@ from ..models import (
     Security,
     ServerProtocol,
 )
+from .base import Finding
 
 _SECURITY = {"SSL": Security.TLS, "TLS": Security.TLS, "STARTTLS": Security.STARTTLS}
 _PASSWORD = {"password-cleartext", "password-encrypted", "plain", "secure"}
 _OAUTH = "oauth2"
 _HOST = re.compile(r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 _USERNAME_TEMPLATE = re.compile(r"^[^\s<>]{1,256}$")
+
+
+async def fetch(
+    fetcher: SafeFetcher, url: str, domain: str, source: DiscoverySourceName
+) -> Finding | None:
+    """The finding an autoconfig file at ``url`` gives, marked as coming
+    from ``source``; None when nothing is there."""
+    fetched = await fetcher.get(url)
+    if fetched is None:
+        return None
+    candidates = parse(fetched.body, domain, source)
+    return Finding(candidates=tuple(candidates), answered_by=fetched.host)
 
 
 def parse(xml: bytes, domain: str, source: DiscoverySourceName) -> list[Candidate]:

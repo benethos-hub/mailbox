@@ -237,8 +237,9 @@ noticing. Every change is measured against that.
    exactly one module or, for a framework, one package: IMAPClient only in
    `protocols/imap.py`, `cryptography` only in the crypto module, FastAPI only
    under `web/`. When you need it somewhere else, extend its wrapper instead
-   of importing it a second time. The one deliberate exception is pydantic,
-   which is how this project writes its own types.
+   of importing it a second time. Two deliberate exceptions: pydantic,
+   which is how this project writes its own types, and anyio, which is how
+   it writes concurrency.
 3. **Translate at the edge.** A wrapper maps everything into this project's
    types on the way in (`data/models/`) and every failure into a
    `MailboxApiError` subclass. Nothing upstream sees a raw library exception

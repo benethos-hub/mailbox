@@ -6,17 +6,17 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Protocol
 
-from ..models import SendRecord
+from ..models import SendOutcome, SendRecord
 
 
 class SendLogRepository(Protocol):
     def add(self, record: SendRecord) -> None: ...
 
     def sent_since(
-        self, user_id: str, account_id: str, since: datetime
+        self, user_id: str, account_id: str, since: datetime, *, outcome: SendOutcome
     ) -> list[datetime]:
-        """When the user sent from the account after ``since``, oldest first;
-        only sends with the outcome ``sent``."""
+        """When the user's sends from the account with ``outcome`` happened
+        after ``since``, oldest first."""
         ...
 
     def list(
@@ -34,14 +34,14 @@ class InMemorySendLogRepository:
         self._records.append(record)
 
     def sent_since(
-        self, user_id: str, account_id: str, since: datetime
+        self, user_id: str, account_id: str, since: datetime, *, outcome: SendOutcome
     ) -> list[datetime]:
         return sorted(
             r.created_at
             for r in self._records
             if r.user_id == user_id
             and r.account_id == account_id
-            and r.outcome == "sent"
+            and r.outcome == outcome
             and r.created_at > since
         )
 

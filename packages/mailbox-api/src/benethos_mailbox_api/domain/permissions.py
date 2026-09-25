@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from ..errors import BadRequestError
+
 ADMIN = "admin"
 
 # Not a group that can be granted: operations every authenticated user may
@@ -93,7 +95,8 @@ def permission_of(operation: str) -> str | None:
 
 
 def expand(names: Iterable[str]) -> frozenset[str]:
-    """Group and operation names to the set of operations they allow."""
+    """Group and operation names to the set of operations they allow. A
+    name that is none of these is refused."""
     result: set[str] = set()
     for name in names:
         if name == ADMIN:
@@ -103,8 +106,16 @@ def expand(names: Iterable[str]) -> frozenset[str]:
         elif name in GROUP_OF:
             result.add(name)
         else:
-            raise ValueError(f"unknown right: {name}")
+            raise BadRequestError(f"unknown right: {name}")
     return frozenset(result)
+
+
+def expand_known(names: Iterable[str]) -> tuple[frozenset[str], list[str]]:
+    """``expand`` for names read back from storage: the operations of the
+    names still known, and the names that are not. A right renamed since
+    the grant was written grants nothing, and must not lock everyone out."""
+    unknown = [n for n in names if n != ADMIN and n not in GROUPS and n not in GROUP_OF]
+    return expand(n for n in names if n not in unknown), unknown
 
 
 def known_names() -> frozenset[str]:

@@ -4,6 +4,7 @@ import pytest
 from fastapi import APIRouter, FastAPI
 
 from benethos_mailbox_api.domain import permissions
+from benethos_mailbox_api.errors import BadRequestError
 from benethos_mailbox_api.main import create_app
 from benethos_mailbox_api.web import api
 from benethos_mailbox_api.web.api import PREFIX as API_PREFIX
@@ -54,8 +55,14 @@ def test_expand_groups_operations_and_admin() -> None:
 
 
 def test_expand_rejects_unknown_names() -> None:
-    with pytest.raises(ValueError, match="unknown right"):
+    with pytest.raises(BadRequestError, match="unknown right"):
         permissions.expand(["mail.everything"])
+
+
+def test_a_stored_right_that_no_longer_exists_grants_nothing() -> None:
+    operations, unknown = permissions.expand_known(["get_account", "mail.gone"])
+    assert operations == {"get_account"}
+    assert unknown == ["mail.gone"]
 
 
 def test_every_operation_has_exactly_one_group() -> None:

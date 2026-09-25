@@ -25,6 +25,7 @@ from ..errors import (
     RecipientNotAllowedError,
     SendLimitError,
 )
+from . import paging
 from .access import Access
 from .locks import KeyedLocks
 
@@ -114,7 +115,10 @@ class SendControl:
             return
         cap = max(cap for cap in caps if cap is not None)
         now = self._clock()
-        sent = self._store.sent_since(access.user_id, account_id, now - WINDOW)
+        # Only what went out counts; a denied or failed attempt sent nothing.
+        sent = self._store.sent_since(
+            access.user_id, account_id, now - WINDOW, outcome="sent"
+        )
         if len(sent) < cap:
             return
         # The next send is possible once enough of the last day's have aged out.
@@ -145,7 +149,7 @@ class SendControl:
         before = None
         if cursor is not None:
             try:
-                at, record_id = opaque.decode(CURSOR, cursor)
+                at, record_id = paging.decode_cursor(CURSOR, cursor)
                 before = (datetime.fromisoformat(at), str(record_id))
             except (ValueError, TypeError):
                 raise BadRequestError("invalid cursor") from None

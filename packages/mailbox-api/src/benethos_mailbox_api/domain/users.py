@@ -267,10 +267,7 @@ def _validate(grants: Iterable[Grant]) -> None:
     for grant in grants:
         if not grant.accounts:
             raise BadRequestError("a grant needs at least one account or '*'")
-        try:
-            permissions.expand(grant.allow)
-        except ValueError as exc:
-            raise BadRequestError(str(exc)) from None
+        permissions.expand(grant.allow)
 
 
 def _exists(roles: RoleRepository, role_id: str) -> bool:

@@ -7,12 +7,15 @@ configuration UI share one check.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
 from ..data.models import Grant, Role, User
 from ..errors import ForbiddenError, NotFoundError
 from . import permissions
+
+log = logging.getLogger(__name__)
 
 ALL_ACCOUNTS = "*"
 ANY_RECIPIENT = "*"
@@ -195,11 +198,10 @@ def _rule(grant: Grant) -> _Rule:
     recipients = None if grant.recipients is None else tuple(grant.recipients)
     if recipients is not None and ANY_RECIPIENT in recipients:
         recipients = None
-    return _Rule(
-        accounts,
-        permissions.expand(grant.allow),
-        SendLimit(recipients, grant.max_sends_per_day),
-    )
+    operations, unknown = permissions.expand_known(grant.allow)
+    if unknown:
+        log.warning("a stored grant names rights that do not exist: %s", unknown)
+    return _Rule(accounts, operations, SendLimit(recipients, grant.max_sends_per_day))
 
 
 def recipient_matches(pattern: str, address: str) -> bool:

@@ -6,7 +6,7 @@ import json
 import sqlite3
 from datetime import datetime
 
-from ...models import SendRecord
+from ...models import SendOutcome, SendRecord
 from .database import Database
 
 
@@ -35,12 +35,12 @@ class SqliteSendLogRepository:
         )
 
     def sent_since(
-        self, user_id: str, account_id: str, since: datetime
+        self, user_id: str, account_id: str, since: datetime, *, outcome: SendOutcome
     ) -> list[datetime]:
         rows = self._db.query(
             "SELECT created_at FROM sends WHERE user_id = ? AND account_id = ?"
-            " AND outcome = 'sent' AND created_at > ? ORDER BY created_at",
-            (user_id, account_id, since.isoformat()),
+            " AND outcome = ? AND created_at > ? ORDER BY created_at",
+            (user_id, account_id, outcome, since.isoformat()),
         )
         return [datetime.fromisoformat(row["created_at"]) for row in rows]
 
