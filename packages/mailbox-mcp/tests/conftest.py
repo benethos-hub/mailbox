@@ -17,7 +17,7 @@ Handler = Callable[[httpx.Request], httpx.Response]
 @pytest.fixture(autouse=True)
 def no_configuration_from_this_machine(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in list(os.environ):
-        if name.startswith("MAILBOX_API_"):
+        if name.startswith("MAILBOX_SERVICE_"):
             monkeypatch.delenv(name)
 
 

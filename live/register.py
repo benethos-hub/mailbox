@@ -1,7 +1,7 @@
 """Register the test accounts of ``live/.env`` in a running service, through
 its REST API, and check that they work.
 
-    MAILBOX_API_TOKEN=... uv run python live/register.py [--url URL] [--count N]
+    MAILBOX_SERVICE_TOKEN=... uv run python live/register.py [--url URL] [--count N]
 
 For each of the first ``N`` test accounts (default 2): discovery for its
 address, ``POST /v1/accounts`` with IMAP and the SMTP server discovery
@@ -55,9 +55,11 @@ def main() -> int:
     parser.add_argument("--url", default=DEFAULT_URL)
     parser.add_argument("--count", type=int, default=2)
     options = parser.parse_args()
-    token = os.environ.get("MAILBOX_API_TOKEN")
+    token = os.environ.get("MAILBOX_SERVICE_TOKEN")
     if not token:
-        sys.exit("set MAILBOX_API_TOKEN to a token with accounts.manage and mail.read")
+        sys.exit(
+            "set MAILBOX_SERVICE_TOKEN to a token with accounts.manage and mail.read"
+        )
     env = read_env(ENV_FILE)
     run = Run()
     with httpx.Client(

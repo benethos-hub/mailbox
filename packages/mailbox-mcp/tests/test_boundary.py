@@ -12,7 +12,7 @@ import tomllib
 from pathlib import Path
 
 PACKAGE = Path(__file__).resolve().parents[1]
-SERVICE = "benethos_mailbox_api"
+SERVICE = "benethos_mailbox_service"
 
 
 def test_no_dependency_on_the_service() -> None:
@@ -21,7 +21,7 @@ def test_no_dependency_on_the_service() -> None:
         d.split(">")[0].split("<")[0].split("=")[0].split("[")[0].strip()
         for d in project["project"]["dependencies"]
     ]
-    assert "benethos-mailbox-api" not in names
+    assert "benethos-mailbox-service" not in names
 
 
 def test_no_import_of_the_service() -> None:

@@ -10,14 +10,14 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "benethos-mailbox-api",
     "benethos-mailbox-mcp",
+    "benethos-mailbox-service",
 ]
 
 [manifest.dependency-groups]
 dev = [
-    { name = "benethos-mailbox-api", editable = "packages/mailbox-api" },
     { name = "benethos-mailbox-mcp", editable = "packages/mailbox-mcp" },
+    { name = "benethos-mailbox-service", editable = "packages/mailbox-service" },
     { name = "mcp", extras = ["cli"], specifier = ">=2.0.0,<3" },
     { name = "mypy", specifier = ">=2.1.0" },
     { name = "pytest", specifier = ">=9.1.1" },
@@ -141,9 +141,28 @@ wheels = [
 ]
 
 [[package]]
-name = "benethos-mailbox-api"
+name = "benethos-mailbox-mcp"
 version = "0.1.0"
-source = { editable = "packages/mailbox-api" }
+source = { editable = "packages/mailbox-mcp" }
+dependencies = [
+    { name = "httpx" },
+    { name = "mcp" },
+    { name = "pypdfium2" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28" },
+    { name = "mcp", specifier = ">=2.0.0,<3" },
+    { name = "pypdfium2", specifier = ">=4.30" },
+    { name = "uvicorn", specifier = ">=0.31" },
+]
+
+[[package]]
+name = "benethos-mailbox-service"
+version = "0.1.0"
+source = { editable = "packages/mailbox-service" }
 dependencies = [
     { name = "anyio" },
     { name = "cryptography" },
@@ -179,25 +198,6 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.10" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "uvicorn", specifier = ">=0.38" },
-]
-
-[[package]]
-name = "benethos-mailbox-mcp"
-version = "0.1.0"
-source = { editable = "packages/mailbox-mcp" }
-dependencies = [
-    { name = "httpx" },
-    { name = "mcp" },
-    { name = "pypdfium2" },
-    { name = "uvicorn" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.28" },
-    { name = "mcp", specifier = ">=2.0.0,<3" },
-    { name = "pypdfium2", specifier = ">=4.30" },
-    { name = "uvicorn", specifier = ">=0.31" },
 ]
 
 [[package]]

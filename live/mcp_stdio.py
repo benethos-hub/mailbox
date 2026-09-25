@@ -40,7 +40,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from register import register
 from smoke import ENV_FILE, Run, accounts, read_env
 
-from benethos_mailbox_api.data.secrets import cipher, encode_recovery
+from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
 READ_TOOLS = {
     "list_accounts",
@@ -67,22 +67,22 @@ def free_port() -> int:
 def service_env(data_dir: str, port: int, admin_key: str) -> dict[str, str]:
     return {
         **os.environ,
-        "MAILBOX_API_DATA_DIR": data_dir,
-        "MAILBOX_API_STORAGE": "sqlite",
-        "MAILBOX_API_KEY_PROVIDER": "env",
-        "MAILBOX_API_MASTER_KEY": encode_recovery(cipher.new_key()),
-        "MAILBOX_API_KEY": admin_key,
-        "MAILBOX_API_HOST": "127.0.0.1",
-        "MAILBOX_API_PORT": str(port),
-        "MAILBOX_API_SYNC_INTERVAL": "0",
-        "MAILBOX_API_SYNC_IDLE": "false",
+        "MAILBOX_SERVICE_DATA_DIR": data_dir,
+        "MAILBOX_SERVICE_STORAGE": "sqlite",
+        "MAILBOX_SERVICE_KEY_PROVIDER": "env",
+        "MAILBOX_SERVICE_MASTER_KEY": encode_recovery(cipher.new_key()),
+        "MAILBOX_SERVICE_KEY": admin_key,
+        "MAILBOX_SERVICE_HOST": "127.0.0.1",
+        "MAILBOX_SERVICE_PORT": str(port),
+        "MAILBOX_SERVICE_SYNC_INTERVAL": "0",
+        "MAILBOX_SERVICE_SYNC_IDLE": "false",
     }
 
 
 def start_service(env: dict[str, str], url: str) -> subprocess.Popen[bytes]:
-    command = shutil.which("benethos-mailbox-api")
+    command = shutil.which("benethos-mailbox-service")
     if command is None:
-        sys.exit("benethos-mailbox-api not found: run this with uv run")
+        sys.exit("benethos-mailbox-service not found: run this with uv run")
     subprocess.run([command, "keys", "init"], env=env, check=True, capture_output=True)
     process = subprocess.Popen(
         [command, "serve"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
@@ -127,7 +127,7 @@ async def mcp_session(url: str, token: str) -> AsyncIterator[ClientSession]:
         sys.exit("benethos-mailbox-mcp not found: run this with uv run")
     params = StdioServerParameters(
         command=command,
-        env={**os.environ, "MAILBOX_API_URL": url, "MAILBOX_API_TOKEN": token},
+        env={**os.environ, "MAILBOX_SERVICE_URL": url, "MAILBOX_SERVICE_TOKEN": token},
     )
     async with (
         stdio_client(params) as (read, write),
@@ -354,7 +354,7 @@ async def check_drafts(
                 "create_draft",
                 {
                     "account_id": account_id,
-                    "text": "mailbox-api MCP draft check",
+                    "text": "mailbox-service MCP draft check",
                     "original_id": original["id"],
                 },
             )
@@ -380,7 +380,7 @@ async def check_drafts(
                     "account_id": account_id,
                     "draft_id": draft_id,
                     "to": [to],
-                    "subject": "mailbox-api MCP draft check",
+                    "subject": "mailbox-service MCP draft check",
                     "text": "second version",
                 },
             )
@@ -437,7 +437,7 @@ async def check_sending(
     with the same call arrives once, a draft is sent. Both are deleted for
     good afterwards, in the inbox and in the sent folder."""
     sender, receiver = ids
-    subject = f"mailbox-api MCP send check {secrets.token_hex(4)}"
+    subject = f"mailbox-service MCP send check {secrets.token_hex(4)}"
     subjects = [subject, f"{subject} draft", f"{subject} html"]
     try:
         async with mcp_session(url, token) as session:
@@ -533,7 +533,7 @@ async def check_constraints(
     too, so a failing check still sends nowhere else."""
     sender, _ = ids
     own, other = emails
-    subject = f"mailbox-api MCP limit check {secrets.token_hex(4)}"
+    subject = f"mailbox-service MCP limit check {secrets.token_hex(4)}"
     subjects = [subject, f"{subject} 2"]
     only_self = user_token(admin, ids, ["send"], recipients=[own])
     once = user_token(admin, ids, ["send"], recipients=[other], max_sends_per_day=1)

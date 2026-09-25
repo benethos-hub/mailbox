@@ -45,8 +45,8 @@ def start_mcp(
         sys.exit("benethos-mailbox-mcp not found: run this with uv run")
     env = {
         **os.environ,
-        "MAILBOX_API_URL": api_url,
-        "MAILBOX_API_TOKEN": api_token,
+        "MAILBOX_SERVICE_URL": api_url,
+        "MAILBOX_SERVICE_TOKEN": api_token,
         "MAILBOX_MCP_BEARER_TOKEN": bearer,
     }
     process = subprocess.Popen(

@@ -290,7 +290,7 @@ def check_writing(
     )
     run.check("delete it", "Folder deleted." in deleted.text)
 
-    token = f"mailbox-api UI live check {secrets.token_hex(4)}"
+    token = f"mailbox-service UI live check {secrets.token_hex(4)}"
     draft = browser.post(
         f"{base}/compose",
         data={

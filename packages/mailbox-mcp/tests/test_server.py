@@ -243,7 +243,7 @@ def test_main_runs_stdio_with_the_allowed_tools(
 
 def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
     async def unreachable() -> set[str]:
-        raise ToolError("The Mailbox API service is not reachable")
+        raise ToolError("The mailbox service is not reachable")
 
     monkeypatch.setattr(server, "allowed_operations", unreachable)
     with pytest.raises(SystemExit, match="not reachable"):

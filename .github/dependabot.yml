@@ -18,7 +18,7 @@ updates:
   # and runs without complaint, and ships unpatched packages.
   - package-ecosystem: "docker"
     directories:
-      - "/containers/benethos-mailbox-api"
+      - "/containers/benethos-mailbox-service"
       - "/containers/benethos-mailbox-mcp"
     schedule:
       interval: "weekly"

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {# htmx must not inject its indicator style: the policy allows no inline style. #}
+    <meta name="htmx-config" content='{"includeIndicatorStyles": false}' />
+    <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+    <link rel="stylesheet" href="/ui/static/css/app.css" />
+  </head>
+  {# Every htmx request carries the session's CSRF token as a header. #}
+  <body hx-headers='{"X-CSRF-Token": "{{ csrf }}"}'>
+    <div class="layout">
+      {% include "partials/sidebar.html" %}
+      <div class="content">
+        <header class="topbar">
+          <div>
+            <h1>{% block heading %}{{ self.title() }}{% endblock %}</h1>
+            {% block subheading %}{% endblock %}
+          </div>
+          <div class="right">{% block actions %}{% endblock %}</div>
+        </header>
+        <main>
+          {% include "partials/flash.html" %}
+          {% block content %}{% endblock %}
+        </main>
+        <footer>benethos-mailbox-service {{ VERSION }}</footer>
+      </div>
+    </div>
+    <div id="modal"></div>
+    <script src="/ui/static/vendor/htmx/htmx.min.js" defer></script>
+    <script src="/ui/static/js/app.js" defer></script>
+  </body>
+</html>

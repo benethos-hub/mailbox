@@ -15,7 +15,7 @@ name: Publish
 #
 # One-time setup on PyPI: a (pending) publisher per project with this
 # repository's owner and name and the workflow filename publish.yml, with
-# the environment pypi-api for benethos-mailbox-api and pypi-mcp for
+# the environment pypi-service for benethos-mailbox-service and pypi-mcp for
 # benethos-mailbox-mcp. PyPI takes a pending publisher (repository,
 # workflow, environment) for one project only, hence one environment each.
 # On GitHub: both environments under Settings, Environments.
@@ -66,9 +66,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - package: benethos-mailbox-api
-            module: benethos_mailbox_api
-            environment: pypi-api
+          - package: benethos-mailbox-service
+            module: benethos_mailbox_service
+            environment: pypi-service
           - package: benethos-mailbox-mcp
             module: benethos_mailbox_mcp
             environment: pypi-mcp
@@ -122,12 +122,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image: benethos-mailbox-api
-            package: packages/mailbox-api
-            description: "Mailbox API: one REST API for several mail providers and accounts."
+          - image: benethos-mailbox-service
+            package: packages/mailbox-service
+            description: "Mailbox Service: one REST API for several mail providers and accounts."
           - image: benethos-mailbox-mcp
             package: packages/mailbox-mcp
-            description: "MCP server for the Mailbox API over streamable HTTP. Reaches mail through that REST API only."
+            description: "MCP server for the Mailbox Service over streamable HTTP. Reaches mail through that REST API only."
     permissions:
       contents: read
       packages: write # push to ghcr.io as the GITHUB_TOKEN identity

@@ -1,4 +1,4 @@
-"""MCP server for the Mailbox API, a client of its REST interface."""
+"""MCP server for the Mailbox Service, a client of its REST interface."""
 
 from __future__ import annotations
 

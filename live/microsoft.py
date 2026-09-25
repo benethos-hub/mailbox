@@ -38,7 +38,7 @@ import httpx
 from register import register
 from smoke import ENV_FILE, Run, accounts, read_env
 
-from benethos_mailbox_api.data.secrets import cipher, encode_recovery
+from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
 DATA = Path("data/live-microsoft")
 PORT = 8080
@@ -60,32 +60,32 @@ def _secret_file(name: str, make: Any) -> str:
 def service_env(env: dict[str, str], admin_key: str) -> dict[str, str]:
     return {
         **os.environ,
-        "MAILBOX_API_DATA_DIR": str(DATA),
-        "MAILBOX_API_STORAGE": "sqlite",
-        "MAILBOX_API_KEY_PROVIDER": "env",
-        "MAILBOX_API_MASTER_KEY": _secret_file(
+        "MAILBOX_SERVICE_DATA_DIR": str(DATA),
+        "MAILBOX_SERVICE_STORAGE": "sqlite",
+        "MAILBOX_SERVICE_KEY_PROVIDER": "env",
+        "MAILBOX_SERVICE_MASTER_KEY": _secret_file(
             "master_key", lambda: encode_recovery(cipher.new_key())
         ),
-        "MAILBOX_API_KEY": admin_key,
-        "MAILBOX_API_HOST": "127.0.0.1",
-        "MAILBOX_API_PORT": str(PORT),
-        "MAILBOX_API_PUBLIC_URL": URL,
-        "MAILBOX_API_SYNC_INTERVAL": "0",
-        "MAILBOX_API_SYNC_IDLE": "false",
-        "MAILBOX_API_OAUTH_MICROSOFT_CLIENT_ID": env["LIVE_MICROSOFT_CLIENT_ID"],
-        "MAILBOX_API_OAUTH_MICROSOFT_CLIENT_SECRET": env.get(
+        "MAILBOX_SERVICE_KEY": admin_key,
+        "MAILBOX_SERVICE_HOST": "127.0.0.1",
+        "MAILBOX_SERVICE_PORT": str(PORT),
+        "MAILBOX_SERVICE_PUBLIC_URL": URL,
+        "MAILBOX_SERVICE_SYNC_INTERVAL": "0",
+        "MAILBOX_SERVICE_SYNC_IDLE": "false",
+        "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID": env["LIVE_MICROSOFT_CLIENT_ID"],
+        "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET": env.get(
             "LIVE_MICROSOFT_CLIENT_SECRET", ""
         ),
-        "MAILBOX_API_OAUTH_MICROSOFT_TENANT": env.get("LIVE_MICROSOFT_TENANT")
+        "MAILBOX_SERVICE_OAUTH_MICROSOFT_TENANT": env.get("LIVE_MICROSOFT_TENANT")
         or "common",
     }
 
 
 def start(env: dict[str, str]) -> subprocess.Popen[bytes]:
     """The service on its own database. The keys are made on the first run."""
-    command = shutil.which("benethos-mailbox-api")
+    command = shutil.which("benethos-mailbox-service")
     if command is None:
-        sys.exit("benethos-mailbox-api not found: run this with uv run")
+        sys.exit("benethos-mailbox-service not found: run this with uv run")
     if not (DATA / "mailbox.db").exists():
         subprocess.run(
             [command, "keys", "init"], env=env, check=True, capture_output=True
@@ -163,11 +163,11 @@ def check(
     run.check("a search", searched.status_code == 200)
 
     print("\n== folders")
-    made = client.post(f"{base}/folders", json={"name": "mailbox-api live check"})
+    made = client.post(f"{base}/folders", json={"name": "mailbox-service live check"})
     if run.check("create a folder", made.status_code == 201):
         folder_id = made.json()["id"]
         renamed = client.patch(
-            f"{base}/folders/{folder_id}", json={"name": "mailbox-api live check 2"}
+            f"{base}/folders/{folder_id}", json={"name": "mailbox-service live check 2"}
         )
         run.check("rename it, same id", renamed.json().get("id") == folder_id)
         gone = client.delete(f"{base}/folders/{folder_id}")
@@ -205,7 +205,7 @@ def check(
                 run.check("delete it", deleted.status_code == 204)
 
     print("\n== sending, to the first test account only")
-    subject = f"mailbox-api microsoft live check {secrets.token_hex(4)}"
+    subject = f"mailbox-service microsoft live check {secrets.token_hex(4)}"
     sent = client.post(
         f"{base}/send",
         json={
