@@ -40,8 +40,8 @@ def master_key(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def endpoint() -> TokenEndpoint:
     return TokenEndpoint(
-        granted("at-1", "rt-1", id_token=id_token(email="me@outlook.com", name="Me")),
-        granted("at-2", "rt-2", id_token=id_token(email="me@outlook.com")),
+        granted("at-1", "rt-1", id_token=id_token(email="me@example.org", name="Me")),
+        granted("at-2", "rt-2", id_token=id_token(email="me@example.org")),
     )
 
 
@@ -92,12 +92,12 @@ def test_the_sign_in_is_offered(browser: tuple[TestClient, Services]) -> None:
 
 def test_off_to_the_provider(browser: tuple[TestClient, Services]) -> None:
     client, _ = browser
-    location = _start(client, login_hint="me@outlook.com").headers["location"]
+    location = _start(client, login_hint="me@example.org").headers["location"]
     parts = urlsplit(location)
     query = {k: v[0] for k, v in parse_qs(parts.query).items()}
     assert parts.netloc == "login.microsoftonline.com"
     assert query["redirect_uri"] == "http://testserver/ui/oauth/microsoft/callback"
-    assert query["login_hint"] == "me@outlook.com"
+    assert query["login_hint"] == "me@example.org"
 
 
 def test_the_redirect_uses_the_public_url(endpoint: TokenEndpoint) -> None:
@@ -120,7 +120,7 @@ def test_back_through_the_bounce_page(browser: tuple[TestClient, Services]) -> N
     assert "/ui/oauth/microsoft/finish?code=c&amp;state=s" in bounce.text
     assert "dropped" not in bounce.text
     finished = _round_trip(client)
-    assert "me@outlook.com signed in." in finished.text
+    assert "me@example.org signed in." in finished.text
     [account_id] = services.accounts.all_ids()
     assert finished.url.path == f"/ui/accounts/{account_id}"
     assert "Sign in again" in finished.text and "New password" not in finished.text
@@ -162,7 +162,7 @@ def test_sign_in_again(browser: tuple[TestClient, Services]) -> None:
     _round_trip(client)
     [account_id] = services.accounts.all_ids()
     location = _start(client, account_id=account_id).headers["location"]
-    assert parse_qs(urlsplit(location).query)["login_hint"] == ["me@outlook.com"]
+    assert parse_qs(urlsplit(location).query)["login_hint"] == ["me@example.org"]
 
 
 def test_an_unknown_provider(browser: tuple[TestClient, Services]) -> None:
@@ -178,7 +178,7 @@ def test_discovery_offers_the_sign_in(browser: tuple[TestClient, Services]) -> N
         async def discover(self, caller: Any, email: str) -> Discovery:
             return Discovery(
                 email=email,
-                domain="outlook.com",
+                domain="example.org",
                 candidates=[
                     Candidate(
                         provider=ProviderType.IMAP,
@@ -192,9 +192,9 @@ def test_discovery_offers_the_sign_in(browser: tuple[TestClient, Services]) -> N
             )
 
     client.app.state.discovery = Found()  # type: ignore[attr-defined]
-    page = post(client, "/ui/accounts/discover", {"email": "me@outlook.com"}).text
+    page = post(client, "/ui/accounts/discover", {"email": "me@example.org"}).text
     assert "2. Outlook.com" in page
-    assert 'name="login_hint" value="me@outlook.com"' in page
+    assert 'name="login_hint" value="me@example.org"' in page
     assert "Sign in with Microsoft" in page
 
 
@@ -205,7 +205,7 @@ def test_the_api_starts_a_sign_in(endpoint: TokenEndpoint) -> None:
     client, _ = build(endpoint)
     answer = client.post(
         "/v1/oauth/microsoft/start",
-        json={"login_hint": "me@outlook.com"},
+        json={"login_hint": "me@example.org"},
         headers={"Authorization": f"Bearer {API_KEY}"},
     )
     assert answer.status_code == 200, answer.text

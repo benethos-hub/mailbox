@@ -238,9 +238,9 @@ async def test_folders_are_created_renamed_moved_deleted(graph: FakeGraph) -> No
 
 
 async def test_send_puts_hidden_recipients_in_bcc(graph: FakeGraph) -> None:
-    raw = b"From: me@outlook.com\r\nTo: bob@example.org\r\nSubject: Hi\r\n\r\nHello\r\n"
+    raw = b"From: me@example.org\r\nTo: bob@example.org\r\nSubject: Hi\r\n\r\nHello\r\n"
     await adapter(graph).send(
-        raw, "me@outlook.com", ["bob@example.org", "carol@example.org"]
+        raw, "me@example.org", ["bob@example.org", "carol@example.org"]
     )
     [sent] = graph.sent
     parsed = message_from_bytes(sent, policy=default)
@@ -252,7 +252,7 @@ async def test_send_puts_hidden_recipients_in_bcc(graph: FakeGraph) -> None:
 async def test_drafts(graph: FakeGraph) -> None:
     provider = adapter(graph)
     raw = (
-        b"From: me@outlook.com\r\nTo: bob@example.org\r\nSubject: Plan\r\n"
+        b"From: me@example.org\r\nTo: bob@example.org\r\nSubject: Plan\r\n"
         b"X-Mailbox-Api-Reference: reply AAMk1=\r\nIn-Reply-To: <x@example.com>\r\n"
         b"Content-Type: text/plain\r\n\r\nFirst\r\n"
     )
@@ -324,7 +324,7 @@ def test_connect_read_and_send_through_the_api(
     monkeypatch.setenv("MAILBOX_API_MASTER_KEY", encode_recovery(cipher.new_key()))
     graph.add_message(subject="Welcome")
     endpoint = TokenEndpoint(
-        granted(TOKEN, "rt-1", id_token=id_token(email="me@outlook.com")),
+        granted(TOKEN, "rt-1", id_token=id_token(email="me@example.org")),
         # The account's own adapter renews once, from the stored token.
         granted(TOKEN, "rt-2"),
     )

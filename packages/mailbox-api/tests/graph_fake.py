@@ -57,7 +57,7 @@ class FakeGraph:
             "parentFolderId": self.well_known.get(folder, folder),
             "subject": "Hello",
             "from": {"emailAddress": {"name": "Alice", "address": "alice@example.com"}},
-            "toRecipients": [{"emailAddress": {"address": "me@outlook.com"}}],
+            "toRecipients": [{"emailAddress": {"address": "me@example.org"}}],
             "receivedDateTime": f"2026-09-{len(self.messages) + 1:02d}T10:00:00Z",
             "bodyPreview": "Hi",
             "isRead": False,
