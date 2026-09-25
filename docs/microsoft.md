@@ -176,6 +176,11 @@ Over the API, `POST /v1/oauth/microsoft/start` returns the sign-in URL for
 a browser. The browser comes back to the UI, and the same user finishes
 the sign-in there.
 
+Once connected, the service asks the account's folders every
+`MAILBOX_SERVICE_SYNC_INTERVAL` seconds what changed (Graph delta
+queries), for the change feed and webhooks. That needs no permission
+beyond those of step 3.
+
 ## Work and school accounts
 
 With `common`, accounts of any Microsoft 365 organisation may sign in, as

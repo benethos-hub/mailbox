@@ -12,7 +12,9 @@
 The Mailbox Service: one REST API (OpenAPI 3.1) for several mail
 providers and accounts, with a configuration UI in the browser. It runs
 permanently, holds the connections to the accounts, keeps their
-credentials encrypted and syncs in the background. Scripts, apps and the
+credentials encrypted and syncs in the background. It keeps a feed of
+what changed in the mailboxes and posts it to webhooks. Scripts, apps and
+the
 MCP server [`benethos-mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp)
 reach mail only through it, each with a token of its own.
 
@@ -134,6 +136,23 @@ Users, roles and tokens are managed in the UI (Users, Roles) or under
 Give each script and each assistant its own user with only the rights it
 needs. With neither a user nor `MAILBOX_SERVICE_KEY`, the API answers
 `503 setup_required`.
+
+## Changes and webhooks
+
+`GET /v1/changes` names each message created, updated or deleted since
+the `state` of an earlier answer, across the accounts the token may read.
+`GET /v1/accounts/{account_id}/changes` does the same for one account.
+Both need `mail.read`. A state older than `MAILBOX_SERVICE_CHANGES_DAYS`
+answers `410 changes_expired`, and the client starts again without
+`since`.
+
+`POST /v1/webhooks` registers a URL, with the right `webhooks.manage`.
+The service posts the events there as JSON, signed in
+`X-Mailbox-Signature`, and tries a failed post again as the
+`MAILBOX_SERVICE_WEBHOOK_*` settings say. The signing secret is in the
+answer to `POST`, the only time it is shown. A host in the local network
+is allowed. The format of a post is in
+[CONCEPT.md, section 6.5](https://github.com/benethos-hub/mailbox/blob/main/docs/CONCEPT.md#65-changes-and-webhooks).
 
 ## Container
 

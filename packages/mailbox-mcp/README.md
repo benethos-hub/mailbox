@@ -11,8 +11,9 @@
 
 The MCP server for the Mailbox Service. It gives Claude and other AI
 assistants your mailboxes, as far as its token allows. It searches and
-reads mail, looks at attachments (PDF pages as images), sorts messages,
-writes drafts and, if you let it, sends.
+reads mail, tells what is new since it last looked, looks at attachments
+(PDF pages as images), sorts messages, writes drafts and, if you let it,
+sends.
 
 It reaches mail only through the REST API of
 [`benethos-mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service),
@@ -59,7 +60,7 @@ curl -X POST http://127.0.0.1:8080/v1/users/<user id>/tokens \
 
 The second answer holds the token. It is shown this once. The account
 ids come from `GET /v1/accounts`. Rights that matter here: `mail.read` to
-read, `mail.write` to sort and file, `drafts` to write drafts, `send` to
+read and to ask what is new, `mail.write` to sort and file, `drafts` to write drafts, `send` to
 send. A grant can limit sending to certain recipients and a number per
 day.
 

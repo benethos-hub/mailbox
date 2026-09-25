@@ -62,20 +62,26 @@ That makes a few things simple that are hard otherwise:
 - **Writing:** flags, moving, deleting, folders, drafts, and sending with
   reply, reply to all and forward. A retried send is not sent twice
   (`Idempotency-Key`).
+- **Changes:** a change feed names each message created, changed or
+  deleted since a point you keep, in IMAP and Microsoft accounts, flags
+  set in other mail clients included where the IMAP server offers
+  CONDSTORE. Webhooks post the same events, signed, to a URL of your
+  choice, a host in your local network included.
 - **Users and rights:** users, roles and grants per account and per
   operation, API tokens, limits on sending (allowed recipients, sends per
   day) and an audit of every send.
-- **MCP server:** reads, sorts, writes drafts and sends over stdio or
-  streamable HTTP, offering only the tools its token may use. Mail content
+- **MCP server:** reads, sorts, writes drafts, sends and tells what is
+  new, over stdio or streamable HTTP, offering only the tools its token
+  may use. Mail content
   reaches the model marked as foreign text.
 - **Configuration UI** in the browser under `/ui`: accounts, users,
   rights, tokens, reading and writing mail, the send audit.
 - **Operation:** encrypted backup and restore, container images, a
   compose file.
 
-Planned next: a change feed and webhooks, Gmail, JMAP. With a change feed
-and webhooks, automation can react to new mail instead of asking for it.
-The order is in [docs/ROADMAP.md](docs/ROADMAP.md).
+Planned next: a rework of the configuration UI, which also gains pages
+for webhooks, then Gmail and JMAP. The order is in
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Providers
 

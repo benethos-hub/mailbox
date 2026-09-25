@@ -1309,7 +1309,7 @@ one or two `operationId`s.
 | `get_message` | read | `get_message`, body shortened, `max_chars` param |
 | `get_thread` | read | `get_thread` |
 | `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
-| `whats_new` | read | `list_changes` across accounts, the "what came in since" tool |
+| `whats_new` | read | `list_all_changes` across accounts, or `list_changes` for one, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash |
 | `create_folder` | write | `create_folder` |
 | `list_drafts` | drafts | `list_drafts` |
@@ -1471,8 +1471,9 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    service is, and cannot collide with anyone's trademark. "Mail gateway"
    was ruled out because it already names a different kind of product,
    the filtering gateway in front of a mail server.
-3. **Gmail / Microsoft priority:** are they needed early, or are GMX / web.de
-   / T-Online over IMAP the main use?
+3. **Gmail priority:** is Gmail needed early, or are GMX / web.de /
+   T-Online over IMAP the main use? Microsoft accounts are supported
+   already (phase 5).
 4. **Sending from the MCP server:** decided 2026-09-24, both stay open,
    governed by rights (7.7).
 5. **Local cache:** list and search go straight to the provider in the

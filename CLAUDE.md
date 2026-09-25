@@ -62,6 +62,7 @@ done. Update the roadmap in the same commit that finishes an item.
   reply draft there. The send tools send two mails from the first test
   account to the second and delete them for good. Grants with recipients
   and a send limit stop mails, and the audit names each attempt.
+  `whats_new` must name the changes of the write tools.
   `uv run python live/mcp_http.py` checks it over streamable HTTP behind
   its bearer token, read-only.
 - The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a token.
