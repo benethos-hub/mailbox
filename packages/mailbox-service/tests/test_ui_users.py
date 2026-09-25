@@ -9,8 +9,11 @@ from fastapi.testclient import TestClient
 from starlette.datastructures import FormData
 
 from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.domain import permissions
+from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.errors import MailboxServiceError
 from benethos_mailbox_service.main import Services
+from benethos_mailbox_service.web.pages.effective import ON_AN_ACCOUNT
 from benethos_mailbox_service.web.pages.grants import (
     GrantFormError,
     read_grants,
@@ -288,3 +291,74 @@ def test_a_role_name_is_quoted_in_links(ui: TestClient, services: Services) -> N
 def test_the_sidebar_links_the_access_pages(ui: TestClient) -> None:
     home = ui.get("/ui").text
     assert 'href="/ui/users"' in home and 'href="/ui/roles"' in home
+
+
+# --- effective rights ------------------------------------------------------------
+
+
+def test_summarize_names_whole_groups_and_the_rest() -> None:
+    groups, rest = permissions.summarize(
+        [*permissions.GROUPS["mail.read"], "create_draft"], ON_AN_ACCOUNT
+    )
+    assert groups == ["mail.read"]
+    assert rest == ["create_draft"]
+
+
+def test_rights_of_joins_roles_and_grants(services: Services, account_id: str) -> None:
+    services.users.create_role(
+        ADMIN, "reader", [Grant(accounts=["*"], allow=["mail.read"])]
+    )
+    user = services.users.create_user(
+        ADMIN,
+        "desktop",
+        ["reader"],
+        [
+            Grant(
+                accounts=[account_id],
+                allow=["drafts", "send"],
+                recipients=["bot@example.org"],
+                max_sends_per_day=3,
+            )
+        ],
+    )
+    rights = services.users.rights_of(ADMIN, user.id)
+    [account] = rights.accounts
+    assert {"get_message", "create_draft", "send_message"} <= set(account.operations)
+    assert [(s.recipients, s.max_per_day) for s in account.sending] == [
+        (("bot@example.org",), 3)
+    ]
+    assert account.warnings == []
+
+
+def test_rights_of_lists_only_accounts_the_caller_sees(
+    services: Services, account_id: str
+) -> None:
+    user = services.users.create_user(
+        ADMIN, "reader", [], [Grant(accounts=["*"], allow=["mail.read"])]
+    )
+    manager = Access(
+        "usr_m", "manager", [Grant(accounts=["*"], allow=["users.manage"])]
+    )
+    assert services.users.rights_of(manager, user.id).accounts == []
+    assert len(services.users.rights_of(ADMIN, user.id).accounts) == 1
+
+
+def test_the_user_page_shows_the_effective_rights(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    services.users.create_role(
+        ADMIN, "reader", [Grant(accounts=["*"], allow=["mail.read"])]
+    )
+    user = services.users.create_user(
+        ADMIN,
+        "desktop",
+        ["reader"],
+        [Grant(accounts=[account_id], allow=["send", "list_accounts"])],
+    )
+    page = ui.get(f"/ui/users/{user.id}").text
+    section = page.split("Effective rights", 1)[1]
+    assert "me@example.com" in section
+    assert ">mail.read<" in section and ">send<" in section
+    assert ">list_accounts<" in section
+    assert "reads and sends anywhere" in section
+    assert "to anyone, no daily limit" in section
