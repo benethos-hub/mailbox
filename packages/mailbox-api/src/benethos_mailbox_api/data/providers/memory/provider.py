@@ -23,6 +23,7 @@ from ...models import (
     Page,
     SentMessage,
 )
+from .. import rules
 from ..base import Capability
 
 
@@ -66,7 +67,10 @@ class MemoryProvider:
             for m in self.messages
             if (folder_id is None or folder_id in m.folder_ids) and _matches(m, search)
         ]
-        start = int(cursor) if cursor else 0
+        try:
+            start = int(cursor) if cursor else 0
+        except ValueError:
+            raise rules.invalid_cursor() from None
         chunk = found[start : start + limit]
         more = start + limit < len(found)
         return Page[MessageSummary](
@@ -106,6 +110,7 @@ class MemoryProvider:
     ) -> MessageSummary:
         message = await self.get_message(message_id)
         fields = changes.model_dump(exclude_none=True)
+        rules.move_target(changes, self.capabilities)
         known = {folder.id for folder in self.folders}
         for folder_id in fields.get("folder_ids", []):
             if folder_id not in known:
@@ -123,15 +128,9 @@ class MemoryProvider:
         if permanent:
             self.messages.remove(message)
             return None
-        trash = next((f.id for f in self.folders if f.role is FolderRole.TRASH), None)
-        if trash is None:
-            raise ConflictError(
-                "the account has no trash folder: delete with permanent=true"
-            )
+        trash = self._role_folder(FolderRole.TRASH)
         if trash in message.folder_ids:
-            raise ConflictError(
-                "the message is in the trash already: delete with permanent=true"
-            )
+            raise rules.in_trash_already()
         moved = message.model_copy(update={"folder_ids": [trash]})
         self.messages[self.messages.index(message)] = moved
         return MessageSummary.model_validate(moved.model_dump())
@@ -189,10 +188,13 @@ class MemoryProvider:
         self.raws.pop(draft.id, None)
 
     def _drafts_folder(self) -> str:
-        drafts = next((f.id for f in self.folders if f.role is FolderRole.DRAFTS), None)
-        if drafts is None:
-            raise ConflictError("the account has no drafts folder")
-        return drafts
+        return self._role_folder(FolderRole.DRAFTS)
+
+    def _role_folder(self, role: FolderRole) -> str:
+        folder = rules.role_folder(self.folders, role)
+        if folder is None:
+            raise rules.no_folder(role)
+        return folder.id
 
     def _draft(self, draft_id: str) -> Message:
         drafts = self._drafts_folder()
@@ -234,24 +236,16 @@ class MemoryProvider:
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxApiError]:
-        results: dict[str, MessageSummary | MailboxApiError] = {}
-        for message_id in message_ids:
-            try:
-                results[message_id] = await self._update_one(message_id, changes)
-            except MailboxApiError as exc:
-                results[message_id] = exc
-        return results
+        return await rules.per_id(
+            message_ids, lambda message_id: self._update_one(message_id, changes)
+        )
 
     async def delete_messages(
         self, message_ids: list[str], permanent: bool
     ) -> dict[str, MessageSummary | None | MailboxApiError]:
-        results: dict[str, MessageSummary | None | MailboxApiError] = {}
-        for message_id in message_ids:
-            try:
-                results[message_id] = await self._delete_one(message_id, permanent)
-            except MailboxApiError as exc:
-                results[message_id] = exc
-        return results
+        return await rules.per_id(
+            message_ids, lambda message_id: self._delete_one(message_id, permanent)
+        )
 
     async def folder_states(self) -> dict[str, str]:
         return {

@@ -34,6 +34,15 @@ stored data and the configuration may change without notice.
 
 ### Changed
 
+- The keywords `$seen`, `$flagged`, `$deleted` and `$recent` are refused
+  with `422` on every provider: use `unread`, `starred` or `DELETE`. Before,
+  IMAP answered `400` and other providers stored them.
+- A cursor that names no page answers `400` (`bad_request`) on every
+  provider. Before, IMAP answered `404` and the memory provider failed.
+- A missing drafts or trash folder answers `409` on every provider.
+  Before, Microsoft answered `404`, and a batch delete failed as a whole.
+- `folder_ids` with several folders answers `400` on every provider that
+  keeps a message in one folder. Before, Microsoft moved to the first.
 - Both packages ship the MIT license text.
 - An account carries its `settings` (host, port, security, username,
   `smtp_*`), never a secret. Settings whose name looks like a secret

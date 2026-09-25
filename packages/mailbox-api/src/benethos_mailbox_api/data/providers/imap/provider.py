@@ -43,6 +43,7 @@ from ...models import (
     Page,
     SentMessage,
 )
+from .. import rules
 from ..base import Capability, CredentialReader
 from ..guard import Guard
 from ..protocols.imap import ImapServer, ImapSession, SearchCriteria
@@ -270,9 +271,9 @@ class ImapProvider:
         return await self._run(lambda: self._folder_contents(folder_id))
 
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
-        folders, unknown = _by_folder(message_ids)
-        if unknown:
-            raise next(iter(unknown.values()))
+        # Ids that are no id of this adapter are left out, like messages
+        # that are gone.
+        folders, _ = _by_folder(message_ids)
         found: dict[str, str | None] = {}
         for (folder, validity), by_uid in folders.items():
             uids = list(by_uid)
@@ -415,7 +416,7 @@ class ImapProvider:
     def _drafts_folder(self) -> str:
         drafts = self._role_folder(FolderRole.DRAFTS)
         if drafts is None:
-            raise ConflictError("the account has no drafts folder")
+            raise rules.no_folder(FolderRole.DRAFTS)
         return drafts
 
     def _draft_place(self, draft_id: str, drafts: str) -> tuple[int, int]:
@@ -510,7 +511,7 @@ class ImapProvider:
         results = _missing(uids, found)
         if not found:
             return results
-        target = self._move_target(changes.folder_ids, folder)
+        target = self._move_target(changes, folder)
         plans: dict[tuple[tuple[str, ...], tuple[str, ...]], list[int]] = {}
         for uid, message in found.items():
             add, remove = mappers.flag_changes(message.flags, changes, permanent)
@@ -551,13 +552,9 @@ class ImapProvider:
             return results
         trash = self._role_folder(FolderRole.TRASH)
         if trash is None:
-            raise ConflictError(
-                "the account has no trash folder: delete with permanent=true"
-            )
+            raise rules.no_folder(FolderRole.TRASH)
         if trash == folder:
-            raise ConflictError(
-                "the message is in the trash already: delete with permanent=true"
-            )
+            raise rules.in_trash_already()
         moved = self._move(found, trash)
         results.update({uid: moved.get(uid) for uid in found})
         return results
@@ -594,17 +591,16 @@ class ImapProvider:
             if new in fetched
         }
 
-    def _move_target(self, folder_ids: list[str] | None, current: str) -> str | None:
+    def _move_target(self, changes: MessageUpdate, current: str) -> str | None:
         """The folder to move to, or None to stay."""
-        if folder_ids is None:
+        wanted = rules.move_target(changes, self.capabilities)
+        if wanted is None:
             return None
-        if len(set(folder_ids)) != 1:
-            raise BadRequestError("an IMAP message is in exactly one folder")
-        target = mappers.folder_name(folder_ids[0])
+        target = mappers.folder_name(wanted)
         if target == current:
             return None
         if target not in _names(self._session.list_folders()):
-            raise NotFoundError(f"folder {folder_ids[0]} not found")
+            raise NotFoundError(f"folder {wanted} not found")
         return target
 
     def _get_raw(self, message_id: str) -> bytes:

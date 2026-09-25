@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class MessageReference(BaseModel):
@@ -122,6 +122,8 @@ class MessageFilter(BaseModel):
 # A keyword as IMAP allows it: an atom, no spaces, brackets, quotes or
 # wildcards, and no system flag (those start with a backslash).
 KEYWORD_PATTERN = r"^[!#$&'+\-.0-9A-Z^_a-z|~]{1,100}$"
+# Keywords that would bypass unread, starred or deletion.
+RESERVED_KEYWORDS = frozenset({"$seen", "$flagged", "$deleted", "$recent"})
 
 
 class MessageUpdate(BaseModel):
@@ -143,3 +145,13 @@ class MessageUpdate(BaseModel):
             "stays. An IMAP message is in exactly one folder."
         ),
     )
+
+    @field_validator("keywords")
+    @classmethod
+    def _no_reserved_keywords(cls, keywords: list[str] | None) -> list[str] | None:
+        reserved = sorted({k.lower() for k in keywords or []} & RESERVED_KEYWORDS)
+        if reserved:
+            raise ValueError(
+                f"{', '.join(reserved)}: use unread, starred or DELETE instead"
+            )
+        return keywords

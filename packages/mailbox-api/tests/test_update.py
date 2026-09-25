@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from benethos_mailbox_api.data.models import Grant, MessageUpdate
 from benethos_mailbox_api.data.providers.imap import mappers
 from benethos_mailbox_api.errors import (
-    BadRequestError,
     NotFoundError,
     NotSupportedError,
 )
@@ -53,8 +53,9 @@ def test_nothing_to_change() -> None:
 
 @pytest.mark.parametrize("keyword", ["$seen", "$Flagged", "$deleted"])
 def test_keywords_that_bypass_fields_are_refused(keyword: str) -> None:
-    with pytest.raises(BadRequestError, match="use unread"):
-        mappers.flag_changes((), MessageUpdate(keywords=[keyword]), ANY_KEYWORD)
+    """Refused for every provider, at the boundary."""
+    with pytest.raises(ValidationError, match="use unread"):
+        MessageUpdate(keywords=[keyword])
 
 
 def test_new_keywords_need_a_server_that_keeps_them() -> None:

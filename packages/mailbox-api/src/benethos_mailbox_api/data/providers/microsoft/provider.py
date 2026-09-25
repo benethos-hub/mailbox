@@ -31,6 +31,7 @@ from ....errors import (
     ConflictError,
     MailboxApiError,
     NotFoundError,
+    NotSupportedError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
@@ -48,6 +49,7 @@ from ...models import (
     Page,
     SentMessage,
 )
+from .. import rules
 from ..base import Capability, TokenSource
 from . import mappers
 
@@ -148,7 +150,7 @@ class MicrosoftProvider:
         for folder_id, found in (await self._folder_roles()).items():
             if found is role:
                 return folder_id
-        raise NotFoundError(f"the mailbox has no {role} folder")
+        raise rules.no_folder(role)
 
     async def list_folders(self) -> list[Folder]:
         roles = await self._folder_roles()
@@ -376,58 +378,49 @@ class MicrosoftProvider:
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxApiError]:
         body = mappers.changes(changes.unread, changes.starred, changes.keywords)
-        target = changes.folder_ids[0] if changes.folder_ids else None
-        results: dict[str, MessageSummary | MailboxApiError] = {}
-        for message_id in message_ids:
+        target = rules.move_target(changes, self.capabilities)
+
+        async def one(message_id: str) -> MessageSummary:
             path = f"/me/messages/{_id(message_id)}"
-            try:
-                item = None
-                if body:
-                    item = await self._json("PATCH", path, json_body=body)
-                if target is not None:
-                    item = await self._json(
-                        "POST", f"{path}/move", json_body={"destinationId": target}
-                    )
-                if item is None:
-                    item = await self._json(
-                        "GET", path, params={"$select": mappers.SUMMARY_FIELDS}
-                    )
-                results[message_id] = mappers.summary(item)
-            except (ProviderAuthError, ProviderUnavailableError):
-                raise
-            except MailboxApiError as exc:
-                results[message_id] = exc
-        return results
+            item = None
+            if body:
+                item = await self._json("PATCH", path, json_body=body)
+            if target is not None:
+                item = await self._json(
+                    "POST", f"{path}/move", json_body={"destinationId": target}
+                )
+            if item is None:
+                item = await self._json(
+                    "GET", path, params={"$select": mappers.SUMMARY_FIELDS}
+                )
+            return mappers.summary(item)
+
+        return await rules.per_id(message_ids, one)
 
     async def delete_messages(
         self, message_ids: list[str], permanent: bool
     ) -> dict[str, MessageSummary | None | MailboxApiError]:
-        trash = None if permanent else await self._role_id(FolderRole.TRASH)
-        results: dict[str, MessageSummary | None | MailboxApiError] = {}
-        for message_id in message_ids:
-            path = f"/me/messages/{_id(message_id)}"
+        trash = None
+        if not permanent:
             try:
-                if trash is None:
-                    await self._call("DELETE", path)
-                    results[message_id] = None
-                    continue
-                where = await self._json(
-                    "GET", path, params={"$select": "parentFolderId"}
-                )
-                if where.get("parentFolderId") == trash:
-                    raise ConflictError(
-                        "the message is in the trash already: delete with "
-                        "permanent=true"
-                    )
-                item = await self._json(
-                    "POST", f"{path}/move", json_body={"destinationId": trash}
-                )
-                results[message_id] = mappers.summary(item)
-            except (ProviderAuthError, ProviderUnavailableError):
-                raise
-            except MailboxApiError as exc:
-                results[message_id] = exc
-        return results
+                trash = await self._role_id(FolderRole.TRASH)
+            except ConflictError as exc:
+                return dict.fromkeys(message_ids, exc)
+
+        async def one(message_id: str) -> MessageSummary | None:
+            path = f"/me/messages/{_id(message_id)}"
+            if trash is None:
+                await self._call("DELETE", path)
+                return None
+            where = await self._json("GET", path, params={"$select": "parentFolderId"})
+            if where.get("parentFolderId") == trash:
+                raise rules.in_trash_already()
+            item = await self._json(
+                "POST", f"{path}/move", json_body={"destinationId": trash}
+            )
+            return mappers.summary(item)
+
+        return await rules.per_id(message_ids, one)
 
     # --- for the sync worker ------------------------------------------------------
     # Ids are stable: the domain keeps no id mapping for this provider, so
@@ -460,7 +453,7 @@ class MicrosoftProvider:
     async def wait_for_change(self, timeout: float) -> bool:
         """No push yet: Graph's change notifications need a public endpoint
         (CONCEPT 5.4)."""
-        return False
+        raise NotSupportedError("Microsoft accounts are polled, not pushed")
 
     async def verify(self) -> None:
         self._roles = None
