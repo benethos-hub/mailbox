@@ -94,6 +94,24 @@ def permission_of(operation: str) -> str | None:
     return GROUP_OF.get(operation)
 
 
+def summarize(
+    operations: Iterable[str], scope: Iterable[str]
+) -> tuple[list[str], list[str]]:
+    """``operations`` as whole groups and single operations, for display.
+    A group counts as whole when every one of its operations in ``scope``
+    is among them. The rest are single operations."""
+    held = frozenset(operations)
+    within = frozenset(scope)
+    groups: list[str] = []
+    covered: set[str] = set()
+    for group, members in GROUPS.items():
+        part = frozenset(members) & within
+        if part and part <= held:
+            groups.append(group)
+            covered |= part
+    return groups, sorted(held - covered)
+
+
 def expand(names: Iterable[str]) -> frozenset[str]:
     """Group and operation names to the set of operations they allow. A
     name that is none of these is refused."""

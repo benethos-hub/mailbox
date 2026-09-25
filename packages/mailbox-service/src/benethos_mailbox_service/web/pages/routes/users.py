@@ -15,6 +15,7 @@ from ....domain import permissions
 from ....domain.access import Access
 from ...services import Users, get_accounts, get_users
 from ..deps import Actor, Viewer
+from ..effective import view_of
 from ..forms import failing
 from ..grants import GROUP_NAMES, account_choices, read_grants, rows_of
 from ..session import show_once, take_once
@@ -108,6 +109,7 @@ async def user(
         "pages/user.html",
         page="users",
         user=found,
+        effective=view_of(users.rights_of(caller, user_id)),
         tokens=[(token, users.token_state(token)) for token in tokens or []],
         can_list_tokens=tokens is not None,
         new_token=take_once(request, f"token:{user_id}"),

@@ -89,6 +89,11 @@ stored data and the configuration may change without notice.
 
 ### Added
 
+- Configuration UI: the user page shows the effective rights, the grants
+  of the user and of its roles together. It lists them per account, with
+  whole groups by name, the limits on sending and the warning where the
+  user may read mail and send it anywhere. Only accounts the viewer can
+  see are listed.
 - MCP: every tool has a title and the hints read-only, destructive,
   idempotent and open world. `update_messages`, `update_draft` and
   `delete_draft` are idempotent. `list_accounts` is the only tool that

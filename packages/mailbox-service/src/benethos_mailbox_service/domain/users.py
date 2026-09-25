@@ -15,7 +15,7 @@ from ..data.models import ApiToken, Grant, Role, User
 from ..data.storage import RoleRepository, TokenRepository, UserRepository
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from . import permissions
-from .access import Access
+from .access import Access, SendLimit
 from .adapters import Adapters
 from .auth import AuthService, TokenState
 
@@ -29,6 +29,9 @@ class AccountRights:
     display_name: str | None
     operations: list[str]
     warnings: list[str]
+    # One entry per grant that allows sending here. A send passes when one
+    # of them allows it. Empty when no grant allows sending.
+    sending: list[SendLimit]
 
 
 @dataclass(frozen=True)
@@ -57,18 +60,32 @@ class UserService:
     # --- the caller itself --------------------------------------------------
 
     def me(self, access: Access) -> EffectiveRights:
+        return self._effective(access, visible_to=None)
+
+    def rights_of(self, access: Access, user_id: str) -> EffectiveRights:
+        """What a user may do, its direct grants and those of its roles
+        together. Only accounts the caller can see are listed."""
+        access.require("get_user")
+        user = self._users.get(user_id)
+        roles = {role.id: role for role in self._roles.list()}
+        return self._effective(Access.for_user(user, roles), visible_to=access)
+
+    def _effective(self, access: Access, visible_to: Access | None) -> EffectiveRights:
         accounts = []
         for account_id in self._adapters.ids():
+            if visible_to is not None and not visible_to.sees(account_id):
+                continue
             operations = access.operations_on(account_id)
             if operations:
                 account = self._adapters.record(account_id)
                 accounts.append(
                     AccountRights(
-                        account.id,
-                        account.email,
-                        account.display_name,
-                        sorted(operations),
-                        _warnings(access, account_id, operations),
+                        id=account.id,
+                        email=account.email,
+                        display_name=account.display_name,
+                        operations=sorted(operations),
+                        warnings=_warnings(access, account_id, operations),
+                        sending=access.send_limits("send_message", account_id),
                     )
                 )
         return EffectiveRights(

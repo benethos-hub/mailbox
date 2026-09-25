@@ -33,6 +33,45 @@
   </div>
 </section>
 
+<section class="card">
+  <header>
+    <h2>Effective rights</h2>
+    <span class="meta">The grants of the user and of its roles together{% if user.disabled %}. They apply once the user is enabled again{% endif %}.</span>
+  </header>
+  <div class="body tight">
+    {% if effective.accounts %}
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Account</th><th>May</th><th>Sending</th></tr></thead>
+        <tbody>
+          {% for row in effective.accounts %}
+          <tr>
+            <td class="name">{{ row.email }}{% for warning in row.warnings %}<span class="sub"><span class="tag warn" title="It may read mail here and send it to any address. A mail with injected instructions could use that to carry data out.">reads and sends anywhere</span></span>{% endfor %}</td>
+            <td>{% for group in row.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for operation in row.operations %}<span class="tag mono">{{ operation }}</span> {% endfor %}</td>
+            <td>
+              {% for limit in row.sending %}
+              <div>{% if limit.recipients is none %}to anyone{% else %}to {{ limit.recipients | join(", ") }}{% endif %}, {% if limit.max_per_day is none %}no daily limit{% else %}at most {{ limit.max_per_day }} a day{% endif %}</div>
+              {% else %}<span class="muted">—</span>{% endfor %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">No rights on any account you can see.</p>
+    {% endif %}
+  </div>
+  {% if effective.groups or effective.operations %}
+  <div class="body">
+    <dl class="facts">
+      <dt>Beyond accounts</dt>
+      <dd>{% for group in effective.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for operation in effective.operations %}<span class="tag mono">{{ operation }}</span> {% endfor %}</dd>
+    </dl>
+  </div>
+  {% endif %}
+</section>
+
 {% if can_list_tokens %}
 <section class="card">
   <header><h2>Tokens</h2><span class="meta">{{ tokens | length }}</span></header>
