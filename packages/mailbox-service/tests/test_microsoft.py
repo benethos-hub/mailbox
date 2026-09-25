@@ -220,6 +220,17 @@ async def test_trash_then_for_good(graph: FakeGraph) -> None:
     assert gone is None and message_id not in graph.messages
 
 
+async def test_message_headers_come_in_one_batch(graph: FakeGraph) -> None:
+    ids = [graph.add_message(subject=f"m{n}") for n in range(3)]
+    provider = adapter(graph)
+    before = len(graph.requests)  # the fake answers a batch through itself
+    found = await provider.message_headers([*ids, "AAMk999="])
+    posted = [r for r in graph.requests[before:] if r.method == "POST"]
+    assert [r.url.path for r in posted] == ["/v1.0/$batch"]
+    assert set(found) == set(ids)
+    assert all(v is not None and v.startswith("<") for v in found.values())
+
+
 async def test_for_good_from_the_inbox(graph: FakeGraph) -> None:
     message_id = graph.add_message()
     provider = adapter(graph)
@@ -249,7 +260,7 @@ async def test_graph_asking_to_wait_is_left_alone(graph: FakeGraph) -> None:
     )
     with pytest.raises(ProviderUnavailableError, match="retry after 30s"):
         await provider.list_folders()
-    before = len(graph.requests)
+    before = len(graph.requests)  # the fake answers a batch through itself
     with pytest.raises(ProviderUnavailableError, match="next attempt in 30s"):
         await provider.list_folders()
     assert len(graph.requests) == before

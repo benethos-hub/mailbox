@@ -8,6 +8,7 @@ retried with backoff and then left alone for a growing pause.
 from __future__ import annotations
 
 import math
+import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -42,15 +43,20 @@ class Guard:
         self._login_rejected = False
         self._failures = 0
         self._paused_until = 0.0
+        # The adapter's own lock covers its session. A send over SMTP runs
+        # outside it, in a thread of its own, so the state here has one.
+        self._state = threading.Lock()
 
     def check(self) -> None:
         """Refuse at once while a login stands rejected or the server rests."""
-        if self._login_rejected:
+        with self._state:
+            rejected = self._login_rejected
+            wait = self._paused_until - self._clock()
+        if rejected:
             raise ProviderAuthError(
                 "the server rejected the login before: no new attempt until the "
                 "credential is replaced or the account is verified"
             )
-        wait = self._paused_until - self._clock()
         if wait > 0:
             raise ProviderUnavailableError(
                 f"the mail server was unreachable: next attempt in {math.ceil(wait)}s"
@@ -66,14 +72,16 @@ class Guard:
         try:
             yield
         except ProviderAuthError:
-            self._login_rejected = True
+            with self._state:
+                self._login_rejected = True
             raise
 
     def reset(self) -> None:
         """Forget rejections and pauses, before a deliberate new attempt."""
-        self._login_rejected = False
-        self._failures = 0
-        self._paused_until = 0.0
+        with self._state:
+            self._login_rejected = False
+            self._failures = 0
+            self._paused_until = 0.0
 
     def once(self, step: Callable[[], T]) -> T:
         """Run ``step`` once, paced, refused while a login stands rejected
@@ -107,13 +115,15 @@ class Guard:
                 # connection may still be in a bad state: start afresh.
                 drop()
                 raise
-            self._failures = 0
+            with self._state:
+                self._failures = 0
             return result
         self._pause()
         assert last is not None
         raise last
 
     def _pause(self) -> None:
-        self._failures += 1
-        pause = min(LONGEST_PAUSE, FIRST_PAUSE * 2 ** (self._failures - 1))
-        self._paused_until = self._clock() + pause
+        with self._state:
+            self._failures += 1
+            pause = min(LONGEST_PAUSE, FIRST_PAUSE * 2 ** (self._failures - 1))
+            self._paused_until = self._clock() + pause

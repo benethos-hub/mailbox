@@ -6421,6 +6421,7 @@
           "has_attachments": {
             "type": "boolean",
             "title": "Has Attachments",
+            "description": "In a list of an IMAP account, whether the message is multipart/mixed, which a list can tell without reading the message. The message itself says whether it has attachments.",
             "default": false
           },
           "cc": {
@@ -6740,6 +6741,7 @@
           "has_attachments": {
             "type": "boolean",
             "title": "Has Attachments",
+            "description": "In a list of an IMAP account, whether the message is multipart/mixed, which a list can tell without reading the message. The message itself says whether it has attachments.",
             "default": false
           }
         },

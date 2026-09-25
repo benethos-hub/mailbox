@@ -456,6 +456,9 @@ class MicrosoftProvider:
     # these serve checks such as "is the folder empty".
 
     async def folder_states(self) -> dict[str, str]:
+        """Graph reports no UIDNEXT: the counts stand in. A message that
+        arrives read while another leaves goes unnoticed until the next
+        change, which the sync then catches up on."""
         return {f.id: f"{f.total}:{f.unread}" for f in await self.list_folders()}
 
     async def folder_contents(self, folder_id: str) -> list[str]:
@@ -466,17 +469,27 @@ class MicrosoftProvider:
         return [str(item["id"]) for item in items]
 
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+        """Twenty to a JSON batch. A message that is gone is left out."""
         found: dict[str, str | None] = {}
-        for message_id in message_ids:
-            try:
-                item = await self._json(
-                    "GET",
-                    f"/me/messages/{_id(message_id)}",
-                    params={"$select": "internetMessageId"},
-                )
-            except NotFoundError:
-                continue
-            found[message_id] = item.get("internetMessageId")
+        for start in range(0, len(message_ids), BATCH_SIZE):
+            chunk = message_ids[start : start + BATCH_SIZE]
+            requests = [
+                {
+                    "id": str(n),
+                    "method": "GET",
+                    "url": f"/me/messages/{_id(message_id)}?$select=internetMessageId",
+                    "headers": {"Prefer": IMMUTABLE_IDS},
+                }
+                for n, message_id in enumerate(chunk)
+            ]
+            answer = await self._json(
+                "POST", "/$batch", json_body={"requests": requests}
+            )
+            for reply in answer.get("responses") or []:
+                if reply.get("status") != 200:
+                    continue
+                body = reply.get("body") or {}
+                found[chunk[int(reply["id"])]] = body.get("internetMessageId")
         return found
 
     async def wait_for_change(self, timeout: float) -> bool:
