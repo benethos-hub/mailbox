@@ -1,6 +1,6 @@
 {% from "components/ui.html" import pager %}
 {# A page of messages. ``emails``: the account column, for lists across
-   accounts; without it, one account's list. ``selectable``: a tick box
+   accounts. Without it, one account's list. ``selectable``: a tick box
    per message for the form ``batch``. ``open_as="drafts"``: links open
    the draft editor. #}
 {% set opens = open_as if open_as is defined else "mail" %}

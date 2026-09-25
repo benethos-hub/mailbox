@@ -107,7 +107,7 @@ async def batch(
     failed = [r for r in result.results if not r.ok]
     done = len(result.results) - len(failed)
     if failed:
-        reasons = "; ".join(
+        reasons = ". ".join(
             sorted({r.error.message for r in failed if r.error is not None})
         )
         return back(listing, f"{done} done.", error=f"{len(failed)} failed: {reasons}")

@@ -165,7 +165,7 @@ def key_provider(settings: Settings) -> KeyProvider:
     """The key provider the settings name."""
     if settings.key_provider == "env":
         logging.getLogger(__name__).warning(
-            "the master key comes from MAILBOX_SERVICE_MASTER_KEY; the environment "
+            "the master key comes from MAILBOX_SERVICE_MASTER_KEY. The environment "
             "shows up in process listings and container inspection"
         )
         value = settings.master_key.get_secret_value() if settings.master_key else None

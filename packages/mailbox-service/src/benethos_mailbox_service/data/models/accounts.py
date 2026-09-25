@@ -40,6 +40,6 @@ class Account(BaseModel):
         default_factory=dict,
         description=(
             "The connection settings: host, port, security, username, "
-            "smtp_host, ... Never a secret; those are `credentials`."
+            "smtp_host, ... Never a secret. Secrets are `credentials`."
         ),
     )

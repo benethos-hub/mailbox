@@ -35,7 +35,7 @@ class AccountUpdate(BaseModel):
     settings: dict[str, str | int | bool | None] = Field(
         default_factory=dict,
         description=(
-            "Settings to change, merged into the current ones; `null` removes "
+            "Settings to change, merged into the current ones. `null` removes "
             "one. E.g. `smtp_host`, `smtp_port`, `smtp_security` for sending."
         ),
     )

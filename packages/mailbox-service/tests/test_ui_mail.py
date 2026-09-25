@@ -89,7 +89,7 @@ def test_an_html_only_message_is_shown_as_its_text(
         3
     ].html_body = '<p>Dear <b>you</b></p><img src="https://tracker.example/p.gif">'
     page = ui.get(f"/ui/accounts/{account_id}/mail/m3").text
-    assert "Written as HTML; shown here as text." in page
+    assert "Written as HTML, shown here as text." in page
     assert "Dear you" in page
     assert "tracker.example" not in page
 

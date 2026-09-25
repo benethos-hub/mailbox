@@ -77,7 +77,7 @@
 <section class="card">
   <header>
     <h2>Message</h2>
-    {% if from_html %}<span class="meta">Written as HTML; shown here as text.</span>{% elif message.html_body %}<span class="meta">Also has an HTML part, not shown.</span>{% endif %}
+    {% if from_html %}<span class="meta">Written as HTML, shown here as text.</span>{% elif message.html_body %}<span class="meta">Also has an HTML part, not shown.</span>{% endif %}
   </header>
   <div class="body">
     {% if body %}<pre class="mail-body">{{ body }}</pre>{% else %}<div class="empty">No text.</div>{% endif %}

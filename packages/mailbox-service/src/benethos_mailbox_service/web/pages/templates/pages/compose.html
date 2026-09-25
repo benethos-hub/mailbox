@@ -17,7 +17,7 @@
     <p class="muted">The draft holds its {{ "forward" if verb == "forward" else "quote" }} already. Saved or sent, it stays linked to this message{% if verb != "forward" %} and in its thread{% endif %}.</p>
     {% else %}
     <p class="muted">
-      {% if values.action == "forward" %}The original goes along below your text, with its attachments.{% else %}Your text comes first; the original is quoted below it.{% endif %}
+      {% if values.action == "forward" %}The original goes along below your text, with its attachments.{% else %}Your text comes first. The original is quoted below it.{% endif %}
       Empty fields are filled in from the original: {% if values.action == "forward" %}the subject.{% else %}recipients and subject.{% endif %}
     </p>
     {% endif %}
@@ -64,7 +64,7 @@
       <details class="fold"{% if values.get('html') %} open{% endif %}>
         <summary>HTML version</summary>
         <div class="field">
-          <textarea id="f-html" name="html" rows="8" aria-label="HTML version" placeholder="Optional. Sent beside the text; without text, the text is made from it.">{{ values.get('html', '') }}</textarea>
+          <textarea id="f-html" name="html" rows="8" aria-label="HTML version" placeholder="Optional. Sent beside the text. Without text, the text is made from it.">{{ values.get('html', '') }}</textarea>
         </div>
       </details>
       {% if values.get("action") == "forward" %}
