@@ -123,7 +123,24 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 5 – More providers and the configuration UI
 
-- `microsoft` adapter over Graph with OAuth (5.4)
+- `microsoft` adapter over Graph with OAuth (5.4), next, prepared step by
+  step so that it can be tested once the prerequisites exist:
+  1. OAuth core for every provider: authorization code with PKCE, `state`
+     bound to the user, refresh token in the vault, access token in memory,
+     rotation, `invalid_grant` to `needs_reauth`; client id, tenant and
+     secret per deployment
+  2. the OAuth round trip in the API and the UI: sign in with Microsoft
+     when connecting, sign in again on the account page
+  3. the `microsoft` adapter behind `MailProvider`: folders, list and
+     search, message, MIME source, attachments, flags, move, delete,
+     drafts, `sendMail`, immutable ids
+  4. a live check against a Microsoft test account
+  - open, to be decided: who may sign in (`common` proposed), where the
+    callback ends (`/ui/oauth/{provider}/callback` proposed, CONCEPT has
+    it under `/v1`)
+  - needed before step 4, by the operator: an app registration in Entra ID
+    (delegated `Mail.ReadWrite`, `Mail.Send`, `offline_access`, redirect
+    URI, client secret) and a Microsoft test account
 - `gmail` adapter with OAuth, own Google Cloud client per deployment (5.5)
 - Gmail history and Graph delta in the worker
 - `jmap` adapter for Fastmail and JMAP servers (5.6)
