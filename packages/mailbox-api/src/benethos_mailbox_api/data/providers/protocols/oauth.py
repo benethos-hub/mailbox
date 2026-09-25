@@ -116,7 +116,8 @@ class OAuthClient:
     ) -> None:
         self.app = app
         self._http = http
-        self._clock = clock
+        # Stamps ``expires_at``; a token source judges expiry by the same clock.
+        self.clock = clock
 
     async def exchange(self, code: str, redirect_uri: str, verifier: str) -> Tokens:
         """The tokens for the code the browser came back with."""
@@ -165,7 +166,7 @@ class OAuthClient:
         id_token = body.get("id_token")
         return Tokens(
             access_token=SecretStr(access),
-            expires_at=self._clock() + timedelta(seconds=seconds),
+            expires_at=self.clock() + timedelta(seconds=seconds),
             refresh_token=SecretStr(refresh) if isinstance(refresh, str) else None,
             identity=identity_of(id_token) if isinstance(id_token, str) else None,
         )
@@ -213,13 +214,15 @@ class RefreshingTokens:
         client: OAuthClient,
         read_refresh: Callable[[], SecretStr],
         store_refresh: Callable[[SecretStr], None],
-        clock: Callable[[], datetime] = utc_now,
+        clock: Callable[[], datetime] | None = None,
         current: Tokens | None = None,
     ) -> None:
+        """``clock`` defaults to the client's: the one that stamped
+        ``expires_at`` decides when a token is spent."""
         self._client = client
         self._read = read_refresh
         self._store = store_refresh
-        self._clock = clock
+        self._clock = clock or client.clock
         self._current = current
         self._lock = anyio.Lock()
 
