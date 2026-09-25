@@ -115,7 +115,7 @@ Everything real mail will depend on, before any real mailbox is connected.
   address (8.1)**, done: `containers/`. Both images are built and the
   service smoke-tested by `ci.yml`, and published for amd64 and arm64 with
   each release by `publish.yml`, beside the PyPI packages (decided
-  2026-09-25). Not yet run on GitHub.
+  2026-09-25). `ci.yml` runs on every pull request.
 
 ## Phase 4 – Change feed and webhooks
 

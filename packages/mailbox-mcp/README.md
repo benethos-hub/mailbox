@@ -250,4 +250,6 @@ the mail first. With `drafts` alone it writes drafts for a person to send.
 
 Mail content comes back inside `<mail-content>` markers, the headers and
 attachment names as much as the body. Strangers wrote it, so it is data,
-not instructions. HTML is turned into text without its hidden parts.
+not instructions. A list of messages, which is JSON, carries a `note`
+saying the same of `from` and `subject`. HTML is turned into text without
+its hidden parts.

@@ -173,7 +173,9 @@ Ids are opaque strings to clients. Nothing may parse them.
   worker (8.1): a message that leaves one folder and one with the same
   `Message-ID` that arrives in another is the same message, and keeps its
   id. A `UIDVALIDITY` change is handled the same way.
-- **A lookup that misses** syncs the account once and tries again.
+- **A lookup that finds the message gone** from its place syncs the
+  account once and tries again. Only the message itself counts: a
+  missing attachment, draft or folder is not a moved message.
 - **Ambiguous matches are never guessed.** Several candidates with the same
   `Message-ID`, or none, and the old id answers `404`.
 
@@ -514,10 +516,16 @@ The service therefore behaves conservatively towards every provider:
   account goes to `needs_reauth`, the event `account.needs_reauth` is raised,
   and nothing tries that credential again until it is replaced or a person
   runs `verify`. Repeating a wrong password is exactly what triggers a lock.
+  A connection the server drops during the login is not a failed login:
+  it is retried like any other dropped connection.
 - **Backoff on everything else.** Timeouts, connection errors, `429` and
   `503` are retried with exponential backoff and jitter, `Retry-After` is
-  honoured, and a persistently unreachable account is shown as
-  `unreachable` rather than hammered.
+  honoured (Graph's as a pause during which nothing is sent), and a
+  persistently unreachable account is shown as `unreachable` rather than
+  hammered. A retried step must not do its work twice: an IMAP `APPEND`
+  is preceded by a search for the message's `Message-ID`, so a draft or a
+  sent copy stored before the connection dropped is found, not stored
+  again.
 - **Push before polling.** `IDLE` where offered, renewed before the 29
   minutes of RFC 2177 run out. Polling intervals are per preset and
   conservative.
@@ -541,6 +549,9 @@ To be kept in mind from the first IMAP line on, and covered by tests:
   (autodiscovery), Unicode in the API.
 - **Addresses with non-ASCII local parts** need SMTPUTF8 (RFC 6531). Sent
   only when the server announces it, otherwise refused with a clear error.
+  Domains go in punycode on the envelope.
+- **Bodies are composed 7bit clean**: text beyond ASCII is encoded, since
+  the service asks no SMTP server for 8BITMIME.
 - **Dates** in every format a `Date` header has ever carried. Stored and
   returned in UTC with offset.
 
@@ -615,7 +626,10 @@ Rules of the implementation (phase 2):
 A message already in the trash answers `DELETE` without `permanent` with
 `409`: otherwise two calls with `mail.write` would delete for good what
 needs `mail.delete`. Deleting for good needs `UIDPLUS` on an IMAP server,
-for the same reason as a move.
+for the same reason as a move. On Microsoft, Graph's delete of a message
+outside Deleted Items only moves it there, so the adapter moves the
+message into the trash and deletes it from there; a deleted or replaced
+draft goes the same way.
 
 `keywords` follow JMAP (RFC 8621): `$answered`, `$forwarded`, `$draft` and
 the provider's own keywords as they are. `\Seen` and `\Flagged` are
@@ -690,10 +704,11 @@ is a later option (see IDEAS.md).
 
 `Idempotency-Key`: the result of the first request is stored for 24 hours.
 The same key with the same body returns the stored result, with a different
-body `409 idempotency_conflict`. A key counts per account. Requests with the
-same key run one after the other, so a retry that arrives while the first
-is still sending waits for its result. A request that fails stores nothing
-and may be tried again.
+body `409 idempotency_conflict`. A key counts per account and per caller:
+the same key from another user is a conflict, never the first caller's
+result. Requests with the same key run one after the other, so a retry
+that arrives while the first is still sending waits for its result. A
+request that fails stores nothing and may be tried again.
 
 ### 6.5 Changes and webhooks
 
@@ -1158,10 +1173,11 @@ makes it visible.
 What applies in both modes:
 
 1. **Mark content as foreign.** MCP tool output wraps everything taken from
-   a mail (subject, sender name, body, attachment text) in clear
-   delimiters, and the server instructions tell the model that this is
-   content of a mail, never an instruction. This lowers the risk, it does
-   not remove it.
+   a mail (the headers with subject and sender, the body, attachment names
+   and text) in clear delimiters, and the server instructions tell the
+   model that this is content of a mail, never an instruction. A list of
+   messages, which is JSON, carries a note that `from` and `subject` are
+   the sender's words. This lowers the risk, it does not remove it.
 2. **Show the model what a person sees.** The HTML to text conversion drops
    hidden content: `display:none`, zero-size or invisible text, comments.
    Hidden text is a common carrier of injected instructions.
