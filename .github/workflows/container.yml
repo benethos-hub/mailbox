@@ -1,15 +1,12 @@
 # Checks, then the images of the service and the MCP server for linux/amd64
 # and linux/arm64, pushed to the GitHub container registry of the
-# repository's owner.
+# repository's owner. Started by hand only, until the images are
+# published as part of a release.
 # See containers/README.md for the tags.
 
 name: container
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
-  pull_request:
   workflow_dispatch:
 
 permissions:
