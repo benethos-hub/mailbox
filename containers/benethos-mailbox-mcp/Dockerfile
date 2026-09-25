@@ -10,7 +10,7 @@
 
 # Base images are named in FROM directly, so Dependabot can update them.
 
-FROM ghcr.io/astral-sh/uv:0.12.5 AS uv
+FROM ghcr.io/astral-sh/uv:0.12.19 AS uv
 
 # --- build: a virtual environment with the MCP server and its dependencies ----
 FROM python:3.13-slim AS build
