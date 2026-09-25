@@ -83,6 +83,11 @@ REST client can do too.
   session. Sessions end after 8 hours without a request and with a
   restart. A content security policy allows no inline script or style and
   no framing. A form answers with a redirect (Post/Redirect/Get).
+  Guessing is slowed down: a client address that fails to sign in ten
+  times within fifteen minutes is locked out for fifteen minutes, on the
+  UI and on the API alike, whatever the credential kind. Behind a proxy,
+  `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` names the proxy so the client
+  address comes from `X-Forwarded-For`.
 - **No HTTP below the web layer**, no decisions in the data layer,
   providers reached only through their registry. A test checks the
   direction of every import.

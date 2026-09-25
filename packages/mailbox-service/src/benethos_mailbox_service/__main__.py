@@ -103,6 +103,7 @@ def _run(args: argparse.Namespace) -> int:
             host=args.host or settings.host,
             port=args.port or settings.port,
             log_level=settings.log_level.lower(),
+            forwarded_allow_ips=settings.forwarded_allow_ips,
         )
     return 0
 

@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     # behind a proxy. Builds the OAuth redirect address, which the provider
     # must know. Empty: taken from each request.
     public_url: str | None = None
+    # Behind a reverse proxy: the proxy's address (or several, separated by
+    # commas, or "*"), whose X-Forwarded-For, -Proto and -Host headers are
+    # believed. They give the client address that the sign-in throttle
+    # counts, the scheme the session cookie's Secure flag follows and the
+    # host the OAuth redirect is built from without a public URL. Empty:
+    # only a proxy on 127.0.0.1 is believed.
+    forwarded_allow_ips: str | None = None
     # The built-in admin key. Read from MAILBOX_SERVICE_KEY, not the prefixed
     # MAILBOX_SERVICE_API_KEY.
     api_key: SecretStr | None = Field(

@@ -78,6 +78,7 @@ A template for the settings file with every option:
 |---|---|---|
 | `MAILBOX_SERVICE_HOST`, `MAILBOX_SERVICE_PORT` | `127.0.0.1`, `8080` | where the service listens (`serve --host/--port` win) |
 | `MAILBOX_SERVICE_PUBLIC_URL` | from each request | the address people reach the service at, e.g. behind a proxy. The OAuth redirect address is built from it. |
+| `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` | `127.0.0.1` | behind a reverse proxy: its address, whose `X-Forwarded-*` headers give the client address, scheme and host |
 | `MAILBOX_SERVICE_LOG_LEVEL` | `INFO` | |
 | `MAILBOX_SERVICE_DATA_DIR` | `data/benethos-mailbox-service` | where the database lives |
 | `MAILBOX_SERVICE_STORAGE` | `sqlite` | or `memory`, which keeps nothing |
