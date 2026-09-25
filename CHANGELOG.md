@@ -47,8 +47,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   `/ui/oauth/{provider}/callback`. Only the refresh token is stored. The
   configuration UI offers "Sign in with Microsoft" when connecting and
   "Sign in again" on the account page. `MAILBOX_API_PUBLIC_URL` sets the
-  address the redirect is built from. Microsoft accounts need the
-  `microsoft` adapter, which is not there yet.
+  address the redirect is built from.
+- The `microsoft` adapter: Outlook.com and Microsoft 365 over Microsoft
+  Graph, connected by OAuth. Folders, lists and search, messages,
+  attachments, the source, flags, categories as keywords, moving,
+  deleting, drafts and sending; message ids stay the same when a message
+  moves. Not yet checked against a live Microsoft account.
 
 - A draft read with `get_message` carries its `reference`. A reference
   with `quote: false` keeps the link to the original without adding its

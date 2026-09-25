@@ -18,6 +18,7 @@ from .base import Capability, CredentialReader, MailProvider, TokenSource
 from .imap import ImapProvider
 from .imap import probe as probe_imap
 from .memory import MemoryProvider
+from .microsoft import MicrosoftProvider
 
 ProviderSettings = Mapping[str, str | int | bool]
 
@@ -45,6 +46,12 @@ _REGISTRY: dict[
     ProviderType.MEMORY: lambda _settings, _credentials: MemoryProvider(),
     ProviderType.IMAP: ImapProvider,
 }
+# Providers that sign in with OAuth: they get a token source instead.
+_SIGNED_IN: dict[
+    ProviderType, Callable[[ProviderSettings, TokenSource], MailProvider]
+] = {
+    ProviderType.MICROSOFT: lambda _settings, tokens: MicrosoftProvider(tokens),
+}
 
 
 def build_provider(
@@ -56,6 +63,12 @@ def build_provider(
     tokens: TokenSource | None = None,
 ) -> MailProvider:
     """A new adapter for one account."""
+    if kind in _SIGNED_IN:
+        if tokens is None:
+            raise NotSupportedError(
+                f"no OAuth app for {kind} is set up in this deployment"
+            )
+        return _SIGNED_IN[kind](settings, tokens)
     try:
         factory = _REGISTRY[kind]
     except KeyError:

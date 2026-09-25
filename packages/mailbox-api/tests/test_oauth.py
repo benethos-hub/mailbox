@@ -432,3 +432,19 @@ def test_the_client_secret_from_a_file(tmp_path: Any) -> None:
     )
     found = settings.oauth_microsoft_secret()
     assert found is not None and found.get_secret_value() == "from-a-file"
+
+
+async def test_a_query_in_the_url_is_kept() -> None:
+    seen: list[str] = []
+
+    def record(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200, json={})
+
+    api = ApiClient(transport=httpx.MockTransport(record))
+    await api.request("GET", "https://graph.example/next?%24skip=10")
+    await api.request("GET", "https://graph.example/list", params={"$top": "5"})
+    assert seen == [
+        "https://graph.example/next?%24skip=10",
+        "https://graph.example/list?%24top=5",
+    ]

@@ -149,7 +149,8 @@ packages/
                           #   imap.py (IMAPClient), smtp.py (smtplib)
           guard.py        # pacing, retries, blocked logins, for any adapter
           sender.py       # SmtpSender: sending for IMAP, POP3, ...
-          imap/, memory/  # one directory per provider (adapter)
+          imap/, memory/, # one directory per provider (adapter)
+          microsoft/      #   microsoft: Graph over data/http, by OAuth
         http/             # httpx: safe.py (hosts users typed, SSRF guard),
                           #   api.py (JSON to a provider's known hosts)
         oauth.py          # OAuth 2.0 with PKCE, refresh, the token source
@@ -242,7 +243,7 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap; planned: gmail, microsoft, pop3 | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, microsoft; planned: gmail, pop3 | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/providers/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI; later templates for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`) | in-memory, SQLite | another database |

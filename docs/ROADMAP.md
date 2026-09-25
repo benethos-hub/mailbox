@@ -131,9 +131,10 @@ Everything real mail will depend on, before any real mailbox is connected.
      and secret per deployment**, done
   2. **the OAuth round trip in the API and the UI: sign in with Microsoft
      when connecting, sign in again on the account page**, done
-  3. the `microsoft` adapter behind `MailProvider`: folders, list and
+  3. **the `microsoft` adapter behind `MailProvider`: folders, list and
      search, message, MIME source, attachments, flags, move, delete,
-     drafts, `sendMail`, immutable ids
+     drafts, `sendMail`, immutable ids**, done offline against a Graph
+     fake; what Graph's documentation leaves open is marked unverified
   4. a live check against a Microsoft test account
   - open, to be decided: who may sign in (`common` proposed), where the
     callback ends (`/ui/oauth/{provider}/callback` proposed, CONCEPT has
