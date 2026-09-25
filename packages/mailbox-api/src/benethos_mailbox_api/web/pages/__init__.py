@@ -26,6 +26,7 @@ from .errors import error_page
 from .routes import (
     accounts,
     compose,
+    drafts,
     folders,
     home,
     login,
@@ -37,7 +38,7 @@ from .routes import (
 from .session import PATH, SessionStore, SignInRequired
 from .templates import STATIC_DIR, is_htmx
 
-AREAS = (login, home, accounts, mail, messages, folders, compose, sends, users)
+AREAS = (login, home, accounts, mail, messages, folders, compose, drafts, sends, users)
 
 # No inline script or style, no framing, nothing loaded from elsewhere.
 SECURITY_HEADERS = [
