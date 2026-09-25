@@ -681,7 +681,7 @@ Rules of the implementation for drafts (phase 2):
   the new one is appended and the old one deleted. The id follows through
   the id mapping (4.1).
 - A draft keeps its Bcc recipients, and its `reference` in the header
-  `X-Mailbox-Api-Reference`, until it is sent. Both are removed before it
+  `X-Mailbox-Service-Reference`, until it is sent. Both are removed before it
   goes out. The quote of a reply or forward is written when the draft is
   made, as a mail client does.
 - `get_message` shows a draft's `reference`. Replaced with that reference

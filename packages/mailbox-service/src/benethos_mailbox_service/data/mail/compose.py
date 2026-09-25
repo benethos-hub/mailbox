@@ -23,7 +23,7 @@ from .fields import message_id as one_message_id
 from .text import from_html
 
 # Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
-REFERENCE_HEADER = "X-Mailbox-Api-Reference"
+REFERENCE_HEADER = "X-Mailbox-Service-Reference"
 
 
 def write_reference(reference: MessageReference) -> str:

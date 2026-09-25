@@ -301,7 +301,7 @@ async def test_drafts(graph: FakeGraph) -> None:
     provider = adapter(graph)
     raw = (
         b"From: me@example.org\r\nTo: bob@example.org\r\nSubject: Plan\r\n"
-        b"X-Mailbox-Api-Reference: reply AAMk1=\r\nIn-Reply-To: <x@example.com>\r\n"
+        b"X-Mailbox-Service-Reference: reply AAMk1=\r\nIn-Reply-To: <x@example.com>\r\n"
         b"Content-Type: text/plain\r\n\r\nFirst\r\n"
     )
     saved = await provider.save_draft(raw, None)

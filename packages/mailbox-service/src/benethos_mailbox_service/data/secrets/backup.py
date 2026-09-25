@@ -19,7 +19,7 @@ from ..storage import Database, inspect_snapshot
 from ..storage.sqlite import SCHEMA_VERSION
 from . import cipher
 
-MAGIC = b"MAILBOX-API-BACKUP 1\n"
+MAGIC = b"MAILBOX-SERVICE-BACKUP 1\n"
 _KEY_INFO = b"mailbox-service backup v1"
 
 

@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The last two places with the old name use the new one. A draft marks
+  what it replies to with `X-Mailbox-Service-Reference` (was
+  `X-Mailbox-Api-Reference`), and a backup starts with
+  `MAILBOX-SERVICE-BACKUP 1` (was `MAILBOX-API-BACKUP 1`). A backup
+  made by 0.1.0 is refused. A draft saved by 0.1.0 loses its reference,
+  and the old header stays in the mail when that draft is sent.
+
 ## [0.1.0] - 2026-09-25
 
 Pre-alpha. Not ready for production use: the API, the stored data and
