@@ -41,23 +41,23 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from smoke import ENV_FILE, Run, accounts, imap_settings, read_env
 
-from benethos_mailbox_api.config import Settings
-from benethos_mailbox_api.data.secrets import cipher, encode_recovery
-from benethos_mailbox_api.errors import MailboxApiError
-from benethos_mailbox_api.main import build_services, create_app
+from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.data.secrets import cipher, encode_recovery
+from benethos_mailbox_service.errors import MailboxServiceError
+from benethos_mailbox_service.main import build_services, create_app
 
 IDLE_WAIT = 90.0
 # How long the mail may take from SMTP to the inbox.
 DELIVERY_TRIES = 10
 DELIVERY_PAUSE = 3.0
 # Set and cleared again on the test mail.
-LIVE_KEYWORD = "$mailbox-api-live"
+LIVE_KEYWORD = "$mailbox-service-live"
 TEXT = (
-    "Automatic test mail of live/changes.py in the mailbox-api repository.\n"
+    "Automatic test mail of live/changes.py in the mailbox-service repository.\n"
     "It deletes itself when the check is over.\n"
 )
 KEPT_TEXT = (
-    "Automatic test mail of live/changes.py in the mailbox-api repository.\n"
+    "Automatic test mail of live/changes.py in the mailbox-service repository.\n"
     "It was kept for inspection (--keep): delete it by hand.\n"
 )
 
@@ -368,8 +368,8 @@ def main() -> int:
         sys.exit("needs two test accounts and LIVE_IMAP_HOST")
     receiver, sender = listed[0], listed[1]
     token = uuid.uuid4().hex[:12]
-    subject = f"mailbox-api live check {token}"
-    base = f"mailbox-api-live-{token}"
+    subject = f"mailbox-service live check {token}"
+    base = f"mailbox-service-live-{token}"
     folder = base
 
     settings = Settings(
@@ -418,7 +418,7 @@ def main() -> int:
         try:
             changed = anyio.run(idle_while_sending, provider, send)
             run.check("IDLE reports the new mail", changed)
-        except MailboxApiError as exc:
+        except MailboxServiceError as exc:
             run.check("IDLE reports the new mail", False, f"{exc.code}: {exc.message}")
         body = answer.get("body", {})
         run.check(

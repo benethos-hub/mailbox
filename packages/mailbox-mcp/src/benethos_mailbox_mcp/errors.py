@@ -15,7 +15,7 @@ class ToolError(_McpToolError):
 
 
 class ServiceUnavailableError(ToolError):
-    """The Mailbox API service is not running or not reachable."""
+    """The mailbox service is not running or not reachable."""
 
 
 class ApiError(ToolError):

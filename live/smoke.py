@@ -30,10 +30,10 @@ import anyio
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from benethos_mailbox_api.config import Settings
-from benethos_mailbox_api.data.secrets import cipher, encode_recovery
-from benethos_mailbox_api.errors import MailboxApiError
-from benethos_mailbox_api.main import build_services, create_app
+from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.data.secrets import cipher, encode_recovery
+from benethos_mailbox_service.errors import MailboxServiceError
+from benethos_mailbox_service.main import build_services, create_app
 
 ENV_FILE = Path(__file__).with_name(".env")
 
@@ -353,7 +353,7 @@ def main() -> int:
             run.check("one pass", True, f"{len(states)} folders indexed")
             anyio.run(services.sync.sync_account, account_id)
             run.check("a second pass right after", True)
-        except MailboxApiError as exc:
+        except MailboxServiceError as exc:
             run.check("one pass", False, f"{exc.code}: {exc.message}")
 
     if args.wrong_password and used:

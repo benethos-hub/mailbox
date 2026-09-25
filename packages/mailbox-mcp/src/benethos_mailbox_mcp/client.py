@@ -1,4 +1,4 @@
-"""The one place that talks to the Mailbox API: its paths, the shapes it
+"""The one place that talks to the Mailbox Service: its paths, the shapes it
 takes and the shapes it answers with.
 
 The tools in ``server`` name what they want in their own terms. This
@@ -20,8 +20,8 @@ import httpx
 from .errors import ApiError, ServiceUnavailableError
 
 DEFAULT_URL = "http://127.0.0.1:8080"
-URL_ENV = "MAILBOX_API_URL"
-TOKEN_ENV = "MAILBOX_API_TOKEN"
+URL_ENV = "MAILBOX_SERVICE_URL"
+TOKEN_ENV = "MAILBOX_SERVICE_TOKEN"
 
 # An address with an optional display name.
 Recipient = tuple[str, str | None]
@@ -131,8 +131,8 @@ class MailboxApiClient:
             response = await self._http.request(method, path, **kwargs)
         except httpx.TransportError:
             raise ServiceUnavailableError(
-                f"The Mailbox API service is not reachable at {self.base_url}. "
-                "Start it with `benethos-mailbox-api serve`."
+                f"The mailbox service is not reachable at {self.base_url}. "
+                "Start it with `benethos-mailbox-service serve`."
             ) from None
         if response.is_error:
             raise _api_error(response)

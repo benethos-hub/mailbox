@@ -16,7 +16,7 @@ done. Update the roadmap in the same commit that finishes an item.
    English. Conversation with the user may be German.
 4. **The OpenAPI document is the contract.** `docs/openapi.json` is checked in
    and a test compares it with the code. After any change to a route or model,
-   regenerate it with `uv run benethos-mailbox-api openapi > docs/openapi.json`
+   regenerate it with `uv run benethos-mailbox-service openapi > docs/openapi.json`
    and review the diff like code. `operationId` is the route function name and
    must stay stable, since generated clients and the MCP server depend on it.
 5. **Secrets never travel.** Provider passwords, OAuth tokens and the API key
@@ -37,20 +37,20 @@ done. Update the roadmap in the same commit that finishes an item.
 - Windows, PowerShell or Bash. Python 3.11-3.14.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
 - Configuration: one folder per package under `config/`, e.g.
-  `config/benethos-mailbox-api/.env` (not versioned) beside its
+  `config/benethos-mailbox-service/.env` (not versioned) beside its
   `.env.example`. Paths count from the repository root, where `uv run` is
   started. Data likewise, one folder per package under `data/` (not
-  versioned): the database in `data/benethos-mailbox-api/`.
-- Run the service: once `uv run benethos-mailbox-api keys init`, then
-  `MAILBOX_API_KEY=... uv run benethos-mailbox-api serve` and
+  versioned): the database in `data/benethos-mailbox-service/`.
+- Run the service: once `uv run benethos-mailbox-service keys init`, then
+  `MAILBOX_SERVICE_KEY=... uv run benethos-mailbox-service serve` and
   `http://127.0.0.1:8080/docs`.
 - Live checks: `uv run python live/smoke.py [--show]` (read-only) and
   `uv run python live/changes.py [--keep]` (sends one test mail between the test
   accounts, moves it, deletes it), test accounts in `live/.env` (not
   versioned, template `live/.env.example`).
-  `MAILBOX_API_TOKEN=... uv run python live/register.py` adds the test
+  `MAILBOX_SERVICE_TOKEN=... uv run python live/register.py` adds the test
   accounts to a running service over its API and checks them.
-- Run the MCP server: `MAILBOX_API_TOKEN=... uv run benethos-mailbox-mcp`
+- Run the MCP server: `MAILBOX_SERVICE_TOKEN=... uv run benethos-mailbox-mcp`
   (stdio, `--transport streamable-http` for HTTP).
   For Claude Code and Claude Desktop see `packages/mailbox-mcp/README.md`.
   `uv run python live/mcp_stdio.py` checks it over stdio against the test
@@ -94,13 +94,13 @@ docs/
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test
 packages/
-  mailbox-api/            # the service, runs permanently
-    src/benethos_mailbox_api/
+  mailbox-service/            # the service, runs permanently
+    src/benethos_mailbox_service/
       __main__.py         # CLI: serve, openapi, users, keys, backup, restore
       main.py             # assembly only: create_app, picks implementations
-      config.py           # cross-cutting: Settings (MAILBOX_API_* env and
-                          #   config/benethos-mailbox-api/.env)
-      errors.py           # cross-cutting: MailboxApiError hierarchy, no HTTP
+      config.py           # cross-cutting: Settings (MAILBOX_SERVICE_* env and
+                          #   config/benethos-mailbox-service/.env)
+      errors.py           # cross-cutting: MailboxServiceError hierarchy, no HTTP
       common/             # cross-cutting: helpers several layers share,
                           #   standard library only
         ids.py            # ids of own records: acc_, usr_, msg_, ... + 64 hex
@@ -244,7 +244,7 @@ noticing. Every change is measured against that.
    it writes concurrency.
 3. **Translate at the edge.** A wrapper maps everything into this project's
    types on the way in (`data/models/`) and every failure into a
-   `MailboxApiError` subclass. Nothing upstream sees a raw library exception
+   `MailboxServiceError` subclass. Nothing upstream sees a raw library exception
    or response.
 4. **Dependencies point inward.** Routes know the store and the models. The
    models know nothing of FastAPI, SQLite or IMAP. The domain never imports

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "benethos-mailbox-mcp"
 version = "0.1.0"
-description = "MCP server that gives AI assistants such as Claude your mailboxes through the Mailbox API, limited to what its token may do. Over stdio or HTTP."
+description = "MCP server that gives AI assistants such as Claude your mailboxes through the Mailbox Service, limited to what its token may do. Over stdio or HTTP."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

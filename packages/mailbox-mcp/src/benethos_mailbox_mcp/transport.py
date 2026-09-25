@@ -6,7 +6,7 @@ so the app is built here, wrapped, and served.
 
 The guard admits callers with one shared token, ``MAILBOX_MCP_BEARER_TOKEN``.
 It is not passed on: the server calls the REST API with its own
-``MAILBOX_API_TOKEN``, whose user decides which tools exist.
+``MAILBOX_SERVICE_TOKEN``, whose user decides which tools exist.
 """
 
 from __future__ import annotations

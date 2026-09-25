@@ -6,7 +6,7 @@
 #   docker build -f containers/benethos-mailbox-mcp/Dockerfile .
 #
 # Only the MCP package goes into the image. It reaches mail through the REST
-# API of the service alone (MAILBOX_API_URL, MAILBOX_API_TOKEN).
+# API of the service alone (MAILBOX_SERVICE_URL, MAILBOX_SERVICE_TOKEN).
 
 # Base images are named in FROM directly, so Dependabot can update them.
 
@@ -37,7 +37,7 @@ COPY --from=build /opt/venv /opt/venv
 # Streamable HTTP on every interface inside the container. The compose file
 # publishes the port on the host's loopback address alone. Set
 # MAILBOX_MCP_BEARER_TOKEN, and MAILBOX_MCP_ALLOWED_HOSTS to the Host values
-# clients use. MAILBOX_API_TOKEN is the token of the user the server acts as.
+# clients use. MAILBOX_SERVICE_TOKEN is the token of the user the server acts as.
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     MAILBOX_MCP_TRANSPORT=streamable-http \

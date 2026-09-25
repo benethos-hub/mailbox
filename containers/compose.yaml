@@ -1,28 +1,28 @@
 # The service as a container, bound to the loopback address of the host
-# (CONCEPT 8.1). The first start: packages/mailbox-api/README.md, "Container".
+# (CONCEPT 8.1). The first start: packages/mailbox-service/README.md, "Container".
 #
-# MAILBOX_API_IMAGE names the image to run, e.g. from the GitHub container
-# registry: ghcr.io/<owner>/benethos-mailbox-api:<version>. Without it, the
+# MAILBOX_SERVICE_IMAGE names the image to run, e.g. from the GitHub container
+# registry: ghcr.io/<owner>/benethos-mailbox-service:<version>. Without it, the
 # image is built from this repository.
 
 name: benethos-mailbox
 
 services:
-  mailbox-api:
-    image: ${MAILBOX_API_IMAGE:-benethos-mailbox-api:local}
+  mailbox-service:
+    image: ${MAILBOX_SERVICE_IMAGE:-benethos-mailbox-service:local}
     build:
       context: ..
-      dockerfile: containers/benethos-mailbox-api/Dockerfile
+      dockerfile: containers/benethos-mailbox-service/Dockerfile
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${MAILBOX_API_PORT:-8080}:8080"
+      - "127.0.0.1:${MAILBOX_SERVICE_PORT:-8080}:8080"
     volumes:
       - data:/data
     secrets:
       - master_key
     environment:
-      MAILBOX_API_LOG_LEVEL: ${MAILBOX_API_LOG_LEVEL:-INFO}
-      MAILBOX_API_SYNC_INTERVAL: ${MAILBOX_API_SYNC_INTERVAL:-300}
+      MAILBOX_SERVICE_LOG_LEVEL: ${MAILBOX_SERVICE_LOG_LEVEL:-INFO}
+      MAILBOX_SERVICE_SYNC_INTERVAL: ${MAILBOX_SERVICE_SYNC_INTERVAL:-300}
     read_only: true
     tmpfs:
       - /tmp
@@ -43,13 +43,13 @@ services:
       dockerfile: containers/benethos-mailbox-mcp/Dockerfile
     restart: unless-stopped
     depends_on:
-      mailbox-api:
+      mailbox-service:
         condition: service_healthy
     ports:
       - "127.0.0.1:${MAILBOX_MCP_PORT:-8000}:8000"
     environment:
-      MAILBOX_API_URL: http://mailbox-api:8080
-      MAILBOX_API_TOKEN: ${MAILBOX_MCP_API_TOKEN:-}
+      MAILBOX_SERVICE_URL: http://mailbox-service:8080
+      MAILBOX_SERVICE_TOKEN: ${MAILBOX_MCP_API_TOKEN:-}
       MAILBOX_MCP_BEARER_TOKEN: ${MAILBOX_MCP_BEARER_TOKEN:-}
       # The Host values clients use: the port as published on the host.
       MAILBOX_MCP_ALLOWED_HOSTS: ${MAILBOX_MCP_ALLOWED_HOSTS:-127.0.0.1:8000,localhost:8000}

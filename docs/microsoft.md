@@ -22,7 +22,7 @@ steps below.
 | 2. Register the app | Entra, App registrations | the client id |
 | 3. Permissions | the app, API permissions | Graph mail rights |
 | 4. A client secret | the app, Certificates & secrets | the secret value |
-| 5. Configure the service | `config/benethos-mailbox-api/.env` | "Sign in with Microsoft" in the UI |
+| 5. Configure the service | `config/benethos-mailbox-service/.env` | "Sign in with Microsoft" in the UI |
 | 6. Connect an account | the UI | a connected Microsoft account |
 
 Everything in steps 1 to 4 is free.
@@ -78,7 +78,7 @@ registrations → New registration**.
   - on one machine: `http://localhost:8080/ui/oauth/microsoft/callback`
   - behind a proxy: `https://mail.example.org/ui/oauth/microsoft/callback`
 
-  It must match `MAILBOX_API_PUBLIC_URL` (step 5) character for
+  It must match `MAILBOX_SERVICE_PUBLIC_URL` (step 5) character for
   character. Plain `http` is allowed for `localhost` only. `localhost` is
   not the same as `127.0.0.1`, so open the UI under the address
   registered here. You can add more addresses later under
@@ -88,7 +88,7 @@ registrations → New registration**.
 
 | On the page | What it is | Needed |
 |---|---|---|
-| Application (client) ID | the app | **yes**: `MAILBOX_API_OAUTH_MICROSOFT_CLIENT_ID` |
+| Application (client) ID | the app | **yes**: `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` |
 | Directory (tenant) ID | the directory from step 1 | no, unless the app is for this one organisation only (step 5) |
 | Object ID | the registration inside the directory | no |
 
@@ -131,23 +131,23 @@ chat. Note its expiry date (see "When the secret expires").
 ## 5. Configure the service
 
 Put the secret into a file that only the account running the service may
-read, e.g. `config/benethos-mailbox-api/microsoft_client_secret`. (The
+read, e.g. `config/benethos-mailbox-service/microsoft_client_secret`. (The
 `config/` folder keeps it out of the repository.) Then set the following
-in `config/benethos-mailbox-api/.env` or the service's environment:
+in `config/benethos-mailbox-service/.env` or the service's environment:
 
 ```
-MAILBOX_API_PUBLIC_URL=http://localhost:8080
-MAILBOX_API_OAUTH_MICROSOFT_CLIENT_ID=<application (client) id>
-MAILBOX_API_OAUTH_MICROSOFT_CLIENT_SECRET_FILE=config/benethos-mailbox-api/microsoft_client_secret
+MAILBOX_SERVICE_PUBLIC_URL=http://localhost:8080
+MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID=<application (client) id>
+MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE=config/benethos-mailbox-service/microsoft_client_secret
 ```
 
-- `MAILBOX_API_PUBLIC_URL` is the redirect URI of step 2 without
+- `MAILBOX_SERVICE_PUBLIC_URL` is the redirect URI of step 2 without
   `/ui/oauth/microsoft/callback`.
 - The secret may also be given directly as
-  `MAILBOX_API_OAUTH_MICROSOFT_CLIENT_SECRET`. A file keeps it out of the
+  `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET`. A file keeps it out of the
   environment, which process listings and `docker inspect` show. In a
   container, mount it as a secret like the master key.
-- **Who may sign in:** `MAILBOX_API_OAUTH_MICROSOFT_TENANT` is `common` by
+- **Who may sign in:** `MAILBOX_SERVICE_OAUTH_MICROSOFT_TENANT` is `common` by
   default. `consumers` lets in personal accounts only. `organizations`
   lets in work and school accounts only. A tenant id or domain lets in
   one organisation only. The value must fit the supported account types
@@ -206,7 +206,7 @@ to the app, not to the secret.
 | What you see | Cause | What to do |
 |---|---|---|
 | No "Sign in with Microsoft" in the UI | no client id configured, or the service not restarted | step 5 |
-| Microsoft: the redirect URI does not match (`AADSTS50011`) | the address differs from the one registered, e.g. `127.0.0.1` against `localhost`, another port, `http` against `https` | open the UI under the registered address, or register this one too (step 2), and check `MAILBOX_API_PUBLIC_URL` |
+| Microsoft: the redirect URI does not match (`AADSTS50011`) | the address differs from the one registered, e.g. `127.0.0.1` against `localhost`, another port, `http` against `https` | open the UI under the registered address, or register this one too (step 2), and check `MAILBOX_SERVICE_PUBLIC_URL` |
 | Microsoft: invalid client secret (`AADSTS7000215`) | the Secret ID was used instead of the Value, or the secret expired | a new secret, its Value (step 4) |
 | Signing in to Entra with a personal account fails: no tenant | a personal account has no directory | a free Azure account (step 1) |
 | "Need admin approval" at sign-in | a work tenant allows no user consent for this app | an administrator of that organisation consents ("Work and school accounts") |

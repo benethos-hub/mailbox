@@ -81,11 +81,11 @@ jobs:
           echo "--- resolved dependency versions ---"
           uv pip list --python /tmp/fresh/bin/python
           echo "--- both commands start ---"
-          /tmp/fresh/bin/benethos-mailbox-api --version
+          /tmp/fresh/bin/benethos-mailbox-service --version
           /tmp/fresh/bin/benethos-mailbox-mcp --version
           /tmp/fresh/bin/benethos-mailbox-mcp --help > /dev/null
           echo "--- the service describes the checked-in API ---"
-          /tmp/fresh/bin/benethos-mailbox-api openapi > /tmp/openapi.json
+          /tmp/fresh/bin/benethos-mailbox-service openapi > /tmp/openapi.json
           python3 - <<'PY'
           import json
 
@@ -108,7 +108,7 @@ jobs:
       - name: Build both images
         run: |
           set -euo pipefail
-          docker build -t benethos-mailbox-api:ci -f containers/benethos-mailbox-api/Dockerfile .
+          docker build -t benethos-mailbox-service:ci -f containers/benethos-mailbox-service/Dockerfile .
           docker build -t benethos-mailbox-mcp:ci -f containers/benethos-mailbox-mcp/Dockerfile .
 
       # The compose file publishes every port on the loopback address only
@@ -150,11 +150,11 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: containers/benethos-mailbox-api/Dockerfile
+          file: containers/benethos-mailbox-service/Dockerfile
           platforms: linux/arm64
           push: false
-          cache-from: type=gha,scope=benethos-mailbox-api
-          cache-to: type=gha,mode=max,scope=benethos-mailbox-api
+          cache-from: type=gha,scope=benethos-mailbox-service
+          cache-to: type=gha,mode=max,scope=benethos-mailbox-service
 
       - name: Build the MCP server for arm64 as well
         uses: docker/build-push-action@v7
@@ -171,14 +171,14 @@ jobs:
       - name: Smoke test (the service starts and is healthy)
         run: |
           set -euo pipefail
-          name=benethos-mailbox-api-ci
+          name=benethos-mailbox-service-ci
           key=$(mktemp -d)/master_key
-          docker run --rm benethos-mailbox-api:ci keys generate > "$key"
+          docker run --rm benethos-mailbox-service:ci keys generate > "$key"
           chmod 444 "$key"
 
           # No --rm: a container that crashes stays, so its logs can be read.
           docker run -d --name "$name" -p 127.0.0.1:8080:8080 --read-only \
-            --tmpfs /tmp -v "$key:/run/secrets/master_key:ro" benethos-mailbox-api:ci
+            --tmpfs /tmp -v "$key:/run/secrets/master_key:ro" benethos-mailbox-service:ci
 
           code=000
           for _ in $(seq 1 30); do

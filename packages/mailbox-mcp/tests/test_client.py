@@ -55,7 +55,7 @@ async def test_unreachable_service_says_what_to_do(make_client: Callable) -> Non
         raise httpx.ConnectError("refused", request=request)
 
     client = make_client(handler)
-    with pytest.raises(ServiceUnavailableError, match="benethos-mailbox-api serve"):
+    with pytest.raises(ServiceUnavailableError, match="benethos-mailbox-service serve"):
         await client.list_accounts()
     await client.aclose()
 
@@ -63,8 +63,8 @@ async def test_unreachable_service_says_what_to_do(make_client: Callable) -> Non
 async def test_url_and_token_from_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MAILBOX_API_URL", "http://elsewhere:9/")
-    monkeypatch.setenv("MAILBOX_API_TOKEN", "tok")
+    monkeypatch.setenv("MAILBOX_SERVICE_URL", "http://elsewhere:9/")
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
     client = MailboxApiClient()
     assert client.base_url == "http://elsewhere:9"
     assert client._http.headers["authorization"] == "Bearer tok"

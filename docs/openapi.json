@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Mailbox API",
+    "title": "Mailbox Service",
     "description": "Unified REST API for several mail providers and accounts.",
     "version": "0.1.0"
   },

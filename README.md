@@ -1,11 +1,11 @@
-# Mailbox API
+# Mailbox Service
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
-[![PyPI api](https://img.shields.io/pypi/v/benethos-mailbox-api?label=PyPI%20api)](https://pypi.org/project/benethos-mailbox-api/)
+[![PyPI api](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20api)](https://pypi.org/project/benethos-mailbox-service/)
 [![PyPI mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
-[![Container](https://img.shields.io/badge/ghcr.io-mailbox--api-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-api)
+[![Container](https://img.shields.io/badge/ghcr.io-mailbox--api-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-service)
 [![Container](https://img.shields.io/badge/ghcr.io-mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
-[![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-api)](https://pypi.org/project/benethos-mailbox-api/)
+[![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
 [![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
@@ -24,7 +24,7 @@ info@ address at some hoster, maybe a Gmail account. Each speaks its own
 dialect: IMAP here, Microsoft Graph there. Every tool that wants to work
 with mail has to learn all of them and has to be given the passwords.
 
-Mailbox API turns that around. One service, running on your own machine
+Mailbox Service turns that around. One service, running on your own machine
 or server, holds the connections to all accounts. Everything else talks
 to that service only, through one REST API that looks the same for every
 provider. The service decides who may do what. A script, an app or an AI
@@ -95,12 +95,12 @@ provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
 
 | Package | What it is | Runs | Read more |
 |---|---|---|---|
-| `benethos-mailbox-api` | the service: REST API, configuration UI, users and rights, accounts, encrypted credentials, provider adapters, background sync | permanently | [packages/mailbox-api](packages/mailbox-api/README.md) |
+| `benethos-mailbox-service` | the service: REST API, configuration UI, users and rights, accounts, encrypted credentials, provider adapters, background sync | permanently | [packages/mailbox-service](packages/mailbox-service/README.md) |
 | `benethos-mailbox-mcp` | the MCP server, a client of the REST API only | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
 
 ```
  AI assistant ──MCP──► benethos-mailbox-mcp ──┐
- scripts, apps ───────────────────────────────┼─REST──► benethos-mailbox-api ──► IMAP / Graph / ...
+ scripts, apps ───────────────────────────────┼─REST──► benethos-mailbox-service ──► IMAP / Graph / ...
  browser ─────────────────────────────── /ui ─┘
 ```
 
@@ -112,7 +112,7 @@ compose file.
 ## Getting started
 
 1. Start the service and create the first user:
-   [packages/mailbox-api](packages/mailbox-api/README.md#first-start).
+   [packages/mailbox-service](packages/mailbox-service/README.md#first-start).
 2. Open `http://127.0.0.1:8080/ui`, sign in with the token and connect
    your accounts.
 3. Give your scripts or your assistant a user with the rights they need,

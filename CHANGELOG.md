@@ -20,7 +20,7 @@ stored data and the configuration may change without notice.
   check as autodiscovery when the account is created or changed, before
   the first connection: a host that resolves to a private, loopback or
   link-local address is refused with `400`, unless it is listed in
-  `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS`. Before, anyone who could create
+  `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS`. Before, anyone who could create
   or change an account could make the service connect into its own
   network. A host that does not resolve is refused with `400` as well.
 
@@ -39,6 +39,12 @@ stored data and the configuration may change without notice.
 
 ### Changed
 
+- The service is now called `benethos-mailbox-service` (was
+  `benethos-mailbox-api`). This covers the package, the command, the
+  container image, the folders under `config/` and `data/`, and the entry
+  of the master key in the OS credential store. Its settings start with
+  `MAILBOX_SERVICE_` (was `MAILBOX_API_`). The MCP server reads
+  `MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN`.
 - An account that has no credential of the kind its sign-in needs
   answers `409` (`credential_missing`). Before, it answered `500`
   (`credential_unreadable`), which stays for a credential that cannot be
@@ -76,7 +82,7 @@ stored data and the configuration may change without notice.
 - Message ids of IMAP accounts are the service's own (`msg_…`) and stay the
   same when another client moves a message or the server renumbers a
   folder. Earlier ids are no longer accepted.
-- Without `MAILBOX_API_KEY` and without any user, `/v1` answers
+- Without `MAILBOX_SERVICE_KEY` and without any user, `/v1` answers
   `503 setup_required`.
 
 ### Added
@@ -93,13 +99,13 @@ stored data and the configuration may change without notice.
   to `ghcr.io`, for `linux/amd64` and `linux/arm64`, under the same
   version.
 - Accounts can connect by OAuth once the operator sets up an app for the
-  provider (`MAILBOX_API_OAUTH_MICROSOFT_CLIENT_ID`, `_CLIENT_SECRET` or
+  provider (`MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID`, `_CLIENT_SECRET` or
   `_CLIENT_SECRET_FILE`, `_TENANT`). `POST /v1/oauth/{provider}/start`
   returns the provider's sign-in URL, to connect an account or, with
   `account_id`, sign it in again. The browser comes back to
   `/ui/oauth/{provider}/callback`. Only the refresh token is stored. The
   configuration UI offers "Sign in with Microsoft" when connecting and
-  "Sign in again" on the account page. `MAILBOX_API_PUBLIC_URL` sets the
+  "Sign in again" on the account page. `MAILBOX_SERVICE_PUBLIC_URL` sets the
   address the redirect is built from.
 - The `microsoft` adapter: Outlook.com and Microsoft 365 over Microsoft
   Graph, connected by OAuth. Folders, lists and search, messages,
@@ -134,11 +140,11 @@ stored data and the configuration may change without notice.
   DNS rebinding. Its container image `benethos-mailbox-mcp` is built with
   the service's and runs in compose with the profile `mcp`.
 
-- Container image of the service (`containers/benethos-mailbox-api/`), for
+- Container image of the service (`containers/benethos-mailbox-service/`), for
   `linux/amd64` and `linux/arm64`, with a compose file that publishes the
   port on `127.0.0.1` only, and a GitHub workflow that pushes it to the
   GitHub container registry. See `containers/README.md`.
-- `benethos-mailbox-api keys generate` prints a new master key for a key
+- `benethos-mailbox-service keys generate` prints a new master key for a key
   file or container secret and stores nothing.
 
 - `GET /v1/me`: each account carries `warnings`, among them
@@ -234,9 +240,9 @@ stored data and the configuration may change without notice.
   `null` where the provider has no subscriptions.
 - A sync worker runs with `serve`: it watches the inbox of IMAP accounts
   over IDLE and polls the other folders, every 5 minutes by default
-  (`MAILBOX_API_SYNC_INTERVAL`, `MAILBOX_API_SYNC_IDLE`). Accounts that need
+  (`MAILBOX_SERVICE_SYNC_INTERVAL`, `MAILBOX_SERVICE_SYNC_IDLE`). Accounts that need
   a new credential are left alone.
-- `config/benethos-mailbox-api/.env.example` lists every setting of the
+- `config/benethos-mailbox-service/.env.example` lists every setting of the
   service with its default. The service reads `.env` from that folder,
   relative to the working directory.
   `serve` names the database it uses.
@@ -247,8 +253,8 @@ stored data and the configuration may change without notice.
   file, Thunderbird's ISPDB, the MX record. IMAP servers are asked for their
   capabilities without a login. `sources` reports what each source found.
   Right: `discover_account` (`accounts.manage`) on every account.
-- `MAILBOX_API_DISCOVERY_ISPDB=false` switches ISPDB off,
-  `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS` (a JSON list) allows hosts with
+- `MAILBOX_SERVICE_DISCOVERY_ISPDB=false` switches ISPDB off,
+  `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` (a JSON list) allows hosts with
   private addresses.
 - `429 rate_limited` with `Retry-After`: more than 10 discoveries per minute
   by one user.
@@ -283,19 +289,19 @@ stored data and the configuration may change without notice.
   message as read.
 - `GET .../messages/{message_id}/raw` returns the RFC 822 source,
   `GET .../messages/{message_id}/attachments/{attachment_id}` an attachment.
-- `benethos-mailbox-api backup FILE`, `backup verify FILE` and
+- `benethos-mailbox-service backup FILE`, `backup verify FILE` and
   `restore FILE`: encrypted backups of the whole database, opened with the
   master key or, with `--recovery-key`, the recovery key.
 - Accounts take `credentials` on creation. They are stored encrypted and
   never returned. An account lists only which credentials it has.
-- `benethos-mailbox-api keys init` creates the keys and prints the recovery
+- `benethos-mailbox-service keys init` creates the keys and prints the recovery
   key once, `keys import` stores the master key from a recovery key.
 - Master key providers: the OS credential store (default), a key file, or
-  `MAILBOX_API_MASTER_KEY`.
+  `MAILBOX_SERVICE_MASTER_KEY`.
 - Accounts, users, roles and tokens are stored in SQLite in
-  `data/benethos-mailbox-api/`, relative to the working directory. `MAILBOX_API_DATA_DIR` moves it,
-  `MAILBOX_API_STORAGE=memory` keeps nothing.
-- `benethos-mailbox-api users create-admin` creates a user with every right
+  `data/benethos-mailbox-service/`, relative to the working directory. `MAILBOX_SERVICE_DATA_DIR` moves it,
+  `MAILBOX_SERVICE_STORAGE=memory` keeps nothing.
+- `benethos-mailbox-service users create-admin` creates a user with every right
   and prints its token once.
 - Users with roles and grants per account and per operation:
   `/v1/users`, `/v1/roles`.
@@ -310,16 +316,16 @@ stored data and the configuration may change without notice.
   `list_accounts` returns only the accounts the caller may read.
 - Every `/v1` operation carries its required right as `x-permission` in the
   OpenAPI document.
-- Two distributions in one uv workspace: `benethos-mailbox-api` (the service)
+- Two distributions in one uv workspace: `benethos-mailbox-service` (the service)
   and `benethos-mailbox-mcp` (the MCP server, a REST client only).
 - MCP server skeleton over stdio or streamable HTTP with a first tool,
-  `list_accounts`. Configured by `MAILBOX_API_URL` and `MAILBOX_API_TOKEN`.
+  `list_accounts`. Configured by `MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN`.
 - REST skeleton on FastAPI: `/health`, account CRUD, folder list, message list
   with cursor pagination and filters, single message.
 - Bearer authentication on every `/v1` route.
 - In-memory provider for tests and local development.
 - OpenAPI 3.1 document with stable `operationId`s, the `bearerAuth` scheme
-  and documented error responses. `benethos-mailbox-api openapi` prints it,
+  and documented error responses. `benethos-mailbox-service openapi` prints it,
   and `docs/openapi.json` holds the current version.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.

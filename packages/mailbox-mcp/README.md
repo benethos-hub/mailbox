@@ -9,13 +9,13 @@
 > **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
 > the stored data and the configuration may change without notice.
 
-The MCP server for the Mailbox API. It gives Claude and other AI
+The MCP server for the Mailbox Service. It gives Claude and other AI
 assistants your mailboxes, as far as its token allows. It searches and
 reads mail, looks at attachments (PDF pages as images), sorts messages,
 writes drafts and, if you let it, sends.
 
 It reaches mail only through the REST API of
-[`benethos-mailbox-api`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-api),
+[`benethos-mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service),
 which has to be running. It holds no mail password and no mail library.
 The rights of the user whose token it carries decide what it may do. It
 runs in one of two ways. Over stdio, the MCP client starts it, and it ends
@@ -74,8 +74,8 @@ In `claude_desktop_config.json` (Settings, Developer, Edit Config):
       "command": "uvx",
       "args": ["benethos-mailbox-mcp"],
       "env": {
-        "MAILBOX_API_URL": "http://127.0.0.1:8080",
-        "MAILBOX_API_TOKEN": "<token>"
+        "MAILBOX_SERVICE_URL": "http://127.0.0.1:8080",
+        "MAILBOX_SERVICE_TOKEN": "<token>"
       }
     }
   }
@@ -91,8 +91,8 @@ change.
 
 ```sh
 claude mcp add mailbox \
-  -e MAILBOX_API_URL=http://127.0.0.1:8080 \
-  -e MAILBOX_API_TOKEN=<token> \
+  -e MAILBOX_SERVICE_URL=http://127.0.0.1:8080 \
+  -e MAILBOX_SERVICE_TOKEN=<token> \
   -- uvx benethos-mailbox-mcp
 ```
 
@@ -102,15 +102,15 @@ it connects.
 ## Without a client
 
 ```sh
-MAILBOX_API_URL=http://127.0.0.1:8080 MAILBOX_API_TOKEN=<token> benethos-mailbox-mcp
+MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos-mailbox-mcp
 ```
 
 ## Options
 
 | Option | Environment | Default |
 |---|---|---|
-| – | `MAILBOX_API_URL` | `http://127.0.0.1:8080`, where the service answers |
-| – | `MAILBOX_API_TOKEN` | none, the token of the user it acts as |
+| – | `MAILBOX_SERVICE_URL` | `http://127.0.0.1:8080`, where the service answers |
+| – | `MAILBOX_SERVICE_TOKEN` | none, the token of the user it acts as |
 | `--transport` | `MAILBOX_MCP_TRANSPORT` | `stdio`, or `streamable-http` |
 | `--host` | `MAILBOX_MCP_HOST` | `127.0.0.1` |
 | `--port` | `MAILBOX_MCP_PORT` | `8000` |
@@ -126,7 +126,7 @@ environment only. The MCP client passes them in its configuration.
 ## Over HTTP
 
 ```sh
-MAILBOX_API_URL=http://127.0.0.1:8080 MAILBOX_API_TOKEN=<token> \
+MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> \
 MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   benethos-mailbox-mcp --transport streamable-http
 ```
@@ -144,7 +144,7 @@ claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
   Without it the server logs a warning and admits anyone who can reach
   the port. Over stdio the token is ignored.
 - **Two tokens.** The bearer token only admits MCP clients. The server
-  calls the REST API with its own `MAILBOX_API_TOKEN`, and that user's
+  calls the REST API with its own `MAILBOX_SERVICE_TOKEN`, and that user's
   rights decide which tools exist, for every client alike.
 - **Host check.** Against DNS rebinding the server checks the `Host` and
   `Origin` headers. On a loopback bind it admits `127.0.0.1`, `localhost`
@@ -162,17 +162,17 @@ Tags: the version (`0.1.0`), the minor version (`0.1`) and `latest`.
 
 ### With docker run
 
-Next to a service container named `mailbox-api` (see the service's
+Next to a service container named `mailbox-service` (see the service's
 README), in a network both share:
 
 ```sh
 docker network create mailbox
-docker network connect mailbox mailbox-api
+docker network connect mailbox mailbox-service
 
 docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
   -p 127.0.0.1:8000:8000 --read-only --tmpfs /tmp \
-  -e MAILBOX_API_URL=http://mailbox-api:8080 \
-  -e MAILBOX_API_TOKEN=<token> \
+  -e MAILBOX_SERVICE_URL=http://mailbox-service:8080 \
+  -e MAILBOX_SERVICE_TOKEN=<token> \
   -e MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   -e MAILBOX_MCP_ALLOWED_HOSTS=127.0.0.1:8000,localhost:8000 \
   ghcr.io/benethos-hub/benethos-mailbox-mcp:0.1.0
@@ -188,7 +188,7 @@ The repository's
 [containers/compose.yaml](https://github.com/benethos-hub/mailbox/blob/main/containers/compose.yaml)
 starts it beside the service with the profile `mcp`. Do this after the
 service's first start
-([service README, Container](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-api#with-compose)):
+([service README, Container](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service#with-compose)):
 
 ```sh
 export MAILBOX_MCP_IMAGE=ghcr.io/benethos-hub/benethos-mailbox-mcp:0.1.0
