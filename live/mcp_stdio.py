@@ -85,7 +85,11 @@ def start_service(env: dict[str, str], url: str) -> subprocess.Popen[bytes]:
         sys.exit("benethos-mailbox-service not found: run this with uv run")
     subprocess.run([command, "keys", "init"], env=env, check=True, capture_output=True)
     process = subprocess.Popen(
-        [command, "serve"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+        [command, "serve"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        # Nobody reads it: a pipe would fill up and block the service.
+        stderr=subprocess.DEVNULL,
     )
     for _ in range(60):
         try:

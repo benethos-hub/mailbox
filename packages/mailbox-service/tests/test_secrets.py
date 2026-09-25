@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -229,6 +230,18 @@ def test_vault_rejects_a_wrong_master_key() -> None:
         CredentialVault(keys_repo, creds, provider).store(
             "acc_1", "password", SecretStr("x")
         )
+
+
+def test_a_credential_under_another_key_is_said_so() -> None:
+    credentials = InMemoryCredentialRepository()
+    v = CredentialVault(InMemoryKeyRepository(), credentials, MemoryKeyProvider())
+    v.initialize()
+    v.store("acc_1", "password", SecretStr("hunter2"))
+    stored = credentials.get("acc_1", "password")
+    assert stored is not None
+    credentials.put(replace(stored, key_id="key_elsewhere"))
+    with pytest.raises(CredentialError, match="key key_elsewhere"):
+        v.read("acc_1", "password")
 
 
 def test_a_credential_moved_to_another_account_does_not_decrypt() -> None:

@@ -11,6 +11,11 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- A credential encrypted with a key the service does not hold answers
+  `500` (`credential_unreadable`) naming that key, instead of a failed
+  decryption with the active one.
+- Deleting an account forgets its `Idempotency-Key` results in the
+  in-memory storage as well, as the database did.
 - The sign-in page of the configuration UI leads back to the page that
   was asked for, with its query. After a posted form it leads to the
   start page. Before, it led to the path alone, and to a `405` after a

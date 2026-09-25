@@ -117,7 +117,14 @@ class CredentialVault:
         stored = self._credentials.get(account_id, field)
         if stored is None:
             raise CredentialMissingError(f"account {account_id} has no {field}")
-        _, dek = self._data_key()
+        key_id, dek = self._data_key()
+        if stored.key_id != key_id:
+            # Only one data key exists so far. A record naming another one
+            # is said so, not tried with the wrong key.
+            raise CredentialError(
+                f"the {field} of account {account_id} is encrypted with key "
+                f"{stored.key_id}, which this service does not hold"
+            )
         try:
             plain = cipher.decrypt(
                 dek, stored.nonce, stored.ciphertext, _credential_aad(account_id, field)

@@ -160,3 +160,22 @@ def test_tokens_round_trip(stores: Stores) -> None:
     assert repo.list_for_user("usr_1") == []
     with pytest.raises(NotFoundError):
         repo.get("tok_1")
+
+
+def test_a_token_hash_is_held_once_and_a_save_replaces_the_whole(
+    stores: Stores,
+) -> None:
+    stores.users.save(User(id="usr_1", name="u"))
+    stores.users.save(User(id="usr_2", name="v"))
+    repo = stores.tokens
+    token = ApiToken(
+        id="tok_1", user_id="usr_1", name="t", token_hash="h", created_at=NOW
+    )
+    repo.save(token)
+    with pytest.raises(ConflictError):
+        repo.save(token.model_copy(update={"id": "tok_2"}))
+    moved = token.model_copy(update={"user_id": "usr_2", "token_hash": "h2"})
+    repo.save(moved)
+    assert repo.get("tok_1") == moved
+    assert repo.find_by_hash("h") is None
+    assert repo.list_for_user("usr_2") == [moved]

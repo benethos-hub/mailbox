@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from ...errors import ConflictError
 from ..models import ApiToken, Role, User
 from .table import Table
 
@@ -31,6 +32,9 @@ class RoleRepository(Protocol):
 
 
 class TokenRepository(Protocol):
+    """``save`` adds or replaces a token as a whole. A hash is held by one
+    token at most, a second one is a conflict."""
+
     def list_for_user(self, user_id: str) -> list[ApiToken]: ...
 
     def get(self, token_id: str) -> ApiToken: ...
@@ -95,6 +99,9 @@ class InMemoryTokenRepository:
         )
 
     def save(self, token: ApiToken) -> None:
+        other = self.find_by_hash(token.token_hash)
+        if other is not None and other.id != token.id:
+            raise ConflictError(f"token {other.id} has the same hash")
         self._tokens.put(token.id, token)
 
     def delete_for_user(self, user_id: str) -> None:

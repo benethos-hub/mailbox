@@ -236,3 +236,10 @@ def test_store_round_trip_and_purge(store: IdempotencyRepository) -> None:
     assert store.get("acc", "k") == stored
     store.purge(then + timedelta(seconds=1))
     assert store.get("acc", "k") is None
+
+
+def test_store_forgets_an_account(store: IdempotencyRepository) -> None:
+    then = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
+    store.put("acc", "k", StoredResult("send_message", "hash", "{}", then))
+    store.forget_account("acc")
+    assert store.get("acc", "k") is None
