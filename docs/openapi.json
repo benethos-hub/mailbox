@@ -6057,7 +6057,7 @@
               }
             ],
             "title": "Parent Id",
-            "description": "The new parent. `null` moves it to the top."
+            "description": "The new parent, a folder id or a role such as `archive`. `null` moves it to the top."
           }
         },
         "type": "object",

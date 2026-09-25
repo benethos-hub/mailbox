@@ -171,6 +171,15 @@ def test_folders_with_a_role_stay(client: TestClient, account_id: str) -> None:
     assert client.delete(f"{url}/sent").status_code == 409
 
 
+def test_a_folder_moves_under_a_role(client: TestClient, account_id: str) -> None:
+    url = f"/v1/accounts/{account_id}/folders"
+    folder = client.post(url, json={"name": "Old"}).json()["id"]
+    sent = next(f["id"] for f in client.get(url).json() if f.get("role") == "sent")
+    moved = client.patch(f"{url}/{folder}", json={"parent_id": "sent"})
+    assert moved.status_code == 200
+    assert moved.json()["parent_id"] == sent
+
+
 def test_only_empty_folders_without_subfolders_go(
     client: TestClient, account_id: str
 ) -> None:

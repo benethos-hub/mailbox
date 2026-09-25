@@ -3,10 +3,11 @@ cursor that carries it, and running one step on every account at once."""
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TypeVar
+
+import anyio
 
 from ..common import opaque
 from ..data.models import AccountFailure, MessageSummary
@@ -75,19 +76,19 @@ async def per_account(
 ) -> dict[str, T]:
     """``run`` for every account at once. An account that fails goes to
     ``failures`` instead of failing the rest."""
-    outcomes = await asyncio.gather(
-        *(run(a) for a in account_ids), return_exceptions=True
-    )
     results: dict[str, T] = {}
-    for account_id, outcome in zip(account_ids, outcomes, strict=True):
-        if isinstance(outcome, MailboxServiceError):
+
+    async def one(account_id: str) -> None:
+        try:
+            results[account_id] = await run(account_id)
+        except MailboxServiceError as exc:
             failures.append(
                 AccountFailure(
-                    account_id=account_id, code=outcome.code, message=outcome.message
+                    account_id=account_id, code=exc.code, message=exc.message
                 )
             )
-        elif isinstance(outcome, BaseException):
-            raise outcome
-        else:
-            results[account_id] = outcome
+
+    async with anyio.create_task_group() as group:
+        for account_id in account_ids:
+            group.start_soon(one, account_id)
     return results

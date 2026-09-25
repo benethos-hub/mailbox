@@ -163,6 +163,18 @@ def test_providers_are_reached_through_the_registry() -> None:
     )
 
 
+def test_concurrency_is_written_with_anyio() -> None:
+    """The one concurrency library (CLAUDE.md, encapsulation rule 2): no
+    module imports asyncio, so every part runs on either event loop."""
+    offenders = [
+        f"{name}:{line}"
+        for name, path in _modules()
+        for module, line in _imports(path)
+        if module == "asyncio" or module.startswith("asyncio.")
+    ]
+    assert offenders == []
+
+
 def test_every_layer_exists_and_is_documented() -> None:
     """A layer without a docstring is a folder, not a decision."""
     for layer in LAYERS:

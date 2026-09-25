@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
 import weakref
 from collections.abc import Hashable
 from typing import Generic, TypeVar
+
+import anyio
 
 K = TypeVar("K", bound=Hashable)
 
@@ -16,13 +17,13 @@ class KeyedLocks(Generic[K]):
     grows with every key it ever saw."""
 
     def __init__(self) -> None:
-        self._locks: weakref.WeakValueDictionary[K, asyncio.Lock] = (
+        self._locks: weakref.WeakValueDictionary[K, anyio.Lock] = (
             weakref.WeakValueDictionary()
         )
 
-    def get(self, key: K) -> asyncio.Lock:
+    def get(self, key: K) -> anyio.Lock:
         lock = self._locks.get(key)
         if lock is None:
-            lock = asyncio.Lock()
+            lock = anyio.Lock()
             self._locks[key] = lock
         return lock

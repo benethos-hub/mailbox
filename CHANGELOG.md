@@ -11,6 +11,8 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- `PATCH /v1/accounts/{account_id}/folders/{folder_id}` takes a role
+  such as `archive` as the new `parent_id`, as creating a folder does.
 - The start page of the configuration UI shows a right that covers only
   part of a group as that operation, as the user page does. Before, one
   operation showed as its whole group.

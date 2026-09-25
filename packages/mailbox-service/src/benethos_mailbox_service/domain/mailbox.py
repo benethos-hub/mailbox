@@ -93,7 +93,11 @@ class MailboxService:
         access.require("update_folder", account_id)
         folder, _ = await self._own_folder(account_id, folder_id)
         name = changes.name or folder.name
-        parent = changes.parent_id if changes.moves else folder.parent_id
+        parent = (
+            await self._folder_by_role(account_id, changes.parent_id)
+            if changes.moves
+            else folder.parent_id
+        )
         updated = await self._calls.call(
             account_id, lambda p: p.update_folder(folder_id, name, parent)
         )
