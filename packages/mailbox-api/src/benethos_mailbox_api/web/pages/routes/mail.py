@@ -10,7 +10,6 @@ origin.
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import quote
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
@@ -20,38 +19,28 @@ from ....data.mail.text import from_html
 from ....data.models import Folder, FolderRole, Message, MessageFilter
 from ....domain.access import Access
 from ....domain.mailbox import find_folder
-from ...services import get_accounts, get_mailbox
+from ...responses import download
+from ...search import FIELDS, FLAGS, filter_from
+from ...services import Mailbox, get_accounts
 from ..deps import Viewer, account_of
 from ..errors import error_page
-from ..templates import page_links, render
+from ..forms import first_problem
+from ..rights import mail_rights
+from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
-
-PAGE_SIZE = 50
-# The search form: its fields and the filter each fills.
-SEARCH_FIELDS = ("q", "sender", "subject", "after", "before")
-SEARCH_FLAGS = ("unread", "starred", "has_attachments")
 
 
 def _search(request: Request) -> tuple[MessageFilter | None, dict[str, str], str]:
     """The filter the query asks for, the fields to fill the form with again,
     and what was wrong with it."""
     query = request.query_params
-    fields = {
-        k: query[k].strip() for k in (*SEARCH_FIELDS, *SEARCH_FLAGS) if k in query
-    }
+    fields = {k: query[k].strip() for k in (*FIELDS, *FLAGS) if k in query}
     fields = {k: v for k, v in fields.items() if v}
-    wanted: dict[str, Any] = {
-        ("text" if k == "q" else k): v for k, v in fields.items() if k in SEARCH_FIELDS
-    }
-    wanted.update({k: True for k in SEARCH_FLAGS if k in fields})
-    if not wanted:
-        return None, fields, ""
     try:
-        return MessageFilter(**wanted), fields, ""
+        return filter_from(fields), fields, ""
     except ValidationError as exc:
-        problem = exc.errors()[0]
-        return None, fields, f"Search: {problem['loc'][0]}: {problem['msg']}"
+        return None, fields, f"Search: {first_problem(exc)}"
 
 
 def _tree(folders: list[Folder]) -> list[tuple[Folder, int]]:
@@ -83,7 +72,7 @@ def _readable(caller: Access, request: Request) -> list[Any]:
 
 
 @router.get("/mail")
-async def all_mail(request: Request, caller: Viewer) -> HTMLResponse:
+async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLResponse:
     """Every account's messages of one role, newest first."""
     search, fields, problem = _search(request)
     role_name = request.query_params.get("folder") or FolderRole.INBOX.value
@@ -93,7 +82,7 @@ async def all_mail(request: Request, caller: Viewer) -> HTMLResponse:
         role, problem = FolderRole.INBOX, f"Unknown folder: {role_name}"
     chosen = request.query_params.getlist("account")
     accounts = _readable(caller, request)
-    page = await get_mailbox(request).list_all_messages(
+    page = await mailbox.list_all_messages(
         caller,
         account_ids=chosen or None,
         folder_role=role,
@@ -121,18 +110,17 @@ async def all_mail(request: Request, caller: Viewer) -> HTMLResponse:
 
 @router.get("/accounts/{account_id}/mail")
 async def account_mail(
-    request: Request, caller: Viewer, account_id: str
+    request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
 ) -> HTMLResponse:
     """One folder of one account, beside the account's folders."""
     account = account_of(request, caller, account_id)
-    mailbox = get_mailbox(request)
     folders = await mailbox.list_folders(caller, account_id)
     wanted = request.query_params.get("folder") or FolderRole.INBOX.value
     current = find_folder(folders, wanted)
     if current is None:
         return error_page(request, 404, f"The account has no folder {wanted}.")
     search, fields, problem = _search(request)
-    can = _rights(caller, account_id)
+    can = mail_rights(caller, account_id)
     can.update(
         change=can["change"] and can["batch"],
         trash=can["trash"] and can["batch"],
@@ -165,31 +153,14 @@ async def account_mail(
     )
 
 
-def _rights(caller: Access, account_id: str) -> dict[str, bool]:
-    """What the mail pages offer, by the caller's rights on the account."""
-    allowed = caller.operations_on(account_id)
-    return {
-        "write": "send_message" in allowed or "create_draft" in allowed,
-        "send": "send_message" in allowed,
-        "drafts": "list_drafts" in allowed,
-        "change": "update_message" in allowed,
-        "trash": "delete_message" in allowed,
-        "purge": "delete_message_permanent" in allowed,
-        "create_folder": "create_folder" in allowed,
-        "update_folder": "update_folder" in allowed,
-        "delete_folder": "delete_folder" in allowed,
-        "batch": "batch_messages" in allowed,
-    }
-
-
 @router.get("/accounts/{account_id}/mail/{message_id}")
 async def message(
-    request: Request, caller: Viewer, account_id: str, message_id: str
+    request: Request, caller: Viewer, account_id: str, message_id: str, mailbox: Mailbox
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
-    found = await get_mailbox(request).get_message(caller, account_id, message_id)
+    found = await mailbox.get_message(caller, account_id, message_id)
     folders = (
-        await get_mailbox(request).list_folders(caller, account_id)
+        await mailbox.list_folders(caller, account_id)
         if caller.allows("list_folders", account_id)
         else []
     )
@@ -206,7 +177,7 @@ async def message(
         in_trash=any(
             f.role is FolderRole.TRASH for f in folders if f.id in found.folder_ids
         ),
-        can=_rights(caller, account_id),
+        can=mail_rights(caller, account_id),
         can_raw=caller.allows("get_message_raw", account_id),
         can_attachment=caller.allows("get_attachment", account_id),
     )
@@ -220,34 +191,22 @@ def _body(message: Message) -> str:
 
 @router.get("/accounts/{account_id}/mail/{message_id}/raw")
 async def raw(
-    request: Request, caller: Viewer, account_id: str, message_id: str
+    caller: Viewer, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
-    data = await get_mailbox(request).get_raw(caller, account_id, message_id)
-    return _download(data, f"{message_id}.eml", "message/rfc822")
+    data = await mailbox.get_raw(caller, account_id, message_id)
+    return download(data, f"{message_id}.eml", "message/rfc822")
 
 
 @router.get("/accounts/{account_id}/mail/{message_id}/attachments/{attachment_id}")
 async def attachment(
-    request: Request,
     caller: Viewer,
     account_id: str,
     message_id: str,
     attachment_id: str,
+    mailbox: Mailbox,
 ) -> Response:
-    found = await get_mailbox(request).get_attachment(
-        caller, account_id, message_id, attachment_id
-    )
+    found = await mailbox.get_attachment(caller, account_id, message_id, attachment_id)
     # Never rendered here, whatever type the sender claims.
-    return _download(
+    return download(
         found.data, found.filename or attachment_id, "application/octet-stream"
-    )
-
-
-def _download(data: bytes, filename: str, media_type: str) -> Response:
-    return Response(
-        content=data,
-        media_type=media_type,
-        headers={
-            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
-        },
     )

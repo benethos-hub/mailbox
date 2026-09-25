@@ -10,7 +10,7 @@ from pydantic import SecretStr
 
 from ....data.models import Candidate, ProviderType
 from ....errors import MailboxApiError
-from ...services import get_accounts, get_discovery, get_oauth
+from ...services import Accounts, Discoverer, get_oauth
 from ..deps import Actor, Viewer
 from ..templates import back, render
 
@@ -66,12 +66,14 @@ def _password(form: Any) -> dict[str, SecretStr]:
 
 
 @router.get("/accounts")
-async def list_accounts(request: Request, caller: Viewer) -> HTMLResponse:
+async def list_accounts(
+    request: Request, caller: Viewer, accounts: Accounts
+) -> HTMLResponse:
     return render(
         request,
         "pages/accounts.html",
         page="accounts",
-        accounts=get_accounts(request).list(caller),
+        accounts=accounts.list(caller),
         can_create=caller.allows("create_account"),
     )
 
@@ -96,12 +98,11 @@ def _oauth_providers(request: Request) -> list[str]:
 
 
 @router.post("/accounts/discover")
-async def discover(request: Request, caller: Actor) -> Response:
+async def discover(request: Request, caller: Actor, discovery: Discoverer) -> Response:
     """The ways to connect an address. A POST, so the address stays out of
     access logs, answered with the page itself: a lookup changes nothing."""
     form = await request.form()
     email = str(form.get("email") or "").strip()
-    discovery = get_discovery(request)
     try:
         found = await discovery.discover(caller, email)
     except MailboxApiError as exc:
@@ -139,7 +140,9 @@ def _usable(candidate: Candidate) -> bool:
 
 
 @router.post("/accounts")
-async def create_account(request: Request, caller: Actor) -> Response:
+async def create_account(
+    request: Request, caller: Actor, accounts: Accounts
+) -> Response:
     form = await request.form()
     email = str(form.get("email") or "").strip()
     settings = _settings(form)
@@ -148,7 +151,7 @@ async def create_account(request: Request, caller: Actor) -> Response:
     except ValueError:
         return back("/ui/accounts/new", error="Unknown provider.")
     try:
-        account = await get_accounts(request).create(
+        account = await accounts.create(
             caller,
             provider,
             email,
@@ -162,8 +165,10 @@ async def create_account(request: Request, caller: Actor) -> Response:
 
 
 @router.get("/accounts/{account_id}")
-async def account(request: Request, caller: Viewer, account_id: str) -> HTMLResponse:
-    found = get_accounts(request).get(caller, account_id)
+async def account(
+    request: Request, caller: Viewer, account_id: str, accounts: Accounts
+) -> HTMLResponse:
+    found = accounts.get(caller, account_id)
     return render(
         request,
         "pages/account.html",
@@ -174,13 +179,15 @@ async def account(request: Request, caller: Viewer, account_id: str) -> HTMLResp
         can_update=caller.allows("update_account", account_id),
         can_verify=caller.allows("verify_account", account_id),
         can_delete=caller.allows("delete_account", account_id),
-        signs_in_with_oauth=get_accounts(request).signs_in_with_oauth(found.provider),
+        signs_in_with_oauth=accounts.signs_in_with_oauth(found.provider),
         security=SECURITY,
     )
 
 
 @router.post("/accounts/{account_id}")
-async def update_account(request: Request, caller: Actor, account_id: str) -> Response:
+async def update_account(
+    request: Request, caller: Actor, account_id: str, accounts: Accounts
+) -> Response:
     form = await request.form()
     here = f"/ui/accounts/{account_id}"
     changes: dict[str, Any] = {"display_name": None, "rename": False}
@@ -190,9 +197,9 @@ async def update_account(request: Request, caller: Actor, account_id: str) -> Re
             "rename": True,
         }
     try:
-        existing = get_accounts(request).get(caller, account_id)
+        existing = accounts.get(caller, account_id)
         settings = _changed(existing.settings, _settings(form), set(form.keys()))
-        await get_accounts(request).update(
+        await accounts.update(
             caller,
             account_id,
             settings=settings,
@@ -205,19 +212,23 @@ async def update_account(request: Request, caller: Actor, account_id: str) -> Re
 
 
 @router.post("/accounts/{account_id}/verify")
-async def verify_account(request: Request, caller: Actor, account_id: str) -> Response:
+async def verify_account(
+    caller: Actor, account_id: str, accounts: Accounts
+) -> Response:
     here = f"/ui/accounts/{account_id}"
     try:
-        checked = await get_accounts(request).verify(caller, account_id)
+        checked = await accounts.verify(caller, account_id)
     except MailboxApiError as exc:
         return back(here, error=f"Not reachable: {exc.message}")
     return back(here, f"Signed in to the provider. Status: {checked.status.value}.")
 
 
 @router.post("/accounts/{account_id}/delete")
-async def delete_account(request: Request, caller: Actor, account_id: str) -> Response:
+async def delete_account(
+    caller: Actor, account_id: str, accounts: Accounts
+) -> Response:
     try:
-        await get_accounts(request).delete(caller, account_id)
+        await accounts.delete(caller, account_id)
     except MailboxApiError as exc:
         return back(f"/ui/accounts/{account_id}", error=exc.message)
     return back("/ui/accounts", "Account removed from the service.")

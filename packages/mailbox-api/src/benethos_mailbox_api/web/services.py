@@ -60,6 +60,7 @@ def get_auth(request: Request) -> AuthService:
 
 
 Accounts = Annotated[AccountService, Depends(get_accounts)]
+Auth = Annotated[AuthService, Depends(get_auth)]
 Discoverer = Annotated[DiscoveryService, Depends(get_discovery)]
 Mailbox = Annotated[MailboxService, Depends(get_mailbox)]
 Users = Annotated[UserService, Depends(get_users)]

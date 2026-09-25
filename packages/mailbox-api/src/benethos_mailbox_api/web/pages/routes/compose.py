@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, Response
 
 from ....data.models import DraftMessage, OutgoingMessage
 from ....errors import MailboxApiError
-from ...services import get_mailbox
+from ...services import Mailbox
 from ..deps import Actor, Viewer, account_of
 from ..mailform import (
     ACTIONS,
@@ -28,23 +28,26 @@ router = APIRouter()
 
 
 @router.get("/accounts/{account_id}/compose")
-async def compose(request: Request, caller: Viewer, account_id: str) -> HTMLResponse:
+async def compose(
+    request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
+) -> HTMLResponse:
     account = account_of(request, caller, account_id)
     values = {key: "" for key in (*ADDRESS_FIELDS, *TEXT_FIELDS)}
     original = None
     wanted = request.query_params.get("original")
     action = request.query_params.get("action", "")
     if wanted and action in ACTIONS:
-        original = await get_mailbox(request).get_message(caller, account_id, wanted)
+        original = await mailbox.get_message(caller, account_id, wanted)
         values.update(original=wanted, action=action, forward_as="inline")
     return show(request, caller, account, values, original=original)
 
 
 @router.post("/accounts/{account_id}/compose")
-async def compose_submit(request: Request, caller: Actor, account_id: str) -> Response:
+async def compose_submit(
+    request: Request, caller: Actor, account_id: str, mailbox: Mailbox
+) -> Response:
     form = await request.form()
     account = account_of(request, caller, account_id)
-    mailbox = get_mailbox(request)
     try:
         fields = {**await read_fields(form), "reference": reference_of(form)}
         if form.get("do") == "send":

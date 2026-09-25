@@ -16,7 +16,7 @@ from fastapi.responses import HTMLResponse, Response
 
 from ....data.models import DraftMessage, Message
 from ....errors import MailboxApiError
-from ...services import get_mailbox
+from ...services import Mailbox
 from ..deps import Actor, Viewer, account_of
 from ..mailform import (
     ComposeError,
@@ -29,17 +29,18 @@ from ..mailform import (
     show_again,
     uploads,
 )
-from ..templates import back, page_links, render
+from ..rights import mail_rights
+from ..templates import PAGE_SIZE, back, page_links, render
 
 router = APIRouter()
 
-PAGE_SIZE = 50
-
 
 @router.get("/accounts/{account_id}/drafts")
-async def drafts(request: Request, caller: Viewer, account_id: str) -> HTMLResponse:
+async def drafts(
+    request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
+) -> HTMLResponse:
     account = account_of(request, caller, account_id)
-    page = await get_mailbox(request).list_drafts(
+    page = await mailbox.list_drafts(
         caller, account_id, limit=PAGE_SIZE, cursor=request.query_params.get("cursor")
     )
     return render(
@@ -51,8 +52,7 @@ async def drafts(request: Request, caller: Viewer, account_id: str) -> HTMLRespo
         pages=page_links(request, page.next_cursor),
         fields={},
         open_as="drafts",
-        can_write=caller.allows("create_draft", account_id)
-        or caller.allows("send_message", account_id),
+        can_write=mail_rights(caller, account_id)["write"],
     )
 
 
@@ -69,10 +69,10 @@ def _stored_values(stored: Message) -> dict[str, str]:
 
 @router.get("/accounts/{account_id}/drafts/{draft_id}")
 async def draft(
-    request: Request, caller: Viewer, account_id: str, draft_id: str
+    request: Request, caller: Viewer, account_id: str, draft_id: str, mailbox: Mailbox
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
-    stored = await get_mailbox(request).get_message(caller, account_id, draft_id)
+    stored = await mailbox.get_message(caller, account_id, draft_id)
     return show(
         request,
         caller,
@@ -102,12 +102,11 @@ def _kept(stored: Message, form: Any) -> list[str]:
 
 @router.post("/accounts/{account_id}/drafts/{draft_id}")
 async def draft_submit(
-    request: Request, caller: Actor, account_id: str, draft_id: str
+    request: Request, caller: Actor, account_id: str, draft_id: str, mailbox: Mailbox
 ) -> Response:
     """Save the draft, save and send it, or delete it."""
     form = await request.form()
     account = account_of(request, caller, account_id)
-    mailbox = get_mailbox(request)
     here = f"/ui/accounts/{account_id}/drafts/{draft_id}"
     doing = str(form.get("do") or "save")
     stored: Message | None = None

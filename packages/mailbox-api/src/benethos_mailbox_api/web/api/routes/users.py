@@ -9,7 +9,6 @@ from ....domain import permissions
 from ..deps import Caller, Users
 from ..schemas import (
     Me,
-    MeAccount,
     PermissionCatalogue,
     RoleCreate,
     RoleReplace,
@@ -25,22 +24,7 @@ router = APIRouter(tags=["users"])
 
 @router.get("/me")
 async def get_me(caller: Caller, users: Users) -> Me:
-    rights = users.me(caller)
-    return Me(
-        user_id=rights.user_id,
-        name=rights.name,
-        accounts=[
-            MeAccount(
-                id=a.id,
-                email=a.email,
-                display_name=a.display_name,
-                operations=a.operations,
-                warnings=a.warnings,
-            )
-            for a in rights.accounts
-        ],
-        operations=rights.operations,
-    )
+    return Me.model_validate(users.me(caller), from_attributes=True)
 
 
 @router.get("/permissions")

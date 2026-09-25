@@ -18,12 +18,13 @@ from pydantic import ValidationError
 
 from ...data.models import Account, Grant
 from ...domain import permissions
+from .forms import FormError, first_problem
 
 GROUP_NAMES = (permissions.ADMIN, *permissions.GROUPS)
 _SPLIT = re.compile(r"[\s,;]+")
 
 
-class GrantFormError(ValueError):
+class GrantFormError(FormError):
     """A grant row that is not a valid grant."""
 
 
@@ -100,6 +101,6 @@ def read_grants(form: Any) -> list[Grant]:
             if problem["loc"][0] == "recipients" and len(problem["loc"]) > 1:
                 reason = f"{problem['input']} is not an address, *@domain or *"
             else:
-                reason = f"{problem['loc'][0]}: {problem['msg']}"
+                reason = first_problem(exc)
             raise GrantFormError(f"grant {index + 1}: {reason}") from None
     return grants

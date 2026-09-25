@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Annotated, Any
-from urllib.parse import quote
 
 from fastapi import APIRouter, Header, Query, Response
 
@@ -22,7 +21,8 @@ from ....data.models import (
     SendRecord,
     SendResult,
 )
-from ..deps import Caller, Mailbox, Search
+from ...responses import download
+from ..deps import Caller, Limit, Mailbox, Search
 from ..schemas import ErrorResponse
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
@@ -90,7 +90,7 @@ async def list_messages(
     folder: Annotated[
         str | None, Query(description="A folder id, or a role such as inbox")
     ] = None,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    limit: Limit = 50,
     cursor: str | None = None,
 ) -> Page[MessageSummary]:
     """Newest first. The search parameters narrow the list together."""
@@ -157,7 +157,7 @@ async def list_sends(
     account_id: str,
     caller: Caller,
     mailbox: Mailbox,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    limit: Limit = 50,
     cursor: str | None = None,
 ) -> Page[SendRecord]:
     """The audit of sends from this account, newest first: every attempt
@@ -171,7 +171,7 @@ async def list_drafts(
     account_id: str,
     caller: Caller,
     mailbox: Mailbox,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    limit: Limit = 50,
     cursor: str | None = None,
 ) -> Page[MessageSummary]:
     """The drafts, newest first. A draft id is a message id and reads with
@@ -284,11 +284,6 @@ async def get_attachment(
     attachment = await mailbox.get_attachment(
         caller, account_id, message_id, attachment_id
     )
-    filename = attachment.filename or attachment_id
-    return Response(
-        content=attachment.data,
-        media_type=attachment.content_type,
-        headers={
-            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
-        },
+    return download(
+        attachment.data, attachment.filename or attachment_id, attachment.content_type
     )

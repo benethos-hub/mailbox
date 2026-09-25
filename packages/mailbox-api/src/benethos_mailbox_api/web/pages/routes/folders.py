@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from ....data.models import FolderCreate, FolderUpdate
 from ....domain.access import Access
 from ....errors import MailboxApiError
-from ...services import get_mailbox
+from ...services import Mailbox, get_mailbox
 from ..deps import Actor
 from ..templates import back
 
@@ -28,7 +28,9 @@ def _folder_page(account_id: str, folder_id: str | None = None) -> str:
 
 
 @router.post("/accounts/{account_id}/folders")
-async def create_folder(request: Request, caller: Actor, account_id: str) -> Response:
+async def create_folder(
+    request: Request, caller: Actor, account_id: str, mailbox: Mailbox
+) -> Response:
     form = await request.form()
     parent = str(form.get("parent") or "") or None
     try:
@@ -36,7 +38,7 @@ async def create_folder(request: Request, caller: Actor, account_id: str) -> Res
     except ValidationError:
         return back(_folder_page(account_id, parent), error=_bad_name())
     try:
-        folder = await get_mailbox(request).create_folder(caller, account_id, new)
+        folder = await mailbox.create_folder(caller, account_id, new)
     except MailboxApiError as exc:
         return back(_folder_page(account_id, parent), error=exc.message)
     return back(_folder_page(account_id, folder.id), f"{folder.name} created.")
@@ -80,11 +82,13 @@ async def _update(
 
 
 @router.post("/accounts/{account_id}/folders/delete")
-async def delete_folder(request: Request, caller: Actor, account_id: str) -> Response:
+async def delete_folder(
+    request: Request, caller: Actor, account_id: str, mailbox: Mailbox
+) -> Response:
     form = await request.form()
     folder_id = str(form.get("folder") or "")
     try:
-        await get_mailbox(request).delete_folder(caller, account_id, folder_id)
+        await mailbox.delete_folder(caller, account_id, folder_id)
     except MailboxApiError as exc:
         return back(_folder_page(account_id, folder_id), error=exc.message)
     return back(_folder_page(account_id), "Folder deleted.")

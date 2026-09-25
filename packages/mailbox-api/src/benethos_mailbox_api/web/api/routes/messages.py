@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from ....data.models import FolderRole, MessagePage
-from ..deps import Caller, Mailbox, Search
+from ..deps import Caller, Limit, Mailbox, Search
 
 router = APIRouter(tags=["mailbox"])
 
@@ -24,7 +24,7 @@ async def list_all_messages(
     folder: Annotated[
         FolderRole | None, Query(description="A folder role, e.g. inbox")
     ] = None,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    limit: Limit = 50,
     cursor: str | None = None,
 ) -> MessagePage:
     return await mailbox.list_all_messages(

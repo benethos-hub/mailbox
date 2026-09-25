@@ -10,7 +10,8 @@
   <details class="fold"{% if fields | length > (1 if 'q' in fields else 0) %} open{% endif %}>
     <summary>More filters</summary>
     <div class="form-grid">
-      <div class="field"><label for="f-sender">From</label><input id="f-sender" name="sender" value="{{ fields.get('sender', '') }}" /></div>
+      <div class="field"><label for="f-from">From</label><input id="f-from" name="from" value="{{ fields.get('from', '') }}" /></div>
+      <div class="field"><label for="f-to">To</label><input id="f-to" name="to" value="{{ fields.get('to', '') }}" /></div>
       <div class="field"><label for="f-subject">Subject</label><input id="f-subject" name="subject" value="{{ fields.get('subject', '') }}" /></div>
       <div class="field"><label for="f-after">From day</label><input id="f-after" name="after" type="date" value="{{ fields.get('after', '') }}" /></div>
       <div class="field"><label for="f-before">Before day</label><input id="f-before" name="before" type="date" value="{{ fields.get('before', '') }}" /></div>

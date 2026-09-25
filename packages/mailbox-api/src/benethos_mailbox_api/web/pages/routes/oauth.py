@@ -17,7 +17,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from ....data.models import ProviderType
 from ....errors import MailboxApiError
-from ...services import get_oauth
+from ...services import OAuth
 from ...urls import oauth_callback
 from ..deps import Actor, Viewer
 from ..templates import back, local_path, render
@@ -33,7 +33,9 @@ def _provider(value: str) -> ProviderType | None:
 
 
 @router.post("/oauth/{provider}/start")
-async def start(request: Request, caller: Actor, provider: str) -> Response:
+async def start(
+    request: Request, caller: Actor, provider: str, oauth: OAuth
+) -> Response:
     form = await request.form()
     account_id = str(form.get("account_id") or "") or None
     fallback = f"/ui/accounts/{account_id}" if account_id else "/ui/accounts/new"
@@ -42,7 +44,7 @@ async def start(request: Request, caller: Actor, provider: str) -> Response:
     if kind is None:
         return back(here, error=f"Unknown provider: {provider}")
     try:
-        url = get_oauth(request).start(
+        url = oauth.start(
             caller,
             kind,
             oauth_callback(request, kind),
@@ -67,9 +69,10 @@ async def callback(request: Request, provider: str) -> HTMLResponse:
 
 
 @router.get("/oauth/{provider}/finish")
-async def finish(request: Request, caller: Viewer, provider: str) -> Response:
+async def finish(
+    request: Request, caller: Viewer, provider: str, oauth: OAuth
+) -> Response:
     query = request.query_params
-    oauth = get_oauth(request)
     kind = _provider(provider)
     state = query.get("state", "")
     if kind is None:

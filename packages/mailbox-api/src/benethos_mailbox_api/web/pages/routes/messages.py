@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from ....data.models import MessageBatch, MessageUpdate
 from ....errors import MailboxApiError
-from ...services import get_mailbox
+from ...services import Mailbox
 from ..deps import Actor
 from ..templates import back, local_path
 
@@ -27,7 +27,7 @@ BATCH_ACTIONS: dict[str, tuple[str, MessageUpdate | None, bool]] = {
 
 @router.post("/accounts/{account_id}/mail/{message_id}/flags")
 async def set_flags(
-    request: Request, caller: Actor, account_id: str, message_id: str
+    request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
     form = await request.form()
     here = f"/ui/accounts/{account_id}/mail/{message_id}"
@@ -36,9 +36,7 @@ async def set_flags(
         starred=form["starred"] == "1" if "starred" in form else None,
     )
     try:
-        await get_mailbox(request).update_message(
-            caller, account_id, message_id, changes
-        )
+        await mailbox.update_message(caller, account_id, message_id, changes)
     except MailboxApiError as exc:
         return back(here, error=exc.message)
     return back(here)
@@ -46,7 +44,7 @@ async def set_flags(
 
 @router.post("/accounts/{account_id}/mail/{message_id}/move")
 async def move(
-    request: Request, caller: Actor, account_id: str, message_id: str
+    request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
     form = await request.form()
     here = f"/ui/accounts/{account_id}/mail/{message_id}"
@@ -54,7 +52,7 @@ async def move(
     if not folder:
         return back(here, error="Choose a folder.")
     try:
-        await get_mailbox(request).update_message(
+        await mailbox.update_message(
             caller, account_id, message_id, MessageUpdate(folder_ids=[folder])
         )
     except MailboxApiError as exc:
@@ -65,22 +63,22 @@ async def move(
 
 @router.post("/accounts/{account_id}/mail/{message_id}/delete")
 async def delete(
-    request: Request, caller: Actor, account_id: str, message_id: str
+    request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
     form = await request.form()
     permanent = form.get("permanent") == "1"
     listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
     try:
-        await get_mailbox(request).delete_message(
-            caller, account_id, message_id, permanent
-        )
+        await mailbox.delete_message(caller, account_id, message_id, permanent)
     except MailboxApiError as exc:
         return back(f"/ui/accounts/{account_id}/mail/{message_id}", error=exc.message)
     return back(listing, "Deleted for good." if permanent else "Moved to the trash.")
 
 
 @router.post("/accounts/{account_id}/mail/batch")
-async def batch(request: Request, caller: Actor, account_id: str) -> Response:
+async def batch(
+    request: Request, caller: Actor, account_id: str, mailbox: Mailbox
+) -> Response:
     """The action menu above a list, for the messages ticked in it."""
     form = await request.form()
     listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
@@ -111,9 +109,7 @@ async def batch(request: Request, caller: Actor, account_id: str) -> Response:
     except ValidationError:
         return back(listing, error="At most 100 messages at a time.")
     try:
-        result = await get_mailbox(request).batch_messages(
-            caller, account_id, request_batch
-        )
+        result = await mailbox.batch_messages(caller, account_id, request_batch)
     except MailboxApiError as exc:
         return back(listing, error=exc.message)
     failed = [r for r in result.results if not r.ok]
