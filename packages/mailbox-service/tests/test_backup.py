@@ -89,6 +89,26 @@ def test_backup_and_restore_round_trip(machine: Path) -> None:
     assert len(kept) == 1
 
 
+def test_restore_moves_a_leftover_journal_with_the_old_file(machine: Path) -> None:
+    _populate()
+    services = _services()
+    assert services.database is not None
+    master = services.vault.master_key()
+    create_backup(services.database, master, machine / "b.bak", "9.9.9")
+    services.close()
+    path = Settings().database_path
+    journal = path.with_name(path.name + "-journal")
+    journal.write_bytes(b"hot journal of the old file")
+
+    restore_backup(machine / "b.bak", master, path)
+    assert not journal.exists()
+    [moved] = list(path.parent.glob("mailbox.db.before-restore-*-journal"))
+    assert moved.read_bytes() == b"hot journal of the old file"
+    restored = _services()
+    assert len(restored.adapters.ids()) == 1
+    restored.close()
+
+
 def test_backup_never_overwrites(machine: Path) -> None:
     _populate()
     services = _services()
@@ -234,6 +254,9 @@ def test_backup_command_errors(
 ) -> None:
     assert main(["backup", "a", "b"]) == 1
     assert "backup verify FILE" in capsys.readouterr().err
+    assert main(["backup", "verify"]) == 1
+    assert "backup verify FILE" in capsys.readouterr().err
+    assert not (Path.cwd() / "verify").exists()
     assert main(["backup", str(machine / "x.bak")]) == 1
     assert "keys init" in capsys.readouterr().err
     monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "memory")

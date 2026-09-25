@@ -149,7 +149,9 @@ def _backup(target: list[str], recovery_key: bool) -> None:
     from .data.secrets.backup import create_backup, read_backup
     from .main import opened
 
-    if target[0] == "verify" and len(target) == 2:
+    if target[0] == "verify":
+        if len(target) != 2:
+            raise _UsageError("use `backup verify FILE`")
         master = _read_recovery_key() if recovery_key else _master_key()
         manifest, _ = read_backup(Path(target[1]), master)
         print(

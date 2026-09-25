@@ -11,6 +11,13 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- `backup verify` without a file says how to use it. Before, it wrote a
+  backup to a file named `verify`.
+- `restore` moves a journal file left beside the old database along
+  with it, so SQLite cannot roll it into the restored file.
+- A truncated encrypted record, a key file that cannot be read and a
+  credential store that does not answer are reported as what they are,
+  instead of failing with a traceback.
 - Autodiscovery keeps a mail server under an internationalised top-level
   domain such as `.рф`. Before, its punycode form was dropped as no host.
 - A failure of the service's own database answers `500` with the code

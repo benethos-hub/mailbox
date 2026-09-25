@@ -72,6 +72,11 @@ def test_cipher_round_trip_and_tamper() -> None:
     tampered = bytes([ciphertext[0] ^ 1]) + ciphertext[1:]
     with pytest.raises(cipher.DecryptionError):
         cipher.decrypt(key, nonce, tampered, b"aad")
+    # Truncated: a nonce or a ciphertext of the wrong length.
+    with pytest.raises(cipher.DecryptionError):
+        cipher.decrypt(key, nonce[:5], ciphertext, b"aad")
+    with pytest.raises(cipher.DecryptionError):
+        cipher.decrypt(key, nonce, ciphertext[:3], b"aad")
 
 
 def test_derive_is_stable_and_separate() -> None:
@@ -115,6 +120,12 @@ def test_file_provider(tmp_path: Path) -> None:
     with pytest.raises(KeyProviderError, match="refusing"):
         provider.store(key)
     assert "master.key" in provider.describe()
+    # A path that cannot be read or written is the provider's failure.
+    folder = FileKeyProvider(tmp_path / "secrets")
+    with pytest.raises(KeyProviderError, match="cannot read"):
+        folder.load()
+    with pytest.raises(KeyProviderError, match="cannot write"):
+        FileKeyProvider(tmp_path / "secrets" / "master.key" / "x").store(key)
 
 
 def test_keyring_provider(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -132,6 +143,22 @@ def test_keyring_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     assert stored[(keys.KEYRING_SERVICE, keys.KEYRING_USERNAME)] == encode_recovery(key)
     assert provider.load() == key
     assert "credential store" in provider.describe()
+
+
+def test_keyring_failures_are_the_providers(monkeypatch: pytest.MonkeyPatch) -> None:
+    import keyring
+    from keyring.errors import NoKeyringError
+
+    def none(*args: object) -> None:
+        raise NoKeyringError("No recommended backend was available")
+
+    monkeypatch.setattr(keyring, "get_password", none)
+    monkeypatch.setattr(keyring, "set_password", none)
+    provider = KeyringKeyProvider()
+    with pytest.raises(KeyProviderError, match="cannot read .* No recommended"):
+        provider.load()
+    with pytest.raises(KeyProviderError, match="cannot write"):
+        provider.store(cipher.new_key())
 
 
 def test_key_provider_from_settings(tmp_path: Path) -> None:
