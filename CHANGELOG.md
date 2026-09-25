@@ -15,6 +15,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   made by 0.1.0 is refused. A draft saved by 0.1.0 loses its reference,
   and the old header stays in the mail when that draft is sent.
 
+### Fixed
+
+- `benethos-mailbox-service` requires fastapi 0.129.1, pydantic 2.12 and
+  defusedxml 0.7.1 at least. With defusedxml 0.7.0, a broken autoconfig
+  file ended discovery with an unhandled error. With an older fastapi,
+  the served OpenAPI document differed from `docs/openapi.json`.
+  pydantic 2.11 could not be installed beside the other minimums.
+
 ## [0.1.0] - 2026-09-25
 
 Pre-alpha. Not ready for production use: the API, the stored data and

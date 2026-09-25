@@ -41,13 +41,13 @@ classifiers = [
     "Topic :: Communications :: Email",
 ]
 dependencies = [
-    "fastapi>=0.120",
+    "fastapi>=0.129.1",
     "uvicorn>=0.38",
     # The configuration UI: server-rendered pages (web/pages/) and their
     # forms.
     "jinja2>=3.1",
     "python-multipart>=0.0.20",
-    "pydantic>=2.11",
+    "pydantic>=2.12",
     "pydantic-settings>=2.10",
     # Outbound HTTP: autodiscovery, later the Gmail and Microsoft Graph
     # adapters.
@@ -63,7 +63,7 @@ dependencies = [
     # Autodiscovery: MX and SRV lookups.
     "dnspython>=2.6",
     # Autodiscovery: autoconfig XML without entity expansion.
-    "defusedxml>=0.7",
+    "defusedxml>=0.7.1",
     # Autodiscovery: where a domain ends. Ships its own copy of the list.
     "publicsuffixlist>=1.0",
     "imapclient>=4.1.0",
