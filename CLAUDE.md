@@ -86,7 +86,8 @@ live/                     # manual checks against the test accounts,
                           #   what they share in _common.py
 containers/               # one folder per image, compose.yaml, README.md,
                           #   secrets/ local (the master key)
-.github/workflows/        # ci.yml: checks, fresh install, images,
+.github/workflows/        # ci.yml: checks, fresh install, lowest
+                          #   versions, images,
                           #   publish.yml: on a release both packages to
                           #   PyPI and both images to GHCR
 docs/
@@ -313,8 +314,8 @@ rule 1.
 
 - Commit only when the user asks. Clear, descriptive messages.
 - `main` is protected: no direct push, no force push, a linear history,
-  and every CI job must pass. Every change reaches `main` as a pull
-  request.
+  and every CI job but `lowest-versions` must pass. Every change reaches
+  `main` as a pull request.
 - The flow: a branch per work stream, created before the first edit.
   Commit, push the branch, open the pull request with `gh pr create`.
   The user merges it on GitHub as a squash merge. Afterwards pull `main`

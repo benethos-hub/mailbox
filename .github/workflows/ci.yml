@@ -98,6 +98,40 @@ jobs:
           print(f"OK: {len(fresh['paths'])} paths, same as docs/openapi.json")
           PY
 
+  # The other side of fresh-install: the lowest versions pyproject.toml
+  # allows. An environment that already holds an older fastapi or
+  # defusedxml keeps it, as long as it meets the minimum. Dependabot moves
+  # uv.lock, never the minimums, so they fall behind the code unnoticed.
+  # Not a required check: a failure here means raising a minimum.
+  lowest-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: Both packages on their lowest versions
+        run: |
+          set -euo pipefail
+          uv venv -p 3.11 /tmp/lowest
+          uv pip install --python /tmp/lowest/bin/python --resolution lowest-direct \
+            -e packages/mailbox-service -e packages/mailbox-mcp \
+            "pytest>=9.1.1" "pytest-asyncio>=1.0"
+          uv pip list --python /tmp/lowest/bin/python
+          /tmp/lowest/bin/python -m pytest -q -p no:cacheprovider
+
+      # Alone, the MCP server may get older versions than beside the service,
+      # uvicorn for one.
+      - name: The MCP server alone on its lowest versions
+        run: |
+          set -euo pipefail
+          uv venv -p 3.11 /tmp/lowest-mcp
+          uv pip install --python /tmp/lowest-mcp/bin/python --resolution lowest-direct \
+            -e packages/mailbox-mcp "pytest>=9.1.1" "pytest-asyncio>=1.0"
+          uv pip list --python /tmp/lowest-mcp/bin/python
+          /tmp/lowest-mcp/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-mcp/tests
+
   # Both images are built on every push, so a broken Dockerfile shows up
   # here and not first in a release.
   docker:
