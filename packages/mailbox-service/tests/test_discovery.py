@@ -415,6 +415,37 @@ async def test_findings_are_cached_per_domain_for_a_day() -> None:
     assert len(source.queries) == 2
 
 
+async def test_the_cache_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(discovery_module, "MAX_CACHED", 2)
+    clock = Clock()
+    source = FakeSource(ISPDB, found(imap("imap.firma.example", ISPDB)))
+    s = service(source, clock=clock, per_user=100)
+    for domain in ("one", "two", "three"):
+        clock.now += 1
+        await s.discover(ADMIN, f"a@{domain}.example")
+    assert len(s._cache) == 2
+    assert "one.example" not in s._cache
+    # A finding that expired goes before a fresh one.
+    clock.now += 24 * 3600 - 2
+    await s.discover(ADMIN, "a@four.example")
+    assert set(s._cache) == {"three.example", "four.example"}
+
+
+async def test_the_callers_counted_are_bounded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(discovery_module, "MAX_CALLERS", 2)
+    clock = Clock()
+    s = service(FakeSource(ISPDB), clock=clock, per_user=100)
+    for user in ("a", "b", "c"):
+        clock.now += 1
+        await s.discover(Access.admin(f"usr_{user}", user), "x@firma.example")
+    assert set(s._calls) == {"usr_b", "usr_c"}
+    clock.now += 60
+    await s.discover(Access.admin("usr_d", "d"), "x@firma.example")
+    assert set(s._calls) == {"usr_d"}
+
+
 async def test_a_failed_lookup_is_not_cached() -> None:
     source = FakeSource(ISPDB, ProviderUnavailableError("down"))
     s = service(source)

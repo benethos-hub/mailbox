@@ -106,10 +106,12 @@ class Access:
         return False
 
     def sees(self, account_id: str) -> bool:
-        """Whether the account exists for this caller at all."""
+        """Whether the account exists for this caller at all: some right on
+        it that is about existing accounts."""
+        about_accounts = permissions.ACCOUNT_FREE | permissions.ALL_ACCOUNTS
         return any(
             (rule.accounts is None or account_id in rule.accounts)
-            and rule.operations - permissions.ACCOUNT_FREE
+            and rule.operations - about_accounts
             for rule in self._rules
         )
 

@@ -10,7 +10,12 @@ import anyio
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.data.models import Account, ProviderType, SendResult
+from benethos_mailbox_service.data.models import (
+    Account,
+    Grant,
+    ProviderType,
+    SendResult,
+)
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.storage import (
     Database,
@@ -23,6 +28,8 @@ from benethos_mailbox_service.data.storage import (
 from benethos_mailbox_service.domain.idempotency import Idempotency
 from benethos_mailbox_service.errors import IdempotencyConflictError, ProviderError
 from benethos_mailbox_service.main import Services
+
+from .conftest import bearer_for
 
 BODY = {"to": [{"email": "you@example.com"}], "subject": "Once", "text": "Hallo"}
 
@@ -57,6 +64,26 @@ def test_the_same_key_with_another_message(
     )
     assert other.status_code == 409
     assert other.json()["error"]["code"] == "idempotency_conflict"
+    assert len(outbox(services, account_id)) == 1
+
+
+def test_a_key_is_the_callers_own(
+    client: TestClient, services: Services, account_id: str
+) -> None:
+    url = f"/v1/accounts/{account_id}/send"
+    grant = Grant(accounts=[account_id], allow=["send"])
+    first = client.post(
+        url,
+        json=BODY,
+        headers={"Idempotency-Key": "k1", **bearer_for(services, grant)},
+    )
+    assert first.status_code == 200
+    other = client.post(
+        url,
+        json=BODY,
+        headers={"Idempotency-Key": "k1", **bearer_for(services, grant)},
+    )
+    assert other.status_code == 409
     assert len(outbox(services, account_id)) == 1
 
 
@@ -100,12 +127,18 @@ async def test_a_key_counts_for_24_hours() -> None:
         return RESULT
 
     request = SendResult(message_id_header="request")
-    await idempotency.run("acc", "k", "send_message", request, action, SendResult)
+    await idempotency.run(
+        "acc", "k", "send_message", request, action, SendResult, user_id="usr"
+    )
     clock.now += timedelta(hours=23)
-    await idempotency.run("acc", "k", "send_message", request, action, SendResult)
+    await idempotency.run(
+        "acc", "k", "send_message", request, action, SendResult, user_id="usr"
+    )
     assert len(calls) == 1
     clock.now += timedelta(hours=2)
-    await idempotency.run("acc", "k", "send_message", request, action, SendResult)
+    await idempotency.run(
+        "acc", "k", "send_message", request, action, SendResult, user_id="usr"
+    )
     assert len(calls) == 2
 
 
@@ -116,10 +149,16 @@ async def test_keys_are_per_account_and_operation() -> None:
     async def action() -> SendResult:
         return RESULT
 
-    await idempotency.run("acc_a", "k", "send_message", request, action, SendResult)
-    await idempotency.run("acc_b", "k", "send_message", request, action, SendResult)
+    await idempotency.run(
+        "acc_a", "k", "send_message", request, action, SendResult, user_id="usr"
+    )
+    await idempotency.run(
+        "acc_b", "k", "send_message", request, action, SendResult, user_id="usr"
+    )
     with pytest.raises(IdempotencyConflictError):
-        await idempotency.run("acc_a", "k", "send_draft", request, action, SendResult)
+        await idempotency.run(
+            "acc_a", "k", "send_draft", request, action, SendResult, user_id="usr"
+        )
 
 
 async def test_a_failure_is_not_stored() -> None:
@@ -134,9 +173,11 @@ async def test_a_failure_is_not_stored() -> None:
         return RESULT
 
     with pytest.raises(ProviderError):
-        await idempotency.run("acc", "k", "send_message", request, flaky, SendResult)
+        await idempotency.run(
+            "acc", "k", "send_message", request, flaky, SendResult, user_id="usr"
+        )
     result = await idempotency.run(
-        "acc", "k", "send_message", request, flaky, SendResult
+        "acc", "k", "send_message", request, flaky, SendResult, user_id="usr"
     )
     assert result == RESULT
 
@@ -155,7 +196,9 @@ async def test_a_retry_during_the_first_waits_for_it() -> None:
 
     async def call() -> None:
         results.append(
-            await idempotency.run("acc", "k", "send_message", request, slow, SendResult)
+            await idempotency.run(
+                "acc", "k", "send_message", request, slow, SendResult, user_id="usr"
+            )
         )
 
     async with anyio.create_task_group() as group:

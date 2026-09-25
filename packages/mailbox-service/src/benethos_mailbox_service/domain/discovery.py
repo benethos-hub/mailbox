@@ -58,6 +58,10 @@ MAX_PROBES = 4
 CACHE_SECONDS = 24 * 3600
 PER_USER = 10
 PER_SECONDS = 60.0
+# How many domains' findings and how many callers' counts are kept at
+# most, so that whoever may discover cannot grow the memory without bound.
+MAX_CACHED = 1000
+MAX_CALLERS = 10_000
 
 
 @dataclass(frozen=True)
@@ -143,7 +147,17 @@ class DiscoveryService:
         done = [r for r in results if r is not None]
         if all(r.error is None for r in done):
             self._cache[query.domain] = (now + CACHE_SECONDS, done)
+            self._trim_cache(now)
         return done
+
+    def _trim_cache(self, now: float) -> None:
+        """Expired findings go first, then the ones expiring soonest."""
+        if len(self._cache) <= MAX_CACHED:
+            return
+        for domain in [d for d, (until, _) in self._cache.items() if until <= now]:
+            del self._cache[domain]
+        while len(self._cache) > MAX_CACHED:
+            del self._cache[min(self._cache, key=lambda d: self._cache[d][0])]
 
     def _count(self, user_id: str) -> None:
         now = self._clock()
@@ -156,6 +170,16 @@ class DiscoveryService:
                 f"too many discoveries, try again in {wait} seconds", wait
             )
         calls.append(now)
+        if len(self._calls) > MAX_CALLERS:
+            self._trim_callers(now)
+
+    def _trim_callers(self, now: float) -> None:
+        """Callers whose calls all left the window are forgotten, then the
+        ones whose last call is longest ago."""
+        for user in [u for u, c in self._calls.items() if c[-1] <= now - PER_SECONDS]:
+            del self._calls[user]
+        while len(self._calls) > MAX_CALLERS:
+            del self._calls[min(self._calls, key=lambda u: self._calls[u][-1])]
 
     # --- trust --------------------------------------------------------------
 

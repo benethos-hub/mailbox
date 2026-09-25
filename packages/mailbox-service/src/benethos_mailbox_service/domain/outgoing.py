@@ -80,6 +80,7 @@ class Outgoing:
             message,
             lambda: self._send(access, account_id, message),
             SendResult,
+            user_id=access.user_id,
         )
 
     async def _send(
@@ -307,6 +308,7 @@ class Outgoing:
             _DraftToSend(draft_id=draft_id),
             lambda: self._send_draft(access, account_id, draft_id),
             SendResult,
+            user_id=access.user_id,
         )
 
     async def _send_draft(

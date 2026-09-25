@@ -68,6 +68,17 @@ stored data and the configuration may change without notice.
 
 ### Security
 
+- An `Idempotency-Key` belongs to the caller: the same key from another
+  user answers `409` (`idempotency_conflict`) instead of the first
+  caller's result.
+- A source locked out after failed sign-ins stays locked out for its
+  fifteen minutes. Before, a flood of failures from other addresses could
+  push the lockout out of memory.
+- A right on accounts that may not exist yet (`discover_account`,
+  `create_account`, `start_oauth`) no longer makes every account visible:
+  an account the caller has no other right on answers `404`, not `403`.
+- The findings autodiscovery caches and the callers it counts are capped
+  in memory.
 - A NAT64 address (`64:ff9b::/96`) counts as public only when the IPv4
   address it carries is. Before, `64:ff9b::10.0.0.1` passed the check
   of autodiscovery and of an account's hosts as a public address.
