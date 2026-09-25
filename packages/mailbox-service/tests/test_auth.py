@@ -70,7 +70,7 @@ def service(repos, clock: Clock) -> AuthService:
 def test_token_format() -> None:
     token = new_token()
     assert token.startswith(TOKEN_PREFIX)
-    assert len(token) == len(TOKEN_PREFIX) + 43
+    assert len(token) == len(TOKEN_PREFIX) + 64
     assert token != new_token()
 
 

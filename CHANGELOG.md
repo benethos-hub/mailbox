@@ -39,6 +39,8 @@ stored data and the configuration may change without notice.
 
 ### Changed
 
+- New API tokens are 64 characters after `mbx_` (were 43). Tokens made
+  before stay valid.
 - The service is now called `benethos-mailbox-service` (was
   `benethos-mailbox-api`). This covers the package, the command, the
   container image, the folders under `config/` and `data/`, and the entry

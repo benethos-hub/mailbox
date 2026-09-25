@@ -27,8 +27,8 @@ from .access import Access
 
 TOKEN_PREFIX = "mbx_"
 _ALPHABET = string.ascii_letters + string.digits
-# 43 characters of base62 carry a little over 256 bits.
-_TOKEN_LENGTH = 43
+# 64 characters of base62 carry a little over 380 bits.
+_TOKEN_LENGTH = 64
 
 ADMIN_KEY_USER_ID = "usr_admin_key"
 
