@@ -223,6 +223,19 @@ the tools that fit:
 | `send_message` | `send` | sends a mail at once, plain text or HTML. With `original_id` a reply, reply to all or forward. |
 | `send_draft` | `send` | sends a stored draft |
 
+Each tool has a title for display and the standard MCP hints. Clients
+can use them to decide when to ask the person before a call.
+
+- **Read-only:** the tools that only read.
+- **Destructive:** `update_messages`, `update_draft`, `delete_draft` and
+  both send tools. They can move mail to the trash, overwrite or delete a
+  draft, or send mail.
+- **Idempotent:** `update_messages`, `update_draft` and `delete_draft`. The
+  same call again changes nothing more. The send tools are not marked
+  idempotent, although a repeat within 24 hours sends nothing.
+- **Open world:** every tool except `list_accounts`, since they reach mail
+  from and to anyone.
+
 Each send carries an `Idempotency-Key` derived from the call. The same
 call repeated within 24 hours sends nothing and returns the first result.
 Give a user `send` only if the model may send without a person looking at
