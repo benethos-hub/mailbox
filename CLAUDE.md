@@ -119,7 +119,9 @@ packages/
           static/         # app.css, app.js, vendored htmx
       domain/             # BUSINESS LOGIC: decides, knows no HTTP
         accounts.py       # AccountService: accounts and their live adapters
-        mailbox.py        # MailboxService: folders and messages
+        mailbox.py        # MailboxService: folders and messages, the facade
+        calls.py          # provider calls under our stable ids, many at once
+        outgoing.py       # sending and drafts, reached through MailboxService
         merge.py          # lists across accounts: merge order, cursor
         replies.py        # replies and forwards made from the original
         discovery.py      # DiscoveryService: trust, ranking, cache, limits
