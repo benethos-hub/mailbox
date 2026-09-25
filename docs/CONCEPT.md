@@ -627,6 +627,12 @@ Rules of the implementation for drafts (phase 2):
   `X-Mailbox-Api-Reference`, until it is sent. Both are removed before it
   goes out. The quote of a reply or forward is written when the draft is
   made, as a mail client does.
+- `get_message` shows a draft's `reference`. Replaced with that reference
+  and `quote: false`, the draft keeps its link to the original (In-Reply-To,
+  References, the mark after sending) and nothing of the original is added
+  again: the text holds the quote already. The reference of any message
+  that is not a draft is not shown: in a received mail the header is the
+  sender's.
 - A deleted draft is gone for good, not moved to the trash.
 - `send_draft` sends the draft as stored, with the date of the send, and
   then deletes it; the sent folder gets its read copy as with `send`. The

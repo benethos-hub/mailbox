@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import Base64Bytes, BaseModel, Field, model_validator
 
-from .messages import MessageSummary
+from .messages import MessageReference, MessageSummary
 
 # No line breaks in anything that goes into a header: a CR or LF there would
 # let a caller add headers of its own (header injection).
@@ -27,23 +25,6 @@ class OutgoingAttachment(BaseModel):
         pattern=r"^[\w.+-]+/[\w.+-]+$",
     )
     data: Base64Bytes = Field(description="The content, base64-encoded.")
-
-
-class MessageReference(BaseModel):
-    """Reply to or forward a message of the same account. The service sets
-    the recipients of a reply where none are given, the subject prefix,
-    In-Reply-To, References and the quote."""
-
-    message_id: str
-    action: Literal["reply", "reply_all", "forward"]
-    forward_as: Literal["inline", "attachment"] = Field(
-        default="inline",
-        description=(
-            "`inline`: quoted with its headers, its attachments attached. "
-            "`attachment`: the unchanged original as `message/rfc822`. "
-            "Ignored for replies."
-        ),
-    )
 
 
 class DraftMessage(BaseModel):

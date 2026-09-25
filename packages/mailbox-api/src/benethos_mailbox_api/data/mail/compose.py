@@ -15,11 +15,31 @@ from email.utils import format_datetime, formataddr, getaddresses, make_msgid
 from html import escape
 from typing import NamedTuple
 
-from ..models import Address, DraftMessage, Message, Recipient
+from pydantic import ValidationError
+
+from ..models import Address, DraftMessage, Message, MessageReference, Recipient
 from .text import from_html
 
 # Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
 REFERENCE_HEADER = "X-Mailbox-Api-Reference"
+
+
+def write_reference(reference: MessageReference) -> str:
+    """What a draft keeps of its reference until it is sent: the action and
+    the original's id, e.g. ``reply msg_...``."""
+    return f"{reference.action} {reference.message_id}"
+
+
+def read_reference(value: str | None) -> MessageReference | None:
+    """The reference a draft kept. None for anything else, such as a header
+    another mail client changed."""
+    if not value:
+        return None
+    action, _, message_id = value.strip().partition(" ")
+    try:
+        return MessageReference(action=action, message_id=message_id.strip())
+    except ValidationError:
+        return None
 
 
 def new_message_id(sender_email: str) -> str:

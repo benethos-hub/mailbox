@@ -48,6 +48,9 @@ T = TypeVar("T")
 S = TypeVar("S", bound=MessageSummary)
 M = TypeVar("M", bound=DraftMessage)
 
+# The keyword of a draft, \Draft on IMAP.
+DRAFT_KEYWORD = "$draft"
+
 log = logging.getLogger(__name__)
 
 
@@ -231,6 +234,10 @@ class MailboxService:
         message = await self._on_message(
             account_id, message_id, lambda p, native: p.get_message(native)
         )
+        if message.reference is not None and DRAFT_KEYWORD not in message.keywords:
+            # Only a draft of this service carries one; in a received mail
+            # the header is the sender's.
+            message = message.model_copy(update={"reference": None})
         return _public(message, message_id, account_id)
 
     async def update_message(
@@ -344,7 +351,7 @@ class MailboxService:
             message_id,
             extras,
             draft=draft,
-            reference=replies.reference_header(reference) if reference else None,
+            reference=compose.write_reference(reference) if reference else None,
         )
         return raw, message_id, message, original
 
@@ -362,9 +369,11 @@ class MailboxService:
             account_id, reference.message_id, lambda p, native: p.get_raw(native)
         )
         if reference.action != "forward":
-            return replies.reply(message, reference.action, original, raw, own_address)
+            return replies.reply(
+                message, reference.action, original, raw, own_address, reference.quote
+            )
         files: list[replies.AttachedFile] = []
-        if reference.forward_as == "inline":
+        if reference.forward_as == "inline" and reference.quote:
             for attachment in original.attachments:
                 content = await self._attachment(
                     account_id, reference.message_id, attachment.id
@@ -376,7 +385,9 @@ class MailboxService:
                         content.data,
                     )
                 )
-        return replies.forward(message, reference.forward_as, original, raw, files)
+        return replies.forward(
+            message, reference.forward_as, original, raw, files, reference.quote
+        )
 
     async def _attachment(
         self, account_id: str, message_id: str, attachment_id: str
@@ -510,7 +521,7 @@ class MailboxService:
 
     async def _mark_from_draft(self, account_id: str, header: str) -> None:
         """Mark the original the sent draft answered or forwarded."""
-        reference = replies.reference_from_header(header)
+        reference = compose.read_reference(header)
         if reference is None:
             return
         try:

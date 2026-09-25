@@ -12,6 +12,7 @@ from typing import Any
 
 from ...errors import NotFoundError
 from ..models import Address, Attachment, AttachmentContent
+from .compose import REFERENCE_HEADER, read_reference
 
 
 def summary_fields(msg: Any) -> dict[str, Any]:
@@ -47,6 +48,7 @@ def message_fields(msg: Any) -> dict[str, Any]:
         "reply_to": _addresses(msg.reply_to_values),
         "message_id_header": _first(headers.get("message-id")),
         "in_reply_to": _first(headers.get("in-reply-to")),
+        "reference": read_reference(_first(headers.get(REFERENCE_HEADER.lower()))),
         "text_body": msg.text or None,
         "html_body": msg.html or None,
         "attachments": attachments,

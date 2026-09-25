@@ -3,6 +3,7 @@ composing, drafts and sending."""
 
 from __future__ import annotations
 
+import html
 import re
 from email import message_from_bytes
 
@@ -352,3 +353,33 @@ def test_a_grant_that_narrows_recipients_is_shown(
     assert refused.status_code == 403
     assert "eve@elsewhere.example" in refused.text
     assert _adapter(services, account_id).outbox == []
+
+
+def test_a_changed_reply_draft_stays_in_its_thread(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    adapter = _adapter(services, account_id)
+    saved = post(
+        ui,
+        f"/ui/accounts/{account_id}/compose",
+        {"original": "m1", "action": "reply", "text": "First", "do": "save"},
+    )
+    assert "Reply: Invoice 1" in saved.text and "stays linked" in saved.text
+    text = re.search(r'name="text" rows="14">([^<]*)</textarea>', saved.text)
+    to = re.search(r'name="to" value="([^"]*)"', saved.text)
+    assert text is not None and to is not None
+    body = html.unescape(text.group(1)).replace("First", "Second", 1)
+    fields = {
+        "to": html.unescape(to.group(1)),
+        "subject": "Re: Invoice 1",
+        "text": body,
+    }
+    edited = post(ui, saved.url.path, {**fields, "do": "save"})
+    assert "Draft saved." in edited.text
+    assert html.unescape(edited.text).count("> body 1") == 1
+    sent = post(ui, saved.url.path, {**fields, "do": "send"})
+    assert "Sent." in sent.text
+    [(_, recipients, raw)] = adapter.outbox
+    assert recipients == ["alice@example.com"]
+    assert "Second" in message_from_bytes(raw).get_payload()
+    assert "$answered" in next(m for m in adapter.messages if m.id == "m1").keywords
