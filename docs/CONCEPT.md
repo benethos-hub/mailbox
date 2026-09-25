@@ -905,9 +905,10 @@ the data, rather than a readable file.
   working directory, moved with `MAILBOX_SERVICE_DATA_DIR`. Decided 2026-09-24:
   one folder per package under `data/` and under `config/`.
   `data/benethos-mailbox-mcp/` is meant for what the MCP server stores, e.g.
-  downloaded attachments. A missing data folder is created. The database is
-  created with owner-only permissions (0600, on Windows an ACL for the user
-  only).
+  downloaded attachments. A missing data folder is created. The database,
+  a backup and a key file are created readable by their owner alone
+  (0600) and never over an existing file. Windows has no such modes: there
+  the folder's own permissions decide who may read them.
 - **Credential kinds per provider:** always the one that is not the main
   password. Per provider in the table of 5.3. In short: OAuth for Google
   and Microsoft, an API token for Fastmail, an app password everywhere
