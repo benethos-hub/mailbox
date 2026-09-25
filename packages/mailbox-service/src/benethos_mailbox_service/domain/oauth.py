@@ -152,9 +152,12 @@ class OAuthService:
             signed_in=tokens,
         )
 
-    def cancel(self, state: str) -> None:
-        """The provider sent back an error instead of a code."""
-        self._pending.pop(state, None)
+    def cancel(self, access: Access, state: str) -> None:
+        """The provider sent back an error instead of a code. Only whoever
+        started the sign-in can end it this way."""
+        pending = self._pending.get(state)
+        if pending is not None and pending.user_id == access.user_id:
+            del self._pending[state]
 
     def sign_in_hosts(self) -> list[str]:
         """The hosts a browser is sent to for a sign-in."""

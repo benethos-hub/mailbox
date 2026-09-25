@@ -343,6 +343,17 @@ async def test_a_state_expires() -> None:
         await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
 
 
+async def test_only_the_starter_cancels_a_sign_in() -> None:
+    services = services_with(TokenEndpoint(granted(id_token=id_token(email="a@b.c"))))
+    state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
+    services.oauth.cancel(Access.admin("usr_other", "other admin"), state)
+    await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
+    state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
+    services.oauth.cancel(ADMIN, state)
+    with pytest.raises(BadRequestError, match="unknown or expired"):
+        await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
+
+
 async def test_a_sign_in_belongs_to_who_started_it() -> None:
     services = services_with(TokenEndpoint())
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))

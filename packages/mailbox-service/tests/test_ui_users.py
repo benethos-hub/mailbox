@@ -231,6 +231,14 @@ def test_token_days_must_be_a_number(ui: TestClient, services: Services) -> None
     )
     assert "err=Days+valid" in answer.headers["location"]
     assert services.users.list_tokens(ADMIN, user.id) == []
+    answer = post(
+        ui,
+        f"/ui/users/{user.id}/tokens",
+        {"name": "t", "days": "99999999999"},
+        follow_redirects=False,
+    )
+    assert "up+to+3650" in answer.headers["location"]
+    assert services.users.list_tokens(ADMIN, user.id) == []
 
 
 # --- roles ----------------------------------------------------------------------------

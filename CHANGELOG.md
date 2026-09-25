@@ -11,6 +11,17 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- The sign-in page of the configuration UI leads back to the page that
+  was asked for, with its query. After a posted form it leads to the
+  start page. Before, it led to the path alone, and to a `405` after a
+  form.
+- A token's days valid on the configuration UI are bound to 3650. A
+  larger number answered `500`.
+- A reply's recipients are counted against the limit of 100 once they are
+  taken from the original, not before.
+- Cancelling an OAuth sign-in on the UI ends only a sign-in the caller
+  started.
+- Idle sessions of the configuration UI are swept at each sign-in.
 - A missing attachment, draft or folder on an IMAP account answers `404`
   for that. Before, it was taken for a moved message: a sync ran and the
   answer said the message was not found.
@@ -165,6 +176,9 @@ stored data and the configuration may change without notice.
 
 ### Added
 
+- `PUT /v1/accounts/{account_id}/drafts/{draft_id}` takes
+  `keep_attachments`, the ids of attachments of the stored draft that go
+  into the new one. The MCP tool `update_draft` passes it on.
 - Configuration UI: the grant editor shows the rights the MCP server uses
   (`mail.read`, `mail.write`, `drafts`, `send`) apart from the others. The
   tooltip of each group names the MCP tools it opens.

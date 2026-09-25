@@ -24,6 +24,18 @@ def test_a_page_without_a_session_asks_to_sign_in(app_client: TestClient) -> Non
     assert answer.headers["location"] == "/ui/login?next=/ui"
 
 
+def test_the_sign_in_leads_back_to_the_page_asked_for(
+    app_client: TestClient,
+) -> None:
+    answer = app_client.get("/ui/mail?folder=inbox&q=x", follow_redirects=False)
+    assert (
+        answer.headers["location"] == "/ui/login?next=/ui/mail%3Ffolder%3Dinbox%26q%3Dx"
+    )
+    # A posted form is not repeated: the sign-in lands on the start page.
+    answer = app_client.post("/ui/accounts", data={}, follow_redirects=False)
+    assert answer.headers["location"] == "/ui/login"
+
+
 def test_htmx_is_sent_to_the_sign_in_page(app_client: TestClient) -> None:
     answer = app_client.get("/ui", headers={"HX-Request": "true"})
     assert answer.status_code == 204
@@ -147,6 +159,16 @@ def test_an_idle_session_expires() -> None:
     assert store.get(session_id) is None
     assert store.get(session_id) is None
     assert store.get(None) is None
+
+
+def test_idle_sessions_are_swept_on_sign_in() -> None:
+    now = [datetime(2026, 9, 24, 12)]
+    store = SessionStore(clock=lambda: now[0])
+    forgotten = store.create("token")
+    now[0] += IDLE + timedelta(minutes=1)
+    fresh = store.create("token")
+    assert forgotten not in store._sessions
+    assert fresh in store._sessions
 
 
 # --- the frame ------------------------------------------------------------------------

@@ -341,10 +341,18 @@ class MailboxApiClient:
         return result
 
     async def update_draft(
-        self, account_id: str, draft_id: str, message: dict[str, Any]
+        self,
+        account_id: str,
+        draft_id: str,
+        message: dict[str, Any],
+        keep_attachments: list[str] | None = None,
     ) -> dict[str, Any]:
+        """``keep_attachments``: ids of the stored draft's attachments that
+        stay. None or empty: none of them."""
         result: dict[str, Any] = await self.request(
-            "PUT", _path("accounts", account_id, "drafts", draft_id), json=message
+            "PUT",
+            _path("accounts", account_id, "drafts", draft_id),
+            json={**message, "keep_attachments": keep_attachments or None},
         )
         return result
 

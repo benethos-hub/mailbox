@@ -374,11 +374,18 @@ async def update_draft(
     html: Html = None,
     original_id: OriginalId = None,
     action: Action = "reply",
+    keep_attachments: Annotated[
+        list[str] | None,
+        Field(description="Ids of the stored draft's attachments to keep"),
+    ] = None,
 ) -> dict[str, Any]:
-    """Replace a draft as a whole: what is left out is gone afterwards. Read
-    it with get_message first to keep parts of it. The id stays."""
+    """Replace a draft as a whole: what is left out is gone afterwards,
+    attachments too unless keep_attachments names them. Read it with
+    get_message first to keep parts of it. The id stays."""
     body = _composed(to, cc, bcc, subject, text, html, original_id, action)
-    return render.draft(await client().update_draft(account_id, draft_id, body))
+    return render.draft(
+        await client().update_draft(account_id, draft_id, body, keep_attachments)
+    )
 
 
 async def delete_draft(account_id: str, draft_id: str) -> str:

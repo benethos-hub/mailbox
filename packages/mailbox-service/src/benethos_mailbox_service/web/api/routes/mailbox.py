@@ -23,7 +23,7 @@ from ....data.models import (
 )
 from ...responses import download
 from ..deps import Caller, Limit, Mailbox, Search
-from ..schemas import ErrorResponse
+from ..schemas import DraftReplacement, ErrorResponse
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
 
@@ -193,13 +193,20 @@ async def create_draft(
 async def update_draft(
     account_id: str,
     draft_id: str,
-    draft: DraftMessage,
+    draft: DraftReplacement,
     caller: Caller,
     mailbox: Mailbox,
 ) -> MessageSummary:
-    """Replace a draft as a whole. Its id stays. An id that names no draft
+    """Replace a draft as a whole. Its id stays. Stored attachments are
+    gone unless `keep_attachments` names them. An id that names no draft
     answers `404`."""
-    return await mailbox.update_draft(caller, account_id, draft_id, draft)
+    return await mailbox.update_draft(
+        caller,
+        account_id,
+        draft_id,
+        DraftMessage.model_validate(draft, from_attributes=True),
+        keep_attachments=draft.keep_attachments,
+    )
 
 
 @router.post("/drafts/{draft_id}/send", responses=SEND_ERRORS)

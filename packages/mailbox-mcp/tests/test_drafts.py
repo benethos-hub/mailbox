@@ -106,6 +106,9 @@ async def test_update_draft_replaces_it(make_client: Callable) -> None:
     [(method, path, _, body)] = handler.calls
     assert (method, path) == ("PUT", f"{DRAFTS}/msg_d")
     assert body["text"] == "v2" and body["subject"] == ""
+    assert "keep_attachments" not in body
+    await server.update_draft("acc_1", "msg_d", text="v3", keep_attachments=["att_0"])
+    assert handler.calls[-1][3]["keep_attachments"] == ["att_0"]
 
 
 async def test_delete_draft(make_client: Callable) -> None:

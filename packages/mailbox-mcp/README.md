@@ -225,7 +225,7 @@ the tools that fit:
 | `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
 | `list_drafts` | `drafts` | the drafts of an account |
 | `create_draft` | `drafts` | a draft in plain text or HTML, recipients optional. With `original_id` a reply, reply to all or forward. |
-| `update_draft` | `drafts` | replaces a draft as a whole, the id stays |
+| `update_draft` | `drafts` | replaces a draft as a whole, the id stays, `keep_attachments` keeps stored files |
 | `delete_draft` | `drafts` | deletes a draft for good, reaches drafts only |
 | `send_message` | `send` | sends a mail at once, plain text or HTML. With `original_id` a reply, reply to all or forward. |
 | `send_draft` | `send` | sends a stored draft |
