@@ -1059,9 +1059,9 @@ with the role
 #### Credentials
 
 - **API token**, the first and for now only kind:
-  - Format `mbx_` + 256 random bits, base62. Shown **once** on creation,
-    stored as a SHA-256 hash (a random token of that length needs no slow
-    hash).
+  - Format `mbx_` + 64 random base62 characters, a little over 380 bits.
+    Shown **once** on creation, stored as a SHA-256 hash (a random token of
+    that length needs no slow hash).
   - Per token: `name`, `created_at`, `expires_at` (optional),
     `last_used_at`, `revoked_at`.
   - A token carries the rights of its user, no more. Narrowing a single
