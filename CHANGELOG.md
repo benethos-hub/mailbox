@@ -11,6 +11,10 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- A failure of the service's own database answers `500` with the code
+  `storage_error` and the reason, a violated constraint `409`
+  (`conflict`). Before, both were unhandled and the background sync
+  stopped for good when an account was deleted during its sync.
 - The MCP server's `--allowed-origins` without `--allowed-hosts` admits
   the hosts of those origins. Before, it answered every request with
   `421`, since no host was allowed.

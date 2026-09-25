@@ -1,7 +1,9 @@
 """The connection, the schema and its migrations.
 
 One connection per process, guarded by a lock, since every call is short.
-The schema is versioned in ``meta`` and migrated forward on open.
+The schema is versioned in ``meta`` and migrated forward on open. Every
+failure of sqlite3 leaves this module as a MailboxServiceError: a
+constraint as ConflictError, anything else as StorageError.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from ....errors import ConflictError, StorageError
 from ...files import create_private
 
 MIGRATIONS: list[str] = [
@@ -133,6 +136,7 @@ class Database:
         )
         self._connection.row_factory = sqlite3.Row
         self._lock = threading.RLock()
+        self._depth = 0  # of savepoints inside the open transaction
         with self._lock:
             self._connection.execute("PRAGMA foreign_keys = ON")
             # Freed pages are overwritten, so deleted secrets do not linger.
@@ -145,22 +149,56 @@ class Database:
 
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:
+        """One transaction. Inside another one, a savepoint: it is released
+        into the outer transaction, or rolled back alone."""
         with self._lock:
-            self._connection.execute("BEGIN IMMEDIATE")
+            if self._connection.in_transaction:
+                with self._savepoint():
+                    yield self._connection
+                return
+            with translated():
+                self._connection.execute("BEGIN IMMEDIATE")
             try:
-                yield self._connection
+                with translated():
+                    yield self._connection
+                    self._connection.execute("COMMIT")
             except BaseException:
-                self._connection.execute("ROLLBACK")
+                self._rollback("ROLLBACK")
                 raise
-            self._connection.execute("COMMIT")
+
+    @contextmanager
+    def _savepoint(self) -> Iterator[None]:
+        self._depth += 1
+        name = f"sp{self._depth}"
+        try:
+            with translated():
+                self._connection.execute(f"SAVEPOINT {name}")
+            try:
+                with translated():
+                    yield
+                    self._connection.execute(f"RELEASE {name}")
+            except BaseException:
+                self._rollback(f"ROLLBACK TO {name}")
+                self._rollback(f"RELEASE {name}")
+                raise
+        finally:
+            self._depth -= 1
+
+    def _rollback(self, statement: str) -> None:
+        """Undo as far as possible. A failure here would only hide the
+        one being raised."""
+        try:
+            self._connection.execute(statement)
+        except sqlite3.Error:
+            pass
 
     def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[sqlite3.Row]:
-        with self._lock:
+        with self._lock, translated():
             return self._connection.execute(sql, params).fetchall()
 
     def one(self, sql: str, params: tuple[Any, ...] = ()) -> sqlite3.Row | None:
         """The first row, or None."""
-        with self._lock:
+        with self._lock, translated():
             row: sqlite3.Row | None = self._connection.execute(sql, params).fetchone()
             return row
 
@@ -170,10 +208,7 @@ class Database:
             return db.execute(sql, params).rowcount
 
     def schema_version(self) -> int:
-        with self._lock:
-            row = self._connection.execute(
-                "SELECT value FROM meta WHERE key = 'schema_version'"
-            ).fetchone()
+        row = self.one("SELECT value FROM meta WHERE key = 'schema_version'")
         return int(row[0]) if row else 0
 
     def close(self) -> None:
@@ -182,7 +217,7 @@ class Database:
 
     def snapshot(self) -> bytes:
         """A consistent copy of the whole database, taken while it is in use."""
-        with self._lock:
+        with self._lock, translated():
             copy = sqlite3.connect(":memory:")
             try:
                 self._connection.backup(copy)
@@ -210,6 +245,18 @@ class Database:
                     " VALUES ('schema_version', ?)",
                     (str(version + 1),),
                 )
+
+
+@contextmanager
+def translated() -> Iterator[None]:
+    """sqlite3's failures as this project's errors. A violated constraint
+    is a conflict with what is stored, the rest is the storage failing."""
+    try:
+        yield
+    except sqlite3.IntegrityError as exc:
+        raise ConflictError(f"conflicts with a stored record: {exc}") from None
+    except sqlite3.Error as exc:
+        raise StorageError(f"the database failed: {exc}") from None
 
 
 def _owner_only(path: Path) -> None:

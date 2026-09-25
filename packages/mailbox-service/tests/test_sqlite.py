@@ -18,7 +18,11 @@ from benethos_mailbox_service.data.storage import (
     SqliteUserRepository,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
-from benethos_mailbox_service.errors import NotFoundError
+from benethos_mailbox_service.errors import (
+    ConflictError,
+    NotFoundError,
+    StorageError,
+)
 from benethos_mailbox_service.main import build_services
 
 from .conftest import create_account
@@ -65,6 +69,75 @@ def test_a_failed_transaction_rolls_back(db: Database) -> None:
         conn.execute("INSERT INTO roles (id, grants) VALUES ('r', '[]')")
         raise RuntimeError("abort")
     assert db.query("SELECT COUNT(*) FROM roles")[0][0] == 0
+
+
+def test_a_failed_commit_leaves_no_open_transaction(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Failing:
+        """The connection, whose COMMIT fails."""
+
+        def __init__(self, real: sqlite3.Connection) -> None:
+            self._real = real
+
+        def execute(self, sql: str, *args: object) -> object:
+            if sql == "COMMIT":
+                raise sqlite3.OperationalError("disk I/O error")
+            return self._real.execute(sql, *args)
+
+        def __getattr__(self, name: str) -> object:
+            return getattr(self._real, name)
+
+    monkeypatch.setattr(db, "_connection", Failing(db._connection))
+    with pytest.raises(StorageError, match="disk I/O error"), db.transaction() as c:
+        c.execute("INSERT INTO roles (id, grants) VALUES ('r', '[]')")
+    monkeypatch.undo()
+    assert not db._connection.in_transaction
+    assert db.query("SELECT COUNT(*) FROM roles")[0][0] == 0
+
+
+def test_a_transaction_inside_another_is_a_savepoint(db: Database) -> None:
+    with db.transaction() as outer:
+        outer.execute("INSERT INTO roles (id, grants) VALUES ('kept', '[]')")
+        with pytest.raises(RuntimeError), db.transaction() as inner:
+            inner.execute("INSERT INTO roles (id, grants) VALUES ('undone', '[]')")
+            raise RuntimeError("abort")
+        with db.transaction() as inner:
+            inner.execute("INSERT INTO roles (id, grants) VALUES ('also', '[]')")
+    assert [r[0] for r in db.query("SELECT id FROM roles ORDER BY id")] == [
+        "also",
+        "kept",
+    ]
+
+
+def test_sqlite_failures_are_translated(db: Database) -> None:
+    with pytest.raises(StorageError, match="no such table"):
+        db.query("SELECT * FROM nope")
+    with pytest.raises(StorageError, match="no such table"):
+        db.one("SELECT * FROM nope")
+    with pytest.raises(StorageError, match="no such table"):
+        db.execute("DELETE FROM nope")
+    with pytest.raises(ConflictError, match="FOREIGN KEY"):
+        db.execute(
+            "INSERT INTO tokens (id, user_id, name, token_hash, created_at)"
+            " VALUES ('t', 'nobody', 'n', 'h', 'now')"
+        )
+    with pytest.raises(ConflictError, match="UNIQUE"):
+        for _ in range(2):
+            db.execute("INSERT INTO roles (id, grants) VALUES ('r', '[]')")
+
+
+def test_the_index_of_a_deleted_account_is_a_conflict(db: Database) -> None:
+    from benethos_mailbox_service.data.storage import (
+        IndexChanges,
+        IndexEntry,
+        SqliteMessageIndexRepository,
+    )
+
+    index = SqliteMessageIndexRepository(db)
+    changes = IndexChanges(added=[IndexEntry("msg_1", "n1", "INBOX")])
+    with pytest.raises(ConflictError):
+        index.apply("acc_gone", changes)
 
 
 def test_everything_survives_a_restart(tmp_path: Path) -> None:

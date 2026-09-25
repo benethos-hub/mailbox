@@ -65,6 +65,9 @@ class CredentialMissingError(CredentialError):
 
 
 class ConflictError(MailboxServiceError):
+    """The record collides with what is stored: an id or a unique value
+    taken, or a reference to a record that is gone."""
+
     code = "conflict"
 
 
@@ -88,6 +91,12 @@ class SendLimitError(RateLimitedError):
     """The caller has sent as many mails in 24 hours as its grants allow."""
 
     code = "send_limit_reached"
+
+
+class StorageError(MailboxServiceError):
+    """The service's own storage failed: busy, damaged or unreadable."""
+
+    code = "storage_error"
 
 
 class NotSupportedError(MailboxServiceError):

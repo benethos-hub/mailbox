@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Generic, TypeVar
 
-from ...errors import NotFoundError
+from ...errors import ConflictError, NotFoundError
 
 T = TypeVar("T")
 
@@ -37,6 +37,12 @@ class Table(Generic[T]):
             raise missing(self._what, row_id) from None
 
     def put(self, row_id: str, row: T) -> None:
+        self._rows[row_id] = row
+
+    def add(self, row_id: str, row: T) -> None:
+        """A new row. An id that exists is a conflict, as it is in SQL."""
+        if row_id in self._rows:
+            raise ConflictError(f"{self._what} {row_id} exists already")
         self._rows[row_id] = row
 
     def delete(self, row_id: str) -> None:

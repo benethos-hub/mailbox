@@ -780,7 +780,7 @@ One envelope for every error the API raises itself:
 | 422 | FastAPI validation format | schema violation |
 | 429 | `rate_limited` | with `Retry-After` |
 | 501 | `not_supported` | capability missing |
-| 500 | `credential_unreadable` | a stored credential cannot be decrypted |
+| 500 | `credential_unreadable`, `storage_error` | a stored credential cannot be decrypted, the service's own database failed |
 | 502 | `provider_error`, `provider_auth_failed`, `provider_unavailable` | upstream failed. An auth failure sets the account to `needs_reauth`, an unreachable server to `unreachable` |
 | 503 | `setup_required` | neither a user nor `MAILBOX_SERVICE_KEY` exists yet |
 

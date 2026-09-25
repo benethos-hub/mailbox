@@ -34,7 +34,7 @@ from benethos_mailbox_service.data.storage import (
     TokenRepository,
     UserRepository,
 )
-from benethos_mailbox_service.errors import NotFoundError
+from benethos_mailbox_service.errors import ConflictError, NotFoundError
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -94,6 +94,14 @@ def test_accounts_round_trip(stores: Stores) -> None:
     ):
         with pytest.raises(NotFoundError, match="account acc_1 not found"):
             call()
+
+
+def test_an_account_id_is_taken_once(stores: Stores) -> None:
+    account = Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
+    stores.accounts.add(account)
+    with pytest.raises(ConflictError):
+        stores.accounts.add(account.model_copy(update={"email": "b@example.com"}))
+    assert stores.accounts.get("acc_1").email == "a@example.com"
 
 
 def test_users_round_trip(stores: Stores) -> None:
