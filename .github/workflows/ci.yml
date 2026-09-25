@@ -56,3 +56,44 @@ jobs:
       # Offline: providers are faked and the MCP tests mock the REST API.
       - name: Run tests with coverage
         run: uv run pytest -q --cov --cov-fail-under=80
+
+  # Every other job installs from uv.lock. A user installs from PyPI, where
+  # only the declared ranges in pyproject.toml count, and most of them have
+  # no upper bound. This job builds both wheels and installs them into a
+  # clean environment without the lockfile, then checks that both commands
+  # start and that the service still describes the same API.
+  fresh-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+
+      - name: Build both wheels
+        run: uv build --all-packages --wheel
+
+      - name: Install them into a clean environment (no lockfile) and start them
+        run: |
+          set -euo pipefail
+          uv venv /tmp/fresh
+          uv pip install --python /tmp/fresh/bin/python dist/*.whl
+          echo "--- resolved dependency versions ---"
+          uv pip list --python /tmp/fresh/bin/python
+          echo "--- both commands start ---"
+          /tmp/fresh/bin/benethos-mailbox-api --version
+          /tmp/fresh/bin/benethos-mailbox-mcp --version
+          /tmp/fresh/bin/benethos-mailbox-mcp --help > /dev/null
+          echo "--- the service describes the checked-in API ---"
+          /tmp/fresh/bin/benethos-mailbox-api openapi > /tmp/openapi.json
+          python3 - <<'PY'
+          import json
+
+          fresh = json.load(open("/tmp/openapi.json"))
+          checked_in = json.load(open("docs/openapi.json"))
+          assert fresh == checked_in, (
+              "a fresh install describes another API than docs/openapi.json: "
+              "a dependency outside uv.lock changes the contract"
+          )
+          print(f"OK: {len(fresh['paths'])} paths, same as docs/openapi.json")
+          PY
