@@ -39,6 +39,9 @@ stored data and the configuration may change without notice.
 
 ### Changed
 
+- A message without a recipient, one with more than 100 recipients or
+  attachments over 25 MB is refused with `400` (`bad_request`) instead
+  of `422`, on `send` and on the draft routes alike.
 - A blank name for a user, a role or a token is refused with `400`, and
   so is a token `expires_at` that lies in the past.
 - An IMAP account's `username` defaults to its address when left out, on

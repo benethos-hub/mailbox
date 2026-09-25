@@ -42,6 +42,10 @@ M = TypeVar("M", bound=DraftMessage)
 
 log = logging.getLogger(__name__)
 
+# What one message may carry.
+MAX_RECIPIENTS = 100
+MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+
 
 class Outgoing:
     def __init__(
@@ -85,8 +89,9 @@ class Outgoing:
             account_id, message, draft=False
         )
         # Checked once composed: a reply finds its recipients in the original.
+        recipients = _addressed(message.recipients())
         result = await self._deliver(
-            access, "send_message", account_id, raw, message.recipients(), message_id
+            access, "send_message", account_id, raw, recipients, message_id
         )
         if message.reference is not None and original is not None:
             await self._mark_answered(account_id, message.reference, original)
@@ -312,10 +317,9 @@ class Outgoing:
         out = compose.outgoing(
             stored, self._date(), compose.new_message_id(account.email)
         )
-        if not out.recipients:
-            raise BadRequestError("the draft has no recipients")
+        recipients = _addressed(out.recipients)
         result = await self._deliver(
-            access, "send_draft", account_id, out.raw, out.recipients, out.message_id
+            access, "send_draft", account_id, out.raw, recipients, out.message_id
         )
         # Sent: from here on nothing may fail, or a client would send again.
         try:
@@ -363,7 +367,19 @@ def _require(
 ) -> None:
     """The operation's right and, with a reference, the right to read: a
     reply quotes the original and a forward passes it on. Whoever may only
-    send or write drafts must not get at mail this way."""
+    send or write drafts must not get at mail this way. Then the limits."""
     access.require(operation, account_id)
     if message.reference is not None:
         access.require("get_message", account_id)
+    if len(message.recipients()) > MAX_RECIPIENTS:
+        raise BadRequestError(f"at most {MAX_RECIPIENTS} recipients")
+    if sum(len(a.data) for a in message.attachments) > MAX_ATTACHMENT_BYTES:
+        raise BadRequestError("the attachments exceed 25 MB")
+
+
+def _addressed(recipients: list[str]) -> list[str]:
+    """A message to send needs at least one recipient. A reply finds them
+    in the original, a forward or a plain message brings its own."""
+    if not recipients:
+        raise BadRequestError("a message needs at least one recipient")
+    return recipients

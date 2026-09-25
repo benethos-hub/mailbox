@@ -122,7 +122,7 @@ packages/
           grants.py       # the grant editor's rows, read back into grants
           mailform.py     # the mail form: fields to a message, shown again
           forms.py        # form errors; failing: back with the message
-          rights.py       # what the signed-in user may see of the UI
+          rights.py       # what the mail pages offer, by the rights on an account
           errors.py       # errors as a page
           routes/         # one module per area
           templates/      # base, partials, components (macros), pages

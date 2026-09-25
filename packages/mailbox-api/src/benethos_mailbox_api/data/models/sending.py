@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from pydantic import Base64Bytes, BaseModel, Field, model_validator
+from pydantic import Base64Bytes, BaseModel, Field
 
 from .messages import MessageReference, MessageSummary
 
 # No line breaks in anything that goes into a header: a CR or LF there would
 # let a caller add headers of its own (header injection).
 _ONE_LINE = r"^[^\r\n]*$"
-MAX_RECIPIENTS = 100
-MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
 
 
 class Recipient(BaseModel):
@@ -49,14 +47,6 @@ class DraftMessage(BaseModel):
     )
     attachments: list[OutgoingAttachment] = Field(default_factory=list)
 
-    @model_validator(mode="after")
-    def _limits(self) -> DraftMessage:
-        if len(self.recipients()) > MAX_RECIPIENTS:
-            raise ValueError(f"at most {MAX_RECIPIENTS} recipients")
-        if sum(len(a.data) for a in self.attachments) > MAX_ATTACHMENT_BYTES:
-            raise ValueError("the attachments exceed 25 MB")
-        return self
-
     def recipients(self) -> list[str]:
         """Every address the message goes to, each once."""
         return list(dict.fromkeys(r.email for r in (*self.to, *self.cc, *self.bcc)))
@@ -65,13 +55,6 @@ class DraftMessage(BaseModel):
 class OutgoingMessage(DraftMessage):
     """A message to send. The service sets From, Date and Message-ID. It
     needs a recipient, unless it is a reply: that finds one in the original."""
-
-    @model_validator(mode="after")
-    def _addressed(self) -> OutgoingMessage:
-        replying = self.reference is not None and self.reference.action != "forward"
-        if not self.recipients() and not replying:
-            raise ValueError("a message needs at least one recipient")
-        return self
 
 
 class SendResult(BaseModel):
