@@ -130,6 +130,32 @@ async def search_messages(
     return render.page(page)
 
 
+MAX_CHANGES = 200
+
+
+async def whats_new(
+    since: Annotated[
+        str | None,
+        Field(
+            description=(
+                "state of the previous call. Left out: no changes, only the "
+                "state to start from"
+            )
+        ),
+    ] = None,
+    account_id: Annotated[
+        str | None, Field(description="One account. Left out: every account")
+    ] = None,
+    limit: Annotated[int, Field(ge=1, le=MAX_CHANGES)] = 50,
+) -> dict[str, Any]:
+    """What changed since an earlier call: mail created, updated (moved,
+    flags) or deleted, oldest first, ids only. Call once without since to
+    get a state, later pass that state as since. With more, call again at
+    once. get_message reads a new mail."""
+    found = await client().list_changes(account_id, since=since, limit=limit)
+    return render.changes(found)
+
+
 async def get_message(
     account_id: str,
     message_id: str,
@@ -490,6 +516,7 @@ TOOLS = (
     _reads(list_folders, "List folders", "list_folders"),
     _reads(search_messages, "Search mail", "list_messages", "list_all_messages"),
     _reads(get_message, "Read a message", "get_message"),
+    _reads(whats_new, "What is new", "list_changes", "list_all_changes"),
     _reads(get_attachment, "Get an attachment", "get_attachment"),
     # Setting a flag or a folder again changes nothing. A message in the
     # trash already is refused, not deleted.

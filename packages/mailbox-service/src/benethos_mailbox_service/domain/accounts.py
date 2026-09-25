@@ -27,6 +27,7 @@ from ..data.storage import (
 from ..errors import BadRequestError, MailboxServiceError
 from .access import Access
 from .adapters import REFRESH_TOKEN, Adapters
+from .changes import ChangeFeed
 
 
 class AccountService:
@@ -41,12 +42,14 @@ class AccountService:
         index: MessageIndexRepository | None = None,
         check_host: HostCheck | None = None,
         idempotency: IdempotencyRepository | None = None,
+        changes: ChangeFeed | None = None,
     ) -> None:
         self._repository = repository
         self._vault = vault
         self._adapters = adapters
         self._index = index
         self._idempotency = idempotency
+        self._changes = changes
         # Every host in an account's settings passes this before the first
         # connection: the service must not be pointed into its own network.
         self._check_host = check_host
@@ -191,6 +194,8 @@ class AccountService:
             self._index.forget_account(account_id)
         if self._idempotency is not None:
             self._idempotency.forget_account(account_id)
+        if self._changes is not None:
+            self._changes.forget_account(account_id)
         self._repository.delete(account_id)
         await self._adapters.drop(account_id)
 

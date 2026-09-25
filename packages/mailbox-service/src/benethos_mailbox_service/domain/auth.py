@@ -97,6 +97,23 @@ class AuthService:
             return Access.admin(ADMIN_KEY_USER_ID, "admin key")
         return self._access_for_token(presented)
 
+    def access_of(self, user_id: str) -> Access | None:
+        """What a user may do now, for work done on its behalf outside a
+        request, such as a webhook. None for a user that is gone or
+        disabled, and for the admin key once it is no longer set."""
+        if user_id == ADMIN_KEY_USER_ID:
+            if self._admin_key is None:
+                return None
+            return Access.admin(ADMIN_KEY_USER_ID, "admin key")
+        try:
+            user = self._users.get(user_id)
+        except NotFoundError:
+            return None
+        if user.disabled:
+            return None
+        roles = {role.id: role for role in self._roles.list()}
+        return Access.for_user(user, roles)
+
     def issue_token(
         self, user_id: str, name: str, expires_at: datetime | None = None
     ) -> tuple[ApiToken, str]:

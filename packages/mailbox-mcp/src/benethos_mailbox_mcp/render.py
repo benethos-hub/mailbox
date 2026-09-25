@@ -12,7 +12,7 @@ import re
 from html.parser import HTMLParser
 from typing import Any
 
-from .client import Folder, Me, MeAccount, Page, Sent
+from .client import Changes, Folder, Me, MeAccount, Page, Sent
 
 # Content of these elements is never shown by a mail client.
 _INVISIBLE = {"script", "style", "head", "title", "template", "noscript"}
@@ -158,6 +158,23 @@ def page(found: Page) -> dict[str, Any]:
     if found.not_answering:
         result["accounts_not_answering"] = found.not_answering
     return result
+
+
+CHANGES_NOTE = (
+    "Ids only. Pass state as since next time. get_message reads a message "
+    "that was created or updated."
+)
+
+
+def changes(found: Changes) -> dict[str, Any]:
+    """A page of the change feed. Ids and types only, nothing a sender
+    wrote, so nothing to mark as foreign."""
+    return {
+        "changes": found.changes,
+        "state": found.state,
+        "more": found.more,
+        "note": CHANGES_NOTE,
+    }
 
 
 def folder(found: Folder) -> dict[str, Any]:

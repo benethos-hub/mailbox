@@ -25,6 +25,7 @@ from ..storage import (
     CredentialRepository,
     EncryptedCredential,
     KeyRepository,
+    Sealed,
     WrappedKey,
 )
 from . import cipher
@@ -33,6 +34,10 @@ from .keys import KeyProvider, encode_recovery
 
 def _credential_aad(account_id: str, field: str) -> bytes:
     return f"credential:{account_id}:{field}".encode()
+
+
+def _sealed_aad(label: str) -> bytes:
+    return f"sealed:{label}".encode()
 
 
 def _key_aad(key_id: str) -> bytes:
@@ -144,6 +149,33 @@ class CredentialVault:
 
     def delete(self, account_id: str) -> None:
         self._credentials.delete_for_account(account_id)
+
+    # --- other secrets --------------------------------------------------------
+
+    def seal(self, label: str, value: SecretStr) -> Sealed:
+        """A secret the service must read again, e.g. a webhook's signing
+        secret, encrypted with the data key and bound to ``label``."""
+        key_id, dek = self._data_key()
+        plain = value.get_secret_value().encode()
+        nonce, ciphertext = cipher.encrypt(dek, plain, _sealed_aad(label))
+        return Sealed(key_id, nonce, ciphertext)
+
+    def unseal(self, label: str, sealed: Sealed) -> SecretStr:
+        key_id, dek = self._data_key()
+        if sealed.key_id != key_id:
+            raise CredentialError(
+                f"the secret of {label} is encrypted with key {sealed.key_id},"
+                " which this service does not hold"
+            )
+        try:
+            plain = cipher.decrypt(
+                dek, sealed.nonce, sealed.ciphertext, _sealed_aad(label)
+            )
+        except cipher.DecryptionError:
+            raise CredentialError(
+                f"the secret of {label} cannot be decrypted"
+            ) from None
+        return SecretStr(plain.decode())
 
     # --- keys -----------------------------------------------------------------
 

@@ -129,6 +129,7 @@ class Outgoing:
         if sent.sent_copy is not None:
             copy = await self._calls.published_one(account_id, sent.sent_copy)
             copy_id = copy.id
+        self._calls.changed(account_id, "message.sent", [copy_id or message_id])
         return SendResult(
             message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
         )

@@ -46,7 +46,7 @@ from ...models import (
     ServerProtocol,
 )
 from .. import rules
-from ..base import Capability, CredentialReader, ProviderSettings
+from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
 from ..guard import Guard
 from ..protocols.imap import (
     DEFAULT_PORTS,
@@ -295,6 +295,13 @@ class ImapProvider:
     async def folder_contents(self, folder_id: str) -> list[str]:
         return await self._run(lambda: self._folder_contents(folder_id))
 
+    async def flag_changes(
+        self, folder_id: str, since: str, message_ids: list[str]
+    ) -> list[str]:
+        return await self._run(
+            lambda: self._flag_changes(folder_id, since, message_ids)
+        )
+
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
         # Ids that are no id of this adapter are left out, like messages
         # that are gone.
@@ -312,6 +319,9 @@ class ImapProvider:
                     )
                 )
         return found
+
+    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+        raise NotSupportedError("IMAP folders are compared by their state")
 
     async def wait_for_change(self, timeout: float) -> bool:
         return await anyio.to_thread.run_sync(
@@ -649,13 +659,33 @@ class ImapProvider:
         return raw
 
     def _folder_states(self) -> dict[str, str]:
+        """``UIDVALIDITY.UIDNEXT.MESSAGES``, with CONDSTORE also
+        ``.HIGHESTMODSEQ``, so that a flag change changes the state too."""
+        modseq = "CONDSTORE" in self._session.server_capabilities()
+        self._session.noop()
         states = {}
         for folder in self._list_folders():
-            validity, uidnext, count = self._session.folder_state(
-                mappers.folder_name(folder.id)
+            validity, uidnext, count, highest = self._session.folder_state(
+                mappers.folder_name(folder.id), modseq=modseq
             )
-            states[folder.id] = f"{validity}.{uidnext}.{count}"
+            state = f"{validity}.{uidnext}.{count}"
+            states[folder.id] = state if highest is None else f"{state}.{highest}"
         return states
+
+    def _flag_changes(
+        self, folder_id: str, since: str, message_ids: list[str]
+    ) -> list[str]:
+        """Only with CONDSTORE, and only while the folder keeps its UIDs."""
+        parts = since.split(".")
+        if len(parts) != 4 or not all(p.isdigit() for p in parts):
+            return []
+        folder = mappers.folder_name(folder_id)
+        validity = int(parts[0])
+        by_uid = _by_folder(message_ids)[0].get((folder, validity), {})
+        if not by_uid or self._session.select(folder) != validity:
+            return []
+        changed = self._session.changed_since(sorted(by_uid), int(parts[3]))
+        return [by_uid[uid] for uid in changed if uid in by_uid]
 
     def _folder_contents(self, folder_id: str) -> list[str]:
         folder = mappers.folder_name(folder_id)

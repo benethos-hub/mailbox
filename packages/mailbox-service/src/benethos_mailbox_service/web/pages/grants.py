@@ -26,7 +26,13 @@ GROUP_NAMES = (permissions.ADMIN, *permissions.GROUPS)
 # the tool table of the MCP server's README documents them. A test compares
 # the two, and the MCP server's tests compare that table with its tools.
 MCP_TOOLS: dict[str, tuple[str, ...]] = {
-    "mail.read": ("list_folders", "search_messages", "get_message", "get_attachment"),
+    "mail.read": (
+        "list_folders",
+        "search_messages",
+        "get_message",
+        "get_attachment",
+        "whats_new",
+    ),
     "mail.write": ("update_messages", "create_folder"),
     "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
     "send": ("send_message", "send_draft"),

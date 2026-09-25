@@ -10,6 +10,14 @@ from __future__ import annotations
 from .accounts import Account, AccountStatus, CredentialInfo, ProviderType
 from .audit import SendOutcome, SendRecord
 from .batch import BatchItemResult, BatchResult, ItemError, MessageBatch
+from .changes import (
+    CHANGE_TYPES,
+    Change,
+    ChangePage,
+    ChangeType,
+    Event,
+    EventType,
+)
 from .discovery import (
     Candidate,
     CredentialKind,
@@ -43,6 +51,7 @@ from .sending import (
     SentMessage,
 )
 from .users import ApiToken, Grant, Role, User
+from .webhooks import EVENT_TYPES, CreatedWebhook, Webhook, WebhookCreate
 
 __all__ = [
     "Account",
@@ -55,11 +64,17 @@ __all__ = [
     "BatchItemResult",
     "BatchResult",
     "Candidate",
+    "CHANGE_TYPES",
+    "Change",
+    "ChangePage",
+    "ChangeType",
     "CredentialInfo",
     "CredentialKind",
     "Discovery",
     "DiscoverySourceName",
     "DraftMessage",
+    "Event",
+    "EventType",
     "Folder",
     "FolderCreate",
     "FolderRole",
@@ -90,4 +105,8 @@ __all__ = [
     "SourceOutcome",
     "SourceReport",
     "User",
+    "EVENT_TYPES",
+    "CreatedWebhook",
+    "Webhook",
+    "WebhookCreate",
 ]

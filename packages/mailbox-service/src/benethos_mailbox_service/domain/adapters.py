@@ -30,6 +30,7 @@ from ..data.providers import (
 from ..data.secrets import CredentialVault
 from ..data.storage import AccountRepository
 from ..errors import ProviderAuthError, ProviderUnavailableError
+from .changes import ChangeFeed
 
 T = TypeVar("T")
 
@@ -44,8 +45,11 @@ class Adapters:
         vault: CredentialVault,
         provider_factory: ProviderFactory = build_provider,
         oauth: Mapping[ProviderType, OAuthClient] | None = None,
+        changes: ChangeFeed | None = None,
     ) -> None:
         self._repository = repository
+        # Hears when an account comes to need a new sign-in.
+        self._changes = changes
         self._vault = vault
         self._provider_factory = provider_factory
         # The OAuth app of each provider that signs in with OAuth, where the
@@ -75,6 +79,8 @@ class Adapters:
         if self.status(account_id) is not status:
             self._repository.set_status(account_id, status)
             self._status[account_id] = status
+            if status is AccountStatus.NEEDS_REAUTH and self._changes is not None:
+                self._changes.record(account_id, "account.needs_reauth", [account_id])
 
     def signs_in_with_oauth(self, provider: ProviderType) -> bool:
         """Whether accounts of ``provider`` connect through an OAuth app of

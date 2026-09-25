@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Literal
 
 from .accounts import AccountRepository, InMemoryAccountRepository
+from .changes import ChangeLogRepository, InMemoryChangeLogRepository, LoggedChange
 from .credentials import (
     CredentialRepository,
     EncryptedCredential,
@@ -34,6 +35,7 @@ from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
     Database,
     SqliteAccountRepository,
+    SqliteChangeLogRepository,
     SqliteCredentialRepository,
     SqliteIdempotencyRepository,
     SqliteKeyRepository,
@@ -42,6 +44,7 @@ from .sqlite import (
     SqliteSendLogRepository,
     SqliteTokenRepository,
     SqliteUserRepository,
+    SqliteWebhookRepository,
     inspect_snapshot,
 )
 from .users import (
@@ -51,6 +54,13 @@ from .users import (
     RoleRepository,
     TokenRepository,
     UserRepository,
+)
+from .webhooks import (
+    Delivery,
+    InMemoryWebhookRepository,
+    Sealed,
+    WebhookRecord,
+    WebhookRepository,
 )
 
 
@@ -67,6 +77,8 @@ class Repositories:
     index: MessageIndexRepository
     idempotency: IdempotencyRepository
     sends: SendLogRepository
+    changes: ChangeLogRepository
+    webhooks: WebhookRepository
     # The database behind them, for backups and for closing. None in memory.
     database: Database | None = None
 
@@ -89,6 +101,8 @@ def open_repositories(
             index=InMemoryMessageIndexRepository(),
             idempotency=InMemoryIdempotencyRepository(),
             sends=InMemorySendLogRepository(),
+            changes=InMemoryChangeLogRepository(),
+            webhooks=InMemoryWebhookRepository(),
         )
     db = Database(database_path)
     return Repositories(
@@ -101,6 +115,8 @@ def open_repositories(
         index=SqliteMessageIndexRepository(db),
         idempotency=SqliteIdempotencyRepository(db),
         sends=SqliteSendLogRepository(db),
+        changes=SqliteChangeLogRepository(db),
+        webhooks=SqliteWebhookRepository(db),
         database=db,
     )
 
@@ -108,6 +124,16 @@ def open_repositories(
 __all__ = [
     "Repositories",
     "open_repositories",
+    "ChangeLogRepository",
+    "InMemoryChangeLogRepository",
+    "LoggedChange",
+    "SqliteChangeLogRepository",
+    "Delivery",
+    "InMemoryWebhookRepository",
+    "Sealed",
+    "SqliteWebhookRepository",
+    "WebhookRecord",
+    "WebhookRepository",
     "IdempotencyRepository",
     "InMemoryIdempotencyRepository",
     "SqliteIdempotencyRepository",

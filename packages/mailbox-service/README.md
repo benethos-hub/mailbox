@@ -12,7 +12,9 @@
 The Mailbox Service: one REST API (OpenAPI 3.1) for several mail
 providers and accounts, with a configuration UI in the browser. It runs
 permanently, holds the connections to the accounts, keeps their
-credentials encrypted and syncs in the background. Scripts, apps and the
+credentials encrypted and syncs in the background. It keeps a feed of
+what changed in the mailboxes and posts it to webhooks. Scripts, apps and
+the
 MCP server [`benethos-mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp)
 reach mail only through it, each with a token of its own.
 
@@ -88,6 +90,11 @@ A template for the settings file with every option:
 | `MAILBOX_SERVICE_KEY` | | optional built-in admin key, for containers and tests |
 | `MAILBOX_SERVICE_SYNC_INTERVAL` | `300` | seconds between two polls of every folder. `0` switches the sync off. |
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | watch the inbox over IMAP IDLE, with a second connection per account |
+| `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
+| `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS` | `8` | tries of a webhook post before its events are dropped |
+| `MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY` | `30` | seconds before the second try, doubled for each further one |
+| `MAILBOX_SERVICE_WEBHOOK_LONGEST_RETRY` | `3600` | the longest pause between two tries, in seconds |
+| `MAILBOX_SERVICE_WEBHOOK_TIMEOUT` | `10` | seconds a webhook receiver may take to answer |
 | `MAILBOX_SERVICE_DISCOVERY_ISPDB` | `true` | whether autodiscovery asks Thunderbird's ISPDB (tells Mozilla the domain) |
 | `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` | `[]` | JSON list of hosts that may resolve to private addresses, e.g. an internal mail server. Autodiscovery may look them up and accounts may use them. |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` | | the Entra app for Microsoft accounts. Without it they cannot be connected. |
@@ -129,6 +136,23 @@ Users, roles and tokens are managed in the UI (Users, Roles) or under
 Give each script and each assistant its own user with only the rights it
 needs. With neither a user nor `MAILBOX_SERVICE_KEY`, the API answers
 `503 setup_required`.
+
+## Changes and webhooks
+
+`GET /v1/changes` names each message created, updated or deleted since
+the `state` of an earlier answer, across the accounts the token may read.
+`GET /v1/accounts/{account_id}/changes` does the same for one account.
+Both need `mail.read`. A state older than `MAILBOX_SERVICE_CHANGES_DAYS`
+answers `410 changes_expired`, and the client starts again without
+`since`.
+
+`POST /v1/webhooks` registers a URL, with the right `webhooks.manage`.
+The service posts the events there as JSON, signed in
+`X-Mailbox-Signature`, and tries a failed post again as the
+`MAILBOX_SERVICE_WEBHOOK_*` settings say. The signing secret is in the
+answer to `POST`, the only time it is shown. A host in the local network
+is allowed. The format of a post is in
+[CONCEPT.md, section 6.5](https://github.com/benethos-hub/mailbox/blob/main/docs/CONCEPT.md#65-changes-and-webhooks).
 
 ## Container
 

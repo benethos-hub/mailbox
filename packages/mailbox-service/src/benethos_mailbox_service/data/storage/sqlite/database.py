@@ -123,6 +123,37 @@ MIGRATIONS: list[str] = [
     CREATE INDEX sends_account ON sends (account_id, created_at);
     CREATE INDEX sends_user ON sends (user_id, account_id, created_at);
     """,
+    # 6: the change log behind the change feed
+    """
+    CREATE TABLE changes (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        message_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        at TEXT NOT NULL
+    );
+    CREATE INDEX changes_account ON changes (account_id, seq);
+    CREATE INDEX changes_at ON changes (at);
+    """,
+    # 7: webhooks, their sealed secret and where their delivery stands
+    """
+    CREATE TABLE webhooks (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        url TEXT NOT NULL,
+        events TEXT NOT NULL,
+        accounts TEXT,
+        created_at TEXT NOT NULL,
+        key_id TEXT NOT NULL REFERENCES keys(key_id),
+        nonce BLOB NOT NULL,
+        ciphertext BLOB NOT NULL,
+        cursor INTEGER NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        next_attempt_at TEXT,
+        last_delivery_at TEXT,
+        last_error TEXT
+    );
+    """,
 ]
 
 SCHEMA_VERSION = len(MIGRATIONS)

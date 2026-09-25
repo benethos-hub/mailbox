@@ -715,7 +715,7 @@ request that fails stores nothing and may be tried again.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `{acc}/changes?since=<state>` | created / updated / deleted message ids since a state token, plus a new state |
-| GET | `/v1/changes?since=<state>` | the same across all accounts |
+| GET | `/v1/changes?since=<state>` | the same across all accounts (`list_all_changes`) |
 | GET / POST | `/v1/webhooks` | list, register (URL, events, account filter) |
 | DELETE | `/v1/webhooks/{webhook_id}` | remove |
 
@@ -723,6 +723,56 @@ Events: `message.created`, `message.updated`, `message.deleted`,
 `message.sent`, `account.needs_reauth`. Payloads carry ids only, signed with
 HMAC-SHA256 in a header. The source is IMAP IDLE / polling, Gmail
 `history.list` and Graph delta queries, all normalized into the change feed.
+
+**Decided 2026-09-25:**
+
+- Phase 4 covers IMAP and Microsoft accounts. IMAP changes come from the
+  sync pass, Microsoft changes from Graph delta queries per folder in the
+  worker.
+- IMAP uses CONDSTORE (RFC 7162) where the server offers it. A pass then
+  also asks for the flags changed since the last one, so a message read
+  or starred in another client shows as `message.updated`. Without
+  CONDSTORE, only created, moved and deleted messages reach the feed.
+- Changes are kept for `MAILBOX_SERVICE_CHANGES_DAYS` days, 7 by default.
+
+Changes made through the API enter the feed for every provider. A
+`since` older than the kept changes answers `410 changes_expired`, and
+the client starts again from a new state. Without `since`, the answer
+holds no changes, only the current state. The first sync of an account
+records no changes: the messages already there are not new. The feed may
+name a change more than once, e.g. a flag set through the API and seen
+again through CONDSTORE. A client treats a repeated entry as harmless.
+
+**Webhooks, decided 2026-09-26:** a webhook may point into the local
+network, e.g. to an automation server, since it is registered on purpose.
+How often and how long a failed post is repeated has defaults and is
+configurable. Webhooks get their pages in the UI with the rework of
+phase 4b.
+
+A webhook belongs to the user who creates it, and each user sees and
+removes only their own. It hears of the accounts that user may read with
+`list_changes`, checked again at every post, so a right taken away also
+stops the webhook. `accounts` narrows that further. The signing secret
+starts with `whsec_`, is shown once, when the webhook is created, and is
+kept sealed with the data key. A new webhook hears of what happens from
+then on. The events come from the same log as the change feed, which also
+holds `message.sent` (the copy in the sent folder, or else the Message-ID
+header) and `account.needs_reauth` (the account id).
+
+The service posts a webhook's events as JSON, up to 100 in one post:
+`{"webhook_id", "delivery_id", "events": [{type, id, account_id, at}],
+"more"}`. `X-Mailbox-Signature: t=<unix time>,v1=<hex>` carries the
+HMAC-SHA256 of `<unix time>.` followed by the body, with the webhook's
+secret. A receiver checks it and may refuse an old time. Each webhook
+keeps the point in the log it has posted up to, so a restart loses
+nothing and repeats nothing a receiver took. A post the receiver does not
+answer with 2xx is tried again after 30 seconds, then twice as long each
+time up to an hour, 8 times in all (the settings
+`MAILBOX_SERVICE_WEBHOOK_ATTEMPTS`, `_FIRST_RETRY`, `_LONGEST_RETRY`).
+After the last try its events are dropped and the webhook notes why in
+`last_error`. The connection goes to the address that was checked. A host
+in the local network passes, link-local, multicast and unspecified
+addresses do not, and redirects are not followed.
 
 ### 6.6 Listing, search and pagination
 
@@ -1018,14 +1068,14 @@ with the role
   | Group | Operations |
   |---|---|
   | `accounts.read` | `list_accounts`, `get_account` |
-  | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes` |
+  | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes`, `list_all_changes` |
   | `mail.write` | `update_message`, `delete_message` to trash, `batch_messages`, `create_folder`, `update_folder` |
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
   | `audit` | `list_sends` |
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
-  | `webhooks.manage` | webhook routes |
+  | `webhooks.manage` | `list_webhooks`, `create_webhook`, `delete_webhook`. Not account-bound |
   | `users.manage` | users, their tokens, roles. Not account-bound |
   | `admin` | everything |
 
@@ -1259,7 +1309,7 @@ one or two `operationId`s.
 | `get_message` | read | `get_message`, body shortened, `max_chars` param |
 | `get_thread` | read | `get_thread` |
 | `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
-| `whats_new` | read | `list_changes` across accounts, the "what came in since" tool |
+| `whats_new` | read | `list_all_changes` across accounts, or `list_changes` for one, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash |
 | `create_folder` | write | `create_folder` |
 | `list_drafts` | drafts | `list_drafts` |
@@ -1355,6 +1405,13 @@ folders whose state changed. It does **not** mirror mailboxes. List, search
 and get still go to the provider live, unless the local cache of open
 question 5 is decided.
 
+A Microsoft account keeps no id mapping. At the same interval the worker
+asks each of its folders with a Graph delta query what changed since the
+last pass. A message that left one folder and came into another moved.
+One that is new to a folder counts as created when Graph dates its
+creation after the last pass, else as updated. A message that arrives
+while a pass runs may therefore count as updated.
+
 **Fallback without the service**, for development and tests only:
 a test harness can run the service app and the MCP client in one process
 via `httpx.ASGITransport`. The REST contract stays the same, there is just
@@ -1414,8 +1471,9 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    service is, and cannot collide with anyone's trademark. "Mail gateway"
    was ruled out because it already names a different kind of product,
    the filtering gateway in front of a mail server.
-3. **Gmail / Microsoft priority:** are they needed early, or are GMX / web.de
-   / T-Online over IMAP the main use?
+3. **Gmail priority:** is Gmail needed early, or are GMX / web.de /
+   T-Online over IMAP the main use? Microsoft accounts are supported
+   already (phase 5).
 4. **Sending from the MCP server:** decided 2026-09-24, both stay open,
    governed by rights (7.7).
 5. **Local cache:** list and search go straight to the provider in the

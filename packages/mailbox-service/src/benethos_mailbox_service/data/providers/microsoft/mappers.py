@@ -72,7 +72,7 @@ def _addresses(values: Any) -> list[Address]:
     return [a for a in found if a is not None]
 
 
-def _when(value: Any) -> datetime | None:
+def when(value: Any) -> datetime | None:
     if not value:
         return None
     return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
@@ -94,7 +94,7 @@ def summary(item: dict[str, Any]) -> MessageSummary:
         subject=item.get("subject"),
         sender=_address(item.get("from")),
         to=_addresses(item.get("toRecipients")),
-        date=_when(item.get("receivedDateTime")),
+        date=when(item.get("receivedDateTime")),
         snippet=item.get("bodyPreview") or None,
         unread=not item.get("isRead", True),
         starred=(item.get("flag") or {}).get("flagStatus") == "flagged",

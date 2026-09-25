@@ -4,17 +4,20 @@
 from __future__ import annotations
 
 from .accounts import SqliteAccountRepository
+from .changes import SqliteChangeLogRepository
 from .credentials import SqliteCredentialRepository, SqliteKeyRepository
 from .database import SCHEMA_VERSION, Database, inspect_snapshot
 from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
 from .sends import SqliteSendLogRepository
 from .users import SqliteRoleRepository, SqliteTokenRepository, SqliteUserRepository
+from .webhooks import SqliteWebhookRepository
 
 __all__ = [
     "SCHEMA_VERSION",
     "Database",
     "SqliteAccountRepository",
+    "SqliteChangeLogRepository",
     "SqliteCredentialRepository",
     "SqliteIdempotencyRepository",
     "SqliteKeyRepository",
@@ -23,5 +26,6 @@ __all__ = [
     "SqliteSendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",
+    "SqliteWebhookRepository",
     "inspect_snapshot",
 ]

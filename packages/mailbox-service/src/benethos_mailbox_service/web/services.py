@@ -17,6 +17,7 @@ from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
 from ..domain.oauth import OAuthService
 from ..domain.users import UserService
+from ..domain.webhooks import WebhookService
 
 
 class Services(Protocol):
@@ -28,6 +29,7 @@ class Services(Protocol):
     mailbox: MailboxService
     discovery: DiscoveryService
     oauth: OAuthService
+    webhooks: WebhookService
 
 
 def services_of(request: Request) -> Services:
@@ -55,6 +57,10 @@ def get_oauth(request: Request) -> OAuthService:
     return services_of(request).oauth
 
 
+def get_webhooks(request: Request) -> WebhookService:
+    return services_of(request).webhooks
+
+
 def get_auth(request: Request) -> AuthService:
     return services_of(request).auth
 
@@ -65,3 +71,4 @@ Discoverer = Annotated[DiscoveryService, Depends(get_discovery)]
 Mailbox = Annotated[MailboxService, Depends(get_mailbox)]
 Users = Annotated[UserService, Depends(get_users)]
 OAuth = Annotated[OAuthService, Depends(get_oauth)]
+Webhooks = Annotated[WebhookService, Depends(get_webhooks)]

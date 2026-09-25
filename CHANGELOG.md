@@ -6,6 +6,41 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A change feed: `GET /v1/accounts/{account_id}/changes` and
+  `GET /v1/changes` (`list_changes`, `list_all_changes`, both in
+  `mail.read`) name each message created, updated or deleted since a
+  `state`, oldest first, ids only. Without `since` the answer holds only
+  the current state. `more` says to ask again at once. A state the feed no
+  longer knows answers `410 changes_expired`. Changes come from the sync
+  (IMAP), from Graph delta queries (Microsoft) and from the API.
+- `MAILBOX_SERVICE_CHANGES_DAYS`: days a change is kept, 7 by default.
+- On an IMAP server with CONDSTORE, flags another mail client changes
+  reach the change feed as `message.updated`.
+- Microsoft accounts reach the change feed: the sync worker now polls
+  them too, at `MAILBOX_SERVICE_SYNC_INTERVAL`, with one Graph delta query
+  per folder.
+- Webhooks: `POST /v1/webhooks` registers a URL for events,
+  `GET /v1/webhooks` lists the caller's own, `DELETE
+  /v1/webhooks/{webhook_id}` removes one, all under the new right
+  `webhooks.manage`. The answer to `POST` holds the signing secret, the
+  only time it is shown. A host in the local network is allowed. Events:
+  `message.created`, `message.updated`, `message.deleted`, `message.sent`
+  and `account.needs_reauth`.
+- The service posts events to each webhook, up to 100 in one JSON post,
+  signed in `X-Mailbox-Signature` as `t=<unix time>,v1=<hex>`, the
+  HMAC-SHA256 of `<unix time>.` and the body with the webhook's secret.
+  A post the receiver does not answer with 2xx is tried again after 30
+  seconds, then twice as long each time up to an hour, 8 times in all.
+  Then its events are dropped and `last_error` says so. The settings
+  `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS`, `_FIRST_RETRY`, `_LONGEST_RETRY` and
+  `_TIMEOUT` change that. Link-local, multicast and unspecified addresses
+  are refused, redirects are not followed.
+- The MCP tool `whats_new`: mail created, updated or deleted since the
+  `state` of an earlier call, in one account or all. A token with
+  `mail.read` gets it.
+
 ### Changed
 
 - The last two places with the old name use the new one. A draft marks
@@ -22,6 +57,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   file ended discovery with an unhandled error. With an older fastapi,
   the served OpenAPI document differed from `docs/openapi.json`.
   pydantic 2.11 could not be installed beside the other minimums.
+
+### Fixed
+
+- The IMAP sync could miss a change in the folder its connection had
+  selected last, e.g. a new mail in the inbox: the server answered STATUS
+  for that folder from an older view. The sync now sends a NOOP first.
 
 ## [0.1.0] - 2026-09-25
 

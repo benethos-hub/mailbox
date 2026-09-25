@@ -1,4 +1,4 @@
-"""Messages across accounts."""
+"""Messages and changes across accounts."""
 
 from __future__ import annotations
 
@@ -6,8 +6,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from ....data.models import FolderRole, MessagePage
-from ..deps import Caller, Limit, Mailbox, Search
+from ....data.models import ChangePage, FolderRole, MessagePage
+from ..deps import Caller, Limit, Mailbox, Search, Since
+from ..errors import CHANGES_ERRORS
 
 router = APIRouter(tags=["mailbox"])
 
@@ -34,4 +35,23 @@ async def list_all_messages(
         search=search,
         limit=limit,
         cursor=cursor,
+    )
+
+
+@router.get("/changes", responses=CHANGES_ERRORS)
+async def list_all_changes(
+    caller: Caller,
+    mailbox: Mailbox,
+    accounts: Annotated[
+        list[str] | None,
+        Query(description="Account ids. Without: every account the caller may read"),
+    ] = None,
+    since: Since = None,
+    limit: Limit = 100,
+) -> ChangePage:
+    """Messages created, updated or deleted since `since` in every account
+    the caller may read, oldest first, ids only. The state is the same
+    point as in the feed of one account."""
+    return mailbox.list_all_changes(
+        caller, account_ids=accounts, since=since, limit=limit
     )

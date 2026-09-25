@@ -46,7 +46,9 @@ done. Update the roadmap in the same commit that finishes an item.
   `http://127.0.0.1:8080/docs`.
 - Live checks: `uv run python live/smoke.py [--show]` (read-only) and
   `uv run python live/changes.py [--keep]` (sends one test mail between the test
-  accounts, moves it, deletes it), test accounts in `live/.env` (not
+  accounts, moves it, deletes it, and checks the change feed and a
+  webhook on a receiver at 127.0.0.1), test
+  accounts in `live/.env` (not
   versioned, template `live/.env.example`).
   `MAILBOX_SERVICE_TOKEN=... uv run python live/register.py` adds the test
   accounts to a running service over its API and checks them.
@@ -60,6 +62,7 @@ done. Update the roadmap in the same commit that finishes an item.
   reply draft there. The send tools send two mails from the first test
   account to the second and delete them for good. Grants with recipients
   and a send limit stop mails, and the audit names each attempt.
+  `whats_new` must name the changes of the write tools.
   `uv run python live/mcp_http.py` checks it over streamable HTTP behind
   its bearer token, read-only.
 - The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a token.
@@ -70,7 +73,9 @@ done. Update the roadmap in the same commit that finishes an item.
   `uv run python live/microsoft.py --connect` once (a person signs in in
   the browser), then `uv run python live/microsoft.py` checks the adapter
   against the Microsoft test account in `live/.env`. It sends one mail
-  from it to the first test account and deletes it for good on both sides.
+  from it to the first test account and deletes it for good on both sides,
+  and checks that the change feed learns of the sent copy through Graph
+  delta queries.
 
 ## Project layout
 
@@ -140,6 +145,7 @@ packages/
         replies.py        # replies and forwards made from the original
         discovery.py      # DiscoveryService: trust, ranking, cache, limits
         sync.py           # SyncService: stable message ids, the sync pass
+        changes.py        # ChangeFeed: records created, updated, deleted
         worker.py         # SyncWorker: polling and IDLE in the background
         idempotency.py    # Idempotency-Key: a retried send returns its result
         locks.py          # KeyedLocks: one asyncio lock per key, for the services
@@ -149,10 +155,13 @@ packages/
         auth.py           # AuthService: tokens, the admin key
         throttle.py       # SignInThrottle: a source that fails too often waits
         users.py          # UserService: users, roles, tokens
+        webhooks.py       # WebhookService: register, list, remove
+        delivery.py       # WebhookDispatcher: signed posts, retries
       data/               # DATA: reads and writes, decides nothing
         models/           # provider-neutral types, one module per subject:
                           #   accounts, users, folders, messages, batch,
-                          #   sending, paging, discovery, audit
+                          #   sending, paging, discovery, audit,
+                          #   changes, webhooks
         mail/             # messages in RFC 5322, whatever protocol carries them
           compose.py      # outgoing messages as bytes (email)
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
@@ -172,7 +181,8 @@ packages/
                           #   its endpoints and the scopes it needs
         http/             # httpx: base.py (the client, the capped read),
                           #   safe.py (hosts users typed, SSRF guard),
-                          #   api.py (JSON to a provider's known hosts)
+                          #   api.py (JSON to a provider's known hosts),
+                          #   post.py (posts to webhook receivers)
         storage/          # own records, one module per subject, table.py
                           #   for the in-memory ones, sqlite/ the database
         secrets/          # envelope encryption, key providers, backup
@@ -268,7 +278,7 @@ noticing. Every change is measured against that.
 | Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, microsoft (planned: gmail, pop3) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/providers/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, later templates for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`) | in-memory, SQLite | another database |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX (planned: JMAP well-known, Microsoft realm, SRV, guessing) | any further lookup, or one switched off |
 | HTTP | `data/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/providers/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |

@@ -14,7 +14,8 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [1c](#phase-1c--stable-ids-and-sync-worker) | Stable ids and sync worker | **done** |
 | [2](#phase-2--writing-and-sending) | Writing and sending | **done** |
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | **done** |
-| [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | |
+| [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | **done** |
+| [4b](#phase-4b--ui-rework) | UI rework | |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
@@ -119,8 +120,27 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 4 – Change feed and webhooks
 
-- Change feed, `/v1/changes`, and the MCP tool `whats_new` (6.5)
-- Webhooks
+- **The change log: every sync pass and every change through the API
+  records created, updated and deleted messages, kept for
+  `MAILBOX_SERVICE_CHANGES_DAYS` days (6.5)**, done
+- **`GET {acc}/changes` and `GET /v1/changes` with an opaque state (6.5)**,
+  done: paged with `more`, `410 changes_expired` for a state the feed no
+  longer knows, live-checked in `live/changes.py`
+- **The MCP tool `whats_new` (8)**, done, live-checked in `live/mcp_stdio.py`
+- **IMAP: CONDSTORE where the server offers it, so flag changes from other
+  clients reach the feed (6.5)**, done, live-checked
+- **Microsoft: Graph delta queries in the worker, so the feed covers
+  Microsoft accounts (5.4, 6.5)**, done, live-checked in `live/microsoft.py`
+- **Webhooks: register, sign with HMAC-SHA256, deliver with retries
+  (6.5)**, done, live-checked in `live/changes.py` against a receiver at
+  127.0.0.1. Their pages in the UI come with phase 4b.
+- decided 2026-09-25: IMAP and Microsoft in this phase, CONDSTORE, 7 days
+  by default (CONCEPT 6.5)
+
+## Phase 4b – UI rework
+
+- A rework of the configuration UI before the providers of phase 5.
+  Not designed yet: its scope goes into CONCEPT first.
 
 ## Phase 5 – More providers and the configuration UI
 
@@ -142,7 +162,7 @@ Everything real mail will depend on, before any real mailbox is connected.
     without a secret. Sign-in through `localhost` or the device code flow.
     An app of the deployment's own stays the option (CONCEPT 5.4)
 - `gmail` adapter with OAuth, own Google Cloud client per deployment (5.5)
-- Gmail history and Graph delta in the worker
+- Gmail history in the worker
 - `jmap` adapter for Fastmail and JMAP servers (5.6)
 - Configuration UI under `/ui` (1.1), brought forward on 2026-09-24:
   - **frame: sign-in with an API token, server-side session, CSRF,

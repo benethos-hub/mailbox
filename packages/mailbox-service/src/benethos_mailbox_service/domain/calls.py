@@ -2,8 +2,9 @@
 
 Callers name messages by our ids (``sync``), providers by their own. This
 module translates between the two, follows a message another client moved,
-and keeps the account's status in step with how each call went. It checks
-no rights: the services that use it do.
+and keeps the account's status in step with how each call went. Each change
+it makes goes into the change feed. It checks no rights: the services that
+use it do.
 """
 
 from __future__ import annotations
@@ -14,6 +15,8 @@ from typing import Any, TypeVar
 from ..data.models import (
     Account,
     AttachmentContent,
+    ChangeType,
+    EventType,
     Message,
     MessageSummary,
     MessageUpdate,
@@ -113,10 +116,16 @@ class Calls:
     def relocate(self, account_id: str, message_id: str, now: MessageSummary) -> None:
         """A message we stored anew: its id points to the new place."""
         self._sync.relocate(account_id, message_id, now.id, folder_of(now))
+        self._sync.changed(account_id, "message.updated", [message_id])
+
+    def changed(self, account_id: str, type: EventType, ids: list[str]) -> None:
+        """Record an event in the change log."""
+        self._sync.changed(account_id, type, ids)
 
     def forget(self, account_id: str, message_id: str) -> None:
         """A message is gone for good: its id answers 404 from now on."""
         self._sync.forget(account_id, message_id)
+        self._sync.changed(account_id, "message.deleted", [message_id])
 
     # --- changes, one or many ---------------------------------------------------------
 
@@ -134,6 +143,7 @@ class Calls:
                 continue
             self._follow(account_id, message_id, natives[message_id], outcome)
             results[message_id] = public(outcome, message_id, account_id)
+        self._sync.changed(account_id, "message.updated", _done(results))
         return results
 
     async def update_one(
@@ -158,10 +168,12 @@ class Calls:
                 results[message_id] = outcome
                 continue
             if permanent:
-                self.forget(account_id, message_id)
+                self._sync.forget(account_id, message_id)
             elif outcome is not None:
                 self._follow(account_id, message_id, natives[message_id], outcome)
             results[message_id] = None
+        type: ChangeType = "message.deleted" if permanent else "message.updated"
+        self._sync.changed(account_id, type, _done(results))
         return results
 
     async def delete_one(
@@ -174,9 +186,10 @@ class Calls:
     def _follow(
         self, account_id: str, message_id: str, native: str, now: MessageSummary
     ) -> None:
-        """A message the provider moved: its id points to the new place."""
+        """A message the provider moved: its id points to the new place.
+        The caller records the change."""
         if now.id != native:
-            self.relocate(account_id, message_id, now)
+            self._sync.relocate(account_id, message_id, now.id, folder_of(now))
 
     async def _on_messages(
         self,
@@ -224,6 +237,11 @@ class Calls:
         )
         missing = MessageNotFoundError("message not found")
         return {i: by_native.get(n, missing) for i, n in natives.items()}
+
+
+def _done(results: dict[str, Any]) -> list[str]:
+    """The ids whose operation succeeded."""
+    return [i for i, r in results.items() if not isinstance(r, MailboxServiceError)]
 
 
 def folder_of(message: MessageSummary) -> str:

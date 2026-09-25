@@ -19,7 +19,7 @@ from fastapi.routing import APIRoute
 from . import __version__, web
 from .config import Settings
 from .data.discovery import SafeFetcher, default_sources, preset_hosts
-from .data.http import ApiClient, Resolve, host_addresses
+from .data.http import ApiClient, Resolve, WebhookPoster, host_addresses
 from .data.models import ProviderType
 from .data.providers import (
     App,
@@ -41,6 +41,8 @@ from .data.storage import Database, MessageIndexRepository, open_repositories
 from .domain.accounts import AccountService
 from .domain.adapters import Adapters
 from .domain.auth import AuthService
+from .domain.changes import ChangeFeed
+from .domain.delivery import Retries, WebhookDispatcher
 from .domain.discovery import DiscoveryService
 from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
@@ -48,6 +50,7 @@ from .domain.oauth import OAuthService
 from .domain.sending import SendControl
 from .domain.sync import SyncService
 from .domain.users import UserService
+from .domain.webhooks import WebhookService
 from .domain.worker import SyncWorker
 
 
@@ -61,8 +64,11 @@ class Services:
     discovery: DiscoveryService
     sync: SyncService
     index: MessageIndexRepository  # the store behind sync
+    changes: ChangeFeed
     vault: CredentialVault
     oauth: OAuthService
+    webhooks: WebhookService
+    deliveries: WebhookDispatcher
     worker: SyncWorker | None = None
     database: Database | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
@@ -100,7 +106,10 @@ def build_services(
         resolve=resolve or host_addresses,
         internal_hosts=settings.discovery_internal_hosts,
     )
-    adapters = Adapters(repos.accounts, vault, provider_factory, oauth=clients)
+    changes = ChangeFeed(repos.changes, days=settings.changes_days)
+    adapters = Adapters(
+        repos.accounts, vault, provider_factory, oauth=clients, changes=changes
+    )
     accounts = AccountService(
         repos.accounts,
         vault,
@@ -108,8 +117,9 @@ def build_services(
         repos.index,
         check_host=fetcher.checked_address,
         idempotency=repos.idempotency,
+        changes=changes,
     )
-    sync = SyncService(adapters, repos.index)
+    sync = SyncService(adapters, repos.index, feed=changes)
     auth = AuthService(repos.users, repos.roles, repos.tokens, admin_key=admin_key)
     return Services(
         accounts=accounts,
@@ -122,6 +132,7 @@ def build_services(
         discovery=discovery or build_discovery(settings, fetcher),
         sync=sync,
         index=repos.index,
+        changes=changes,
         worker=(
             SyncWorker(
                 adapters, sync, interval=settings.sync_interval, push=settings.sync_idle
@@ -131,6 +142,22 @@ def build_services(
         ),
         vault=vault,
         oauth=OAuthService(accounts, adapters, clients),
+        webhooks=WebhookService(repos.webhooks, vault, changes),
+        deliveries=WebhookDispatcher(
+            repos.webhooks,
+            vault,
+            changes,
+            WebhookPoster(
+                resolve=resolve or host_addresses, timeout=settings.webhook_timeout
+            ),
+            access_of=auth.access_of,
+            account_ids=adapters.ids,
+            retries=Retries(
+                attempts=settings.webhook_attempts,
+                first_retry=settings.webhook_first_retry,
+                longest_retry=settings.webhook_longest_retry,
+            ),
+        ),
         database=repos.database,
         oauth_clients=clients,
     )
@@ -206,6 +233,7 @@ def create_app(
         async with anyio.create_task_group() as background:
             if services.worker is not None:
                 background.start_soon(services.worker.run)
+            background.start_soon(services.deliveries.run)
             try:
                 yield
             finally:

@@ -6,19 +6,33 @@ index. A sync pass compares the provider's folders with the index: a message
 that left one folder and one with the same ``Message-ID`` that arrived in
 another is the same message and keeps its id. Anything ambiguous is not
 guessed: the old id is dropped and the new place gets a new one.
+
+A provider with stable ids needs no index. Where it reports changes per
+folder (``DELTA``, Graph delta queries), a pass asks each folder what
+changed since its last token and records that instead.
+
+What a pass finds goes into the change feed: new messages as created,
+moved ones and, where the provider can tell, ones whose flags changed as
+updated, vanished ones as deleted. The first pass of an
+account records nothing, since the messages already there are not new.
 """
 
 from __future__ import annotations
 
+import json
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import replace
+from datetime import datetime
 from typing import TypeVar
 
+from ..common.clock import utc_now
 from ..common.ids import new_id
-from ..data.providers import Capability, MailProvider
+from ..data.models import EventType
+from ..data.providers import Capability, FolderChanges, MailProvider
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
-from ..errors import MailboxServiceError, MessageNotFoundError
+from ..errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
 from .adapters import Adapters
+from .changes import ChangeFeed
 from .locks import KeyedLocks
 
 T = TypeVar("T")
@@ -34,15 +48,31 @@ class SyncService:
         adapters: Adapters,
         index: MessageIndexRepository,
         new_id: Callable[[], str] = new_message_id,
+        feed: ChangeFeed | None = None,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._adapters = adapters
         self._index = index
         self._new_id = new_id
+        self._feed = feed if feed is not None else ChangeFeed()
+        self._clock = clock
         self._locks: KeyedLocks[str] = KeyedLocks()
+
+    @property
+    def feed(self) -> ChangeFeed:
+        """The change feed this service records into."""
+        return self._feed
 
     def mapped(self, account_id: str) -> bool:
         """Whether the account's ids go through the index."""
         return Capability.STABLE_IDS not in self._adapters.capabilities(account_id)
+
+    def watched(self, account_id: str) -> bool:
+        """Whether a sync pass does anything for the account: keep its index,
+        or ask its folders what changed."""
+        return self.mapped(account_id) or (
+            Capability.DELTA in self._adapters.capabilities(account_id)
+        )
 
     # --- ids ------------------------------------------------------------------------
 
@@ -60,12 +90,21 @@ class SyncService:
         missing = [(n, f) for n, f in dict(places).items() if n not in known]
         if missing:
             headers = await self._headers(account_id, [n for n, _ in missing])
-            self._index.add(
-                account_id,
-                [IndexEntry(self._new_id(), n, f, headers.get(n)) for n, f in missing],
-            )
+            added = [
+                IndexEntry(self._new_id(), n, f, headers.get(n)) for n, f in missing
+            ]
+            # Before the first sync, every message is still unknown.
+            synced = bool(self._index.folder_states(account_id))
+            self._index.add(account_id, added)
             # Read back: a sync may have added the same place meanwhile.
             known = self._index.by_native(account_id, natives)
+            if synced:
+                ours = {e.id for e in added}
+                self.changed(
+                    account_id,
+                    "message.created",
+                    [e.id for e in known.values() if e.id in ours],
+                )
         return [known[native].id for native in natives]
 
     async def resolve(
@@ -106,9 +145,22 @@ class SyncService:
         if self.mapped(account_id):
             self._index.drop(account_id, message_id)
 
+    def changed(
+        self, account_id: str, type: EventType, message_ids: Iterable[str]
+    ) -> None:
+        """Record changes to messages in the change feed."""
+        self._feed.record(account_id, type, message_ids)
+
     async def _contents(self, account_id: str, folder_id: str) -> list[str]:
         return await self._adapters.call(
             account_id, lambda p: p.folder_contents(folder_id)
+        )
+
+    async def _flag_changes(
+        self, account_id: str, folder_id: str, since: str, natives: list[str]
+    ) -> list[str]:
+        return await self._adapters.call(
+            account_id, lambda p: p.flag_changes(folder_id, since, natives)
         )
 
     async def _headers(
@@ -145,11 +197,68 @@ class SyncService:
     async def sync_account(self, account_id: str) -> None:
         """Bring the index of one account up to date. Reads only the folders
         whose state changed. A failure changes nothing."""
-        if not self.mapped(account_id):
+        if not self.watched(account_id):
             return
         lock = self._locks.get(account_id)
         async with lock:
-            await self._sync(account_id)
+            if self.mapped(account_id):
+                await self._sync(account_id)
+            else:
+                await self._sync_delta(account_id)
+
+    async def _sync_delta(self, account_id: str) -> None:
+        """Ask every folder what changed since its last token. A folder asked
+        for the first time only hands out its token. The stored state of a
+        folder is its token and when the pass that got it began."""
+        now = self._clock()
+        folders = await self._adapters.call(account_id, lambda p: p.folder_states())
+        before = self._index.folder_states(account_id)
+        states: dict[str, str] = {}
+        seen: dict[str, datetime | None] = {}  # id -> created
+        removed: set[str] = set()
+        arrived_new: set[str] = set()  # in folders asked for the first time
+        since: dict[str, datetime] = {}
+        for folder_id in folders:
+            last = _delta_state(before.get(folder_id))
+            try:
+                found = await self._folder_changes(
+                    account_id, folder_id, last[0] if last else None
+                )
+            except ChangesExpiredError:
+                last = None
+                found = await self._folder_changes(account_id, folder_id, None)
+            states[folder_id] = json.dumps(
+                {"token": found.token, "at": now.isoformat()}
+            )
+            if last is None:
+                arrived_new |= {m.id for m in found.changed}
+                continue
+            for message in found.changed:
+                seen[message.id] = message.created
+                since[message.id] = last[1]
+            removed |= set(found.removed)
+        self._index.apply(account_id, IndexChanges(states=states))
+        if not before:
+            return
+        # Deleted: removed and seen nowhere. Moved: removed here, seen there.
+        created = [
+            i
+            for i, at in seen.items()
+            if i not in removed and at is not None and at >= since[i]
+        ]
+        updated = [i for i in seen if i not in created]
+        updated += sorted((removed & arrived_new) - set(seen))
+        deleted = sorted(removed - set(seen) - arrived_new)
+        self.changed(account_id, "message.created", created)
+        self.changed(account_id, "message.updated", updated)
+        self.changed(account_id, "message.deleted", deleted)
+
+    async def _folder_changes(
+        self, account_id: str, folder_id: str, token: str | None
+    ) -> FolderChanges:
+        return await self._adapters.call(
+            account_id, lambda p: p.folder_changes(folder_id, token)
+        )
 
     async def _sync(self, account_id: str) -> None:
         async def call(operation: Callable[[MailProvider], Awaitable[T]]) -> T:
@@ -175,6 +284,19 @@ class SyncService:
         ]
         wanted = arrived + unread_headers
         headers = await call(lambda p: p.message_headers(wanted)) if wanted else {}
+        # Messages that stayed but whose flags changed, where the provider
+        # can tell (IMAP with CONDSTORE).
+        stayed = {
+            e.native_id: e for e in entries if present.get(e.native_id) == e.folder_id
+        }
+        flagged: list[str] = []
+        for folder_id in changed:
+            known = [n for n, e in stayed.items() if e.folder_id == folder_id]
+            if folder_id in before and known:
+                natives = await self._flag_changes(
+                    account_id, folder_id, before[folder_id], known
+                )
+                flagged += [stayed[n].id for n in natives if n in stayed]
 
         changes = IndexChanges(states=states)
         for entry in entries:
@@ -195,6 +317,25 @@ class SyncService:
             if n not in taken
         ]
         self._index.apply(account_id, changes)
+        if before:
+            self.changed(account_id, "message.created", [e.id for e in changes.added])
+            # A message renumbered in its folder (a new UIDVALIDITY) did not
+            # change for the caller. One that went to another folder did.
+            elsewhere = [e.id for e, n in moved.items() if present[n] != e.folder_id]
+            self.changed(account_id, "message.updated", elsewhere + flagged)
+            self.changed(account_id, "message.deleted", changes.removed)
+
+
+def _delta_state(stored: str | None) -> tuple[str, datetime] | None:
+    """The token and time of a folder's stored delta state, None for a
+    state of another kind or none at all."""
+    if stored is None:
+        return None
+    try:
+        value = json.loads(stored)
+        return str(value["token"]), datetime.fromisoformat(value["at"])
+    except (ValueError, TypeError, KeyError):
+        return None
 
 
 def _moves(

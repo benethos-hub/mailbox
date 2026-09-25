@@ -13,13 +13,20 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 5. creates a folder and moves the mail into it through the API: the id
    stays,
 6. moves it back the way another mail client would: the id still answers,
+   and, where the server offers CONDSTORE, flags it the same way: the
+   change feed names that,
 7. replies and forwards through the API, back to account 2 only, and
    checks the flags on the original,
 8. renames and deletes the folder, runs a batch, stores, replaces and
    deletes a reply draft, and sends a draft to account 2,
 9. deletes the mail through the API, into the trash, then for good, and
-   the sent copy. With ``--keep`` the mail stays in the inbox and the copy
-   in the sent folder, to look at in a mail client.
+   the sent copy,
+10. checks that the change feed names the mail as created, updated and
+   deleted, and that a webhook on a receiver of its own at 127.0.0.1
+   hears the same, signed, with the send as well.
+
+With ``--keep`` the mail stays in the inbox and the copy in the sent
+folder, to look at in a mail client.
 
 Nothing else in the mailboxes is touched. The service runs in-process with
 memory storage and a throwaway master key. Credentials are never printed.
@@ -28,11 +35,16 @@ memory storage and a throwaway master key. Credentials are never printed.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import imaplib
+import json
 import re
 import ssl
 import sys
+import threading
 import uuid
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 import anyio
@@ -46,6 +58,7 @@ from benethos_mailbox_service.errors import MailboxServiceError
 from benethos_mailbox_service.main import build_services, create_app
 
 IDLE_WAIT = 90.0
+FLAGGED = chr(92) + "Flagged"
 # How long the mail may take from SMTP to the inbox.
 DELIVERY_TRIES = 10
 DELIVERY_PAUSE = 3.0
@@ -158,6 +171,14 @@ class OtherClient:
         status, data = self.conn.uid("MOVE", uid.decode(), _quoted(target))
         if status != "OK":
             raise RuntimeError(f"MOVE failed: {data!r}")
+
+    def capabilities(self) -> set[str]:
+        return {c.upper() for c in self.conn.capabilities}
+
+    def set_flag(self, folder: str, subject: str, flag: str, on: bool) -> None:
+        for uid in self.uids(folder, subject):
+            sign = "+FLAGS.SILENT" if on else "-FLAGS.SILENT"
+            self.conn.uid("STORE", uid.decode(), sign, f"({flag})")
 
     def delete_mail(self, folder: str, subject: str) -> int:
         found = self.uids(folder, subject)
@@ -273,6 +294,59 @@ def check_drafts(
     )
 
 
+class Receiver:
+    """A webhook receiver on 127.0.0.1 that keeps each post it takes."""
+
+    def __init__(self) -> None:
+        posts: list[tuple[bytes, str]] = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802
+                length = int(self.headers.get("Content-Length", "0"))
+                posts.append(
+                    (self.rfile.read(length), self.headers["X-Mailbox-Signature"])
+                )
+                self.send_response(204)
+                self.end_headers()
+
+            def log_message(self, *args: Any) -> None:
+                pass
+
+        self.posts = posts
+        self.server = HTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.server.server_port}/hook"
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def signed(self, secret: str) -> bool:
+        """Whether every post carries a valid signature."""
+        for body, header in self.posts:
+            stamp, digest = (part.split("=", 1)[1] for part in header.split(","))
+            expected = hmac.new(
+                secret.encode(), f"{stamp}.".encode() + body, hashlib.sha256
+            ).hexdigest()
+            if not hmac.compare_digest(digest, expected):
+                return False
+        return bool(self.posts)
+
+    def events(self) -> list[dict[str, Any]]:
+        return [e for body, _ in self.posts for e in json.loads(body)["events"]]
+
+    def close(self) -> None:
+        self.server.shutdown()
+
+
+def feed_types(
+    client: TestClient, account_id: str, since: str, message_id: str
+) -> list[str]:
+    """The types the change feed names for one message since ``since``."""
+    answer = client.get(
+        f"/v1/accounts/{account_id}/changes", params={"since": since, "limit": 200}
+    )
+    if answer.status_code != 200:
+        return [f"status {answer.status_code}"]
+    return [c["type"] for c in answer.json()["changes"] if c["id"] == message_id]
+
+
 def find_by_subject(
     client: TestClient, account_id: str, subject: str
 ) -> dict[str, Any] | None:
@@ -371,6 +445,12 @@ def main() -> int:
             return 1
         assert account_id is not None and sender_id is not None
         anyio.run(services.sync.sync_account, account_id)
+        since = client.get(f"/v1/accounts/{account_id}/changes").json()["state"]
+        hooked = Receiver()
+        hook = client.post(
+            "/v1/webhooks",
+            json={"url": hooked.url, "accounts": [account_id, sender_id]},
+        ).json()
 
         provider = services.adapters.get(account_id)
         answer: dict[str, Any] = {}
@@ -428,6 +508,11 @@ def main() -> int:
         )
         message_id = found["id"]
         inbox_folder = found["folder_ids"][0]
+        run.check(
+            "the change feed names it as created",
+            feed_types(client, account_id, since, message_id) == ["message.created"],
+            " ".join(feed_types(client, account_id, since, message_id)),
+        )
 
         other = OtherClient(env, receiver)
         patched = client.patch(
@@ -498,6 +583,21 @@ def main() -> int:
             back.status_code == 200 and back.json().get("subject") == subject,
         )
 
+        if "CONDSTORE" in other.capabilities():
+            anyio.run(services.sync.sync_account, account_id)
+            mark = client.get(f"/v1/accounts/{account_id}/changes").json()["state"]
+            other.set_flag("INBOX", subject, FLAGGED, on=True)
+            anyio.run(services.sync.sync_account, account_id)
+            types = feed_types(client, account_id, mark, message_id)
+            run.check(
+                "the change feed names a flag another client set (CONDSTORE)",
+                types == ["message.updated"],
+                " ".join(types),
+            )
+            other.set_flag("INBOX", subject, FLAGGED, on=False)
+        else:
+            print("SKIP  the server offers no CONDSTORE")
+
         # Answered by account 1, so it goes back to account 2 only.
         replied = client.post(
             f"/v1/accounts/{account_id}/send",
@@ -558,6 +658,13 @@ def main() -> int:
             f"{batch.status_code} {outcomes}",
         )
 
+        types = feed_types(client, account_id, since, message_id)
+        run.check(
+            "the change feed names its changes as updated",
+            "message.updated" in types,
+            " ".join(types),
+        )
+
         check_drafts(
             run,
             client,
@@ -615,6 +722,12 @@ def main() -> int:
                 and client.get(url).status_code == 404,
                 str(gone.status_code),
             )
+            types = feed_types(client, account_id, since, message_id)
+            run.check(
+                "the change feed names it as deleted, last",
+                types[-1:] == ["message.deleted"],
+                " ".join(types),
+            )
             if sent_copy_id:
                 copy_gone = client.delete(
                     f"/v1/accounts/{sender_id}/messages/{sent_copy_id}",
@@ -625,6 +738,24 @@ def main() -> int:
                     copy_gone.status_code == 204,
                     str(copy_gone.status_code),
                 )
+        anyio.run(services.deliveries.deliver_due)
+        heard = hooked.events()
+        mail = [e["type"] for e in heard if e["id"] == message_id]
+        run.check(
+            "a webhook at 127.0.0.1 hears of it, signed",
+            hooked.signed(hook.get("secret", ""))
+            and mail[:1] == ["message.created"]
+            and "message.updated" in mail,
+            f"{len(hooked.posts)} posts, " + " ".join(dict.fromkeys(mail)),
+        )
+        run.check(
+            "and of the send",
+            any(
+                e["type"] == "message.sent" and e["account_id"] == sender_id
+                for e in heard
+            ),
+        )
+        hooked.close()
     finally:
         if keep:
             if other is not None:

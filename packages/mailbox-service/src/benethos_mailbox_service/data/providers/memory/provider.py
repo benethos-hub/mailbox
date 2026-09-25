@@ -23,7 +23,7 @@ from ...models import (
     SentMessage,
 )
 from .. import rules
-from ..base import Capability
+from ..base import Capability, FolderChanges
 
 
 class MemoryProvider:
@@ -256,9 +256,17 @@ class MemoryProvider:
     async def folder_contents(self, folder_id: str) -> list[str]:
         return [m.id for m in self.messages if folder_id in m.folder_ids]
 
+    async def flag_changes(
+        self, folder_id: str, since: str, message_ids: list[str]
+    ) -> list[str]:
+        return []
+
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
         wanted = set(message_ids)
         return {m.id: m.message_id_header for m in self.messages if m.id in wanted}
+
+    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+        raise NotSupportedError("the memory provider reports no folder changes")
 
     async def wait_for_change(self, timeout: float) -> bool:
         raise NotSupportedError("the memory provider does not push changes")

@@ -56,6 +56,10 @@ class FakeFolder:
     messages: dict[int, tuple[bytes, tuple[str, ...]]] = field(default_factory=dict)
     # Like a real server, UIDNEXT never goes down, even when messages leave.
     highest_uid: int = 0
+    # CONDSTORE: the modification sequence of each message's last change,
+    # and the highest of the folder, which never goes down either.
+    modseqs: dict[int, int] = field(default_factory=dict)
+    highest_modseq: int = 0
 
     @property
     def uidnext(self) -> int:
@@ -95,6 +99,9 @@ class FakeMailBox:
         # Whether MOVE and COPY report the new UID (UIDPLUS).
         self.copyuid = True
         self.append_failure: Exception | None = None
+        # CONDSTORE: one sequence across the mailbox. Only answered when
+        # "CONDSTORE" is announced.
+        self.modseq = 0
         # imaplib's store of response codes, which IMAPClient keeps in _imap.
         self._imap = SimpleNamespace(untagged_responses={})
 
@@ -111,6 +118,19 @@ class FakeMailBox:
         target = self.folders.setdefault(folder, FakeFolder())
         target.messages[uid] = (raw, flags)
         target.highest_uid = max(target.highest_uid, uid)
+        self._touch(target, uid)
+
+    def other_client_flags(self, folder: str, uid: int, flags: tuple[str, ...]) -> None:
+        """Another client sets the flags of a message."""
+        target = self.folders[folder]
+        raw, _ = target.messages[uid]
+        target.messages[uid] = (raw, flags)
+        self._touch(target, uid)
+
+    def _touch(self, folder: FakeFolder, uid: int) -> None:
+        self.modseq += 1
+        folder.modseqs[uid] = self.modseq
+        folder.highest_modseq = self.modseq
 
     def other_client_moves(
         self, source: str, uid: int, target: str, new_uid: int
@@ -288,6 +308,7 @@ class FakeMailBox:
                 gone = {f.lower() for f in flags}
                 changed = tuple(f for f in current if f.lower() not in gone)
             folder.messages[uid] = (raw, changed)
+            self._touch(folder, uid)
 
     def folder_status(self, name: str, what: list[str]) -> dict[bytes, int]:
         self.calls.append(("status", name, tuple(what)))
@@ -297,6 +318,8 @@ class FakeMailBox:
             "UIDNEXT": folder.uidnext,
             "MESSAGES": len(folder.messages),
         }
+        if "CONDSTORE" in self.announced:
+            values["HIGHESTMODSEQ"] = folder.highest_modseq
         return {k.encode(): v for k, v in values.items() if k in what}
 
     def search(self, criteria: Any, charset: str | None = None) -> list[int]:
@@ -314,7 +337,15 @@ class FakeMailBox:
                 found.append(uid)
         return found
 
-    def fetch(self, uids: list[int], items: list[str]) -> dict[int, dict[bytes, Any]]:
+    def fetch(
+        self,
+        uids: list[int] | str,
+        items: list[str],
+        modifiers: list[str] | None = None,
+    ) -> dict[int, dict[bytes, Any]]:
+        if modifiers:
+            return self._changed_since(uids, items, modifiers)
+        assert not isinstance(uids, str)
         for item in items:
             assert "BODY" not in item or "PEEK" in item, "a read must never set \\Seen"
         kind = (
@@ -344,6 +375,28 @@ class FakeMailBox:
                 data[b"BODY[]"] = raw
             found[uid] = data
         return found
+
+    def _changed_since(
+        self, uids: list[int] | str, items: list[str], modifiers: list[str]
+    ) -> dict[int, dict[bytes, Any]]:
+        """FETCH uids (FLAGS) (CHANGEDSINCE n), as CONDSTORE answers it."""
+        assert "CONDSTORE" in self.announced, "CHANGEDSINCE needs CONDSTORE"
+        assert not isinstance(uids, str), "IMAPClient needs the UIDs listed"
+        assert items == ["FLAGS"]
+        [modifier] = modifiers
+        name, since = modifier.split()
+        assert name == "CHANGEDSINCE"
+        self.calls.append(("changedsince", tuple(uids), int(since)))
+        folder = self.folders[self.selected]
+        return {
+            uid: {b"FLAGS": tuple(f.encode() for f in folder.messages[uid][1])}
+            for uid in uids
+            if uid in folder.messages and folder.modseqs.get(uid, 0) > int(since)
+        }
+
+    def noop(self) -> tuple[bytes, list[Any]]:
+        self.calls.append(("noop",))
+        return b"NOOP completed", []
 
     def idle(self) -> None:
         self.calls.append(("idle", self.selected))

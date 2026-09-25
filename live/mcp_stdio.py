@@ -8,7 +8,8 @@ API, and makes a user that may only read them. Then it starts
 ``benethos-mailbox-mcp`` over stdio with that user's token and calls the
 tools. A second user may also write: with it the check creates a folder in
 the first test account, stars, moves and trashes the newest inbox message
-there, and puts everything back as it was. A third user may write drafts:
+there, and puts everything back as it was. whats_new must name those
+changes. A third user may write drafts:
 it writes, replaces and deletes a reply draft. Nothing is sent. A fourth
 user may send: it sends one mail twice with the same call, one draft and
 one HTML mail, from the first test account to the second only, and
@@ -48,6 +49,7 @@ READ_TOOLS = {
     "search_messages",
     "get_message",
     "get_attachment",
+    "whats_new",
 }
 WRITE_TOOLS = READ_TOOLS | {"update_messages", "create_folder"}
 DRAFT_TOOLS = READ_TOOLS | {
@@ -206,6 +208,10 @@ async def check_writing(
                     found = {"error": text_of(result)}
                 return found
 
+            start = await session.call_tool("whats_new", {"account_id": account_id})
+            since = (start.structured_content or {}).get("state")
+            run.check("whats_new hands out a state", not start.is_error and bool(since))
+
             created = await session.call_tool(
                 "create_folder",
                 {"account_id": account_id, "name": f"mcp-live-{secrets.token_hex(4)}"},
@@ -253,6 +259,20 @@ async def check_writing(
                 back.get("done") == [message["id"]]
                 and now.get("folder_ids") == [inbox["id"]],
                 str(back.get("error", "")),
+            )
+
+            news = await session.call_tool(
+                "whats_new", {"account_id": account_id, "since": since}
+            )
+            changes = (news.structured_content or {}).get("changes", [])
+            run.check(
+                "whats_new names the message as updated",
+                not news.is_error
+                and any(
+                    c["id"] == message["id"] and c["type"] == "message.updated"
+                    for c in changes
+                ),
+                f"{len(changes)} changes",
             )
     finally:
         # Whatever failed above: the message back in the inbox as it was.
