@@ -11,7 +11,6 @@ from benethos_mailbox_service.data.discovery.ispdb import IspdbSource
 from benethos_mailbox_service.data.discovery.mx import MxLookup, MxSource
 from benethos_mailbox_service.data.discovery.presets import PresetSource, bundled
 from benethos_mailbox_service.data.discovery.suffix import (
-    is_public_suffix,
     registrable_domain,
 )
 from benethos_mailbox_service.data.http import SafeFetcher
@@ -69,7 +68,6 @@ def test_bundled_presets_are_consistent() -> None:
     assert len(mx) == len(set(mx)), "an MX domain in two presets"
     for domain in domains + mx:
         assert domain == domain.lower()
-        assert not is_public_suffix(domain), domain
         assert registrable_domain(domain) == domain, domain
     for preset in presets:
         assert preset.candidates or preset.hints, preset.id

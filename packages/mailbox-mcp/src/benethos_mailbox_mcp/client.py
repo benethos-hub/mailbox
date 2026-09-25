@@ -169,10 +169,6 @@ class MailboxApiClient:
             operations=frozenset(found.get("operations", [])),
         )
 
-    async def list_accounts(self) -> list[dict[str, Any]]:
-        result: list[dict[str, Any]] = await self.request("GET", "/v1/accounts")
-        return result
-
     # --- folders ----------------------------------------------------------------------
 
     async def list_folders(self, account_id: str) -> list[Folder]:

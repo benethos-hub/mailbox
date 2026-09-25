@@ -67,7 +67,7 @@ def _tree(folders: list[Folder]) -> list[tuple[Folder, int]]:
     return result
 
 
-def _readable(caller: Access, request: Request) -> list[Any]:
+def _readable_accounts(caller: Access, request: Request) -> list[Any]:
     return get_accounts(request).list(caller, may="list_all_messages")
 
 
@@ -81,7 +81,7 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
     except ValueError:
         role, problem = FolderRole.INBOX, f"Unknown folder: {role_name}"
     chosen = request.query_params.getlist("account")
-    accounts = _readable(caller, request)
+    accounts = _readable_accounts(caller, request)
     page = await mailbox.list_all_messages(
         caller,
         account_ids=chosen or None,

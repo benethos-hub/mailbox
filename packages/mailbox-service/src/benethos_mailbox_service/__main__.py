@@ -152,7 +152,7 @@ def _backup(target: list[str], recovery_key: bool) -> None:
     if target[0] == "verify":
         if len(target) != 2:
             raise _UsageError("use `backup verify FILE`")
-        master = _read_recovery_key() if recovery_key else _master_key()
+        master = _read_recovery_key() if recovery_key else _master_key(Settings())
         manifest, _ = read_backup(Path(target[1]), master)
         print(
             f"OK: backup of {manifest.created_at}, service "
@@ -185,7 +185,7 @@ def _restore(source: Path, recovery_key: bool) -> None:
     from .main import key_provider, opened
 
     settings = Settings()
-    master = _read_recovery_key() if recovery_key else _master_key()
+    master = _read_recovery_key() if recovery_key else _master_key(settings)
     manifest = restore_backup(source, master, settings.database_path)
     if recovery_key and key_provider(settings).load() != master:
         with opened(settings) as services:
@@ -198,10 +198,10 @@ def _restore(source: Path, recovery_key: bool) -> None:
     )
 
 
-def _master_key() -> bytes:
+def _master_key(settings: Settings) -> bytes:
     from .main import key_provider
 
-    provider = key_provider(Settings())
+    provider = key_provider(settings)
     key = provider.load()
     if key is None:
         raise _UsageError(

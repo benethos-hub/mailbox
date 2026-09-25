@@ -68,7 +68,6 @@ def is_public_address(address: str) -> bool:
 
 @dataclass(frozen=True)
 class Fetched:
-    url: str
     # The host that answered, after redirects.
     host: str
     body: bytes
@@ -111,7 +110,7 @@ class SafeFetcher:
                     continue
                 if response is None:
                     return None
-                return Fetched(url=str(target), host=host, body=response)
+                return Fetched(host=host, body=response)
         raise ProviderError(f"refused to follow more than {MAX_REDIRECTS} redirects")
 
     async def checked_address(self, host: str, port: int) -> str | None:

@@ -22,8 +22,3 @@ def registrable_domain(host: str) -> str | None:
     gives ``hoster.co.uk``. None for a public suffix such as ``co.uk``."""
     result = _list().privatesuffix(host.lower().rstrip("."))
     return str(result) if result else None
-
-
-def is_public_suffix(host: str) -> bool:
-    """True for ``de``, ``co.uk``, ``github.io`` and the like."""
-    return bool(_list().is_public(host.lower().rstrip(".")))

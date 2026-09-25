@@ -7,6 +7,7 @@ value shows as ``—``.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from ... import __version__
+from ...data.models import Address
 from .session import PATH
 
 HERE = Path(__file__).resolve().parent
@@ -32,12 +34,10 @@ templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 templates.env.undefined = jinja2.StrictUndefined
 
 
-def when(value: datetime | str | None) -> str:
+def when(value: datetime | None) -> str:
     """Local date and time to the minute."""
-    if value is None or value == "":
+    if value is None:
         return MISSING
-    if isinstance(value, str):
-        value = datetime.fromisoformat(value)
     return value.astimezone().strftime("%Y-%m-%d %H:%M")
 
 
@@ -51,24 +51,14 @@ def size(value: int | None) -> str:
     return MISSING  # pragma: no cover
 
 
-def address(value: Any) -> str:
-    """``Name <email>``, from a model or a dict."""
+def address(value: Address | None) -> str:
+    """``Name <email>``, or the email alone."""
     if value is None:
         return MISSING
-    name = (
-        getattr(value, "name", None)
-        if not isinstance(value, dict)
-        else value.get("name")
-    )
-    email = (
-        getattr(value, "email", None)
-        if not isinstance(value, dict)
-        else value.get("email")
-    )
-    return f"{name} <{email}>" if name else str(email or MISSING)
+    return f"{value.name} <{value.email}>" if value.name else value.email
 
 
-def addresses(values: Any) -> str:
+def addresses(values: Iterable[Address] | None) -> str:
     return ", ".join(address(v) for v in values or []) or MISSING
 
 
