@@ -27,7 +27,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   `webhooks.manage`. The answer to `POST` holds the signing secret, the
   only time it is shown. A host in the local network is allowed. Events:
   `message.created`, `message.updated`, `message.deleted`, `message.sent`
-  and `account.needs_reauth`. Posting them follows in the next step.
+  and `account.needs_reauth`.
+- The service posts events to each webhook, up to 100 in one JSON post,
+  signed in `X-Mailbox-Signature` as `t=<unix time>,v1=<hex>`, the
+  HMAC-SHA256 of `<unix time>.` and the body with the webhook's secret.
+  A post the receiver does not answer with 2xx is tried again after 30
+  seconds, then twice as long each time up to an hour, 8 times in all.
+  Then its events are dropped and `last_error` says so. The settings
+  `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS`, `_FIRST_RETRY`, `_LONGEST_RETRY` and
+  `_TIMEOUT` change that. Link-local, multicast and unspecified addresses
+  are refused, redirects are not followed.
 - The MCP tool `whats_new`: mail created, updated or deleted since the
   `state` of an earlier call, in one account or all. A token with
   `mail.read` gets it.

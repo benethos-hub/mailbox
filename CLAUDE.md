@@ -46,7 +46,8 @@ done. Update the roadmap in the same commit that finishes an item.
   `http://127.0.0.1:8080/docs`.
 - Live checks: `uv run python live/smoke.py [--show]` (read-only) and
   `uv run python live/changes.py [--keep]` (sends one test mail between the test
-  accounts, moves it, deletes it, and checks the change feed), test
+  accounts, moves it, deletes it, and checks the change feed and a
+  webhook on a receiver at 127.0.0.1), test
   accounts in `live/.env` (not
   versioned, template `live/.env.example`).
   `MAILBOX_SERVICE_TOKEN=... uv run python live/register.py` adds the test
@@ -154,6 +155,7 @@ packages/
         throttle.py       # SignInThrottle: a source that fails too often waits
         users.py          # UserService: users, roles, tokens
         webhooks.py       # WebhookService: register, list, remove
+        delivery.py       # WebhookDispatcher: signed posts, retries
       data/               # DATA: reads and writes, decides nothing
         models/           # provider-neutral types, one module per subject:
                           #   accounts, users, folders, messages, batch,
@@ -178,7 +180,8 @@ packages/
                           #   its endpoints and the scopes it needs
         http/             # httpx: base.py (the client, the capped read),
                           #   safe.py (hosts users typed, SSRF guard),
-                          #   api.py (JSON to a provider's known hosts)
+                          #   api.py (JSON to a provider's known hosts),
+                          #   post.py (posts to webhook receivers)
         storage/          # own records, one module per subject, table.py
                           #   for the in-memory ones, sqlite/ the database
         secrets/          # envelope encryption, key providers, backup

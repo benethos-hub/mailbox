@@ -19,7 +19,7 @@ from fastapi.routing import APIRoute
 from . import __version__, web
 from .config import Settings
 from .data.discovery import SafeFetcher, default_sources, preset_hosts
-from .data.http import ApiClient, Resolve, host_addresses
+from .data.http import ApiClient, Resolve, WebhookPoster, host_addresses
 from .data.models import ProviderType
 from .data.providers import (
     App,
@@ -42,6 +42,7 @@ from .domain.accounts import AccountService
 from .domain.adapters import Adapters
 from .domain.auth import AuthService
 from .domain.changes import ChangeFeed
+from .domain.delivery import Retries, WebhookDispatcher
 from .domain.discovery import DiscoveryService
 from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
@@ -67,6 +68,7 @@ class Services:
     vault: CredentialVault
     oauth: OAuthService
     webhooks: WebhookService
+    deliveries: WebhookDispatcher
     worker: SyncWorker | None = None
     database: Database | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
@@ -141,6 +143,21 @@ def build_services(
         vault=vault,
         oauth=OAuthService(accounts, adapters, clients),
         webhooks=WebhookService(repos.webhooks, vault, changes),
+        deliveries=WebhookDispatcher(
+            repos.webhooks,
+            vault,
+            changes,
+            WebhookPoster(
+                resolve=resolve or host_addresses, timeout=settings.webhook_timeout
+            ),
+            access_of=auth.access_of,
+            account_ids=adapters.ids,
+            retries=Retries(
+                attempts=settings.webhook_attempts,
+                first_retry=settings.webhook_first_retry,
+                longest_retry=settings.webhook_longest_retry,
+            ),
+        ),
         database=repos.database,
         oauth_clients=clients,
     )
@@ -216,6 +233,7 @@ def create_app(
         async with anyio.create_task_group() as background:
             if services.worker is not None:
                 background.start_soon(services.worker.run)
+            background.start_soon(services.deliveries.run)
             try:
                 yield
             finally:

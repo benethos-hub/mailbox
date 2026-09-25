@@ -22,8 +22,11 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 9. deletes the mail through the API, into the trash, then for good, and
    the sent copy,
 10. checks that the change feed names the mail as created, updated and
-   deleted. With ``--keep`` the mail stays in the inbox and the copy
-   in the sent folder, to look at in a mail client.
+   deleted, and that a webhook on a receiver of its own at 127.0.0.1
+   hears the same, signed, with the send as well.
+
+With ``--keep`` the mail stays in the inbox and the copy in the sent
+folder, to look at in a mail client.
 
 Nothing else in the mailboxes is touched. The service runs in-process with
 memory storage and a throwaway master key. Credentials are never printed.
@@ -32,11 +35,16 @@ memory storage and a throwaway master key. Credentials are never printed.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import imaplib
+import json
 import re
 import ssl
 import sys
+import threading
 import uuid
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 import anyio
@@ -286,6 +294,47 @@ def check_drafts(
     )
 
 
+class Receiver:
+    """A webhook receiver on 127.0.0.1 that keeps each post it takes."""
+
+    def __init__(self) -> None:
+        posts: list[tuple[bytes, str]] = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802
+                length = int(self.headers.get("Content-Length", "0"))
+                posts.append(
+                    (self.rfile.read(length), self.headers["X-Mailbox-Signature"])
+                )
+                self.send_response(204)
+                self.end_headers()
+
+            def log_message(self, *args: Any) -> None:
+                pass
+
+        self.posts = posts
+        self.server = HTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.server.server_port}/hook"
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def signed(self, secret: str) -> bool:
+        """Whether every post carries a valid signature."""
+        for body, header in self.posts:
+            stamp, digest = (part.split("=", 1)[1] for part in header.split(","))
+            expected = hmac.new(
+                secret.encode(), f"{stamp}.".encode() + body, hashlib.sha256
+            ).hexdigest()
+            if not hmac.compare_digest(digest, expected):
+                return False
+        return bool(self.posts)
+
+    def events(self) -> list[dict[str, Any]]:
+        return [e for body, _ in self.posts for e in json.loads(body)["events"]]
+
+    def close(self) -> None:
+        self.server.shutdown()
+
+
 def feed_types(
     client: TestClient, account_id: str, since: str, message_id: str
 ) -> list[str]:
@@ -397,6 +446,11 @@ def main() -> int:
         assert account_id is not None and sender_id is not None
         anyio.run(services.sync.sync_account, account_id)
         since = client.get(f"/v1/accounts/{account_id}/changes").json()["state"]
+        hooked = Receiver()
+        hook = client.post(
+            "/v1/webhooks",
+            json={"url": hooked.url, "accounts": [account_id, sender_id]},
+        ).json()
 
         provider = services.adapters.get(account_id)
         answer: dict[str, Any] = {}
@@ -684,6 +738,24 @@ def main() -> int:
                     copy_gone.status_code == 204,
                     str(copy_gone.status_code),
                 )
+        anyio.run(services.deliveries.deliver_due)
+        heard = hooked.events()
+        mail = [e["type"] for e in heard if e["id"] == message_id]
+        run.check(
+            "a webhook at 127.0.0.1 hears of it, signed",
+            hooked.signed(hook.get("secret", ""))
+            and mail[:1] == ["message.created"]
+            and "message.updated" in mail,
+            f"{len(hooked.posts)} posts, " + " ".join(dict.fromkeys(mail)),
+        )
+        run.check(
+            "and of the send",
+            any(
+                e["type"] == "message.sent" and e["account_id"] == sender_id
+                for e in heard
+            ),
+        )
+        hooked.close()
     finally:
         if keep:
             if other is not None:

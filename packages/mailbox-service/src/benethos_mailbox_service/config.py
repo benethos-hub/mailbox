@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     # Sync worker: watch the inbox over IMAP IDLE, which needs a second
     # connection per account.
     sync_idle: bool = True
+    # Webhooks: how many times a post is tried before its events are
+    # dropped, the pause after the first failure in seconds, doubled after
+    # each further one up to the longest, and how long a receiver may take.
+    webhook_attempts: int = Field(default=8, ge=1)
+    webhook_first_retry: float = Field(default=30.0, gt=0)
+    webhook_longest_retry: float = Field(default=3600.0, gt=0)
+    webhook_timeout: float = Field(default=10.0, gt=0)
     # Change feed: days a change is kept. A client that asks from an older
     # point starts again from the current state.
     changes_days: int = Field(default=7, ge=1)

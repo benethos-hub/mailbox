@@ -14,7 +14,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [1c](#phase-1c--stable-ids-and-sync-worker) | Stable ids and sync worker | **done** |
 | [2](#phase-2--writing-and-sending) | Writing and sending | **done** |
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | **done** |
-| [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | in progress |
+| [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | **done** |
 | [4b](#phase-4b--ui-rework) | UI rework | |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
 
@@ -131,10 +131,9 @@ Everything real mail will depend on, before any real mailbox is connected.
   clients reach the feed (6.5)**, done, live-checked
 - **Microsoft: Graph delta queries in the worker, so the feed covers
   Microsoft accounts (5.4, 6.5)**, done, live-checked in `live/microsoft.py`
-- Webhooks: register, sign with HMAC-SHA256, deliver with retries (6.5)
-  - **register, list and remove, the secret sealed, the right
-    `webhooks.manage`**, done
-  - delivery
+- **Webhooks: register, sign with HMAC-SHA256, deliver with retries
+  (6.5)**, done, live-checked in `live/changes.py` against a receiver at
+  127.0.0.1. Their pages in the UI come with phase 4b.
 - decided 2026-09-25: IMAP and Microsoft in this phase, CONDSTORE, 7 days
   by default (CONCEPT 6.5)
 

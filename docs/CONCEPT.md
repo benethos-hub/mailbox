@@ -759,6 +759,21 @@ then on. The events come from the same log as the change feed, which also
 holds `message.sent` (the copy in the sent folder, or else the Message-ID
 header) and `account.needs_reauth` (the account id).
 
+The service posts a webhook's events as JSON, up to 100 in one post:
+`{"webhook_id", "delivery_id", "events": [{type, id, account_id, at}],
+"more"}`. `X-Mailbox-Signature: t=<unix time>,v1=<hex>` carries the
+HMAC-SHA256 of `<unix time>.` followed by the body, with the webhook's
+secret. A receiver checks it and may refuse an old time. Each webhook
+keeps the point in the log it has posted up to, so a restart loses
+nothing and repeats nothing a receiver took. A post the receiver does not
+answer with 2xx is tried again after 30 seconds, then twice as long each
+time up to an hour, 8 times in all (the settings
+`MAILBOX_SERVICE_WEBHOOK_ATTEMPTS`, `_FIRST_RETRY`, `_LONGEST_RETRY`).
+After the last try its events are dropped and the webhook notes why in
+`last_error`. The connection goes to the address that was checked. A host
+in the local network passes, link-local, multicast and unspecified
+addresses do not, and redirects are not followed.
+
 ### 6.6 Listing, search and pagination
 
 `GET {acc}/messages` parameters:
