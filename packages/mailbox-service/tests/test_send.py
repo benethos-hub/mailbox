@@ -20,14 +20,13 @@ from benethos_mailbox_service.data.models import (
     Recipient,
 )
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.providers.protocols.imap import ImapSession
 from benethos_mailbox_service.data.providers.protocols.smtp import SmtpSession
 from benethos_mailbox_service.domain import outgoing
 from benethos_mailbox_service.errors import ConflictError, ProviderAuthError
 from benethos_mailbox_service.main import Services
 
-from .conftest import bearer_for
+from .conftest import bearer_for, memory_of
 from .imap_fake import FakeFolder, FakeMailBox
 from .smtp_fake import FakeSmtpServer
 
@@ -179,12 +178,6 @@ def body() -> dict[str, object]:
             {"filename": "a.txt", "data": base64.b64encode(b"data").decode()}
         ],
     }
-
-
-def memory_of(services: Services, account_id: str) -> MemoryProvider:
-    provider = services.adapters.get(account_id)
-    assert isinstance(provider, MemoryProvider)
-    return provider
 
 
 def test_send(client: TestClient, services: Services, account_id: str) -> None:

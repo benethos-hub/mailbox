@@ -14,7 +14,6 @@ import pytest
 from benethos_mailbox_service.data.discovery import autoconfig
 from benethos_mailbox_service.data.discovery.dns import mx_hosts
 from benethos_mailbox_service.data.discovery.suffix import (
-    is_public_suffix,
     registrable_domain,
 )
 from benethos_mailbox_service.data.http import (
@@ -30,7 +29,8 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 
-PUBLIC = "93.184.215.14"
+from .conftest import PUBLIC
+
 PUBLIC_2 = "93.184.215.15"
 
 # --- dns ------------------------------------------------------------------------
@@ -123,10 +123,10 @@ def test_registrable_domain(host: str, base: str | None) -> None:
     assert registrable_domain(host) == base
 
 
-def test_public_suffixes() -> None:
-    assert is_public_suffix("co.uk")
-    assert is_public_suffix("de")
-    assert not is_public_suffix("example.de")
+def test_a_public_suffix_is_no_domain() -> None:
+    assert registrable_domain("co.uk") is None
+    assert registrable_domain("de") is None
+    assert registrable_domain("example.de") == "example.de"
 
 
 # --- fetch ----------------------------------------------------------------------
@@ -229,7 +229,7 @@ async def test_fetch_follows_redirects_and_checks_each_hop() -> None:
     assert result is not None
     assert result.body == b"final"
     assert result.host == "config.hoster.example"
-    assert result.url == "https://config.hoster.example/c.xml"
+    assert seen[-1].url.path == "/c.xml"
     assert [r.url.host for r in seen] == [PUBLIC, PUBLIC_2]
 
 

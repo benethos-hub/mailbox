@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, csrf_field with context %}
+{% from "components/ui.html" import csrf_field, danger_card with context %}
 {% from "components/grants.html" import grant_editor, grants_of %}
 {% block title %}{{ role.id }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}Role {{ role.id }}{% endblock %}
@@ -32,12 +32,6 @@
 {% endif %}
 
 {% if can_delete %}
-<section class="card">
-  <header><h2>Delete</h2></header>
-  <div class="body toolbar">
-    <span class="muted grow">Only a role no user holds can be deleted.</span>
-    {{ action("/ui/roles/" ~ (role.id | segment) ~ "/delete", "Delete role", confirm="Delete the role " ~ role.id ~ "?", cls="danger") }}
-  </div>
-</section>
+{{ danger_card("Delete", "Only a role no user holds can be deleted.", "/ui/roles/" ~ (role.id | segment) ~ "/delete", "Delete role", "Delete the role " ~ role.id ~ "?") }}
 {% endif %}
 {% endblock %}

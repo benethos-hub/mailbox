@@ -172,7 +172,9 @@ async def show_again(
     }
     original = None
     if values["original"] and values["action"] in ACTIONS:
-        original = await _readable(request, caller, account.id, values["original"])
+        original = await _message_if_readable(
+            request, caller, account.id, values["original"]
+        )
     if original is None:
         original = await original_of(request, caller, account.id, stored)
     return show(
@@ -194,10 +196,12 @@ async def original_of(
     """The message a draft answers or forwards, if it can still be read."""
     if stored is None or stored.reference is None:
         return None
-    return await _readable(request, caller, account_id, stored.reference.message_id)
+    return await _message_if_readable(
+        request, caller, account_id, stored.reference.message_id
+    )
 
 
-async def _readable(
+async def _message_if_readable(
     request: Request, caller: Access, account_id: str, message_id: str
 ) -> Message | None:
     try:

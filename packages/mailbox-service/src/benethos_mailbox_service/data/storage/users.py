@@ -6,7 +6,7 @@ from typing import Protocol
 
 from ...errors import ConflictError
 from ..models import ApiToken, Role, User
-from .table import Table
+from .table import Table, TableRepository
 
 
 class UserRepository(Protocol):
@@ -46,41 +46,17 @@ class TokenRepository(Protocol):
     def delete_for_user(self, user_id: str) -> None: ...
 
 
-class InMemoryUserRepository:
+class InMemoryUserRepository(TableRepository[User]):
     def __init__(self) -> None:
-        self._users: Table[User] = Table("user")
-
-    def list(self) -> list[User]:
-        return self._users.list()
-
-    def get(self, user_id: str) -> User:
-        return self._users.get(user_id)
-
-    def save(self, user: User) -> None:
-        self._users.put(user.id, user)
-
-    def delete(self, user_id: str) -> None:
-        self._users.delete(user_id)
+        super().__init__("user")
 
     def count(self) -> int:
-        return len(self._users)
+        return len(self._rows)
 
 
-class InMemoryRoleRepository:
+class InMemoryRoleRepository(TableRepository[Role]):
     def __init__(self) -> None:
-        self._roles: Table[Role] = Table("role")
-
-    def list(self) -> list[Role]:
-        return self._roles.list()
-
-    def get(self, role_id: str) -> Role:
-        return self._roles.get(role_id)
-
-    def save(self, role: Role) -> None:
-        self._roles.put(role.id, role)
-
-    def delete(self, role_id: str) -> None:
-        self._roles.delete(role_id)
+        super().__init__("role")
 
 
 class InMemoryTokenRepository:

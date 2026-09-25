@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
-from typing import Any
+from pathlib import Path
 
 import httpx
 import pytest
@@ -25,22 +26,6 @@ ME = {
     ],
     "operations": [],
 }
-
-
-def answering(routes: dict[str, Any]) -> Callable[[httpx.Request], httpx.Response]:
-    """A REST API that answers each path from ``routes`` and records calls."""
-
-    def handle(request: httpx.Request) -> httpx.Response:
-        handle.calls.append(request)  # type: ignore[attr-defined]
-        body = routes.get(request.url.path)
-        if body is None:
-            return httpx.Response(
-                404, json={"error": {"code": "not_found", "message": "no route"}}
-            )
-        return httpx.Response(200, json=body)
-
-    handle.calls = []  # type: ignore[attr-defined]
-    return handle
 
 
 # --- which tools exist ----------------------------------------------------------------
@@ -66,21 +51,16 @@ async def test_read_tools_are_marked_read_only() -> None:
         assert tool.annotations.read_only_hint is True
 
 
-async def test_tool_descriptions_stay_short() -> None:
-    for tool in await server.build_server(READ).list_tools():
-        assert len(tool.description or "") < 700, tool.name
-
-
-async def test_allowed_operations_from_me(make_client: Callable) -> None:
-    make_client(answering({"/v1/me": {**ME, "operations": ["list_users"]}}))
+async def test_allowed_operations_from_me(api: Callable) -> None:
+    api(routes={"/v1/me": {**ME, "operations": ["list_users"]}})
     assert await server.allowed_operations() == {*READ, "create_draft", "list_users"}
 
 
 async def test_the_start_warns_who_may_read_and_send_anywhere(
-    make_client: Callable, caplog: pytest.LogCaptureFixture
+    api: Callable, caplog: pytest.LogCaptureFixture
 ) -> None:
     account = {**ME["accounts"][0], "warnings": ["read_and_send_anywhere"]}  # type: ignore[index]
-    make_client(answering({"/v1/me": {**ME, "accounts": [account]}}))
+    api(routes={"/v1/me": {**ME, "accounts": [account]}})
     await server.allowed_operations()
     assert "me@example.com: this token can read mail and send it" in caplog.text
 
@@ -88,8 +68,8 @@ async def test_the_start_warns_who_may_read_and_send_anywhere(
 # --- the tools ------------------------------------------------------------------------
 
 
-async def test_list_accounts_says_what_is_allowed(make_client: Callable) -> None:
-    make_client(answering({"/v1/me": ME}))
+async def test_list_accounts_says_what_is_allowed(api: Callable) -> None:
+    api(routes={"/v1/me": ME})
     assert await server.list_accounts() == [
         {
             "id": "acc_1",
@@ -100,9 +80,7 @@ async def test_list_accounts_says_what_is_allowed(make_client: Callable) -> None
     ]
 
 
-async def test_search_passes_filters_and_answers_summaries(
-    make_client: Callable,
-) -> None:
+async def test_search_passes_filters_and_answers_summaries(api: Callable) -> None:
     page = {
         "items": [
             {
@@ -121,11 +99,10 @@ async def test_search_passes_filters_and_answers_summaries(
         "next_cursor": "c1",
         "incomplete": [{"account_id": "acc_2", "code": "x", "message": "down"}],
     }
-    handler = answering({"/v1/messages": page})
-    make_client(handler)
+    handler = api(routes={"/v1/messages": page})
     result = await server.search_messages(sender="alice", after="2026-09-01")
-    [request] = handler.calls
-    assert dict(request.url.params) == {
+    [call] = handler.calls
+    assert call.params == {
         "from": "alice",
         "after": "2026-09-01",
         "limit": "20",
@@ -149,19 +126,18 @@ async def test_search_passes_filters_and_answers_summaries(
     }
 
 
-async def test_search_in_one_account(make_client: Callable) -> None:
-    handler = answering({"/v1/accounts/acc_1/messages": {"items": []}})
-    make_client(handler)
+async def test_search_in_one_account(api: Callable) -> None:
+    handler = api(routes={"/v1/accounts/acc_1/messages": {"items": []}})
     await server.search_messages(account_id="acc_1", folder="inbox", unread=True)
-    [request] = handler.calls
-    assert dict(request.url.params) == {
+    [call] = handler.calls
+    assert call.params == {
         "folder": "inbox",
         "unread": "true",
         "limit": "20",
     }
 
 
-async def test_get_message_is_marked_foreign(make_client: Callable) -> None:
+async def test_get_message_is_marked_foreign(api: Callable) -> None:
     message = {
         "id": "msg_1",
         "from": {"email": "a@example.com"},
@@ -177,7 +153,7 @@ async def test_get_message_is_marked_foreign(make_client: Callable) -> None:
             }
         ],
     }
-    make_client(answering({"/v1/accounts/acc_1/messages/msg_1": message}))
+    api(routes={"/v1/accounts/acc_1/messages/msg_1": message})
     text = await server.get_message("acc_1", "msg_1")
     assert 'source="acc_1/msg_1"' in text
     assert "<mail-content" in text and "</mail-content>" in text
@@ -195,10 +171,10 @@ async def test_errors_are_tool_errors(make_client: Callable) -> None:
         await server.list_accounts()
 
 
-async def test_a_tool_call_through_the_server(make_client: Callable) -> None:
-    make_client(answering({"/v1/accounts/acc_1/folders": [
+async def test_a_tool_call_through_the_server(api: Callable) -> None:
+    api(routes={"/v1/accounts/acc_1/folders": [
         {"id": "f1", "name": "Inbox", "role": "inbox", "unread": 2, "total": 5}
-    ]}))  # fmt: skip
+    ]})  # fmt: skip
     result = await server.build_server(READ).call_tool(
         "list_folders", {"account_id": "acc_1"}
     )
@@ -208,8 +184,7 @@ async def test_a_tool_call_through_the_server(make_client: Callable) -> None:
 # --- the command line ------------------------------------------------------------
 
 
-def test_client_is_created_once(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(server, "_client", None)
+def test_client_is_created_once() -> None:
     first = server.client()
     assert isinstance(first, MailboxApiClient)
     assert server.client() is first
@@ -255,11 +230,12 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
     """The start runs in an event loop of its own. A client made there would
     carry connections of a closed loop into the server's."""
 
+    made: list[MailboxApiClient] = []
+
     async def operations() -> set[str]:
-        server.client()
+        made.append(server.client())
         return set(READ)
 
-    monkeypatch.setattr(server, "_client", None)
     monkeypatch.setattr(server, "allowed_operations", operations)
     monkeypatch.setattr(
         server,
@@ -267,7 +243,7 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
         lambda ops: type("S", (), {"run": lambda self, transport: None})(),
     )
     server.main([])
-    assert server._client is None
+    assert server.client() is not made[0]
 
 
 # title, read-only, destructive, idempotent, open world
@@ -288,6 +264,17 @@ HINTS = {
 }
 
 
+README = Path(__file__).resolve().parents[1] / "README.md"
+
+
+async def test_the_readme_lists_every_tool() -> None:
+    """The tool table of the README, which the service's UI repeats."""
+    every = {need for tool in server.TOOLS for need in tool.needs}
+    tools = {tool.name for tool in await server.build_server(every).list_tools()}
+    listed = re.findall(r"^\| `(\w+)` \|", README.read_text(encoding="utf-8"), re.M)
+    assert set(listed) == tools and len(listed) == len(tools)
+
+
 async def test_every_tool_carries_its_title_and_hints() -> None:
     every = {need for tool in server.TOOLS for need in tool.needs}
     tools = await server.build_server(every).list_tools()
@@ -304,3 +291,4 @@ async def test_every_tool_carries_its_title_and_hints() -> None:
             hints.open_world_hint,
         )
         assert found == HINTS[tool.name], tool.name
+        assert len(tool.description or "") < 700, tool.name

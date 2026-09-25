@@ -7,14 +7,9 @@ from email import message_from_bytes
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import MessageReference
-from benethos_mailbox_service.data.providers import MemoryProvider
 from benethos_mailbox_service.main import Services
 
-
-def _adapter(services: Services, account_id: str) -> MemoryProvider:
-    adapter = services.adapters.get(account_id)
-    assert isinstance(adapter, MemoryProvider)
-    return adapter
+from .conftest import memory_of
 
 
 def test_edit_a_reply_draft_as_a_whole(
@@ -51,10 +46,10 @@ def test_edit_a_reply_draft_as_a_whole(
     assert again["text_body"].startswith("Hello")
 
     client.post(f"{base}/drafts/{created['id']}/send").raise_for_status()
-    [(_, recipients, raw)] = _adapter(services, account_id).outbox
+    [(_, recipients, raw)] = memory_of(services, account_id).outbox
     assert recipients == ["alice@example.com"]
     assert message_from_bytes(raw)["Subject"] == "Re: Invoice 1"
-    original = next(m for m in _adapter(services, account_id).messages if m.id == "m1")
+    original = next(m for m in memory_of(services, account_id).messages if m.id == "m1")
     assert "$answered" in original.keywords
 
 
@@ -62,7 +57,7 @@ def test_a_received_mail_shows_no_reference(
     client: TestClient, services: Services, account_id: str
 ) -> None:
     """The header of a received mail is the sender's, not this service's."""
-    adapter = _adapter(services, account_id)
+    adapter = memory_of(services, account_id)
     forged = next(m for m in adapter.messages if m.id == "m2")
     forged.reference = MessageReference(message_id="m1", action="reply")
     shown = client.get(f"/v1/accounts/{account_id}/messages/m2").json()

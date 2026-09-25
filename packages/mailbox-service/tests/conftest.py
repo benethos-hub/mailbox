@@ -27,16 +27,19 @@ from benethos_mailbox_service.data.providers import (
     build_provider,
 )
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
+from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.domain.accounts import AccountService
 from benethos_mailbox_service.domain.auth import AuthService
 from benethos_mailbox_service.main import Services, build_services, create_app
 
 API_KEY = "test-key"
+PUBLIC = "93.184.215.14"  # what every host resolves to, without DNS
+METHODS = {"get", "post", "put", "patch", "delete"}  # of the OpenAPI document
 
 
 async def resolve_to_public(host: str, port: int) -> list[str]:
-    return ["93.184.215.14"]
+    return [PUBLIC]
 
 
 ADMIN = Access.admin("usr_test_admin", "test admin")
@@ -120,6 +123,19 @@ def auth(services: Services) -> AuthService:
 @pytest.fixture
 def account_id(accounts: AccountService) -> str:
     return create_account(accounts, ProviderType.MEMORY, "me@example.com").id
+
+
+@pytest.fixture
+def master_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A vault key in the environment, for tests that store credentials."""
+    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+
+
+def memory_of(services: Services, account_id: str) -> MemoryProvider:
+    """The memory adapter behind an account, to look at what it holds."""
+    provider = services.adapters.get(account_id)
+    assert isinstance(provider, MemoryProvider)
+    return provider
 
 
 @pytest.fixture

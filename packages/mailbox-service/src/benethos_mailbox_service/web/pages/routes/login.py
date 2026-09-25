@@ -38,14 +38,7 @@ async def login_page(request: Request, next: str | None = None) -> Response:
         nonce=nonce,
         next=local_path(next, PATH),
     )
-    response.set_cookie(
-        LOGIN_COOKIE,
-        nonce,
-        httponly=True,
-        samesite="strict",
-        path=PATH,
-        secure=request.url.scheme == "https",
-    )
+    _set(response, request, LOGIN_COOKIE, nonce)
     return response
 
 
@@ -73,16 +66,22 @@ async def login(
         return back(f"{PATH}/login", error="That token is not valid.")
     session_id = store_of(request).create(token)
     response = RedirectResponse(local_path(next, PATH), status_code=303)
+    _set(response, request, COOKIE, session_id)
+    response.delete_cookie(LOGIN_COOKIE, path=PATH)
+    return response
+
+
+def _set(response: Response, request: Request, name: str, value: str) -> None:
+    """A cookie of the UI: scripts cannot read it, other sites cannot send
+    it, and over HTTPS it stays there."""
     response.set_cookie(
-        COOKIE,
-        session_id,
+        name,
+        value,
         httponly=True,
         samesite="strict",
         path=PATH,
         secure=request.url.scheme == "https",
     )
-    response.delete_cookie(LOGIN_COOKIE, path=PATH)
-    return response
 
 
 @router.post("/logout")

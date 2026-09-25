@@ -13,18 +13,12 @@ from benethos_mailbox_service.data.models import Folder, FolderRole, Grant
 from benethos_mailbox_service.data.providers import MemoryProvider
 from benethos_mailbox_service.main import Services
 
-from .conftest import bearer_for
+from .conftest import bearer_for, memory_of
 from .ui_helpers import csrf_of, post, sign_in
 
 
-def _adapter(services: Services, account_id: str) -> MemoryProvider:
-    adapter = services.adapters.get(account_id)
-    assert isinstance(adapter, MemoryProvider)
-    return adapter
-
-
 def _with_trash(services: Services, account_id: str) -> MemoryProvider:
-    adapter = _adapter(services, account_id)
+    adapter = memory_of(services, account_id)
     adapter.folders.append(Folder(id="trash", name="Trash", role=FolderRole.TRASH))
     adapter.folders.append(Folder(id="archive", name="Archive"))
     return adapter
@@ -36,7 +30,7 @@ def _with_trash(services: Services, account_id: str) -> MemoryProvider:
 def test_flags_on_a_message(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
-    adapter = _adapter(services, account_id)
+    adapter = memory_of(services, account_id)
     url = f"/ui/accounts/{account_id}/mail/m3"
     page = ui.get(url).text
     assert "Mark unread" in page and "Star" in page
@@ -128,7 +122,7 @@ def test_the_batch_needs_ticks_and_an_action(ui: TestClient, account_id: str) ->
 def test_create_rename_move_and_delete_a_folder(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
-    adapter = _adapter(services, account_id)
+    adapter = memory_of(services, account_id)
     base = f"/ui/accounts/{account_id}/folders"
     created = post(ui, base, {"name": "Projects"})
     assert "Projects created." in created.text
@@ -164,7 +158,7 @@ def test_a_bad_folder_name_is_named(ui: TestClient, account_id: str) -> None:
 def test_send_a_new_message(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
-    adapter = _adapter(services, account_id)
+    adapter = memory_of(services, account_id)
     form = ui.get(f"/ui/accounts/{account_id}/compose").text
     key = re.search(r'name="idempotency_key" value="([^"]+)"', form)
     assert key is not None
@@ -215,7 +209,7 @@ def test_a_failed_send_keeps_what_was_typed(
         "not an address" in answer.text
     )
     assert "my long text" in answer.text and 'value="Keep"' in answer.text
-    assert _adapter(services, account_id).outbox == []
+    assert memory_of(services, account_id).outbox == []
 
 
 def test_a_bad_address_is_named(ui: TestClient, account_id: str) -> None:
@@ -230,7 +224,7 @@ def test_a_bad_address_is_named(ui: TestClient, account_id: str) -> None:
 def test_reply_quotes_and_finds_the_recipient(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
-    adapter = _adapter(services, account_id)
+    adapter = memory_of(services, account_id)
     page = ui.get(
         f"/ui/accounts/{account_id}/compose",
         params={"original": "m1", "action": "reply"},
@@ -251,7 +245,7 @@ def test_reply_quotes_and_finds_the_recipient(
 def test_drafts_save_edit_send(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
-    adapter = _adapter(services, account_id)
+    adapter = memory_of(services, account_id)
     saved = post(
         ui,
         f"/ui/accounts/{account_id}/compose",
@@ -330,7 +324,7 @@ def test_sending_needs_its_right(
         {"to": "bob@example.org", "text": "x", "do": "send"},
     )
     assert refused.status_code == 403 and "missing right" in refused.text
-    assert _adapter(services, account_id).outbox == []
+    assert memory_of(services, account_id).outbox == []
 
 
 def test_a_grant_that_narrows_recipients_is_shown(
@@ -352,13 +346,13 @@ def test_a_grant_that_narrows_recipients_is_shown(
     )
     assert refused.status_code == 403
     assert "eve@elsewhere.example" in refused.text
-    assert _adapter(services, account_id).outbox == []
+    assert memory_of(services, account_id).outbox == []
 
 
 def test_a_changed_reply_draft_stays_in_its_thread(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
-    adapter = _adapter(services, account_id)
+    adapter = memory_of(services, account_id)
     saved = post(
         ui,
         f"/ui/accounts/{account_id}/compose",

@@ -19,7 +19,7 @@ async def test_sends_bearer_and_parses(make_client: Callable) -> None:
         return httpx.Response(200, json=[ACCOUNT])
 
     client = make_client(handler)
-    assert await client.list_accounts() == [ACCOUNT]
+    assert await client.request("GET", "/v1/accounts") == [ACCOUNT]
     assert seen[0].headers["authorization"] == "Bearer secret"
     assert seen[0].url == "http://mail.test/v1/accounts"
     await client.aclose()
@@ -93,8 +93,16 @@ async def test_unreachable_service_says_what_to_do(make_client: Callable) -> Non
 
     client = make_client(handler)
     with pytest.raises(ServiceUnavailableError, match="benethos-mailbox-service serve"):
-        await client.list_accounts()
+        await client.request("GET", "/v1/accounts")
     await client.aclose()
+
+
+def recording(seen: list[httpx.Request]) -> httpx.MockTransport:
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json=[])
+
+    return httpx.MockTransport(handler)
 
 
 async def test_url_and_token_from_environment(
@@ -102,17 +110,21 @@ async def test_url_and_token_from_environment(
 ) -> None:
     monkeypatch.setenv("MAILBOX_SERVICE_URL", "http://elsewhere:9/")
     monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
-    client = MailboxApiClient()
-    assert client.base_url == "http://elsewhere:9"
-    assert client._http.headers["authorization"] == "Bearer tok"
+    seen: list[httpx.Request] = []
+    client = MailboxApiClient(transport=recording(seen))
+    await client.request("GET", "/v1/accounts")
     await client.aclose()
+    assert seen[0].url == "http://elsewhere:9/v1/accounts"
+    assert seen[0].headers["authorization"] == "Bearer tok"
 
 
 async def test_defaults_without_environment() -> None:
-    client = MailboxApiClient()
-    assert client.base_url == DEFAULT_URL
-    assert "authorization" not in client._http.headers
+    seen: list[httpx.Request] = []
+    client = MailboxApiClient(transport=recording(seen))
+    await client.request("GET", "/v1/accounts")
     await client.aclose()
+    assert str(seen[0].url).startswith(DEFAULT_URL)
+    assert "authorization" not in seen[0].headers
 
 
 async def test_ids_are_quoted_in_paths(make_client: Callable) -> None:

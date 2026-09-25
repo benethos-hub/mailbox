@@ -538,7 +538,7 @@ def test_settings_switch_ispdb_off(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.discovery_ispdb is False
     assert settings.discovery_internal_hosts == ["mail.intern.example"]
     services = build_services(settings)
-    assert ISPDB not in [s.name for s in services.discovery._sources]
+    assert ISPDB not in services.discovery.sources
 
 
 @pytest.fixture

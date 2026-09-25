@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -38,6 +39,11 @@ async def changing(request: Request) -> Access:
 def account_of(request: Request, caller: Access, account_id: str) -> Account:
     """The account a mail page is about. The domain decides who sees it."""
     return get_accounts(request).visible(caller, account_id)
+
+
+def emails_of(accounts: Iterable[Account]) -> dict[str, str]:
+    """Email by account id, to show an account readably."""
+    return {account.id: account.email for account in accounts}
 
 
 Viewer = Annotated[Access, Depends(signed_in)]

@@ -23,10 +23,10 @@ from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
 from typing import Any
 
 import anyio
+from _common import Run, accounts, imap_settings, read_env
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -34,69 +34,6 @@ from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import MailboxServiceError
 from benethos_mailbox_service.main import build_services, create_app
-
-ENV_FILE = Path(__file__).with_name(".env")
-
-
-class Run:
-    def __init__(self) -> None:
-        self.failures = 0
-
-    def check(self, name: str, ok: bool, detail: str = "") -> bool:
-        print(f"{'PASS' if ok else 'FAIL'}  {name}{f'  ({detail})' if detail else ''}")
-        self.failures += not ok
-        return ok
-
-
-def read_env(path: Path) -> dict[str, str]:
-    if not path.exists():
-        sys.exit(f"{path} is missing; copy live/.env.example and fill it in")
-    values = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            key, value = line.split("=", 1)
-            values[key.strip()] = value.strip()
-    return {k: v for k, v in values.items() if v}
-
-
-def accounts(env: dict[str, str]) -> list[dict[str, str]]:
-    found = []
-    number = 1
-    while f"LIVE_ACCOUNT_{number}_EMAIL" in env:
-        prefix = f"LIVE_ACCOUNT_{number}_"
-        found.append(
-            {
-                "email": env[prefix + "EMAIL"],
-                "password": env.get(prefix + "PASSWORD", ""),
-                "username": env.get(prefix + "USERNAME", env[prefix + "EMAIL"]),
-            }
-        )
-        number += 1
-    if not found:
-        sys.exit("no LIVE_ACCOUNT_1_EMAIL in live/.env")
-    return found
-
-
-def imap_settings(
-    env: dict[str, str], account: dict[str, str], discovered: dict[str, Any]
-) -> dict[str, Any]:
-    if "LIVE_IMAP_HOST" not in env:
-        settings = dict(discovered)
-    else:
-        settings = {"host": env["LIVE_IMAP_HOST"]}
-        if "LIVE_IMAP_PORT" in env:
-            settings["port"] = int(env["LIVE_IMAP_PORT"])
-        if "LIVE_IMAP_SECURITY" in env:
-            settings["security"] = env["LIVE_IMAP_SECURITY"]
-        # Sending: from LIVE_SMTP_* where set, else what discovery found.
-        for key in ("smtp_host", "smtp_port", "smtp_security", "smtp_username"):
-            if f"LIVE_{key.upper()}" in env:
-                settings[key] = env[f"LIVE_{key.upper()}"]
-            elif key in discovered:
-                settings[key] = discovered[key]
-    settings["username"] = account["username"]
-    return settings
 
 
 def unread_ids(client: TestClient, account_id: str) -> set[str]:
@@ -294,7 +231,7 @@ def main() -> int:
     parser.add_argument("--wrong-password", action="store_true")
     args = parser.parse_args()
 
-    env = read_env(ENV_FILE)
+    env = read_env()
     settings = Settings(
         storage="memory",
         api_key=SecretStr("live-smoke"),
@@ -376,8 +313,7 @@ def main() -> int:
         )
 
     anyio.run(services.aclose)
-    print(f"\n{run.failures} failed" if run.failures else "\nall passed")
-    return 1 if run.failures else 0
+    return run.finish()
 
 
 if __name__ == "__main__":

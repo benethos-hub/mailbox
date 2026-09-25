@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from ..idempotency import StoredResult
-from .database import Database
+from .database import Database, iso, parse_iso
 
 
 class SqliteIdempotencyRepository:
@@ -23,7 +23,7 @@ class SqliteIdempotencyRepository:
             operation=row["operation"],
             request_hash=row["request_hash"],
             result=row["result"],
-            created_at=datetime.fromisoformat(row["created_at"]),
+            created_at=parse_iso(row["created_at"]),
         )
 
     def put(self, account_id: str, key: str, stored: StoredResult) -> None:
@@ -36,14 +36,12 @@ class SqliteIdempotencyRepository:
                 stored.operation,
                 stored.request_hash,
                 stored.result,
-                stored.created_at.isoformat(),
+                iso(stored.created_at),
             ),
         )
 
     def purge(self, before: datetime) -> None:
-        self._db.execute(
-            "DELETE FROM idempotency WHERE created_at < ?", (before.isoformat(),)
-        )
+        self._db.execute("DELETE FROM idempotency WHERE created_at < ?", (iso(before),))
 
     def forget_account(self, account_id: str) -> None:
         # ON DELETE CASCADE does this as well. Said here, so both stores agree.

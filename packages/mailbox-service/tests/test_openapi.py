@@ -8,11 +8,14 @@ from typing import Any
 import pytest
 
 from benethos_mailbox_service.__main__ import main
+from benethos_mailbox_service.data.models import MessageFilter
 from benethos_mailbox_service.main import create_app, openapi_json
+from benethos_mailbox_service.web import search
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 
+from .conftest import METHODS
+
 COMMITTED = Path(__file__).resolve().parents[3] / "docs" / "openapi.json"
-METHODS = {"get", "post", "put", "patch", "delete"}
 
 
 def _operations() -> list[tuple[str, dict[str, Any]]]:
@@ -47,6 +50,16 @@ def test_protected_routes_declare_bearer_and_errors() -> None:
         if path.startswith(API_PREFIX):
             assert op["security"] == [{"bearerAuth": []}], path
             assert {"401", "404", "502"} <= set(op["responses"]), path
+
+
+def test_the_search_form_uses_the_query_names_of_the_api() -> None:
+    """The UI's search (web.search) and the API's query parameters name
+    the same filter fields, so a search reads the same in both."""
+    listing = create_app().openapi()["paths"][f"{API_PREFIX}/messages"]["get"]
+    query = {p["name"] for p in listing["parameters"] if p["in"] == "query"}
+    assert set(search.FIELDS) | set(search.FLAGS) <= query
+    filtered = set(search.FIELDS.values()) | set(search.FLAGS)
+    assert filtered == set(MessageFilter.model_fields)
 
 
 def test_cli_prints_the_document(capsys: pytest.CaptureFixture[str]) -> None:

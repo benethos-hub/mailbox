@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, csrf_field with context %}
+{% from "components/ui.html" import action, credentials, csrf_field, danger_card with context %}
 {% from "components/connection.html" import connection_fields %}
 {% block title %}{{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ account.email }}{% endblock %}
@@ -33,10 +33,7 @@
       <dt>SMTP</dt><dd>{{ account.settings.get("smtp_host") | or_missing }}{% if account.settings.get("smtp_port") %}:{{ account.settings.smtp_port }}{% endif %}</dd>
       <dt>Status</dt><dd>{% include "partials/account_status.html" %}</dd>
       <dt>Credentials</dt>
-      <dd>
-        {% for credential in account.credentials %}{{ credential.field }}, changed {{ credential.updated_at | when }}{% if not loop.last %}<br />{% endif %}
-        {% else %}—{% endfor %}
-      </dd>
+      <dd>{{ credentials(account.credentials) }}</dd>
     </dl>
   </div>
 </section>
@@ -66,12 +63,6 @@
 {% endif %}
 
 {% if can_delete %}
-<section class="card">
-  <header><h2>Remove</h2></header>
-  <div class="body toolbar">
-    <span class="muted grow">Removes the account and its stored credentials from this service. The mailbox at the provider stays as it is.</span>
-    {{ action("/ui/accounts/" ~ account.id ~ "/delete", "Remove account", confirm="Remove " ~ account.email ~ " from the service?", cls="danger") }}
-  </div>
-</section>
+{{ danger_card("Remove", "Removes the account and its stored credentials from this service. The mailbox at the provider stays as it is.", "/ui/accounts/" ~ account.id ~ "/delete", "Remove account", "Remove " ~ account.email ~ " from the service?") }}
 {% endif %}
 {% endblock %}

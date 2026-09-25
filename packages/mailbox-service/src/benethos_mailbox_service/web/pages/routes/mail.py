@@ -22,7 +22,7 @@ from ....domain.mailbox import find_folder
 from ...responses import download
 from ...search import FIELDS, FLAGS, filter_from
 from ...services import Mailbox, get_accounts
-from ..deps import Viewer, account_of
+from ..deps import Viewer, account_of, emails_of
 from ..errors import error_page
 from ..forms import first_problem
 from ..rights import mail_rights
@@ -67,7 +67,7 @@ def _tree(folders: list[Folder]) -> list[tuple[Folder, int]]:
     return result
 
 
-def _readable(caller: Access, request: Request) -> list[Any]:
+def _readable_accounts(caller: Access, request: Request) -> list[Any]:
     return get_accounts(request).list(caller, may="list_all_messages")
 
 
@@ -81,7 +81,7 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
     except ValueError:
         role, problem = FolderRole.INBOX, f"Unknown folder: {role_name}"
     chosen = request.query_params.getlist("account")
-    accounts = _readable(caller, request)
+    accounts = _readable_accounts(caller, request)
     page = await mailbox.list_all_messages(
         caller,
         account_ids=chosen or None,
@@ -98,7 +98,7 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
         incomplete=page.incomplete,
         pages=page_links(request, page.next_cursor),
         accounts=accounts,
-        emails={account.id: account.email for account in accounts},
+        emails=emails_of(accounts),
         chosen=chosen,
         keep=[("folder", role.value), *(("account", a) for a in chosen)],
         roles=[r.value for r in FolderRole],

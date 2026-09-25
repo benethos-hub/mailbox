@@ -422,7 +422,7 @@ def test_no_grant_at_all_allows_nothing() -> None:
 
 
 def test_sqlite_send_log(tmp_path: object) -> None:
-    db = Database(":memory:")
+    db = Database()
     try:
         clock = Clock()
         store = SqliteSendLogRepository(db)

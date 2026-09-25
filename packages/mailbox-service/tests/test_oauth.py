@@ -39,7 +39,6 @@ from benethos_mailbox_service.data.providers.protocols.oauth import (
     identity_of,
     new_pkce,
 )
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.domain.adapters import REFRESH_TOKEN
 from benethos_mailbox_service.errors import (
@@ -54,12 +53,8 @@ from benethos_mailbox_service.main import Services, build_services
 
 from .conftest import ADMIN
 
-
-@pytest.fixture(autouse=True)
-def master_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The vault needs a key to store refresh tokens."""
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
-
+# The vault needs a key to store refresh tokens.
+pytestmark = pytest.mark.usefixtures("master_key")
 
 REDIRECT = "http://127.0.0.1:8080/ui/oauth/microsoft/callback"
 NOW = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)

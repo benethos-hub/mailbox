@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -374,6 +375,21 @@ def test_the_user_page_shows_the_effective_rights(
     assert ">list_accounts<" in section
     assert "reads and sends anywhere" in section
     assert "to anyone, no daily limit" in section
+
+
+MCP_README = Path(__file__).resolve().parents[3] / "packages/mailbox-mcp/README.md"
+
+
+def test_the_mcp_tools_shown_are_those_of_the_mcp_readme() -> None:
+    """grants.MCP_TOOLS repeats the tool table of the MCP server's README,
+    the one place that documents which right opens which tool."""
+    rows = re.findall(
+        r"^\| `(\w+)` \| `([\w.]+)` \|", MCP_README.read_text(encoding="utf-8"), re.M
+    )
+    documented: dict[str, list[str]] = {}
+    for tool, group in rows:
+        documented.setdefault(group, []).append(tool)
+    assert {group: tuple(tools) for group, tools in documented.items()} == MCP_TOOLS
 
 
 def test_the_editor_sorts_every_group_into_one_row() -> None:

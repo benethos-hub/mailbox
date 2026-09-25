@@ -14,11 +14,13 @@ import stat
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, overload
 
 from ....errors import ConflictError, StorageError
 from ...files import create_private
+from ..table import missing
 
 MIGRATIONS: list[str] = [
     # 1: accounts, users, roles, tokens
@@ -127,12 +129,17 @@ SCHEMA_VERSION = len(MIGRATIONS)
 
 
 class Database:
-    def __init__(self, path: Path | str) -> None:
-        if isinstance(path, Path):
+    """The database at ``path``, readable by its owner alone. Without a
+    path it lives in memory, for tests."""
+
+    def __init__(self, path: Path | None = None) -> None:
+        if path is not None:
             path.parent.mkdir(parents=True, exist_ok=True)
             _owner_only(path)
         self._connection = sqlite3.connect(
-            str(path), check_same_thread=False, isolation_level=None
+            str(path) if path is not None else ":memory:",
+            check_same_thread=False,
+            isolation_level=None,
         )
         self._connection.row_factory = sqlite3.Row
         self._lock = threading.RLock()
@@ -207,6 +214,14 @@ class Database:
         with self.transaction() as db:
             return db.execute(sql, params).rowcount
 
+    def must_change(
+        self, sql: str, params: tuple[Any, ...], what: str, row_id: str
+    ) -> None:
+        """``execute`` for a statement about one row: NotFoundError when
+        the row is not there."""
+        if not self.execute(sql, params):
+            raise missing(what, row_id)
+
     def schema_version(self) -> int:
         row = self.one("SELECT value FROM meta WHERE key = 'schema_version'")
         return int(row[0]) if row else 0
@@ -257,6 +272,22 @@ def translated() -> Iterator[None]:
         raise ConflictError(f"conflicts with a stored record: {exc}") from None
     except sqlite3.Error as exc:
         raise StorageError(f"the database failed: {exc}") from None
+
+
+def iso(value: datetime | None) -> str | None:
+    """A time as the TEXT columns hold it."""
+    return value.isoformat() if value else None
+
+
+@overload
+def parse_iso(value: str) -> datetime: ...
+@overload
+def parse_iso(value: None) -> None: ...
+@overload
+def parse_iso(value: str | None) -> datetime | None: ...
+def parse_iso(value: str | None) -> datetime | None:
+    """The time a TEXT column holds, None for NULL."""
+    return datetime.fromisoformat(value) if value else None
 
 
 def _owner_only(path: Path) -> None:

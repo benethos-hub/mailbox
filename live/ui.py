@@ -18,17 +18,19 @@ from __future__ import annotations
 import html
 import re
 import secrets
-import shutil
 import sys
-import tempfile
-import time
-from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
-from mcp_stdio import free_port, service_env, start_service
-from register import register
-from smoke import ENV_FILE, Run, accounts, imap_settings, read_env
+from _common import (
+    Run,
+    accounts,
+    imap_settings,
+    polled,
+    read_env,
+    register,
+    throwaway_service,
+)
 
 
 def sign_in(browser: httpx.Client, token: str) -> bool:
@@ -247,7 +249,8 @@ def _find(
     browser: httpx.Client, account_id: str, folder: str, token: str, tries: int = 1
 ) -> str | None:
     """The page of the one message whose subject holds ``token``."""
-    for attempt in range(tries):
+
+    def look() -> str | None:
         listing = browser.get(
             f"/ui/accounts/{account_id}/mail",
             params={"folder": folder, "subject": token},
@@ -255,11 +258,9 @@ def _find(
         found = re.search(
             rf'href="(/ui/accounts/{account_id}/mail/msg_[0-9a-f]+)"', listing
         )
-        if found is not None:
-            return found.group(1)
-        if attempt + 1 < tries:
-            time.sleep(5)
-    return None
+        return found.group(1) if found is not None else None
+
+    return polled(look, tries, 5)
 
 
 def check_writing(
@@ -428,18 +429,12 @@ def check_sends(
 
 
 def main() -> int:
-    env = read_env(ENV_FILE)
+    env = read_env()
     test_accounts = accounts(env)[:2]
     run = Run()
-    port = free_port()
-    url = f"http://127.0.0.1:{port}"
-    admin_key = secrets.token_urlsafe(32)
-    data_dir = tempfile.mkdtemp(prefix="mailbox-ui-live-")
-    process = start_service(service_env(data_dir, port, admin_key), url)
-    try:
-        with httpx.Client(
-            base_url=url, headers={"Authorization": f"Bearer {admin_key}"}, timeout=60
-        ) as client:
+    with throwaway_service("mailbox-ui-live-") as service:
+        url, admin_key = service.url, service.admin_key
+        with service.admin() as client:
             account_id, outcome = register(client, env, test_accounts[0])
             if not run.check(
                 "account 1 in the service", account_id is not None, outcome
@@ -465,12 +460,7 @@ def main() -> int:
                 check_sends(run, browser, account_id, test_accounts[1]["email"])
             print("\n== the frame")
             check_frame(run, browser, [a["email"].lower() for a in test_accounts])
-    finally:
-        process.terminate()
-        process.wait(timeout=10)
-        shutil.rmtree(Path(data_dir), ignore_errors=True)
-    print(f"\n{run.failures} failed" if run.failures else "\nall passed")
-    return 1 if run.failures else 0
+    return run.finish()
 
 
 if __name__ == "__main__":

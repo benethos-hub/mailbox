@@ -36,7 +36,7 @@ def worker(services: Services, **options: object) -> SyncWorker:  # noqa: F811
 
 
 def indexed(services: Services, account_id: str) -> dict[str, str]:  # noqa: F811
-    return services.sync._index.folder_states(account_id)
+    return services.index.folder_states(account_id)
 
 
 async def test_a_poll_syncs_mapped_accounts(

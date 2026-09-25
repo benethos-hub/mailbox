@@ -82,7 +82,8 @@ config/                   # one folder per package: .env.example versioned,
                           #   .env and key files local
 data/                     # one folder per package, created when missing,
                           #   only .gitkeep is versioned
-live/                     # manual checks against the test accounts
+live/                     # manual checks against the test accounts,
+                          #   what they share in _common.py
 containers/               # one folder per image, compose.yaml, README.md,
                           #   secrets/ local (the master key)
 .github/workflows/        # ci.yml: checks, fresh install, images,

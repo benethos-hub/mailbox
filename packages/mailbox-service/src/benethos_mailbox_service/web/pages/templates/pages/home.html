@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import empty %}
+{% from "components/ui.html" import anywhere_tag, empty %}
 {% block title %}Overview · {{ APP_NAME }}{% endblock %}
 {% block heading %}Overview{% endblock %}
 {% block subheading %}<div class="sub">Signed in as {{ rights.name }}</div>{% endblock %}
@@ -23,9 +23,7 @@
               {% for op in rows[account.id].operations %}<span class="tag">{{ op }}</span> {% endfor %}
             </td>
             <td>
-              {% if "read_and_send_anywhere" in account.warnings %}
-              <span class="tag warn" title="This user may read mail here and send it to any address. Narrow sending with a grant's recipients.">reads and sends anywhere</span>
-              {% endif %}
+              {% if "read_and_send_anywhere" in account.warnings %}{{ anywhere_tag() }}{% endif %}
             </td>
           </tr>
           {% endfor %}

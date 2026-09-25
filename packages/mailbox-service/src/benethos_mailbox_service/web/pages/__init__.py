@@ -74,24 +74,6 @@ def security_headers(sign_in_hosts: list[str]) -> list[tuple[bytes, bytes]]:
     ]
 
 
-def _secured(app: ASGIApp, headers: list[tuple[bytes, bytes]]) -> ASGIApp:
-    """Security headers on every answer under ``/ui``."""
-
-    async def wrapped(scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not scope["path"].startswith(PATH):
-            await app(scope, receive, send)
-            return
-
-        async def send_with_headers(message: Message) -> None:
-            if message["type"] == "http.response.start":
-                message["headers"] = [*message.get("headers", []), *headers]
-            await send(message)
-
-        await app(scope, receive, send_with_headers)
-
-    return wrapped
-
-
 def owns(request: Request) -> bool:
     """Whether the request is one for the UI."""
     return request.url.path.startswith(PATH)
@@ -131,16 +113,25 @@ def install(app: FastAPI) -> None:
             title="Form expired",
         )
 
-    services = getattr(app.state, "services", None)
-    hosts = services.oauth.sign_in_hosts() if services is not None else []
+    hosts = app.state.services.oauth.sign_in_hosts()
     app.add_middleware(_Security, headers=security_headers(hosts))
 
 
 class _Security:
-    """``_secured`` as a Starlette middleware class."""
+    """Security headers on every answer under ``/ui``."""
 
     def __init__(self, app: ASGIApp, headers: list[tuple[bytes, bytes]]) -> None:
-        self.app = _secured(app, headers)
+        self.app = app
+        self.headers = headers
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        await self.app(scope, receive, send)
+        if scope["type"] != "http" or not scope["path"].startswith(PATH):
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                message["headers"] = [*message.get("headers", []), *self.headers]
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)

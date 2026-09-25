@@ -171,6 +171,9 @@ stored data and the configuration may change without notice.
 
 ### Changed
 
+- The MCP server's `--log-level` (and `MAILBOX_MCP_LOG_LEVEL`) takes
+  `DEBUG`, `INFO`, `WARNING` or `ERROR`, in any case. Another value is
+  refused at start instead of failing later.
 - New API tokens are 64 characters after `mbx_` (were 43). Tokens made
   before stay valid.
 - The service is now called `benethos-mailbox-service` (was

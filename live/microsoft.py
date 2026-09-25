@@ -27,16 +27,23 @@ from __future__ import annotations
 import argparse
 import os
 import secrets
-import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
 import httpx
-from register import register
-from smoke import ENV_FILE, Run, accounts, read_env
+from _common import (
+    Run,
+    Service,
+    accounts,
+    messages_with_subject,
+    read_env,
+    register,
+    service_env,
+    start_service,
+    stop,
+)
 
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
@@ -57,21 +64,13 @@ def _secret_file(name: str, make: Any) -> str:
     return path.read_text(encoding="utf-8").strip()
 
 
-def service_env(env: dict[str, str], admin_key: str) -> dict[str, str]:
+def microsoft_env(env: dict[str, str], admin_key: str) -> dict[str, str]:
+    """The service on its own database in DATA, reachable under URL, with
+    the app registration of live/.env."""
+    master_key = _secret_file("master_key", lambda: encode_recovery(cipher.new_key()))
     return {
-        **os.environ,
-        "MAILBOX_SERVICE_DATA_DIR": str(DATA),
-        "MAILBOX_SERVICE_STORAGE": "sqlite",
-        "MAILBOX_SERVICE_KEY_PROVIDER": "env",
-        "MAILBOX_SERVICE_MASTER_KEY": _secret_file(
-            "master_key", lambda: encode_recovery(cipher.new_key())
-        ),
-        "MAILBOX_SERVICE_KEY": admin_key,
-        "MAILBOX_SERVICE_HOST": "127.0.0.1",
-        "MAILBOX_SERVICE_PORT": str(PORT),
+        **service_env(str(DATA), PORT, admin_key, master_key),
         "MAILBOX_SERVICE_PUBLIC_URL": URL,
-        "MAILBOX_SERVICE_SYNC_INTERVAL": "0",
-        "MAILBOX_SERVICE_SYNC_IDLE": "false",
         "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID": env["LIVE_MICROSOFT_CLIENT_ID"],
         "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET": env.get(
             "LIVE_MICROSOFT_CLIENT_SECRET", ""
@@ -79,32 +78,6 @@ def service_env(env: dict[str, str], admin_key: str) -> dict[str, str]:
         "MAILBOX_SERVICE_OAUTH_MICROSOFT_TENANT": env.get("LIVE_MICROSOFT_TENANT")
         or "common",
     }
-
-
-def start(env: dict[str, str]) -> subprocess.Popen[bytes]:
-    """The service on its own database. The keys are made on the first run."""
-    command = shutil.which("benethos-mailbox-service")
-    if command is None:
-        sys.exit("benethos-mailbox-service not found: run this with uv run")
-    if not (DATA / "mailbox.db").exists():
-        subprocess.run(
-            [command, "keys", "init"], env=env, check=True, capture_output=True
-        )
-    process = subprocess.Popen(
-        [command, "serve"],
-        env=env,
-        stdout=subprocess.DEVNULL,
-        # Nobody reads it: a pipe would fill up and block the service.
-        stderr=subprocess.DEVNULL,
-    )
-    for _ in range(60):
-        try:
-            if httpx.get(f"{URL}/health", timeout=1).status_code == 200:
-                return process
-        except httpx.TransportError:
-            time.sleep(0.5)
-    process.terminate()
-    sys.exit("the service did not start")
 
 
 def microsoft_account(client: httpx.Client, email: str) -> dict[str, Any] | None:
@@ -132,17 +105,11 @@ def connect(client: httpx.Client, email: str) -> int:
 def _find(
     client: httpx.Client, account_id: str, folder: str, subject: str, tries: int
 ) -> str | None:
-    for attempt in range(tries):
-        page = client.get(
-            f"/v1/accounts/{account_id}/messages",
-            params={"folder": folder, "subject": subject, "limit": 10},
-        ).json()
-        found = [m for m in page.get("items", []) if m.get("subject") == subject]
-        if found:
-            return str(found[0]["id"])
-        if attempt + 1 < tries:
-            time.sleep(5)
-    return None
+    """The id of the message with ``subject`` in the folder, once it is there."""
+    found = messages_with_subject(
+        client, account_id, subject, folder=folder, tries=tries, pause=5
+    )
+    return str(found[0]["id"]) if found else None
 
 
 def check(
@@ -256,7 +223,7 @@ def main() -> int:
         "--connect", action="store_true", help="connect the test account"
     )
     options = parser.parse_args()
-    env = read_env(ENV_FILE)
+    env = read_env()
     email = (env.get("LIVE_MICROSOFT_EMAIL") or "").strip().lower()
     if not env.get("LIVE_MICROSOFT_CLIENT_ID") or not email:
         print(
@@ -264,12 +231,13 @@ def main() -> int:
         )
         return 2
     admin_key = _secret_file("admin_key", lambda: secrets.token_urlsafe(32))
-    process = start(service_env(env, admin_key))
+    # The keys are made on the first run; the database keeps them after.
+    process = start_service(
+        microsoft_env(env, admin_key), URL, init_keys=not (DATA / "mailbox.db").exists()
+    )
     run = Run()
     try:
-        with httpx.Client(
-            base_url=URL, headers={"Authorization": f"Bearer {admin_key}"}, timeout=120
-        ) as client:
+        with Service(URL, admin_key).admin(timeout=120) as client:
             if options.connect:
                 return connect(client, email)
             account = microsoft_account(client, email)
@@ -286,10 +254,8 @@ def main() -> int:
             assert bot_id is not None
             check(run, client, account["id"], bot, bot_id)
     finally:
-        process.terminate()
-        process.wait(timeout=10)
-    print(f"\n{run.failures} failed" if run.failures else "\nall passed")
-    return 1 if run.failures else 0
+        stop(process)
+    return run.finish()
 
 
 if __name__ == "__main__":

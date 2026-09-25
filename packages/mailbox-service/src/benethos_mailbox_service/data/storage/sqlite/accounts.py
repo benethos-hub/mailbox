@@ -43,23 +43,25 @@ class SqliteAccountRepository:
         return result
 
     def set_status(self, account_id: str, status: AccountStatus) -> None:
-        changed = self._db.execute(
-            "UPDATE accounts SET status = ? WHERE id = ?", (status.value, account_id)
+        self._db.must_change(
+            "UPDATE accounts SET status = ? WHERE id = ?",
+            (status.value, account_id),
+            "account",
+            account_id,
         )
-        if not changed:
-            raise missing("account", account_id)
 
     def update(self, account: Account, settings: SettingsDict) -> None:
-        changed = self._db.execute(
+        self._db.must_change(
             "UPDATE accounts SET display_name = ?, settings = ? WHERE id = ?",
             (account.display_name, json.dumps(settings), account.id),
+            "account",
+            account.id,
         )
-        if not changed:
-            raise missing("account", account.id)
 
     def delete(self, account_id: str) -> None:
-        if not self._db.execute("DELETE FROM accounts WHERE id = ?", (account_id,)):
-            raise missing("account", account_id)
+        self._db.must_change(
+            "DELETE FROM accounts WHERE id = ?", (account_id,), "account", account_id
+        )
 
     def _row(self, account_id: str) -> sqlite3.Row:
         row = self._db.one("SELECT * FROM accounts WHERE id = ?", (account_id,))
