@@ -3,11 +3,18 @@ repository gives for an id it does not know."""
 
 from __future__ import annotations
 
-from typing import Generic, TypeVar
+from typing import Generic, Protocol, TypeVar
 
 from ...errors import ConflictError, NotFoundError
 
 T = TypeVar("T")
+
+
+class Record(Protocol):
+    id: str
+
+
+R = TypeVar("R", bound=Record)
 
 
 def missing(what: str, row_id: str) -> NotFoundError:
@@ -48,3 +55,23 @@ class Table(Generic[T]):
     def delete(self, row_id: str) -> None:
         self.get(row_id)
         del self._rows[row_id]
+
+
+class TableRepository(Generic[R]):
+    """An in-memory repository of records kept by their ``id``: list, get,
+    save and delete, as the SQLite ones do it."""
+
+    def __init__(self, what: str) -> None:
+        self._rows: Table[R] = Table(what)
+
+    def list(self) -> list[R]:
+        return self._rows.list()
+
+    def get(self, row_id: str) -> R:
+        return self._rows.get(row_id)
+
+    def save(self, record: R) -> None:
+        self._rows.put(record.id, record)
+
+    def delete(self, row_id: str) -> None:
+        self._rows.delete(row_id)

@@ -31,33 +31,34 @@ class SqliteMessageIndexRepository:
     def by_native(
         self, account_id: str, native_ids: Iterable[str]
     ) -> dict[str, IndexEntry]:
-        found: dict[str, IndexEntry] = {}
-        for chunk in _chunks(list(dict.fromkeys(native_ids))):
-            marks = ", ".join("?" * len(chunk))
-            for row in self._db.query(
-                "SELECT * FROM message_index WHERE account_id = ?"
-                f" AND native_id IN ({marks})",
-                (account_id, *chunk),
-            ):
-                found[row["native_id"]] = _entry(row)
-        return found
+        rows = self._rows_in(
+            "SELECT * FROM message_index WHERE account_id = ? AND native_id IN",
+            account_id,
+            native_ids,
+        )
+        return {row["native_id"]: _entry(row) for row in rows}
 
     def in_folders(
         self, account_id: str, folder_ids: Iterable[str]
     ) -> list[IndexEntry]:
+        rows = self._rows_in(
+            "SELECT rowid, * FROM message_index WHERE account_id = ? AND folder_id IN",
+            account_id,
+            folder_ids,
+        )
         # In the order the entries came, across the chunks of the query.
-        found: list[tuple[int, IndexEntry]] = []
-        for chunk in _chunks(list(dict.fromkeys(folder_ids))):
+        return [_entry(row) for row in sorted(rows, key=lambda row: row["rowid"])]
+
+    def _rows_in(
+        self, sql: str, account_id: str, values: Iterable[str]
+    ) -> list[sqlite3.Row]:
+        """The rows of ``sql``, which ends in ``IN``, for every value: in
+        chunks, since SQLite caps the parameters of one statement."""
+        rows: list[sqlite3.Row] = []
+        for chunk in _chunks(list(dict.fromkeys(values))):
             marks = ", ".join("?" * len(chunk))
-            found += [
-                (row["rowid"], _entry(row))
-                for row in self._db.query(
-                    "SELECT rowid, * FROM message_index WHERE account_id = ?"
-                    f" AND folder_id IN ({marks})",
-                    (account_id, *chunk),
-                )
-            ]
-        return [entry for _, entry in sorted(found, key=lambda pair: pair[0])]
+            rows += self._db.query(f"{sql} ({marks})", (account_id, *chunk))
+        return rows
 
     def add(self, account_id: str, entries: Iterable[IndexEntry]) -> None:
         with self._db.transaction() as db:

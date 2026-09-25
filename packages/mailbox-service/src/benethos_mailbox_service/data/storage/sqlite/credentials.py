@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime
 
 from ..credentials import EncryptedCredential, WrappedKey
-from .database import Database
+from .database import Database, iso, parse_iso
 
 
 class SqliteKeyRepository:
@@ -44,7 +43,7 @@ class SqliteCredentialRepository:
                 credential.key_id,
                 credential.nonce,
                 credential.ciphertext,
-                credential.updated_at.isoformat(),
+                iso(credential.updated_at),
             ),
         )
 
@@ -73,5 +72,5 @@ def _credential(row: sqlite3.Row) -> EncryptedCredential:
         key_id=row["key_id"],
         nonce=bytes(row["nonce"]),
         ciphertext=bytes(row["ciphertext"]),
-        updated_at=datetime.fromisoformat(row["updated_at"]),
+        updated_at=parse_iso(row["updated_at"]),
     )

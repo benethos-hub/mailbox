@@ -4,25 +4,16 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime
 
 from ...models import ApiToken, Grant, Role, User
 from ..table import missing
-from .database import Database
+from .database import Database, iso, parse_iso
+from .rows import SqliteRows
 
 
-class SqliteUserRepository:
+class SqliteUserRepository(SqliteRows[User]):
     def __init__(self, db: Database) -> None:
-        self._db = db
-
-    def list(self) -> list[User]:
-        return [_user(r) for r in self._db.query("SELECT * FROM users ORDER BY rowid")]
-
-    def get(self, user_id: str) -> User:
-        row = self._db.one("SELECT * FROM users WHERE id = ?", (user_id,))
-        if row is None:
-            raise missing("user", user_id)
-        return _user(row)
+        super().__init__(db, "users", "user", _user)
 
     def save(self, user: User) -> None:
         self._db.execute(
@@ -40,10 +31,6 @@ class SqliteUserRepository:
             ),
         )
 
-    def delete(self, user_id: str) -> None:
-        if not self._db.execute("DELETE FROM users WHERE id = ?", (user_id,)):
-            raise missing("user", user_id)
-
     def count(self) -> int:
         return int(self._db.query("SELECT COUNT(*) FROM users")[0][0])
 
@@ -58,18 +45,9 @@ def _user(row: sqlite3.Row) -> User:
     )
 
 
-class SqliteRoleRepository:
+class SqliteRoleRepository(SqliteRows[Role]):
     def __init__(self, db: Database) -> None:
-        self._db = db
-
-    def list(self) -> list[Role]:
-        return [_role(r) for r in self._db.query("SELECT * FROM roles ORDER BY rowid")]
-
-    def get(self, role_id: str) -> Role:
-        row = self._db.one("SELECT * FROM roles WHERE id = ?", (role_id,))
-        if row is None:
-            raise missing("role", role_id)
-        return _role(row)
+        super().__init__(db, "roles", "role", _role)
 
     def save(self, role: Role) -> None:
         self._db.execute(
@@ -77,10 +55,6 @@ class SqliteRoleRepository:
             " ON CONFLICT(id) DO UPDATE SET grants = excluded.grants",
             (role.id, _grants_json(role.grants)),
         )
-
-    def delete(self, role_id: str) -> None:
-        if not self._db.execute("DELETE FROM roles WHERE id = ?", (role_id,)):
-            raise missing("role", role_id)
 
 
 def _role(row: sqlite3.Row) -> Role:
@@ -121,10 +95,10 @@ class SqliteTokenRepository:
                 token.user_id,
                 token.name,
                 token.token_hash,
-                _dt(token.created_at),
-                _dt(token.expires_at),
-                _dt(token.last_used_at),
-                _dt(token.revoked_at),
+                iso(token.created_at),
+                iso(token.expires_at),
+                iso(token.last_used_at),
+                iso(token.revoked_at),
             ),
         )
 
@@ -138,10 +112,10 @@ def _token(row: sqlite3.Row) -> ApiToken:
         user_id=row["user_id"],
         name=row["name"],
         token_hash=row["token_hash"],
-        created_at=datetime.fromisoformat(row["created_at"]),
-        expires_at=_parse_dt(row["expires_at"]),
-        last_used_at=_parse_dt(row["last_used_at"]),
-        revoked_at=_parse_dt(row["revoked_at"]),
+        created_at=parse_iso(row["created_at"]),
+        expires_at=parse_iso(row["expires_at"]),
+        last_used_at=parse_iso(row["last_used_at"]),
+        revoked_at=parse_iso(row["revoked_at"]),
     )
 
 
@@ -151,11 +125,3 @@ def _grants_json(grants: list[Grant]) -> str:
 
 def _grants(raw: str) -> list[Grant]:
     return [Grant.model_validate(g) for g in json.loads(raw)]
-
-
-def _dt(value: datetime | None) -> str | None:
-    return value.isoformat() if value else None
-
-
-def _parse_dt(value: str | None) -> datetime | None:
-    return datetime.fromisoformat(value) if value else None
