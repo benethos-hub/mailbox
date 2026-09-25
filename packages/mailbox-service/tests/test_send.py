@@ -65,6 +65,8 @@ def test_compose() -> None:
     assert mail["Date"] == "Thu, 24 Sep 2026 12:00:00 +0000"
     assert mail["Message-ID"] == "<id@example.com>"
     assert mail.get_body(("plain",)).get_content().strip() == "Hallo"
+    # Sent without 8BITMIME, so the bytes stay ASCII.
+    assert raw.isascii()
     assert mail.get_body(("html",)).get_content().strip() == "<p>Hallo</p>"
     [attachment] = list(mail.iter_attachments())
     assert attachment.get_filename() == "a.pdf"

@@ -74,6 +74,24 @@ def test_send_reports_refused_recipients() -> None:
     assert fake.sent[0].recipients == ["you@example.com"]
 
 
+def test_domains_go_in_punycode_and_a_unicode_local_part_needs_smtputf8() -> None:
+    fake = FakeSmtpServer()
+    refused = session(fake).send(
+        LOGIN, "me@bücher.example", ["du@bücher.example"], b"x"
+    )
+    assert refused == []
+    assert (fake.sent[0].sender, fake.sent[0].recipients, fake.sent[0].options) == (
+        "me@xn--bcher-kva.example",
+        ["du@xn--bcher-kva.example"],
+        [],
+    )
+    with pytest.raises(BadRequestError, match="SMTPUTF8"):
+        session(fake).send(LOGIN, "me@example.com", ["jürgen@example.com"], b"x")
+    fake.extensions.add("smtputf8")
+    session(fake).send(LOGIN, "me@example.com", ["jürgen@example.com"], b"x")
+    assert fake.sent[-1].options == ["SMTPUTF8"]
+
+
 def test_send_with_every_recipient_refused() -> None:
     fake = FakeSmtpServer(refuse={"nobody@example.com"})
     with pytest.raises(BadRequestError, match="refused every recipient"):

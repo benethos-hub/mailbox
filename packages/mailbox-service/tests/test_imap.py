@@ -369,6 +369,20 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
         await imap.list_folders()  # the success in between reset the count
 
 
+async def test_a_dropped_connection_during_the_login_is_no_rejection(
+    server: FakeMailBox,
+) -> None:
+    server.login_failure = imaplib.IMAP4.abort("socket error: EOF")
+    imap = provider(server)
+    # Unavailable, so the guard tries again, and the second login succeeds.
+    # A rejected credential would have been raised and blocked the account.
+    await imap.list_folders()
+    logins = [c for c in server.calls if c[0] == "login"]
+    assert logins == [("login", "me@example.com")] * 2
+    assert ("logout",) in server.calls
+    assert server.logins == 1
+
+
 async def test_a_rejected_login_is_not_tried_again(server: FakeMailBox) -> None:
     server.password = "changed"
     imap = provider(server)

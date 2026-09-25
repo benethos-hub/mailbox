@@ -72,6 +72,8 @@ class FakeMailBox:
 
     def __init__(self, password: str = "secret") -> None:
         self.password = password
+        # Raised by the next login, wrapped as imapclient wraps it.
+        self.login_failure: Exception | None = None
         self.delimiter = "/"
         self.folders: dict[str, FakeFolder] = {"INBOX": FakeFolder()}
         self.selected = "INBOX"
@@ -128,6 +130,12 @@ class FakeMailBox:
 
     def login(self, username: str, password: str) -> bytes:
         self.calls.append(("login", username))
+        if self.login_failure is not None:
+            failure, self.login_failure = self.login_failure, None
+            try:
+                raise failure
+            except Exception as exc:
+                raise LoginError(str(exc))  # noqa: B904 - as imapclient does
         if password != self.password:
             raise LoginError("b'[AUTHENTICATIONFAILED] Authentication failed.'")
         self.logins += 1

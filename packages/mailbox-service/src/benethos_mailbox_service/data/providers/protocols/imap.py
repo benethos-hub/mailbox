@@ -132,9 +132,19 @@ class ImapSession:
             client = self._connect()
             try:
                 authenticate(client)
-            except LoginError:
+            except LoginError as exc:
                 _quietly_logout(client)
+                # imapclient wraps whatever the login raised. A dropped
+                # connection is not a rejected credential.
+                cause = exc.__context__
+                if isinstance(cause, imaplib.IMAP4.abort | OSError):
+                    raise ProviderUnavailableError(
+                        f"the mail server dropped the connection during the {what}"
+                    ) from None
                 raise ProviderAuthError(f"the server rejected the {what}") from None
+            except BaseException:
+                _quietly_logout(client)
+                raise
             self._client = client
 
     def _connect(self) -> Any:

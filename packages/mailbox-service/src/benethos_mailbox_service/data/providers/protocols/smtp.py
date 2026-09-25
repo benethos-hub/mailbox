@@ -21,6 +21,7 @@ from ....errors import (
     ProviderError,
     ProviderUnavailableError,
 )
+from ...mail.fields import ascii_domain
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}
 
@@ -48,7 +49,11 @@ def _default_connection(server: SmtpServer, timeout: float) -> Any:
             server.host, server.port, context=context, timeout=timeout
         )
     connection = smtplib.SMTP(server.host, server.port, timeout=timeout)
-    connection.starttls(context=context)
+    try:
+        connection.starttls(context=context)
+    except BaseException:
+        connection.close()
+        raise
     return connection
 
 
@@ -73,10 +78,24 @@ class SmtpSession:
         self, login: SmtpLogin, sender: str, recipients: list[str], raw: bytes
     ) -> list[str]:
         """Hand one message to the server. Returns the recipients it refused
-        while it accepted others. If it accepts none, it raises."""
+        while it accepted others. If it accepts none, it raises.
+
+        Domains go in punycode. A local part beyond ASCII needs SMTPUTF8
+        of the server, else the message is refused before it is sent."""
+        envelope = [_on_the_wire(sender), *(_on_the_wire(r) for r in recipients)]
+        options = ["SMTPUTF8"] if any(not a.isascii() for a in envelope) else []
         with self._connected(login) as connection, _errors():
+            if options:
+                connection.ehlo_or_helo_if_needed()
+                if not connection.has_extn("smtputf8"):
+                    raise BadRequestError(
+                        "an address is not ASCII and the mail server does not "
+                        "support SMTPUTF8"
+                    )
             try:
-                refused = connection.sendmail(sender, recipients, raw)
+                refused = connection.sendmail(
+                    envelope[0], envelope[1:], raw, mail_options=options
+                )
             except smtplib.SMTPRecipientsRefused as exc:
                 raise BadRequestError(
                     "the mail server refused every recipient: "
@@ -113,12 +132,21 @@ class SmtpSession:
                 pass
 
 
+def _on_the_wire(address: str) -> str:
+    try:
+        return ascii_domain(address)
+    except UnicodeError:
+        raise BadRequestError(f"the domain of {address} cannot be encoded") from None
+
+
 @contextmanager
 def _errors() -> Iterator[None]:
     try:
         yield
     except (BadRequestError, ProviderAuthError, ProviderError):
         raise
+    except UnicodeError as exc:
+        raise BadRequestError(f"an address cannot go on the wire: {exc}") from None
     except smtplib.SMTPAuthenticationError:
         raise ProviderAuthError("the mail server rejected the login") from None
     except smtplib.SMTPServerDisconnected as exc:

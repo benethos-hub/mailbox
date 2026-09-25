@@ -11,6 +11,19 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- A connection dropped by the IMAP server during the login answers `502`
+  (`provider_unavailable`) and is tried again on the next call. Before,
+  it counted as a rejected credential and blocked the account until
+  `verify`.
+- Sending to an internationalised domain puts it in punycode on the SMTP
+  envelope. An address with a local part beyond ASCII is sent with
+  SMTPUTF8 where the server supports it, else refused with `400`. Before,
+  both failed with `500`.
+- Outgoing messages are composed 7bit clean: a body beyond ASCII is
+  encoded, since the service asks no SMTP server for 8BITMIME.
+- Keywords are set on an IMAP server that lists them in PERMANENTFLAGS or
+  sends no PERMANENTFLAGS at all. Before, only `\*` counted, and such
+  servers answered `501`.
 - A credential encrypted with a key the service does not hold answers
   `500` (`credential_unreadable`) naming that key, instead of a failed
   decryption with the active one.

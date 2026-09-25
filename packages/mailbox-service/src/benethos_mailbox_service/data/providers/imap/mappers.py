@@ -252,6 +252,16 @@ def imap_flag(keyword: str) -> str:
     return _IMAP_SPELLING.get(lowered, keyword)
 
 
+def _kept(flags: list[str], permanent: frozenset[str]) -> bool:
+    """Whether the server keeps these flags: it said so with ``\\*``, it
+    lists the flag itself, or it sent no PERMANENTFLAGS at all, which
+    means every flag is permanent (RFC 3501)."""
+    if not permanent or "\\*" in permanent:
+        return True
+    listed = {f.lower() for f in permanent}
+    return all(f.startswith("\\") or f.lower() in listed for f in flags)
+
+
 def flag_changes(
     current: Any, changes: MessageUpdate, permanent: frozenset[str]
 ) -> tuple[list[str], list[str]]:
@@ -271,7 +281,7 @@ def flag_changes(
             for keyword in keywords([flag]):
                 present[keyword] = str(flag)
         new = [imap_flag(wanted[k]) for k in wanted if k not in present]
-        if any(not f.startswith("\\") for f in new) and "\\*" not in permanent:
+        if not _kept(new, permanent):
             raise NotSupportedError("the mail server keeps no new keywords")
         add += new
         remove += [flag for k, flag in present.items() if k not in wanted]

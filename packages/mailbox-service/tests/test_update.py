@@ -63,6 +63,12 @@ def test_new_keywords_need_a_server_that_keeps_them() -> None:
         mappers.flag_changes(
             (), MessageUpdate(keywords=["work"]), frozenset({"\\Seen"})
         )
+    # Kept: the server keeps any flag, lists this one, or said nothing.
+    for permanent in ({"\\*"}, {"\\Seen", "Work"}, set()):
+        add, _ = mappers.flag_changes(
+            (), MessageUpdate(keywords=["work"]), frozenset(permanent)
+        )
+        assert add == ["work"]
 
 
 @pytest.mark.parametrize("keyword", ["two words", "\\Seen", "a(b", "", "x" * 101])
