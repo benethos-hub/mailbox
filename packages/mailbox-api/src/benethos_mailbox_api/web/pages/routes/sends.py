@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from urllib.parse import urlencode
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
@@ -11,7 +9,7 @@ from ....data.models import SendRecord
 from ....domain.access import Access
 from ...services import get_accounts, get_mailbox, get_users
 from ..deps import Viewer, account_of
-from ..templates import render
+from ..templates import page_links, render
 
 router = APIRouter()
 
@@ -67,7 +65,6 @@ async def account_sends(
     page = get_mailbox(request).list_sends(
         caller, account_id, limit=PAGE_SIZE, cursor=cursor
     )
-    here = f"/ui/accounts/{account_id}/sends"
     return render(
         request,
         "pages/sends.html",
@@ -77,10 +74,5 @@ async def account_sends(
         emails={account.id: account.email},
         records=page.items,
         names=_user_names(request, caller),
-        pages=(
-            f"{here}?{urlencode({'cursor': page.next_cursor})}"
-            if page.next_cursor
-            else None,
-            here if cursor else None,
-        ),
+        pages=page_links(request, page.next_cursor),
     )

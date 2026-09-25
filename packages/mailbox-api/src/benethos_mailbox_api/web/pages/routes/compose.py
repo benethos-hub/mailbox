@@ -34,7 +34,7 @@ from ....errors import MailboxApiError
 from ...api.errors import status_of
 from ...services import get_mailbox
 from ..deps import Actor, Viewer, account_of
-from ..templates import back, render
+from ..templates import back, page_links, render
 
 router = APIRouter()
 
@@ -253,23 +253,13 @@ async def drafts(request: Request, caller: Viewer, account_id: str) -> HTMLRespo
     page = await get_mailbox(request).list_drafts(
         caller, account_id, limit=50, cursor=request.query_params.get("cursor")
     )
-    more = (
-        f"/ui/accounts/{account_id}/drafts?cursor={page.next_cursor}"
-        if page.next_cursor
-        else None
-    )
-    first = (
-        f"/ui/accounts/{account_id}/drafts"
-        if "cursor" in request.query_params
-        else None
-    )
     return render(
         request,
         "pages/drafts.html",
         page="mail",
         account=account,
         messages=page.items,
-        pages=(more, first),
+        pages=page_links(request, page.next_cursor),
         fields={},
         open_as="drafts",
         can_write=caller.allows("create_draft", account_id)
