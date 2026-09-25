@@ -47,8 +47,8 @@ def _parser() -> argparse.ArgumentParser:
     )
     keys_commands.add_parser(
         "generate",
-        help="print a new master key for a key file or container secret; "
-        "stores nothing",
+        help="print a new master key for a key file or container secret. "
+        "Stores nothing.",
     )
 
     backup = commands.add_parser(
@@ -64,7 +64,7 @@ def _parser() -> argparse.ArgumentParser:
     )
 
     restore = commands.add_parser(
-        "restore", help="replace the database with a backup; stop the service first"
+        "restore", help="replace the database with a backup. Stop the service first."
     )
     restore.add_argument("source", type=Path)
     restore.add_argument(

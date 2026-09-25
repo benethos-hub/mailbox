@@ -5270,7 +5270,7 @@
             },
             "type": "object",
             "title": "Settings",
-            "description": "The connection settings: host, port, security, username, smtp_host, ... Never a secret; those are `credentials`."
+            "description": "The connection settings: host, port, security, username, smtp_host, ... Never a secret. Secrets are `credentials`."
           }
         },
         "type": "object",
@@ -5403,7 +5403,7 @@
             },
             "type": "object",
             "title": "Settings",
-            "description": "Settings to change, merged into the current ones; `null` removes one. E.g. `smtp_host`, `smtp_port`, `smtp_security` for sending."
+            "description": "Settings to change, merged into the current ones. `null` removes one. E.g. `smtp_host`, `smtp_port`, `smtp_security` for sending."
           },
           "credentials": {
             "additionalProperties": {
@@ -6713,7 +6713,7 @@
               }
             ],
             "title": "Folder Ids",
-            "description": "The folders the message is to be in, by id or by a role such as `archive`. A change moves it; the id stays. An IMAP message is in exactly one folder."
+            "description": "The folders the message is to be in, by id or by a role such as `archive`. A change moves it, and the id stays. An IMAP message is in exactly one folder."
           }
         },
         "type": "object",
@@ -7079,7 +7079,7 @@
               }
             ],
             "title": "Credential Id",
-            "description": "The token used; null for the admin key."
+            "description": "The token used, null for the admin key."
           },
           "account_id": {
             "type": "string",

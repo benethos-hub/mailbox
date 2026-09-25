@@ -47,7 +47,7 @@
   <header><h2>Sign in with your provider</h2></header>
   <div class="body toolbar">
     {% for provider in oauth_providers %}{{ sign_in_form(provider) }}{% endfor %}
-    <span class="muted">No password: the provider asks you, and this service keeps only a token it can renew.</span>
+    <span class="muted">No password is needed. The provider asks you, and this service keeps only a token it can renew.</span>
   </div>
 </section>
 {% endif %}
@@ -76,7 +76,7 @@
   </header>
   <div class="body toolbar">
     {{ sign_in_form(candidate.oauth_provider, discovery.email) }}
-    <span class="muted">No password: {{ candidate.oauth_provider | capitalize }} asks you, and this service keeps only a token it can renew.</span>
+    <span class="muted">No password is needed. {{ candidate.oauth_provider | capitalize }} asks you, and this service keeps only a token it can renew.</span>
   </div>
 </section>
 {% endfor %}

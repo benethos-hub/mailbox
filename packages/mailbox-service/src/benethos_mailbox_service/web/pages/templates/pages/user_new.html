@@ -3,7 +3,7 @@
 {% from "components/grants.html" import grant_editor, role_checks %}
 {% block title %}New user · {{ APP_NAME }}{% endblock %}
 {% block heading %}New user{% endblock %}
-{% block subheading %}<div class="sub">A user acts with its roles and grants; it signs in with a token you create next</div>{% endblock %}
+{% block subheading %}<div class="sub">A user acts with its roles and grants. It signs in with a token you create next</div>{% endblock %}
 {% block content %}
 <form method="post" action="/ui/users">
   {{ csrf_field() }}

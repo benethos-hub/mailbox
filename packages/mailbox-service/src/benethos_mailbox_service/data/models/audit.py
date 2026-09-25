@@ -17,7 +17,7 @@ class SendRecord(BaseModel):
     created_at: datetime
     user_id: str
     credential_id: str | None = Field(
-        description="The token used; null for the admin key."
+        description="The token used, null for the admin key."
     )
     account_id: str
     operation: Literal["send_message", "send_draft"]
