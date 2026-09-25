@@ -1,12 +1,19 @@
-"""The one place that talks to the Mailbox API."""
+"""The one place that talks to the Mailbox API: its paths, the shapes it
+takes and the shapes it answers with.
+
+The tools in ``server`` name what they want in their own terms; this
+module turns that into requests and the answers into small records, so
+nothing above it spells out a path, a query name or a field of the API.
+"""
 
 from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 import httpx
 
@@ -16,6 +23,9 @@ DEFAULT_URL = "http://127.0.0.1:8080"
 URL_ENV = "MAILBOX_API_URL"
 TOKEN_ENV = "MAILBOX_API_TOKEN"
 
+# An address with an optional display name.
+Recipient = tuple[str, str | None]
+
 
 @dataclass(frozen=True)
 class Attachment:
@@ -23,6 +33,57 @@ class Attachment:
     content_type: str
     charset: str | None
     filename: str | None
+
+
+@dataclass(frozen=True)
+class MeAccount:
+    id: str
+    email: str
+    display_name: str | None
+    operations: frozenset[str]
+    warnings: frozenset[str]
+
+
+@dataclass(frozen=True)
+class Me:
+    """The token's user: its accounts with what it may do on each, and
+    what it may do beyond one account."""
+
+    accounts: list[MeAccount]
+    operations: frozenset[str]
+
+
+@dataclass(frozen=True)
+class Folder:
+    id: str
+    name: str
+    role: str | None
+    unread: int | None
+    total: int | None
+
+
+@dataclass(frozen=True)
+class Page:
+    """A page of message summaries, as the API describes them."""
+
+    items: list[dict[str, Any]]
+    next_cursor: str | None
+    # Accounts that did not answer, as "account: why".
+    not_answering: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Outcome:
+    """A batch: the ids done, and per failed id why not."""
+
+    done: list[str]
+    failed: list[dict[str, str]]
+
+
+@dataclass(frozen=True)
+class Sent:
+    message_id_header: str | None
+    refused: list[str]
 
 
 class MailboxApiClient:
@@ -41,7 +102,31 @@ class MailboxApiClient:
             transport=transport,
         )
 
-    async def request(self, method: str, path: str, **kwargs: Any) -> Any:
+    # --- the wire ---------------------------------------------------------------------
+
+    async def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Mapping[str, Any] | None = None,
+        json: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> Any:
+        """The JSON the API answers, None for no content. Parameters and
+        fields that are None are left out of the request."""
+        response = await self._send(
+            method,
+            path,
+            params=_given(params),
+            json=_given(json) if json is not None else None,
+            headers=dict(headers or {}),
+        )
+        if response.status_code == 204:
+            return None
+        return response.json()
+
+    async def _send(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
             response = await self._http.request(method, path, **kwargs)
         except httpx.TransportError:
@@ -51,109 +136,95 @@ class MailboxApiClient:
             ) from None
         if response.is_error:
             raise _api_error(response)
-        if response.status_code == 204:
-            return None
-        return response.json()
+        return response
 
-    async def me(self) -> dict[str, Any]:
-        """The caller: its accounts, each with the operations allowed on it."""
-        result: dict[str, Any] = await self.request("GET", "/v1/me")
-        return result
+    # --- the caller and the accounts --------------------------------------------------
+
+    async def me(self) -> Me:
+        found = await self.request("GET", "/v1/me")
+        return Me(
+            accounts=[
+                MeAccount(
+                    id=str(a["id"]),
+                    email=str(a["email"]),
+                    display_name=a.get("display_name"),
+                    operations=frozenset(a.get("operations", [])),
+                    warnings=frozenset(a.get("warnings", [])),
+                )
+                for a in found.get("accounts", [])
+            ],
+            operations=frozenset(found.get("operations", [])),
+        )
 
     async def list_accounts(self) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = await self.request("GET", "/v1/accounts")
         return result
 
-    async def list_folders(self, account_id: str) -> list[dict[str, Any]]:
-        result: list[dict[str, Any]] = await self.request(
-            "GET", f"/v1/accounts/{account_id}/folders"
-        )
-        return result
+    # --- folders ----------------------------------------------------------------------
+
+    async def list_folders(self, account_id: str) -> list[Folder]:
+        found = await self.request("GET", _path("accounts", account_id, "folders"))
+        return [_folder(item) for item in found]
 
     async def create_folder(
         self, account_id: str, name: str, parent_id: str | None
-    ) -> dict[str, Any]:
-        body: dict[str, Any] = {"name": name}
-        if parent_id is not None:
-            body["parent_id"] = parent_id
-        result: dict[str, Any] = await self.request(
-            "POST", f"/v1/accounts/{account_id}/folders", json=body
-        )
-        return result
-
-    async def batch_messages(
-        self, account_id: str, body: dict[str, Any]
-    ) -> dict[str, Any]:
-        """One action for many messages, a result per id."""
-        result: dict[str, Any] = await self.request(
-            "POST", f"/v1/accounts/{account_id}/messages/batch", json=body
-        )
-        return result
-
-    async def list_drafts(
-        self, account_id: str, limit: int, cursor: str | None
-    ) -> dict[str, Any]:
-        params: dict[str, Any] = {"limit": limit}
-        if cursor is not None:
-            params["cursor"] = cursor
-        result: dict[str, Any] = await self.request(
-            "GET", f"/v1/accounts/{account_id}/drafts", params=params
-        )
-        return result
-
-    async def create_draft(
-        self, account_id: str, draft: dict[str, Any]
-    ) -> dict[str, Any]:
-        result: dict[str, Any] = await self.request(
-            "POST", f"/v1/accounts/{account_id}/drafts", json=draft
-        )
-        return result
-
-    async def update_draft(
-        self, account_id: str, draft_id: str, draft: dict[str, Any]
-    ) -> dict[str, Any]:
-        result: dict[str, Any] = await self.request(
-            "PUT", f"/v1/accounts/{account_id}/drafts/{draft_id}", json=draft
-        )
-        return result
-
-    async def delete_draft(self, account_id: str, draft_id: str) -> None:
-        await self.request("DELETE", f"/v1/accounts/{account_id}/drafts/{draft_id}")
-
-    async def send_message(
-        self, account_id: str, message: dict[str, Any], idempotency_key: str
-    ) -> dict[str, Any]:
-        result: dict[str, Any] = await self.request(
+    ) -> Folder:
+        """A new folder; ``parent_id`` may be a role such as ``archive``."""
+        item = await self.request(
             "POST",
-            f"/v1/accounts/{account_id}/send",
-            json=message,
-            headers={"Idempotency-Key": idempotency_key},
+            _path("accounts", account_id, "folders"),
+            json={"name": name, "parent_id": parent_id},
         )
-        return result
+        return _folder(item)
 
-    async def send_draft(
-        self, account_id: str, draft_id: str, idempotency_key: str
-    ) -> dict[str, Any]:
-        result: dict[str, Any] = await self.request(
-            "POST",
-            f"/v1/accounts/{account_id}/drafts/{draft_id}/send",
-            headers={"Idempotency-Key": idempotency_key},
-        )
-        return result
+    # --- messages ---------------------------------------------------------------------
 
     async def list_messages(
-        self, account_id: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
+        self,
+        account_id: str | None,
+        *,
+        folder: str | None = None,
+        text: str | None = None,
+        sender: str | None = None,
+        to: str | None = None,
+        subject: str | None = None,
+        after: str | None = None,
+        before: str | None = None,
+        unread: bool | None = None,
+        starred: bool | None = None,
+        has_attachments: bool | None = None,
+        limit: int,
+        cursor: str | None = None,
+    ) -> Page:
         """One account's messages, or with ``account_id`` None, those of
-        every account the caller may read."""
-        path = f"/v1/accounts/{account_id}/messages" if account_id else "/v1/messages"
-        wanted = {k: v for k, v in params.items() if v is not None}
-        result: dict[str, Any] = await self.request("GET", path, params=wanted)
-        return result
+        every account the caller may read. ``folder`` is an id or a role;
+        across accounts, a role."""
+        path = (
+            _path("accounts", account_id, "messages") if account_id else "/v1/messages"
+        )
+        found = await self.request(
+            "GET",
+            path,
+            params={
+                "folder": folder,
+                "q": text,
+                "from": sender,
+                "to": to,
+                "subject": subject,
+                "after": after,
+                "before": before,
+                "unread": unread,
+                "starred": starred,
+                "has_attachments": has_attachments,
+                "limit": limit,
+                "cursor": cursor,
+            },
+        )
+        return _page(found)
 
     async def get_message(self, account_id: str, message_id: str) -> dict[str, Any]:
         result: dict[str, Any] = await self.request(
-            "GET", f"/v1/accounts/{account_id}/messages/{message_id}"
+            "GET", _path("accounts", account_id, "messages", message_id)
         )
         return result
 
@@ -161,18 +232,17 @@ class MailboxApiClient:
         self, account_id: str, message_id: str, attachment_id: str
     ) -> Attachment:
         """The attachment's bytes, with its type, charset and file name."""
-        path = (
-            f"/v1/accounts/{account_id}/messages/{message_id}"
-            f"/attachments/{attachment_id}"
+        response = await self._send(
+            "GET",
+            _path(
+                "accounts",
+                account_id,
+                "messages",
+                message_id,
+                "attachments",
+                attachment_id,
+            ),
         )
-        try:
-            response = await self._http.get(path)
-        except httpx.TransportError:
-            raise ServiceUnavailableError(
-                f"The Mailbox API service is not reachable at {self.base_url}."
-            ) from None
-        if response.is_error:
-            raise _api_error(response)
         media, _, options = response.headers.get(
             "content-type", "application/octet-stream"
         ).partition(";")
@@ -188,8 +258,166 @@ class MailboxApiClient:
             filename=unquote(name.group(1)) if name else None,
         )
 
+    async def update_messages(
+        self,
+        account_id: str,
+        message_ids: list[str],
+        *,
+        unread: bool | None = None,
+        starred: bool | None = None,
+        folder_id: str | None = None,
+    ) -> Outcome:
+        """Flags and a move for many messages at once; ``folder_id`` may
+        be a role such as ``archive``."""
+        changes: dict[str, Any] = {"unread": unread, "starred": starred}
+        if folder_id is not None:
+            changes["folder_ids"] = [folder_id]
+        return await self._batch(
+            account_id,
+            {"ids": message_ids, "action": "update", "changes": _given(changes)},
+        )
+
+    async def trash_messages(self, account_id: str, message_ids: list[str]) -> Outcome:
+        return await self._batch(account_id, {"ids": message_ids, "action": "delete"})
+
+    async def _batch(self, account_id: str, body: dict[str, Any]) -> Outcome:
+        found = await self.request(
+            "POST", _path("accounts", account_id, "messages", "batch"), json=body
+        )
+        done, failed = [], []
+        for item in found.get("results", []):
+            if item.get("ok"):
+                done.append(str(item["id"]))
+            else:
+                error = item.get("error") or {}
+                failed.append(
+                    {"id": str(item["id"]), "error": error.get("message", "failed")}
+                )
+        return Outcome(done, failed)
+
+    # --- drafts and sending -----------------------------------------------------------
+
+    async def list_drafts(
+        self, account_id: str, limit: int, cursor: str | None
+    ) -> Page:
+        found = await self.request(
+            "GET",
+            _path("accounts", account_id, "drafts"),
+            params={"limit": limit, "cursor": cursor},
+        )
+        return _page(found)
+
+    async def create_draft(
+        self, account_id: str, message: dict[str, Any]
+    ) -> dict[str, Any]:
+        """``message`` as ``message_body`` makes it; the draft's summary."""
+        result: dict[str, Any] = await self.request(
+            "POST", _path("accounts", account_id, "drafts"), json=message
+        )
+        return result
+
+    async def update_draft(
+        self, account_id: str, draft_id: str, message: dict[str, Any]
+    ) -> dict[str, Any]:
+        result: dict[str, Any] = await self.request(
+            "PUT", _path("accounts", account_id, "drafts", draft_id), json=message
+        )
+        return result
+
+    async def delete_draft(self, account_id: str, draft_id: str) -> None:
+        await self.request("DELETE", _path("accounts", account_id, "drafts", draft_id))
+
+    async def send_message(
+        self, account_id: str, message: dict[str, Any], idempotency_key: str
+    ) -> Sent:
+        found = await self.request(
+            "POST",
+            _path("accounts", account_id, "send"),
+            json=message,
+            headers={"Idempotency-Key": idempotency_key},
+        )
+        return _sent(found)
+
+    async def send_draft(
+        self, account_id: str, draft_id: str, idempotency_key: str
+    ) -> Sent:
+        found = await self.request(
+            "POST",
+            _path("accounts", account_id, "drafts", draft_id, "send"),
+            headers={"Idempotency-Key": idempotency_key},
+        )
+        return _sent(found)
+
     async def aclose(self) -> None:
         await self._http.aclose()
+
+
+def message_body(
+    *,
+    to: list[Recipient],
+    cc: list[Recipient],
+    bcc: list[Recipient],
+    subject: str,
+    text: str,
+    html: str | None,
+    reference: tuple[str, str] | None,
+) -> dict[str, Any]:
+    """The body of a draft or a message to send, as the API takes it.
+    ``reference``: the id of the message answered or forwarded, and the
+    action (reply, reply_all, forward)."""
+    body: dict[str, Any] = {
+        "to": [_recipient(r) for r in to],
+        "cc": [_recipient(r) for r in cc],
+        "bcc": [_recipient(r) for r in bcc],
+        "subject": subject,
+        "text": text,
+    }
+    if html is not None:
+        body["html"] = html
+    if reference is not None:
+        body["reference"] = {"message_id": reference[0], "action": reference[1]}
+    return body
+
+
+def _recipient(recipient: Recipient) -> dict[str, str]:
+    email, name = recipient
+    return {"email": email, "name": name} if name else {"email": email}
+
+
+def _path(*parts: str) -> str:
+    """A path below ``/v1``, each part quoted: an id comes from the model."""
+    return "/v1/" + "/".join(quote(part, safe="") for part in parts)
+
+
+def _given(values: Mapping[str, Any] | None) -> dict[str, Any]:
+    return {k: v for k, v in (values or {}).items() if v is not None}
+
+
+def _folder(item: dict[str, Any]) -> Folder:
+    return Folder(
+        id=str(item["id"]),
+        name=str(item["name"]),
+        role=item.get("role"),
+        unread=item.get("unread"),
+        total=item.get("total"),
+    )
+
+
+def _page(found: dict[str, Any]) -> Page:
+    return Page(
+        items=list(found.get("items", [])),
+        next_cursor=found.get("next_cursor"),
+        not_answering=[
+            f"{f['account_id']}: {f['message']}" for f in found.get("incomplete") or []
+        ],
+    )
+
+
+def _sent(found: dict[str, Any]) -> Sent:
+    return Sent(
+        message_id_header=found.get("message_id_header"),
+        refused=list(found.get("refused") or []),
+    )
 
 
 def _api_error(response: httpx.Response) -> ApiError:

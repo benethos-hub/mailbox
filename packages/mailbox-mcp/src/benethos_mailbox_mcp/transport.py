@@ -12,12 +12,15 @@ It is not passed on: the server calls the REST API with its own
 from __future__ import annotations
 
 import hmac
+import logging
 import os
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from starlette.types import ASGIApp, Receive, Scope, Send
+
+logger = logging.getLogger(__name__)
 
 ENV_VAR = "MAILBOX_MCP_BEARER_TOKEN"
 
@@ -124,3 +127,54 @@ def run_http(app: ASGIApp, *, host: str, port: int, log_level: str) -> None:
 
     config: Any = uvicorn.Config(app, host=host, port=port, log_level=log_level.lower())
     uvicorn.Server(config).run()
+
+
+def serve_stdio(server: MCPServer) -> None:
+    """Over the client's own pipes: no port, so no token."""
+    if token_from_env() is not None:
+        logger.warning(
+            "%s is set, but stdio has no port anyone could reach: the "
+            "client owns this process, so the token is ignored",
+            ENV_VAR,
+        )
+    logger.info("Starting Mailbox MCP server (stdio)")
+    server.run(transport="stdio")
+
+
+def serve_http(
+    server: MCPServer,
+    *,
+    host: str,
+    port: int,
+    path: str,
+    allowed_hosts: list[str],
+    allowed_origins: list[str],
+    log_level: str,
+) -> None:
+    """Over streamable HTTP, behind the bearer guard where a token is set."""
+    token = token_from_env()
+    logger.info(
+        "Starting Mailbox MCP server (streamable HTTP) on http://%s:%s%s",
+        host,
+        port,
+        path,
+    )
+    if token is None:
+        logger.warning(
+            "No %s set: anything that can reach %s:%s can use every tool of "
+            "this server's user. Fine for a loopback bind on your own "
+            "machine, not anywhere else.",
+            ENV_VAR,
+            host,
+            port,
+        )
+    else:
+        logger.info("Bearer token required: requests without it get HTTP 401.")
+    app = http_app(
+        server,
+        path=path,
+        host=host,
+        security=transport_security(host, allowed_hosts, allowed_origins),
+        token=token,
+    )
+    run_http(app, host=host, port=port, log_level=log_level)

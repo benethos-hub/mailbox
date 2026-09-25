@@ -25,7 +25,7 @@ from mcp.types import CallToolResult, ImageContent, TextContent, ToolAnnotations
 from pydantic import Field
 
 from . import __version__, pdf, render, transport
-from .client import MailboxApiClient
+from .client import MailboxApiClient, Recipient, message_body
 from .errors import ToolError
 
 logger = logging.getLogger(__name__)
@@ -47,14 +47,9 @@ def client() -> MailboxApiClient:
     return _client
 
 
-# What list_accounts reports a caller may do, by one operation that stands
-# for it.
-_CAN = {
-    "read": "get_message",
-    "write": "batch_messages",
-    "drafts": "create_draft",
-    "send": "send_message",
-}
+# What list_accounts reports a caller may do, in this order: what the
+# tools of that kind need.
+CAPABILITIES = ("read", "write", "drafts", "send")
 
 MAX_LIMIT = 50
 
@@ -66,29 +61,21 @@ async def list_accounts() -> list[dict[str, Any]]:
     (read, write, drafts, send). Other tools take the account id."""
     me = await client().me()
     return [
-        {
-            "id": account["id"],
-            "email": account["email"],
-            "name": account.get("display_name"),
-            "can": [can for can, op in _CAN.items() if op in account["operations"]],
-        }
-        for account in me.get("accounts", [])
+        render.account(account, _capabilities(account.operations))
+        for account in me.accounts
     ]
+
+
+def _capabilities(operations: frozenset[str]) -> list[str]:
+    """Which kinds of tool ``operations`` unlock."""
+    kinds = {tool.kind for tool in TOOLS if tool.kind and tool.needs & operations}
+    return [kind for kind in CAPABILITIES if kind in kinds]
 
 
 async def list_folders(account_id: str) -> list[dict[str, Any]]:
     """The folders of an account: id, name, role (inbox, sent, drafts, trash,
     junk, archive) and counts."""
-    return [
-        {
-            "id": folder["id"],
-            "name": folder["name"],
-            "role": folder.get("role"),
-            "unread": folder.get("unread"),
-            "total": folder.get("total"),
-        }
-        for folder in await client().list_folders(account_id)
-    ]
+    return [render.folder(f) for f in await client().list_folders(account_id)]
 
 
 async def search_messages(
@@ -118,30 +105,22 @@ async def search_messages(
     """Find mail, newest first. All filters narrow together. Without an
     account it searches every account you may read, and folder must be a
     role. Answers summaries; get_message reads one."""
-    params = {
-        "folder": folder,
-        "q": text,
-        "from": sender,
-        "to": to,
-        "subject": subject,
-        "after": after,
-        "before": before,
-        "unread": unread,
-        "starred": starred,
-        "has_attachments": has_attachments,
-        "limit": limit,
-        "cursor": cursor,
-    }
-    page = await client().list_messages(account_id, params)
-    result: dict[str, Any] = {
-        "messages": [render.summary(item) for item in page.get("items", [])],
-        "next_cursor": page.get("next_cursor"),
-    }
-    if page.get("incomplete"):
-        result["accounts_not_answering"] = [
-            f"{f['account_id']}: {f['message']}" for f in page["incomplete"]
-        ]
-    return result
+    page = await client().list_messages(
+        account_id,
+        folder=folder,
+        text=text,
+        sender=sender,
+        to=to,
+        subject=subject,
+        after=after,
+        before=before,
+        unread=unread,
+        starred=starred,
+        has_attachments=has_attachments,
+        limit=limit,
+        cursor=cursor,
+    )
+    return render.page(page)
 
 
 async def get_message(
@@ -208,10 +187,11 @@ async def get_attachment(
             f"{render.MARKER_NOTE}",
             images=[(image, "image/png") for image in rendered.images],
         )
-    text = found.data.decode(found.charset or "utf-8", errors="replace")
-    cut = len(text) > max_chars
-    note = f" Cut to {max_chars} characters." if cut else ""
-    return _result(f"{head}{note}\n\n" + render.foreign(source, text[:max_chars]))
+    text, note = render.cut(
+        found.data.decode(found.charset or "utf-8", errors="replace"), max_chars
+    )
+    shortened = f" {note[0].upper()}{note[1:]}." if note else ""
+    return _result(f"{head}{shortened}\n\n" + render.foreign(source, text))
 
 
 def _is_text(kind: str) -> bool:
@@ -253,27 +233,14 @@ async def update_messages(
     if trash:
         if unread is not None or starred is not None or move_to is not None:
             raise ToolError("trash goes alone, without other changes")
-        body: dict[str, Any] = {"ids": message_ids, "action": "delete"}
+        outcome = await client().trash_messages(account_id, message_ids)
     else:
-        changes: dict[str, Any] = {
-            key: value
-            for key, value in (("unread", unread), ("starred", starred))
-            if value is not None
-        }
-        if move_to is not None:
-            changes["folder_ids"] = [move_to]
-        if not changes:
+        if unread is None and starred is None and move_to is None:
             raise ToolError("nothing to change: give unread, starred, move_to or trash")
-        body = {"ids": message_ids, "action": "update", "changes": changes}
-    result = await client().batch_messages(account_id, body)
-    done, failed = [], []
-    for item in result.get("results", []):
-        if item.get("ok"):
-            done.append(item["id"])
-        else:
-            error = item.get("error") or {}
-            failed.append({"id": item["id"], "error": error.get("message", "failed")})
-    return {"done": done, "failed": failed}
+        outcome = await client().update_messages(
+            account_id, message_ids, unread=unread, starred=starred, folder_id=move_to
+        )
+    return {"done": outcome.done, "failed": outcome.failed}
 
 
 async def create_folder(
@@ -287,7 +254,7 @@ async def create_folder(
     """Create a folder in an account. Answers its id, which update_messages
     takes as move_to."""
     folder = await client().create_folder(account_id, name, parent)
-    return {"id": folder["id"], "name": folder["name"]}
+    return {"id": folder.id, "name": folder.name}
 
 
 # --- drafts -------------------------------------------------------------------------
@@ -314,13 +281,14 @@ Html = Annotated[
 ]
 
 
-def _recipients(addresses: list[str] | None) -> list[dict[str, str]]:
+def _recipients(addresses: list[str] | None) -> list[Recipient]:
+    """``Name <address>`` or plain addresses, as the model wrote them."""
     found = []
     for value in addresses or []:
         name, email = parseaddr(value)
         if "@" not in email:
             raise ToolError(f"not an address: {value}")
-        found.append({"email": email, "name": name} if name else {"email": email})
+        found.append((email, name or None))
     return found
 
 
@@ -334,28 +302,16 @@ def _composed(
     original_id: str | None,
     action: Action,
 ) -> dict[str, Any]:
-    """The body of a draft or a message to send, as the API takes it."""
-    body: dict[str, Any] = {
-        "to": _recipients(to),
-        "cc": _recipients(cc),
-        "bcc": _recipients(bcc),
-        "subject": subject,
-        "text": text,
-    }
-    if html is not None:
-        body["html"] = html
-    if original_id is not None:
-        body["reference"] = {"message_id": original_id, "action": action}
-    return body
-
-
-def _draft(item: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "id": item["id"],
-        "date": item.get("date"),
-        "to": ", ".join(render.address(a) for a in item.get("to", [])) or "-",
-        "subject": item.get("subject"),
-    }
+    """The message the tool's arguments describe."""
+    return message_body(
+        to=_recipients(to),
+        cc=_recipients(cc),
+        bcc=_recipients(bcc),
+        subject=subject,
+        text=text,
+        html=html,
+        reference=(original_id, action) if original_id is not None else None,
+    )
 
 
 async def list_drafts(
@@ -369,8 +325,8 @@ async def list_drafts(
     its id."""
     page = await client().list_drafts(account_id, limit, cursor)
     return {
-        "drafts": [_draft(item) for item in page.get("items", [])],
-        "next_cursor": page.get("next_cursor"),
+        "drafts": [render.draft(item) for item in page.items],
+        "next_cursor": page.next_cursor,
     }
 
 
@@ -390,7 +346,7 @@ async def create_draft(
     recipients of a reply, the subject prefix and the quote. Recipients may
     stay empty."""
     body = _composed(to, cc, bcc, subject, text, html, original_id, action)
-    return _draft(await client().create_draft(account_id, body))
+    return render.draft(await client().create_draft(account_id, body))
 
 
 async def update_draft(
@@ -408,7 +364,7 @@ async def update_draft(
     """Replace a draft as a whole: what is left out is gone afterwards. Read
     it with get_message first to keep parts of it. The id stays."""
     body = _composed(to, cc, bcc, subject, text, html, original_id, action)
-    return _draft(await client().update_draft(account_id, draft_id, body))
+    return render.draft(await client().update_draft(account_id, draft_id, body))
 
 
 async def delete_draft(account_id: str, draft_id: str) -> str:
@@ -425,16 +381,6 @@ def _idempotency_key(tool: str, account_id: str, arguments: Any) -> str:
     24 hours with the first result instead of sending twice."""
     call = json.dumps([tool, account_id, arguments], sort_keys=True)
     return "mcp-" + hashlib.sha256(call.encode("utf-8")).hexdigest()
-
-
-def _sent(result: dict[str, Any]) -> dict[str, Any]:
-    found: dict[str, Any] = {
-        "sent": True,
-        "message_id_header": result.get("message_id_header"),
-    }
-    if result.get("refused"):
-        found["refused"] = result["refused"]
-    return found
 
 
 async def send_message(
@@ -455,14 +401,14 @@ async def send_message(
     take."""
     body = _composed(to, cc, bcc, subject, text, html, original_id, action)
     key = _idempotency_key("send_message", account_id, body)
-    return _sent(await client().send_message(account_id, body, key))
+    return render.sent(await client().send_message(account_id, body, key))
 
 
 async def send_draft(account_id: str, draft_id: str) -> dict[str, Any]:
     """Send a draft as it is stored; it cannot be taken back. Afterwards the
     draft is gone and a copy is in the sent folder."""
     key = _idempotency_key("send_draft", account_id, draft_id)
-    return _sent(await client().send_draft(account_id, draft_id, key))
+    return render.sent(await client().send_draft(account_id, draft_id, key))
 
 
 # --- which tools exist ----------------------------------------------------------------
@@ -473,29 +419,36 @@ class _Tool:
     fn: Callable[..., Any]
     # Registered when the token holds any of these on at least one account.
     needs: frozenset[str]
+    # What list_accounts calls tools of this kind; None for list_accounts.
+    kind: str | None = None
     read_only: bool = True
     destructive: bool = False
 
 
+def _reads(fn: Callable[..., Any], *needs: str) -> _Tool:
+    return _Tool(fn, frozenset(needs), "read")
+
+
+def _changes(
+    fn: Callable[..., Any], kind: str, *needs: str, destructive: bool
+) -> _Tool:
+    return _Tool(fn, frozenset(needs), kind, read_only=False, destructive=destructive)
+
+
 TOOLS = (
     _Tool(list_accounts, frozenset()),
-    _Tool(list_folders, frozenset({"list_folders"})),
-    _Tool(search_messages, frozenset({"list_messages", "list_all_messages"})),
-    _Tool(get_message, frozenset({"get_message"})),
-    _Tool(get_attachment, frozenset({"get_attachment"})),
-    _Tool(
-        update_messages,
-        frozenset({"batch_messages"}),
-        read_only=False,
-        destructive=True,
-    ),
-    _Tool(create_folder, frozenset({"create_folder"}), read_only=False),
-    _Tool(list_drafts, frozenset({"list_drafts"})),
-    _Tool(create_draft, frozenset({"create_draft"}), read_only=False),
-    _Tool(update_draft, frozenset({"update_draft"}), read_only=False, destructive=True),
-    _Tool(delete_draft, frozenset({"delete_draft"}), read_only=False, destructive=True),
-    _Tool(send_message, frozenset({"send_message"}), read_only=False, destructive=True),
-    _Tool(send_draft, frozenset({"send_draft"}), read_only=False, destructive=True),
+    _reads(list_folders, "list_folders"),
+    _reads(search_messages, "list_messages", "list_all_messages"),
+    _reads(get_message, "get_message"),
+    _reads(get_attachment, "get_attachment"),
+    _changes(update_messages, "write", "batch_messages", destructive=True),
+    _changes(create_folder, "write", "create_folder", destructive=False),
+    _Tool(list_drafts, frozenset({"list_drafts"}), "drafts"),
+    _changes(create_draft, "drafts", "create_draft", destructive=False),
+    _changes(update_draft, "drafts", "update_draft", destructive=True),
+    _changes(delete_draft, "drafts", "delete_draft", destructive=True),
+    _changes(send_message, "send", "send_message", destructive=True),
+    _changes(send_draft, "send", "send_draft", destructive=True),
 )
 
 
@@ -525,15 +478,11 @@ async def allowed_operations() -> set[str]:
     """Every operation the token may call on at least one account. Warns in
     the log where it may read mail and send it to any address."""
     me = await client().me()
-    found = set(me.get("operations", []))
-    for account in me.get("accounts", []):
-        found.update(account.get("operations", []))
-        if "read_and_send_anywhere" in account.get("warnings", []):
-            logger.warning(
-                "%s: this token can read mail and send it to any address; "
-                "narrow sending with a grant's recipients",
-                account.get("email") or account["id"],
-            )
+    for warning in render.warnings_of(me):
+        logger.warning("%s", warning)
+    found = set(me.operations)
+    for account in me.accounts:
+        found.update(account.operations)
     return found
 
 
@@ -602,41 +551,15 @@ def main(argv: list[str] | None = None) -> None:
     except ToolError as exc:
         sys.exit(f"benethos-mailbox-mcp: {exc}")
     server = build_server(operations)
-    token = transport.token_from_env()
     if args.transport == "stdio":
-        if token is not None:
-            logger.warning(
-                "%s is set, but stdio has no port anyone could reach: the "
-                "client owns this process, so the token is ignored",
-                transport.ENV_VAR,
-            )
-        logger.info("Starting Mailbox MCP server (stdio)")
-        server.run(transport="stdio")
+        transport.serve_stdio(server)
         return
-    logger.info(
-        "Starting Mailbox MCP server (streamable HTTP) on http://%s:%s%s",
-        args.host,
-        args.port,
-        args.path,
-    )
-    if token is None:
-        logger.warning(
-            "No %s set: anything that can reach %s:%s can use every tool of "
-            "this server's user. Fine for a loopback bind on your own "
-            "machine, not anywhere else.",
-            transport.ENV_VAR,
-            args.host,
-            args.port,
-        )
-    else:
-        logger.info("Bearer token required: requests without it get HTTP 401.")
-    app = transport.http_app(
+    transport.serve_http(
         server,
-        path=args.path,
         host=args.host,
-        security=transport.transport_security(
-            args.host, _csv(args.allowed_hosts), _csv(args.allowed_origins)
-        ),
-        token=token,
+        port=args.port,
+        path=args.path,
+        allowed_hosts=_csv(args.allowed_hosts),
+        allowed_origins=_csv(args.allowed_origins),
+        log_level=args.log_level,
     )
-    transport.run_http(app, host=args.host, port=args.port, log_level=args.log_level)
