@@ -16,6 +16,26 @@ stored data and the configuration may change without notice.
 
 ### Security
 
+- Listing the tokens of a user needs the rights that user holds, as
+  creating and revoking them already did. Before, `users.manage` alone
+  listed the token names and dates of any user, an admin's included.
+
+- Guessed credentials are slowed down: a client address that fails to
+  sign in ten times within fifteen minutes is locked out for fifteen
+  minutes. On the API every request from it answers `429 rate_limited`
+  with `Retry-After`, on the UI the sign-in page says so. A successful
+  sign-in clears the count. Behind a reverse proxy, set
+  `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` to the proxy's address, so the
+  client address is read from `X-Forwarded-For`. Without it, every client
+  behind the proxy counts as one.
+
+- Every line break is refused in a header field of an outgoing message,
+  not only CR and LF: `422` for a subject, a recipient name or an
+  attachment name with a vertical tab, a form feed, NEL (U+0085) or a
+  Unicode line or paragraph separator. A reply or a forward folds what the
+  original carried in its subject or attachment names onto one line.
+  Before, both answered `500`.
+
 - The hosts in an account's settings (`host`, `smtp_host`) pass the same
   check as autodiscovery when the account is created or changed, before
   the first connection: a host that resolves to a private, loopback or

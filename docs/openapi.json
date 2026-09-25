@@ -5757,7 +5757,7 @@
           "subject": {
             "type": "string",
             "maxLength": 998,
-            "pattern": "^[^\\r\\n]*$",
+            "pattern": "^[^\\r\\n\\x0b\\x0c\\x1c-\\x1e\\x85\\u2028\\u2029]*$",
             "title": "Subject",
             "default": ""
           },
@@ -6771,7 +6771,7 @@
             "type": "string",
             "maxLength": 200,
             "minLength": 1,
-            "pattern": "^[^\\r\\n]*$",
+            "pattern": "^[^\\r\\n\\x0b\\x0c\\x1c-\\x1e\\x85\\u2028\\u2029]*$",
             "title": "Filename"
           },
           "content_type": {
@@ -6839,7 +6839,7 @@
           "subject": {
             "type": "string",
             "maxLength": 998,
-            "pattern": "^[^\\r\\n]*$",
+            "pattern": "^[^\\r\\n\\x0b\\x0c\\x1c-\\x1e\\x85\\u2028\\u2029]*$",
             "title": "Subject",
             "default": ""
           },
@@ -6976,7 +6976,7 @@
               {
                 "type": "string",
                 "maxLength": 200,
-                "pattern": "^[^\\r\\n]*$"
+                "pattern": "^[^\\r\\n\\x0b\\x0c\\x1c-\\x1e\\x85\\u2028\\u2029]*$"
               },
               {
                 "type": "null"

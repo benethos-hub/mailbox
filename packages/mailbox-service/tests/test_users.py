@@ -259,6 +259,10 @@ def test_cannot_manage_a_stronger_user(
         == 403
     )
     assert (
+        app_client.get(f"/v1/users/{strong['id']}/tokens", headers=headers).status_code
+        == 403
+    )
+    assert (
         app_client.delete(f"/v1/users/{strong['id']}", headers=headers).status_code
         == 403
     )

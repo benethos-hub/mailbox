@@ -24,6 +24,7 @@ from ..errors import (
     UnauthorizedError,
 )
 from .access import Access
+from .throttle import SignInThrottle
 
 TOKEN_PREFIX = "mbx_"
 _ALPHABET = string.ascii_letters + string.digits
@@ -53,14 +54,23 @@ class AuthService:
         tokens: TokenRepository,
         admin_key: str | None = None,
         clock: Callable[[], datetime] = utc_now,
+        throttle: SignInThrottle | None = None,
     ) -> None:
         self._users = users
         self._roles = roles
         self._tokens = tokens
         self._admin_key = admin_key or None
         self._clock = clock
+        self._throttle = throttle or SignInThrottle(clock=clock)
 
-    def authenticate(self, presented: str | None) -> Access:
+    def authenticate(
+        self, presented: str | None, *, source: str | None = None
+    ) -> Access:
+        """Whose rights ``presented`` carries. With a ``source``, the client
+        address of a sign-in, guessing is slowed down: a source that failed
+        too often is locked out for a while (``RateLimitedError``), before
+        the credential is looked at. A request that carries a session the
+        service made itself passes no source."""
         if self._admin_key is None and self._users.count() == 0:
             raise SetupRequiredError(
                 "no user exists and MAILBOX_SERVICE_KEY is not set: "
@@ -68,6 +78,19 @@ class AuthService:
             )
         if not presented:
             raise UnauthorizedError("missing bearer token")
+        if source is not None:
+            self._throttle.check(source)
+        try:
+            access = self._authenticate(presented)
+        except UnauthorizedError:
+            if source is not None:
+                self._throttle.failed(source)
+            raise
+        if source is not None:
+            self._throttle.succeeded(source)
+        return access
+
+    def _authenticate(self, presented: str) -> Access:
         if self._admin_key is not None and secrets.compare_digest(
             presented.encode(), self._admin_key.encode()
         ):

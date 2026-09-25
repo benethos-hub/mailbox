@@ -145,6 +145,7 @@ packages/
         permissions.py    # the catalogue of rights and groups
         access.py         # Access: what one caller may do
         auth.py           # AuthService: tokens, the admin key
+        throttle.py       # SignInThrottle: a source that fails too often waits
         users.py          # UserService: users, roles, tokens
       data/               # DATA: reads and writes, decides nothing
         models/           # provider-neutral types, one module per subject:

@@ -10,13 +10,14 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated
 
-from fastapi import Depends, Query
+from fastapi import Depends, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ...data.models import MessageFilter
 from ...data.models.messages import SEARCH_TEXT_PATTERN
 from ...domain.access import Access
 from ..services import Accounts, Auth, Discoverer, Mailbox, Users
+from ..urls import client_address
 
 __all__ = [
     "Accounts",
@@ -36,10 +37,12 @@ _bearer = HTTPBearer(auto_error=False, scheme_name="bearerAuth")
 
 
 def authenticate(
+    request: Request,
     auth: Auth,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> Access:
-    return auth.authenticate(credentials.credentials if credentials else None)
+    presented = credentials.credentials if credentials else None
+    return auth.authenticate(presented, source=client_address(request))
 
 
 Caller = Annotated[Access, Depends(authenticate)]

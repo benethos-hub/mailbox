@@ -9,8 +9,9 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse, Response
 
-from ....errors import MailboxServiceError
+from ....errors import MailboxServiceError, RateLimitedError
 from ...services import get_auth
+from ...urls import client_address
 from ..deps import Actor
 from ..session import COOKIE, PATH, SignInRequired, current, store_of
 from ..templates import back, local_path, render
@@ -61,7 +62,13 @@ async def login(
     auth = get_auth(request)
     token = token.strip()
     try:
-        auth.authenticate(token)
+        auth.authenticate(token, source=client_address(request))
+    except RateLimitedError as exc:
+        minutes = max(1, -(-exc.retry_after // 60))
+        return back(
+            f"{PATH}/login",
+            error=f"Too many failed attempts. Try again in {minutes} minutes.",
+        )
     except MailboxServiceError:
         return back(f"{PATH}/login", error="That token is not valid.")
     session_id = store_of(request).create(token)

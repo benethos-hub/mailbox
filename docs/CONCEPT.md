@@ -83,6 +83,11 @@ REST client can do too.
   session. Sessions end after 8 hours without a request and with a
   restart. A content security policy allows no inline script or style and
   no framing. A form answers with a redirect (Post/Redirect/Get).
+  Guessing is slowed down: a client address that fails to sign in ten
+  times within fifteen minutes is locked out for fifteen minutes, on the
+  UI and on the API alike, whatever the credential kind. Behind a proxy,
+  `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` names the proxy so the client
+  address comes from `X-Forwarded-For`.
 - **No HTTP below the web layer**, no decisions in the data layer,
   providers reached only through their registry. A test checks the
   direction of every import.
@@ -900,9 +905,10 @@ the data, rather than a readable file.
   working directory, moved with `MAILBOX_SERVICE_DATA_DIR`. Decided 2026-09-24:
   one folder per package under `data/` and under `config/`.
   `data/benethos-mailbox-mcp/` is meant for what the MCP server stores, e.g.
-  downloaded attachments. A missing data folder is created. The database is
-  created with owner-only permissions (0600, on Windows an ACL for the user
-  only).
+  downloaded attachments. A missing data folder is created. The database,
+  a backup and a key file are created readable by their owner alone
+  (0600) and never over an existing file. Windows has no such modes: there
+  the folder's own permissions decide who may read them.
 - **Credential kinds per provider:** always the one that is not the main
   password. Per provider in the table of 5.3. In short: OAuth for Google
   and Microsoft, an API token for Fastmail, an app password everywhere

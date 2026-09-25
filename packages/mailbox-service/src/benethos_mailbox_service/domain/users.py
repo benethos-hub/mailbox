@@ -176,7 +176,7 @@ class UserService:
 
     def list_tokens(self, access: Access, user_id: str) -> list[ApiToken]:
         access.require("list_tokens")
-        self._users.get(user_id)
+        self._require_covers_user(access, self._users.get(user_id))
         return self._tokens.list_for_user(user_id)
 
     def token_state(self, token: ApiToken) -> TokenState:
