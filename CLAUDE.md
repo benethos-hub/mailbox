@@ -149,16 +149,17 @@ packages/
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
           convert.py      # a parsed message to Message / MessageSummary
           text.py         # the text part of an HTML-only mail
-        providers/        # registry in __init__.py, base.py protocol
-          protocols/      # wire protocols, one library each:
-                          #   imap.py (IMAPClient), smtp.py (smtplib)
+        providers/        # registry in __init__.py (also sign_in), base.py
+          protocols/      # wire protocols, one library each: imap.py
+                          #   (IMAPClient), smtp.py (smtplib), oauth.py
+                          #   (OAuth 2.0 with PKCE, refresh, token source)
           guard.py        # pacing, retries, blocked logins, for any adapter
           sender.py       # SmtpSender: sending for IMAP, POP3, ...
           imap/, memory/, # one directory per provider (adapter)
-          microsoft/      #   microsoft: Graph over data/http, by OAuth
+          microsoft/      #   microsoft: Graph over data/http; signin.py
+                          #   its endpoints and the scopes it needs
         http/             # httpx: safe.py (hosts users typed, SSRF guard),
                           #   api.py (JSON to a provider's known hosts)
-        oauth.py          # OAuth 2.0 with PKCE, refresh, the token source
         storage/          # own records, one module per subject
         secrets/          # envelope encryption, key providers, backup
         discovery/        # autodiscovery sources and their helpers
@@ -254,7 +255,7 @@ noticing. Every change is measured against that.
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX; planned: JMAP well-known, Microsoft realm, SRV, guessing | any further lookup, or one switched off |
 | HTTP | `data/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
-| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/oauth.py` | refresh token in the vault, access token in memory | another token store |
+| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/providers/protocols/oauth.py`; each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token | password + TOTP, OAuth client credentials |
 | MCP ↔ service | the REST API, `docs/openapi.json` | httpx client in `client.py` | a generated client |

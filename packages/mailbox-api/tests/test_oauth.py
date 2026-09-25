@@ -19,16 +19,6 @@ from pydantic import SecretStr
 from benethos_mailbox_api.config import Settings
 from benethos_mailbox_api.data.http import ApiClient
 from benethos_mailbox_api.data.models import Grant, ProviderType
-from benethos_mailbox_api.data.oauth import (
-    App,
-    OAuthClient,
-    RefreshingTokens,
-    Tokens,
-    authorize_url,
-    identity_of,
-    microsoft,
-    new_pkce,
-)
 from benethos_mailbox_api.data.providers import (
     CredentialReader,
     MailProvider,
@@ -37,6 +27,18 @@ from benethos_mailbox_api.data.providers import (
     build_provider,
 )
 from benethos_mailbox_api.data.providers.memory import MemoryProvider
+from benethos_mailbox_api.data.providers.microsoft import (
+    endpoints as microsoft_endpoints,
+)
+from benethos_mailbox_api.data.providers.protocols.oauth import (
+    App,
+    OAuthClient,
+    RefreshingTokens,
+    Tokens,
+    authorize_url,
+    identity_of,
+    new_pkce,
+)
 from benethos_mailbox_api.data.secrets import cipher, encode_recovery
 from benethos_mailbox_api.domain.access import Access
 from benethos_mailbox_api.domain.accounts import REFRESH_TOKEN
@@ -99,7 +101,7 @@ def granted(
 def client(
     endpoint: TokenEndpoint, clock: Callable[[], datetime] = lambda: NOW
 ) -> OAuthClient:
-    app = App(microsoft(), "client-1", SecretStr("app-secret"))
+    app = App(microsoft_endpoints(), "client-1", SecretStr("app-secret"))
     return OAuthClient(app, ApiClient(transport=httpx.MockTransport(endpoint)), clock)
 
 
@@ -114,7 +116,7 @@ def test_pkce_challenge_is_the_s256_of_the_verifier() -> None:
 
 
 def test_the_sign_in_address() -> None:
-    app = App(microsoft("consumers"), "client-1")
+    app = App(microsoft_endpoints("consumers"), "client-1")
     url = authorize_url(app, REDIRECT, "st", new_pkce(), login_hint="a@example.org")
     parts = urlsplit(url)
     query = {k: v[0] for k, v in parse_qs(parts.query).items()}
@@ -133,12 +135,12 @@ def test_the_sign_in_address() -> None:
     "tenant", ["common", "organizations", "contoso.onmicrosoft.com"]
 )
 def test_tenants(tenant: str) -> None:
-    assert f"/{tenant}/" in microsoft(tenant).token_url
+    assert f"/{tenant}/" in microsoft_endpoints(tenant).token_url
 
 
 def test_a_tenant_cannot_change_the_host() -> None:
     with pytest.raises(BadRequestError):
-        microsoft("evil.example/x?")
+        microsoft_endpoints("evil.example/x?")
 
 
 def test_identity_from_the_id_token() -> None:
@@ -448,3 +450,13 @@ async def test_a_query_in_the_url_is_kept() -> None:
         "https://graph.example/next?%24skip=10",
         "https://graph.example/list?%24top=5",
     ]
+
+
+def test_the_registry_knows_how_a_provider_signs_in() -> None:
+    from benethos_mailbox_api.data.providers import sign_in
+
+    endpoints = sign_in(ProviderType.MICROSOFT)
+    assert endpoints.provider == "microsoft" and "/common/" in endpoints.token_url
+    assert "/consumers/" in sign_in(ProviderType.MICROSOFT, "consumers").token_url
+    with pytest.raises(NotSupportedError, match="do not sign in with OAuth"):
+        sign_in(ProviderType.IMAP)

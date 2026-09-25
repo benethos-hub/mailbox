@@ -27,7 +27,7 @@ from urllib.parse import urlsplit
 
 from ..common.clock import utc_now
 from ..data.models import Account, ProviderType
-from ..data.oauth import OAuthClient, authorize_url, new_pkce
+from ..data.providers import OAuthClient, authorize_url, new_pkce
 from ..errors import BadRequestError, ForbiddenError, NotSupportedError
 from .access import Access
 from .accounts import REFRESH_TOKEN, AccountService
