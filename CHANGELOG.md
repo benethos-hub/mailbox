@@ -11,6 +11,8 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- Autodiscovery keeps a mail server under an internationalised top-level
+  domain such as `.рф`. Before, its punycode form was dropped as no host.
 - A failure of the service's own database answers `500` with the code
   `storage_error` and the reason, a violated constraint `409`
   (`conflict`). Before, both were unhandled and the background sync
@@ -33,6 +35,9 @@ stored data and the configuration may change without notice.
 
 ### Security
 
+- A NAT64 address (`64:ff9b::/96`) counts as public only when the IPv4
+  address it carries is. Before, `64:ff9b::10.0.0.1` passed the check
+  of autodiscovery and of an account's hosts as a public address.
 - The MCP server puts the sender's words inside the `<mail-content>`
   marker in full: a message's date, from, to, cc, subject and attachment
   names as much as its body, and an attachment's filename. A list of

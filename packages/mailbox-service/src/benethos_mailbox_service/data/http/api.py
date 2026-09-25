@@ -19,7 +19,7 @@ from typing import Any
 import httpx
 
 from ...errors import ProviderError
-from .base import new_client, read_capped, unreachable
+from .base import new_client, parse_url, read_capped, unreachable
 
 TIMEOUT = 30.0
 # Enough for a message with its attachments (25 MB) in base64.
@@ -65,7 +65,7 @@ class ApiClient:
         json_body: Any = None,
         content: bytes | None = None,
     ) -> Answer:
-        target = httpx.URL(url)
+        target = parse_url(url)
         if target.scheme != "https":
             raise ProviderError(f"refused to call {target.host}: HTTPS only")
         request = self._client.build_request(

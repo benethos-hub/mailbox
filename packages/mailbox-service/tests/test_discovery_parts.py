@@ -94,6 +94,10 @@ async def test_host_addresses_of_localhost_and_nowhere() -> None:
         ("0.0.0.0", False),
         ("::ffff:10.0.0.1", False),
         ("::ffff:8.8.8.8", True),
+        ("64:ff9b::a00:1", False),
+        ("64:ff9b::808:808", True),
+        ("64:ff9b:1::808:808", False),
+        ("2002:a00:1::1", False),
     ],
 )
 def test_public_addresses(address: str, public: bool) -> None:
@@ -248,6 +252,21 @@ async def test_fetch_redirect_to_a_private_address_is_refused() -> None:
     with pytest.raises(ProviderError, match="non-public"):
         await f.get("https://example.com/")
     assert len(seen) == 1
+
+
+async def test_fetch_redirect_to_a_location_that_is_no_url() -> None:
+    f, _ = fetcher(
+        lambda r: httpx.Response(302, headers={"location": "https://[::1"}),
+        {"example.com": [PUBLIC]},
+    )
+    with pytest.raises(ProviderError, match="not reachable"):
+        await f.get("https://example.com/")
+
+
+async def test_fetch_of_what_is_no_url() -> None:
+    f, _ = fetcher(lambda r: httpx.Response(200), {"example.com": [PUBLIC]})
+    with pytest.raises(ProviderError, match="not a URL"):
+        await f.get("https://[::1")
 
 
 async def test_fetch_redirect_to_http_is_refused() -> None:
@@ -412,6 +431,16 @@ def test_parse_drops_invalid_servers(host: str, port: str) -> None:
       <socketType>SSL</socketType><authentication>plain</authentication>
       </incomingServer></emailProvider></clientConfig>""".encode()
     assert autoconfig.parse(xml, "example.com", DiscoverySourceName.ISPDB) == []
+
+
+def test_parse_keeps_a_host_under_an_idn_top_level_domain() -> None:
+    xml = """<clientConfig><emailProvider>
+      <incomingServer type="imap"><hostname>imap.почта.рф</hostname>
+      <port>993</port><socketType>SSL</socketType>
+      <authentication>password-encrypted</authentication>
+      </incomingServer></emailProvider></clientConfig>""".encode()
+    [candidate] = autoconfig.parse(xml, "example.com", DiscoverySourceName.ISPDB)
+    assert candidate.servers[0].host == "imap.xn--80a1acny.xn--p1ai"
 
 
 def test_parse_idn_host_to_ascii() -> None:

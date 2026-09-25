@@ -35,6 +35,15 @@ async def read_capped(response: httpx.Response, host: str, max_bytes: int) -> by
     return bytes(body)
 
 
+def parse_url(url: str) -> httpx.URL:
+    """``url`` parsed, or a ProviderError: what a user or a provider gave us
+    is data, and data that is no URL must not crash the request."""
+    try:
+        return httpx.URL(url)
+    except httpx.InvalidURL as exc:
+        raise ProviderError(f"not a URL: {exc}") from None
+
+
 def unreachable(exc: httpx.HTTPError, host: str) -> ProviderUnavailableError:
     """The failure named by its kind alone, never by the request: a URL
     may carry a token."""
