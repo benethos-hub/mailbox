@@ -81,6 +81,10 @@ stored data and the configuration may change without notice.
 
 ### Added
 
+- MCP: every tool has a title and the hints read-only, destructive,
+  idempotent and open world. `update_messages`, `update_draft` and
+  `delete_draft` are idempotent. `list_accounts` is the only tool that
+  stays inside the service.
 - `folder_ids` of a message update and `parent_id` of a new folder take a
   role such as `archive` in place of a folder id, as `folder` of
   `list_messages` does.

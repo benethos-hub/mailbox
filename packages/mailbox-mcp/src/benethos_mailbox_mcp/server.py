@@ -417,38 +417,114 @@ async def send_draft(account_id: str, draft_id: str) -> dict[str, Any]:
 @dataclass(frozen=True)
 class _Tool:
     fn: Callable[..., Any]
+    # What a client shows to a person.
+    title: str
     # Registered when the token holds any of these on at least one account.
     needs: frozenset[str]
     # What list_accounts calls tools of this kind. None for list_accounts.
     kind: str | None = None
     read_only: bool = True
+    # The hints below mean something for tools that change things only.
+    # Destructive: it can remove or overwrite something, or send mail.
     destructive: bool = False
+    # Idempotent: the same call again changes nothing more.
+    idempotent: bool = False
+    # Open world: it reaches mail, which comes from and goes to anyone.
+    # Only list_accounts stays inside this service.
+    open_world: bool = True
 
 
-def _reads(fn: Callable[..., Any], *needs: str) -> _Tool:
-    return _Tool(fn, frozenset(needs), "read")
+def _reads(fn: Callable[..., Any], title: str, *needs: str) -> _Tool:
+    return _Tool(fn, title, frozenset(needs), "read")
 
 
 def _changes(
-    fn: Callable[..., Any], kind: str, *needs: str, destructive: bool
+    fn: Callable[..., Any],
+    title: str,
+    kind: str,
+    *needs: str,
+    destructive: bool,
+    idempotent: bool,
 ) -> _Tool:
-    return _Tool(fn, frozenset(needs), kind, read_only=False, destructive=destructive)
+    return _Tool(
+        fn,
+        title,
+        frozenset(needs),
+        kind,
+        read_only=False,
+        destructive=destructive,
+        idempotent=idempotent,
+    )
 
 
 TOOLS = (
-    _Tool(list_accounts, frozenset()),
-    _reads(list_folders, "list_folders"),
-    _reads(search_messages, "list_messages", "list_all_messages"),
-    _reads(get_message, "get_message"),
-    _reads(get_attachment, "get_attachment"),
-    _changes(update_messages, "write", "batch_messages", destructive=True),
-    _changes(create_folder, "write", "create_folder", destructive=False),
-    _Tool(list_drafts, frozenset({"list_drafts"}), "drafts"),
-    _changes(create_draft, "drafts", "create_draft", destructive=False),
-    _changes(update_draft, "drafts", "update_draft", destructive=True),
-    _changes(delete_draft, "drafts", "delete_draft", destructive=True),
-    _changes(send_message, "send", "send_message", destructive=True),
-    _changes(send_draft, "send", "send_draft", destructive=True),
+    _Tool(list_accounts, "List accounts", frozenset(), open_world=False),
+    _reads(list_folders, "List folders", "list_folders"),
+    _reads(search_messages, "Search mail", "list_messages", "list_all_messages"),
+    _reads(get_message, "Read a message", "get_message"),
+    _reads(get_attachment, "Get an attachment", "get_attachment"),
+    # Setting a flag or a folder again changes nothing. A message in the
+    # trash already is refused, not deleted.
+    _changes(
+        update_messages,
+        "Change messages",
+        "write",
+        "batch_messages",
+        destructive=True,
+        idempotent=True,
+    ),
+    _changes(
+        create_folder,
+        "Create a folder",
+        "write",
+        "create_folder",
+        destructive=False,
+        idempotent=False,
+    ),
+    _Tool(list_drafts, "List drafts", frozenset({"list_drafts"}), "drafts"),
+    _changes(
+        create_draft,
+        "Write a draft",
+        "drafts",
+        "create_draft",
+        destructive=False,
+        idempotent=False,
+    ),
+    # Replaces the draft as a whole, under the same id.
+    _changes(
+        update_draft,
+        "Replace a draft",
+        "drafts",
+        "update_draft",
+        destructive=True,
+        idempotent=True,
+    ),
+    _changes(
+        delete_draft,
+        "Delete a draft",
+        "drafts",
+        "delete_draft",
+        destructive=True,
+        idempotent=True,
+    ),
+    # A repeated send within 24 hours sends nothing (Idempotency-Key). It is
+    # still marked as not idempotent: after that time it sends again.
+    _changes(
+        send_message,
+        "Send a mail",
+        "send",
+        "send_message",
+        destructive=True,
+        idempotent=False,
+    ),
+    _changes(
+        send_draft,
+        "Send a draft",
+        "send",
+        "send_draft",
+        destructive=True,
+        idempotent=False,
+    ),
 )
 
 
@@ -465,10 +541,13 @@ def build_server(operations: Iterable[str]) -> MCPServer:
         if not tool.needs or tool.needs & allowed:
             server.add_tool(
                 tool.fn,
+                title=tool.title,
                 annotations=ToolAnnotations(
+                    title=tool.title,
                     readOnlyHint=tool.read_only,
                     destructiveHint=None if tool.read_only else tool.destructive,
-                    openWorldHint=True,
+                    idempotentHint=None if tool.read_only else tool.idempotent,
+                    openWorldHint=tool.open_world,
                 ),
             )
     return server

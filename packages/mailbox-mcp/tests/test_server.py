@@ -267,3 +267,39 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
     )
     server.main([])
     assert server._client is None
+
+
+# title, read-only, destructive, idempotent, open world
+HINTS = {
+    "list_accounts": ("List accounts", True, None, None, False),
+    "list_folders": ("List folders", True, None, None, True),
+    "search_messages": ("Search mail", True, None, None, True),
+    "get_message": ("Read a message", True, None, None, True),
+    "get_attachment": ("Get an attachment", True, None, None, True),
+    "update_messages": ("Change messages", False, True, True, True),
+    "create_folder": ("Create a folder", False, False, False, True),
+    "list_drafts": ("List drafts", True, None, None, True),
+    "create_draft": ("Write a draft", False, False, False, True),
+    "update_draft": ("Replace a draft", False, True, True, True),
+    "delete_draft": ("Delete a draft", False, True, True, True),
+    "send_message": ("Send a mail", False, True, False, True),
+    "send_draft": ("Send a draft", False, True, False, True),
+}
+
+
+async def test_every_tool_carries_its_title_and_hints() -> None:
+    every = {need for tool in server.TOOLS for need in tool.needs}
+    tools = await server.build_server(every).list_tools()
+    assert {tool.name for tool in tools} == set(HINTS)
+    for tool in tools:
+        hints = tool.annotations
+        assert hints is not None
+        assert tool.title == hints.title
+        found = (
+            hints.title,
+            hints.read_only_hint,
+            hints.destructive_hint,
+            hints.idempotent_hint,
+            hints.open_world_hint,
+        )
+        assert found == HINTS[tool.name], tool.name
