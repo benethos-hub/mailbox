@@ -1284,7 +1284,8 @@ only, installed from the lockfile, and runs as a non-root user on a
 read-only root file system; configuration comes from the environment, the
 database from the volume `/data`. `keys generate` prints a new master key
 for the secret file, and `keys init` then adds the data key. The compose
-file publishes the port on `127.0.0.1` only. See `containers/README.md`.
+file publishes the port on `127.0.0.1` only. See the "Container" sections
+of the package READMEs.
 
 Why the REST server cannot be spawned per session like an MCP server:
 

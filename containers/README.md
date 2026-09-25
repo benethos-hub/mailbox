@@ -7,7 +7,8 @@ One folder per image, and a compose file for running them.
 
 ```
 containers/
-  compose.yaml                   # the service, published on 127.0.0.1 only
+  compose.yaml                   # the service, and the MCP server with the
+                                 #   profile mcp; ports on 127.0.0.1 only
   benethos-mailbox-api/
     Dockerfile                   # build context: the repository root
   benethos-mailbox-mcp/
@@ -15,99 +16,38 @@ containers/
   secrets/                       # local, not versioned: master_key
 ```
 
-The images of `benethos-mailbox-api` and `benethos-mailbox-mcp` are built
-for `linux/amd64` and `linux/arm64` by the GitHub workflow
-`.github/workflows/publish.yml` and pushed to the GitHub container
-registry as `ghcr.io/<owner>/<image>`, with the same version as the PyPI
-packages:
+How to start and run them, with `docker run` or with compose:
+
+- the service: [packages/mailbox-api/README.md](../packages/mailbox-api/README.md#container)
+- the MCP server: [packages/mailbox-mcp/README.md](../packages/mailbox-mcp/README.md#container)
+
+## The images
+
+`ghcr.io/benethos-hub/benethos-mailbox-api` and
+`ghcr.io/benethos-hub/benethos-mailbox-mcp`, for `linux/amd64` and
+`linux/arm64`, built by `.github/workflows/publish.yml` with the same
+version as the PyPI packages:
 
 | Event | Tags |
 |---|---|
 | release `v1.2.3` | `1.2.3`, `1.2`, `latest` |
 | started by hand (Actions, Publish, Run workflow) | `edge` |
 
-A client that starts the MCP server over stdio needs no image; the image
-serves it over streamable HTTP.
+- Only the one package goes into each image, installed from `uv.lock`
+  without the development tools.
+- They run as user `mailbox` (uid 10001); the compose file adds a
+  read-only root file system, no capabilities and `no-new-privileges`.
+- Settings come from the environment only.
+- Both have a health check: the service on `GET /health`, the MCP server
+  on its port.
 
-## In the container
-
-- Runs as user `mailbox` (uid 10001), read-only root file system, no
-  capabilities.
-- Configuration from the environment only (`MAILBOX_API_*`, see
-  `config/benethos-mailbox-api/.env.example`). The image sets
-  `MAILBOX_API_HOST=0.0.0.0`, `MAILBOX_API_DATA_DIR=/data`,
-  `MAILBOX_API_KEY_PROVIDER=file` and
-  `MAILBOX_API_KEY_FILE=/run/secrets/master_key`.
-- The database lives in the volume `data` at `/data`.
-- The master key is the secret `master_key`. It holds the recovery key in
-  text form, so the file and the recovery key are the same thing: keep a
-  copy apart from the host.
-- Health check on `GET /health`.
-
-## First start
-
-Run from this folder. `MAILBOX_API_IMAGE` picks a released image; without
-it, `docker compose build` builds one from the repository.
+Built from the repository root:
 
 ```sh
-export MAILBOX_API_IMAGE=ghcr.io/<owner>/benethos-mailbox-api:<version>
-
-# 1. A new master key, written to the secret file on the host.
-mkdir -p secrets
-docker run --rm "$MAILBOX_API_IMAGE" keys generate > secrets/master_key
-chmod 400 secrets/master_key
-# Linux: the container user must be able to read it.
-sudo chown 10001 secrets/master_key
-
-# 2. The data key in the database, wrapped by the master key.
-docker compose run --rm mailbox-api keys init
-
-# 3. The first user with every right; the token is printed once.
-docker compose run --rm mailbox-api users create-admin
-
-# 4. Start.
-docker compose up -d
-curl http://127.0.0.1:8080/health
+docker build -f containers/benethos-mailbox-api/Dockerfile -t benethos-mailbox-api:local .
+docker build -f containers/benethos-mailbox-mcp/Dockerfile -t benethos-mailbox-mcp:local .
 ```
 
-`keys init` prints the recovery key; it is the content of
-`secrets/master_key`.
-
-## Operation
-
-```sh
-docker compose logs -f mailbox-api
-docker compose pull && docker compose up -d        # update
-docker compose exec mailbox-api \
-    benethos-mailbox-api backup /data/backup.mbx   # encrypted backup
-docker compose cp mailbox-api:/data/backup.mbx .
-```
-
-Restore into a stopped service:
-
-```sh
-docker compose stop mailbox-api
-docker compose cp backup.mbx mailbox-api:/data/backup.mbx
-docker compose run --rm mailbox-api restore /data/backup.mbx
-docker compose up -d
-```
-
-## The MCP server
-
-The service `mailbox-mcp` runs with the profile `mcp`. It reaches the
-service inside the compose network and publishes its own port on
-`127.0.0.1` only.
-
-```sh
-# A user for the MCP server with only the rights it needs, and its token:
-# see packages/mailbox-mcp/README.md, "A token for it".
-export MAILBOX_MCP_API_TOKEN=<that token>
-export MAILBOX_MCP_BEARER_TOKEN=$(openssl rand -base64 32)
-export MAILBOX_MCP_IMAGE=ghcr.io/<owner>/benethos-mailbox-mcp:<version>
-docker compose --profile mcp up -d
-```
-
-Clients connect to `http://127.0.0.1:8000/mcp` with
-`Authorization: Bearer $MAILBOX_MCP_BEARER_TOKEN`. Behind a reverse proxy,
-set `MAILBOX_MCP_ALLOWED_HOSTS` to the host name clients use. Both tokens
-are environment variables and show in `docker inspect`.
+`ci.yml` builds both on every push, for arm64 as well, checks that the
+compose file keeps every port on the loopback address and starts the
+service until its health check reports healthy.
