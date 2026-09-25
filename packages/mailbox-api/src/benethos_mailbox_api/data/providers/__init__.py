@@ -19,6 +19,16 @@ from .imap import ImapProvider
 from .imap import probe as probe_imap
 from .memory import MemoryProvider
 from .microsoft import MicrosoftProvider
+from .microsoft import endpoints as microsoft_endpoints
+from .protocols.oauth import (
+    App,
+    Endpoints,
+    OAuthClient,
+    RefreshingTokens,
+    Tokens,
+    authorize_url,
+    new_pkce,
+)
 
 ProviderSettings = Mapping[str, str | int | bool]
 
@@ -54,6 +64,21 @@ _SIGNED_IN: dict[
 }
 
 
+# How the accounts of a provider that signs in with OAuth do so, given the
+# deployment's tenant or its like.
+_SIGN_IN: dict[ProviderType, Callable[[str | None], Endpoints]] = {
+    ProviderType.MICROSOFT: microsoft_endpoints,
+}
+
+
+def sign_in(kind: ProviderType, tenant: str | None = None) -> Endpoints:
+    """Where accounts of ``kind`` sign in, and what the adapter asks for."""
+    try:
+        return _SIGN_IN[kind](tenant)
+    except KeyError:
+        raise NotSupportedError(f"{kind} accounts do not sign in with OAuth") from None
+
+
 def build_provider(
     kind: ProviderType,
     settings: ProviderSettings,
@@ -87,13 +112,21 @@ async def probe_server(
 
 
 __all__ = [
+    "App",
     "Capability",
     "CredentialReader",
+    "Endpoints",
     "MailProvider",
+    "OAuthClient",
     "ProviderFactory",
     "ProviderSettings",
+    "RefreshingTokens",
     "ServerProbe",
     "TokenSource",
+    "Tokens",
+    "authorize_url",
     "build_provider",
+    "new_pkce",
     "probe_server",
+    "sign_in",
 ]

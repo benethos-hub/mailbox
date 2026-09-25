@@ -21,7 +21,6 @@ from benethos_mailbox_api.data.models import (
     MessageUpdate,
     ProviderType,
 )
-from benethos_mailbox_api.data.oauth import App, OAuthClient, microsoft
 from benethos_mailbox_api.data.providers import (
     CredentialReader,
     MailProvider,
@@ -30,6 +29,10 @@ from benethos_mailbox_api.data.providers import (
     build_provider,
 )
 from benethos_mailbox_api.data.providers.microsoft import MicrosoftProvider, mappers
+from benethos_mailbox_api.data.providers.microsoft import (
+    endpoints as microsoft_endpoints,
+)
+from benethos_mailbox_api.data.providers.protocols.oauth import App, OAuthClient
 from benethos_mailbox_api.data.secrets import cipher, encode_recovery
 from benethos_mailbox_api.errors import (
     BadRequestError,
@@ -340,7 +343,7 @@ def test_connect_read_and_send_through_the_api(
         )
 
     config = Settings(storage="memory", api_key=SecretStr(API_KEY))
-    app = App(microsoft(), "client-1", SecretStr("secret"))
+    app = App(microsoft_endpoints(), "client-1", SecretStr("secret"))
     services = build_services(
         config,
         provider_factory=factory,

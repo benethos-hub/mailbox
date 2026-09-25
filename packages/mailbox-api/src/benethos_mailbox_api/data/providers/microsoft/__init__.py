@@ -4,5 +4,6 @@
 from __future__ import annotations
 
 from .provider import MicrosoftProvider
+from .signin import endpoints
 
-__all__ = ["MicrosoftProvider"]
+__all__ = ["MicrosoftProvider", "endpoints"]

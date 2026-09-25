@@ -21,8 +21,14 @@ from .config import Settings
 from .data.discovery import SafeFetcher, default_sources, preset_hosts
 from .data.http import ApiClient
 from .data.models import ProviderType
-from .data.oauth import App, OAuthClient, microsoft
-from .data.providers import ProviderFactory, build_provider, probe_server
+from .data.providers import (
+    App,
+    OAuthClient,
+    ProviderFactory,
+    build_provider,
+    probe_server,
+    sign_in,
+)
 from .data.secrets import (
     CredentialVault,
     EnvKeyProvider,
@@ -162,7 +168,7 @@ def build_oauth(settings: Settings) -> dict[ProviderType, OAuthClient]:
     clients: dict[ProviderType, OAuthClient] = {}
     if settings.oauth_microsoft_client_id:
         app = App(
-            endpoints=microsoft(settings.oauth_microsoft_tenant),
+            endpoints=sign_in(ProviderType.MICROSOFT, settings.oauth_microsoft_tenant),
             client_id=settings.oauth_microsoft_client_id,
             client_secret=settings.oauth_microsoft_secret(),
         )

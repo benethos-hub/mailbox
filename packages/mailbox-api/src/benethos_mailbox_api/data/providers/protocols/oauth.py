@@ -1,8 +1,10 @@
-"""OAuth 2.0 for mail providers: the authorization code flow with PKCE,
-refreshing, and a token source that keeps an adapter's access token valid.
+"""OAuth 2.0, the wire protocol of a sign-in: the authorization code flow
+with PKCE, refreshing, and a token source that keeps an adapter's access
+token valid.
 
-Provider-neutral; what differs per provider is an ``Endpoints`` value, such
-as ``microsoft(tenant)``. Nothing here decides who may sign in or where a
+Provider-neutral; what differs per provider is an ``Endpoints`` value,
+which each adapter that signs in with OAuth brings, e.g.
+``microsoft/signin.py``. Nothing here decides who may sign in or where a
 token is kept: the caller hands in how to read and store the refresh token.
 Tokens are ``SecretStr`` throughout and appear in no error text.
 """
@@ -12,7 +14,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import re
 import secrets
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -23,17 +24,12 @@ from urllib.parse import urlencode
 import anyio
 from pydantic import SecretStr
 
-from ..common.clock import utc_now
-from ..errors import BadRequestError, ProviderAuthError, ProviderError
-from .http import ApiClient
+from ....common.clock import utc_now
+from ....errors import ProviderAuthError, ProviderError
+from ...http import ApiClient
 
 # An access token counts as spent this long before it runs out.
 MARGIN = timedelta(minutes=1)
-
-# Microsoft Entra: who may sign in. A tenant id or domain names one
-# organisation.
-MICROSOFT_AUDIENCES = ("common", "consumers", "organizations")
-_TENANT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]{0,254}$")
 
 
 @dataclass(frozen=True)
@@ -45,29 +41,6 @@ class Endpoints:
     authorize_url: str
     token_url: str
     scopes: tuple[str, ...]
-
-
-def microsoft(tenant: str = "common") -> Endpoints:
-    """Microsoft identity platform v2.0, for Graph mail. ``common`` lets in
-    personal and work or school accounts."""
-    if tenant not in MICROSOFT_AUDIENCES and not _TENANT.match(tenant):
-        raise BadRequestError(f"not a Microsoft tenant: {tenant}")
-    base = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0"
-    return Endpoints(
-        provider="microsoft",
-        authorize_url=f"{base}/authorize",
-        token_url=f"{base}/token",
-        scopes=(
-            # Who signed in, for the account's address.
-            "openid",
-            "email",
-            "profile",
-            # A refresh token, so the service keeps access.
-            "offline_access",
-            "https://graph.microsoft.com/Mail.ReadWrite",
-            "https://graph.microsoft.com/Mail.Send",
-        ),
-    )
 
 
 @dataclass(frozen=True)

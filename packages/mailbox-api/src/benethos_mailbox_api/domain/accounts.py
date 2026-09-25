@@ -10,12 +10,14 @@ from pydantic import SecretStr
 
 from ..common.ids import new_id
 from ..data.models import Account, AccountStatus, ProviderType
-from ..data.oauth import OAuthClient, RefreshingTokens, Tokens
 from ..data.providers import (
     CredentialReader,
     MailProvider,
+    OAuthClient,
     ProviderFactory,
     ProviderSettings,
+    RefreshingTokens,
+    Tokens,
     TokenSource,
     build_provider,
 )
