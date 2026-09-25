@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import sqlite3
+import stat
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -191,3 +193,28 @@ def test_a_missing_data_folder_is_created(tmp_path: Path) -> None:
         assert (data_dir / "mailbox.db").is_file()
     finally:
         services.close()
+
+
+POSIX_ONLY = pytest.mark.skipif(os.name != "posix", reason="file modes are POSIX")
+
+
+def test_the_database_file_is_created(tmp_path: Path) -> None:
+    path = tmp_path / "sub" / "mailbox.db"
+    Database(path).close()
+    assert path.is_file()
+
+
+@POSIX_ONLY
+def test_the_database_file_is_the_owners_alone(tmp_path: Path) -> None:
+    path = tmp_path / "mailbox.db"
+    Database(path).close()
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+@POSIX_ONLY
+def test_a_readable_database_file_is_narrowed(tmp_path: Path) -> None:
+    path = tmp_path / "mailbox.db"
+    Database(path).close()
+    path.chmod(0o644)
+    Database(path).close()
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600

@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- The database file is created readable by its owner alone (`0600`); an
+  existing one that others may read is narrowed on start. On POSIX
+  systems only.
+
 - Search text with a line break or another control character is refused
   (`422`). Before, `q` could carry further IMAP commands into the
   account's session.
