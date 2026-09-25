@@ -5537,7 +5537,7 @@
           "results"
         ],
         "title": "BatchResult",
-        "description": "One result per id, in the order of the request."
+        "description": "One result per id, in the order of the request, a repeated id once."
       },
       "Candidate": {
         "properties": {
@@ -6556,7 +6556,7 @@
           "action"
         ],
         "title": "MessageBatch",
-        "description": "One action for up to 100 messages of one account."
+        "description": "One action for up to 100 messages of one account. An id given\ntwice counts once."
       },
       "MessagePage": {
         "properties": {

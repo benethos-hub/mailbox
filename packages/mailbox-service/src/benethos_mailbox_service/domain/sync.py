@@ -10,7 +10,6 @@ guessed: the old id is dropped and the new place gets a new one.
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import replace
 from typing import TypeVar
@@ -20,6 +19,7 @@ from ..data.providers import Capability, MailProvider
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ..errors import MailboxServiceError, MessageNotFoundError
 from .adapters import Adapters
+from .locks import KeyedLocks
 
 T = TypeVar("T")
 
@@ -38,7 +38,7 @@ class SyncService:
         self._adapters = adapters
         self._index = index
         self._new_id = new_id
-        self._locks: dict[str, asyncio.Lock] = {}
+        self._locks: KeyedLocks[str] = KeyedLocks()
 
     def mapped(self, account_id: str) -> bool:
         """Whether the account's ids go through the index."""
@@ -147,7 +147,7 @@ class SyncService:
         whose state changed. A failure changes nothing."""
         if not self.mapped(account_id):
             return
-        lock = self._locks.setdefault(account_id, asyncio.Lock())
+        lock = self._locks.get(account_id)
         async with lock:
             await self._sync(account_id)
 

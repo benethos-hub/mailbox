@@ -153,6 +153,6 @@ class MessageUpdate(BaseModel):
         reserved = sorted({k.lower() for k in keywords or []} & RESERVED_KEYWORDS)
         if reserved:
             raise ValueError(
-                f"{', '.join(reserved)}: use unread, starred or DELETE instead"
+                f"{', '.join(reserved)}: use unread, starred or a delete instead"
             )
         return keywords

@@ -8,8 +8,11 @@ service.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
+from ..common.clock import utc_now
 from ..data.models import (
     AccountFailure,
     AttachmentContent,
@@ -53,9 +56,10 @@ class MailboxService:
         sync: SyncService,
         idempotency: Idempotency,
         sends: SendControl,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._calls = Calls(adapters, sync)
-        self._outgoing = Outgoing(self._calls, idempotency, sends)
+        self._outgoing = Outgoing(self._calls, idempotency, sends, clock)
         # Sending and drafts live in ``Outgoing``. Callers reach them here.
         self.send_message = self._outgoing.send_message
         self.list_sends = self._outgoing.list_sends
