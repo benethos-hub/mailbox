@@ -2790,6 +2790,167 @@
         "x-permission": "mail.read"
       }
     },
+    "/v1/changes": {
+      "get": {
+        "tags": [
+          "mailbox"
+        ],
+        "summary": "List All Changes",
+        "description": "Messages created, updated or deleted since `since` in every account\nthe caller may read, oldest first, ids only. The state is the same\npoint as in the feed of one account.",
+        "operationId": "list_all_changes",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accounts",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Account ids. Without: every account the caller may read",
+              "title": "Accounts"
+            },
+            "description": "Account ids. Without: every account the caller may read"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The `state` of an earlier answer. Without it the answer holds no changes, only the current state to start from.",
+              "title": "Since"
+            },
+            "description": "The `state` of an earlier answer. Without it the answer holds no changes, only the current state to start from."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The state is unknown or older than the changes kept (`changes_expired`). Start again without `since`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "mail.read"
+      }
+    },
     "/v1/accounts/{account_id}/folders": {
       "get": {
         "tags": [
@@ -4223,6 +4384,155 @@
         "x-permission": "audit"
       }
     },
+    "/v1/accounts/{account_id}/changes": {
+      "get": {
+        "tags": [
+          "mailbox"
+        ],
+        "summary": "List Changes",
+        "description": "Messages created, updated or deleted in this account since `since`,\noldest first, ids only. Ask again with the answer's `state` for the\nnext ones. Without `since`, start from the current state.",
+        "operationId": "list_changes",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The `state` of an earlier answer. Without it the answer holds no changes, only the current state to start from.",
+              "title": "Since"
+            },
+            "description": "The `state` of an earlier answer. Without it the answer holds no changes, only the current state to start from."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The state is unknown or older than the changes kept (`changes_expired`). Start again without `since`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "mail.read"
+      }
+    },
     "/v1/accounts/{account_id}/drafts": {
       "get": {
         "tags": [
@@ -5617,6 +5927,73 @@
         ],
         "title": "Candidate",
         "description": "One way to connect an address, as found by one source."
+      },
+      "Change": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "message.created",
+              "message.updated",
+              "message.deleted"
+            ],
+            "title": "Type",
+            "description": "`message.created`: a message arrived. `message.updated`: it moved or its flags changed. `message.deleted`: it is gone."
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "The message's id."
+          },
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At",
+            "description": "When the service noticed the change."
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "account_id",
+          "at"
+        ],
+        "title": "Change",
+        "description": "One entry in the change feed."
+      },
+      "ChangePage": {
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "description": "The point after these changes. Pass it as `since` next time."
+          },
+          "more": {
+            "type": "boolean",
+            "title": "More",
+            "description": "More changes wait: ask again with `state` right away."
+          }
+        },
+        "type": "object",
+        "required": [
+          "changes",
+          "state",
+          "more"
+        ],
+        "title": "ChangePage",
+        "description": "Changes after a point in the feed, oldest first."
       },
       "CredentialInfo": {
         "properties": {

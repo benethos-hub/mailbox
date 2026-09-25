@@ -48,6 +48,11 @@ class SyncService:
         self._feed = feed if feed is not None else ChangeFeed()
         self._locks: KeyedLocks[str] = KeyedLocks()
 
+    @property
+    def feed(self) -> ChangeFeed:
+        """The change feed this service records into."""
+        return self._feed
+
     def mapped(self, account_id: str) -> bool:
         """Whether the account's ids go through the index."""
         return Capability.STABLE_IDS not in self._adapters.capabilities(account_id)

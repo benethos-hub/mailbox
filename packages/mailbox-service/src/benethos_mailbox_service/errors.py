@@ -76,6 +76,13 @@ class ConflictError(MailboxServiceError):
     code = "conflict"
 
 
+class ChangesExpiredError(MailboxServiceError):
+    """A point in the change feed older than the changes kept, or one this
+    service never handed out. The client starts again from a new state."""
+
+    code = "changes_expired"
+
+
 class IdempotencyConflictError(ConflictError):
     """An Idempotency-Key used again with a different request."""
 

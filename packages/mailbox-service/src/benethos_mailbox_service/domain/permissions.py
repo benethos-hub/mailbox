@@ -27,6 +27,8 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "get_message",
         "get_message_raw",
         "get_attachment",
+        "list_changes",
+        "list_all_changes",
     ),
     # batch_messages also needs the right of the single operation.
     "mail.write": (

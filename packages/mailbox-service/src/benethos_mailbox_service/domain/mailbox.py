@@ -18,6 +18,7 @@ from ..data.models import (
     AttachmentContent,
     BatchItemResult,
     BatchResult,
+    ChangePage,
     Folder,
     FolderCreate,
     FolderRole,
@@ -59,6 +60,7 @@ class MailboxService:
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._calls = Calls(adapters, sync)
+        self._changes = sync.feed
         self._outgoing = Outgoing(self._calls, idempotency, sends, clock)
         # Sending and drafts live in ``Outgoing``. Callers reach them here.
         self.send_message = self._outgoing.send_message
@@ -253,6 +255,33 @@ class MailboxService:
         return await self._calls.attachment(account_id, message_id, attachment_id)
 
     # --- across accounts ---------------------------------------------------------
+
+    # --- changes ----------------------------------------------------------------------
+
+    def list_changes(
+        self, access: Access, account_id: str, *, since: str | None, limit: int
+    ) -> ChangePage:
+        """What changed in one account since a point in the change feed."""
+        access.require("list_changes", account_id)
+        return self._changes.page([account_id], since, limit=limit)
+
+    def list_all_changes(
+        self,
+        access: Access,
+        *,
+        account_ids: list[str] | None,
+        since: str | None,
+        limit: int,
+    ) -> ChangePage:
+        """What changed in several accounts since a point in the change feed.
+        Accounts the caller may not read are left out without a word."""
+        existing = self._calls.ids()
+        visible = [
+            a
+            for a in dict.fromkeys(account_ids or existing)
+            if a in existing and access.allows("list_all_changes", a)
+        ]
+        return self._changes.page(visible, since, limit=limit)
 
     async def list_all_messages(
         self,

@@ -715,7 +715,7 @@ request that fails stores nothing and may be tried again.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `{acc}/changes?since=<state>` | created / updated / deleted message ids since a state token, plus a new state |
-| GET | `/v1/changes?since=<state>` | the same across all accounts |
+| GET | `/v1/changes?since=<state>` | the same across all accounts (`list_all_changes`) |
 | GET / POST | `/v1/webhooks` | list, register (URL, events, account filter) |
 | DELETE | `/v1/webhooks/{webhook_id}` | remove |
 
@@ -1035,7 +1035,7 @@ with the role
   | Group | Operations |
   |---|---|
   | `accounts.read` | `list_accounts`, `get_account` |
-  | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes` |
+  | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes`, `list_all_changes` |
   | `mail.write` | `update_message`, `delete_message` to trash, `batch_messages`, `create_folder`, `update_folder` |
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |

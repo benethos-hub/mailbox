@@ -6,6 +6,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A change feed: `GET /v1/accounts/{account_id}/changes` and
+  `GET /v1/changes` (`list_changes`, `list_all_changes`, both in
+  `mail.read`) name each message created, updated or deleted since a
+  `state`, oldest first, ids only. Without `since` the answer holds only
+  the current state. `more` says to ask again at once. A state the feed no
+  longer knows answers `410 changes_expired`. IMAP changes come from the
+  sync and from the API. Other providers report changes made through the
+  API for now.
+- `MAILBOX_SERVICE_CHANGES_DAYS`: days a change is kept, 7 by default.
+
 ### Changed
 
 - The last two places with the old name use the new one. A draft marks

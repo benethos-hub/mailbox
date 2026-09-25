@@ -8,6 +8,7 @@ from fastapi import APIRouter, Header, Query, Response
 
 from ....data.models import (
     BatchResult,
+    ChangePage,
     DraftMessage,
     Folder,
     FolderCreate,
@@ -22,7 +23,8 @@ from ....data.models import (
     SendResult,
 )
 from ...responses import download
-from ..deps import Caller, Limit, Mailbox, Search
+from ..deps import Caller, Limit, Mailbox, Search, Since
+from ..errors import CHANGES_ERRORS
 from ..schemas import DraftReplacement, ErrorResponse
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
@@ -170,6 +172,20 @@ async def list_sends(
     through `send_message` or `send_draft`, sent, denied by a grant or
     failed, with user, token and recipients, never content."""
     return mailbox.list_sends(caller, account_id, limit=limit, cursor=cursor)
+
+
+@router.get("/changes", responses=CHANGES_ERRORS)
+async def list_changes(
+    account_id: str,
+    caller: Caller,
+    mailbox: Mailbox,
+    since: Since = None,
+    limit: Limit = 100,
+) -> ChangePage:
+    """Messages created, updated or deleted in this account since `since`,
+    oldest first, ids only. Ask again with the answer's `state` for the
+    next ones. Without `since`, start from the current state."""
+    return mailbox.list_changes(caller, account_id, since=since, limit=limit)
 
 
 @router.get("/drafts")

@@ -23,3 +23,15 @@ class Change(BaseModel):
     id: str = Field(description="The message's id.")
     account_id: str
     at: datetime = Field(description="When the service noticed the change.")
+
+
+class ChangePage(BaseModel):
+    """Changes after a point in the feed, oldest first."""
+
+    changes: list[Change]
+    state: str = Field(
+        description=("The point after these changes. Pass it as `since` next time.")
+    )
+    more: bool = Field(
+        description="More changes wait: ask again with `state` right away."
+    )

@@ -26,12 +26,24 @@ __all__ = [
     "Limit",
     "Mailbox",
     "Search",
+    "Since",
     "Users",
     "authenticate",
 ]
 
 # How many items a list answers with at most. The default is 50.
 Limit = Annotated[int, Query(ge=1, le=200)]
+
+# A point in the change feed, from the ``state`` of an earlier answer.
+Since = Annotated[
+    str | None,
+    Query(
+        description=(
+            "The `state` of an earlier answer. Without it the answer holds "
+            "no changes, only the current state to start from."
+        )
+    ),
+]
 
 _bearer = HTTPBearer(auto_error=False, scheme_name="bearerAuth")
 

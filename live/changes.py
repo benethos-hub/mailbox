@@ -18,7 +18,9 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 8. renames and deletes the folder, runs a batch, stores, replaces and
    deletes a reply draft, and sends a draft to account 2,
 9. deletes the mail through the API, into the trash, then for good, and
-   the sent copy. With ``--keep`` the mail stays in the inbox and the copy
+   the sent copy,
+10. checks that the change feed names the mail as created, updated and
+   deleted. With ``--keep`` the mail stays in the inbox and the copy
    in the sent folder, to look at in a mail client.
 
 Nothing else in the mailboxes is touched. The service runs in-process with
@@ -273,6 +275,18 @@ def check_drafts(
     )
 
 
+def feed_types(
+    client: TestClient, account_id: str, since: str, message_id: str
+) -> list[str]:
+    """The types the change feed names for one message since ``since``."""
+    answer = client.get(
+        f"/v1/accounts/{account_id}/changes", params={"since": since, "limit": 200}
+    )
+    if answer.status_code != 200:
+        return [f"status {answer.status_code}"]
+    return [c["type"] for c in answer.json()["changes"] if c["id"] == message_id]
+
+
 def find_by_subject(
     client: TestClient, account_id: str, subject: str
 ) -> dict[str, Any] | None:
@@ -371,6 +385,7 @@ def main() -> int:
             return 1
         assert account_id is not None and sender_id is not None
         anyio.run(services.sync.sync_account, account_id)
+        since = client.get(f"/v1/accounts/{account_id}/changes").json()["state"]
 
         provider = services.adapters.get(account_id)
         answer: dict[str, Any] = {}
@@ -428,6 +443,11 @@ def main() -> int:
         )
         message_id = found["id"]
         inbox_folder = found["folder_ids"][0]
+        run.check(
+            "the change feed names it as created",
+            feed_types(client, account_id, since, message_id) == ["message.created"],
+            " ".join(feed_types(client, account_id, since, message_id)),
+        )
 
         other = OtherClient(env, receiver)
         patched = client.patch(
@@ -558,6 +578,13 @@ def main() -> int:
             f"{batch.status_code} {outcomes}",
         )
 
+        types = feed_types(client, account_id, since, message_id)
+        run.check(
+            "the change feed names its changes as updated",
+            "message.updated" in types,
+            " ".join(types),
+        )
+
         check_drafts(
             run,
             client,
@@ -614,6 +641,12 @@ def main() -> int:
                 and not other.uids(trash, subject)
                 and client.get(url).status_code == 404,
                 str(gone.status_code),
+            )
+            types = feed_types(client, account_id, since, message_id)
+            run.check(
+                "the change feed names it as deleted, last",
+                types[-1:] == ["message.deleted"],
+                " ".join(types),
             )
             if sent_copy_id:
                 copy_gone = client.delete(

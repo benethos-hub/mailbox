@@ -29,6 +29,18 @@ DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
 }
 
 
+# The change feed answers 410 for a point it no longer knows.
+CHANGES_ERRORS: dict[int | str, dict[str, Any]] = {
+    410: {
+        "model": ErrorResponse,
+        "description": (
+            "The state is unknown or older than the changes kept "
+            "(`changes_expired`). Start again without `since`."
+        ),
+    }
+}
+
+
 def api_error(exc: MailboxServiceError) -> JSONResponse:
     """A domain error as the API answers it: status and envelope."""
     status = status_of(exc)

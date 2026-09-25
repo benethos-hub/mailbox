@@ -46,7 +46,8 @@ done. Update the roadmap in the same commit that finishes an item.
   `http://127.0.0.1:8080/docs`.
 - Live checks: `uv run python live/smoke.py [--show]` (read-only) and
   `uv run python live/changes.py [--keep]` (sends one test mail between the test
-  accounts, moves it, deletes it), test accounts in `live/.env` (not
+  accounts, moves it, deletes it, and checks the change feed), test
+  accounts in `live/.env` (not
   versioned, template `live/.env.example`).
   `MAILBOX_SERVICE_TOKEN=... uv run python live/register.py` adds the test
   accounts to a running service over its API and checks them.

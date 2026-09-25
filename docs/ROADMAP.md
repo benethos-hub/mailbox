@@ -120,10 +120,12 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 4 – Change feed and webhooks
 
-- The change log: every sync pass and every change through the API
+- **The change log: every sync pass and every change through the API
   records created, updated and deleted messages, kept for
-  `MAILBOX_SERVICE_CHANGES_DAYS` days (6.5)
-- `GET {acc}/changes` and `GET /v1/changes` with an opaque state (6.5)
+  `MAILBOX_SERVICE_CHANGES_DAYS` days (6.5)**, done
+- **`GET {acc}/changes` and `GET /v1/changes` with an opaque state (6.5)**,
+  done: paged with `more`, `410 changes_expired` for a state the feed no
+  longer knows, live-checked in `live/changes.py`
 - The MCP tool `whats_new` (8)
 - IMAP: CONDSTORE where the server offers it, so flag changes from other
   clients reach the feed (6.5)

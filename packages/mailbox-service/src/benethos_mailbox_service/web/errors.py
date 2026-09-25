@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from ..errors import (
     BadRequestError,
+    ChangesExpiredError,
     ConflictError,
     CredentialError,
     CredentialMissingError,
@@ -26,6 +27,7 @@ STATUS: list[tuple[type[MailboxServiceError], int]] = [
     (ForbiddenError, 403),
     (NotFoundError, 404),
     (ConflictError, 409),
+    (ChangesExpiredError, 410),
     (RateLimitedError, 429),
     (NotSupportedError, 501),
     (ProviderAuthError, 502),
