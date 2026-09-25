@@ -127,8 +127,8 @@ Everything real mail will depend on, before any real mailbox is connected.
   done: paged with `more`, `410 changes_expired` for a state the feed no
   longer knows, live-checked in `live/changes.py`
 - **The MCP tool `whats_new` (8)**, done, live-checked in `live/mcp_stdio.py`
-- IMAP: CONDSTORE where the server offers it, so flag changes from other
-  clients reach the feed (6.5)
+- **IMAP: CONDSTORE where the server offers it, so flag changes from other
+  clients reach the feed (6.5)**, done, live-checked
 - Microsoft: Graph delta queries in the worker, so the feed covers
   Microsoft accounts (5.4, 6.5)
 - Webhooks: register, sign with HMAC-SHA256, deliver with retries (6.5)

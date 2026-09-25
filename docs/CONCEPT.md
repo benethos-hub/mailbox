@@ -739,7 +739,9 @@ Changes made through the API enter the feed for every provider. A
 `since` older than the kept changes answers `410 changes_expired`, and
 the client starts again from a new state. Without `since`, the answer
 holds no changes, only the current state. The first sync of an account
-records no changes: the messages already there are not new.
+records no changes: the messages already there are not new. The feed may
+name a change more than once, e.g. a flag set through the API and seen
+again through CONDSTORE. A client treats a repeated entry as harmless.
 
 ### 6.6 Listing, search and pagination
 

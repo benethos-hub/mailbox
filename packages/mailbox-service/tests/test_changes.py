@@ -89,6 +89,98 @@ async def test_a_sync_without_changes_records_nothing(
     assert recorded(services, account_id) == []
 
 
+# --- flags from other clients (CONDSTORE) --------------------------------------------
+
+
+async def test_flags_set_by_another_client_with_condstore(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    server.announced.append("CONDSTORE")
+    await services.sync.sync_account(account_id)
+    ids = await ids_by_subject(services, account_id)
+    server.other_client_flags("INBOX", 2, ("\\Seen", "\\Flagged"))
+    await services.sync.sync_account(account_id)
+    assert recorded(services, account_id) == [("message.updated", ids["Mail 2"])]
+    # Asked only for the folder whose state changed.
+    asked = [c for c in server.calls if c[0] == "changedsince"]
+    assert len(asked) == 1
+
+
+async def test_flag_changes_are_asked_for_in_batches(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    server.announced.append("CONDSTORE")
+    for uid in range(5, 1205):
+        server.add("INBOX", uid, make_message(f"Bulk {uid}"))
+    await services.sync.sync_account(account_id)
+    server.other_client_flags("INBOX", 1100, ("\\Seen",))
+    server.calls.clear()
+    await services.sync.sync_account(account_id)
+    batches = [c[1] for c in server.calls if c[0] == "changedsince"]
+    assert [len(b) for b in batches] == [500, 500, 204]
+    assert [t for t, _ in recorded(services, account_id)] == ["message.updated"]
+
+
+async def test_the_states_are_read_after_a_noop(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    # A server answers STATUS on the selected folder from when it was
+    # selected, until a NOOP lets it catch up.
+    await ids_by_subject(services, account_id)  # selects INBOX
+    server.calls.clear()
+    await services.sync.sync_account(account_id)
+    kinds = [c[0] for c in server.calls]
+    assert kinds.index("noop") < kinds.index("status")
+
+
+async def test_flags_set_by_another_client_without_condstore(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    await services.sync.sync_account(account_id)
+    server.other_client_flags("INBOX", 2, ("\\Seen",))
+    await services.sync.sync_account(account_id)
+    assert recorded(services, account_id) == []
+    assert not [c for c in server.calls if c[0] == "changedsince"]
+
+
+async def test_a_new_mail_with_condstore_is_created_not_updated(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    server.announced.append("CONDSTORE")
+    await services.sync.sync_account(account_id)
+    server.add("INBOX", 5, make_message("New"))
+    await services.sync.sync_account(account_id)
+    new = (await ids_by_subject(services, account_id))["New"]
+    assert recorded(services, account_id) == [("message.created", new)]
+
+
+async def test_a_state_from_before_condstore_asks_for_no_flags(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    await services.sync.sync_account(account_id)
+    server.announced.append("CONDSTORE")
+    server.other_client_flags("INBOX", 1, ("\\Seen",))
+    # The states gain HIGHESTMODSEQ: every folder counts as changed once.
+    await services.sync.sync_account(account_id)
+    assert recorded(services, account_id) == []
+    ids = await ids_by_subject(services, account_id)
+    server.other_client_flags("INBOX", 1, ("\\Flagged",))
+    await services.sync.sync_account(account_id)
+    assert recorded(services, account_id) == [("message.updated", ids["Mail 1"])]
+
+
+async def test_a_new_uidvalidity_asks_for_no_flags(
+    services: Services, account_id: str, server: FakeMailBox
+) -> None:
+    server.announced.append("CONDSTORE")
+    await services.sync.sync_account(account_id)
+    inbox = server.folders["INBOX"]
+    inbox.uidvalidity = 8
+    server.other_client_flags("INBOX", 1, ("\\Seen",))
+    await services.sync.sync_account(account_id)
+    assert all(t != "message.updated" for t, _ in recorded(services, account_id))
+
+
 # --- through the API ----------------------------------------------------------------
 
 

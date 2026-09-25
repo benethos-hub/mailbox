@@ -13,6 +13,8 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 5. creates a folder and moves the mail into it through the API: the id
    stays,
 6. moves it back the way another mail client would: the id still answers,
+   and, where the server offers CONDSTORE, flags it the same way: the
+   change feed names that,
 7. replies and forwards through the API, back to account 2 only, and
    checks the flags on the original,
 8. renames and deletes the folder, runs a batch, stores, replaces and
@@ -48,6 +50,7 @@ from benethos_mailbox_service.errors import MailboxServiceError
 from benethos_mailbox_service.main import build_services, create_app
 
 IDLE_WAIT = 90.0
+FLAGGED = chr(92) + "Flagged"
 # How long the mail may take from SMTP to the inbox.
 DELIVERY_TRIES = 10
 DELIVERY_PAUSE = 3.0
@@ -160,6 +163,14 @@ class OtherClient:
         status, data = self.conn.uid("MOVE", uid.decode(), _quoted(target))
         if status != "OK":
             raise RuntimeError(f"MOVE failed: {data!r}")
+
+    def capabilities(self) -> set[str]:
+        return {c.upper() for c in self.conn.capabilities}
+
+    def set_flag(self, folder: str, subject: str, flag: str, on: bool) -> None:
+        for uid in self.uids(folder, subject):
+            sign = "+FLAGS.SILENT" if on else "-FLAGS.SILENT"
+            self.conn.uid("STORE", uid.decode(), sign, f"({flag})")
 
     def delete_mail(self, folder: str, subject: str) -> int:
         found = self.uids(folder, subject)
@@ -517,6 +528,21 @@ def main() -> int:
             "the subject matches",
             back.status_code == 200 and back.json().get("subject") == subject,
         )
+
+        if "CONDSTORE" in other.capabilities():
+            anyio.run(services.sync.sync_account, account_id)
+            mark = client.get(f"/v1/accounts/{account_id}/changes").json()["state"]
+            other.set_flag("INBOX", subject, FLAGGED, on=True)
+            anyio.run(services.sync.sync_account, account_id)
+            types = feed_types(client, account_id, mark, message_id)
+            run.check(
+                "the change feed names a flag another client set (CONDSTORE)",
+                types == ["message.updated"],
+                " ".join(types),
+            )
+            other.set_flag("INBOX", subject, FLAGGED, on=False)
+        else:
+            print("SKIP  the server offers no CONDSTORE")
 
         # Answered by account 1, so it goes back to account 2 only.
         replied = client.post(

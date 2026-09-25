@@ -165,6 +165,14 @@ class MailProvider(Protocol):
         are left out."""
         ...
 
+    async def flag_changes(
+        self, folder_id: str, since: str, message_ids: list[str]
+    ) -> list[str]:
+        """Those of ``message_ids``, all in the folder, whose flags changed
+        since the folder had the state ``since``. Empty where the provider
+        cannot tell."""
+        ...
+
     async def wait_for_change(self, timeout: float) -> bool:
         """Wait until the server reports a change in the inbox, at most
         ``timeout`` seconds. True if it did. Only with ``PUSH``."""

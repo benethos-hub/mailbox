@@ -468,6 +468,12 @@ class MicrosoftProvider:
         )
         return [str(item["id"]) for item in items]
 
+    async def flag_changes(
+        self, folder_id: str, since: str, message_ids: list[str]
+    ) -> list[str]:
+        """Graph reports changes through delta queries instead."""
+        return []
+
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
         """Twenty to a JSON batch. A message that is gone is left out."""
         found: dict[str, str | None] = {}

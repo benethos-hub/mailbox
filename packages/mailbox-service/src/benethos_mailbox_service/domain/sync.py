@@ -8,7 +8,8 @@ another is the same message and keeps its id. Anything ambiguous is not
 guessed: the old id is dropped and the new place gets a new one.
 
 What a pass finds goes into the change feed: new messages as created,
-moved ones as updated, vanished ones as deleted. The first pass of an
+moved ones and, where the provider can tell, ones whose flags changed as
+updated, vanished ones as deleted. The first pass of an
 account records nothing, since the messages already there are not new.
 """
 
@@ -139,6 +140,13 @@ class SyncService:
             account_id, lambda p: p.folder_contents(folder_id)
         )
 
+    async def _flag_changes(
+        self, account_id: str, folder_id: str, since: str, natives: list[str]
+    ) -> list[str]:
+        return await self._adapters.call(
+            account_id, lambda p: p.flag_changes(folder_id, since, natives)
+        )
+
     async def _headers(
         self, account_id: str, natives: list[str]
     ) -> dict[str, str | None]:
@@ -203,6 +211,19 @@ class SyncService:
         ]
         wanted = arrived + unread_headers
         headers = await call(lambda p: p.message_headers(wanted)) if wanted else {}
+        # Messages that stayed but whose flags changed, where the provider
+        # can tell (IMAP with CONDSTORE).
+        stayed = {
+            e.native_id: e for e in entries if present.get(e.native_id) == e.folder_id
+        }
+        flagged: list[str] = []
+        for folder_id in changed:
+            known = [n for n, e in stayed.items() if e.folder_id == folder_id]
+            if folder_id in before and known:
+                natives = await self._flag_changes(
+                    account_id, folder_id, before[folder_id], known
+                )
+                flagged += [stayed[n].id for n in natives if n in stayed]
 
         changes = IndexChanges(states=states)
         for entry in entries:
@@ -225,7 +246,10 @@ class SyncService:
         self._index.apply(account_id, changes)
         if before:
             self.changed(account_id, "message.created", [e.id for e in changes.added])
-            self.changed(account_id, "message.updated", [e.id for e in moved])
+            # A message renumbered in its folder (a new UIDVALIDITY) did not
+            # change for the caller. One that went to another folder did.
+            elsewhere = [e.id for e, n in moved.items() if present[n] != e.folder_id]
+            self.changed(account_id, "message.updated", elsewhere + flagged)
             self.changed(account_id, "message.deleted", changes.removed)
 
 

@@ -256,6 +256,11 @@ class MemoryProvider:
     async def folder_contents(self, folder_id: str) -> list[str]:
         return [m.id for m in self.messages if folder_id in m.folder_ids]
 
+    async def flag_changes(
+        self, folder_id: str, since: str, message_ids: list[str]
+    ) -> list[str]:
+        return []
+
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
         wanted = set(message_ids)
         return {m.id: m.message_id_header for m in self.messages if m.id in wanted}

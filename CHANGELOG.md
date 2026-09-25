@@ -17,6 +17,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   sync and from the API. Other providers report changes made through the
   API for now.
 - `MAILBOX_SERVICE_CHANGES_DAYS`: days a change is kept, 7 by default.
+- On an IMAP server with CONDSTORE, flags another mail client changes
+  reach the change feed as `message.updated`.
 - The MCP tool `whats_new`: mail created, updated or deleted since the
   `state` of an earlier call, in one account or all. A token with
   `mail.read` gets it.
@@ -37,6 +39,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   file ended discovery with an unhandled error. With an older fastapi,
   the served OpenAPI document differed from `docs/openapi.json`.
   pydantic 2.11 could not be installed beside the other minimums.
+
+### Fixed
+
+- The IMAP sync could miss a change in the folder its connection had
+  selected last, e.g. a new mail in the inbox: the server answered STATUS
+  for that folder from an older view. The sync now sends a NOOP first.
 
 ## [0.1.0] - 2026-09-25
 

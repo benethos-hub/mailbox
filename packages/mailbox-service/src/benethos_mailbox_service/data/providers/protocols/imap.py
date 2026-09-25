@@ -104,6 +104,11 @@ def _default_client(server: ImapServer, timeout: float) -> Any:
     )
 
 
+# UIDs per FETCH ... (CHANGEDSINCE n). A command line of a few kilobytes
+# stays within what servers accept.
+_CHANGED_BATCH = 500
+
+
 class ImapSession:
     def __init__(
         self,
@@ -296,18 +301,47 @@ class ImapSession:
                 int(u) for u in self._require().search(["HEADER", "Message-ID", header])
             )
 
-    def folder_state(self, folder: str) -> tuple[int, int, int]:
-        """UIDVALIDITY, UIDNEXT and MESSAGES of a folder, without selecting
-        it. Together they change whenever a message arrives or leaves."""
+    def folder_state(
+        self, folder: str, modseq: bool = False
+    ) -> tuple[int, int, int, int | None]:
+        """UIDVALIDITY, UIDNEXT, MESSAGES and, with ``modseq``, HIGHESTMODSEQ
+        of a folder, without selecting it. The first three change whenever a
+        message arrives or leaves, HIGHESTMODSEQ also when flags change
+        (CONDSTORE, RFC 7162). None where the server does not report it."""
+        items = ["UIDVALIDITY", "UIDNEXT", "MESSAGES"]
+        if modseq:
+            items.append("HIGHESTMODSEQ")
         with _errors():
-            status = self._require().folder_status(
-                folder, ["UIDVALIDITY", "UIDNEXT", "MESSAGES"]
-            )
+            status = self._require().folder_status(folder, items)
+        highest = status.get(b"HIGHESTMODSEQ")
         return (
             int(status[b"UIDVALIDITY"]),
             int(status.get(b"UIDNEXT", 0)),
             int(status.get(b"MESSAGES", 0)),
+            int(highest) if highest is not None else None,
         )
+
+    def noop(self) -> None:
+        """Lets the server catch up the selected folder. Until then STATUS
+        on that folder may answer the state from when it was selected
+        (RFC 3501), and a change another client made goes unseen."""
+        with _errors():
+            self._require().noop()
+
+    def changed_since(self, uids: list[int], modseq: int) -> list[int]:
+        """Those of ``uids`` in the selected folder whose flags changed after
+        ``modseq`` (CONDSTORE, RFC 7162). Reads flags only, in batches, so
+        a command line stays short."""
+        changed: list[int] = []
+        with _errors():
+            client = self._require()
+            for start in range(0, len(uids), _CHANGED_BATCH):
+                batch = uids[start : start + _CHANGED_BATCH]
+                found = client.fetch(
+                    batch, ["FLAGS"], modifiers=[f"CHANGEDSINCE {modseq}"]
+                )
+                changed += [int(uid) for uid in found]
+        return sorted(changed)
 
     def search(self, criteria: SearchCriteria) -> list[int]:
         """UIDs in the selected folder, ascending."""
