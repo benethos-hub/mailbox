@@ -18,7 +18,7 @@ members = [
 dev = [
     { name = "benethos-mailbox-mcp", editable = "packages/mailbox-mcp" },
     { name = "benethos-mailbox-service", editable = "packages/mailbox-service" },
-    { name = "mcp", extras = ["cli"], specifier = ">=2.0.0,<3" },
+    { name = "mcp", extras = ["cli"], specifier = ">=2.2.0,<3" },
     { name = "mypy", specifier = ">=2.1.0" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=1.0" },
