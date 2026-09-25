@@ -6,6 +6,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+Pre-alpha, version 0.0.1. Not ready for production use: the API, the
+stored data and the configuration may change without notice.
+
 ### Security
 
 - The database file is created readable by its owner alone (`0600`); an
@@ -18,6 +21,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Both packages are versioned 0.0.1 (were 0.1.0).
 - An account carries its `settings` (host, port, security, username,
   `smtp_*`), never a secret. Settings whose name looks like a secret
   (`password`, `secret`, `token`, `api_key`, ...) are refused with `400`:

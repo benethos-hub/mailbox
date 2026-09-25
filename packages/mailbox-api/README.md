@@ -1,5 +1,8 @@
 # benethos-mailbox-api
 
+> **Pre-alpha, version 0.0.1.** Not ready for production use: the API,
+> the stored data and the configuration may change without notice.
+
 The Mailbox API service: one REST API (OpenAPI 3.1) for several mail
 providers and accounts. It runs permanently, owns the account store and the
 provider connections, and fetches in the background.

@@ -1,6 +1,7 @@
 # Concept — Mailbox API
 
-> **Status: draft, 2026-09-24.** Describes the target design. What is built
+> **Status: draft, 2026-09-24; the software is pre-alpha, version 0.0.1.**
+> Describes the target design. What is built
 > today is marked in [ROADMAP.md](ROADMAP.md). Facts about third-party
 > products were taken from their public documentation on 2026-09-24; items
 > marked **(to verify)** could not be confirmed there.

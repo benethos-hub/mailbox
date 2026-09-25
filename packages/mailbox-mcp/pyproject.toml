@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "benethos-mailbox-mcp"
-version = "0.1.0"
+version = "0.0.1"
 description = "MCP server for the Mailbox API, over stdio or HTTP. Reaches mail through that REST API only."
 readme = "README.md"
 requires-python = ">=3.11"
