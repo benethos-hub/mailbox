@@ -329,7 +329,8 @@ packages carry the same version.
 1. `uv lock --upgrade --dry-run`. If it moves anything, run
    `uv lock --upgrade` as a commit of its own, then all checks.
 2. Set `version` in both packages' `pyproject.toml`, then `uv lock` and
-   `uv sync`. `test_packaging.py` checks that both carry the same version.
+   `uv sync`. `test_packaging.py` names every version example in the
+   documentation that still shows the old one.
 3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`.
 4. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
    then `gh release create vX.Y.Z --verify-tag` with the changelog section
