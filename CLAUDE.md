@@ -85,8 +85,9 @@ data/                     # one folder per package, created when missing;
 live/                     # manual checks against the test accounts
 containers/               # one folder per image, compose.yaml, README.md;
                           #   secrets/ local (the master key)
-.github/workflows/        # ci.yml: checks; container.yml: images to GHCR,
-                          #   by hand only
+.github/workflows/        # ci.yml: checks; publish.yml: both packages to
+                          #   PyPI on a release; container.yml: images to
+                          #   GHCR, by hand only
 docs/
   CONCEPT.md              # design
   ROADMAP.md              # phases and their state
@@ -299,5 +300,7 @@ rule 1.
 
 - Commit only when the user asks. Clear, descriptive messages.
 - Ship changes on a branch, one branch per work stream.
+- A release is a GitHub release tagged `v<version>`; both packages carry
+  that version, and `publish.yml` uploads them to PyPI.
 - End commit messages with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.

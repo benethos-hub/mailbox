@@ -1,0 +1,98 @@
+name: Publish
+
+# Publishes both packages to PyPI when a GitHub release is published, via
+# Trusted Publishing (OIDC, no stored token). Both carry the same version,
+# and the release tag must name it: v0.0.2 publishes 0.0.2 of each.
+#
+# One job per package, so a failure in one does not withhold the other.
+# A version can be uploaded to PyPI only once, so the checks run first and
+# each wheel is inspected before its upload.
+#
+# One-time setup on PyPI, for each of benethos-mailbox-api and
+# benethos-mailbox-mcp: a (pending) publisher with this repository's owner
+# and name, the workflow filename publish.yml and the environment pypi.
+# On GitHub: the environment pypi under Settings, Environments.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (locked)
+        run: uv sync --frozen
+
+      - name: Lint, types and tests
+        run: |
+          set -euo pipefail
+          uv lock --check
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run mypy
+          uv run pytest -q
+
+  pypi-publish:
+    name: Build and publish ${{ matrix.package }}
+    needs: checks
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: benethos-mailbox-api
+            module: benethos_mailbox_api
+          - package: benethos-mailbox-mcp
+            module: benethos_mailbox_mcp
+    environment:
+      name: pypi
+      url: https://pypi.org/p/${{ matrix.package }}
+    permissions:
+      id-token: write # required for Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+
+      - name: Build sdist and wheel
+        run: uv build --package ${{ matrix.package }} --out-dir dist
+
+      # Once a version is on PyPI it cannot be replaced, so what the files
+      # carry is checked here, in front of the upload: the version the
+      # release names, the PEP 561 marker that makes type checkers read the
+      # package, and the license text.
+      - name: Check the version, py.typed and the license
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          MODULE: ${{ matrix.module }}
+        run: |
+          set -euo pipefail
+          wheel=$(ls dist/*.whl)
+          version=$(basename "$wheel" | cut -d- -f2)
+          if [ "v${version}" != "${TAG}" ]; then
+            echo "::error::the release ${TAG} does not match the package version ${version}"
+            exit 1
+          fi
+          for needed in "${MODULE}/py.typed" "${MODULE}-${version}.dist-info/licenses/LICENSE"; do
+            if ! unzip -l "$wheel" | grep -q "$needed"; then
+              echo "::error::${wheel} does not contain ${needed}"
+              unzip -l "$wheel"
+              exit 1
+            fi
+          done
+          echo "OK: ${wheel} is ${version} with py.typed and LICENSE"
+
+      - name: Publish to PyPI (Trusted Publishing)
+        run: uv publish --trusted-publishing always dist/*
