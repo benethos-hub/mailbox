@@ -24,8 +24,8 @@ from dataclasses import dataclass
 
 import anyio
 
-from ..data.discovery import DiscoverySource, Finding, Query
-from ..data.discovery.suffix import registrable_domain
+from ..data.discovery import DiscoverySource, Finding, Query, registrable_domain
+from ..data.http import HostCheck
 from ..data.models import (
     Candidate,
     CredentialKind,
@@ -41,10 +41,7 @@ from ..data.models import (
 from ..data.providers import ServerProbe
 from ..errors import BadRequestError, MailboxApiError, RateLimitedError
 from .access import Access
-from .accounts import HostCheck
 
-# Resolves a host and returns an address to connect to, None when it does
-# not resolve. Raises when the host must not be contacted.
 Clock = Callable[[], float]
 
 SOURCE_TIMEOUT = 10.0

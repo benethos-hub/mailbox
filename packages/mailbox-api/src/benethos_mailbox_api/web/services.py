@@ -1,12 +1,13 @@
 """The domain services, for both front ends.
 
-``main.create_app`` puts one of each on ``app.state``; a route or page gets
-it here, as a FastAPI dependency or, in a helper, from the request.
+``main.create_app`` puts them on ``app.state.services``, one object with
+one attribute per service; a route or page gets a service here, as a
+FastAPI dependency or, in a helper, from the request.
 """
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Protocol
 
 from fastapi import Depends, Request
 
@@ -18,34 +19,44 @@ from ..domain.oauth import OAuthService
 from ..domain.users import UserService
 
 
+class Services(Protocol):
+    """What the web layer needs of the assembled services."""
+
+    accounts: AccountService
+    auth: AuthService
+    users: UserService
+    mailbox: MailboxService
+    discovery: DiscoveryService
+    oauth: OAuthService
+
+
+def services_of(request: Request) -> Services:
+    services: Services = request.app.state.services
+    return services
+
+
 def get_accounts(request: Request) -> AccountService:
-    accounts: AccountService = request.app.state.accounts
-    return accounts
+    return services_of(request).accounts
 
 
 def get_mailbox(request: Request) -> MailboxService:
-    mailbox: MailboxService = request.app.state.mailbox
-    return mailbox
+    return services_of(request).mailbox
 
 
 def get_discovery(request: Request) -> DiscoveryService:
-    discovery: DiscoveryService = request.app.state.discovery
-    return discovery
+    return services_of(request).discovery
 
 
 def get_users(request: Request) -> UserService:
-    users: UserService = request.app.state.users
-    return users
+    return services_of(request).users
 
 
 def get_oauth(request: Request) -> OAuthService:
-    oauth: OAuthService = request.app.state.oauth
-    return oauth
+    return services_of(request).oauth
 
 
 def get_auth(request: Request) -> AuthService:
-    auth: AuthService = request.app.state.auth
-    return auth
+    return services_of(request).auth
 
 
 Accounts = Annotated[AccountService, Depends(get_accounts)]

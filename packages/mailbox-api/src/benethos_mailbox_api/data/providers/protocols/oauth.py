@@ -119,6 +119,9 @@ class OAuthClient:
         # Stamps ``expires_at``; a token source judges expiry by the same clock.
         self.clock = clock
 
+    async def close(self) -> None:
+        await self._http.close()
+
     async def exchange(self, code: str, redirect_uri: str, verifier: str) -> Tokens:
         """The tokens for the code the browser came back with."""
         return await self._token(

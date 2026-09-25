@@ -4,6 +4,7 @@ back through the bounce page, the account connected."""
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -191,7 +192,9 @@ def test_discovery_offers_the_sign_in(browser: tuple[TestClient, Services]) -> N
                 ],
             )
 
-    client.app.state.discovery = Found()  # type: ignore[attr-defined]
+    client.app.state.services = replace(  # type: ignore[attr-defined]
+        client.app.state.services, discovery=Found()
+    )
     page = post(client, "/ui/accounts/discover", {"email": "me@example.org"}).text
     assert "2. Outlook.com" in page
     assert 'name="login_hint" value="me@example.org"' in page

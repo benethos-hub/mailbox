@@ -15,6 +15,7 @@ from .isp import IspAutoconfigSource
 from .ispdb import IspdbSource
 from .mx import MxSource
 from .presets import PresetSource, bundled
+from .suffix import registrable_domain
 
 
 def default_sources(fetcher: SafeFetcher, *, ispdb: bool) -> list[DiscoverySource]:
@@ -44,4 +45,5 @@ __all__ = [
     "SafeFetcher",
     "default_sources",
     "preset_hosts",
+    "registrable_domain",
 ]

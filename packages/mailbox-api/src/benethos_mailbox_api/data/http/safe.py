@@ -30,6 +30,11 @@ MAX_BYTES = 256 * 1024
 MAX_REDIRECTS = 3
 
 Resolve = Callable[[str, int], Awaitable[list[str]]]
+# The address a host resolves to, None when it does not resolve; raises when
+# the host may not be connected to (CONCEPT 5.8, rule 6). The signature of
+# ``SafeFetcher.checked_address``, shared by accounts and discovery so both
+# apply the same rule and the same allow-list.
+HostCheck = Callable[[str, int], Awaitable[str | None]]
 
 
 async def host_addresses(host: str, port: int) -> list[str]:

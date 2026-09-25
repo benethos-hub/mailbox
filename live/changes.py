@@ -663,8 +663,7 @@ def main() -> int:
             )
         else:
             clean_up(env, receiver, sender, other, base, subject)
-        anyio.run(services.adapters.close)
-        services.close()
+        anyio.run(services.aclose)
 
     print(f"\n{run.failures} failed" if run.failures else "\nall passed")
     return 1 if run.failures else 0

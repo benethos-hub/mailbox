@@ -117,8 +117,8 @@ def install(app: FastAPI) -> None:
             title="Form expired",
         )
 
-    oauth = getattr(app.state, "oauth", None)
-    hosts = oauth.sign_in_hosts() if oauth is not None else []
+    services = getattr(app.state, "services", None)
+    hosts = services.oauth.sign_in_hosts() if services is not None else []
     app.add_middleware(_Security, headers=security_headers(hosts))
 
 

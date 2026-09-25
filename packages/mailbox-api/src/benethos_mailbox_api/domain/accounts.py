@@ -4,11 +4,12 @@ rights. The live adapter of each is ``adapters``."""
 from __future__ import annotations
 
 import builtins
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Mapping
 
 from pydantic import SecretStr
 
 from ..common.ids import new_id
+from ..data.http import HostCheck
 from ..data.models import Account, AccountStatus, ProviderType
 from ..data.providers import (
     CredentialReader,
@@ -21,11 +22,6 @@ from ..data.storage import AccountRepository, MessageIndexRepository
 from ..errors import BadRequestError, MailboxApiError
 from .access import Access
 from .adapters import REFRESH_TOKEN, Adapters
-
-# The address a host resolves to, None when it does not resolve. Raises when
-# the host may not be connected to (CONCEPT 5.8, rule 6). Shared with
-# discovery, so both apply the same rule and the same allow-list.
-HostCheck = Callable[[str, int], Awaitable[str | None]]
 
 
 class AccountService:
