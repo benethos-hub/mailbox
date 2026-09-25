@@ -247,6 +247,6 @@ call repeated within 24 hours sends nothing and returns the first result.
 Give a user `send` only if the model may send without a person looking at
 the mail first. With `drafts` alone it writes drafts for a person to send.
 
-Mail content comes back inside `<mail-content>` markers. Strangers wrote
-it, so it is data, not instructions. HTML is turned into text without
-its hidden parts.
+Mail content comes back inside `<mail-content>` markers, the headers and
+attachment names as much as the body. Strangers wrote it, so it is data,
+not instructions. HTML is turned into text without its hidden parts.

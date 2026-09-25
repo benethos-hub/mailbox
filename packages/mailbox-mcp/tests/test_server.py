@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 import pytest
 
-from benethos_mailbox_mcp import __version__, server
+from benethos_mailbox_mcp import __version__, render, server
 from benethos_mailbox_mcp.client import MailboxApiClient
 from benethos_mailbox_mcp.errors import ToolError
 
@@ -144,6 +144,7 @@ async def test_search_passes_filters_and_answers_summaries(
             }
         ],
         "next_cursor": "c1",
+        "note": render.SUMMARY_NOTE,
         "accounts_not_answering": ["acc_2: down"],
     }
 

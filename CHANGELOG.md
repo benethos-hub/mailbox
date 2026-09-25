@@ -16,6 +16,18 @@ stored data and the configuration may change without notice.
 
 ### Security
 
+- The MCP server puts the sender's words inside the `<mail-content>`
+  marker in full: a message's date, from, to, cc, subject and attachment
+  names as much as its body, and an attachment's filename. A list of
+  messages carries a `note` that `from` and `subject` are the sender's.
+  Before, only the body sat inside the marker.
+
+- An HTML body cannot end a hidden element with an end tag of another
+  name: `<div style="display:none">...</span> text</div>` kept `text`
+  hidden in a mail client but the MCP server showed it. Now an end tag
+  closes the innermost open element of its own name, and a stray one
+  closes nothing.
+
 - Listing the tokens of a user needs the rights that user holds, as
   creating and revoking them already did. Before, `users.manage` alone
   listed the token names and dates of any user, an admin's included.
