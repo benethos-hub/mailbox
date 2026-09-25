@@ -28,6 +28,7 @@ from benethos_mailbox_api.data.storage import (
 from benethos_mailbox_api.errors import (
     ConflictError,
     CredentialError,
+    CredentialMissingError,
     SetupRequiredError,
 )
 from benethos_mailbox_api.main import build_services, key_provider
@@ -160,7 +161,7 @@ def test_vault_round_trip() -> None:
     assert [i.field for i in v.info("acc_1")] == ["password"]
     v.delete("acc_1")
     assert v.info("acc_1") == []
-    with pytest.raises(CredentialError, match="has no password"):
+    with pytest.raises(CredentialMissingError, match="has no password"):
         v.read("acc_1", "password")
 
 

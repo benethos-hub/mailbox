@@ -39,6 +39,10 @@ stored data and the configuration may change without notice.
 
 ### Changed
 
+- An account that has no credential of the kind its sign-in needs
+  answers `409` (`credential_missing`). Before, it answered `500`
+  (`credential_unreadable`), which stays for a credential that cannot be
+  decrypted.
 - A message without a recipient, one with more than 100 recipients or
   attachments over 25 MB is refused with `400` (`bad_request`) instead
   of `422`, on `send` and on the draft routes alike.

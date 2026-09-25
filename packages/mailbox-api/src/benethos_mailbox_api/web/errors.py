@@ -7,6 +7,7 @@ from ..errors import (
     BadRequestError,
     ConflictError,
     CredentialError,
+    CredentialMissingError,
     ForbiddenError,
     MailboxApiError,
     NotFoundError,
@@ -31,6 +32,7 @@ STATUS: list[tuple[type[MailboxApiError], int]] = [
     (ProviderAuthError, 502),
     (ProviderUnavailableError, 502),
     (ProviderError, 502),
+    (CredentialMissingError, 409),
     (CredentialError, 500),
     (SetupRequiredError, 503),
 ]
