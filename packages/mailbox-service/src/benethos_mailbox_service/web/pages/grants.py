@@ -46,6 +46,8 @@ def group_hint(name: str) -> str:
     hint = ", ".join(permissions.GROUPS.get(name, ("every right",)))
     if name in MCP_TOOLS:
         hint += ". MCP tools: " + ", ".join(MCP_TOOLS[name])
+    elif name == "accounts.read":
+        hint += ". The MCP server does not need it: it reads its accounts from /v1/me"
     return hint
 
 

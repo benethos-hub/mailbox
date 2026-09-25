@@ -52,6 +52,21 @@ its MCP server should offer, e.g. may send but the model should only
 draft. An option of the MCP server, such as leaving out the send tools,
 would do the same with less.
 
+## Sending limits for the MCP server
+
+`list_accounts` tells the model which kinds of tools it may use on each
+account. It does not tell the limits on sending: the allowed recipients
+and the sends per day. The model learns them only when a send is refused.
+The service works these limits out already, for the effective rights in
+the configuration UI.
+
+- API sketch: `GET /v1/me` gives each account a `sending` list, one entry
+  per grant that allows sending, with its recipients and its daily limit.
+- MCP: `list_accounts` shows them beside `send`, for example "only to
+  *@example.org, at most 10 a day".
+- The read-and-send warning could reach the model the same way. Today it
+  is only in the log at start.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

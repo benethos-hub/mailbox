@@ -63,6 +63,12 @@ read, `mail.write` to sort and file, `drafts` to write drafts, `send` to
 send. A grant can limit sending to certain recipients and a number per
 day.
 
+The server needs no `accounts.read`. It learns its accounts from
+`/v1/me`, which every token may call. That answer names each account the
+token has any right on, and what it may do there. `accounts.read` would
+add the full account records with the server settings, which the model
+does not need.
+
 ## Claude Desktop
 
 In `claude_desktop_config.json` (Settings, Developer, Edit Config):

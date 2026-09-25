@@ -374,6 +374,7 @@ def test_the_editor_sorts_every_group_into_one_row() -> None:
     assert set(MCP_TOOLS) <= set(permissions.GROUPS)
     assert "MCP tools: list_folders, search_messages" in group_hint("mail.read")
     assert "MCP tools" not in group_hint("mail.delete")
+    assert "does not need it" in group_hint("accounts.read")
 
 
 def test_the_editor_shows_what_the_mcp_server_uses(ui: TestClient) -> None:
