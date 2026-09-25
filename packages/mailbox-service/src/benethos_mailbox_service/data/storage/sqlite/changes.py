@@ -4,10 +4,10 @@ which never hands out a number twice, not even after a purge."""
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from datetime import datetime
 
-from ...models.changes import Change
+from ...models.changes import Event
 from ..changes import LoggedChange
 from .database import Database, iso, parse_iso
 
@@ -20,26 +20,37 @@ class SqliteChangeLogRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    def append(self, changes: Iterable[Change]) -> None:
+    def append(self, events: Iterable[Event]) -> None:
         with self._db.transaction() as conn:
             conn.executemany(
                 "INSERT INTO changes (account_id, message_id, type, at)"
                 " VALUES (?, ?, ?, ?)",
-                [(c.account_id, c.id, c.type, iso(c.at)) for c in changes],
+                [(e.account_id, e.id, e.type, iso(e.at)) for e in events],
             )
 
     def after(
-        self, account_ids: Iterable[str], seq: int, *, limit: int
+        self,
+        account_ids: Iterable[str],
+        seq: int,
+        *,
+        limit: int,
+        types: Collection[str] | None = None,
     ) -> list[LoggedChange]:
         accounts = list(dict.fromkeys(account_ids))
+        kinds = sorted(types) if types is not None else []
+        if types is not None and not kinds:
+            return []
+        of_type = ""
+        if kinds:
+            of_type = " AND type IN (" + ", ".join("?" * len(kinds)) + ")"
         found: list[LoggedChange] = []
         for start in range(0, len(accounts), _MAX_ACCOUNTS):
             chunk = accounts[start : start + _MAX_ACCOUNTS]
             marks = ", ".join("?" * len(chunk))
             rows = self._db.query(
                 f"SELECT * FROM changes WHERE seq > ? AND account_id IN ({marks})"
-                " ORDER BY seq LIMIT ?",
-                (seq, *chunk, limit),
+                f"{of_type} ORDER BY seq LIMIT ?",
+                (seq, *chunk, *kinds, limit),
             )
             found += [_logged(row) for row in rows]
         return sorted(found, key=lambda e: e.seq)[:limit]
@@ -75,7 +86,7 @@ class SqliteChangeLogRepository:
 def _logged(row: sqlite3.Row) -> LoggedChange:
     return LoggedChange(
         seq=row["seq"],
-        change=Change(
+        event=Event(
             type=row["type"],
             id=row["message_id"],
             account_id=row["account_id"],

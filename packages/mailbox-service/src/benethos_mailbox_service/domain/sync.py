@@ -27,7 +27,7 @@ from typing import TypeVar
 
 from ..common.clock import utc_now
 from ..common.ids import new_id
-from ..data.models import ChangeType
+from ..data.models import EventType
 from ..data.providers import Capability, FolderChanges, MailProvider
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ..errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
@@ -146,7 +146,7 @@ class SyncService:
             self._index.drop(account_id, message_id)
 
     def changed(
-        self, account_id: str, type: ChangeType, message_ids: Iterable[str]
+        self, account_id: str, type: EventType, message_ids: Iterable[str]
     ) -> None:
         """Record changes to messages in the change feed."""
         self._feed.record(account_id, type, message_ids)

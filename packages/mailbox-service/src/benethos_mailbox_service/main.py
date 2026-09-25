@@ -102,8 +102,10 @@ def build_services(
         resolve=resolve or host_addresses,
         internal_hosts=settings.discovery_internal_hosts,
     )
-    adapters = Adapters(repos.accounts, vault, provider_factory, oauth=clients)
     changes = ChangeFeed(repos.changes, days=settings.changes_days)
+    adapters = Adapters(
+        repos.accounts, vault, provider_factory, oauth=clients, changes=changes
+    )
     accounts = AccountService(
         repos.accounts,
         vault,

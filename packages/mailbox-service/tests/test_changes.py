@@ -24,7 +24,7 @@ ARCHIVE = mappers.folder_id("Archive")
 
 def recorded(services: Services, account_id: str) -> list[tuple[str, str]]:
     return [
-        (e.change.type, e.change.id)
+        (e.event.type, e.event.id)
         for e in services.changes.after([account_id], 0, limit=1000)
     ]
 
@@ -270,7 +270,7 @@ def test_old_changes_are_purged_as_new_ones_come_in() -> None:
     feed.record("acc_1", "message.created", ["msg_1"])
     now += timedelta(days=8)
     feed.record("acc_1", "message.created", ["msg_2"])
-    assert [e.change.id for e in feed.after(["acc_1"], 0, limit=10)] == ["msg_2"]
+    assert [e.event.id for e in feed.after(["acc_1"], 0, limit=10)] == ["msg_2"]
     assert log.horizon() == 1
 
 
@@ -284,10 +284,10 @@ def test_purging_waits_an_hour_between_two_runs() -> None:
     now = t0 + timedelta(days=1, minutes=10)
     feed.record("acc_1", "message.created", ["msg_2"])
     # Old enough, but the last purge was 40 minutes ago.
-    assert [e.change.id for e in feed.after(["acc_1"], 0, limit=10)][0] == "msg_1"
+    assert [e.event.id for e in feed.after(["acc_1"], 0, limit=10)][0] == "msg_1"
     now = t0 + timedelta(days=1, minutes=31)
     feed.record("acc_1", "message.created", ["msg_3"])
-    assert [e.change.id for e in feed.after(["acc_1"], 0, limit=10)] == [
+    assert [e.event.id for e in feed.after(["acc_1"], 0, limit=10)] == [
         "msg_2",
         "msg_3",
     ]
@@ -296,7 +296,7 @@ def test_purging_waits_an_hour_between_two_runs() -> None:
 def test_a_change_is_recorded_once_per_message() -> None:
     feed = ChangeFeed()
     feed.record("acc_1", "message.updated", ["msg_1", "msg_1", "msg_2"])
-    assert [e.change.id for e in feed.after(["acc_1"], 0, limit=10)] == [
+    assert [e.event.id for e in feed.after(["acc_1"], 0, limit=10)] == [
         "msg_1",
         "msg_2",
     ]

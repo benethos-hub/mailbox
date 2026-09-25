@@ -12,12 +12,12 @@ feed across accounts mean the same point.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Collection, Iterable
 from datetime import datetime, timedelta
 
 from ..common import opaque
 from ..common.clock import utc_now
-from ..data.models import Change, ChangePage, ChangeType
+from ..data.models import CHANGE_TYPES, Change, ChangePage, Event, EventType
 from ..data.storage import (
     ChangeLogRepository,
     InMemoryChangeLogRepository,
@@ -44,18 +44,16 @@ class ChangeFeed:
         self._clock = clock
         self._purged_at: datetime | None = None
 
-    def record(
-        self, account_id: str, type: ChangeType, message_ids: Iterable[str]
-    ) -> None:
-        """One change of ``type`` for each message, in this order."""
+    def record(self, account_id: str, type: EventType, ids: Iterable[str]) -> None:
+        """One event of ``type`` for each id, in this order."""
         now = self._clock()
-        changes = [
-            Change(type=type, id=message_id, account_id=account_id, at=now)
-            for message_id in dict.fromkeys(message_ids)
+        events = [
+            Event(type=type, id=i, account_id=account_id, at=now)
+            for i in dict.fromkeys(ids)
         ]
-        if not changes:
+        if not events:
             return
-        self._log.append(changes)
+        self._log.append(events)
         if self._purged_at is None or now - self._purged_at >= PURGE_EVERY:
             self.purge()
 
@@ -75,19 +73,30 @@ class ChangeFeed:
                 "this state is unknown or older than the changes kept: start"
                 " again without since"
             )
-        found = self._log.after(account_ids, seq, limit=limit + 1)
+        found = self._log.after(account_ids, seq, limit=limit + 1, types=CHANGE_TYPES)
         more = len(found) > limit
         found = found[:limit]
         end = found[-1].seq if more else max([last, *(e.seq for e in found)])
         return ChangePage(
-            changes=[e.change for e in found], state=_state(end), more=more
+            changes=[Change.model_validate(e.event.model_dump()) for e in found],
+            state=_state(end),
+            more=more,
         )
 
     def after(
-        self, account_ids: Iterable[str], seq: int, *, limit: int
+        self,
+        account_ids: Iterable[str],
+        seq: int,
+        *,
+        limit: int,
+        types: Collection[str] | None = None,
     ) -> list[LoggedChange]:
-        """The changes of these accounts after point ``seq``, oldest first."""
-        return self._log.after(account_ids, seq, limit=limit)
+        """The events of these accounts after point ``seq``, oldest first."""
+        return self._log.after(account_ids, seq, limit=limit, types=types)
+
+    def horizon(self) -> int:
+        """Events up to this point were purged."""
+        return self._log.horizon()
 
     def last(self) -> int:
         """The current point in the feed."""

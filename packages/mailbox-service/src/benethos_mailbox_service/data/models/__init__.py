@@ -10,7 +10,14 @@ from __future__ import annotations
 from .accounts import Account, AccountStatus, CredentialInfo, ProviderType
 from .audit import SendOutcome, SendRecord
 from .batch import BatchItemResult, BatchResult, ItemError, MessageBatch
-from .changes import Change, ChangePage, ChangeType
+from .changes import (
+    CHANGE_TYPES,
+    Change,
+    ChangePage,
+    ChangeType,
+    Event,
+    EventType,
+)
 from .discovery import (
     Candidate,
     CredentialKind,
@@ -56,6 +63,7 @@ __all__ = [
     "BatchItemResult",
     "BatchResult",
     "Candidate",
+    "CHANGE_TYPES",
     "Change",
     "ChangePage",
     "ChangeType",
@@ -64,6 +72,8 @@ __all__ = [
     "Discovery",
     "DiscoverySourceName",
     "DraftMessage",
+    "Event",
+    "EventType",
     "Folder",
     "FolderCreate",
     "FolderRole",

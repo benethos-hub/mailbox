@@ -10,8 +10,8 @@ import pytest
 
 from benethos_mailbox_service.data.models import (
     Account,
-    Change,
-    ChangeType,
+    Event,
+    EventType,
     ProviderType,
 )
 from benethos_mailbox_service.data.storage import (
@@ -45,10 +45,10 @@ def log(
 def change(
     n: int,
     account_id: str = "acc_1",
-    type: ChangeType = "message.created",
+    type: EventType = "message.created",
     minutes: int = 0,
-) -> Change:
-    return Change(
+) -> Event:
+    return Event(
         type=type,
         id=f"msg_{n}",
         account_id=account_id,
@@ -67,7 +67,7 @@ def test_changes_are_numbered_in_order(log: ChangeLogRepository) -> None:
     log.append([change(3, "acc_2", "message.deleted")])
     found = log.after(["acc_1", "acc_2"], 0, limit=10)
     assert [e.seq for e in found] == [1, 2, 3]
-    assert [e.change for e in found] == [
+    assert [e.event for e in found] == [
         change(1),
         change(2, type="message.updated"),
         change(3, "acc_2", "message.deleted"),
@@ -77,15 +77,22 @@ def test_changes_are_numbered_in_order(log: ChangeLogRepository) -> None:
 
 def test_after_filters_by_number_account_and_limit(log: ChangeLogRepository) -> None:
     log.append([change(1), change(2, "acc_2"), change(3), change(4)])
-    assert [e.change.id for e in log.after(["acc_1"], 1, limit=10)] == [
+    assert [e.event.id for e in log.after(["acc_1"], 1, limit=10)] == [
         "msg_3",
         "msg_4",
     ]
-    assert [e.change.id for e in log.after(["acc_1", "acc_2"], 0, limit=2)] == [
+    assert [e.event.id for e in log.after(["acc_1", "acc_2"], 0, limit=2)] == [
         "msg_1",
         "msg_2",
     ]
     assert log.after([], 0, limit=10) == []
+
+
+def test_after_filters_by_type(log: ChangeLogRepository) -> None:
+    log.append([change(1), change(2, type="message.sent"), change(3)])
+    kinds = {"message.created"}
+    assert [e.seq for e in log.after(["acc_1"], 0, limit=10, types=kinds)] == [1, 3]
+    assert log.after(["acc_1"], 0, limit=10, types=set()) == []
 
 
 def test_purge_removes_old_changes_and_moves_the_horizon(
@@ -127,7 +134,7 @@ def test_the_last_number_survives_a_purge_of_everything(
 def test_forget_account(log: ChangeLogRepository) -> None:
     log.append([change(1), change(2, "acc_2")])
     log.forget_account("acc_1")
-    assert log.after(["acc_1", "acc_2"], 0, limit=10)[0].change.id == "msg_2"
+    assert log.after(["acc_1", "acc_2"], 0, limit=10)[0].event.id == "msg_2"
 
 
 def test_sqlite_keeps_the_log_across_a_reopen(tmp_path: Path) -> None:

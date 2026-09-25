@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.common import opaque
-from benethos_mailbox_service.data.models import Grant, ProviderType
+from benethos_mailbox_service.data.models import AccountStatus, Grant, ProviderType
 from benethos_mailbox_service.domain.changes import STATE
 from benethos_mailbox_service.main import Services
 
@@ -155,3 +155,36 @@ def test_the_feed_of_one_account_needs_list_changes(
     answer = sender.get(f"/v1/accounts/{account_id}/changes")
     assert answer.status_code == 403
     assert "list_changes" in answer.json()["error"]["message"]
+
+
+# --- events beyond the feed ---------------------------------------------------------
+
+
+def test_a_send_is_an_event_the_feed_leaves_out(
+    client: TestClient, services: Services, account_id: str
+) -> None:
+    since = state_now(client)
+    answer = client.post(
+        f"/v1/accounts/{account_id}/send",
+        json={"to": [{"email": "bob@example.com"}], "subject": "Hi", "text": "x"},
+    )
+    assert answer.status_code == 200
+    copy_id = answer.json()["sent_copy_id"]
+    events = [
+        (e.event.type, e.event.id)
+        for e in services.changes.after([account_id], 0, limit=50)
+    ]
+    assert ("message.sent", copy_id) in events
+    feed = client.get("/v1/changes", params={"since": since}).json()["changes"]
+    assert "message.sent" not in {c["type"] for c in feed}
+
+
+def test_an_account_that_needs_a_new_sign_in_is_an_event_once(
+    services: Services, account_id: str
+) -> None:
+    services.adapters.set_status(account_id, AccountStatus.NEEDS_REAUTH)
+    services.adapters.set_status(account_id, AccountStatus.NEEDS_REAUTH)
+    events = services.changes.after([account_id], 0, limit=50)
+    assert [(e.event.type, e.event.id) for e in events] == [
+        ("account.needs_reauth", account_id)
+    ]

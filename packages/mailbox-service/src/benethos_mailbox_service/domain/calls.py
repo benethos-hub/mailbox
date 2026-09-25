@@ -16,6 +16,7 @@ from ..data.models import (
     Account,
     AttachmentContent,
     ChangeType,
+    EventType,
     Message,
     MessageSummary,
     MessageUpdate,
@@ -116,6 +117,10 @@ class Calls:
         """A message we stored anew: its id points to the new place."""
         self._sync.relocate(account_id, message_id, now.id, folder_of(now))
         self._sync.changed(account_id, "message.updated", [message_id])
+
+    def changed(self, account_id: str, type: EventType, ids: list[str]) -> None:
+        """Record an event in the change log."""
+        self._sync.changed(account_id, type, ids)
 
     def forget(self, account_id: str, message_id: str) -> None:
         """A message is gone for good: its id answers 404 from now on."""
