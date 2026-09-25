@@ -9,12 +9,18 @@ through :func:`build_provider`, never by importing a provider module.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable
 from typing import Protocol
 
 from ...errors import NotSupportedError
 from ..models import ProviderType, Security, ServerProtocol
-from .base import Capability, CredentialReader, MailProvider, TokenSource
+from .base import (
+    Capability,
+    CredentialReader,
+    MailProvider,
+    ProviderSettings,
+    TokenSource,
+)
 from .imap import ImapProvider
 from .imap import probe as probe_imap
 from .memory import MemoryProvider
@@ -29,8 +35,6 @@ from .protocols.oauth import (
     authorize_url,
     new_pkce,
 )
-
-ProviderSettings = Mapping[str, str | int | bool]
 
 
 class ProviderFactory(Protocol):

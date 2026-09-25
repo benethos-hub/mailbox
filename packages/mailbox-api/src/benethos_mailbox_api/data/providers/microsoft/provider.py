@@ -54,9 +54,11 @@ from . import mappers
 GRAPH = "https://graph.microsoft.com"
 VERSION = "/v1.0"
 # A page of folders or of message ids, as many as Graph hands out at once.
-BATCH = 250
+PAGE_SIZE = 250
 # Requests in one JSON batch, Graph's limit.
 BATCH_SIZE = 20
+# Ids that survive a move (CONCEPT 4.1), asked for on every request.
+IMMUTABLE_IDS = 'IdType="ImmutableId"'
 
 
 class MicrosoftProvider:
@@ -91,7 +93,7 @@ class MicrosoftProvider:
             token = await self._tokens.access_token()
             headers = {
                 "Authorization": f"Bearer {token.get_secret_value()}",
-                "Prefer": 'IdType="ImmutableId"',
+                "Prefer": IMMUTABLE_IDS,
             }
             if content_type:
                 headers["Content-Type"] = content_type
@@ -152,7 +154,7 @@ class MicrosoftProvider:
 
     async def list_folders(self) -> list[Folder]:
         roles = await self._folder_roles()
-        params = {"$select": mappers.FOLDER_FIELDS, "$top": str(BATCH)}
+        params = {"$select": mappers.FOLDER_FIELDS, "$top": str(PAGE_SIZE)}
         found: list[Folder] = []
         waiting = await self._all("/me/mailFolders", params)
         while waiting:
@@ -251,7 +253,7 @@ class MicrosoftProvider:
                         "id": str(n),
                         "method": "GET",
                         "url": f"/me/messages?{query}",
-                        "headers": {"Prefer": 'IdType="ImmutableId"'},
+                        "headers": {"Prefer": IMMUTABLE_IDS},
                     }
                 )
             answer = await self._json(
@@ -421,7 +423,7 @@ class MicrosoftProvider:
     async def folder_contents(self, folder_id: str) -> list[str]:
         items = await self._all(
             f"/me/mailFolders/{_id(folder_id)}/messages",
-            {"$select": "id", "$top": str(BATCH)},
+            {"$select": "id", "$top": str(PAGE_SIZE)},
         )
         return [str(item["id"]) for item in items]
 

@@ -23,6 +23,7 @@ from imapclient import IMAPClient
 from imapclient.exceptions import LoginError
 
 from ....errors import (
+    BadRequestError,
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
@@ -88,6 +89,9 @@ class SearchCriteria:
     before_uid: int | None = None
 
 
+DEFAULT_PORTS = {"tls": 993, "starttls": 143}
+
+
 def _default_client(server: ImapServer, timeout: float) -> Any:
     context = ssl.create_default_context()
     if server.security == "starttls":
@@ -118,23 +122,19 @@ class ImapSession:
         return self._client is not None
 
     def login(self, username: str, password: str) -> None:
-        with _errors():
-            client = self._connect()
-            try:
-                client.login(username, password)
-            except LoginError:
-                _quietly_logout(client)
-                raise ProviderAuthError("the server rejected the login") from None
-            self._client = client
+        self._log_in(lambda c: c.login(username, password), "login")
 
     def login_oauth(self, username: str, access_token: str) -> None:
+        self._log_in(lambda c: c.oauth2_login(username, access_token), "token")
+
+    def _log_in(self, authenticate: Callable[[Any], Any], what: str) -> None:
         with _errors():
             client = self._connect()
             try:
-                client.oauth2_login(username, access_token)
+                authenticate(client)
             except LoginError:
                 _quietly_logout(client)
-                raise ProviderAuthError("the server rejected the token") from None
+                raise ProviderAuthError(f"the server rejected the {what}") from None
             self._client = client
 
     def _connect(self) -> Any:
@@ -226,21 +226,24 @@ class ImapSession:
         with _errors():
             client = self._require()
             announced = _capabilities(client)
-            # imaplib files response codes such as [COPYUID ...] here.
-            codes = client._imap.untagged_responses
-            codes.pop("COPYUID", None)
             if "MOVE" in announced:
-                answer = client.move(uids, target)
+                reported = _with_code(
+                    client, "COPYUID", lambda: client.move(uids, target)
+                )
             elif "UIDPLUS" in announced:
-                answer = client.copy(uids, target)
-                client.add_flags(uids, ["\\Deleted"], silent=True)
-                client.uid_expunge(uids)
+
+                def copy_and_expunge() -> Any:
+                    answer = client.copy(uids, target)
+                    client.add_flags(uids, ["\\Deleted"], silent=True)
+                    client.uid_expunge(uids)
+                    return answer
+
+                reported = _with_code(client, "COPYUID", copy_and_expunge)
             else:
                 raise NotSupportedError(
                     "the mail server offers neither MOVE nor UIDPLUS: moving "
                     "would expunge other deleted messages of the folder too"
                 )
-            reported = codes.pop("COPYUID", None) or [answer]
         return _new_uids(reported)
 
     def expunge(self, uids: list[int]) -> None:
@@ -262,10 +265,13 @@ class ImapSession:
         reports it (``APPENDUID``, RFC 4315)."""
         with _errors():
             client = self._require()
-            codes = client._imap.untagged_responses
-            codes.pop("APPENDUID", None)
-            answer = client.append(folder, raw, flags=flags, msg_time=datetime.now(UTC))
-            reported = codes.pop("APPENDUID", None) or [answer]
+            reported = _with_code(
+                client,
+                "APPENDUID",
+                lambda: client.append(
+                    folder, raw, flags=flags, msg_time=datetime.now(UTC)
+                ),
+            )
         for item in reported:
             match = re.search(r"(?:APPENDUID )?\d+ (\d+)", _text(item) if item else "")
             if match:
@@ -306,7 +312,9 @@ class ImapSession:
                 if _CONTROL.search(value):
                     # The library quotes but keeps line breaks: they would end
                     # the command and start one of the caller's choosing.
-                    raise ProviderError("search text must not hold control characters")
+                    raise BadRequestError(
+                        "search text must not hold control characters"
+                    )
                 query += [key, value]
         if criteria.since is not None:
             query += ["SINCE", criteria.since]
@@ -499,6 +507,18 @@ def _uid_set(text: str) -> list[int]:
         step = 1 if end >= start else -1
         uids += range(start, end + step, step)
     return uids
+
+
+def _with_code(client: Any, code: str, command: Callable[[], Any]) -> list[Any]:
+    """Run a command and return the response code it produced, e.g. the
+    ``[COPYUID ...]`` of a move, or else the command's own answer. imaplib
+    files such codes in the client's untagged responses; this is the one
+    place that reaches into it."""
+    codes = client._imap.untagged_responses
+    codes.pop(code, None)
+    answer = command()
+    found: list[Any] = codes.pop(code, None) or [answer]
+    return found
 
 
 def _message_id(header_block: bytes) -> str | None:

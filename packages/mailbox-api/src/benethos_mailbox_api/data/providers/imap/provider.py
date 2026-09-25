@@ -44,9 +44,14 @@ from ...models import (
     SentMessage,
 )
 from .. import rules
-from ..base import Capability, CredentialReader
+from ..base import Capability, CredentialReader, ProviderSettings
 from ..guard import Guard
-from ..protocols.imap import ImapServer, ImapSession, SearchCriteria
+from ..protocols.imap import (
+    DEFAULT_PORTS,
+    ImapServer,
+    ImapSession,
+    SearchCriteria,
+)
 from ..protocols.smtp import SmtpSession
 from ..ratelimit import Clock, Sleep
 from ..sender import SmtpFactory, SmtpSender
@@ -55,11 +60,8 @@ from . import mappers
 T = TypeVar("T")
 
 log = logging.getLogger(__name__)
-R = TypeVar("R")
 
 SessionFactory = Callable[[ImapServer], ImapSession]
-
-DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
 CLIENT_ID = ("benethos-mailbox-api", __version__)
 
@@ -101,7 +103,7 @@ class ImapProvider:
 
     def __init__(
         self,
-        settings: Any,
+        settings: ProviderSettings,
         credentials: CredentialReader,
         session_factory: SessionFactory = default_session,
         clock: Clock = time.monotonic,
@@ -112,12 +114,7 @@ class ImapProvider:
         host = settings.get("host")
         if not host:
             raise BadRequestError("an IMAP account needs settings.host")
-        security = settings.get("security", "tls")
-        if security not in DEFAULT_PORTS:
-            raise BadRequestError(
-                "settings.security must be 'tls' or 'starttls': "
-                "IMAP without encryption is not supported"
-            )
+        security = rules.encrypted(settings, "security", "IMAP")
         username = settings.get("username")
         if not username:
             raise BadRequestError("an IMAP account needs settings.username")
@@ -126,8 +123,8 @@ class ImapProvider:
             raise BadRequestError("settings.auth must be 'password' or 'xoauth2'")
         self._server = ImapServer(
             host=str(host),
-            port=int(settings.get("port") or DEFAULT_PORTS[security]),
-            security=str(security),
+            port=rules.port_of(settings, "port", DEFAULT_PORTS[security]),
+            security=security,
         )
         self._username = str(username)
         self._auth = str(auth)
@@ -246,13 +243,13 @@ class ImapProvider:
     async def _per_folder(
         self,
         message_ids: list[str],
-        work: Callable[[str, int, list[int]], dict[int, R | MailboxApiError]],
-    ) -> dict[str, R | MailboxApiError]:
+        work: Callable[[str, int, list[int]], dict[int, T | MailboxApiError]],
+    ) -> dict[str, T | MailboxApiError]:
         """Run ``work`` once per folder, each under the lock. A failure of
         the connection or the login stops everything; any other failure
         answers for that folder's messages only."""
         folders, unknown = _by_folder(message_ids)
-        results: dict[str, R | MailboxApiError] = dict(unknown)
+        results: dict[str, T | MailboxApiError] = dict(unknown)
         for (folder, validity), by_uid in folders.items():
             try:
                 done = await self._run(partial(work, folder, validity, list(by_uid)))

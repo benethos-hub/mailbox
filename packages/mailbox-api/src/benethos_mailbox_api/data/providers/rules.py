@@ -21,7 +21,7 @@ from ...errors import (
     ProviderUnavailableError,
 )
 from ..models import Folder, FolderRole, MessageUpdate
-from .base import Capability
+from .base import Capability, ProviderSettings
 
 R = TypeVar("R")
 
@@ -61,6 +61,22 @@ def move_target(
     if len(set(changes.folder_ids)) != 1 and Capability.LABELS not in capabilities:
         raise BadRequestError("a message of this account is in exactly one folder")
     return changes.folder_ids[0]
+
+
+def encrypted(settings: ProviderSettings, key: str, protocol: str) -> str:
+    """The ``security`` setting under ``key``: ``tls`` (the default) or
+    ``starttls``. Nothing else: a connection without encryption is refused."""
+    security = str(settings.get(key, "tls"))
+    if security not in ("tls", "starttls"):
+        raise BadRequestError(
+            f"settings.{key} must be 'tls' or 'starttls': "
+            f"{protocol} without encryption is not supported"
+        )
+    return security
+
+
+def port_of(settings: ProviderSettings, key: str, default: int) -> int:
+    return int(settings.get(key) or default)
 
 
 async def per_id(
