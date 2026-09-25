@@ -2,17 +2,34 @@ version: 2
 updates:
   # "uv", not "pip": the versions actually installed are the ones pinned in
   # uv.lock, and the pip ecosystem does not read that file.
+  # Each pull request rewrites uv.lock, so separate ones conflict after
+  # every merge. Minor and patch updates come as one pull request. A
+  # major update comes alone.
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      python-minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      actions-minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # The base images of both Dockerfiles (python, uv). A stale base builds
   # and runs without complaint, and ships unpatched packages. Both images
