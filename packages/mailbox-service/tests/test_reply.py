@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from email import message_from_bytes
@@ -11,7 +12,7 @@ from email.policy import default
 import anyio
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
+from pydantic import SecretStr, ValidationError
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.mail import compose
@@ -334,3 +335,55 @@ async def test_a_forward_without_quote_adds_nothing_of_the_original(
     assert mail["Subject"] == "Fwd: Angebot"
     assert "Forwarded message" not in plain(mail)
     assert list(mail.iter_attachments()) == []
+
+
+# --- line breaks the original carries ---------------------------------------------
+
+
+async def _id_of(services: Services, account_id: str, subject: str) -> str:
+    page = await services.mailbox.list_messages(
+        ADMIN, account_id, folder_id=None, search=None, limit=10, cursor=None
+    )
+    [found] = [m for m in page.items if m.subject == subject]
+    return found.id
+
+
+async def test_a_reply_folds_a_line_separator_in_the_subject(
+    send: Sender, services: Services, account_id: str, box: FakeMailBox
+) -> None:
+    """A sender's subject may carry U+2028, which the standard library
+    refuses in a header. The reply's subject is on one line."""
+    subject = "Ang ebot"
+    encoded = "=?utf-8?b?" + base64.b64encode(subject.encode()).decode() + "?="
+    box.add("INBOX", 2, make_message(encoded))
+    message_id = await _id_of(services, account_id, subject)
+    mail = await send(MessageReference(message_id=message_id, action="reply"))
+    assert mail["Subject"] == "Re: Ang ebot"
+
+
+async def test_a_forward_folds_a_line_break_in_an_attachment_name(
+    send: Sender, services: Services, account_id: str, box: FakeMailBox
+) -> None:
+    # The standard library refuses to write such a name, so it is put into
+    # the bytes afterwards, as a sender's software might.
+    raw = make_message("Files", attachments=[("PLACEHOLDER", "text/plain", b"x")])
+    assert raw.count(b'filename="PLACEHOLDER"') == 1
+    box.add("INBOX", 2, raw.replace(b'"PLACEHOLDER"', b'"=?utf-8?q?a=0Ab.txt?="'))
+    message_id = await _id_of(services, account_id, "Files")
+    mail = await send(
+        MessageReference(message_id=message_id, action="forward"),
+        to=[Recipient(email="dave@example.com")],
+    )
+    [attachment] = list(mail.iter_attachments())
+    assert attachment.get_filename() == "a b.txt"
+
+
+@pytest.mark.parametrize("bad", ["a b", "a\x85b", "a\x0bb", "a\x0cb", "a\rb"])
+def test_a_caller_may_not_write_a_line_break_into_a_header(bad: str) -> None:
+    for field in ({"subject": bad}, {"to": [{"email": "a@x.org", "name": bad}]}):
+        with pytest.raises(ValidationError):
+            OutgoingMessage.model_validate(field)
+    with pytest.raises(ValidationError):
+        OutgoingMessage.model_validate(
+            {"attachments": [{"filename": bad, "data": "eA=="}]}
+        )

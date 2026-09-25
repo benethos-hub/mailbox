@@ -16,6 +16,13 @@ stored data and the configuration may change without notice.
 
 ### Security
 
+- Every line break is refused in a header field of an outgoing message,
+  not only CR and LF: `422` for a subject, a recipient name or an
+  attachment name with a vertical tab, a form feed, NEL (U+0085) or a
+  Unicode line or paragraph separator. A reply or a forward folds what the
+  original carried in its subject or attachment names onto one line.
+  Before, both answered `500`.
+
 - The hosts in an account's settings (`host`, `smtp_host`) pass the same
   check as autodiscovery when the account is created or changed, before
   the first connection: a host that resolves to a private, loopback or

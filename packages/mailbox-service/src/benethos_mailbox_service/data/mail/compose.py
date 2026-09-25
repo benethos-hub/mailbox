@@ -77,6 +77,9 @@ def message(
     its own. ``outgoing`` takes both out again before the draft is sent."""
     mail = EmailMessage(policy=SMTP)
     mail["From"] = _address(sender)
+    # Values that came out of another message, the original of a reply or a
+    # forward, are folded onto one line here. What a caller wrote was checked
+    # on the way in.
     if message.to:
         mail["To"] = ", ".join(_address(r) for r in message.to)
     if message.cc:
@@ -87,7 +90,7 @@ def message(
         mail[REFERENCE_HEADER] = reference
     if message.reply_to:
         mail["Reply-To"] = ", ".join(_address(r) for r in message.reply_to)
-    mail["Subject"] = message.subject
+    mail["Subject"] = one_line(message.subject)
     # RFC 5322 requires both. Without Date clients show no date.
     mail["Date"] = format_datetime(date)
     mail["Message-ID"] = message_id
@@ -101,8 +104,10 @@ def message(
         mail.add_alternative(message.html, subtype="html")
     files = [(a.filename, a.content_type, a.data) for a in message.attachments]
     for filename, content_type, data in [*extras.attachments, *files]:
-        maintype, _, subtype = content_type.partition("/")
-        mail.add_attachment(data, maintype=maintype, subtype=subtype, filename=filename)
+        maintype, _, subtype = one_line(content_type).partition("/")
+        mail.add_attachment(
+            data, maintype=maintype, subtype=subtype, filename=one_line(filename)
+        )
     if extras.attached_message is not None:
         original = message_from_bytes(extras.attached_message, policy=default)
         mail.add_attachment(original, filename="forwarded.eml")
@@ -163,9 +168,16 @@ def references(original_raw: bytes) -> tuple[str | None, tuple[str, ...]]:
     return message_id, (*chain, message_id) if message_id else chain
 
 
+def one_line(value: str) -> str:
+    """``value`` on one line: every line break, including the Unicode ones
+    the standard library refuses in a header, becomes a space."""
+    return " ".join(value.splitlines())
+
+
 def prefixed(prefix: str, subject: str | None) -> str:
-    """``Re: Subject`` or ``Fwd: Subject``, not ``Re: Re: Subject``."""
-    subject = (subject or "").strip()
+    """``Re: Subject`` or ``Fwd: Subject``, not ``Re: Re: Subject``. On one
+    line, whatever the original's subject carried."""
+    subject = one_line(subject or "").strip()
     if subject.lower().startswith(prefix.lower()):
         return subject
     return f"{prefix} {subject}".strip()
@@ -229,4 +241,4 @@ def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
 
 
 def _address(recipient: Recipient) -> str:
-    return formataddr((recipient.name or "", recipient.email))
+    return formataddr((one_line(recipient.name or ""), recipient.email))

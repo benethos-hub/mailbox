@@ -6,9 +6,11 @@ from pydantic import Base64Bytes, BaseModel, Field
 
 from .messages import MessageReference, MessageSummary
 
-# No line breaks in anything that goes into a header: a CR or LF there would
-# let a caller add headers of its own (header injection).
-_ONE_LINE = r"^[^\r\n]*$"
+# No line break in anything that goes into a header: a CR or LF there would
+# let a caller add headers of its own (header injection). The other
+# characters are what ``str.splitlines`` breaks on as well, and the standard
+# library refuses a header value with any of them.
+_ONE_LINE = r"^[^\r\n\x0b\x0c\x1c-\x1e\x85\u2028\u2029]*$"
 
 
 class Recipient(BaseModel):
