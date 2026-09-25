@@ -152,7 +152,8 @@ packages/
       data/               # DATA: reads and writes, decides nothing
         models/           # provider-neutral types, one module per subject:
                           #   accounts, users, folders, messages, batch,
-                          #   sending, paging, discovery, audit
+                          #   sending, paging, discovery, audit,
+                          #   changes
         mail/             # messages in RFC 5322, whatever protocol carries them
           compose.py      # outgoing messages as bytes (email)
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
@@ -268,7 +269,7 @@ noticing. Every change is measured against that.
 | Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, microsoft (planned: gmail, pop3) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/providers/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, later templates for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`) | in-memory, SQLite | another database |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX (planned: JMAP well-known, Microsoft realm, SRV, guessing) | any further lookup, or one switched off |
 | HTTP | `data/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/providers/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |

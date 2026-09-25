@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Literal
 
 from .accounts import AccountRepository, InMemoryAccountRepository
+from .changes import ChangeLogRepository, InMemoryChangeLogRepository, LoggedChange
 from .credentials import (
     CredentialRepository,
     EncryptedCredential,
@@ -34,6 +35,7 @@ from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
     Database,
     SqliteAccountRepository,
+    SqliteChangeLogRepository,
     SqliteCredentialRepository,
     SqliteIdempotencyRepository,
     SqliteKeyRepository,
@@ -67,6 +69,7 @@ class Repositories:
     index: MessageIndexRepository
     idempotency: IdempotencyRepository
     sends: SendLogRepository
+    changes: ChangeLogRepository
     # The database behind them, for backups and for closing. None in memory.
     database: Database | None = None
 
@@ -89,6 +92,7 @@ def open_repositories(
             index=InMemoryMessageIndexRepository(),
             idempotency=InMemoryIdempotencyRepository(),
             sends=InMemorySendLogRepository(),
+            changes=InMemoryChangeLogRepository(),
         )
     db = Database(database_path)
     return Repositories(
@@ -101,6 +105,7 @@ def open_repositories(
         index=SqliteMessageIndexRepository(db),
         idempotency=SqliteIdempotencyRepository(db),
         sends=SqliteSendLogRepository(db),
+        changes=SqliteChangeLogRepository(db),
         database=db,
     )
 
@@ -108,6 +113,10 @@ def open_repositories(
 __all__ = [
     "Repositories",
     "open_repositories",
+    "ChangeLogRepository",
+    "InMemoryChangeLogRepository",
+    "LoggedChange",
+    "SqliteChangeLogRepository",
     "IdempotencyRepository",
     "InMemoryIdempotencyRepository",
     "SqliteIdempotencyRepository",

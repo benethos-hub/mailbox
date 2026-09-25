@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from .accounts import SqliteAccountRepository
+from .changes import SqliteChangeLogRepository
 from .credentials import SqliteCredentialRepository, SqliteKeyRepository
 from .database import SCHEMA_VERSION, Database, inspect_snapshot
 from .idempotency import SqliteIdempotencyRepository
@@ -15,6 +16,7 @@ __all__ = [
     "SCHEMA_VERSION",
     "Database",
     "SqliteAccountRepository",
+    "SqliteChangeLogRepository",
     "SqliteCredentialRepository",
     "SqliteIdempotencyRepository",
     "SqliteKeyRepository",

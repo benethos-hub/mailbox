@@ -10,6 +10,7 @@ from __future__ import annotations
 from .accounts import Account, AccountStatus, CredentialInfo, ProviderType
 from .audit import SendOutcome, SendRecord
 from .batch import BatchItemResult, BatchResult, ItemError, MessageBatch
+from .changes import Change, ChangeType
 from .discovery import (
     Candidate,
     CredentialKind,
@@ -55,6 +56,8 @@ __all__ = [
     "BatchItemResult",
     "BatchResult",
     "Candidate",
+    "Change",
+    "ChangeType",
     "CredentialInfo",
     "CredentialKind",
     "Discovery",
