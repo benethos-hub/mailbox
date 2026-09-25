@@ -11,6 +11,11 @@ stored data and the configuration may change without notice.
 
 ### Security
 
+- A request that fails validation (`422`) no longer comes back in the
+  answer: `detail` carries `type`, `loc` and `msg` only, not FastAPI's
+  `input` and `ctx`. Before, a wrong `POST /v1/accounts` returned the
+  provider password it was sent, where proxies and client logs keep it.
+
 - The database file is created readable by its owner alone (`0600`); an
   existing one that others may read is narrowed on start. On POSIX
   systems only.

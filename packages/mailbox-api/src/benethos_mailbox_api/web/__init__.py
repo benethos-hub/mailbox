@@ -14,14 +14,13 @@ API.
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
-from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 from starlette.exceptions import HTTPException
 
 from ..errors import MailboxApiError
 from . import api, pages
-from .api.errors import api_error, http_error, status_of
+from .api.errors import api_error, http_error, status_of, validation_error
 from .pages.errors import error_page
 
 
@@ -50,4 +49,4 @@ def install(app: FastAPI) -> None:
                 "Some fields were missing or not valid. Go back and check them.",
                 title="Incomplete form",
             )
-        return await request_validation_exception_handler(request, exc)
+        return validation_error(exc)

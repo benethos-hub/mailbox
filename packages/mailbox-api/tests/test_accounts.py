@@ -70,3 +70,21 @@ def test_a_secret_in_changed_settings_is_refused(
         f"/v1/accounts/{account_id}", json={"settings": {"password": "x"}}
     )
     assert answer.status_code == 400
+
+
+# --- a request that fails validation does not come back --------------------------
+
+
+def test_a_422_does_not_echo_the_request(client: TestClient) -> None:
+    """FastAPI's default 422 repeats the offending input, which here may be
+    a provider password. Only the location and the message come back."""
+    response = client.post(
+        "/v1/accounts",
+        json={"provider": "imap", "credentials": {"password": "S3cretPW"}},
+    )
+    assert response.status_code == 422
+    assert "S3cretPW" not in response.text
+    [error] = response.json()["detail"]
+    assert set(error) == {"type", "loc", "msg"}
+    assert error["loc"] == ["body", "email"]
+    assert error["type"] == "missing"
