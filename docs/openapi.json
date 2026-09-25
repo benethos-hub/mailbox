@@ -2344,6 +2344,124 @@
         "x-permission": "accounts.manage"
       }
     },
+    "/v1/oauth/{provider}/start": {
+      "post": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Start Oauth",
+        "description": "Where to send a browser to sign in at the provider: to connect a new\naccount (needs `create_account`) or, with `account_id`, to sign that\naccount in again (needs `update_account`). The provider sends the\nbrowser back to `/ui/oauth/{provider}/callback`, where the person signs\nin to the UI as the same user and the account is connected. Valid for\nten minutes. `501` without an OAuth app for the provider.",
+        "operationId": "start_oauth",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthStart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user and no admin key exist yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "accounts.manage"
+      }
+    },
     "/v1/messages": {
       "get": {
         "tags": [
@@ -6601,6 +6719,51 @@
         "type": "object",
         "title": "MessageUpdate",
         "description": "What ``PATCH`` changes on a message. Fields left out stay as they are."
+      },
+      "OAuthStart": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id",
+            "description": "Sign this account in again. Left out: connect."
+          },
+          "login_hint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 254
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login Hint",
+            "description": "The address to suggest at the provider's sign-in."
+          }
+        },
+        "type": "object",
+        "title": "OAuthStart"
+      },
+      "OAuthStarted": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "The provider's sign-in page, for a browser."
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "OAuthStarted"
       },
       "OutgoingAttachment": {
         "properties": {

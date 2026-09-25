@@ -46,6 +46,9 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "audit": ("list_sends",),
     "accounts.manage": (
         "discover_account",
+        # Connecting needs create_account, signing in again update_account:
+        # the domain checks those.
+        "start_oauth",
         "create_account",
         "update_account",
         "delete_account",
@@ -74,7 +77,9 @@ ACCOUNT_FREE: frozenset[str] = frozenset(GROUPS["users.manage"])
 
 # Operations that act on accounts which may not exist yet. They need a grant
 # on every account ("*").
-ALL_ACCOUNTS: frozenset[str] = frozenset({"discover_account", "create_account"})
+ALL_ACCOUNTS: frozenset[str] = frozenset(
+    {"discover_account", "create_account", "start_oauth"}
+)
 
 GROUP_OF: dict[str, str] = {op: group for group, ops in GROUPS.items() for op in ops}
 

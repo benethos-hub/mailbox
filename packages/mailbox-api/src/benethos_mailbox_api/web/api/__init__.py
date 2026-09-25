@@ -14,7 +14,7 @@ from fastapi.routing import APIRoute
 from ...domain.permissions import permission_of
 from .deps import authenticate
 from .errors import DOCUMENTED_ERRORS
-from .routes import accounts, discovery, health, mailbox, messages, users
+from .routes import accounts, discovery, health, mailbox, messages, oauth, users
 
 PREFIX = "/v1"
 
@@ -32,6 +32,7 @@ def install(app: FastAPI) -> None:
         users.router,
         accounts.router,
         discovery.router,
+        oauth.router,
         messages.router,
         mailbox.router,
     ):

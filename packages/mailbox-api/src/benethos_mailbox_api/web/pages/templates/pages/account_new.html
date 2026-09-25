@@ -5,6 +5,22 @@
 {% block heading %}Connect an account{% endblock %}
 {% block subheading %}<div class="sub">Look up how to reach an address, then sign in with its password</div>{% endblock %}
 {% block content %}
+{% macro sign_in_form(provider, hint="") %}
+<form class="inline" method="post" action="/ui/oauth/{{ provider }}/start">
+  {{ csrf_field() }}
+  <input type="hidden" name="login_hint" value="{{ hint }}" />
+  <button class="primary" type="submit">Sign in with {{ provider | capitalize }}</button>
+</form>
+{% endmacro %}
+{% if oauth_providers and not discovery %}
+<section class="card">
+  <header><h2>Sign in with your provider</h2></header>
+  <div class="body toolbar">
+    {% for provider in oauth_providers %}{{ sign_in_form(provider) }}{% endfor %}
+    <span class="muted">No password: the provider asks you, and this service keeps only a token it can renew.</span>
+  </div>
+</section>
+{% endif %}
 <section class="card">
   <header><h2>1. The address</h2></header>
   <div class="body">
@@ -20,6 +36,19 @@
 {% if discovery %}
 {% for hint in discovery.hints %}
 <div class="notice warn">{{ hint.text }}{% if hint.url %} <a href="{{ hint.url }}" rel="noreferrer">More</a>{% endif %}</div>
+{% endfor %}
+
+{% for candidate in sign_ins %}
+<section class="card">
+  <header>
+    <h2>2. {{ candidate.name or discovery.domain }}</h2>
+    <span class="meta">found by {{ candidate.source.value }}</span>
+  </header>
+  <div class="body toolbar">
+    {{ sign_in_form(candidate.oauth_provider, discovery.email) }}
+    <span class="muted">No password: {{ candidate.oauth_provider | capitalize }} asks you, and this service keeps only a token it can renew.</span>
+  </div>
+</section>
 {% endfor %}
 
 {% for candidate in usable %}
@@ -64,9 +93,9 @@
 {% endfor %}
 
 <section class="card">
-  <header><h2>{{ "Or set it up by hand" if usable else "2. Set it up by hand" }}</h2></header>
+  <header><h2>{{ "Or set it up by hand" if usable or sign_ins else "2. Set it up by hand" }}</h2></header>
   <div class="body">
-    {% if not usable %}<p class="muted">No way to connect {{ discovery.email }} over IMAP was found. Enter your provider's servers.</p>{% endif %}
+    {% if not usable and not sign_ins %}<p class="muted">No way to connect {{ discovery.email }} over IMAP was found. Enter your provider's servers.</p>{% endif %}
     <form method="post" action="/ui/accounts">
       {{ csrf_field() }}
       <input type="hidden" name="email" value="{{ discovery.email }}" />

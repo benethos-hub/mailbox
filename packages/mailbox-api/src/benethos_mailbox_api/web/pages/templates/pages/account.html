@@ -10,6 +10,19 @@
 {% if can_verify %}{{ action("/ui/accounts/" ~ account.id ~ "/verify", "Verify", cls="") }}{% endif %}
 {% endblock %}
 {% block content %}
+{% if signs_in_with_oauth and can_update %}
+<section class="card">
+  <header><h2>Sign-in</h2></header>
+  <div class="body toolbar">
+    {% if account.status.value == "needs_reauth" %}<div class="notice warn grow">{{ account.provider.value | capitalize }} no longer accepts this service's token: sign in again.</div>{% else %}<span class="muted grow">Signed in with {{ account.provider.value | capitalize }}. Sign in again after a password change or when access was revoked.</span>{% endif %}
+    <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/start">
+      {{ csrf_field() }}
+      <input type="hidden" name="account_id" value="{{ account.id }}" />
+      <button class="{{ 'primary' if account.status.value == 'needs_reauth' else '' }}" type="submit">Sign in again</button>
+    </form>
+  </div>
+</section>
+{% endif %}
 <section class="card">
   <header><h2>Account</h2></header>
   <div class="body">
@@ -28,7 +41,7 @@
   </div>
 </section>
 
-{% if can_update %}
+{% if can_update and not signs_in_with_oauth %}
 <section class="card">
   <header><h2>Change</h2><span class="meta">A new password or new servers are tried first; nothing is stored unless the provider accepts them.</span></header>
   <div class="body">

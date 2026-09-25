@@ -102,6 +102,7 @@ packages/
       web/                # PRESENTATION: HTTP only, FastAPI lives here
         __init__.py       # install: both front ends, errors to the right one
         services.py       # the domain services as dependencies, for both
+        urls.py           # this service's public address, OAuth callback
         api/              # the JSON API: /health open, the rest under /v1
           deps.py         # bearer authentication, services per request
           schemas.py      # shapes that exist only at the HTTP boundary

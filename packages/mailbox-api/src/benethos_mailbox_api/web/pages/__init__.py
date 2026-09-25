@@ -32,29 +32,47 @@ from .routes import (
     login,
     mail,
     messages,
+    oauth,
     sends,
     users,
 )
 from .session import PATH, SessionStore, SignInRequired
 from .templates import STATIC_DIR, is_htmx
 
-AREAS = (login, home, accounts, mail, messages, folders, compose, drafts, sends, users)
+AREAS = (
+    login,
+    home,
+    accounts,
+    mail,
+    messages,
+    folders,
+    compose,
+    drafts,
+    sends,
+    oauth,
+    users,
+)
 
-# No inline script or style, no framing, nothing loaded from elsewhere.
-SECURITY_HEADERS = [
-    (
-        b"content-security-policy",
-        b"default-src 'self'; script-src 'self'; style-src 'self'; "
-        b"img-src 'self' data:; frame-ancestors 'none'; form-action 'self'; "
-        b"base-uri 'none'",
-    ),
-    (b"x-content-type-options", b"nosniff"),
-    (b"referrer-policy", b"same-origin"),
-    (b"cache-control", b"no-store"),
-]
+
+def security_headers(sign_in_hosts: list[str]) -> list[tuple[bytes, bytes]]:
+    """No inline script or style, no framing, nothing loaded from elsewhere.
+    Forms post here only; the one exception is the redirect of an OAuth
+    sign-in to its provider's ``sign_in_hosts``."""
+    form_action = " ".join(["'self'", *(f"https://{h}" for h in sign_in_hosts)])
+    policy = (
+        "default-src 'self'; script-src 'self'; style-src 'self'; "
+        "img-src 'self' data:; frame-ancestors 'none'; "
+        f"form-action {form_action}; base-uri 'none'"
+    )
+    return [
+        (b"content-security-policy", policy.encode("ascii")),
+        (b"x-content-type-options", b"nosniff"),
+        (b"referrer-policy", b"same-origin"),
+        (b"cache-control", b"no-store"),
+    ]
 
 
-def _secured(app: ASGIApp) -> ASGIApp:
+def _secured(app: ASGIApp, headers: list[tuple[bytes, bytes]]) -> ASGIApp:
     """Security headers on every answer under ``/ui``."""
 
     async def wrapped(scope: Scope, receive: Receive, send: Send) -> None:
@@ -64,7 +82,7 @@ def _secured(app: ASGIApp) -> ASGIApp:
 
         async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
-                message["headers"] = [*message.get("headers", []), *SECURITY_HEADERS]
+                message["headers"] = [*message.get("headers", []), *headers]
             await send(message)
 
         await app(scope, receive, send_with_headers)
@@ -99,14 +117,16 @@ def install(app: FastAPI) -> None:
             title="Form expired",
         )
 
-    app.add_middleware(_Security)
+    oauth = getattr(app.state, "oauth", None)
+    hosts = oauth.sign_in_hosts() if oauth is not None else []
+    app.add_middleware(_Security, headers=security_headers(hosts))
 
 
 class _Security:
     """``_secured`` as a Starlette middleware class."""
 
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = _secured(app)
+    def __init__(self, app: ASGIApp, headers: list[tuple[bytes, bytes]]) -> None:
+        self.app = _secured(app, headers)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await self.app(scope, receive, send)

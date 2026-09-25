@@ -129,8 +129,8 @@ Everything real mail will depend on, before any real mailbox is connected.
      `state` bound to the user, refresh token in the vault, access token in
      memory, rotation, `invalid_grant` to `needs_reauth`; client id, tenant
      and secret per deployment**, done
-  2. the OAuth round trip in the API and the UI: sign in with Microsoft
-     when connecting, sign in again on the account page
+  2. **the OAuth round trip in the API and the UI: sign in with Microsoft
+     when connecting, sign in again on the account page**, done
   3. the `microsoft` adapter behind `MailProvider`: folders, list and
      search, message, MIME source, attachments, flags, move, delete,
      drafts, `sendMail`, immutable ids

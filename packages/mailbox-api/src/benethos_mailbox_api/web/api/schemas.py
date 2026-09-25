@@ -48,6 +48,21 @@ class DiscoveryRequest(BaseModel):
     email: str = Field(max_length=254, description="The address to be connected.")
 
 
+class OAuthStart(BaseModel):
+    account_id: str | None = Field(
+        default=None, description="Sign this account in again. Left out: connect."
+    )
+    login_hint: str | None = Field(
+        default=None,
+        max_length=254,
+        description="The address to suggest at the provider's sign-in.",
+    )
+
+
+class OAuthStarted(BaseModel):
+    url: str = Field(description="The provider's sign-in page, for a browser.")
+
+
 class ErrorDetail(BaseModel):
     code: str
     message: str
