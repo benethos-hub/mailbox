@@ -15,7 +15,8 @@ updates:
     open-pull-requests-limit: 5
 
   # The base images of both Dockerfiles (python, uv). A stale base builds
-  # and runs without complaint, and ships unpatched packages.
+  # and runs without complaint, and ships unpatched packages. Both images
+  # use the same bases, so one group brings each update as one pull request.
   - package-ecosystem: "docker"
     directories:
       - "/containers/benethos-mailbox-service"
@@ -23,3 +24,7 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      base-images:
+        patterns:
+          - "*"
