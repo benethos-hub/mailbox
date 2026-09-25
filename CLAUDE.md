@@ -66,6 +66,11 @@ done. Update the roadmap in the same commit that finishes an item.
   `uv run python live/ui.py` checks it against the test accounts; it sends
   one mail from the first test account to the second and deletes it for
   good on both sides.
+- Microsoft accounts: `docs/microsoft.md` sets up the app registration.
+  `uv run python live/microsoft.py --connect` once (a person signs in in
+  the browser), then `uv run python live/microsoft.py` checks the adapter
+  against the Microsoft test account in `live/.env`; it sends one mail
+  from it to the first test account and deletes it for good on both sides.
 
 ## Project layout
 

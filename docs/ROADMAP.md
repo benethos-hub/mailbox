@@ -135,7 +135,8 @@ Everything real mail will depend on, before any real mailbox is connected.
      search, message, MIME source, attachments, flags, move, delete,
      drafts, `sendMail`, immutable ids**, done offline against a Graph
      fake; what Graph's documentation leaves open is marked unverified
-  4. a live check against a Microsoft test account
+  4. a live check against a Microsoft test account: prepared
+     (`live/microsoft.py`, `docs/microsoft.md`), waiting for the prerequisites
   - open, to be decided: who may sign in (`common` proposed), where the
     callback ends (`/ui/oauth/{provider}/callback` proposed, CONCEPT has
     it under `/v1`)
