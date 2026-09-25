@@ -1,6 +1,6 @@
 # Roadmap
 
-> **Pre-alpha, version 0.0.1.** Not ready for production use: the API,
+> **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
 > the stored data and the configuration may change without notice.
 
 The phases in which Mailbox API is built. What each item means is designed

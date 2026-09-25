@@ -4,7 +4,7 @@ name: Publish
 #   * both packages to PyPI, via Trusted Publishing (OIDC, no stored token)
 #   * both container images to ghcr.io, via the automatic GITHUB_TOKEN
 # Everything carries the same version, and the release tag must name it:
-# v0.0.2 publishes 0.0.2 of each package and image.
+# v0.2.0 publishes 0.2.0 of each package and image.
 #
 # One job per package and per image, so a failure in one does not withhold
 # the others. A version can be uploaded to PyPI only once, so the checks

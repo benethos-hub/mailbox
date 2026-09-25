@@ -1,6 +1,6 @@
 # benethos-mailbox-mcp
 
-> **Pre-alpha, version 0.0.1.** Not ready for production use: the API,
+> **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
 > the stored data and the configuration may change without notice.
 
 MCP server for the Mailbox API. It reaches mail only through that REST

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "benethos-mailbox-api"
-version = "0.0.1"
+version = "0.1.0"
 description = "Mail service: one REST API for several mail providers and accounts."
 readme = "README.md"
 requires-python = ">=3.11"
