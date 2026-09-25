@@ -1,4 +1,5 @@
-"""Dependencies shared by the routers: who is calling, and the services.
+"""Dependencies shared by the routers: who is calling, the services (from
+``web.services``) and the search parameters.
 
 The web layer only establishes the caller. What the caller may do is decided
 in the domain.
@@ -9,44 +10,26 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated
 
-from fastapi import Depends, Query, Request
+from fastapi import Depends, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ...data.models import MessageFilter
 from ...data.models.messages import SEARCH_TEXT_PATTERN
 from ...domain.access import Access
-from ...domain.accounts import AccountService
 from ...domain.auth import AuthService
-from ...domain.discovery import DiscoveryService
-from ...domain.mailbox import MailboxService
-from ...domain.users import UserService
+from ..services import Accounts, Discoverer, Mailbox, Users, get_auth
+
+__all__ = [
+    "Accounts",
+    "Caller",
+    "Discoverer",
+    "Mailbox",
+    "Search",
+    "Users",
+    "authenticate",
+]
 
 _bearer = HTTPBearer(auto_error=False, scheme_name="bearerAuth")
-
-
-def get_accounts(request: Request) -> AccountService:
-    accounts: AccountService = request.app.state.accounts
-    return accounts
-
-
-def get_mailbox(request: Request) -> MailboxService:
-    mailbox: MailboxService = request.app.state.mailbox
-    return mailbox
-
-
-def get_discovery(request: Request) -> DiscoveryService:
-    discovery: DiscoveryService = request.app.state.discovery
-    return discovery
-
-
-def get_users(request: Request) -> UserService:
-    users: UserService = request.app.state.users
-    return users
-
-
-def get_auth(request: Request) -> AuthService:
-    auth: AuthService = request.app.state.auth
-    return auth
 
 
 def authenticate(
@@ -56,10 +39,6 @@ def authenticate(
     return auth.authenticate(credentials.credentials if credentials else None)
 
 
-Accounts = Annotated[AccountService, Depends(get_accounts)]
-Discoverer = Annotated[DiscoveryService, Depends(get_discovery)]
-Mailbox = Annotated[MailboxService, Depends(get_mailbox)]
-Users = Annotated[UserService, Depends(get_users)]
 Caller = Annotated[Access, Depends(authenticate)]
 
 

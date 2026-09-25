@@ -9,9 +9,8 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
 from ....data.models import Candidate, ProviderType
-from ....domain.accounts import AccountService
-from ....domain.discovery import DiscoveryService
 from ....errors import MailboxApiError
+from ...services import get_accounts, get_discovery
 from ..deps import Actor, Viewer
 from ..templates import back, render
 
@@ -30,11 +29,6 @@ SETTING_FIELDS = (
 )
 NUMBERS = {"port", "smtp_port"}
 SECURITY = ("tls", "starttls")
-
-
-def _service(request: Request) -> AccountService:
-    accounts: AccountService = request.app.state.accounts
-    return accounts
 
 
 def _settings(form: Any) -> dict[str, str | int | bool]:
@@ -77,7 +71,7 @@ async def list_accounts(request: Request, caller: Viewer) -> HTMLResponse:
         request,
         "pages/accounts.html",
         page="accounts",
-        accounts=_service(request).list(caller),
+        accounts=get_accounts(request).list(caller),
         can_create=caller.allows("create_account"),
     )
 
@@ -101,7 +95,7 @@ async def discover(request: Request, caller: Actor) -> Response:
     access logs, answered with the page itself: a lookup changes nothing."""
     form = await request.form()
     email = str(form.get("email") or "").strip()
-    discovery: DiscoveryService = request.app.state.discovery
+    discovery = get_discovery(request)
     try:
         found = await discovery.discover(caller, email)
     except MailboxApiError as exc:
@@ -136,7 +130,7 @@ async def create_account(request: Request, caller: Actor) -> Response:
     except ValueError:
         return back("/ui/accounts/new", error="Unknown provider.")
     try:
-        account = await _service(request).create(
+        account = await get_accounts(request).create(
             caller,
             provider,
             email,
@@ -155,7 +149,7 @@ async def account(request: Request, caller: Viewer, account_id: str) -> HTMLResp
         request,
         "pages/account.html",
         page="accounts",
-        account=_service(request).get(caller, account_id),
+        account=get_accounts(request).get(caller, account_id),
         can_read=caller.allows("list_messages", account_id),
         can_audit=caller.allows("list_sends", account_id),
         can_update=caller.allows("update_account", account_id),
@@ -176,11 +170,11 @@ async def update_account(request: Request, caller: Actor, account_id: str) -> Re
             "rename": True,
         }
     try:
-        existing = _service(request).get(caller, account_id)
+        existing = get_accounts(request).get(caller, account_id)
         settings = _changed(existing.settings, _settings(form), set(form.keys()))
         if "username" in settings and settings["username"] is None:
             settings["username"] = existing.email  # as the hint says
-        await _service(request).update(
+        await get_accounts(request).update(
             caller,
             account_id,
             settings=settings,
@@ -196,7 +190,7 @@ async def update_account(request: Request, caller: Actor, account_id: str) -> Re
 async def verify_account(request: Request, caller: Actor, account_id: str) -> Response:
     here = f"/ui/accounts/{account_id}"
     try:
-        checked = await _service(request).verify(caller, account_id)
+        checked = await get_accounts(request).verify(caller, account_id)
     except MailboxApiError as exc:
         return back(here, error=f"Not reachable: {exc.message}")
     return back(here, f"Signed in to the provider. Status: {checked.status.value}.")
@@ -205,7 +199,7 @@ async def verify_account(request: Request, caller: Actor, account_id: str) -> Re
 @router.post("/accounts/{account_id}/delete")
 async def delete_account(request: Request, caller: Actor, account_id: str) -> Response:
     try:
-        await _service(request).delete(caller, account_id)
+        await get_accounts(request).delete(caller, account_id)
     except MailboxApiError as exc:
         return back(f"/ui/accounts/{account_id}", error=exc.message)
     return back("/ui/accounts", "Account removed from the service.")

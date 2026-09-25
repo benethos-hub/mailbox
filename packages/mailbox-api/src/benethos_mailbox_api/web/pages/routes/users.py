@@ -13,9 +13,8 @@ from ....common.clock import utc_now
 from ....data.models import ApiToken, Grant, Role
 from ....domain import permissions
 from ....domain.access import Access
-from ....domain.accounts import AccountService
-from ....domain.users import UserService
 from ....errors import MailboxApiError
+from ...services import get_accounts, get_users
 from ..deps import Actor, Viewer
 from ..grants import GROUP_NAMES, GrantFormError, account_choices, read_grants, rows_of
 from ..session import show_once, take_once
@@ -24,20 +23,15 @@ from ..templates import back, render
 router = APIRouter()
 
 
-def _users(request: Request) -> UserService:
-    users: UserService = request.app.state.users
-    return users
-
-
 def _account_names(request: Request, caller: Access) -> dict[str, str]:
     """Emails of the accounts the caller sees, to show a grant readably."""
-    accounts: AccountService = request.app.state.accounts
+    accounts = get_accounts(request)
     return {account.id: account.email for account in accounts.list(caller)}
 
 
 def _editor(request: Request, caller: Access, grants: list[Grant]) -> dict[str, Any]:
     """What the grant editor needs."""
-    accounts: AccountService = request.app.state.accounts
+    accounts = get_accounts(request)
     rows = rows_of(grants)
     return {
         "rows": rows,
@@ -54,7 +48,7 @@ def _role_choices(request: Request, caller: Access, held: list[str]) -> list[str
     """The roles a user may be given: every role the caller sees, and those
     the user holds already, so a save keeps them."""
     known = (
-        {role.id for role in _users(request).list_roles(caller)}
+        {role.id for role in get_users(request).list_roles(caller)}
         if caller.allows("list_roles")
         else set()
     )
@@ -78,7 +72,7 @@ async def list_users(request: Request, caller: Viewer) -> HTMLResponse:
         request,
         "pages/users.html",
         page="users",
-        users=_users(request).list_users(caller),
+        users=get_users(request).list_users(caller),
         names=_account_names(request, caller),
         can_create=caller.allows("create_user"),
     )
@@ -103,7 +97,7 @@ async def create_user(request: Request, caller: Actor) -> Response:
     if not name:
         return back("/ui/users/new", error="A user needs a name.")
     try:
-        user = _users(request).create_user(
+        user = get_users(request).create_user(
             caller,
             name,
             [str(role) for role in form.getlist("roles")],
@@ -116,7 +110,7 @@ async def create_user(request: Request, caller: Actor) -> Response:
 
 @router.get("/users/{user_id}")
 async def user(request: Request, caller: Viewer, user_id: str) -> HTMLResponse:
-    users = _users(request)
+    users = get_users(request)
     found = users.get_user(caller, user_id)
     tokens = (
         users.list_tokens(caller, user_id) if caller.allows("list_tokens") else None
@@ -145,7 +139,7 @@ async def update_user(request: Request, caller: Actor, user_id: str) -> Response
     form = await request.form()
     here = f"/ui/users/{user_id}"
     try:
-        _users(request).update_user(
+        get_users(request).update_user(
             caller,
             user_id,
             name=str(form.get("name") or "").strip() or None,
@@ -161,7 +155,7 @@ async def update_user(request: Request, caller: Actor, user_id: str) -> Response
 @router.post("/users/{user_id}/delete")
 async def delete_user(request: Request, caller: Actor, user_id: str) -> Response:
     try:
-        _users(request).delete_user(caller, user_id)
+        get_users(request).delete_user(caller, user_id)
     except MailboxApiError as exc:
         return back(f"/ui/users/{user_id}", error=exc.message)
     return back("/ui/users", "User deleted, and its tokens with it.")
@@ -182,7 +176,7 @@ async def create_token(request: Request, caller: Actor, user_id: str) -> Respons
         return back(here, error="Days valid must be a whole number above 0.")
     expires_at = utc_now() + timedelta(days=int(days)) if days else None
     try:
-        _, plain = _users(request).create_token(caller, user_id, name, expires_at)
+        _, plain = get_users(request).create_token(caller, user_id, name, expires_at)
     except MailboxApiError as exc:
         return back(here, error=exc.message)
     # Shown on the next page, once; never in the URL.
@@ -196,7 +190,7 @@ async def revoke_token(
 ) -> Response:
     here = f"/ui/users/{user_id}"
     try:
-        token = _users(request).revoke_token(caller, user_id, token_id)
+        token = get_users(request).revoke_token(caller, user_id, token_id)
     except MailboxApiError as exc:
         return back(here, error=exc.message)
     return back(here, f"Token {token.name} revoked.")
@@ -207,7 +201,7 @@ async def revoke_token(
 
 @router.get("/roles")
 async def list_roles(request: Request, caller: Viewer) -> HTMLResponse:
-    users = _users(request)
+    users = get_users(request)
     roles = users.list_roles(caller)
     return render(
         request,
@@ -225,7 +219,7 @@ def _used_by(request: Request, caller: Access, roles: list[Role]) -> dict[str, i
     """How many users hold each role, if the caller may list users."""
     if not caller.allows("list_users"):
         return {}
-    holders = _users(request).list_users(caller)
+    holders = get_users(request).list_users(caller)
     return {role.id: sum(role.id in user.roles for user in holders) for role in roles}
 
 
@@ -236,7 +230,7 @@ async def create_role(request: Request, caller: Actor) -> Response:
     if not role_id:
         return back("/ui/roles", error="A role needs a name.")
     try:
-        role = _users(request).create_role(caller, role_id, read_grants(form))
+        role = get_users(request).create_role(caller, role_id, read_grants(form))
     except (MailboxApiError, GrantFormError) as exc:
         return back("/ui/roles", error=_message(exc))
     return back(_role_path(role.id), f"Role {role.id} created.")
@@ -244,9 +238,9 @@ async def create_role(request: Request, caller: Actor) -> Response:
 
 @router.get("/roles/{role_id}")
 async def role(request: Request, caller: Viewer, role_id: str) -> HTMLResponse:
-    found = _users(request).get_role(caller, role_id)
+    found = get_users(request).get_role(caller, role_id)
     holders = (
-        [u for u in _users(request).list_users(caller) if role_id in u.roles]
+        [u for u in get_users(request).list_users(caller) if role_id in u.roles]
         if caller.allows("list_users")
         else None
     )
@@ -268,7 +262,7 @@ async def replace_role(request: Request, caller: Actor, role_id: str) -> Respons
     form = await request.form()
     here = _role_path(role_id)
     try:
-        _users(request).replace_role(caller, role_id, read_grants(form))
+        get_users(request).replace_role(caller, role_id, read_grants(form))
     except (MailboxApiError, GrantFormError) as exc:
         return back(here, error=_message(exc))
     return back(here, "Saved.")
@@ -277,7 +271,7 @@ async def replace_role(request: Request, caller: Actor, role_id: str) -> Respons
 @router.post("/roles/{role_id}/delete")
 async def delete_role(request: Request, caller: Actor, role_id: str) -> Response:
     try:
-        _users(request).delete_role(caller, role_id)
+        get_users(request).delete_role(caller, role_id)
     except MailboxApiError as exc:
         return back(_role_path(role_id), error=exc.message)
     return back("/ui/roles", f"Role {role_id} deleted.")
