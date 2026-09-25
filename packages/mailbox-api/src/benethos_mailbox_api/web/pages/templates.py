@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote, urlencode
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit
 
 import jinja2
 from fastapi import Request
@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from ... import __version__
+from .session import PATH
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE_DIR = HERE / "templates"
@@ -123,3 +124,28 @@ def back(path: str, message: str | None = None, error: str | None = None) -> Res
     separator = "&" if "?" in path else "?"
     url = f"{path}{separator}{urlencode(query)}" if query else path
     return RedirectResponse(url, status_code=303)
+
+
+def local_path(value: str | None, fallback: str) -> str:
+    """Where to go after a form: a page of this UI, never another site.
+    A message the earlier redirect carried is dropped; the next replaces it."""
+    parts = urlsplit(value or "")
+    inside = parts.path == PATH or parts.path.startswith(PATH + "/")
+    if parts.scheme or parts.netloc or not inside:
+        return fallback
+    query = urlencode(
+        [(k, v) for k, v in parse_qsl(parts.query) if k not in ("msg", "err")]
+    )
+    return f"{parts.path}?{query}" if query else parts.path
+
+
+def page_links(request: Request, cursor: str | None) -> tuple[str | None, str | None]:
+    """Links to the next page (this query with the next cursor) and, from a
+    later page, back to the first."""
+    query = [(k, v) for k, v in request.query_params.multi_items() if k != "cursor"]
+    here = request.url.path
+    more = f"{here}?{urlencode([*query, ('cursor', cursor)])}" if cursor else None
+    first = None
+    if "cursor" in request.query_params:
+        first = f"{here}?{urlencode(query)}" if query else here
+    return more, first

@@ -13,7 +13,7 @@ from ....errors import MailboxApiError
 from ...services import get_auth
 from ..deps import Actor
 from ..session import COOKIE, PATH, SignInRequired, current, store_of
-from ..templates import back, render
+from ..templates import back, local_path, render
 
 router = APIRouter()
 
@@ -22,23 +22,20 @@ router = APIRouter()
 LOGIN_COOKIE = "mailbox_ui_login"
 
 
-def _safe_next(value: str | None) -> str:
-    """Only a page of this UI, never another site."""
-    if value and value.startswith(PATH) and not value.startswith("//"):
-        return value
-    return PATH
-
-
 @router.get("/login")
 async def login_page(request: Request, next: str | None = None) -> Response:
     try:
         current(request)
-        return RedirectResponse(_safe_next(next), status_code=303)
+        return RedirectResponse(local_path(next, PATH), status_code=303)
     except SignInRequired:
         pass
     nonce = secrets.token_urlsafe(24)
     response = render(
-        request, "pages/login.html", page="login", nonce=nonce, next=_safe_next(next)
+        request,
+        "pages/login.html",
+        page="login",
+        nonce=nonce,
+        next=local_path(next, PATH),
     )
     response.set_cookie(
         LOGIN_COOKIE,
@@ -68,7 +65,7 @@ async def login(
     except MailboxApiError:
         return back(f"{PATH}/login", error="That token is not valid.")
     session_id = store_of(request).create(token)
-    response = RedirectResponse(_safe_next(next), status_code=303)
+    response = RedirectResponse(local_path(next, PATH), status_code=303)
     response.set_cookie(
         COOKIE,
         session_id,

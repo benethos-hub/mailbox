@@ -10,7 +10,7 @@ origin.
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import quote, urlencode
+from urllib.parse import quote
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
@@ -22,7 +22,7 @@ from ....domain.access import Access
 from ...services import get_accounts, get_mailbox
 from ..deps import Viewer, account_of
 from ..errors import error_page
-from ..templates import render
+from ..templates import page_links, render
 
 router = APIRouter()
 
@@ -51,16 +51,6 @@ def _search(request: Request) -> tuple[MessageFilter | None, dict[str, str], str
     except ValidationError as exc:
         problem = exc.errors()[0]
         return None, fields, f"Search: {problem['loc'][0]}: {problem['msg']}"
-
-
-def _pages(request: Request, cursor: str | None) -> tuple[str | None, str | None]:
-    """Links to the next page (this query with the next cursor) and, from a
-    later page, back to the first."""
-    query = [(k, v) for k, v in request.query_params.multi_items() if k != "cursor"]
-    here = request.url.path
-    more = f"{here}?{urlencode([*query, ('cursor', cursor)])}" if cursor else None
-    first = f"{here}?{urlencode(query)}" if "cursor" in request.query_params else None
-    return more, first
 
 
 def _tree(folders: list[Folder]) -> list[tuple[Folder, int]]:
@@ -121,7 +111,7 @@ async def all_mail(request: Request, caller: Viewer) -> HTMLResponse:
         page="mail",
         messages=page.items,
         incomplete=page.incomplete,
-        pages=_pages(request, page.next_cursor),
+        pages=page_links(request, page.next_cursor),
         accounts=accounts,
         emails={account.id: account.email for account in accounts},
         chosen=chosen,
@@ -172,7 +162,7 @@ async def account_mail(
         current=current,
         keep=[("folder", current.id)],
         messages=page.items,
-        pages=_pages(request, page.next_cursor),
+        pages=page_links(request, page.next_cursor),
         fields=fields,
         problem=problem,
         can=can,

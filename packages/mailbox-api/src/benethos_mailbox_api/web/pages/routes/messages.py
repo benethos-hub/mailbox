@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlsplit
-
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
 from pydantic import ValidationError
@@ -13,7 +10,7 @@ from ....data.models import MessageBatch, MessageUpdate
 from ....errors import MailboxApiError
 from ...services import get_mailbox
 from ..deps import Actor
-from ..templates import back
+from ..templates import back, local_path
 
 router = APIRouter()
 
@@ -26,19 +23,6 @@ BATCH_ACTIONS: dict[str, tuple[str, MessageUpdate | None, bool]] = {
     "trash": ("delete", None, False),
     "delete": ("delete", None, True),
 }
-
-
-def _return_to(form: Any, fallback: str) -> str:
-    """Where the form came from: a path of this UI, never another site. The
-    message the answer carries replaces an earlier one."""
-    parts = urlsplit(str(form.get("back") or ""))
-    query = urlencode(
-        [(k, v) for k, v in parse_qsl(parts.query) if k not in ("msg", "err")]
-    )
-    value = f"{parts.path}?{query}" if query else parts.path
-    if parts.scheme or parts.netloc or not parts.path.startswith("/ui/"):
-        return fallback
-    return value
 
 
 @router.post("/accounts/{account_id}/mail/{message_id}/flags")
@@ -85,7 +69,7 @@ async def delete(
 ) -> Response:
     form = await request.form()
     permanent = form.get("permanent") == "1"
-    listing = _return_to(form, f"/ui/accounts/{account_id}/mail")
+    listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
     try:
         await get_mailbox(request).delete_message(
             caller, account_id, message_id, permanent
@@ -99,7 +83,7 @@ async def delete(
 async def batch(request: Request, caller: Actor, account_id: str) -> Response:
     """The action menu above a list, for the messages ticked in it."""
     form = await request.form()
-    listing = _return_to(form, f"/ui/accounts/{account_id}/mail")
+    listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
     ids = [str(i) for i in form.getlist("ids")]
     action = "delete" if form.get("purge") == "1" else str(form.get("action") or "")
     if not ids:

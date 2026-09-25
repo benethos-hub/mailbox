@@ -191,3 +191,44 @@ def test_an_incomplete_form_is_a_page(app_client: TestClient) -> None:
 
 def test_the_ui_is_not_in_the_contract(client: TestClient) -> None:
     assert not [p for p in client.get("/openapi.json").json()["paths"] if "/ui" in p]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("/ui/accounts?msg=Saved.&x=1", "/ui/accounts?x=1"),
+        ("/ui", "/ui"),
+        ("https://evil.example/ui/x", "/ui/fallback"),
+        ("//evil.example/ui", "/ui/fallback"),
+        ("/uievil", "/ui/fallback"),
+        ("/v1/me", "/ui/fallback"),
+        ("", "/ui/fallback"),
+        (None, "/ui/fallback"),
+    ],
+)
+def test_only_local_paths_after_a_form(value: str | None, expected: str) -> None:
+    from benethos_mailbox_api.web.pages.templates import local_path
+
+    assert local_path(value, "/ui/fallback") == expected
+
+
+def test_page_links_carry_the_query_and_quote_the_cursor() -> None:
+    from starlette.requests import Request
+
+    from benethos_mailbox_api.web.pages.templates import page_links
+
+    def request(query: str) -> Request:
+        return Request(
+            {
+                "type": "http",
+                "path": "/ui/x",
+                "query_string": query.encode(),
+                "headers": [],
+            }
+        )
+
+    more, first = page_links(request("q=a"), "c+d/e=")
+    assert more == "/ui/x?q=a&cursor=c%2Bd%2Fe%3D" and first is None
+    more, first = page_links(request("q=a&cursor=old"), None)
+    assert more is None and first == "/ui/x?q=a"
+    assert page_links(request("cursor=old"), None) == (None, "/ui/x")
