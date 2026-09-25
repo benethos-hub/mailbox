@@ -15,39 +15,11 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from typing import Any
 
 import httpx
-from smoke import ENV_FILE, Run, accounts, imap_settings, read_env
+from _common import Run, accounts, read_env, register
 
 DEFAULT_URL = "http://127.0.0.1:8080"
-
-
-def register(
-    client: httpx.Client, env: dict[str, str], account: dict[str, str]
-) -> tuple[str | None, str]:
-    """The account's id in the service, and what happened."""
-    known = client.get("/v1/accounts").json()
-    for existing in known:
-        if existing.get("email", "").lower() == account["email"].lower():
-            return str(existing["id"]), "already there"
-    found = client.post("/v1/discovery", json={"email": account["email"]}).json()
-    discovered: dict[str, Any] = next(
-        (c["settings"] for c in found.get("candidates", []) if c.get("settings")), {}
-    )
-    created = client.post(
-        "/v1/accounts",
-        json={
-            "provider": "imap",
-            "email": account["email"],
-            "settings": imap_settings(env, account, discovered),
-            "credentials": {"password": account["password"]},
-        },
-    )
-    if created.status_code != 201:
-        message = created.json().get("error", {}).get("message", "")
-        return None, f"{created.status_code} {message}"
-    return str(created.json()["id"]), "added"
 
 
 def main() -> int:
@@ -60,7 +32,7 @@ def main() -> int:
         sys.exit(
             "set MAILBOX_SERVICE_TOKEN to a token with accounts.manage and mail.read"
         )
-    env = read_env(ENV_FILE)
+    env = read_env()
     run = Run()
     with httpx.Client(
         base_url=options.url,
@@ -94,8 +66,7 @@ def main() -> int:
             )
             status = client.get(base).json().get("status", record.get("status"))
             run.check("status", status == "connected", str(status))
-    print(f"\n{run.failures} failed" if run.failures else "\nall passed")
-    return 1 if run.failures else 0
+    return run.finish()
 
 
 if __name__ == "__main__":

@@ -22,25 +22,25 @@ from __future__ import annotations
 
 import os
 import secrets
-import shutil
-import socket
-import subprocess
 import sys
-import tempfile
-import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Any
 
 import anyio
 import httpx
+from _common import (
+    Run,
+    accounts,
+    messages_with_subject,
+    program,
+    read_env,
+    register_all,
+    throwaway_service,
+    user_token,
+)
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
-from register import register
-from smoke import ENV_FILE, Run, accounts, read_env
-
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
 READ_TOOLS = {
     "list_accounts",
@@ -58,67 +58,6 @@ DRAFT_TOOLS = READ_TOOLS | {
 }
 
 
-def free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
-
-
-def service_env(data_dir: str, port: int, admin_key: str) -> dict[str, str]:
-    return {
-        **os.environ,
-        "MAILBOX_SERVICE_DATA_DIR": data_dir,
-        "MAILBOX_SERVICE_STORAGE": "sqlite",
-        "MAILBOX_SERVICE_KEY_PROVIDER": "env",
-        "MAILBOX_SERVICE_MASTER_KEY": encode_recovery(cipher.new_key()),
-        "MAILBOX_SERVICE_KEY": admin_key,
-        "MAILBOX_SERVICE_HOST": "127.0.0.1",
-        "MAILBOX_SERVICE_PORT": str(port),
-        "MAILBOX_SERVICE_SYNC_INTERVAL": "0",
-        "MAILBOX_SERVICE_SYNC_IDLE": "false",
-    }
-
-
-def start_service(env: dict[str, str], url: str) -> subprocess.Popen[bytes]:
-    command = shutil.which("benethos-mailbox-service")
-    if command is None:
-        sys.exit("benethos-mailbox-service not found: run this with uv run")
-    subprocess.run([command, "keys", "init"], env=env, check=True, capture_output=True)
-    process = subprocess.Popen(
-        [command, "serve"],
-        env=env,
-        stdout=subprocess.DEVNULL,
-        # Nobody reads it: a pipe would fill up and block the service.
-        stderr=subprocess.DEVNULL,
-    )
-    for _ in range(60):
-        try:
-            if httpx.get(f"{url}/health", timeout=1).status_code == 200:
-                return process
-        except httpx.TransportError:
-            time.sleep(0.5)
-    process.terminate()
-    sys.exit("the service did not start")
-
-
-def user_token(
-    client: httpx.Client,
-    account_ids: list[str],
-    allow: list[str],
-    **constraints: Any,
-) -> str:
-    """A user with ``allow`` on the test accounts, and a token for it."""
-    user = client.post(
-        "/v1/users",
-        json={
-            "name": f"mcp live check {'+'.join(allow)}",
-            "grants": [{"accounts": account_ids, "allow": allow, **constraints}],
-        },
-    ).json()
-    created = client.post(f"/v1/users/{user['id']}/tokens", json={"name": "live"})
-    return str(created.json()["token"])
-
-
 def text_of(result: Any) -> str:
     return "".join(getattr(part, "text", "") for part in result.content)
 
@@ -126,11 +65,8 @@ def text_of(result: Any) -> str:
 @asynccontextmanager
 async def mcp_session(url: str, token: str) -> AsyncIterator[ClientSession]:
     """``benethos-mailbox-mcp`` over stdio with ``token``."""
-    command = shutil.which("benethos-mailbox-mcp")
-    if command is None:
-        sys.exit("benethos-mailbox-mcp not found: run this with uv run")
     params = StdioServerParameters(
-        command=command,
+        command=program("benethos-mailbox-mcp"),
         env={**os.environ, "MAILBOX_SERVICE_URL": url, "MAILBOX_SERVICE_TOKEN": token},
     )
     async with (
@@ -418,15 +354,7 @@ async def check_drafts(
 
 def arrived(admin: httpx.Client, account_id: str, subject: str) -> list[dict[str, Any]]:
     """The messages with ``subject`` in the account, once one is there."""
-    for _ in range(20):
-        page = admin.get(
-            f"/v1/accounts/{account_id}/messages", params={"q": subject, "limit": 10}
-        ).json()
-        found = [m for m in page.get("items", []) if m.get("subject") == subject]
-        if found:
-            return found
-        time.sleep(3)
-    return []
+    return messages_with_subject(admin, account_id, subject, tries=20)
 
 
 async def check_sending(
@@ -586,68 +514,48 @@ async def check_constraints(
 
 
 def main() -> int:
-    env = read_env(ENV_FILE)
+    env = read_env()
     test_accounts = accounts(env)[:2]
     run = Run()
-    port = free_port()
-    url = f"http://127.0.0.1:{port}"
-    admin_key = secrets.token_urlsafe(32)
-    data_dir = tempfile.mkdtemp(prefix="mailbox-mcp-live-")
-    process = start_service(service_env(data_dir, port, admin_key), url)
-    try:
-        with httpx.Client(
-            base_url=url, headers={"Authorization": f"Bearer {admin_key}"}, timeout=60
-        ) as client:
-            ids = []
-            for account in test_accounts:
-                account_id, outcome = register(client, env, account)
-                if run.check(
-                    f"account {len(ids) + 1} in the service",
-                    account_id is not None,
-                    outcome,
-                ):
-                    ids.append(str(account_id))
-            if len(ids) != len(test_accounts):
-                return 1
-            token = user_token(client, ids, ["mail.read"])
-            writer = user_token(client, ids, ["mail.read", "mail.write"])
-            emails = {a["email"].lower() for a in test_accounts}
-            print("\n== the MCP server over stdio, reading")
-            anyio.run(check_tools, run, url, token, emails)
-            print("\n== the MCP server over stdio, writing")
-            anyio.run(check_writing, run, url, writer, client, ids[0])
-            drafter = user_token(client, ids, ["mail.read", "drafts"])
-            print("\n== the MCP server over stdio, drafts")
-            anyio.run(
-                check_drafts,
-                run,
-                url,
-                drafter,
-                client,
-                ids[0],
-                test_accounts[1]["email"],
-            )
-            # Sends from the first test account to the second, nowhere else.
-            sender = user_token(client, ids, ["mail.read", "drafts", "send"])
-            print("\n== the MCP server over stdio, sending")
-            anyio.run(
-                check_sending, run, url, sender, client, ids, test_accounts[1]["email"]
-            )
-            print("\n== grants that narrow sending, and the audit")
-            anyio.run(
-                check_constraints,
-                run,
-                url,
-                client,
-                ids,
-                [a["email"] for a in test_accounts],
-            )
-    finally:
-        process.terminate()
-        process.wait(timeout=10)
-        shutil.rmtree(Path(data_dir), ignore_errors=True)
-    print(f"\n{run.failures} failed" if run.failures else "\nall passed")
-    return 1 if run.failures else 0
+    with throwaway_service("mailbox-mcp-live-") as service, service.admin() as client:
+        url = service.url
+        ids = register_all(run, client, env, test_accounts)
+        if len(ids) != len(test_accounts):
+            return 1
+        token = user_token(client, ids, ["mail.read"])
+        writer = user_token(client, ids, ["mail.read", "mail.write"])
+        emails = {a["email"].lower() for a in test_accounts}
+        print("\n== the MCP server over stdio, reading")
+        anyio.run(check_tools, run, url, token, emails)
+        print("\n== the MCP server over stdio, writing")
+        anyio.run(check_writing, run, url, writer, client, ids[0])
+        drafter = user_token(client, ids, ["mail.read", "drafts"])
+        print("\n== the MCP server over stdio, drafts")
+        anyio.run(
+            check_drafts,
+            run,
+            url,
+            drafter,
+            client,
+            ids[0],
+            test_accounts[1]["email"],
+        )
+        # Sends from the first test account to the second, nowhere else.
+        sender = user_token(client, ids, ["mail.read", "drafts", "send"])
+        print("\n== the MCP server over stdio, sending")
+        anyio.run(
+            check_sending, run, url, sender, client, ids, test_accounts[1]["email"]
+        )
+        print("\n== grants that narrow sending, and the audit")
+        anyio.run(
+            check_constraints,
+            run,
+            url,
+            client,
+            ids,
+            [a["email"] for a in test_accounts],
+        )
+    return run.finish()
 
 
 if __name__ == "__main__":

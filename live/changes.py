@@ -32,14 +32,13 @@ import imaplib
 import re
 import ssl
 import sys
-import time
 import uuid
 from typing import Any
 
 import anyio
+from _common import Run, accounts, messages_with_subject, read_env, register
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from smoke import ENV_FILE, Run, accounts, imap_settings, read_env
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
@@ -60,27 +59,6 @@ KEPT_TEXT = (
     "Automatic test mail of live/changes.py in the mailbox-service repository.\n"
     "It was kept for inspection (--keep): delete it by hand.\n"
 )
-
-
-def connect(
-    client: TestClient, env: dict[str, str], account: dict[str, str]
-) -> str | None:
-    """The account in the service, with IMAP and the SMTP server discovery
-    finds. Its id, or None if it did not connect."""
-    found = client.post("/v1/discovery", json={"email": account["email"]}).json()
-    discovered: dict[str, Any] = next(
-        (c["settings"] for c in found.get("candidates", []) if c.get("settings")), {}
-    )
-    created = client.post(
-        "/v1/accounts",
-        json={
-            "provider": "imap",
-            "email": account["email"],
-            "settings": imap_settings(env, account, discovered),
-            "credentials": {"password": account["password"]},
-        },
-    )
-    return str(created.json()["id"]) if created.status_code == 201 else None
 
 
 class OtherClient:
@@ -298,15 +276,10 @@ def check_drafts(
 def find_by_subject(
     client: TestClient, account_id: str, subject: str
 ) -> dict[str, Any] | None:
-    for _ in range(DELIVERY_TRIES):
-        page = client.get(
-            f"/v1/accounts/{account_id}/messages", params={"q": subject, "limit": 5}
-        ).json()
-        items = [m for m in page.get("items", []) if m.get("subject") == subject]
-        if items:
-            return items[0]
-        time.sleep(DELIVERY_PAUSE)
-    return None
+    found = messages_with_subject(
+        client, account_id, subject, tries=DELIVERY_TRIES, pause=DELIVERY_PAUSE
+    )
+    return found[0] if found else None
 
 
 def clean_up(
@@ -362,7 +335,7 @@ def main() -> int:
         "sender's Sent folder, to look at in a mail client",
     )
     keep = parser.parse_args().keep
-    env = read_env(ENV_FILE)
+    env = read_env()
     listed = accounts(env)
     if len(listed) < 2 or "LIVE_IMAP_HOST" not in env:
         sys.exit("needs two test accounts and LIVE_IMAP_HOST")
@@ -389,8 +362,8 @@ def main() -> int:
     other: OtherClient | None = None
     print(f"== {receiver['email']} receives from {sender['email']}")
     try:
-        account_id = connect(client, env, receiver)
-        sender_id = connect(client, env, sender)
+        account_id, _ = register(client, env, receiver)
+        sender_id, _ = register(client, env, sender)
         if not run.check(
             "connect both test accounts, the sender with SMTP",
             account_id is not None and sender_id is not None,
@@ -665,8 +638,7 @@ def main() -> int:
             clean_up(env, receiver, sender, other, base, subject)
         anyio.run(services.aclose)
 
-    print(f"\n{run.failures} failed" if run.failures else "\nall passed")
-    return 1 if run.failures else 0
+    return run.finish()
 
 
 if __name__ == "__main__":

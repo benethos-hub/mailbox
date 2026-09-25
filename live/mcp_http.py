@@ -15,34 +15,31 @@ from __future__ import annotations
 
 import os
 import secrets
-import shutil
 import subprocess
 import sys
-import tempfile
-import time
-from pathlib import Path
 
 import anyio
 import httpx
-from mcp import ClientSession
-from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
-from mcp_stdio import (
-    READ_TOOLS,
+from _common import (
+    Run,
+    accounts,
     free_port,
-    service_env,
-    start_service,
+    program,
+    read_env,
+    register_all,
+    started,
+    stop,
+    throwaway_service,
     user_token,
 )
-from register import register
-from smoke import ENV_FILE, Run, accounts, read_env
+from mcp import ClientSession
+from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
+from mcp_stdio import READ_TOOLS
 
 
 def start_mcp(
     api_url: str, api_token: str, bearer: str, port: int
 ) -> subprocess.Popen[bytes]:
-    command = shutil.which("benethos-mailbox-mcp")
-    if command is None:
-        sys.exit("benethos-mailbox-mcp not found: run this with uv run")
     env = {
         **os.environ,
         "MAILBOX_SERVICE_URL": api_url,
@@ -50,19 +47,14 @@ def start_mcp(
         "MAILBOX_MCP_BEARER_TOKEN": bearer,
     }
     process = subprocess.Popen(
-        [command, "--transport", "streamable-http", "--port", str(port)],
+        [program("benethos-mailbox-mcp"), "--transport", "streamable-http"]
+        + ["--port", str(port)],
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    for _ in range(60):
-        try:
-            httpx.get(f"http://127.0.0.1:{port}/mcp", timeout=1)
-            return process
-        except httpx.TransportError:
-            time.sleep(0.5)
-    process.terminate()
-    sys.exit("the MCP server did not start")
+    started(process, f"http://127.0.0.1:{port}/mcp", "the MCP server")
+    return process
 
 
 async def check_http(run: Run, url: str, bearer: str, emails: set[str]) -> None:
@@ -118,51 +110,30 @@ async def check_http(run: Run, url: str, bearer: str, emails: set[str]) -> None:
 
 
 def main() -> int:
-    env = read_env(ENV_FILE)
+    env = read_env()
     test_accounts = accounts(env)[:2]
     run = Run()
-    api_port, mcp_port = free_port(), free_port()
-    api_url = f"http://127.0.0.1:{api_port}"
-    admin_key = secrets.token_urlsafe(32)
     bearer = secrets.token_urlsafe(32)
-    data_dir = tempfile.mkdtemp(prefix="mailbox-mcp-http-")
-    service = start_service(service_env(data_dir, api_port, admin_key), api_url)
-    mcp = None
-    try:
-        with httpx.Client(
-            base_url=api_url,
-            headers={"Authorization": f"Bearer {admin_key}"},
-            timeout=60,
-        ) as client:
-            ids = []
-            for account in test_accounts:
-                account_id, outcome = register(client, env, account)
-                if run.check(
-                    f"account {len(ids) + 1} in the service",
-                    account_id is not None,
-                    outcome,
-                ):
-                    ids.append(str(account_id))
+    mcp_port = free_port()
+    with throwaway_service("mailbox-mcp-http-") as service:
+        with service.admin() as client:
+            ids = register_all(run, client, env, test_accounts)
             if len(ids) != len(test_accounts):
                 return 1
             token = user_token(client, ids, ["mail.read"])
-        mcp = start_mcp(api_url, token, bearer, mcp_port)
-        print("\n== the MCP server over streamable HTTP")
-        anyio.run(
-            check_http,
-            run,
-            f"http://127.0.0.1:{mcp_port}/mcp",
-            bearer,
-            {a["email"].lower() for a in test_accounts},
-        )
-    finally:
-        for process in (mcp, service):
-            if process is not None:
-                process.terminate()
-                process.wait(timeout=10)
-        shutil.rmtree(Path(data_dir), ignore_errors=True)
-    print(f"\n{run.failures} failed" if run.failures else "\nall passed")
-    return 1 if run.failures else 0
+        mcp = start_mcp(service.url, token, bearer, mcp_port)
+        try:
+            print("\n== the MCP server over streamable HTTP")
+            anyio.run(
+                check_http,
+                run,
+                f"http://127.0.0.1:{mcp_port}/mcp",
+                bearer,
+                {a["email"].lower() for a in test_accounts},
+            )
+        finally:
+            stop(mcp)
+    return run.finish()
 
 
 if __name__ == "__main__":
