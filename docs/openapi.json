@@ -3,7 +3,7 @@
   "info": {
     "title": "Mailbox API",
     "description": "Unified REST API for several mail providers and accounts.",
-    "version": "0.0.1"
+    "version": "0.1.0"
   },
   "paths": {
     "/health": {

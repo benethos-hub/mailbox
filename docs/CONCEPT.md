@@ -1,6 +1,6 @@
 # Concept — Mailbox API
 
-> **Status: draft, 2026-09-24; the software is pre-alpha, version 0.0.1.**
+> **Status: draft, 2026-09-24; the software is pre-alpha, version 0.1.0.**
 > Describes the target design. What is built
 > today is marked in [ROADMAP.md](ROADMAP.md). Facts about third-party
 > products were taken from their public documentation on 2026-09-24; items

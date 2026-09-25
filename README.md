@@ -3,7 +3,7 @@
 One REST API for all your mailboxes, whichever provider they are at, with
 an MCP server on top so an AI assistant can work with them too.
 
-> **Status: pre-alpha, version 0.0.1.** Not ready for production use: the
+> **Status: pre-alpha, version 0.1.0.** Not ready for production use: the
 > API, the stored data and the configuration may change without notice.
 >
 > IMAP accounts with autodiscovery from the address, and Microsoft

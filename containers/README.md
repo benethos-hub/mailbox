@@ -1,6 +1,6 @@
 # Containers
 
-> **Pre-alpha, version 0.0.1.** Not ready for production use: the API,
+> **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
 > the stored data and the configuration may change without notice.
 
 One folder per image, and a compose file for running them.
