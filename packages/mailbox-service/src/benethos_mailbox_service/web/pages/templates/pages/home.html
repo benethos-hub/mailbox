@@ -19,7 +19,8 @@
               <span class="sub">{{ account.display_name | or_missing }} · <span class="mono">{{ account.id[:16] }}…</span></span>
             </td>
             <td>
-              {% for group in groups[account.id] %}<span class="tag accent">{{ group }}</span> {% endfor %}
+              {% for group in rows[account.id].groups %}<span class="tag accent">{{ group }}</span> {% endfor %}
+              {% for op in rows[account.id].operations %}<span class="tag">{{ op }}</span> {% endfor %}
             </td>
             <td>
               {% if "read_and_send_anywhere" in account.warnings %}

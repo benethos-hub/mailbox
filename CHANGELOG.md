@@ -11,6 +11,9 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- The start page of the configuration UI shows a right that covers only
+  part of a group as that operation, as the user page does. Before, one
+  operation showed as its whole group.
 - `PATCH /v1/accounts/{account_id}` logs in to the provider only when
   the settings sent differ from the stored ones. Before, any `settings`
   in the body logged in, the same values included.

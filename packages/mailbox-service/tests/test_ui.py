@@ -107,6 +107,20 @@ def test_a_user_token_signs_in_with_its_rights(
     assert "reads and sends anywhere" not in page
 
 
+def test_the_start_page_shows_whole_groups_and_single_operations(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    headers = bearer_for(
+        services, Grant(accounts=[account_id], allow=["mail.read", "send_draft"])
+    )
+    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
+    page = app_client.get("/ui").text
+    assert '<span class="tag accent">mail.read</span>' in page
+    assert '<span class="tag">send_draft</span>' in page
+    # A single operation does not show as its whole group.
+    assert '<span class="tag accent">send</span>' not in page
+
+
 def test_the_admin_key_is_warned(ui: TestClient, account_id: str) -> None:
     assert "reads and sends anywhere" in ui.get("/ui").text
 
