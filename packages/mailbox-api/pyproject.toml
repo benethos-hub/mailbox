@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "benethos-mailbox-api"
 version = "0.1.0"
-description = "Mail service: one REST API for several mail providers and accounts."
+description = "Self-hosted mail service: one REST API and a web UI for IMAP and Microsoft 365 / Outlook.com accounts, with users, rights and encrypted credentials."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -13,13 +13,19 @@ license-files = ["LICENSE"]
 authors = [{ name = "Benedikt Oswald" }]
 keywords = [
     "email",
+    "mail",
     "imap",
     "smtp",
-    "gmail",
     "microsoft-graph",
+    "outlook",
+    "microsoft-365",
     "rest-api",
     "openapi",
+    "fastapi",
+    "oauth2",
     "multi-account",
+    "self-hosted",
+    "email-automation",
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
