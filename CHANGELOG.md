@@ -21,7 +21,8 @@ stored data and the configuration may change without notice.
 
 ### Changed
 
-- Both packages are versioned 0.0.1 (were 0.1.0).
+- Both packages are versioned 0.0.1 (were 0.1.0) and ship the MIT license
+  text.
 - An account carries its `settings` (host, port, security, username,
   `smtp_*`), never a secret. Settings whose name looks like a secret
   (`password`, `secret`, `token`, `api_key`, ...) are refused with `400`:
