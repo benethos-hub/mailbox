@@ -724,6 +724,23 @@ Events: `message.created`, `message.updated`, `message.deleted`,
 HMAC-SHA256 in a header. The source is IMAP IDLE / polling, Gmail
 `history.list` and Graph delta queries, all normalized into the change feed.
 
+**Decided 2026-09-25:**
+
+- Phase 4 covers IMAP and Microsoft accounts. IMAP changes come from the
+  sync pass, Microsoft changes from Graph delta queries per folder in the
+  worker.
+- IMAP uses CONDSTORE (RFC 7162) where the server offers it. A pass then
+  also asks for the flags changed since the last one, so a message read
+  or starred in another client shows as `message.updated`. Without
+  CONDSTORE, only created, moved and deleted messages reach the feed.
+- Changes are kept for `MAILBOX_SERVICE_CHANGES_DAYS` days, 7 by default.
+
+Changes made through the API enter the feed for every provider. A
+`since` older than the kept changes answers `410 changes_expired`, and
+the client starts again from a new state. Without `since`, the answer
+holds no changes, only the current state. The first sync of an account
+records no changes: the messages already there are not new.
+
 ### 6.6 Listing, search and pagination
 
 `GET {acc}/messages` parameters:
