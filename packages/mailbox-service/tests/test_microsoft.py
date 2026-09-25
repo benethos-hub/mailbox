@@ -220,6 +220,13 @@ async def test_trash_then_for_good(graph: FakeGraph) -> None:
     assert gone is None and message_id not in graph.messages
 
 
+async def test_for_good_from_the_inbox(graph: FakeGraph) -> None:
+    message_id = graph.add_message()
+    provider = adapter(graph)
+    [gone] = (await provider.delete_messages([message_id], permanent=True)).values()
+    assert gone is None and message_id not in graph.messages
+
+
 async def test_folders_are_created_renamed_moved_deleted(graph: FakeGraph) -> None:
     provider = adapter(graph)
     top = await provider.create_folder("Work", None)

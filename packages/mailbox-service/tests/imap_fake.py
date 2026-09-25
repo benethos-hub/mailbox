@@ -79,8 +79,8 @@ class FakeMailBox:
         self.selected = "INBOX"
         self.calls: list[tuple[Any, ...]] = []
         self.logins = 0
-        # Raised one by one by the next searches.
-        self.failures: list[Exception] = []
+        # Raised one by one by the next searches. None: that search passes.
+        self.failures: list[Exception | None] = []
         # IDLE answers, one list of parsed responses per idle_check.
         self.idle_script: list[list[tuple[Any, ...]]] = []
         self.announced = ["IMAP4REV1", "ID", "IDLE", "UIDPLUS", "MOVE"]
@@ -303,7 +303,9 @@ class FakeMailBox:
         """SEARCH with the keys the adapter uses, compared the way servers
         do: case-insensitive substrings, dates by day."""
         if self.failures:
-            raise self.failures.pop(0)
+            failure = self.failures.pop(0)
+            if failure is not None:
+                raise failure
         words = [criteria] if isinstance(criteria, str) else list(criteria)
         self.calls.append(("search", tuple(words), charset))
         found = []

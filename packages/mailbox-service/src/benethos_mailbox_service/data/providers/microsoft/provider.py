@@ -340,7 +340,7 @@ class MicrosoftProvider:
             content_type="text/plain",
         )
         if replaces is not None:
-            await self._call("DELETE", f"/me/messages/{_id(replaces)}")
+            await self._delete_for_good(replaces)
         return mappers.summary(item)
 
     async def get_draft(self, draft_id: str) -> bytes:
@@ -349,7 +349,7 @@ class MicrosoftProvider:
 
     async def delete_draft(self, draft_id: str) -> None:
         await self._draft(draft_id)
-        await self._call("DELETE", f"/me/messages/{_id(draft_id)}")
+        await self._delete_for_good(draft_id)
 
     async def _draft(self, draft_id: str) -> None:
         """Only drafts: any other id is not found, so the draft operations
@@ -391,18 +391,16 @@ class MicrosoftProvider:
     async def delete_messages(
         self, message_ids: list[str], permanent: bool
     ) -> dict[str, MessageSummary | None | MailboxServiceError]:
-        trash = None
-        if not permanent:
-            try:
-                trash = await self._role_id(FolderRole.TRASH)
-            except ConflictError as exc:
-                return dict.fromkeys(message_ids, exc)
+        try:
+            trash = await self._role_id(FolderRole.TRASH)
+        except ConflictError as exc:
+            return dict.fromkeys(message_ids, exc)
 
         async def one(message_id: str) -> MessageSummary | None:
-            path = f"/me/messages/{_id(message_id)}"
-            if trash is None:
-                await self._call("DELETE", path)
+            if permanent:
+                await self._delete_for_good(message_id, trash)
                 return None
+            path = f"/me/messages/{_id(message_id)}"
             where = await self._json("GET", path, params={"$select": "parentFolderId"})
             if where.get("parentFolderId") == trash:
                 raise rules.in_trash_already()
@@ -412,6 +410,20 @@ class MicrosoftProvider:
             return mappers.summary(item)
 
         return await rules.per_id(message_ids, one)
+
+    async def _delete_for_good(self, message_id: str, trash: str | None = None) -> None:
+        """Graph's DELETE outside the trash only moves the message there.
+        For good means: into the trash, then deleted from it."""
+        if trash is None:
+            trash = await self._role_id(FolderRole.TRASH)
+        path = f"/me/messages/{_id(message_id)}"
+        where = await self._json("GET", path, params={"$select": "parentFolderId"})
+        if where.get("parentFolderId") != trash:
+            item = await self._json(
+                "POST", f"{path}/move", json_body={"destinationId": trash}
+            )
+            path = f"/me/messages/{_id(str(item['id']))}"
+        await self._call("DELETE", path)
 
     # --- for the sync worker ------------------------------------------------------
     # Ids are stable: the domain keeps no id mapping for this provider, so

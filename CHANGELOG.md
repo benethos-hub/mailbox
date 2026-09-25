@@ -11,6 +11,13 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- A message of a Microsoft account deleted with `permanent=true`, and a
+  draft there that is deleted or replaced, are gone for good. Before,
+  one not in Deleted Items was only moved there, since that is what
+  Graph's delete does outside the trash.
+- A draft saved or a sent copy stored over a connection the IMAP server
+  dropped right after the APPEND is stored once: the retry finds it by
+  its Message-ID instead of storing it again.
 - A connection dropped by the IMAP server during the login answers `502`
   (`provider_unavailable`) and is tried again on the next call. Before,
   it counted as a rejected credential and blocked the account until

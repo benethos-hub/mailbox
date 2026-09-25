@@ -398,11 +398,17 @@ class ImapProvider:
         self, folder: str, raw: bytes, flags: list[str]
     ) -> MessageSummary | None:
         """Store ``raw`` in ``folder``. The stored message, found by its UID
-        from APPENDUID or else by its Message-ID. None if neither finds it."""
-        uid = self._session.append(folder, raw, flags)
+        from APPENDUID or else by its Message-ID. None if neither finds it.
+
+        A message with this Message-ID that the folder holds already is
+        that stored message: the guard retries a step whose connection
+        dropped, and the APPEND may have gone through before the drop."""
+        header = ParsedMessage(raw).message_id
         validity = self._session.select(folder)
+        stored = self._session.search_message_id(header) if header else []
+        uid = stored[-1] if stored else self._session.append(folder, raw, flags)
         if uid is None:
-            header = ParsedMessage(raw).message_id
+            validity = self._session.select(folder)
             matches = self._session.search_message_id(header) if header else []
             uid = matches[-1] if matches else None
         found = self._session.fetch_headers([uid]) if uid else []
@@ -422,7 +428,10 @@ class ImapProvider:
         if saved is None:
             raise ProviderError("the draft was stored but cannot be found again")
         if old is not None:
-            self._delete_draft_at(drafts, *old)
+            try:
+                self._delete_draft_at(drafts, *old)
+            except NotFoundError:
+                pass  # gone already: a retried step removed it before the drop
         return saved
 
     def _get_draft(self, draft_id: str) -> bytes:

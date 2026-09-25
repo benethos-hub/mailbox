@@ -255,7 +255,13 @@ class FakeGraph:
                 message.update(json.loads(request.content))
                 return _json(200, message)
             if method == "DELETE":
-                del self.messages[message["id"]]
+                # As Graph does: outside the trash, a delete moves the
+                # message there. Deleted from the trash, it is gone.
+                trash = self.well_known["deleteditems"]
+                if message["parentFolderId"] != trash:
+                    message["parentFolderId"] = trash
+                else:
+                    del self.messages[message["id"]]
                 return httpx.Response(204)
         if rest == ["$value"]:
             return httpx.Response(200, content=self.raws[message["id"]])
