@@ -5,7 +5,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from ....data.models import SendRecord
 from ....domain.access import Access
 from ...services import get_accounts, get_mailbox, get_users
 from ..deps import Viewer, account_of
@@ -30,19 +29,10 @@ def _user_names(request: Request, caller: Access) -> dict[str, str]:
 @router.get("/sends")
 async def all_sends(request: Request, caller: Viewer) -> HTMLResponse:
     """The latest sends of every account the caller may audit."""
-    accounts = get_accounts(request)
-    audited = [
-        account
-        for account in accounts.list(caller)
-        if caller.allows("list_sends", account.id)
-    ]
-    records: list[SendRecord] = []
-    for account in audited:
-        page = get_mailbox(request).list_sends(
-            caller, account.id, limit=LATEST, cursor=None
-        )
-        records.extend(page.items)
-    records.sort(key=lambda record: (record.created_at, record.id), reverse=True)
+    audited = get_accounts(request).list(caller, may="list_sends")
+    records = get_mailbox(request).list_all_sends(
+        caller, per_account=LATEST, limit=PAGE_SIZE
+    )
     return render(
         request,
         "pages/sends.html",
@@ -50,7 +40,7 @@ async def all_sends(request: Request, caller: Viewer) -> HTMLResponse:
         account=None,
         accounts=audited,
         emails={account.id: account.email for account in audited},
-        records=records[:PAGE_SIZE],
+        records=records,
         names=_user_names(request, caller),
         pages=(None, None),
     )

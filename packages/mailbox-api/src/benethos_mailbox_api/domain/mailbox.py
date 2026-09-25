@@ -64,6 +64,7 @@ class MailboxService:
         self.update_draft = self._outgoing.update_draft
         self.send_draft = self._outgoing.send_draft
         self.delete_draft = self._outgoing.delete_draft
+        self.list_all_sends = self._outgoing.list_all_sends
 
     # --- folders ----------------------------------------------------------------------
 
@@ -75,8 +76,9 @@ class MailboxService:
         self, access: Access, account_id: str, new: FolderCreate
     ) -> Folder:
         access.require("create_folder", account_id)
+        parent = await self._folder_by_role(account_id, new.parent_id)
         return await self._calls.call(
-            account_id, lambda p: p.create_folder(new.name, new.parent_id)
+            account_id, lambda p: p.create_folder(new.name, parent)
         )
 
     async def update_folder(
@@ -138,14 +140,27 @@ class MailboxService:
 
     async def _folder_by_role(self, account_id: str, folder: str | None) -> str | None:
         """A folder id, or the id of the folder with that role."""
-        if folder is None or folder not in FolderRole.__members__.values():
+        if folder is None or not is_role(folder):
             return folder
-        match = next(
-            (f for f in await self._folders(account_id) if f.role == folder), None
-        )
+        match = find_folder(await self._folders(account_id), folder)
         if match is None:
             raise NotFoundError(f"the account has no {folder} folder")
         return match.id
+
+    async def _folders_by_role(
+        self, account_id: str, changes: MessageUpdate
+    ) -> MessageUpdate:
+        """The changes with every role among ``folder_ids`` resolved."""
+        if not changes.folder_ids or not any(is_role(f) for f in changes.folder_ids):
+            return changes
+        folders = await self._folders(account_id)
+        resolved = []
+        for wanted in changes.folder_ids:
+            match = find_folder(folders, wanted) if is_role(wanted) else None
+            if is_role(wanted) and match is None:
+                raise NotFoundError(f"the account has no {wanted} folder")
+            resolved.append(match.id if match is not None else wanted)
+        return changes.model_copy(update={"folder_ids": resolved})
 
     # --- messages of one account ------------------------------------------------------
 
@@ -190,6 +205,7 @@ class MailboxService:
         changes: MessageUpdate,
     ) -> MessageSummary:
         access.require("update_message", account_id)
+        changes = await self._folders_by_role(account_id, changes)
         return await self._calls.update_one(account_id, message_id, changes)
 
     async def delete_message(
@@ -209,7 +225,8 @@ class MailboxService:
         if batch.action == "update":
             access.require("update_message", account_id)
             assert batch.changes is not None
-            outcomes = await self._calls.update(account_id, batch.ids, batch.changes)
+            changes = await self._folders_by_role(account_id, batch.changes)
+            outcomes = await self._calls.update(account_id, batch.ids, changes)
         else:
             access.require(_delete_right(batch.permanent), account_id)
             outcomes = await self._calls.delete(account_id, batch.ids, batch.permanent)
@@ -342,6 +359,18 @@ class MailboxService:
                 merge.Chunk(first.next_cursor, 0, second.items, second.next_cursor)
             )
         return chunks
+
+
+def is_role(folder: str) -> bool:
+    return folder in FolderRole.__members__.values()
+
+
+def find_folder(folders: list[Folder], wanted: str) -> Folder | None:
+    """The folder with this id, or with this role."""
+    return next(
+        (f for f in folders if f.id == wanted or (f.role and f.role.value == wanted)),
+        None,
+    )
 
 
 def _delete_right(permanent: bool) -> str:

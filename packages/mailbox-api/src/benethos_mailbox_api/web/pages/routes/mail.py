@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from ....data.mail.text import from_html
 from ....data.models import Folder, FolderRole, Message, MessageFilter
 from ....domain.access import Access
+from ....domain.mailbox import find_folder
 from ...services import get_accounts, get_mailbox
 from ..deps import Viewer, account_of
 from ..errors import error_page
@@ -78,12 +79,7 @@ def _tree(folders: list[Folder]) -> list[tuple[Folder, int]]:
 
 
 def _readable(caller: Access, request: Request) -> list[Any]:
-    accounts = get_accounts(request)
-    return [
-        account
-        for account in accounts.list(caller)
-        if caller.allows("list_all_messages", account.id)
-    ]
+    return get_accounts(request).list(caller, may="list_all_messages")
 
 
 @router.get("/mail")
@@ -132,10 +128,7 @@ async def account_mail(
     mailbox = get_mailbox(request)
     folders = await mailbox.list_folders(caller, account_id)
     wanted = request.query_params.get("folder") or FolderRole.INBOX.value
-    current = next(
-        (f for f in folders if f.id == wanted or (f.role and f.role.value == wanted)),
-        None,
-    )
+    current = find_folder(folders, wanted)
     if current is None:
         return error_page(request, 404, f"The account has no folder {wanted}.")
     search, fields, problem = _search(request)

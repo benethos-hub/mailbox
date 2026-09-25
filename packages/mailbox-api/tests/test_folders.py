@@ -4,18 +4,27 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
-from benethos_mailbox_api.data.models import Grant
+from benethos_mailbox_api.config import Settings
+from benethos_mailbox_api.data.models import (
+    Folder,
+    FolderRole,
+    Grant,
+    Message,
+    ProviderType,
+)
 from benethos_mailbox_api.data.providers.imap import mappers
+from benethos_mailbox_api.data.providers.memory import MemoryProvider
 from benethos_mailbox_api.data.providers.protocols.imap import ImapServer, ImapSession
 from benethos_mailbox_api.errors import (
     BadRequestError,
     ConflictError,
     NotFoundError,
 )
-from benethos_mailbox_api.main import Services
+from benethos_mailbox_api.main import Services, build_services, create_app
 
-from .conftest import bearer_for
+from .conftest import bearer_for, create_account
 from .imap_fake import FakeFolder, FakeMailBox
 from .test_imap import provider, server  # noqa: F401 - the fixture
 
@@ -119,6 +128,38 @@ def test_create_rename_delete(client: TestClient, account_id: str) -> None:
     assert renamed.json()["name"] == "Belege"
     assert client.delete(f"{url}/{folder_id}").status_code == 204
     assert folder_id not in {f["id"] for f in client.get(url).json()}
+
+
+def test_a_role_names_a_folder(messages: list[Message]) -> None:
+    """In place of an id: the parent of a new folder, the target of a move."""
+    adapter = MemoryProvider(
+        folders=[
+            Folder(id="f1", name="Inbox", role=FolderRole.INBOX),
+            Folder(id="f2", name="Archive", role=FolderRole.ARCHIVE),
+        ],
+        messages=messages,
+    )
+    settings = Settings(storage="memory", api_key=SecretStr("k"))
+    services = build_services(settings, provider_factory=lambda *_: adapter)
+    account_id = create_account(services.accounts, ProviderType.MEMORY, "a@x.org").id
+    client = TestClient(
+        create_app(settings, services), headers={"Authorization": "Bearer k"}
+    )
+    url = f"/v1/accounts/{account_id}"
+    created = client.post(
+        f"{url}/folders", json={"name": "2026", "parent_id": "archive"}
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["parent_id"] == "f2"
+    one = client.patch(f"{url}/messages/m1", json={"folder_ids": ["archive"]})
+    assert one.status_code == 200, one.text
+    assert one.json()["folder_ids"] == ["f2"]
+    batch = {"ids": ["m0"], "action": "update", "changes": {"folder_ids": ["archive"]}}
+    moved = client.post(f"{url}/messages/batch", json=batch).json()["results"][0]
+    assert moved["message"]["folder_ids"] == ["f2"]
+    missing = client.patch(f"{url}/messages/m2", json={"folder_ids": ["junk"]})
+    assert missing.status_code == 404
+    assert "no junk folder" in missing.json()["error"]["message"]
 
 
 def test_folders_with_a_role_stay(client: TestClient, account_id: str) -> None:

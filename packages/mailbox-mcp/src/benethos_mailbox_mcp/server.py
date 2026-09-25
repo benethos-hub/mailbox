@@ -231,19 +231,7 @@ def _result(text: str, images: list[tuple[bytes, str]] | None = None) -> CallToo
 
 # --- writing ------------------------------------------------------------------------
 
-# Folder roles a tool takes in place of a folder id.
-ROLES = frozenset({"inbox", "sent", "drafts", "trash", "junk", "archive"})
 MAX_BATCH = 100
-
-
-async def _folder_id(account_id: str, folder: str) -> str:
-    """A folder id, or the id of the account's folder with that role."""
-    if folder not in ROLES:
-        return folder
-    for found in await client().list_folders(account_id):
-        if found.get("role") == folder:
-            return str(found["id"])
-    raise ToolError(f"account {account_id} has no {folder} folder")
 
 
 async def update_messages(
@@ -273,7 +261,7 @@ async def update_messages(
             if value is not None
         }
         if move_to is not None:
-            changes["folder_ids"] = [await _folder_id(account_id, move_to)]
+            changes["folder_ids"] = [move_to]
         if not changes:
             raise ToolError("nothing to change: give unread, starred, move_to or trash")
         body = {"ids": message_ids, "action": "update", "changes": changes}
@@ -298,8 +286,7 @@ async def create_folder(
 ) -> dict[str, Any]:
     """Create a folder in an account. Answers its id, which update_messages
     takes as move_to."""
-    parent_id = await _folder_id(account_id, parent) if parent is not None else None
-    folder = await client().create_folder(account_id, name, parent_id)
+    folder = await client().create_folder(account_id, name, parent)
     return {"id": folder["id"], "name": folder["name"]}
 
 

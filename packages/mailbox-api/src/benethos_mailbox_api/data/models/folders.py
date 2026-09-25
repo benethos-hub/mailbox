@@ -43,7 +43,11 @@ FOLDER_NAME_PATTERN = r"^[^\x00-\x1f\x7f*%]{1,200}$"
 class FolderCreate(BaseModel):
     name: str = Field(pattern=FOLDER_NAME_PATTERN)
     parent_id: str | None = Field(
-        default=None, description="The folder to create it in. Left out: the top."
+        default=None,
+        description=(
+            "The folder to create it in, by id or by a role such as `inbox`. "
+            "Left out: the top."
+        ),
     )
 
 

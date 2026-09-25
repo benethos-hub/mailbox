@@ -141,8 +141,9 @@ class MessageUpdate(BaseModel):
         min_length=1,
         max_length=20,
         description=(
-            "The folders the message is to be in. A change moves it; the id "
-            "stays. An IMAP message is in exactly one folder."
+            "The folders the message is to be in, by id or by a role such as "
+            "`archive`. A change moves it; the id stays. An IMAP message is "
+            "in exactly one folder."
         ),
     )
 

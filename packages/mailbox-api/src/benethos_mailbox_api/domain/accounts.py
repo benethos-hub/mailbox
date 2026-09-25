@@ -48,11 +48,14 @@ class AccountService:
         # connection: the service must not be pointed into its own network.
         self._check_host = check_host
 
-    def list(self, access: Access) -> builtins.list[Account]:
+    def list(self, access: Access, *, may: str | None = None) -> builtins.list[Account]:
+        """The accounts the caller may list; with ``may``, those it may do
+        that operation on as well."""
         return [
             self._with_credentials(account)
             for account in self._repository.list()
             if access.allows("list_accounts", account.id)
+            and (may is None or access.allows(may, account.id))
         ]
 
     def get(self, access: Access, account_id: str) -> Account:

@@ -1,22 +1,20 @@
 """Drafts: the list, and one draft in the mail form to save, send or
 delete.
 
-A draft is replaced as a whole. Its attachments go in again, less those
-ticked to drop, and a reply or forward keeps its link to the original
-with ``quote: false``: the text holds the quote already. A draft sent
+A draft is replaced as a whole. Its attachments stay, less those ticked
+to drop, and a reply or forward keeps its link to the original with
+``quote: false``: the text holds the quote already. A draft sent
 unchanged is not replaced at all.
 """
 
 from __future__ import annotations
 
-import base64
 from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
-from ....data.models import DraftMessage, Message, OutgoingAttachment
-from ....domain.access import Access
+from ....data.models import DraftMessage, Message
 from ....errors import MailboxApiError
 from ...services import get_mailbox
 from ..deps import Actor, Viewer, account_of
@@ -96,26 +94,10 @@ def _unchanged(form: Any, stored: Message) -> bool:
     return same and not uploads(form) and not form.getlist("drop")
 
 
-async def _kept_attachments(
-    request: Request, caller: Access, account_id: str, stored: Message, form: Any
-) -> list[OutgoingAttachment]:
-    """The draft's attachments that stay."""
+def _kept(stored: Message, form: Any) -> list[str]:
+    """The ids of the draft's attachments that stay."""
     dropped = set(form.getlist("drop"))
-    kept = []
-    for attachment in stored.attachments:
-        if attachment.id in dropped:
-            continue
-        content = await get_mailbox(request).get_attachment(
-            caller, account_id, stored.id, attachment.id
-        )
-        kept.append(
-            OutgoingAttachment(
-                filename=attachment.filename or attachment.id,
-                content_type=attachment.content_type,
-                data=base64.b64encode(content.data),
-            )
-        )
-    return kept
+    return [a.id for a in stored.attachments if a.id not in dropped]
 
 
 @router.post("/accounts/{account_id}/drafts/{draft_id}")
@@ -140,12 +122,12 @@ async def draft_submit(
                 fields["reference"] = stored.reference.model_copy(
                     update={"quote": False}
                 )
-            fields["attachments"] = [
-                *await _kept_attachments(request, caller, account_id, stored, form),
-                *fields["attachments"],
-            ]
             await mailbox.update_draft(
-                caller, account_id, draft_id, build(DraftMessage, fields)
+                caller,
+                account_id,
+                draft_id,
+                build(DraftMessage, fields),
+                keep_attachments=_kept(stored, form),
             )
         if doing != "send":
             return back(here, "Draft saved.")

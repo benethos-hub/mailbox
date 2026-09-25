@@ -75,10 +75,13 @@ async def test_marks_and_reports_each_id(make_client: Callable) -> None:
 
 
 async def test_move_by_role(make_client: Callable) -> None:
+    """The API resolves roles: the server passes one on and asks for no
+    folders."""
     handler = api({"results": [{"id": "msg_1", "ok": True}]})
     make_client(handler)
     await server.update_messages("acc_1", ["msg_1"], move_to="archive")
-    assert posted(handler)[0][1]["changes"] == {"folder_ids": ["fld_archive"]}
+    assert [method for method, _, _ in handler.calls] == ["POST"]
+    assert posted(handler)[0][1]["changes"] == {"folder_ids": ["archive"]}
 
 
 async def test_move_by_id_asks_for_no_folders(make_client: Callable) -> None:
@@ -90,7 +93,11 @@ async def test_move_by_id_asks_for_no_folders(make_client: Callable) -> None:
 
 
 async def test_a_role_the_account_lacks(make_client: Callable) -> None:
-    make_client(api())
+    def refuse(request: httpx.Request) -> httpx.Response:
+        error = {"code": "not_found", "message": "the account has no junk folder"}
+        return httpx.Response(404, json={"error": error})
+
+    make_client(refuse)
     with pytest.raises(ToolError, match="has no junk folder"):
         await server.update_messages("acc_1", ["msg_1"], move_to="junk")
 
@@ -134,7 +141,7 @@ async def test_create_folder_below_a_role(make_client: Callable) -> None:
     handler = api({"id": "fld_new", "name": "2026"})
     make_client(handler)
     await server.create_folder("acc_1", "2026", parent="archive")
-    assert posted(handler)[0][1] == {"name": "2026", "parent_id": "fld_archive"}
+    assert posted(handler)[0][1] == {"name": "2026", "parent_id": "archive"}
 
 
 # --- registration ---------------------------------------------------------------------

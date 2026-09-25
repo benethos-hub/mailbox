@@ -7,6 +7,7 @@ callers keep using the mailbox service.
 
 from __future__ import annotations
 
+import base64
 import logging
 from collections.abc import Callable
 from datetime import datetime
@@ -22,6 +23,7 @@ from ..data.models import (
     MessageReference,
     MessageSummary,
     MessageUpdate,
+    OutgoingAttachment,
     OutgoingMessage,
     Page,
     Recipient,
@@ -131,6 +133,14 @@ class Outgoing:
         """The audit of sends from an account, newest first."""
         return self._sends.list_sends(access, account_id, limit=limit, cursor=cursor)
 
+    def list_all_sends(
+        self, access: Access, *, per_account: int, limit: int
+    ) -> list[SendRecord]:
+        """The latest sends of every account the caller may audit."""
+        return self._sends.list_all_sends(
+            access, self._calls.ids(), per_account=per_account, limit=limit
+        )
+
     # --- composing ------------------------------------------------------------------
 
     async def _compose(
@@ -235,17 +245,41 @@ class Outgoing:
         return await self._calls.published_one(account_id, saved)
 
     async def update_draft(
-        self, access: Access, account_id: str, draft_id: str, draft: DraftMessage
+        self,
+        access: Access,
+        account_id: str,
+        draft_id: str,
+        draft: DraftMessage,
+        *,
+        keep_attachments: list[str] | None = None,
     ) -> MessageSummary:
         """Replace a draft. It keeps its id, though the provider stores a
-        new message and removes the old one."""
+        new message and removes the old one. ``keep_attachments``: ids of
+        attachments of the stored draft that go into the new one, before
+        those the draft brings."""
         _require(access, "update_draft", account_id, draft)
+        if keep_attachments:
+            kept = [
+                await self._kept_attachment(account_id, draft_id, attachment_id)
+                for attachment_id in keep_attachments
+            ]
+            draft = draft.model_copy(update={"attachments": kept + draft.attachments})
         raw, _, _, _ = await self._compose(account_id, draft, draft=True)
         saved = await self._calls.on_message(
             account_id, draft_id, lambda p, native: p.save_draft(raw, native)
         )
         self._calls.relocate(account_id, draft_id, saved)
         return await self._calls.published_one(account_id, saved)
+
+    async def _kept_attachment(
+        self, account_id: str, draft_id: str, attachment_id: str
+    ) -> OutgoingAttachment:
+        found = await self._calls.attachment(account_id, draft_id, attachment_id)
+        return OutgoingAttachment(
+            filename=found.filename or attachment_id,
+            content_type=found.content_type,
+            data=base64.b64encode(found.data),
+        )
 
     async def send_draft(
         self,

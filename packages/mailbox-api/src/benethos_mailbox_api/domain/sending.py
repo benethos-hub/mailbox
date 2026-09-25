@@ -125,6 +125,18 @@ class SendControl:
             retry_after=max(1, math.ceil((free_at - now).total_seconds())),
         )
 
+    def list_all_sends(
+        self, access: Access, account_ids: list[str], *, per_account: int, limit: int
+    ) -> list[SendRecord]:
+        """The latest sends of every account the caller may audit, merged
+        newest first: the newest ``per_account`` of each, ``limit`` in all."""
+        records: list[SendRecord] = []
+        for account_id in account_ids:
+            if access.allows("list_sends", account_id):
+                records += self._store.list(account_id, limit=per_account, before=None)
+        records.sort(key=lambda record: (record.created_at, record.id), reverse=True)
+        return records[:limit]
+
     def list_sends(
         self, access: Access, account_id: str, *, limit: int, cursor: str | None
     ) -> Page[SendRecord]:

@@ -69,6 +69,9 @@ stored data and the configuration may change without notice.
 
 ### Added
 
+- `folder_ids` of a message update and `parent_id` of a new folder take a
+  role such as `archive` in place of a folder id, as `folder` of
+  `list_messages` does.
 - A token carries its `state`: `active`, `expired` or `revoked`.
 - Each release publishes both packages to PyPI and both container images
   to `ghcr.io`, for `linux/amd64` and `linux/arm64`, under the same
