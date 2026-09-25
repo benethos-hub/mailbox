@@ -964,7 +964,7 @@ As stored:
   "name": "Claude Desktop",
   "roles": [],
   "grants": [
-    {"accounts": ["acc_gmx"], "allow": ["accounts.read", "mail.read", "mail.write", "drafts"]}
+    {"accounts": ["acc_gmx"], "allow": ["mail.read", "mail.write", "drafts"]}
   ],
   "disabled": false
 }
@@ -1113,9 +1113,15 @@ right `list_sends` (group `audit`).
 
 #### And the MCP server
 
-- It is a user of its own, typically with `accounts.read`,
-  `mail.read`, `mail.write` and `drafts` on chosen accounts. It never gets
-  `accounts.manage` or `users.manage`.
+- It is a user of its own, typically with `mail.read`, `mail.write` and
+  `drafts` on chosen accounts. It never gets `accounts.manage` or
+  `users.manage`.
+- It needs no `accounts.read`. Every token may call `/v1/me`. That answer
+  lists each account the token has any right on, with its address and the
+  operations allowed there. The tool `list_accounts` is built on it.
+  `accounts.read` opens the full account records instead: the server
+  settings, the state and which credentials are stored. The model does not
+  need them.
 - At start it calls `/v1/me` and registers **only the tools its user can
   use**. The user's rights decide what is offered to the model.
 
