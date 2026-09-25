@@ -43,11 +43,14 @@
   </div>
   <div class="field">
     <span class="label">Rights</span>
+    {% for caption, names in groups %}
+    <span class="hint">{{ caption }}</span>
     <div class="checks">
-      {% for group in groups %}
+      {% for group in names %}
       <label class="check" title="{{ group_ops[group] }}"><input type="checkbox" name="g{{ i }}_allow" value="{{ group }}"{% if group in row.groups %} checked{% endif %} /> {{ group }}</label>
       {% endfor %}
     </div>
+    {% endfor %}
   </div>
   <div class="form-grid">
     <div class="field">
