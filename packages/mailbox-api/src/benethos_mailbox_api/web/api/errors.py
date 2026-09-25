@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from http import HTTPStatus
 from typing import Any
 
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
@@ -80,9 +81,22 @@ def api_error(exc: MailboxApiError) -> JSONResponse:
 def http_error(exc: HTTPException) -> JSONResponse:
     """Framework errors (auth, unknown route) in the same envelope, so a
     client parses one error shape. Request validation keeps FastAPI's 422
-    format, which the schema documents on its own."""
+    format, which the schema documents on its own (``validation_error``)."""
     code = HTTPStatus(exc.status_code).phrase.lower().replace(" ", "_")
     return error_response(exc.status_code, code, str(exc.detail), exc.headers)
+
+
+def validation_error(exc: RequestValidationError) -> JSONResponse:
+    """FastAPI's 422 shape, ``{"detail": [{"type", "loc", "msg"}]}``, without
+    the ``input`` and ``ctx`` fields the default handler adds. Those repeat
+    the request, and a request may carry a password: a body that fails
+    validation must not come back in the answer, where proxies and client
+    logs keep it."""
+    detail = [
+        {"type": error["type"], "loc": list(error["loc"]), "msg": error["msg"]}
+        for error in exc.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": detail})
 
 
 def error_response(

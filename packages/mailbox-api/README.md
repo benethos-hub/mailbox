@@ -88,7 +88,7 @@ A template for the settings file with every option:
 | `MAILBOX_API_SYNC_INTERVAL` | `300` | seconds between two polls of every folder; `0` switches the sync off |
 | `MAILBOX_API_SYNC_IDLE` | `true` | watch the inbox over IMAP IDLE, with a second connection per account |
 | `MAILBOX_API_DISCOVERY_ISPDB` | `true` | whether autodiscovery asks Thunderbird's ISPDB (tells Mozilla the domain) |
-| `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS` | `[]` | JSON list of hosts autodiscovery may reach on private addresses |
+| `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS` | `[]` | JSON list of hosts that may resolve to private addresses, e.g. an internal mail server: autodiscovery may look them up and accounts may use them |
 | `MAILBOX_API_OAUTH_MICROSOFT_CLIENT_ID` | | the Entra app for Microsoft accounts; without it they cannot be connected |
 | `MAILBOX_API_OAUTH_MICROSOFT_CLIENT_SECRET` | | its client secret, or better: |
 | `MAILBOX_API_OAUTH_MICROSOFT_CLIENT_SECRET_FILE` | | a file holding it |

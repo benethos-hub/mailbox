@@ -11,6 +11,19 @@ stored data and the configuration may change without notice.
 
 ### Security
 
+- The hosts in an account's settings (`host`, `smtp_host`) pass the same
+  check as autodiscovery when the account is created or changed, before
+  the first connection: a host that resolves to a private, loopback or
+  link-local address is refused with `400`, unless it is listed in
+  `MAILBOX_API_DISCOVERY_INTERNAL_HOSTS`. Before, anyone who could create
+  or change an account could make the service connect into its own
+  network. A host that does not resolve is refused with `400` as well.
+
+- A request that fails validation (`422`) no longer comes back in the
+  answer: `detail` carries `type`, `loc` and `msg` only, not FastAPI's
+  `input` and `ctx`. Before, a wrong `POST /v1/accounts` returned the
+  provider password it was sent, where proxies and client logs keep it.
+
 - The database file is created readable by its owner alone (`0600`); an
   existing one that others may read is narrowed on start. On POSIX
   systems only.

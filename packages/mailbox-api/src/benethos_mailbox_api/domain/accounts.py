@@ -23,10 +23,20 @@ from ..data.providers import (
 )
 from ..data.secrets import CredentialVault
 from ..data.storage import AccountRepository, MessageIndexRepository
-from ..errors import BadRequestError, ProviderAuthError, ProviderUnavailableError
+from ..errors import (
+    BadRequestError,
+    MailboxApiError,
+    ProviderAuthError,
+    ProviderUnavailableError,
+)
 from .access import Access
 
 T = TypeVar("T")
+
+# The address a host resolves to, None when it does not resolve. Raises when
+# the host may not be connected to (CONCEPT 5.8, rule 6). Shared with
+# discovery, so both apply the same rule and the same allow-list.
+HostCheck = Callable[[str, int], Awaitable[str | None]]
 
 # The credential of an OAuth account: its refresh token.
 REFRESH_TOKEN = "refresh_token"
@@ -43,11 +53,15 @@ class AccountService:
         provider_factory: ProviderFactory = build_provider,
         index: MessageIndexRepository | None = None,
         oauth: Mapping[ProviderType, OAuthClient] | None = None,
+        check_host: HostCheck | None = None,
     ) -> None:
         self._repository = repository
         self._vault = vault
         self._provider_factory = provider_factory
         self._index = index
+        # Every host in an account's settings passes this before the first
+        # connection: the service must not be pointed into its own network.
+        self._check_host = check_host
         # The OAuth app of each provider that signs in with OAuth, where the
         # operator registered one.
         self._oauth = dict(oauth or {})
@@ -79,6 +93,7 @@ class AccountService:
         the check instead of a refresh."""
         access.require("create_account")
         _no_secrets_in(settings)
+        await self._check_hosts(settings or {})
         secrets = dict(credentials or {})
         if secrets:
             self._vault.require_ready()
@@ -141,6 +156,8 @@ class AccountService:
         secrets = dict(credentials or {})
         if secrets:
             self._vault.require_ready()
+        if settings:
+            await self._check_hosts(merged)
         if settings or secrets:
 
             def read(field: str) -> SecretStr:
@@ -270,6 +287,27 @@ class AccountService:
 
     def _reader(self, account_id: str) -> CredentialReader:
         return lambda field: self._vault.read(account_id, field)
+
+    async def _check_hosts(self, settings: Mapping[str, object]) -> None:
+        """Refuse settings that point the service at a host it may not
+        connect to, before any adapter is built: ``host``, ``smtp_host`` and
+        any other ``*_host``. Without a check, every host passes."""
+        if self._check_host is None:
+            return
+        for key, value in settings.items():
+            if not (key == "host" or key.endswith("_host")):
+                continue
+            if not isinstance(value, str) or not value:
+                continue
+            port = settings.get(key[: -len("host")] + "port")
+            try:
+                address = await self._check_host(
+                    value, port if isinstance(port, int) else 0
+                )
+            except MailboxApiError as exc:
+                raise BadRequestError(exc.message) from None
+            if address is None:
+                raise BadRequestError(f"{key}: {value} does not resolve")
 
     def _with_credentials(self, account: Account) -> Account:
         """The account as callers see it: which credentials are stored, and

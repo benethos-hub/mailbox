@@ -19,7 +19,7 @@ from fastapi.routing import APIRoute
 from . import __version__, web
 from .config import Settings
 from .data.discovery import SafeFetcher, default_sources, preset_hosts
-from .data.http import ApiClient
+from .data.http import ApiClient, Resolve, host_addresses
 from .data.models import ProviderType
 from .data.providers import (
     App,
@@ -101,7 +101,10 @@ def build_services(
     provider_factory: ProviderFactory = build_provider,
     discovery: DiscoveryService | None = None,
     oauth_clients: Mapping[ProviderType, OAuthClient] | None = None,
+    resolve: Resolve | None = None,
 ) -> Services:
+    """``resolve`` answers DNS for the host check that autodiscovery and the
+    hosts of an account pass (CONCEPT 5.8, rule 6); tests hand in a table."""
     account_repo: AccountRepository
     user_repo: UserRepository
     role_repo: RoleRepository
@@ -136,8 +139,19 @@ def build_services(
     vault = CredentialVault(key_repo, credential_repo, key_provider(settings))
     admin_key = settings.api_key.get_secret_value() if settings.api_key else None
     clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
+    # One guard for every connection the service makes to a host a user
+    # typed: the lookups of autodiscovery and the servers of an account.
+    fetcher = SafeFetcher(
+        resolve=resolve or host_addresses,
+        internal_hosts=settings.discovery_internal_hosts,
+    )
     accounts = AccountService(
-        account_repo, vault, provider_factory, index_repo, oauth=clients
+        account_repo,
+        vault,
+        provider_factory,
+        index_repo,
+        oauth=clients,
+        check_host=fetcher.checked_address,
     )
     sync = SyncService(accounts, index_repo)
     auth = AuthService(user_repo, role_repo, token_repo, admin_key=admin_key)
@@ -148,7 +162,7 @@ def build_services(
         mailbox=MailboxService(
             accounts, sync, Idempotency(idempotency_repo), SendControl(send_repo)
         ),
-        discovery=discovery or build_discovery(settings),
+        discovery=discovery or build_discovery(settings, fetcher),
         sync=sync,
         worker=(
             SyncWorker(
@@ -176,8 +190,7 @@ def build_oauth(settings: Settings) -> dict[ProviderType, OAuthClient]:
     return clients
 
 
-def build_discovery(settings: Settings) -> DiscoveryService:
-    fetcher = SafeFetcher(internal_hosts=settings.discovery_internal_hosts)
+def build_discovery(settings: Settings, fetcher: SafeFetcher) -> DiscoveryService:
     return DiscoveryService(
         default_sources(fetcher, ispdb=settings.discovery_ispdb),
         probe=probe_server,

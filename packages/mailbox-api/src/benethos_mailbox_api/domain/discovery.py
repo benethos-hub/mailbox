@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import time
 from collections import deque
-from collections.abc import Awaitable, Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 
 import anyio
@@ -41,10 +41,10 @@ from ..data.models import (
 from ..data.providers import ServerProbe
 from ..errors import BadRequestError, MailboxApiError, RateLimitedError
 from .access import Access
+from .accounts import HostCheck
 
 # Resolves a host and returns an address to connect to, None when it does
 # not resolve. Raises when the host must not be contacted.
-HostCheck = Callable[[str, int], Awaitable[str | None]]
 Clock = Callable[[], float]
 
 SOURCE_TIMEOUT = 10.0
