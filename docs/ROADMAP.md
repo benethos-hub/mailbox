@@ -112,11 +112,10 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **The MCP server over streamable HTTP, behind a bearer guard, with its
   own container image**, done
 - **Container image and compose file for the service, bound to the loopback
-  address (8.1)**, done: `containers/`, the workflow
-  `.github/workflows/container.yml`. Both images built and run locally
-  for amd64 with the compose file, as `containers/README.md` describes;
-  arm64 and the workflow not yet run: the repository has no GitHub remote
-  so far. Running the workflow is deferred (decided 2026-09-25).
+  address (8.1)**, done: `containers/`. Both images are built and the
+  service smoke-tested by `ci.yml`, and published for amd64 and arm64 with
+  each release by `publish.yml`, beside the PyPI packages (decided
+  2026-09-25). Not yet run on GitHub.
 
 ## Phase 4 – Change feed and webhooks
 

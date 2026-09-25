@@ -44,6 +44,9 @@ stored data and the configuration may change without notice.
 
 ### Added
 
+- Each release publishes both packages to PyPI and both container images
+  to `ghcr.io`, for `linux/amd64` and `linux/arm64`, under the same
+  version.
 - Accounts can connect by OAuth once the operator sets up an app for the
   provider (`MAILBOX_API_OAUTH_MICROSOFT_CLIENT_ID`, `_CLIENT_SECRET` or
   `_CLIENT_SECRET_FILE`, `_TENANT`). `POST /v1/oauth/{provider}/start`

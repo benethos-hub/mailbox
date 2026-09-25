@@ -97,3 +97,127 @@ jobs:
           )
           print(f"OK: {len(fresh['paths'])} paths, same as docs/openapi.json")
           PY
+
+  # Both images are built on every push, so a broken Dockerfile shows up
+  # here and not first in a release.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build both images
+        run: |
+          set -euo pipefail
+          docker build -t benethos-mailbox-api:ci -f containers/benethos-mailbox-api/Dockerfile .
+          docker build -t benethos-mailbox-mcp:ci -f containers/benethos-mailbox-mcp/Dockerfile .
+
+      # The compose file publishes every port on the loopback address only
+      # (CONCEPT 8.1). That is asserted here, so a change cannot drop it
+      # unnoticed. Anyone running it may still publish wider in their own
+      # copy or an override file.
+      - name: Compose is valid and keeps every port on the loopback address
+        working-directory: containers
+        run: |
+          set -euo pipefail
+          mkdir -p secrets && touch secrets/master_key
+          docker compose --profile mcp config -q
+          docker compose --profile mcp config --format json > /tmp/compose.json
+          python3 - <<'PY'
+          import json
+
+          services = json.load(open("/tmp/compose.json"))["services"]
+          assert services, "the compose file defines no services"
+          for name, service in services.items():
+              for port in service.get("ports") or []:
+                  host_ip = port.get("host_ip")
+                  assert host_ip in ("127.0.0.1", "::1"), (
+                      f"{name} publishes port {port.get('published')} on "
+                      f"{host_ip or 'every interface'}, not on the loopback address"
+                  )
+                  print(f"OK: {name} publishes {host_ip}:{port.get('published')}")
+          PY
+
+      # The release publishes linux/arm64 as well; build it here so that an
+      # arm64-only break does not first surface in a release. Nothing is
+      # loaded or pushed.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build the service for arm64 as well
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: containers/benethos-mailbox-api/Dockerfile
+          platforms: linux/arm64
+          push: false
+          cache-from: type=gha,scope=benethos-mailbox-api
+          cache-to: type=gha,mode=max,scope=benethos-mailbox-api
+
+      - name: Build the MCP server for arm64 as well
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: containers/benethos-mailbox-mcp/Dockerfile
+          platforms: linux/arm64
+          push: false
+          cache-from: type=gha,scope=benethos-mailbox-mcp
+          cache-to: type=gha,mode=max,scope=benethos-mailbox-mcp
+
+      # The service starts from its image with a new master key, answers on
+      # /health, keeps running, and its own health check agrees.
+      - name: Smoke test (the service starts and is healthy)
+        run: |
+          set -euo pipefail
+          name=benethos-mailbox-api-ci
+          key=$(mktemp -d)/master_key
+          docker run --rm benethos-mailbox-api:ci keys generate > "$key"
+          chmod 444 "$key"
+
+          # No --rm: a container that crashes stays, so its logs can be read.
+          docker run -d --name "$name" -p 127.0.0.1:8080:8080 --read-only \
+            --tmpfs /tmp -v "$key:/run/secrets/master_key:ro" benethos-mailbox-api:ci
+
+          code=000
+          for _ in $(seq 1 30); do
+            # On a connection failure curl prints 000 and exits non-zero; the
+            # fallback is an assignment outside the substitution.
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/health) || code=000
+            if [ "$code" != "000" ]; then
+              break
+            fi
+            sleep 1
+          done
+
+          status=missing
+          health=missing
+          for _ in $(seq 1 20); do
+            status=$(docker inspect -f '{{.State.Status}}' "$name") || status=missing
+            health=$(docker inspect -f '{{.State.Health.Status}}' "$name") || health=missing
+            if [ "$status" != "running" ] || [ "$health" != "starting" ]; then
+              break
+            fi
+            sleep 3
+          done
+
+          docker logs "$name" || true
+          echo "health endpoint: HTTP $code, container: $status, health check: $health"
+          docker rm -f "$name" > /dev/null || true
+
+          if [ "$code" != "200" ]; then
+            echo "::error::/health answered $code"
+            exit 1
+          fi
+          if [ "$status" != "running" ]; then
+            echo "::error::the container is not running (status: $status)"
+            exit 1
+          fi
+          if [ "$health" != "healthy" ]; then
+            echo "::error::the container health check reports $health"
+            exit 1
+          fi
+
+      - name: Smoke test (the MCP server image starts)
+        run: docker run --rm benethos-mailbox-mcp:ci --version
