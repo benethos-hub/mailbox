@@ -11,6 +11,7 @@ from typing import TypeVar
 from ..common import opaque
 from ..data.models import AccountFailure, MessageSummary
 from ..errors import BadRequestError, MailboxApiError
+from . import paging
 
 T = TypeVar("T")
 
@@ -57,8 +58,8 @@ def encode_cursor(positions: dict[str, Position]) -> str:
 
 
 def decode_cursor(value: str) -> dict[str, Position]:
+    state = paging.decode_cursor(_CURSOR_PREFIX, value)
     try:
-        state = opaque.decode(_CURSOR_PREFIX, value)
         return {
             account_id: Position(folder_id, cursor, int(offset), bool(done))
             for account_id, (folder_id, cursor, offset, done) in state.items()

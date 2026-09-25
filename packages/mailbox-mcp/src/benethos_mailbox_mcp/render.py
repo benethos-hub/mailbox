@@ -12,6 +12,8 @@ import re
 from html.parser import HTMLParser
 from typing import Any
 
+from .client import Folder, Me, MeAccount, Page, Sent
+
 # Content of these elements is never shown by a mail client.
 _INVISIBLE = {"script", "style", "head", "title", "template", "noscript"}
 _BLOCKS = {
@@ -107,12 +109,17 @@ def summary(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def cut(text: str, max_chars: int) -> tuple[str, str | None]:
+    """``text`` up to ``max_chars``, and a note when that cut something."""
+    if len(text) <= max_chars:
+        return text, None
+    return text[:max_chars], f"cut to {max_chars} characters"
+
+
 def message(account_id: str, item: dict[str, Any], max_chars: int) -> str:
     """One message as text: headers, attachments, then the body, cut to
     ``max_chars`` and inside the foreign-content marker."""
-    body = body_text(item)
-    cut = len(body) > max_chars
-    body = body[:max_chars]
+    body, note = cut(body_text(item), max_chars)
     lines = [
         f"id: {item['id']}",
         f"account: {account_id}",
@@ -128,9 +135,69 @@ def message(account_id: str, item: dict[str, Any], max_chars: int) -> str:
             f"attachment: {attachment['id']} {attachment.get('filename') or '-'} "
             f"({attachment.get('content_type')}, {attachment.get('size')} bytes)"
         )
-    if cut:
-        lines.append(f"note: body cut to {max_chars} characters")
+    if note:
+        lines.append(f"note: body {note}")
     return "\n".join(lines) + "\n\n" + foreign(f"{account_id}/{item['id']}", body)
+
+
+def page(found: Page) -> dict[str, Any]:
+    """A page of summaries, with the accounts that did not answer."""
+    result: dict[str, Any] = {
+        "messages": [summary(item) for item in found.items],
+        "next_cursor": found.next_cursor,
+    }
+    if found.not_answering:
+        result["accounts_not_answering"] = found.not_answering
+    return result
+
+
+def folder(found: Folder) -> dict[str, Any]:
+    return {
+        "id": found.id,
+        "name": found.name,
+        "role": found.role,
+        "unread": found.unread,
+        "total": found.total,
+    }
+
+
+def account(found: MeAccount, can: list[str]) -> dict[str, Any]:
+    return {
+        "id": found.id,
+        "email": found.email,
+        "name": found.display_name,
+        "can": can,
+    }
+
+
+def draft(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": item["id"],
+        "date": item.get("date"),
+        "to": ", ".join(address(a) for a in item.get("to", [])) or "-",
+        "subject": item.get("subject"),
+    }
+
+
+def sent(result: Sent) -> dict[str, Any]:
+    found: dict[str, Any] = {
+        "sent": True,
+        "message_id_header": result.message_id_header,
+    }
+    if result.refused:
+        found["refused"] = result.refused
+    return found
+
+
+def warnings_of(me: Me) -> list[str]:
+    """One line per account the token can read mail in and send to any
+    address from: what an injected instruction needs to carry data out."""
+    return [
+        f"{account.email or account.id}: this token can read mail and send it "
+        "to any address; narrow sending with a grant's recipients"
+        for account in me.accounts
+        if "read_and_send_anywhere" in account.warnings
+    ]
 
 
 def foreign(source: str, text: str) -> str:

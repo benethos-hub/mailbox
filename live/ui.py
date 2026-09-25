@@ -320,6 +320,9 @@ def check_writing(
     original = re.search(rf'href="{base}/mail/(msg_[0-9a-f]+)"', inbox)
     if run.check("a message to answer", original is not None):
         assert original is not None
+        # The original may quote a message itself: the draft adds one quote.
+        shown = html.unescape(browser.get(f"{base}/mail/{original.group(1)}").text)
+        quoted_before = shown.count("wrote:")
         reply = browser.post(
             f"{base}/compose",
             data={
@@ -353,7 +356,7 @@ def check_writing(
             "Draft saved." in changed.text
             and "stays linked" in changed.text
             and "Changed: a reply" in changed.text
-            and html.unescape(changed.text).count("wrote:") == 1,
+            and html.unescape(changed.text).count("wrote:") == quoted_before + 1,
         )
         gone = browser.post(
             str(reply.url.path), data={"csrf_token": csrf, "do": "delete"}

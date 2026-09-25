@@ -20,9 +20,6 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Mapping
-from email.parser import BytesHeaderParser
-from email.policy import default
-from email.utils import getaddresses
 from typing import Any
 from urllib.parse import quote, unquote, urlencode, urlsplit
 
@@ -31,12 +28,14 @@ from ....errors import (
     ConflictError,
     MailboxApiError,
     NotFoundError,
+    NotSupportedError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
 )
 from ...http import Answer, ApiClient
-from ...mail import compose
+from ...mail import compose, convert
+from ...mail.parse import ParsedMessage
 from ...models import (
     AttachmentContent,
     Folder,
@@ -48,15 +47,18 @@ from ...models import (
     Page,
     SentMessage,
 )
+from .. import rules
 from ..base import Capability, TokenSource
 from . import mappers
 
 GRAPH = "https://graph.microsoft.com"
 VERSION = "/v1.0"
 # A page of folders or of message ids, as many as Graph hands out at once.
-BATCH = 250
+PAGE_SIZE = 250
 # Requests in one JSON batch, Graph's limit.
 BATCH_SIZE = 20
+# Ids that survive a move (CONCEPT 4.1), asked for on every request.
+IMMUTABLE_IDS = 'IdType="ImmutableId"'
 
 
 class MicrosoftProvider:
@@ -91,7 +93,7 @@ class MicrosoftProvider:
             token = await self._tokens.access_token()
             headers = {
                 "Authorization": f"Bearer {token.get_secret_value()}",
-                "Prefer": 'IdType="ImmutableId"',
+                "Prefer": IMMUTABLE_IDS,
             }
             if content_type:
                 headers["Content-Type"] = content_type
@@ -148,11 +150,11 @@ class MicrosoftProvider:
         for folder_id, found in (await self._folder_roles()).items():
             if found is role:
                 return folder_id
-        raise NotFoundError(f"the mailbox has no {role} folder")
+        raise rules.no_folder(role)
 
     async def list_folders(self) -> list[Folder]:
         roles = await self._folder_roles()
-        params = {"$select": mappers.FOLDER_FIELDS, "$top": str(BATCH)}
+        params = {"$select": mappers.FOLDER_FIELDS, "$top": str(PAGE_SIZE)}
         found: list[Folder] = []
         waiting = await self._all("/me/mailFolders", params)
         while waiting:
@@ -251,7 +253,7 @@ class MicrosoftProvider:
                         "id": str(n),
                         "method": "GET",
                         "url": f"/me/messages?{query}",
-                        "headers": {"Prefer": 'IdType="ImmutableId"'},
+                        "headers": {"Prefer": IMMUTABLE_IDS},
                     }
                 )
             answer = await self._json(
@@ -283,16 +285,11 @@ class MicrosoftProvider:
         found = mappers.message(item, attachments)
         if item.get("isDraft"):
             # What a draft answers lives in its MIME only.
-            headers = BytesHeaderParser(policy=default).parsebytes(
-                await self.get_raw(message_id)
+            thread = convert.thread_fields(
+                ParsedMessage(await self.get_raw(message_id))
             )
             found = found.model_copy(
-                update={
-                    "reference": compose.read_reference(
-                        headers.get(compose.REFERENCE_HEADER)
-                    ),
-                    "in_reply_to": headers.get("In-Reply-To"),
-                }
+                update={k: thread[k] for k in ("reference", "in_reply_to")}
             )
         return found
 
@@ -307,11 +304,7 @@ class MicrosoftProvider:
             if content
             else (await self._call("GET", f"{path}/$value")).body
         )
-        return AttachmentContent(
-            filename=item.get("name") or None,
-            content_type=item.get("contentType") or "application/octet-stream",
-            data=data,
-        )
+        return mappers.attachment_content(item, data)
 
     async def get_raw(self, message_id: str) -> bytes:
         return (await self._call("GET", f"/me/messages/{_id(message_id)}/$value")).body
@@ -324,7 +317,7 @@ class MicrosoftProvider:
         await self._call(
             "POST",
             "/me/sendMail",
-            content=base64.b64encode(_with_bcc(raw, recipients)),
+            content=base64.b64encode(compose.with_bcc(raw, recipients)),
             content_type="text/plain",
         )
         return SentMessage()
@@ -376,58 +369,49 @@ class MicrosoftProvider:
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxApiError]:
         body = mappers.changes(changes.unread, changes.starred, changes.keywords)
-        target = changes.folder_ids[0] if changes.folder_ids else None
-        results: dict[str, MessageSummary | MailboxApiError] = {}
-        for message_id in message_ids:
+        target = rules.move_target(changes, self.capabilities)
+
+        async def one(message_id: str) -> MessageSummary:
             path = f"/me/messages/{_id(message_id)}"
-            try:
-                item = None
-                if body:
-                    item = await self._json("PATCH", path, json_body=body)
-                if target is not None:
-                    item = await self._json(
-                        "POST", f"{path}/move", json_body={"destinationId": target}
-                    )
-                if item is None:
-                    item = await self._json(
-                        "GET", path, params={"$select": mappers.SUMMARY_FIELDS}
-                    )
-                results[message_id] = mappers.summary(item)
-            except (ProviderAuthError, ProviderUnavailableError):
-                raise
-            except MailboxApiError as exc:
-                results[message_id] = exc
-        return results
+            item = None
+            if body:
+                item = await self._json("PATCH", path, json_body=body)
+            if target is not None:
+                item = await self._json(
+                    "POST", f"{path}/move", json_body={"destinationId": target}
+                )
+            if item is None:
+                item = await self._json(
+                    "GET", path, params={"$select": mappers.SUMMARY_FIELDS}
+                )
+            return mappers.summary(item)
+
+        return await rules.per_id(message_ids, one)
 
     async def delete_messages(
         self, message_ids: list[str], permanent: bool
     ) -> dict[str, MessageSummary | None | MailboxApiError]:
-        trash = None if permanent else await self._role_id(FolderRole.TRASH)
-        results: dict[str, MessageSummary | None | MailboxApiError] = {}
-        for message_id in message_ids:
-            path = f"/me/messages/{_id(message_id)}"
+        trash = None
+        if not permanent:
             try:
-                if trash is None:
-                    await self._call("DELETE", path)
-                    results[message_id] = None
-                    continue
-                where = await self._json(
-                    "GET", path, params={"$select": "parentFolderId"}
-                )
-                if where.get("parentFolderId") == trash:
-                    raise ConflictError(
-                        "the message is in the trash already: delete with "
-                        "permanent=true"
-                    )
-                item = await self._json(
-                    "POST", f"{path}/move", json_body={"destinationId": trash}
-                )
-                results[message_id] = mappers.summary(item)
-            except (ProviderAuthError, ProviderUnavailableError):
-                raise
-            except MailboxApiError as exc:
-                results[message_id] = exc
-        return results
+                trash = await self._role_id(FolderRole.TRASH)
+            except ConflictError as exc:
+                return dict.fromkeys(message_ids, exc)
+
+        async def one(message_id: str) -> MessageSummary | None:
+            path = f"/me/messages/{_id(message_id)}"
+            if trash is None:
+                await self._call("DELETE", path)
+                return None
+            where = await self._json("GET", path, params={"$select": "parentFolderId"})
+            if where.get("parentFolderId") == trash:
+                raise rules.in_trash_already()
+            item = await self._json(
+                "POST", f"{path}/move", json_body={"destinationId": trash}
+            )
+            return mappers.summary(item)
+
+        return await rules.per_id(message_ids, one)
 
     # --- for the sync worker ------------------------------------------------------
     # Ids are stable: the domain keeps no id mapping for this provider, so
@@ -439,7 +423,7 @@ class MicrosoftProvider:
     async def folder_contents(self, folder_id: str) -> list[str]:
         items = await self._all(
             f"/me/mailFolders/{_id(folder_id)}/messages",
-            {"$select": "id", "$top": str(BATCH)},
+            {"$select": "id", "$top": str(PAGE_SIZE)},
         )
         return [str(item["id"]) for item in items]
 
@@ -460,7 +444,7 @@ class MicrosoftProvider:
     async def wait_for_change(self, timeout: float) -> bool:
         """No push yet: Graph's change notifications need a public endpoint
         (CONCEPT 5.4)."""
-        return False
+        raise NotSupportedError("Microsoft accounts are polled, not pushed")
 
     async def verify(self) -> None:
         self._roles = None
@@ -487,22 +471,6 @@ def _own_path(link: str) -> str:
     if not rest.startswith("/me/") or ".." in rest:
         raise BadRequestError("invalid cursor")
     return f"{rest}?{parts.query}" if parts.query else rest
-
-
-def _with_bcc(raw: bytes, recipients: list[str]) -> bytes:
-    """``raw`` with a Bcc header for the recipients no header names."""
-    head, separator, body = raw.partition(b"\r\n\r\n")
-    headers = BytesHeaderParser(policy=default).parsebytes(head + separator)
-    named = {
-        address.lower()
-        for _, address in getaddresses(
-            [str(v) for n in ("To", "Cc", "Bcc") for v in headers.get_all(n, [])]
-        )
-    }
-    hidden = [r for r in recipients if r.lower() not in named]
-    if not hidden:
-        return raw
-    return head + b"\r\nBcc: " + ", ".join(hidden).encode() + separator + body
 
 
 def _failure(answer: Answer) -> MailboxApiError:

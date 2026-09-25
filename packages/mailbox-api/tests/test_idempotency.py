@@ -28,7 +28,7 @@ BODY = {"to": [{"email": "you@example.com"}], "subject": "Once", "text": "Hallo"
 
 
 def outbox(services: Services, account_id: str) -> list[object]:
-    provider = services.accounts.provider(account_id)
+    provider = services.adapters.get(account_id)
     assert isinstance(provider, MemoryProvider)
     return list(provider.outbox)
 

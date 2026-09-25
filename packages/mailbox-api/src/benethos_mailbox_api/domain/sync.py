@@ -16,10 +16,10 @@ from dataclasses import replace
 from typing import TypeVar
 
 from ..common.ids import new_id
-from ..data.providers import Capability
+from ..data.providers import Capability, MailProvider
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ..errors import MailboxApiError, NotFoundError
-from .accounts import AccountService
+from .adapters import Adapters
 
 T = TypeVar("T")
 
@@ -31,19 +31,18 @@ def new_message_id() -> str:
 class SyncService:
     def __init__(
         self,
-        accounts: AccountService,
+        adapters: Adapters,
         index: MessageIndexRepository,
         new_id: Callable[[], str] = new_message_id,
     ) -> None:
-        self._accounts = accounts
+        self._adapters = adapters
         self._index = index
         self._new_id = new_id
         self._locks: dict[str, asyncio.Lock] = {}
 
     def mapped(self, account_id: str) -> bool:
         """Whether the account's ids go through the index."""
-        provider = self._accounts.provider(account_id)
-        return Capability.STABLE_IDS not in provider.capabilities
+        return Capability.STABLE_IDS not in self._adapters.capabilities(account_id)
 
     # --- ids ------------------------------------------------------------------------
 
@@ -106,15 +105,19 @@ class SyncService:
         if self.mapped(account_id):
             self._index.drop(account_id, message_id)
 
+    async def _contents(self, account_id: str, folder_id: str) -> list[str]:
+        return await self._adapters.call(
+            account_id, lambda p: p.folder_contents(folder_id)
+        )
+
     async def _headers(
         self, account_id: str, natives: list[str]
     ) -> dict[str, str | None]:
         """Best effort: without the headers the listing still works, the next
         sync reads them."""
-        provider = self._accounts.provider(account_id)
         try:
-            return await self._accounts.observe(
-                account_id, provider.message_headers(natives)
+            return await self._adapters.call(
+                account_id, lambda p: p.message_headers(natives)
             )
         except MailboxApiError:
             return {}
@@ -148,12 +151,10 @@ class SyncService:
             await self._sync(account_id)
 
     async def _sync(self, account_id: str) -> None:
-        provider = self._accounts.provider(account_id)
+        async def call(operation: Callable[[MailProvider], Awaitable[T]]) -> T:
+            return await self._adapters.call(account_id, operation)
 
-        def observe(operation: Awaitable[T]) -> Awaitable[T]:
-            return self._accounts.observe(account_id, operation)
-
-        states = await observe(provider.folder_states())
+        states = await call(lambda p: p.folder_states())
         before = self._index.folder_states(account_id)
         changed = [f for f, state in states.items() if before.get(f) != state]
         vanished = [f for f in before if f not in states]
@@ -162,7 +163,7 @@ class SyncService:
 
         present: dict[str, str] = {}  # provider id -> folder
         for folder_id in changed:
-            for native in await observe(provider.folder_contents(folder_id)):
+            for native in await self._contents(account_id, folder_id):
                 present[native] = folder_id
         entries = self._index.in_folders(account_id, changed + vanished)
         indexed = {e.native_id for e in entries}
@@ -172,7 +173,7 @@ class SyncService:
             e.native_id for e in entries if e.header is None and e.native_id in present
         ]
         wanted = arrived + unread_headers
-        headers = await observe(provider.message_headers(wanted)) if wanted else {}
+        headers = await call(lambda p: p.message_headers(wanted)) if wanted else {}
 
         changes = IndexChanges(states=states)
         for entry in entries:

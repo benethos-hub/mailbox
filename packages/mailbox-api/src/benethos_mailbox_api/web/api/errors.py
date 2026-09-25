@@ -1,7 +1,5 @@
-"""Domain errors to HTTP responses, and the one error envelope.
-
-The only place that knows which error becomes which status code.
-"""
+"""Domain errors as the API answers them: the status (``web.errors``) and
+the one error envelope."""
 
 from __future__ import annotations
 
@@ -13,38 +11,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from ...errors import (
-    BadRequestError,
-    ConflictError,
-    CredentialError,
-    ForbiddenError,
-    MailboxApiError,
-    NotFoundError,
-    NotSupportedError,
-    ProviderAuthError,
-    ProviderError,
-    ProviderUnavailableError,
-    RateLimitedError,
-    SetupRequiredError,
-    UnauthorizedError,
-)
+from ...errors import MailboxApiError, RateLimitedError
+from ..errors import status_of
 from .schemas import ErrorResponse
-
-# Most specific first: the first matching class decides.
-STATUS: list[tuple[type[MailboxApiError], int]] = [
-    (BadRequestError, 400),
-    (UnauthorizedError, 401),
-    (ForbiddenError, 403),
-    (NotFoundError, 404),
-    (ConflictError, 409),
-    (RateLimitedError, 429),
-    (NotSupportedError, 501),
-    (ProviderAuthError, 502),
-    (ProviderUnavailableError, 502),
-    (ProviderError, 502),
-    (CredentialError, 500),
-    (SetupRequiredError, 503),
-]
 
 # Documented on every protected route, so generated clients know the shape.
 DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
@@ -58,13 +27,6 @@ DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
         503: "No user and no admin key exist yet",
     }.items()
 }
-
-
-def status_of(error: MailboxApiError) -> int:
-    for cls, status in STATUS:
-        if isinstance(error, cls):
-            return status
-    return 500
 
 
 def api_error(exc: MailboxApiError) -> JSONResponse:

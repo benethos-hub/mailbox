@@ -30,8 +30,9 @@ from ...data.models import (
 )
 from ...domain.access import Access
 from ...errors import MailboxApiError
-from ..api.errors import status_of
+from ..errors import status_of
 from ..services import get_mailbox
+from .forms import FormError, first_problem
 from .templates import render
 
 ACTIONS = ("reply", "reply_all", "forward")
@@ -39,7 +40,7 @@ ADDRESS_FIELDS = ("to", "cc", "bcc")
 TEXT_FIELDS = ("subject", "text", "html")
 
 
-class ComposeError(ValueError):
+class ComposeError(FormError):
     """What the form holds is not a message yet."""
 
 
@@ -107,10 +108,7 @@ def build(model: type[DraftMessage], fields: dict[str, Any]) -> Any:
     try:
         return model(**fields)
     except ValidationError as exc:
-        problem = exc.errors()[0]
-        where = ".".join(str(p) for p in problem["loc"])
-        reason = str(problem["msg"]).removeprefix("Value error, ")
-        raise ComposeError(f"{where}: {reason}" if where else reason) from None
+        raise ComposeError(first_problem(exc)) from None
 
 
 def sent_text(result: SendResult) -> str:
@@ -185,7 +183,7 @@ async def show_again(
         draft_id=draft_id,
         original=original,
         stored=stored,
-        error=exc.message if isinstance(exc, MailboxApiError) else str(exc),
+        error=exc.message,
         status_code=status_of(exc) if isinstance(exc, MailboxApiError) else 400,
     )
 

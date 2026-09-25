@@ -28,6 +28,7 @@ from benethos_mailbox_api.data.storage import (
 from benethos_mailbox_api.errors import (
     ConflictError,
     CredentialError,
+    CredentialMissingError,
     SetupRequiredError,
 )
 from benethos_mailbox_api.main import build_services, key_provider
@@ -89,7 +90,7 @@ def test_recovery_key_round_trip() -> None:
 
 @pytest.mark.parametrize("text", ["not base32!", "ABCD-EFGH"])
 def test_recovery_key_rejects_garbage(text: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyProviderError, match="not a recovery key"):
         decode_recovery(text)
 
 
@@ -142,7 +143,7 @@ def test_key_provider_from_settings(tmp_path: Path) -> None:
         FileKeyProvider,
     )
     assert isinstance(key_provider(Settings(key_provider="env")), EnvKeyProvider)
-    with pytest.raises(ValueError, match="KEY_FILE"):
+    with pytest.raises(KeyProviderError, match="KEY_FILE"):
         key_provider(Settings(key_provider="file"))
 
 
@@ -160,7 +161,7 @@ def test_vault_round_trip() -> None:
     assert [i.field for i in v.info("acc_1")] == ["password"]
     v.delete("acc_1")
     assert v.info("acc_1") == []
-    with pytest.raises(CredentialError, match="has no password"):
+    with pytest.raises(CredentialMissingError, match="has no password"):
         v.read("acc_1", "password")
 
 

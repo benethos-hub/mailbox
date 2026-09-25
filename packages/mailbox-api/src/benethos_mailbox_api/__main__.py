@@ -108,14 +108,11 @@ def _run(args: argparse.Namespace) -> int:
 
 
 def _create_admin(name: str) -> None:
-    from .main import build_services
+    from .main import opened
 
     settings = Settings()
-    services = build_services(settings)
-    try:
+    with opened(settings) as services:
         user, token = services.users.create_admin(name)
-    finally:
-        services.close()
     print(
         f"Created user {user.id} ({user.name}) with every right in "
         f"{settings.database_path}. Its token is shown this once:",
@@ -130,10 +127,9 @@ def _keys(command: str) -> None:
 
         print(encode_recovery(cipher.new_key()))
         return
-    from .main import build_services
+    from .main import opened
 
-    services = build_services(Settings())
-    try:
+    with opened(Settings()) as services:
         if command == "init":
             recovery = services.vault.initialize()
             print(
@@ -146,13 +142,11 @@ def _keys(command: str) -> None:
         else:
             services.vault.import_master_key(_read_recovery_key())
             print("Master key stored.", file=sys.stderr)
-    finally:
-        services.close()
 
 
 def _backup(target: list[str], recovery_key: bool) -> None:
     from .data.secrets.backup import create_backup, read_backup
-    from .main import build_services
+    from .main import opened
 
     if target[0] == "verify" and len(target) == 2:
         master = _read_recovery_key() if recovery_key else _master_key()
@@ -168,8 +162,7 @@ def _backup(target: list[str], recovery_key: bool) -> None:
     settings = Settings()
     if settings.storage != "sqlite":
         raise _UsageError("backups need MAILBOX_API_STORAGE=sqlite")
-    services = build_services(settings)
-    try:
+    with opened(settings) as services:
         assert services.database is not None
         manifest = create_backup(
             services.database,
@@ -177,8 +170,6 @@ def _backup(target: list[str], recovery_key: bool) -> None:
             Path(target[0]),
             __version__,
         )
-    finally:
-        services.close()
     print(
         f"Backup written: schema {manifest.schema_version}, {manifest.created_at}. "
         "It opens only with this master key or the recovery key.",
@@ -188,18 +179,14 @@ def _backup(target: list[str], recovery_key: bool) -> None:
 
 def _restore(source: Path, recovery_key: bool) -> None:
     from .data.secrets.backup import restore_backup
-    from .main import build_services, key_provider
+    from .main import key_provider, opened
 
     settings = Settings()
     master = _read_recovery_key() if recovery_key else _master_key()
     manifest = restore_backup(source, master, settings.database_path)
-    if recovery_key:
-        if key_provider(settings).load() != master:
-            services = build_services(settings)
-            try:
-                services.vault.import_master_key(master)
-            finally:
-                services.close()
+    if recovery_key and key_provider(settings).load() != master:
+        with opened(settings) as services:
+            services.vault.import_master_key(master)
     print(
         f"Restored the backup of {manifest.created_at}. The previous database "
         "was kept beside it. Accounts whose OAuth tokens changed since then "
@@ -236,11 +223,22 @@ class _UsageError(Exception):
 
 
 def _expected() -> tuple[type[BaseException], ...]:
+    """What a command reports as an error and a return code, not a trace:
+    its own usage, a key or backup that cannot be read, the service's
+    errors, and settings that do not validate."""
+    from pydantic import ValidationError
+
     from .data.secrets import KeyProviderError
     from .data.secrets.backup import BackupError
     from .errors import MailboxApiError
 
-    return (_UsageError, BackupError, KeyProviderError, MailboxApiError, ValueError)
+    return (
+        _UsageError,
+        BackupError,
+        KeyProviderError,
+        MailboxApiError,
+        ValidationError,
+    )
 
 
 def _message(exc: BaseException) -> str:

@@ -56,7 +56,7 @@ def test_paging_carries_the_query(
 
 
 def test_folders_as_a_tree(ui: TestClient, account_id: str, services: Services) -> None:
-    adapter = services.accounts.provider(account_id)
+    adapter = services.adapters.get(account_id)
     adapter.folders.append(Folder(id="projects", name="Projects"))
     adapter.folders.append(Folder(id="projects/a", name="A", parent_id="projects"))
     page = ui.get(f"/ui/accounts/{account_id}/mail").text
@@ -71,7 +71,7 @@ def test_folders_as_a_tree(ui: TestClient, account_id: str, services: Services) 
 def test_a_message_is_shown_as_text(
     ui: TestClient, account_id: str, services: Services
 ) -> None:
-    adapter = services.accounts.provider(account_id)
+    adapter = services.adapters.get(account_id)
     adapter.messages[2].text_body = "<script>alert(1)</script> hi"
     page = ui.get(f"/ui/accounts/{account_id}/mail/m2").text
     assert "Hello 2" in page and "Alice &lt;alice@example.com&gt;" in page
@@ -83,7 +83,7 @@ def test_a_message_is_shown_as_text(
 def test_an_html_only_message_is_shown_as_its_text(
     ui: TestClient, account_id: str, services: Services
 ) -> None:
-    adapter = services.accounts.provider(account_id)
+    adapter = services.adapters.get(account_id)
     adapter.messages[3].text_body = None
     adapter.messages[
         3
@@ -97,7 +97,7 @@ def test_an_html_only_message_is_shown_as_its_text(
 def test_attachments_and_the_original_are_downloads(
     ui: TestClient, account_id: str, services: Services
 ) -> None:
-    adapter = services.accounts.provider(account_id)
+    adapter = services.adapters.get(account_id)
     adapter.messages[0].attachments.append(
         Attachment(id="att_0", filename="page.html", content_type="text/html", size=5)
     )

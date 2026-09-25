@@ -16,8 +16,8 @@ from ..data.storage import RoleRepository, TokenRepository, UserRepository
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from . import permissions
 from .access import Access
-from .accounts import AccountService
-from .auth import AuthService
+from .adapters import Adapters
+from .auth import AuthService, TokenState
 
 
 @dataclass(frozen=True)
@@ -45,23 +45,23 @@ class UserService:
         users: UserRepository,
         roles: RoleRepository,
         tokens: TokenRepository,
-        accounts: AccountService,
+        adapters: Adapters,
         auth: AuthService,
     ) -> None:
         self._users = users
         self._roles = roles
         self._tokens = tokens
-        self._accounts = accounts
+        self._adapters = adapters
         self._auth = auth
 
     # --- the caller itself --------------------------------------------------
 
     def me(self, access: Access) -> EffectiveRights:
         accounts = []
-        for account_id in self._accounts.all_ids():
+        for account_id in self._adapters.ids():
             operations = access.operations_on(account_id)
             if operations:
-                account = self._accounts.record(account_id)
+                account = self._adapters.record(account_id)
                 accounts.append(
                     AccountRights(
                         account.id,
@@ -110,6 +110,7 @@ class UserService:
         grants: list[Grant],
     ) -> User:
         access.require("create_user")
+        _named("a user", name)
         user = User(id=new_id("usr"), name=name, roles=roles, grants=grants)
         self._check_grantable(access, user.roles, user.grants)
         self._users.save(user)
@@ -126,6 +127,8 @@ class UserService:
         disabled: bool | None = None,
     ) -> User:
         access.require("update_user")
+        if name is not None:
+            _named("a user", name)
         user = self._users.get(user_id)
         self._require_covers_user(access, user)
         changes = {
@@ -159,6 +162,10 @@ class UserService:
         self._users.get(user_id)
         return self._tokens.list_for_user(user_id)
 
+    def token_state(self, token: ApiToken) -> TokenState:
+        """Active, expired or revoked, by the service's clock."""
+        return self._auth.state_of(token)
+
     def create_token(
         self,
         access: Access,
@@ -167,6 +174,7 @@ class UserService:
         expires_at: datetime | None = None,
     ) -> tuple[ApiToken, str]:
         access.require("create_token")
+        _named("a token", name)
         self._require_covers_user(access, self._users.get(user_id))
         return self._auth.issue_token(user_id, name, expires_at)
 
@@ -189,6 +197,7 @@ class UserService:
 
     def create_role(self, access: Access, role_id: str, grants: list[Grant]) -> Role:
         access.require("create_role")
+        _named("a role", role_id)
         if role_id in {role.id for role in self._roles.list()}:
             raise ConflictError(f"role {role_id} exists")
         return self._save_role(access, Role(id=role_id, grants=grants))
@@ -202,10 +211,19 @@ class UserService:
         access.require("delete_role")
         role = self._roles.get(role_id)
         self._require_covers(access, role.grants)
-        users = [user.id for user in self._users.list() if role_id in user.roles]
+        users = [user.id for user in self._holders(role_id)]
         if users:
             raise ConflictError(f"role {role_id} is used by {', '.join(users)}")
         self._roles.delete(role_id)
+
+    def holders_of(self, access: Access, role_id: str) -> list[User]:
+        """The users that hold a role."""
+        access.require("list_users")
+        self._roles.get(role_id)
+        return self._holders(role_id)
+
+    def _holders(self, role_id: str) -> list[User]:
+        return [user for user in self._users.list() if role_id in user.roles]
 
     # --- rules ----------------------------------------------------------------
 
@@ -240,14 +258,16 @@ class UserService:
             raise ForbiddenError("cannot grant or manage rights the caller lacks")
 
 
+def _named(what: str, name: str) -> None:
+    if not name.strip():
+        raise BadRequestError(f"{what} needs a name")
+
+
 def _validate(grants: Iterable[Grant]) -> None:
     for grant in grants:
         if not grant.accounts:
             raise BadRequestError("a grant needs at least one account or '*'")
-        try:
-            permissions.expand(grant.allow)
-        except ValueError as exc:
-            raise BadRequestError(str(exc)) from None
+        permissions.expand(grant.allow)
 
 
 def _exists(roles: RoleRepository, role_id: str) -> bool:

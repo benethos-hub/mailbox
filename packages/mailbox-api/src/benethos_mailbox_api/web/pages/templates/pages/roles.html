@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import csrf_field, empty with context %}
-{% from "components/grants.html" import grant_editor, grant_summary %}
+{% from "components/grants.html" import grant_editor, grants_of %}
 {% block title %}Roles · {{ APP_NAME }}{% endblock %}
 {% block heading %}Roles{% endblock %}
 {% block subheading %}<div class="sub">Named sets of grants that users share</div>{% endblock %}
@@ -15,7 +15,7 @@
           {% for role in roles %}
           <tr>
             <td class="name"><a href="/ui/roles/{{ role.id | segment }}">{{ role.id }}</a></td>
-            <td>{% for grant in role.grants %}{{ grant_summary(grant, names) }}{% else %}—{% endfor %}</td>
+            <td>{{ grants_of(role.grants, names) }}</td>
             <td class="num">{{ used.get(role.id) | or_missing }}</td>
             <td class="actions"><a class="btn small" href="/ui/roles/{{ role.id | segment }}">Open</a></td>
           </tr>

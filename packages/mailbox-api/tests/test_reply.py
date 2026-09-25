@@ -270,9 +270,18 @@ async def test_forward_as_attachment(
     assert inner["Subject"] == "Angebot"
 
 
-def test_a_forward_needs_recipients() -> None:
-    with pytest.raises(ValueError, match="recipient"):
-        OutgoingMessage(reference=MessageReference(message_id="m", action="forward"))
+def test_a_forward_needs_recipients(services: Services, account_id: str) -> None:
+    client = TestClient(create_app(Settings(storage="memory"), services))
+    message_id = anyio.run(original_id, services, account_id)
+    answer = client.post(
+        f"/v1/accounts/{account_id}/send",
+        json={"reference": {"message_id": message_id, "action": "forward"}},
+        headers=bearer_for(
+            services, Grant(accounts=[account_id], allow=["send", "mail.read"])
+        ),
+    )
+    assert answer.status_code == 400
+    assert "recipient" in answer.json()["error"]["message"]
 
 
 def test_answering_needs_the_right_to_read(services: Services, account_id: str) -> None:

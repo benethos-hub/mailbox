@@ -16,10 +16,10 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from ....data.models import ProviderType
-from ....errors import MailboxApiError
-from ...services import get_oauth
+from ...services import OAuth
 from ...urls import oauth_callback
 from ..deps import Actor, Viewer
+from ..forms import failing
 from ..templates import back, local_path, render
 
 router = APIRouter()
@@ -33,7 +33,9 @@ def _provider(value: str) -> ProviderType | None:
 
 
 @router.post("/oauth/{provider}/start")
-async def start(request: Request, caller: Actor, provider: str) -> Response:
+async def start(
+    request: Request, caller: Actor, provider: str, oauth: OAuth
+) -> Response:
     form = await request.form()
     account_id = str(form.get("account_id") or "") or None
     fallback = f"/ui/accounts/{account_id}" if account_id else "/ui/accounts/new"
@@ -41,16 +43,14 @@ async def start(request: Request, caller: Actor, provider: str) -> Response:
     kind = _provider(provider)
     if kind is None:
         return back(here, error=f"Unknown provider: {provider}")
-    try:
-        url = get_oauth(request).start(
+    with failing(here):
+        url = oauth.start(
             caller,
             kind,
             oauth_callback(request, kind),
             account_id=account_id,
             login_hint=str(form.get("login_hint") or "").strip() or None,
         )
-    except MailboxApiError as exc:
-        return back(here, error=exc.message)
     return RedirectResponse(url, status_code=303)
 
 
@@ -67,9 +67,10 @@ async def callback(request: Request, provider: str) -> HTMLResponse:
 
 
 @router.get("/oauth/{provider}/finish")
-async def finish(request: Request, caller: Viewer, provider: str) -> Response:
+async def finish(
+    request: Request, caller: Viewer, provider: str, oauth: OAuth
+) -> Response:
     query = request.query_params
-    oauth = get_oauth(request)
     kind = _provider(provider)
     state = query.get("state", "")
     if kind is None:
@@ -78,8 +79,6 @@ async def finish(request: Request, caller: Viewer, provider: str) -> Response:
         oauth.cancel(state)
         reason = query.get("error_description") or query["error"]
         return back("/ui/accounts", error=f"{kind.value} did not sign in: {reason}")
-    try:
+    with failing("/ui/accounts"):
         account = await oauth.finish(caller, kind, state, query.get("code", ""))
-    except MailboxApiError as exc:
-        return back("/ui/accounts", error=exc.message)
     return back(f"/ui/accounts/{account.id}", f"{account.email} signed in.")

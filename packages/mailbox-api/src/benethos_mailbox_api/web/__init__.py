@@ -20,7 +20,8 @@ from starlette.exceptions import HTTPException
 
 from ..errors import MailboxApiError
 from . import api, pages
-from .api.errors import api_error, http_error, status_of, validation_error
+from .api.errors import api_error, http_error, validation_error
+from .errors import status_of
 from .pages.errors import error_page
 
 

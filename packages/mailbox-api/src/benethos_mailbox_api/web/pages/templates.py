@@ -24,6 +24,8 @@ HERE = Path(__file__).resolve().parent
 TEMPLATE_DIR = HERE / "templates"
 STATIC_DIR = HERE / "static"
 MISSING = "—"
+# Items per page of a list.
+PAGE_SIZE = 50
 
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 # A typo in a template raises instead of rendering an empty cell.

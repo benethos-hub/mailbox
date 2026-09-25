@@ -771,7 +771,7 @@ One envelope for every error the API raises itself:
 | 401 | `unauthorized` | missing, wrong, expired or revoked credential, or disabled user |
 | 403 | `forbidden` | the user has a grant for the account but not for this operation (7.5) |
 | 404 | `not_found` | account, folder, message; also an account the user has no grant for |
-| 409 | `conflict`, `idempotency_conflict` | |
+| 409 | `conflict`, `idempotency_conflict`, `credential_missing` | the last: the account has no credential of the kind its sign-in needs |
 | 422 | FastAPI validation format | schema violation |
 | 429 | `rate_limited` | with `Retry-After` |
 | 501 | `not_supported` | capability missing |

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import csrf_field, folder_options with context %}
 {% block title %}{{ current.name }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ current.name }}{% endblock %}
 {% block subheading %}<div class="sub"><a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a>{% if current.total is not none %} · {{ current.total }} messages{% endif %}{% if current.unread %}, {{ current.unread }} unread{% endif %}</div>{% endblock %}
@@ -23,7 +24,7 @@
       </ul>
       {% if can.create_folder %}
       <form class="body" method="post" action="/ui/accounts/{{ account.id }}/folders">
-        <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+        {{ csrf_field() }}
         <div class="field">
           <label for="f-new-folder">New folder</label>
           <input id="f-new-folder" name="name" required />
@@ -40,7 +41,7 @@
       <div class="body">
         {% if can.update_folder %}
         <form method="post" action="/ui/accounts/{{ account.id }}/folders/rename">
-          <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+          {{ csrf_field() }}
           <input type="hidden" name="folder" value="{{ current.id }}" />
           <div class="field">
             <label for="f-rename">Name</label>
@@ -49,13 +50,13 @@
           <div class="form-actions"><button class="small" type="submit">Rename</button></div>
         </form>
         <form method="post" action="/ui/accounts/{{ account.id }}/folders/move">
-          <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+          {{ csrf_field() }}
           <input type="hidden" name="folder" value="{{ current.id }}" />
           <div class="field">
             <label for="f-parent">Inside</label>
             <select id="f-parent" name="parent">
               <option value="">the top</option>
-              {% for folder, depth in tree %}{% if folder.id != current.id %}<option value="{{ folder.id }}"{% if folder.id == current.parent_id %} selected{% endif %}>{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
+              {{ folder_options(tree, [current.id], selected=current.parent_id) }}
             </select>
           </div>
           <div class="form-actions"><button class="small" type="submit">Move</button></div>
@@ -63,7 +64,7 @@
         {% endif %}
         {% if can.delete_folder %}
         <form method="post" action="/ui/accounts/{{ account.id }}/folders/delete" data-confirm="Delete the folder {{ current.name }}? Only an empty folder without subfolders can be deleted.">
-          <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+          {{ csrf_field() }}
           <input type="hidden" name="folder" value="{{ current.id }}" />
           <div class="form-actions"><button class="small danger" type="submit">Delete folder</button></div>
         </form>
@@ -77,7 +78,7 @@
     <div class="body">{% include "partials/mail_search.html" %}</div>
     {% if selectable and messages %}
     <form id="batch" class="body toolbar" method="post" action="/ui/accounts/{{ account.id }}/mail/batch">
-      <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+      {{ csrf_field() }}
       <input type="hidden" name="back" value="{{ here }}" />
       <label for="f-batch-action">Ticked messages</label>
       <select id="f-batch-action" name="action">
@@ -93,7 +94,7 @@
       {% if can.change %}
       <select name="folder" aria-label="Folder to move to">
         <option value="">(folder, for move)</option>
-        {% for folder, depth in tree %}{% if folder.id != current.id %}<option value="{{ folder.id }}">{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
+        {{ folder_options(tree, [current.id]) }}
       </select>
       {% endif %}
       <button type="submit">Apply</button>

@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....common import opaque
-from ....errors import BadRequestError, NotFoundError, NotSupportedError
+from ....errors import NotFoundError, NotSupportedError
 from ...mail import convert
 from ...models import (
     Folder,
@@ -19,7 +19,8 @@ from ...models import (
     MessageSummary,
     MessageUpdate,
 )
-from ..protocols.imap import RawFolder
+from .. import rules
+from ..protocols.imap import FetchedMessage, RawFolder
 
 INBOX = "INBOX"
 
@@ -119,9 +120,17 @@ def cursor(folder: str, uidvalidity: int, before_uid: int) -> str:
 
 
 def parse_cursor(value: str) -> tuple[str, int, int]:
-    parts = _decode("c_", value, "cursor")
-    if len(parts) != 3:
-        raise NotFoundError(f"cursor {value} not found")
+    try:
+        parts = opaque.decode("c_", value)
+    except ValueError:
+        raise rules.invalid_cursor() from None
+    if (
+        not isinstance(parts, list)
+        or len(parts) != 3
+        or not isinstance(parts[0], str)
+        or not all(isinstance(p, int) for p in parts[1:])
+    ):
+        raise rules.invalid_cursor()
     return parts[0], parts[1], parts[2]
 
 
@@ -176,13 +185,13 @@ def role_of(name: str, flags: set[str]) -> FolderRole | None:
 # --- messages -----------------------------------------------------------------
 
 
-def to_summary(msg: Any, folder: str, uidvalidity: int) -> MessageSummary:
+def to_summary(msg: FetchedMessage, folder: str, uidvalidity: int) -> MessageSummary:
     return MessageSummary.model_validate(
         {**convert.summary_fields(msg), **_imap_fields(msg, folder, uidvalidity)}
     )
 
 
-def to_message(msg: Any, folder: str, uidvalidity: int) -> Message:
+def to_message(msg: FetchedMessage, folder: str, uidvalidity: int) -> Message:
     return Message.model_validate(
         {
             **convert.summary_fields(msg),
@@ -192,7 +201,7 @@ def to_message(msg: Any, folder: str, uidvalidity: int) -> Message:
     )
 
 
-def _imap_fields(msg: Any, folder: str, uidvalidity: int) -> dict[str, Any]:
+def _imap_fields(msg: FetchedMessage, folder: str, uidvalidity: int) -> dict[str, Any]:
     """What only IMAP knows of a message: its id, folder and flags."""
     flags = {flag.lower() for flag in msg.flags}
     return {
@@ -218,8 +227,6 @@ _IMAP_SPELLING = {
     "$mdnsent": "$MDNSent",
     "$phishing": "$Phishing",
 }
-# Keywords that would bypass unread, starred or deletion.
-RESERVED_KEYWORDS = {"$seen", "$flagged", "$deleted", "$recent"}
 
 
 def keywords(flags: Any) -> list[str]:
@@ -255,11 +262,6 @@ def flag_changes(
         (add if changes.starred else remove).append("\\Flagged")
     if changes.keywords is not None:
         wanted = {k.lower(): k for k in changes.keywords}
-        reserved = sorted(set(wanted) & RESERVED_KEYWORDS)
-        if reserved:
-            raise BadRequestError(
-                f"{', '.join(reserved)}: use unread, starred or DELETE instead"
-            )
         # Each keyword the message has, with the flag as the server spells it.
         present: dict[str, str] = {}
         for flag in current:

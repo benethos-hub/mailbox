@@ -30,7 +30,8 @@ from ..data.models import Account, ProviderType
 from ..data.providers import OAuthClient, authorize_url, new_pkce
 from ..errors import BadRequestError, ForbiddenError, NotSupportedError
 from .access import Access
-from .accounts import REFRESH_TOKEN, AccountService
+from .accounts import AccountService
+from .adapters import REFRESH_TOKEN, Adapters
 
 VALID_FOR = timedelta(minutes=10)
 # Sign-ins a user may have open at once; older ones are dropped.
@@ -52,10 +53,12 @@ class OAuthService:
     def __init__(
         self,
         accounts: AccountService,
+        adapters: Adapters,
         clients: Mapping[ProviderType, OAuthClient],
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._accounts = accounts
+        self._adapters = adapters
         self._clients = dict(clients)
         self._clock = clock
         self._pending: dict[str, _Pending] = {}
@@ -80,7 +83,7 @@ class OAuthService:
             access.require("create_account")
         else:
             access.require("update_account", account_id)
-            account = self._accounts.record(account_id)
+            account = self._adapters.record(account_id)
             if account.provider is not provider:
                 raise BadRequestError(
                     f"{account.email} is a {account.provider} account, not {provider}"

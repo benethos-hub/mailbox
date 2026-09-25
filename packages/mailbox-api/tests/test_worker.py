@@ -27,7 +27,7 @@ def worker(services: Services, **options: object) -> SyncWorker:  # noqa: F811
         return None
 
     return SyncWorker(
-        services.accounts,
+        services.adapters,
         services.sync,
         interval=300,
         sleep=no_sleep,
@@ -57,7 +57,7 @@ async def test_a_rejected_account_is_left_alone(
     server.password = "changed"
     with pytest.raises(ProviderAuthError):
         await services.sync.sync_account(account_id)
-    assert services.accounts.status(account_id) is AccountStatus.NEEDS_REAUTH
+    assert services.adapters.status(account_id) is AccountStatus.NEEDS_REAUTH
     logins = [c for c in server.calls if c[0] == "login"]
     await worker(services).poll()
     assert [c for c in server.calls if c[0] == "login"] == logins
@@ -138,7 +138,7 @@ def test_the_app_starts_and_stops_the_worker(
     running = Services(
         **{
             **services.__dict__,
-            "worker": SyncWorker(services.accounts, services.sync, interval=300),
+            "worker": SyncWorker(services.adapters, services.sync, interval=300),
         }
     )
     with TestClient(create_app(settings, running)) as client:
@@ -160,4 +160,4 @@ async def test_a_rejected_login_ends_the_watcher(
 ) -> None:
     server.password = "changed"
     await worker(services).watch(account_id)  # ends by itself
-    assert services.accounts.status(account_id) is AccountStatus.NEEDS_REAUTH
+    assert services.adapters.status(account_id) is AccountStatus.NEEDS_REAUTH

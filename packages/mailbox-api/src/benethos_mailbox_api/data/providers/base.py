@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from enum import StrEnum
 from typing import Protocol
 
@@ -23,6 +23,10 @@ from ..models import (
 # Hands an adapter one stored credential by field name, decrypted at the
 # moment of the call. Adapters call it right before a login and keep nothing.
 CredentialReader = Callable[[str], SecretStr]
+
+# An account's connection settings: host, port, security and the like.
+# Never a secret; those come through the ``CredentialReader``.
+ProviderSettings = Mapping[str, str | int | bool]
 
 
 class TokenSource(Protocol):

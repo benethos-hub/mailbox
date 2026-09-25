@@ -48,7 +48,8 @@ class MessageIndexRepository(Protocol):
     ) -> list[IndexEntry]: ...
 
     def add(self, account_id: str, entries: Iterable[IndexEntry]) -> None:
-        """Adds entries. A provider id that already has one keeps it."""
+        """Adds entries. A provider id that already has one keeps it, and
+        so does an id that exists already."""
         ...
 
     def apply(self, account_id: str, changes: IndexChanges) -> None:
@@ -58,7 +59,8 @@ class MessageIndexRepository(Protocol):
 
     def relocate(self, account_id: str, entry: IndexEntry) -> None:
         """A message moved: its entry gets the new place. Takes over the
-        provider id from any other entry."""
+        provider id from any other entry. An id the index does not know
+        changes nothing."""
         ...
 
     def drop(self, account_id: str, message_id: str) -> None:
@@ -103,7 +105,7 @@ class InMemoryMessageIndexRepository:
         taken = set(self.by_native(account_id, (e.native_id for e in entries)))
         own = self._entries.setdefault(account_id, {})
         for entry in entries:
-            if entry.native_id not in taken:
+            if entry.native_id not in taken and entry.id not in own:
                 own[entry.id] = entry
                 taken.add(entry.native_id)
 
@@ -118,6 +120,8 @@ class InMemoryMessageIndexRepository:
 
     def relocate(self, account_id: str, entry: IndexEntry) -> None:
         own = self._entries.setdefault(account_id, {})
+        if entry.id not in own:
+            return
         for other in [
             o.id
             for o in own.values()

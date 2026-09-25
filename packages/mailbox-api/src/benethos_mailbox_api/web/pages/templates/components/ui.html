@@ -8,7 +8,7 @@
 {# A form that is only a button, e.g. "Delete", with a question before it. #}
 {% macro action(url, label, confirm=None, cls="small", fields={}) %}
 <form class="inline" method="post" action="{{ url }}"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
-  <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+  {{ csrf_field() }}
   {% for name, value in fields.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endfor %}
   <button class="{{ cls }}" type="submit">{{ label }}</button>
 </form>
@@ -21,6 +21,25 @@
   <input id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"{% if required %} required{% endif %} {{ attrs }} />
   {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
 </div>
+{% endmacro %}
+
+{# The links below a list: to the next page, and from a later page back to
+   the first. ``pages``: (more, first), as ``page_links`` gives them. #}
+{% macro pager(pages) %}
+{% set more, first = pages %}
+{% if more or first %}
+<div class="body toolbar">
+  {% if first %}<a class="btn small" href="{{ first }}">Newest</a>{% endif %}
+  <span class="grow"></span>
+  {% if more %}<a class="btn small" href="{{ more }}">Older</a>{% endif %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{# The options of a folder select: the tree indented by depth, without the
+   folders in ``exclude``. #}
+{% macro folder_options(tree, exclude, selected=None) %}
+{% for folder, depth in tree %}{% if folder.id not in exclude %}<option value="{{ folder.id }}"{% if folder.id == selected %} selected{% endif %}>{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
 {% endmacro %}
 
 {# A native dialog for a form loaded into #modal. #}

@@ -14,7 +14,12 @@ from pydantic import SecretStr
 
 from ...common.clock import utc_now
 from ...common.ids import new_id
-from ...errors import ConflictError, CredentialError, SetupRequiredError
+from ...errors import (
+    ConflictError,
+    CredentialError,
+    CredentialMissingError,
+    SetupRequiredError,
+)
 from ..models import CredentialInfo
 from ..storage import (
     CredentialRepository,
@@ -111,7 +116,7 @@ class CredentialVault:
     def read(self, account_id: str, field: str) -> SecretStr:
         stored = self._credentials.get(account_id, field)
         if stored is None:
-            raise CredentialError(f"account {account_id} has no {field}")
+            raise CredentialMissingError(f"account {account_id} has no {field}")
         _, dek = self._data_key()
         try:
             plain = cipher.decrypt(

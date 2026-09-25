@@ -1,4 +1,18 @@
-{# Grants: one line to read, and the editor inside a form (see grants.py). #}
+{# Grants: one line to read, and the editor inside a form (see grants.py).
+   Roles: as tags, and as checkboxes to give. #}
+
+{% macro grants_of(grants, names) %}{% for grant in grants %}{{ grant_summary(grant, names) }}{% else %}—{% endfor %}{% endmacro %}
+
+{% macro role_tags(roles) %}{% for role in roles %}<a class="tag" href="/ui/roles/{{ role | segment }}">{{ role }}</a> {% else %}—{% endfor %}{% endmacro %}
+
+{% macro role_checks(choices, held) %}
+<div class="field">
+  <span class="label">Roles</span>
+  <div class="checks">
+    {% for role in choices %}<label class="check"><input type="checkbox" name="roles" value="{{ role }}"{% if role in held %} checked{% endif %} /> {{ role }}</label>{% endfor %}
+  </div>
+</div>
+{% endmacro %}
 
 {% macro grant_summary(grant, names) %}
 <div class="grant">

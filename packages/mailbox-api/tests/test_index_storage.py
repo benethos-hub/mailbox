@@ -58,6 +58,22 @@ def test_a_known_native_id_keeps_its_entry(index: MessageIndexRepository) -> Non
     assert index.get(ACC, "msg_other") is None
 
 
+def test_a_known_id_keeps_its_entry(index: MessageIndexRepository) -> None:
+    index.add(ACC, [entry(1)])
+    index.add(ACC, [IndexEntry(id="msg_1", native_id="n5", folder_id="f_b")])
+    assert index.get(ACC, "msg_1") == entry(1)
+    assert index.by_native(ACC, ["n5"]) == {}
+
+
+def test_relocating_an_unknown_id_changes_nothing(
+    index: MessageIndexRepository,
+) -> None:
+    index.add(ACC, [entry(1)])
+    index.relocate(ACC, IndexEntry(id="msg_9", native_id="n1", folder_id="f_b"))
+    assert index.get(ACC, "msg_9") is None
+    assert index.by_native(ACC, ["n1"])["n1"].id == "msg_1"
+
+
 def test_apply_one_pass(index: MessageIndexRepository) -> None:
     index.add(ACC, [entry(1), entry(2), entry(3)])
     moved = IndexEntry(

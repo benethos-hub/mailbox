@@ -22,13 +22,19 @@ from dataclasses import dataclass
 import anyio
 import httpx
 
-from ...errors import ProviderError, ProviderUnavailableError
+from ...errors import ProviderError
+from .base import new_client, read_capped, unreachable
 
 TIMEOUT = 5.0
 MAX_BYTES = 256 * 1024
 MAX_REDIRECTS = 3
 
 Resolve = Callable[[str, int], Awaitable[list[str]]]
+# The address a host resolves to, None when it does not resolve; raises when
+# the host may not be connected to (CONCEPT 5.8, rule 6). The signature of
+# ``SafeFetcher.checked_address``, shared by accounts and discovery so both
+# apply the same rule and the same allow-list.
+HostCheck = Callable[[str, int], Awaitable[str | None]]
 
 
 async def host_addresses(host: str, port: int) -> list[str]:
@@ -79,13 +85,7 @@ class SafeFetcher:
     async def get(self, url: str) -> Fetched | None:
         """The body of a ``200`` answer. None when there is nothing to find:
         the host does not resolve, or the answer is not ``200``."""
-        async with httpx.AsyncClient(
-            transport=self._transport,
-            timeout=self._timeout,
-            follow_redirects=False,
-            trust_env=False,
-            verify=True,
-        ) as client:
+        async with new_client(self._transport, self._timeout) as client:
             target = httpx.URL(url)
             for _ in range(MAX_REDIRECTS + 1):
                 if target.scheme != "https":
@@ -96,14 +96,8 @@ class SafeFetcher:
                     return None
                 try:
                     response = await self._send(client, target, host, address)
-                except httpx.TimeoutException:
-                    raise ProviderUnavailableError(
-                        f"{host} did not answer in time"
-                    ) from None
                 except httpx.HTTPError as exc:
-                    raise ProviderUnavailableError(
-                        f"{host} is not reachable: {exc}"
-                    ) from None
+                    raise unreachable(exc, host) from None
                 if isinstance(response, httpx.URL):
                     target = target.join(response)
                     continue
@@ -145,16 +139,6 @@ class SafeFetcher:
                 return httpx.URL(location) if location else None
             if response.status_code != 200:
                 return None
-            return await self._read(response, host)
+            return await read_capped(response, host, self._max_bytes)
         finally:
             await response.aclose()
-
-    async def _read(self, response: httpx.Response, host: str) -> bytes:
-        body = bytearray()
-        async for chunk in response.aiter_bytes():
-            body += chunk
-            if len(body) > self._max_bytes:
-                raise ProviderError(
-                    f"the answer of {host} is larger than {self._max_bytes} bytes"
-                )
-        return bytes(body)

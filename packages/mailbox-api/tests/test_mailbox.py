@@ -59,7 +59,7 @@ def test_raw_source(client: TestClient, account_id: str) -> None:
 def test_attachment_download(
     client: TestClient, account_id: str, services: Services
 ) -> None:
-    adapter = services.accounts.provider(account_id)
+    adapter = services.adapters.get(account_id)
     message = adapter.messages[0]
     message.attachments.append(
         Attachment(

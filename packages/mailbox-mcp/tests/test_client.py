@@ -76,3 +76,17 @@ async def test_defaults_without_environment() -> None:
     assert client.base_url == DEFAULT_URL
     assert "authorization" not in client._http.headers
     await client.aclose()
+
+
+async def test_ids_are_quoted_in_paths(make_client: Callable) -> None:
+    """An id comes from the model: it must not carry a path of its own."""
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"id": "x"})
+
+    client = make_client(handler)
+    await client.get_message("acc_1", "../users")
+    assert seen[0].url.raw_path == b"/v1/accounts/acc_1/messages/..%2Fusers"
+    await client.aclose()

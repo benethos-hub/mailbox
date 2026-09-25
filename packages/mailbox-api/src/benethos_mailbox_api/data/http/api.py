@@ -18,7 +18,8 @@ from typing import Any
 
 import httpx
 
-from ...errors import ProviderError, ProviderUnavailableError
+from ...errors import ProviderError
+from .base import new_client, read_capped, unreachable
 
 TIMEOUT = 30.0
 # Enough for a message with its attachments (25 MB) in base64.
@@ -50,13 +51,7 @@ class ApiClient:
         timeout: float = TIMEOUT,
         max_bytes: int = MAX_BYTES,
     ) -> None:
-        self._client = httpx.AsyncClient(
-            transport=transport,
-            timeout=timeout,
-            follow_redirects=False,
-            trust_env=False,
-            verify=True,
-        )
+        self._client = new_client(transport, timeout)
         self._max_bytes = max_bytes
 
     async def request(
@@ -85,30 +80,12 @@ class ApiClient:
         try:
             response = await self._client.send(request, stream=True)
             try:
-                body = await self._read(response, target.host)
+                body = await read_capped(response, target.host, self._max_bytes)
             finally:
                 await response.aclose()
-        except httpx.TimeoutException:
-            raise ProviderUnavailableError(
-                f"{target.host} did not answer in time"
-            ) from None
         except httpx.HTTPError as exc:
-            # The message names the host and the kind of failure, never the
-            # request: it may carry a token.
-            raise ProviderUnavailableError(
-                f"{target.host} is not reachable: {type(exc).__name__}"
-            ) from None
+            raise unreachable(exc, target.host) from None
         return Answer(response.status_code, body, dict(response.headers))
-
-    async def _read(self, response: httpx.Response, host: str) -> bytes:
-        body = bytearray()
-        async for chunk in response.aiter_bytes():
-            body += chunk
-            if len(body) > self._max_bytes:
-                raise ProviderError(
-                    f"the answer of {host} is larger than {self._max_bytes} bytes"
-                )
-        return bytes(body)
 
     async def close(self) -> None:
         await self._client.aclose()

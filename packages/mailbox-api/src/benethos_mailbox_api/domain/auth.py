@@ -11,12 +11,18 @@ import secrets
 import string
 from collections.abc import Callable
 from datetime import datetime
+from typing import Literal
 
 from ..common.clock import utc_now
 from ..common.ids import new_id
 from ..data.models import ApiToken
 from ..data.storage import RoleRepository, TokenRepository, UserRepository
-from ..errors import NotFoundError, SetupRequiredError, UnauthorizedError
+from ..errors import (
+    BadRequestError,
+    NotFoundError,
+    SetupRequiredError,
+    UnauthorizedError,
+)
 from .access import Access
 
 TOKEN_PREFIX = "mbx_"
@@ -25,6 +31,8 @@ _ALPHABET = string.ascii_letters + string.digits
 _TOKEN_LENGTH = 43
 
 ADMIN_KEY_USER_ID = "usr_admin_key"
+
+TokenState = Literal["active", "expired", "revoked"]
 
 
 def hash_token(token: str) -> str:
@@ -71,6 +79,8 @@ class AuthService:
     ) -> tuple[ApiToken, str]:
         """A new token for a user. The plain token is returned once only."""
         self._users.get(user_id)
+        if expires_at is not None and expires_at <= self._clock():
+            raise BadRequestError("the token would be expired already")
         plain = new_token()
         token = ApiToken(
             id=new_id("tok"),
@@ -90,13 +100,20 @@ class AuthService:
             self._tokens.save(token)
         return token
 
+    def state_of(self, token: ApiToken) -> TokenState:
+        if token.revoked_at is not None:
+            return "revoked"
+        if token.expires_at is not None and token.expires_at <= self._clock():
+            return "expired"
+        return "active"
+
     def _access_for_token(self, presented: str) -> Access:
         token = self._tokens.find_by_hash(hash_token(presented))
-        now = self._clock()
-        if token is None or token.revoked_at is not None:
+        if token is None or self.state_of(token) == "revoked":
             raise UnauthorizedError("invalid or revoked token")
-        if token.expires_at is not None and token.expires_at <= now:
+        if self.state_of(token) == "expired":
             raise UnauthorizedError("token expired")
+        now = self._clock()
         try:
             user = self._users.get(token.user_id)
         except NotFoundError:

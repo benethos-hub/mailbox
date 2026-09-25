@@ -5,15 +5,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from ....data.models import SendRecord
 from ....domain.access import Access
-from ...services import get_accounts, get_mailbox, get_users
+from ...services import Accounts, Mailbox, get_users
 from ..deps import Viewer, account_of
-from ..templates import page_links, render
+from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
-
-PAGE_SIZE = 50
 # Across accounts: the latest of each, merged.
 LATEST = 20
 
@@ -28,21 +25,12 @@ def _user_names(request: Request, caller: Access) -> dict[str, str]:
 
 
 @router.get("/sends")
-async def all_sends(request: Request, caller: Viewer) -> HTMLResponse:
+async def all_sends(
+    request: Request, caller: Viewer, mailbox: Mailbox, accounts: Accounts
+) -> HTMLResponse:
     """The latest sends of every account the caller may audit."""
-    accounts = get_accounts(request)
-    audited = [
-        account
-        for account in accounts.list(caller)
-        if caller.allows("list_sends", account.id)
-    ]
-    records: list[SendRecord] = []
-    for account in audited:
-        page = get_mailbox(request).list_sends(
-            caller, account.id, limit=LATEST, cursor=None
-        )
-        records.extend(page.items)
-    records.sort(key=lambda record: (record.created_at, record.id), reverse=True)
+    audited = accounts.list(caller, may="list_sends")
+    records = mailbox.list_all_sends(caller, per_account=LATEST, limit=PAGE_SIZE)
     return render(
         request,
         "pages/sends.html",
@@ -50,7 +38,7 @@ async def all_sends(request: Request, caller: Viewer) -> HTMLResponse:
         account=None,
         accounts=audited,
         emails={account.id: account.email for account in audited},
-        records=records[:PAGE_SIZE],
+        records=records,
         names=_user_names(request, caller),
         pages=(None, None),
     )
@@ -58,13 +46,11 @@ async def all_sends(request: Request, caller: Viewer) -> HTMLResponse:
 
 @router.get("/accounts/{account_id}/sends")
 async def account_sends(
-    request: Request, caller: Viewer, account_id: str
+    request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
     cursor = request.query_params.get("cursor")
-    page = get_mailbox(request).list_sends(
-        caller, account_id, limit=PAGE_SIZE, cursor=cursor
-    )
+    page = mailbox.list_sends(caller, account_id, limit=PAGE_SIZE, cursor=cursor)
     return render(
         request,
         "pages/sends.html",

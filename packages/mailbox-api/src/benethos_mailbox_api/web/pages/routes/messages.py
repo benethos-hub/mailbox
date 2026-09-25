@@ -7,9 +7,9 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 
 from ....data.models import MessageBatch, MessageUpdate
-from ....errors import MailboxApiError
-from ...services import get_mailbox
+from ...services import Mailbox
 from ..deps import Actor
+from ..forms import failing
 from ..templates import back, local_path
 
 router = APIRouter()
@@ -27,7 +27,7 @@ BATCH_ACTIONS: dict[str, tuple[str, MessageUpdate | None, bool]] = {
 
 @router.post("/accounts/{account_id}/mail/{message_id}/flags")
 async def set_flags(
-    request: Request, caller: Actor, account_id: str, message_id: str
+    request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
     form = await request.form()
     here = f"/ui/accounts/{account_id}/mail/{message_id}"
@@ -35,52 +35,44 @@ async def set_flags(
         unread=form["unread"] == "1" if "unread" in form else None,
         starred=form["starred"] == "1" if "starred" in form else None,
     )
-    try:
-        await get_mailbox(request).update_message(
-            caller, account_id, message_id, changes
-        )
-    except MailboxApiError as exc:
-        return back(here, error=exc.message)
+    with failing(here):
+        await mailbox.update_message(caller, account_id, message_id, changes)
     return back(here)
 
 
 @router.post("/accounts/{account_id}/mail/{message_id}/move")
 async def move(
-    request: Request, caller: Actor, account_id: str, message_id: str
+    request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
     form = await request.form()
     here = f"/ui/accounts/{account_id}/mail/{message_id}"
     folder = str(form.get("folder") or "")
     if not folder:
         return back(here, error="Choose a folder.")
-    try:
-        await get_mailbox(request).update_message(
+    with failing(here):
+        await mailbox.update_message(
             caller, account_id, message_id, MessageUpdate(folder_ids=[folder])
         )
-    except MailboxApiError as exc:
-        return back(here, error=exc.message)
     # The id stays when a message moves.
     return back(here, "Moved.")
 
 
 @router.post("/accounts/{account_id}/mail/{message_id}/delete")
 async def delete(
-    request: Request, caller: Actor, account_id: str, message_id: str
+    request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
     form = await request.form()
     permanent = form.get("permanent") == "1"
     listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
-    try:
-        await get_mailbox(request).delete_message(
-            caller, account_id, message_id, permanent
-        )
-    except MailboxApiError as exc:
-        return back(f"/ui/accounts/{account_id}/mail/{message_id}", error=exc.message)
+    with failing(f"/ui/accounts/{account_id}/mail/{message_id}"):
+        await mailbox.delete_message(caller, account_id, message_id, permanent)
     return back(listing, "Deleted for good." if permanent else "Moved to the trash.")
 
 
 @router.post("/accounts/{account_id}/mail/batch")
-async def batch(request: Request, caller: Actor, account_id: str) -> Response:
+async def batch(
+    request: Request, caller: Actor, account_id: str, mailbox: Mailbox
+) -> Response:
     """The action menu above a list, for the messages ticked in it."""
     form = await request.form()
     listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
@@ -110,12 +102,8 @@ async def batch(request: Request, caller: Actor, account_id: str) -> Response:
             return back(listing, error="Choose an action.")
     except ValidationError:
         return back(listing, error="At most 100 messages at a time.")
-    try:
-        result = await get_mailbox(request).batch_messages(
-            caller, account_id, request_batch
-        )
-    except MailboxApiError as exc:
-        return back(listing, error=exc.message)
+    with failing(listing):
+        result = await mailbox.batch_messages(caller, account_id, request_batch)
     failed = [r for r in result.results if not r.ok]
     done = len(result.results) - len(failed)
     if failed:

@@ -423,7 +423,8 @@ def test_ids_round_trip_and_are_opaque() -> None:
         mappers.folder_name(mappers.message_id("x", 1, 1))
     with pytest.raises(NotFoundError):
         mappers.parse_message_id(mappers.folder_id("x"))
-    with pytest.raises(NotFoundError):
+    # A cursor is a request parameter, not a resource: bad request.
+    with pytest.raises(BadRequestError, match="invalid cursor"):
         mappers.parse_cursor(mappers.folder_id("x"))
 
 

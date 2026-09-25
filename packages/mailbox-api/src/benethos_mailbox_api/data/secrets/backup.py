@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from ..files import create_private
 from ..storage import Database, inspect_snapshot
 from ..storage.sqlite import SCHEMA_VERSION
 from . import cipher
@@ -56,10 +56,7 @@ def write_backup(
 ) -> None:
     header = MAGIC + json.dumps(asdict(manifest)).encode() + b"\n"
     nonce, ciphertext = cipher.encrypt(_backup_key(master_key), data, header)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "wb") as file:
-        file.write(header + nonce + ciphertext)
+    create_private(target, header + nonce + ciphertext)
 
 
 def read_backup(source: Path, master_key: bytes) -> tuple[Manifest, bytes]:
@@ -107,9 +104,7 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
     if target.exists():
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         target.replace(target.with_name(f"{target.name}.before-restore-{stamp}"))
-    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "wb") as file:
-        file.write(data)
+    create_private(target, data)
     # Opening migrates an older schema forward.
     Database(target).close()
     return manifest

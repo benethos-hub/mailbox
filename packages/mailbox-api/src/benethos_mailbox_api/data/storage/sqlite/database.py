@@ -15,6 +15,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from ...files import create_private
+
 MIGRATIONS: list[str] = [
     # 1: accounts, users, roles, tokens
     """
@@ -156,6 +158,17 @@ class Database:
         with self._lock:
             return self._connection.execute(sql, params).fetchall()
 
+    def one(self, sql: str, params: tuple[Any, ...] = ()) -> sqlite3.Row | None:
+        """The first row, or None."""
+        with self._lock:
+            row: sqlite3.Row | None = self._connection.execute(sql, params).fetchone()
+            return row
+
+    def execute(self, sql: str, params: tuple[Any, ...] = ()) -> int:
+        """One statement in a transaction of its own; the rows it changed."""
+        with self.transaction() as db:
+            return db.execute(sql, params).rowcount
+
     def schema_version(self) -> int:
         with self._lock:
             row = self._connection.execute(
@@ -205,7 +218,7 @@ def _owner_only(path: Path) -> None:
     one that others may read is narrowed. SQLite gives its journal files
     the mode of the database. Windows has no such modes."""
     if not path.exists():
-        os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+        create_private(path)
     if os.name == "posix" and stat.S_IMODE(path.stat().st_mode) & 0o077:
         path.chmod(0o600)
 

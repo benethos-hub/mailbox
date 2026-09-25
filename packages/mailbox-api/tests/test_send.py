@@ -23,6 +23,7 @@ from benethos_mailbox_api.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_api.data.providers.memory import MemoryProvider
 from benethos_mailbox_api.data.providers.protocols.imap import ImapSession
 from benethos_mailbox_api.data.providers.protocols.smtp import SmtpSession
+from benethos_mailbox_api.domain import outgoing
 from benethos_mailbox_api.errors import ConflictError, ProviderAuthError
 from benethos_mailbox_api.main import Services
 
@@ -179,7 +180,7 @@ def body() -> dict[str, object]:
 
 
 def memory_of(services: Services, account_id: str) -> MemoryProvider:
-    provider = services.accounts.provider(account_id)
+    provider = services.adapters.get(account_id)
     assert isinstance(provider, MemoryProvider)
     return provider
 
@@ -203,7 +204,6 @@ def test_send(client: TestClient, services: Services, account_id: str) -> None:
 @pytest.mark.parametrize(
     "change",
     [
-        {"to": [], "bcc": []},
         {"subject": "Hi\r\nBcc: someone@else.example"},
         {"to": [{"email": "not an address"}]},
     ],
@@ -213,6 +213,33 @@ def test_send_refuses_bad_messages(
 ) -> None:
     answer = client.post(f"/v1/accounts/{account_id}/send", json={**body(), **change})
     assert answer.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("change", "reason"),
+    [
+        ({"to": [], "bcc": []}, "at least one recipient"),
+        (
+            {"to": [{"email": f"r{n}@example.com"} for n in range(101)]},
+            "at most 100 recipients",
+        ),
+    ],
+)
+def test_send_refuses_what_the_service_does_not_carry(
+    client: TestClient, account_id: str, change: dict[str, object], reason: str
+) -> None:
+    answer = client.post(f"/v1/accounts/{account_id}/send", json={**body(), **change})
+    assert answer.status_code == 400
+    assert reason in answer.json()["error"]["message"]
+
+
+def test_attachments_have_a_size_limit(
+    client: TestClient, account_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(outgoing, "MAX_ATTACHMENT_BYTES", 3)
+    answer = client.post(f"/v1/accounts/{account_id}/send", json=body())
+    assert answer.status_code == 400
+    assert "25 MB" in answer.json()["error"]["message"]
 
 
 def test_sending_is_its_own_right(
@@ -229,4 +256,4 @@ def test_sending_is_its_own_right(
 
 
 def test_the_account_kind_is_memory(services: Services, account_id: str) -> None:
-    assert services.accounts.record(account_id).provider is ProviderType.MEMORY
+    assert services.adapters.record(account_id).provider is ProviderType.MEMORY

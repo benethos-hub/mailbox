@@ -36,12 +36,8 @@ async def changing(request: Request) -> Access:
 
 
 def account_of(request: Request, caller: Access, account_id: str) -> Account:
-    """The account a mail page is about. Any right on it will do, as in
-    ``/v1/me``: whoever may only write drafts there sees its address too."""
-    if not caller.operations_on(account_id):
-        caller.require("get_account", account_id)
-    accounts = get_accounts(request)
-    return accounts.record(account_id)
+    """The account a mail page is about; the domain decides who sees it."""
+    return get_accounts(request).visible(caller, account_id)
 
 
 Viewer = Annotated[Access, Depends(signed_in)]

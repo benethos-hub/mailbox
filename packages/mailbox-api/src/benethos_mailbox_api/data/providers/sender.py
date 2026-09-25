@@ -9,9 +9,9 @@ after a send, such as a copy in the sent folder, stays with the adapter.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
-from ...errors import BadRequestError
+from . import rules
+from .base import ProviderSettings
 from .guard import Guard
 from .protocols.smtp import DEFAULT_PORTS, SmtpLogin, SmtpServer, SmtpSession
 
@@ -36,7 +36,7 @@ class SmtpSender:
     @classmethod
     def from_settings(
         cls,
-        settings: Any,
+        settings: ProviderSettings,
         username: str,
         auth: str,
         secret: Callable[[], str],
@@ -49,14 +49,9 @@ class SmtpSender:
         host = settings.get("smtp_host")
         if not host:
             return None
-        security = settings.get("smtp_security", "tls")
-        if security not in DEFAULT_PORTS:
-            raise BadRequestError(
-                "settings.smtp_security must be 'tls' or 'starttls': "
-                "SMTP without encryption is not supported"
-            )
-        port = int(settings.get("smtp_port") or DEFAULT_PORTS[security])
-        server = SmtpServer(host=str(host), port=port, security=str(security))
+        security = rules.encrypted(settings, "smtp_security", "SMTP")
+        port = rules.port_of(settings, "smtp_port", DEFAULT_PORTS[security])
+        server = SmtpServer(host=str(host), port=port, security=security)
         return cls(
             factory(server),
             str(settings.get("smtp_username") or username),
@@ -67,16 +62,14 @@ class SmtpSender:
 
     def send(self, raw: bytes, sender: str, recipients: list[str]) -> list[str]:
         """Send, blocking. The recipients the server refused."""
-        self._guard.check()
-        self._guard.acquire()
         # The same credential as the mailbox: no new attempt until it changes.
-        with self._guard.refused_logins():
-            return self._session.send(self._login(), sender, recipients, raw)
+        return self._guard.once(
+            lambda: self._session.send(self._login(), sender, recipients, raw)
+        )
 
     def verify(self) -> None:
         """Log in and out, blocking."""
-        with self._guard.refused_logins():
-            self._session.verify(self._login())
+        self._guard.once(lambda: self._session.verify(self._login()))
 
     def _login(self) -> SmtpLogin:
         """The credential, decrypted for this one use."""

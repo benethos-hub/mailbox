@@ -9,6 +9,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 Pre-alpha, version 0.1.0. Not ready for production use: the API, the
 stored data and the configuration may change without notice.
 
+### Fixed
+
+- The MCP server quotes the ids a model hands it before they go into
+  an API path.
+
 ### Security
 
 - The hosts in an account's settings (`host`, `smtp_host`) pass the same
@@ -34,6 +39,26 @@ stored data and the configuration may change without notice.
 
 ### Changed
 
+- An account that has no credential of the kind its sign-in needs
+  answers `409` (`credential_missing`). Before, it answered `500`
+  (`credential_unreadable`), which stays for a credential that cannot be
+  decrypted.
+- A message without a recipient, one with more than 100 recipients or
+  attachments over 25 MB is refused with `400` (`bad_request`) instead
+  of `422`, on `send` and on the draft routes alike.
+- A blank name for a user, a role or a token is refused with `400`, and
+  so is a token `expires_at` that lies in the past.
+- An IMAP account's `username` defaults to its address when left out, on
+  create and when it is removed.
+- The keywords `$seen`, `$flagged`, `$deleted` and `$recent` are refused
+  with `422` on every provider: use `unread`, `starred` or `DELETE`. Before,
+  IMAP answered `400` and other providers stored them.
+- A cursor that names no page answers `400` (`bad_request`) on every
+  provider. Before, IMAP answered `404` and the memory provider failed.
+- A missing drafts or trash folder answers `409` on every provider.
+  Before, Microsoft answered `404`, and a batch delete failed as a whole.
+- `folder_ids` with several folders answers `400` on every provider that
+  keeps a message in one folder. Before, Microsoft moved to the first.
 - Both packages ship the MIT license text.
 - An account carries its `settings` (host, port, security, username,
   `smtp_*`), never a secret. Settings whose name looks like a secret
@@ -56,6 +81,10 @@ stored data and the configuration may change without notice.
 
 ### Added
 
+- `folder_ids` of a message update and `parent_id` of a new folder take a
+  role such as `archive` in place of a folder id, as `folder` of
+  `list_messages` does.
+- A token carries its `state`: `active`, `expired` or `revoked`.
 - Each release publishes both packages to PyPI and both container images
   to `ghcr.io`, for `linux/amd64` and `linux/arm64`, under the same
   version.

@@ -5918,7 +5918,7 @@
               }
             ],
             "title": "Parent Id",
-            "description": "The folder to create it in. Left out: the top."
+            "description": "The folder to create it in, by id or by a role such as `inbox`. Left out: the top."
           }
         },
         "type": "object",
@@ -6713,7 +6713,7 @@
               }
             ],
             "title": "Folder Ids",
-            "description": "The folders the message is to be in. A change moves it; the id stays. An IMAP message is in exactly one folder."
+            "description": "The folders the message is to be in, by id or by a role such as `archive`. A change moves it; the id stays. An IMAP message is in exactly one folder."
           }
         },
         "type": "object",
@@ -7273,6 +7273,16 @@
             "type": "string",
             "title": "Name"
           },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "title": "State",
+            "description": "Whether the token authenticates now"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -7325,6 +7335,7 @@
           "id",
           "user_id",
           "name",
+          "state",
           "created_at",
           "token"
         ],
@@ -7343,6 +7354,16 @@
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "title": "State",
+            "description": "Whether the token authenticates now"
           },
           "created_at": {
             "type": "string",
@@ -7391,6 +7412,7 @@
           "id",
           "user_id",
           "name",
+          "state",
           "created_at"
         ],
         "title": "TokenInfo",

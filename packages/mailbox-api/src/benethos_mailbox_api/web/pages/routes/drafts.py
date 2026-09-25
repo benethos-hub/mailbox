@@ -1,24 +1,22 @@
 """Drafts: the list, and one draft in the mail form to save, send or
 delete.
 
-A draft is replaced as a whole. Its attachments go in again, less those
-ticked to drop, and a reply or forward keeps its link to the original
-with ``quote: false``: the text holds the quote already. A draft sent
+A draft is replaced as a whole. Its attachments stay, less those ticked
+to drop, and a reply or forward keeps its link to the original with
+``quote: false``: the text holds the quote already. A draft sent
 unchanged is not replaced at all.
 """
 
 from __future__ import annotations
 
-import base64
 from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
-from ....data.models import DraftMessage, Message, OutgoingAttachment
-from ....domain.access import Access
+from ....data.models import DraftMessage, Message
 from ....errors import MailboxApiError
-from ...services import get_mailbox
+from ...services import Mailbox
 from ..deps import Actor, Viewer, account_of
 from ..mailform import (
     ComposeError,
@@ -31,17 +29,18 @@ from ..mailform import (
     show_again,
     uploads,
 )
-from ..templates import back, page_links, render
+from ..rights import mail_rights
+from ..templates import PAGE_SIZE, back, page_links, render
 
 router = APIRouter()
 
-PAGE_SIZE = 50
-
 
 @router.get("/accounts/{account_id}/drafts")
-async def drafts(request: Request, caller: Viewer, account_id: str) -> HTMLResponse:
+async def drafts(
+    request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
+) -> HTMLResponse:
     account = account_of(request, caller, account_id)
-    page = await get_mailbox(request).list_drafts(
+    page = await mailbox.list_drafts(
         caller, account_id, limit=PAGE_SIZE, cursor=request.query_params.get("cursor")
     )
     return render(
@@ -53,8 +52,7 @@ async def drafts(request: Request, caller: Viewer, account_id: str) -> HTMLRespo
         pages=page_links(request, page.next_cursor),
         fields={},
         open_as="drafts",
-        can_write=caller.allows("create_draft", account_id)
-        or caller.allows("send_message", account_id),
+        can_write=mail_rights(caller, account_id)["write"],
     )
 
 
@@ -71,10 +69,10 @@ def _stored_values(stored: Message) -> dict[str, str]:
 
 @router.get("/accounts/{account_id}/drafts/{draft_id}")
 async def draft(
-    request: Request, caller: Viewer, account_id: str, draft_id: str
+    request: Request, caller: Viewer, account_id: str, draft_id: str, mailbox: Mailbox
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
-    stored = await get_mailbox(request).get_message(caller, account_id, draft_id)
+    stored = await mailbox.get_message(caller, account_id, draft_id)
     return show(
         request,
         caller,
@@ -96,36 +94,19 @@ def _unchanged(form: Any, stored: Message) -> bool:
     return same and not uploads(form) and not form.getlist("drop")
 
 
-async def _kept_attachments(
-    request: Request, caller: Access, account_id: str, stored: Message, form: Any
-) -> list[OutgoingAttachment]:
-    """The draft's attachments that stay."""
+def _kept(stored: Message, form: Any) -> list[str]:
+    """The ids of the draft's attachments that stay."""
     dropped = set(form.getlist("drop"))
-    kept = []
-    for attachment in stored.attachments:
-        if attachment.id in dropped:
-            continue
-        content = await get_mailbox(request).get_attachment(
-            caller, account_id, stored.id, attachment.id
-        )
-        kept.append(
-            OutgoingAttachment(
-                filename=attachment.filename or attachment.id,
-                content_type=attachment.content_type,
-                data=base64.b64encode(content.data),
-            )
-        )
-    return kept
+    return [a.id for a in stored.attachments if a.id not in dropped]
 
 
 @router.post("/accounts/{account_id}/drafts/{draft_id}")
 async def draft_submit(
-    request: Request, caller: Actor, account_id: str, draft_id: str
+    request: Request, caller: Actor, account_id: str, draft_id: str, mailbox: Mailbox
 ) -> Response:
     """Save the draft, save and send it, or delete it."""
     form = await request.form()
     account = account_of(request, caller, account_id)
-    mailbox = get_mailbox(request)
     here = f"/ui/accounts/{account_id}/drafts/{draft_id}"
     doing = str(form.get("do") or "save")
     stored: Message | None = None
@@ -140,12 +121,12 @@ async def draft_submit(
                 fields["reference"] = stored.reference.model_copy(
                     update={"quote": False}
                 )
-            fields["attachments"] = [
-                *await _kept_attachments(request, caller, account_id, stored, form),
-                *fields["attachments"],
-            ]
             await mailbox.update_draft(
-                caller, account_id, draft_id, build(DraftMessage, fields)
+                caller,
+                account_id,
+                draft_id,
+                build(DraftMessage, fields),
+                keep_attachments=_kept(stored, form),
             )
         if doing != "send":
             return back(here, "Draft saved.")

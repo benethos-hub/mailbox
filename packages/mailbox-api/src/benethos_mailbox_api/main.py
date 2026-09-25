@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncIterator, Mapping
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from collections.abc import AsyncIterator, Iterator, Mapping
+from contextlib import asynccontextmanager, contextmanager
+from dataclasses import dataclass, field
 
 import anyio
 from fastapi import FastAPI
@@ -34,39 +34,12 @@ from .data.secrets import (
     EnvKeyProvider,
     FileKeyProvider,
     KeyProvider,
+    KeyProviderError,
     KeyringKeyProvider,
 )
-from .data.storage import (
-    AccountRepository,
-    CredentialRepository,
-    Database,
-    IdempotencyRepository,
-    InMemoryAccountRepository,
-    InMemoryCredentialRepository,
-    InMemoryIdempotencyRepository,
-    InMemoryKeyRepository,
-    InMemoryMessageIndexRepository,
-    InMemoryRoleRepository,
-    InMemorySendLogRepository,
-    InMemoryTokenRepository,
-    InMemoryUserRepository,
-    KeyRepository,
-    MessageIndexRepository,
-    RoleRepository,
-    SendLogRepository,
-    SqliteAccountRepository,
-    SqliteCredentialRepository,
-    SqliteIdempotencyRepository,
-    SqliteKeyRepository,
-    SqliteMessageIndexRepository,
-    SqliteRoleRepository,
-    SqliteSendLogRepository,
-    SqliteTokenRepository,
-    SqliteUserRepository,
-    TokenRepository,
-    UserRepository,
-)
+from .data.storage import Database, open_repositories
 from .domain.accounts import AccountService
+from .domain.adapters import Adapters
 from .domain.auth import AuthService
 from .domain.discovery import DiscoveryService
 from .domain.idempotency import Idempotency
@@ -81,6 +54,7 @@ from .domain.worker import SyncWorker
 @dataclass(frozen=True)
 class Services:
     accounts: AccountService
+    adapters: Adapters
     auth: AuthService
     users: UserService
     mailbox: MailboxService
@@ -90,8 +64,18 @@ class Services:
     oauth: OAuthService
     worker: SyncWorker | None = None
     database: Database | None = None
+    oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
+
+    async def aclose(self) -> None:
+        """Every connection and the database, when the service stops."""
+        await self.adapters.close()
+        for client in self.oauth_clients.values():
+            await client.close()
+        self.close()
 
     def close(self) -> None:
+        """The database alone: for the command line, which connects to
+        nothing."""
         if self.database is not None:
             self.database.close()
 
@@ -105,38 +89,8 @@ def build_services(
 ) -> Services:
     """``resolve`` answers DNS for the host check that autodiscovery and the
     hosts of an account pass (CONCEPT 5.8, rule 6); tests hand in a table."""
-    account_repo: AccountRepository
-    user_repo: UserRepository
-    role_repo: RoleRepository
-    token_repo: TokenRepository
-    key_repo: KeyRepository
-    credential_repo: CredentialRepository
-    index_repo: MessageIndexRepository
-    idempotency_repo: IdempotencyRepository
-    send_repo: SendLogRepository
-    db: Database | None = None
-    if settings.storage == "memory":
-        account_repo = InMemoryAccountRepository()
-        user_repo = InMemoryUserRepository()
-        role_repo = InMemoryRoleRepository()
-        token_repo = InMemoryTokenRepository()
-        key_repo = InMemoryKeyRepository()
-        credential_repo = InMemoryCredentialRepository()
-        index_repo = InMemoryMessageIndexRepository()
-        idempotency_repo = InMemoryIdempotencyRepository()
-        send_repo = InMemorySendLogRepository()
-    else:
-        db = Database(settings.database_path)
-        account_repo = SqliteAccountRepository(db)
-        user_repo = SqliteUserRepository(db)
-        role_repo = SqliteRoleRepository(db)
-        token_repo = SqliteTokenRepository(db)
-        key_repo = SqliteKeyRepository(db)
-        credential_repo = SqliteCredentialRepository(db)
-        index_repo = SqliteMessageIndexRepository(db)
-        idempotency_repo = SqliteIdempotencyRepository(db)
-        send_repo = SqliteSendLogRepository(db)
-    vault = CredentialVault(key_repo, credential_repo, key_provider(settings))
+    repos = open_repositories(settings.storage, settings.database_path)
+    vault = CredentialVault(repos.keys, repos.credentials, key_provider(settings))
     admin_key = settings.api_key.get_secret_value() if settings.api_key else None
     clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
     # One guard for every connection the service makes to a host a user
@@ -145,36 +99,44 @@ def build_services(
         resolve=resolve or host_addresses,
         internal_hosts=settings.discovery_internal_hosts,
     )
+    adapters = Adapters(repos.accounts, vault, provider_factory, oauth=clients)
     accounts = AccountService(
-        account_repo,
-        vault,
-        provider_factory,
-        index_repo,
-        oauth=clients,
-        check_host=fetcher.checked_address,
+        repos.accounts, vault, adapters, repos.index, check_host=fetcher.checked_address
     )
-    sync = SyncService(accounts, index_repo)
-    auth = AuthService(user_repo, role_repo, token_repo, admin_key=admin_key)
+    sync = SyncService(adapters, repos.index)
+    auth = AuthService(repos.users, repos.roles, repos.tokens, admin_key=admin_key)
     return Services(
         accounts=accounts,
+        adapters=adapters,
         auth=auth,
-        users=UserService(user_repo, role_repo, token_repo, accounts, auth),
+        users=UserService(repos.users, repos.roles, repos.tokens, adapters, auth),
         mailbox=MailboxService(
-            accounts, sync, Idempotency(idempotency_repo), SendControl(send_repo)
+            adapters, sync, Idempotency(repos.idempotency), SendControl(repos.sends)
         ),
         discovery=discovery or build_discovery(settings, fetcher),
         sync=sync,
         worker=(
             SyncWorker(
-                accounts, sync, interval=settings.sync_interval, push=settings.sync_idle
+                adapters, sync, interval=settings.sync_interval, push=settings.sync_idle
             )
             if settings.sync_interval
             else None
         ),
         vault=vault,
-        oauth=OAuthService(accounts, clients),
-        database=db,
+        oauth=OAuthService(accounts, adapters, clients),
+        database=repos.database,
+        oauth_clients=clients,
     )
+
+
+@contextmanager
+def opened(settings: Settings) -> Iterator[Services]:
+    """The services for one command on the host, closed afterwards."""
+    services = build_services(settings)
+    try:
+        yield services
+    finally:
+        services.close()
 
 
 def build_oauth(settings: Settings) -> dict[ProviderType, OAuthClient]:
@@ -210,7 +172,7 @@ def key_provider(settings: Settings) -> KeyProvider:
         return EnvKeyProvider(value)
     if settings.key_provider == "file":
         if settings.key_file is None:
-            raise ValueError(
+            raise KeyProviderError(
                 "MAILBOX_API_KEY_FILE must be set for the file key provider"
             )
         return FileKeyProvider(settings.key_file)
@@ -243,8 +205,7 @@ def create_app(
                 # The worker first, so it opens nothing new while the
                 # adapters close.
                 background.cancel_scope.cancel()
-        await services.accounts.close()
-        services.close()
+        await services.aclose()
 
     app = FastAPI(
         title="Mailbox API",
@@ -254,12 +215,7 @@ def create_app(
         lifespan=lifespan,
     )
     app.state.settings = settings
-    app.state.accounts = services.accounts
-    app.state.auth = services.auth
-    app.state.users = services.users
-    app.state.mailbox = services.mailbox
-    app.state.discovery = services.discovery
-    app.state.oauth = services.oauth
+    app.state.services = services
 
     web.install(app)
     return app

@@ -75,6 +75,16 @@ class Guard:
         self._failures = 0
         self._paused_until = 0.0
 
+    def once(self, step: Callable[[], T]) -> T:
+        """Run ``step`` once, paced, refused while a login stands rejected
+        or the server rests, and a rejected login inside blocks further
+        attempts. For a connection made and dropped within the step, such
+        as a send over SMTP."""
+        self.check()
+        self.acquire()
+        with self.refused_logins():
+            return step()
+
     def attempts(self, step: Callable[[], T], drop: Callable[[], None]) -> T:
         """Run ``step`` with retries while the server is unreachable. After
         any failure ``drop`` discards the connection; after the last attempt

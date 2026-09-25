@@ -121,12 +121,15 @@ packages/
           templates.py    # Jinja2: filters, render, Post/Redirect/Get
           grants.py       # the grant editor's rows, read back into grants
           mailform.py     # the mail form: fields to a message, shown again
+          forms.py        # form errors; failing: back with the message
+          rights.py       # what the mail pages offer, by the rights on an account
           errors.py       # errors as a page
           routes/         # one module per area
           templates/      # base, partials, components (macros), pages
           static/         # app.css, app.js, vendored htmx
       domain/             # BUSINESS LOGIC: decides, knows no HTTP
-        accounts.py       # AccountService: accounts and their live adapters
+        accounts.py       # AccountService: accounts under the caller's rights
+        adapters.py       # Adapters: the live adapter per account, calls through it
         oauth.py          # OAuthService: connect or sign in again by OAuth
         mailbox.py        # MailboxService: folders and messages, the facade
         calls.py          # provider calls under our stable ids, many at once
@@ -137,6 +140,7 @@ packages/
         sync.py           # SyncService: stable message ids, the sync pass
         worker.py         # SyncWorker: polling and IDLE in the background
         idempotency.py    # Idempotency-Key: a retried send returns its result
+        locks.py          # KeyedLocks: one asyncio lock per key, for the services
         sending.py        # SendControl: grant constraints on sending, send audit
         permissions.py    # the catalogue of rights and groups
         access.py         # Access: what one caller may do
@@ -151,6 +155,8 @@ packages/
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
           convert.py      # a parsed message to Message / MessageSummary
           text.py         # the text part of an HTML-only mail
+          fields.py       # one header field: a Message-ID as one token,
+                          #   an address in Unicode
         providers/        # registry in __init__.py (also sign_in), base.py
           protocols/      # wire protocols, one library each: imap.py
                           #   (IMAPClient), smtp.py (smtplib), oauth.py
@@ -160,10 +166,13 @@ packages/
           imap/, memory/, # one directory per provider (adapter)
           microsoft/      #   microsoft: Graph over data/http; signin.py
                           #   its endpoints and the scopes it needs
-        http/             # httpx: safe.py (hosts users typed, SSRF guard),
+        http/             # httpx: base.py (the client, the capped read),
+                          #   safe.py (hosts users typed, SSRF guard),
                           #   api.py (JSON to a provider's known hosts)
-        storage/          # own records, one module per subject
+        storage/          # own records, one module per subject; table.py
+                          #   for the in-memory ones, sqlite/ the database
         secrets/          # envelope encryption, key providers, backup
+        files.py          # files for the owner alone (0600): database, backup, key
         discovery/        # autodiscovery sources and their helpers
     tests/
       test_architecture.py  # checks the layering on every run
@@ -230,8 +239,9 @@ noticing. Every change is measured against that.
    exactly one module or, for a framework, one package: IMAPClient only in
    `protocols/imap.py`, `cryptography` only in the crypto module, FastAPI only
    under `web/`. When you need it somewhere else, extend its wrapper instead
-   of importing it a second time. The one deliberate exception is pydantic,
-   which is how this project writes its own types.
+   of importing it a second time. Two deliberate exceptions: pydantic,
+   which is how this project writes its own types, and anyio, which is how
+   it writes concurrency.
 3. **Translate at the edge.** A wrapper maps everything into this project's
    types on the way in (`data/models/`) and every failure into a
    `MailboxApiError` subclass. Nothing upstream sees a raw library exception

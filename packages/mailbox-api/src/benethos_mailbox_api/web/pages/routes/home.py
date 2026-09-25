@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from ....domain import permissions
-from ...services import get_users
+from ...services import Users
 from ..deps import Viewer
 from ..templates import render
 
@@ -14,8 +14,7 @@ router = APIRouter()
 
 
 @router.get("")
-async def home(request: Request, caller: Viewer) -> HTMLResponse:
-    users = get_users(request)
+async def home(request: Request, caller: Viewer, users: Users) -> HTMLResponse:
     rights = users.me(caller)
     groups = {
         account.id: sorted(

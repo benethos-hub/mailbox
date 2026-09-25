@@ -90,7 +90,7 @@ def test_a_reply_in_html_quotes_the_html_as_text(
         },
     )
     assert answer.status_code == 200
-    provider = services.accounts.provider(account_id)
+    provider = services.adapters.get(account_id)
     assert isinstance(provider, MemoryProvider)
     [(_, _, raw)] = provider.outbox
     text, html = parts(raw)

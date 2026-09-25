@@ -8,10 +8,10 @@ writes down is also what an environment variable or a key file holds.
 from __future__ import annotations
 
 import base64
-import os
 from pathlib import Path
 from typing import Protocol
 
+from ..files import create_private
 from .cipher import KEY_BYTES
 
 KEYRING_SERVICE = "benethos-mailbox-api"
@@ -45,9 +45,9 @@ def decode_recovery(text: str) -> bytes:
     try:
         key = base64.b32decode(compact)
     except ValueError:
-        raise ValueError("not a recovery key") from None
+        raise KeyProviderError("not a recovery key") from None
     if len(key) != KEY_BYTES:
-        raise ValueError("not a recovery key")
+        raise KeyProviderError("not a recovery key")
     return key
 
 
@@ -84,10 +84,7 @@ class FileKeyProvider:
     def store(self, key: bytes) -> None:
         if self._path.exists():
             raise KeyProviderError(f"{self._path} exists, refusing to overwrite it")
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(self._path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "w", encoding="utf-8") as file:
-            file.write(encode_recovery(key) + "\n")
+        create_private(self._path, (encode_recovery(key) + "\n").encode("utf-8"))
 
     def describe(self) -> str:
         return f"the key file {self._path}"

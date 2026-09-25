@@ -75,7 +75,7 @@ def test_backup_and_restore_round_trip(machine: Path) -> None:
 
     restore_backup(machine / "b.bak", master, Settings().database_path)
     restored = _services()
-    ids = restored.accounts.all_ids()
+    ids = restored.adapters.ids()
     assert ids == [account_id]
     assert restored.vault.read(account_id, "password").get_secret_value() == "hunter2"
     restored.close()

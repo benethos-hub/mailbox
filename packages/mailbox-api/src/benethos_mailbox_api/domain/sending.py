@@ -9,9 +9,7 @@ sent, denied or failed, with its recipients and never its content.
 
 from __future__ import annotations
 
-import asyncio
 import math
-import weakref
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import Literal
@@ -27,7 +25,9 @@ from ..errors import (
     RecipientNotAllowedError,
     SendLimitError,
 )
+from . import paging
 from .access import Access
+from .locks import KeyedLocks
 
 WINDOW = timedelta(hours=24)
 CURSOR = "s_"
@@ -45,9 +45,7 @@ class SendControl:
         self._clock = clock
         # One send at a time per user and account, so two cannot both pass
         # the limit.
-        self._locks: weakref.WeakValueDictionary[tuple[str, str], asyncio.Lock] = (
-            weakref.WeakValueDictionary()
-        )
+        self._locks: KeyedLocks[tuple[str, str]] = KeyedLocks()
 
     async def send(
         self,
@@ -60,12 +58,7 @@ class SendControl:
     ) -> SentMessage:
         """``action``'s result, if the grants allow sending to
         ``recipients``; recorded either way."""
-        lock_key = (access.user_id, account_id)
-        lock = self._locks.get(lock_key)
-        if lock is None:
-            lock = asyncio.Lock()
-            self._locks[lock_key] = lock
-        async with lock:
+        async with self._locks.get((access.user_id, account_id)):
 
             def record(outcome: SendOutcome, **fields: object) -> None:
                 self._store.add(
@@ -122,7 +115,10 @@ class SendControl:
             return
         cap = max(cap for cap in caps if cap is not None)
         now = self._clock()
-        sent = self._store.sent_since(access.user_id, account_id, now - WINDOW)
+        # Only what went out counts; a denied or failed attempt sent nothing.
+        sent = self._store.sent_since(
+            access.user_id, account_id, now - WINDOW, outcome="sent"
+        )
         if len(sent) < cap:
             return
         # The next send is possible once enough of the last day's have aged out.
@@ -133,6 +129,18 @@ class SendControl:
             retry_after=max(1, math.ceil((free_at - now).total_seconds())),
         )
 
+    def list_all_sends(
+        self, access: Access, account_ids: list[str], *, per_account: int, limit: int
+    ) -> list[SendRecord]:
+        """The latest sends of every account the caller may audit, merged
+        newest first: the newest ``per_account`` of each, ``limit`` in all."""
+        records: list[SendRecord] = []
+        for account_id in account_ids:
+            if access.allows("list_sends", account_id):
+                records += self._store.list(account_id, limit=per_account, before=None)
+        records.sort(key=lambda record: (record.created_at, record.id), reverse=True)
+        return records[:limit]
+
     def list_sends(
         self, access: Access, account_id: str, *, limit: int, cursor: str | None
     ) -> Page[SendRecord]:
@@ -141,7 +149,7 @@ class SendControl:
         before = None
         if cursor is not None:
             try:
-                at, record_id = opaque.decode(CURSOR, cursor)
+                at, record_id = paging.decode_cursor(CURSOR, cursor)
                 before = (datetime.fromisoformat(at), str(record_id))
             except (ValueError, TypeError):
                 raise BadRequestError("invalid cursor") from None

@@ -16,24 +16,27 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ...data.models import MessageFilter
 from ...data.models.messages import SEARCH_TEXT_PATTERN
 from ...domain.access import Access
-from ...domain.auth import AuthService
-from ..services import Accounts, Discoverer, Mailbox, Users, get_auth
+from ..services import Accounts, Auth, Discoverer, Mailbox, Users
 
 __all__ = [
     "Accounts",
     "Caller",
     "Discoverer",
+    "Limit",
     "Mailbox",
     "Search",
     "Users",
     "authenticate",
 ]
 
+# How many items a list answers with at most; 50 without a say.
+Limit = Annotated[int, Query(ge=1, le=200)]
+
 _bearer = HTTPBearer(auto_error=False, scheme_name="bearerAuth")
 
 
 def authenticate(
-    auth: Annotated[AuthService, Depends(get_auth)],
+    auth: Auth,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> Access:
     return auth.authenticate(credentials.credentials if credentials else None)

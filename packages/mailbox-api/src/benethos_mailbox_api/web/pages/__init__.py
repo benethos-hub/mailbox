@@ -23,6 +23,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from .deps import CsrfRefused
 from .errors import error_page
+from .forms import Failed
 from .routes import (
     accounts,
     compose,
@@ -37,7 +38,7 @@ from .routes import (
     users,
 )
 from .session import PATH, SessionStore, SignInRequired
-from .templates import STATIC_DIR, is_htmx
+from .templates import STATIC_DIR, back, is_htmx
 
 AREAS = (
     login,
@@ -108,6 +109,10 @@ def install(app: FastAPI) -> None:
             return Response(status_code=204, headers={"HX-Redirect": target})
         return RedirectResponse(target, status_code=303)
 
+    @app.exception_handler(Failed)
+    async def _failed(_: Request, exc: Failed) -> Response:
+        return back(exc.path, error=exc.error)
+
     @app.exception_handler(CsrfRefused)
     async def _csrf(request: Request, _: CsrfRefused) -> HTMLResponse:
         return error_page(
@@ -117,8 +122,8 @@ def install(app: FastAPI) -> None:
             title="Form expired",
         )
 
-    oauth = getattr(app.state, "oauth", None)
-    hosts = oauth.sign_in_hosts() if oauth is not None else []
+    services = getattr(app.state, "services", None)
+    hosts = services.oauth.sign_in_hosts() if services is not None else []
     app.add_middleware(_Security, headers=security_headers(hosts))
 
 

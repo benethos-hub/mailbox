@@ -10,11 +10,13 @@ merged is decided in ``domain/discovery.py``. Helpers each wrap one library:
 from __future__ import annotations
 
 from ..http import SafeFetcher
+from . import placeholders
 from .base import DiscoverySource, Finding, Query
 from .isp import IspAutoconfigSource
 from .ispdb import IspdbSource
 from .mx import MxSource
 from .presets import PresetSource, bundled
+from .suffix import registrable_domain
 
 
 def default_sources(fetcher: SafeFetcher, *, ispdb: bool) -> list[DiscoverySource]:
@@ -43,5 +45,7 @@ __all__ = [
     "Query",
     "SafeFetcher",
     "default_sources",
+    "placeholders",
     "preset_hosts",
+    "registrable_domain",
 ]

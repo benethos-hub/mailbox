@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import empty %}
+{% from "components/ui.html" import empty, pager %}
 {% block title %}Sends · {{ APP_NAME }}{% endblock %}
 {% block heading %}Sends{% endblock %}
 {% block subheading %}
@@ -59,13 +59,6 @@
     {{ empty("Nothing sent yet, or no account you may audit.") }}
     {% endif %}
   </div>
-  {% set more, first = pages %}
-  {% if more or first %}
-  <div class="body toolbar">
-    {% if first %}<a class="btn small" href="{{ first }}">Newest</a>{% endif %}
-    <span class="grow"></span>
-    {% if more %}<a class="btn small" href="{{ more }}">Older</a>{% endif %}
-  </div>
-  {% endif %}
+  {{ pager(pages) }}
 </section>
 {% endblock %}

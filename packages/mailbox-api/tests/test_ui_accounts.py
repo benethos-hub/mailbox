@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -61,7 +62,7 @@ def test_the_list(ui: TestClient, account_id: str) -> None:
 
 def test_discovery_offers_what_can_be_connected(ui: TestClient) -> None:
     found = FoundBy()
-    ui.app.state.discovery = found  # type: ignore[attr-defined]
+    ui.app.state.services = replace(ui.app.state.services, discovery=found)  # type: ignore[attr-defined]
     page = post(ui, "/ui/accounts/discover", {"email": "new@example.org"})
     assert found.asked == ["new@example.org"]
     assert page.status_code == 200
@@ -90,9 +91,9 @@ def test_connect_an_account(ui: TestClient, services: Services) -> None:
     page = ui.get(location).text
     assert "added@example.org connected." in page
     [account] = [
-        services.accounts.record(i)
-        for i in services.accounts.all_ids()
-        if services.accounts.record(i).email == "added@example.org"
+        services.adapters.record(i)
+        for i in services.adapters.ids()
+        if services.adapters.record(i).email == "added@example.org"
     ]
     assert account.display_name == "Added"
 

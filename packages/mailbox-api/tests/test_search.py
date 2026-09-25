@@ -13,7 +13,7 @@ from benethos_mailbox_api.data.providers.protocols.imap import (
     ImapSession,
     SearchCriteria,
 )
-from benethos_mailbox_api.errors import ProviderError
+from benethos_mailbox_api.errors import BadRequestError
 
 from .imap_fake import FakeFolder, FakeMailBox, make_message
 from .test_imap import provider
@@ -94,7 +94,7 @@ def test_the_session_refuses_a_line_break_in_a_search(box: FakeMailBox) -> None:
     session.login("me@example.com", "secret")
     session.select("INBOX")
     for field in ("text", "sender", "to", "subject"):
-        with pytest.raises(ProviderError, match="control characters"):
+        with pytest.raises(BadRequestError, match="control characters"):
             session.search(SearchCriteria(**{field: "a\r\nX1 DELETE INBOX"}))
     assert not [c for c in box.calls if c[0] == "search"]
 

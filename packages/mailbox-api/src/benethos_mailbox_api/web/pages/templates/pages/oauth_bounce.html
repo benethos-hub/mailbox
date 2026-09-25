@@ -1,23 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    {# From this site, so the browser sends the session cookie again. #}
-    <meta http-equiv="refresh" content="0;url={{ target }}" />
-    <meta name="referrer" content="no-referrer" />
-    <title>Signing in · {{ APP_NAME }}</title>
-    <link rel="stylesheet" href="/ui/static/css/app.css" />
-  </head>
-  <body>
-    <div class="signin">
-      <section class="card">
-        <header><h2>✉ {{ APP_NAME }}</h2></header>
-        <div class="body">
-          <p>Back from the sign-in. One moment…</p>
-          <p><a class="btn primary" href="{{ target }}">Continue</a></p>
-        </div>
-      </section>
-    </div>
-  </body>
-</html>
+{% extends "bare.html" %}
+{% block head %}
+{# From this site, so the browser sends the session cookie again. #}
+<meta http-equiv="refresh" content="0;url={{ target }}" />
+<meta name="referrer" content="no-referrer" />
+{% endblock %}
+{% block title %}Signing in · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<p>Back from the sign-in. One moment…</p>
+<p><a class="btn primary" href="{{ target }}">Continue</a></p>
+{% endblock %}
