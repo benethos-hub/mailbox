@@ -11,13 +11,19 @@ from fastapi.responses import HTMLResponse, Response
 
 from ....common.clock import utc_now
 from ....data.models import Grant, Role
-from ....domain import permissions
 from ....domain.access import Access
 from ...services import Users, get_accounts, get_users
 from ..deps import Actor, Viewer
 from ..effective import view_of
 from ..forms import failing
-from ..grants import GROUP_NAMES, account_choices, read_grants, rows_of
+from ..grants import (
+    GROUP_NAMES,
+    GROUP_SECTIONS,
+    account_choices,
+    group_hint,
+    read_grants,
+    rows_of,
+)
 from ..session import show_once, take_once
 from ..templates import back, render
 
@@ -37,11 +43,8 @@ def _editor(request: Request, caller: Access, grants: list[Grant]) -> dict[str, 
     return {
         "rows": rows,
         "account_choices": account_choices(accounts.list(caller), rows),
-        "groups": GROUP_NAMES,
-        "group_ops": {
-            name: ", ".join(permissions.GROUPS.get(name, ("every right",)))
-            for name in GROUP_NAMES
-        },
+        "groups": GROUP_SECTIONS,
+        "group_ops": {name: group_hint(name) for name in GROUP_NAMES},
     }
 
 

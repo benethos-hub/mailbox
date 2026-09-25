@@ -89,6 +89,9 @@ stored data and the configuration may change without notice.
 
 ### Added
 
+- Configuration UI: the grant editor shows the rights the MCP server uses
+  (`mail.read`, `mail.write`, `drafts`, `send`) apart from the others. The
+  tooltip of each group names the MCP tools it opens.
 - Configuration UI: the user page shows the effective rights, the grants
   of the user and of its roles together. It lists them per account, with
   whole groups by name, the limits on sending and the warning where the

@@ -21,6 +21,34 @@ from ...domain import permissions
 from .forms import FormError, first_problem
 
 GROUP_NAMES = (permissions.ADMIN, *permissions.GROUPS)
+
+# The groups the MCP server works with, and the tools each opens there. The
+# MCP package keeps its own table of tools and rights. Keep the two in step.
+MCP_TOOLS: dict[str, tuple[str, ...]] = {
+    "mail.read": ("list_folders", "search_messages", "get_message", "get_attachment"),
+    "mail.write": ("update_messages", "create_folder"),
+    "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
+    "send": ("send_message", "send_draft"),
+}
+
+# The rows of the rights in the editor: a caption and its groups.
+GROUP_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("Used by the MCP server", tuple(MCP_TOOLS)),
+    (
+        "Not used by the MCP server",
+        tuple(name for name in GROUP_NAMES if name not in MCP_TOOLS),
+    ),
+)
+
+
+def group_hint(name: str) -> str:
+    """The tooltip of a group: its operations, and its MCP tools if any."""
+    hint = ", ".join(permissions.GROUPS.get(name, ("every right",)))
+    if name in MCP_TOOLS:
+        hint += ". MCP tools: " + ", ".join(MCP_TOOLS[name])
+    return hint
+
+
 _SPLIT = re.compile(r"[\s,;]+")
 
 

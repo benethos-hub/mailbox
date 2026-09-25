@@ -15,7 +15,11 @@ from benethos_mailbox_service.errors import MailboxServiceError
 from benethos_mailbox_service.main import Services
 from benethos_mailbox_service.web.pages.effective import ON_AN_ACCOUNT
 from benethos_mailbox_service.web.pages.grants import (
+    GROUP_NAMES,
+    GROUP_SECTIONS,
+    MCP_TOOLS,
     GrantFormError,
+    group_hint,
     read_grants,
     rows_of,
 )
@@ -362,3 +366,19 @@ def test_the_user_page_shows_the_effective_rights(
     assert ">list_accounts<" in section
     assert "reads and sends anywhere" in section
     assert "to anyone, no daily limit" in section
+
+
+def test_the_editor_sorts_every_group_into_one_row() -> None:
+    names = [name for _, section in GROUP_SECTIONS for name in section]
+    assert sorted(names) == sorted(GROUP_NAMES)
+    assert set(MCP_TOOLS) <= set(permissions.GROUPS)
+    assert "MCP tools: list_folders, search_messages" in group_hint("mail.read")
+    assert "MCP tools" not in group_hint("mail.delete")
+
+
+def test_the_editor_shows_what_the_mcp_server_uses(ui: TestClient) -> None:
+    form = ui.get("/ui/users/new").text
+    used, rest = form.split("Not used by the MCP server", 1)
+    assert "Used by the MCP server" in used
+    assert 'value="send"' in used.split("Used by the MCP server", 1)[1]
+    assert 'value="mail.delete"' in rest and 'value="admin"' in rest
