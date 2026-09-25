@@ -138,6 +138,9 @@ Everything real mail will depend on, before any real mailbox is connected.
      personal Outlook.com account (`live/microsoft.py`, `docs/microsoft.md`)
   - decided 2026-09-25: tenant `common` by default, the callback at
     `/ui/oauth/{provider}/callback` (CONCEPT 5.4)
+  - planned: the project's own client id as the default, a public client
+    without a secret; sign-in through `localhost` or the device code flow;
+    an app of the deployment's own stays the option (CONCEPT 5.4)
 - `gmail` adapter with OAuth, own Google Cloud client per deployment (5.5)
 - Gmail history and Graph delta in the worker
 - `jmap` adapter for Fastmail and JMAP servers (5.6)
