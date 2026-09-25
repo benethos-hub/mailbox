@@ -25,17 +25,13 @@ from benethos_mailbox_service.data.providers.microsoft import (
     endpoints as microsoft_endpoints,
 )
 from benethos_mailbox_service.data.providers.protocols.oauth import App, OAuthClient
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.main import Services, build_services, create_app
 
 from .conftest import API_KEY, bearer_for
 from .test_oauth import TokenEndpoint, factory, granted, id_token
 from .ui_helpers import post, sign_in
 
-
-@pytest.fixture(autouse=True)
-def master_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+pytestmark = pytest.mark.usefixtures("master_key")
 
 
 @pytest.fixture

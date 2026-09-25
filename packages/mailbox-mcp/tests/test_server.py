@@ -182,8 +182,7 @@ async def test_a_tool_call_through_the_server(api: Callable) -> None:
 # --- the command line ------------------------------------------------------------
 
 
-def test_client_is_created_once(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(server, "_client", None)
+def test_client_is_created_once() -> None:
     first = server.client()
     assert isinstance(first, MailboxApiClient)
     assert server.client() is first
@@ -229,11 +228,12 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
     """The start runs in an event loop of its own. A client made there would
     carry connections of a closed loop into the server's."""
 
+    made: list[MailboxApiClient] = []
+
     async def operations() -> set[str]:
-        server.client()
+        made.append(server.client())
         return set(READ)
 
-    monkeypatch.setattr(server, "_client", None)
     monkeypatch.setattr(server, "allowed_operations", operations)
     monkeypatch.setattr(
         server,
@@ -241,7 +241,7 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
         lambda ops: type("S", (), {"run": lambda self, transport: None})(),
     )
     server.main([])
-    assert server._client is None
+    assert server.client() is not made[0]
 
 
 # title, read-only, destructive, idempotent, open world

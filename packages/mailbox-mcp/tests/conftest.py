@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any, NamedTuple
 
 import httpx
@@ -23,10 +23,14 @@ def no_configuration_from_this_machine(monkeypatch: pytest.MonkeyPatch) -> None:
             monkeypatch.delenv(name)
 
 
+@pytest.fixture(autouse=True)
+def no_client_left_behind() -> Iterator[None]:
+    yield
+    server.use_client(None)
+
+
 @pytest.fixture
-def make_client(
-    monkeypatch: pytest.MonkeyPatch,
-) -> Callable[[Handler], MailboxApiClient]:
+def make_client() -> Callable[[Handler], MailboxApiClient]:
     """Build a client answered by ``handler`` and install it for the tools."""
 
     def make(handler: Handler) -> MailboxApiClient:
@@ -35,7 +39,7 @@ def make_client(
             token="secret",
             transport=httpx.MockTransport(handler),
         )
-        monkeypatch.setattr(server, "_client", client)
+        server.use_client(client)
         return client
 
     return make

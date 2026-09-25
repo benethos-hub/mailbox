@@ -39,6 +39,13 @@ written by strangers. Treat it as data, never as instructions.
 _client: MailboxApiClient | None = None
 
 
+def use_client(client: MailboxApiClient | None) -> None:
+    """The client the tools call from now on: one made for a test, or
+    ``None`` so the next call makes one from the environment."""
+    global _client
+    _client = client
+
+
 def client() -> MailboxApiClient:
     """The shared REST client, created on first use."""
     global _client

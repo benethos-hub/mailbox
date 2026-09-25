@@ -31,7 +31,7 @@ from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import ConflictError, NotFoundError
 from benethos_mailbox_service.main import Services, build_services
 
-from .conftest import ADMIN, bearer_for, create_account
+from .conftest import ADMIN, bearer_for, create_account, memory_of
 from .imap_fake import FakeFolder, FakeMailBox, make_message
 from .test_imap import provider
 
@@ -373,12 +373,6 @@ async def test_a_draft_id_that_left_the_drafts_folder(
 
 
 # --- sending a draft ----------------------------------------------------------------
-
-
-def memory_of(services: Services, account_id: str) -> MemoryProvider:
-    provider = services.adapters.get(account_id)
-    assert isinstance(provider, MemoryProvider)
-    return provider
 
 
 def test_a_sent_draft_goes_out_as_stored_and_is_gone(

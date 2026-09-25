@@ -23,7 +23,8 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.errors import ProviderError
 
-PUBLIC = "93.184.215.14"
+from .conftest import PUBLIC
+
 QUERY = Query(email="me+x@firma.example", domain="firma.example")
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from typing import Any
 
@@ -71,7 +72,7 @@ def test_anything_else_is_refused_alike(value: bytes | None) -> None:
     assert answer["status"] == 401
     assert answer["reached"] is False
     assert answer["headers"][b"www-authenticate"] == b"Bearer"
-    assert answer["body"] == transport._REFUSED
+    assert json.loads(answer["body"])["error"]["code"] == "unauthorized"
 
 
 def test_lifespan_passes() -> None:

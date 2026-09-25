@@ -37,7 +37,7 @@ from .data.secrets import (
     KeyProviderError,
     KeyringKeyProvider,
 )
-from .data.storage import Database, open_repositories
+from .data.storage import Database, MessageIndexRepository, open_repositories
 from .domain.accounts import AccountService
 from .domain.adapters import Adapters
 from .domain.auth import AuthService
@@ -60,6 +60,7 @@ class Services:
     mailbox: MailboxService
     discovery: DiscoveryService
     sync: SyncService
+    index: MessageIndexRepository  # the store behind sync
     vault: CredentialVault
     oauth: OAuthService
     worker: SyncWorker | None = None
@@ -120,6 +121,7 @@ def build_services(
         ),
         discovery=discovery or build_discovery(settings, fetcher),
         sync=sync,
+        index=repos.index,
         worker=(
             SyncWorker(
                 adapters, sync, interval=settings.sync_interval, push=settings.sync_idle

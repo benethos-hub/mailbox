@@ -13,9 +13,8 @@ from pydantic import SecretStr
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.main import build_services, create_app
 
-from .conftest import API_KEY
+from .conftest import API_KEY, PUBLIC
 
-PUBLIC = "93.184.215.14"
 TABLE: dict[str, list[str]] = {
     "imap.example.org": [PUBLIC],
     "smtp.example.org": [PUBLIC],

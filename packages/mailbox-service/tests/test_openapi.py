@@ -11,8 +11,9 @@ from benethos_mailbox_service.__main__ import main
 from benethos_mailbox_service.main import create_app, openapi_json
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 
+from .conftest import METHODS
+
 COMMITTED = Path(__file__).resolve().parents[3] / "docs" / "openapi.json"
-METHODS = {"get", "post", "put", "patch", "delete"}
 
 
 def _operations() -> list[tuple[str, dict[str, Any]]]:

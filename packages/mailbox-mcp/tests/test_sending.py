@@ -8,6 +8,7 @@ from collections.abc import Callable
 from benethos_mailbox_mcp import server
 
 SENT = {"message_id_header": "<m1@example.com>", "sent_copy_id": "msg_s", "refused": []}
+SEND_DRAFT = "/v1/accounts/acc_1/drafts/msg_d/send"
 
 
 async def test_send_message(api: Callable) -> None:
@@ -54,11 +55,12 @@ async def test_refused_recipients_are_named(api: Callable) -> None:
 async def test_send_draft(api: Callable) -> None:
     handler = api(SENT)
     assert (await server.send_draft("acc_1", "msg_d"))["sent"] is True
-    [call], [key] = handler.calls, handler.keys
-    assert call.path == "/v1/accounts/acc_1/drafts/msg_d/send"
-    assert call.body is None
-    assert key != server._idempotency_key("send_draft", "acc_1", "msg_e")
-    assert key == server._idempotency_key("send_draft", "acc_1", "msg_d")
+    await server.send_draft("acc_1", "msg_d")
+    await server.send_draft("acc_1", "msg_e")
+    assert [c.path for c in handler.calls[:2]] == [SEND_DRAFT, SEND_DRAFT]
+    assert handler.calls[0].body is None
+    first, again, other = handler.keys
+    assert first == again and first != other
 
 
 async def test_registered_only_with_the_send_rights() -> None:

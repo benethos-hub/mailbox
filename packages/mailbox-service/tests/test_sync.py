@@ -245,7 +245,7 @@ async def test_deleting_the_account_forgets_its_ids(
 ) -> None:
     await services.sync.sync_account(account_id)
     await services.accounts.delete(ADMIN, account_id)
-    index = services.sync._index  # the store behind the service
+    index = services.index
     assert index.folder_states(account_id) == {}
     assert index.in_folders(account_id, [mappers.folder_id("INBOX")]) == []
 

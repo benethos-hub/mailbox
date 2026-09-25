@@ -91,6 +91,11 @@ class DiscoveryService:
         self._calls: dict[str, deque[float]] = {}
         self._cache: dict[str, tuple[float, list[_Result]]] = {}
 
+    @property
+    def sources(self) -> list[DiscoverySourceName]:
+        """The sources asked, in the order their answers are ranked."""
+        return [source.name for source in self._sources]
+
     async def discover(self, access: Access, email: str) -> Discovery:
         access.require("discover_account")
         query = _query(email)

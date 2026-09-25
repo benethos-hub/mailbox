@@ -30,7 +30,8 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 
-PUBLIC = "93.184.215.14"
+from .conftest import PUBLIC
+
 PUBLIC_2 = "93.184.215.15"
 
 # --- dns ------------------------------------------------------------------------

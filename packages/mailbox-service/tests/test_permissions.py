@@ -9,7 +9,7 @@ from benethos_mailbox_service.main import create_app
 from benethos_mailbox_service.web import api
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 
-METHODS = {"get", "post", "put", "patch", "delete"}
+from .conftest import METHODS
 
 
 def test_every_v1_operation_declares_its_right() -> None:
