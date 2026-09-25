@@ -77,7 +77,7 @@ class ApiClient:
             method,
             target,
             headers=dict(headers or {}),
-            params=dict(params or {}),
+            params=dict(params) if params else None,
             data=dict(form) if form is not None else None,
             json=json_body,
             content=content,

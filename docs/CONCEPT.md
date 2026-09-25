@@ -271,6 +271,16 @@ an app password is the credential to ask for.
   in the second half of 2027. Sending therefore goes through Graph
   `sendMail`, not SMTP.
 - Outlook.com has accepted no basic auth since 2024-09-16.
+- Rules of the implementation (phase 5): every call asks for immutable ids
+  (`Prefer: IdType="ImmutableId"`), so the domain keeps no id mapping.
+  Sending and drafts go as MIME, composed as for every provider:
+  `sendMail` keeps the copy in Sent Items itself; a draft is created from
+  MIME and replaced by a new one, since Graph cannot change a draft's MIME.
+  Bcc recipients travel in a Bcc header **(unverified: that Exchange takes
+  it out before delivery)**. Keywords are categories; `$answered` and the
+  other system keywords have no place and are not stored. A next-page
+  cursor is a Graph path below `/me/` and never leaves the Graph host.
+  No push yet.
 - Each deployment registers its own app in Entra ID (delegated
   `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `openid`, `email`,
   `profile` for the address that signed in). Change-notification
