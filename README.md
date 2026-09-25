@@ -1,8 +1,8 @@
 # Mailbox Service
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
-[![PyPI service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20service)](https://pypi.org/project/benethos-mailbox-service/)
-[![PyPI mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
+[![PyPI mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
+[![PyPI mailbox-mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
 [![Container](https://img.shields.io/badge/ghcr.io-mailbox--service-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-service)
 [![Container](https://img.shields.io/badge/ghcr.io-mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
