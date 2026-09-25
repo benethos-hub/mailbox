@@ -237,6 +237,25 @@ def test_a_change_that_does_not_log_in_is_not_stored(
     assert smtp.calls == []
 
 
+def test_settings_sent_as_stored_log_in_nowhere(
+    world: tuple[TestClient, FakeSmtpServer],
+) -> None:
+    client, smtp = world
+    account_id = new_account(client)
+    url = f"/v1/accounts/{account_id}"
+    client.patch(url, json={"settings": {"smtp_host": "smtp.example.com"}})
+    smtp.calls.clear()
+    same = client.patch(
+        url,
+        json={
+            "display_name": "Renamed",
+            "settings": {"smtp_host": "smtp.example.com", "smtp_port": None},
+        },
+    )
+    assert same.status_code == 200 and same.json()["display_name"] == "Renamed"
+    assert smtp.calls == []
+
+
 def test_a_setting_is_removed_with_null(
     world: tuple[TestClient, FakeSmtpServer],
 ) -> None:

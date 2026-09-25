@@ -131,28 +131,30 @@ class AccountService:
     ) -> Account:
         """Change the display name, settings (``None`` removes one) or
         credentials. A change of settings or credentials logs in first, as on
-        create: nothing is stored unless the provider accepts it."""
+        create: nothing is stored unless the provider accepts it. Settings
+        sent as they are stored change nothing and log in nowhere."""
         access.require("update_account", account_id)
         _no_secrets_in(settings)
         account = self._repository.get(account_id)
-        merged: dict[str, str | int | bool] = dict(
-            self._repository.settings(account_id)
-        )
+        defaults = settings_defaults(account.provider, account.email)
+        # A setting removed falls back to what the provider assumes.
+        before = {**defaults, **self._repository.settings(account_id)}
+        merged: dict[str, str | int | bool] = dict(before)
         for key, value in (settings or {}).items():
             if value is None:
                 merged.pop(key, None)
+                if key in defaults:
+                    merged[key] = defaults[key]
             else:
                 merged[key] = value
-        # A setting removed falls back to what the provider assumes.
-        for key, value in settings_defaults(account.provider, account.email).items():
-            merged.setdefault(key, value)
+        changed = merged != before
         secrets = dict(credentials or {})
         # An OAuth probe may hand back a refresh token to store.
         if secrets or self.signs_in_with_oauth(account.provider):
             self._vault.require_ready()
-        if settings:
+        if changed:
             await self._check_hosts(merged)
-        if settings or secrets:
+        if changed or secrets:
 
             def read(field: str) -> SecretStr:
                 if field in secrets:
@@ -168,7 +170,7 @@ class AccountService:
         for field, secret in secrets.items():
             self._vault.store(account_id, field, secret)
         self._repository.update(account, merged)
-        if settings or secrets:
+        if changed or secrets:
             # The live adapter still has the old settings: the next use
             # builds a new one.
             await self._adapters.drop(account_id)

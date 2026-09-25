@@ -11,6 +11,9 @@ stored data and the configuration may change without notice.
 
 ### Fixed
 
+- `PATCH /v1/accounts/{account_id}` logs in to the provider only when
+  the settings sent differ from the stored ones. Before, any `settings`
+  in the body logged in, the same values included.
 - A Microsoft account's keywords come back in lower case, as the other
   providers answer them. Renaming a top-level folder there no longer
   moves it. A move of a batch to several folders is refused per message,

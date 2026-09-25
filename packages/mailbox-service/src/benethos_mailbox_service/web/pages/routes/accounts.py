@@ -50,8 +50,8 @@ def _changed(
 ) -> dict[str, str | int | bool | None]:
     """What the form changes: new or different values, and ``None`` for a
     field that was sent empty. A field the form did not send changes
-    nothing. Unchanged settings are not passed on, so a rename does not log
-    in to the provider again."""
+    nothing. The domain logs in only for settings that differ from the
+    stored ones; leaving the unchanged out keeps the request small."""
     changed: dict[str, str | int | bool | None] = {
         key: value for key, value in submitted.items() if current.get(key) != value
     }
