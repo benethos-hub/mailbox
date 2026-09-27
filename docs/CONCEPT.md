@@ -1182,11 +1182,30 @@ with the role
     a forgotten password of the last administrator.
   - Not in the API: a password is for a person at a browser. A user
     without one cannot sign in to the UI.
+- **The UI sign-in switch** (**decided 2026-09-27**): `ui_sign_in` on
+  the user says whether it may sign in to the UI at all. Without it the
+  user is an API user: tokens only.
+  - A new user is an API user unless `ui_sign_in` is set. The first
+    admin from `users create-admin` has it. The migration sets it for
+    every user that has a password and leaves it off for the others,
+    so nothing changes for anyone.
+  - Switched off: the stored password is deleted, running UI sessions
+    end at the next request, and a sign-in answers as a wrong password
+    does, so nobody learns that the name exists. The log names the
+    reason. Setting a password or a one-time password is refused.
+    Tokens keep working.
+  - Switched on: the user still has no password. It gets a one-time
+    password as a new user does, and changes it at the first sign-in.
+  - Who switches: a user with `update_user`, for users whose rights it
+    covers, as for any change of a user. Not for itself: a user cannot
+    lock itself out of the UI.
+  - On the host, `users set-password <name>` switches it on as well and
+    says so. It is the way back in when nobody can sign in.
+  - In the API: `ui_sign_in` on the user, in `POST /v1/users` (false
+    when left out) and `PATCH /v1/users/{user_id}`.
 - **Later:** TOTP or a passkey as a second factor (IDEAS), OAuth 2.0
-  client credentials for machines. Which credential kinds a user holds
-  decides where it can sign in. There is deliberately no "person" or
-  "service" type on the user: rights come from grants alone, and a type
-  field would only matter to rules nobody has asked for yet.
+  client credentials for machines. Rights come from grants alone. The
+  switch above says where a user may sign in, not what it may do.
 - A disabled user fails authentication with every credential at once.
   Rights changes take effect on the next request. Revoking a token is
   immediate.
@@ -1227,7 +1246,7 @@ right `list_sends` (group `audit`).
 | GET | `/v1/me` | any authenticated user. Who am I, and my effective rights resolved to operations per account |
 | GET | `/v1/permissions` | any authenticated user. The catalogue of operations and groups |
 | GET / POST | `/v1/users` | `users.manage` |
-| GET / PATCH / DELETE | `/v1/users/{user_id}` | `users.manage`. Name, roles, grants, disabled |
+| GET / PATCH / DELETE | `/v1/users/{user_id}` | `users.manage`. Name, roles, grants, disabled, `ui_sign_in` |
 | GET / POST | `/v1/users/{user_id}/tokens` | `users.manage`. POST returns the token once |
 | DELETE | `/v1/users/{user_id}/tokens/{token_id}` | `users.manage`. Revoke |
 | GET / POST | `/v1/roles` | `users.manage` |

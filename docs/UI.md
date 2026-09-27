@@ -163,7 +163,7 @@ The options per list, with the same names where the field is the same:
 |---|---|---|
 | Mail | text | folder and accounts (the mail of every account), from, to, subject, from day, before day, unread, starred, with attachments |
 | Sends | recipient | account, who, outcome, from day, before day |
-| Users | name | role, disabled |
+| Users | name | role, disabled, API only |
 | Accounts | address | provider, status |
 | Webhooks | url | account, failing |
 | Changes | – | account, event, from day |
@@ -252,9 +252,16 @@ exist only here (a user, a role, a token, a folder).
 
 ### 6.3 Users, roles, tokens
 
-New user: name, a one-time password (CONCEPT 7.5) that the service
-makes and shows once, as a token, roles as tick boxes, grants in the
-grant editor. New role is an editor page too. It takes the path
+New user: name, where it signs in, roles as tick boxes, grants in the
+grant editor. **Signs in to** is "the API only" by default, or "the UI
+and the API" (CONCEPT 7.5, the UI sign-in switch). With the UI, the
+service makes a one-time password and shows it once, as a token.
+
+A user that signs in to the API only has the tag **API only** in the
+list and on its page, and the list filters by it. Its page has no
+Password card. The Change card switches the UI sign-in on and off, but
+not for the signed-in user itself. Switched on, the Password card
+offers a one-time password. New role is an editor page too. It takes the path
 `/ui/roles/new`, so the UI cannot open a role named `new`. The user page shows the effective rights as
 today, then tokens, then Change, then Danger. Roles the same without
 tokens. A token is created in the Tokens card and shown once.
