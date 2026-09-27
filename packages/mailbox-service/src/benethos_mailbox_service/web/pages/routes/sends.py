@@ -1,18 +1,26 @@
-"""The audit of sends: who sent from which account to whom, never content."""
+"""The audit of sends: who sent from which account to whom, never content.
+One list for every account the caller may audit, narrowed by the filter
+bar, an account among its filters."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from datetime import UTC, date, datetime, time
 
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import ValidationError
+
+from ....data.models import SendFilter
 from ....domain.access import Access
 from ...services import Accounts, Mailbox, get_users
-from ..deps import Viewer, account_of, emails_of
+from ..deps import Viewer, emails_of
+from ..filters import Field, FilterBar, filter_bar
+from ..forms import first_problem
 from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
-# Across accounts: the latest of each, merged.
-LATEST = 20
+
+OUTCOMES = [("sent", "sent"), ("denied", "denied"), ("failed", "failed")]
 
 
 def _user_names(request: Request, caller: Access) -> dict[str, str]:
@@ -24,41 +32,76 @@ def _user_names(request: Request, caller: Access) -> dict[str, str]:
     return names
 
 
+def _day(value: str) -> datetime | None:
+    """The start of a day, in UTC."""
+    return datetime.combine(date.fromisoformat(value), time(), UTC) if value else None
+
+
+def _filter(bar: FilterBar) -> SendFilter | None:
+    """What the bar asks for. Raises ``ValueError`` for a value that is no
+    filter."""
+    wanted = {
+        "user_id": bar.value("who") or None,
+        "outcome": bar.value("outcome") or None,
+        "recipient": bar.value("to") or None,
+        "after": _day(bar.value("after")),
+        "before": _day(bar.value("before")),
+    }
+    if not any(value is not None for value in wanted.values()):
+        return None
+    try:
+        return SendFilter.model_validate(wanted)
+    except ValidationError as exc:
+        raise ValueError(first_problem(exc)) from None
+
+
 @router.get("/sends")
-async def all_sends(
+async def sends(
     request: Request, caller: Viewer, mailbox: Mailbox, accounts: Accounts
 ) -> HTMLResponse:
-    """The latest sends of every account the caller may audit."""
     audited = accounts.list(caller, may="list_sends")
-    records = mailbox.list_all_sends(caller, per_account=LATEST, limit=PAGE_SIZE)
+    names = _user_names(request, caller)
+    bar = filter_bar(
+        request,
+        (
+            Field("account", "Account", "select", [(a.id, a.email) for a in audited]),
+            Field("who", "Who", "select", sorted(names.items(), key=lambda n: n[1])),
+            Field("outcome", "Outcome", "select", OUTCOMES),
+            Field("after", "From day", "date"),
+            Field("before", "Before day", "date"),
+        ),
+        search=Field("to", "Recipient"),
+    )
+    problem = ""
+    try:
+        matching = _filter(bar)
+    except ValueError as exc:
+        matching, problem = None, f"Filter: {exc}"
+    account_id = bar.value("account")
+    cursor = request.query_params.get("cursor")
+    if account_id:
+        page = mailbox.list_sends(
+            caller, account_id, limit=PAGE_SIZE, cursor=cursor, matching=matching
+        )
+    else:
+        page = mailbox.list_all_sends(
+            caller, limit=PAGE_SIZE, cursor=cursor, matching=matching
+        )
     return render(
         request,
         "pages/sends.html",
         page="sends",
-        account=None,
-        accounts=audited,
+        bar=bar,
+        problem=problem,
+        one_account=bool(account_id),
         emails=emails_of(audited),
-        records=records,
-        names=_user_names(request, caller),
-        pages=(None, None),
+        records=page.items,
+        names=names,
+        pages=page_links(request, page.next_cursor),
     )
 
 
 @router.get("/accounts/{account_id}/sends")
-async def account_sends(
-    request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
-) -> HTMLResponse:
-    account = account_of(request, caller, account_id)
-    cursor = request.query_params.get("cursor")
-    page = mailbox.list_sends(caller, account_id, limit=PAGE_SIZE, cursor=cursor)
-    return render(
-        request,
-        "pages/sends.html",
-        page="sends",
-        account=account,
-        accounts=[],
-        emails=emails_of([account]),
-        records=page.items,
-        names=_user_names(request, caller),
-        pages=page_links(request, page.next_cursor),
-    )
+async def account_sends(account_id: str) -> RedirectResponse:
+    """The list above, for one account."""
+    return RedirectResponse(f"/ui/sends?account={account_id}", status_code=303)

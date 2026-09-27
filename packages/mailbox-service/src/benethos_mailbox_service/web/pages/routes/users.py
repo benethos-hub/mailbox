@@ -15,6 +15,7 @@ from ....domain.access import Access
 from ...services import Users, get_accounts, get_users
 from ..deps import Actor, Viewer, emails_of
 from ..effective import view_of
+from ..filters import Field, filter_bar
 from ..forms import failing
 from ..grants import (
     GROUP_NAMES,
@@ -66,11 +67,26 @@ def _role_choices(request: Request, caller: Access, held: list[str]) -> list[str
 
 @router.get("/users")
 async def list_users(request: Request, caller: Viewer, users: Users) -> HTMLResponse:
+    roles = _role_choices(request, caller, [])
+    bar = filter_bar(
+        request,
+        (
+            Field("role", "Role", "select", [(r, r) for r in roles]),
+            Field("disabled", "disabled", "flag"),
+        ),
+        search=Field("name", "Name"),
+    )
     return render(
         request,
         "pages/users.html",
         page="users",
-        users=users.list_users(caller),
+        bar=bar,
+        users=users.list_users(
+            caller,
+            name=bar.value("name") or None,
+            role=bar.value("role") or None,
+            disabled=True if bar.value("disabled") else None,
+        ),
         names=_account_names(request, caller),
         can_create=caller.allows("create_user"),
     )

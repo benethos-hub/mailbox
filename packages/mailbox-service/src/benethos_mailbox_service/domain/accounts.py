@@ -54,14 +54,27 @@ class AccountService:
         # connection: the service must not be pointed into its own network.
         self._check_host = check_host
 
-    def list(self, access: Access, *, may: str | None = None) -> builtins.list[Account]:
+    def list(
+        self,
+        access: Access,
+        *,
+        may: str | None = None,
+        address: str | None = None,
+        provider: ProviderType | None = None,
+        status: AccountStatus | None = None,
+    ) -> builtins.list[Account]:
         """The accounts the caller may list. With ``may``, those it may do
-        that operation on as well."""
+        that operation on as well. The others narrow the list: a part of
+        the address regardless of case, the provider, the status."""
+        wanted = (address or "").casefold()
         return [
             self._with_credentials(account)
             for account in self._repository.list()
             if access.allows("list_accounts", account.id)
             and (may is None or access.allows(may, account.id))
+            and wanted in account.email.casefold()
+            and (provider is None or account.provider is provider)
+            and (status is None or account.status is status)
         ]
 
     def get(self, access: Access, account_id: str) -> Account:

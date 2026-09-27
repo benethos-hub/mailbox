@@ -5,7 +5,7 @@
 {% block heading %}{{ account.email }}{% endblock %}
 {% block subheading %}{{ breadcrumb([("Accounts", "/ui/accounts"), (account.email, None)]) }}{% endblock %}
 {% block actions %}
-{% if can_audit %}<a class="btn" href="/ui/accounts/{{ account.id }}/sends">Sends</a>{% endif %}
+{% if can_audit %}<a class="btn" href="/ui/sends?account={{ account.id }}">Sends</a>{% endif %}
 {% if can_verify %}{{ action("/ui/accounts/" ~ account.id ~ "/verify", "Verify", cls="") }}{% endif %}
 {% if can_read %}<a class="btn primary" href="/ui/accounts/{{ account.id }}/mail">Mail</a>{% endif %}
 {% endblock %}

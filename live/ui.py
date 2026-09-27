@@ -470,7 +470,7 @@ def check_sends(
     run: Run, browser: httpx.Client, sender_id: str, receiver_email: str
 ) -> None:
     """The send before is in the audit, as sent, without its content."""
-    page = browser.get(f"/ui/accounts/{sender_id}/sends").text
+    page = browser.get("/ui/sends", params={"account": sender_id}).text
     run.check(
         "the audit names the send and its recipient",
         receiver_email in page and '<span class="tag ok">sent</span>' in page,

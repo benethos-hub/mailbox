@@ -180,6 +180,7 @@ footer {
 .card .body.tight { padding: 0; }
 .card .body + .body { border-top: 1px solid var(--border); }
 .danger-zone > header h2 { color: var(--bad); }
+.card .body.list-bar { border-bottom: 1px solid var(--border); }
 
 /* The fold that adds one more to a related list. */
 .new-row { border-top: 1px solid var(--border); }

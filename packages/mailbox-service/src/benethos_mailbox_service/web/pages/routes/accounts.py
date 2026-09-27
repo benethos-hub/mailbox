@@ -9,12 +9,13 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
-from ....data.models import ProviderType
+from ....data.models import AccountStatus, ProviderType
 from ....domain.discovery import connectable, sign_ins
 from ....errors import MailboxServiceError
 from ...errors import status_of
 from ...services import Accounts, Discoverer, Status, get_oauth
 from ..deps import Actor, Viewer
+from ..filters import Field, filter_bar
 from ..forms import failing
 from ..templates import back, render
 
@@ -73,11 +74,44 @@ def _password(form: Any) -> dict[str, SecretStr]:
 async def list_accounts(
     request: Request, caller: Viewer, accounts: Accounts
 ) -> HTMLResponse:
+    bar = filter_bar(
+        request,
+        (
+            Field(
+                "provider",
+                "Provider",
+                "select",
+                [(p.value, p.value) for p in ProviderType],
+            ),
+            Field(
+                "status",
+                "Status",
+                "select",
+                [(s.value, s.value) for s in AccountStatus],
+            ),
+        ),
+        search=Field("address", "Address"),
+    )
+    problem = ""
+    try:
+        provider = (
+            ProviderType(bar.value("provider")) if bar.value("provider") else None
+        )
+        status = AccountStatus(bar.value("status")) if bar.value("status") else None
+    except ValueError:
+        provider, status, problem = None, None, "Filter: unknown provider or status"
     return render(
         request,
         "pages/accounts.html",
         page="accounts",
-        accounts=accounts.list(caller),
+        bar=bar,
+        problem=problem,
+        accounts=accounts.list(
+            caller,
+            address=bar.value("address") or None,
+            provider=provider,
+            status=status,
+        ),
         can_create=caller.allows("create_account"),
     )
 

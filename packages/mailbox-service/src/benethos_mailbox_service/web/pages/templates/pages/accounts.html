@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, credentials, empty with context %}
+{% from "components/ui.html" import card, credentials, empty, filter_bar with context %}
 {% block title %}Accounts · {{ APP_NAME }}{% endblock %}
 {% block heading %}Accounts{% endblock %}
 {% block subheading %}<div class="sub">The mailboxes this service connects</div>{% endblock %}
@@ -7,8 +7,9 @@
 {% if can_create %}<a class="btn primary" href="/ui/accounts/new">Connect an account</a>{% endif %}
 {% endblock %}
 {% block content %}
-{% if accounts %}
 {% call card("Accounts", meta=accounts | length, tight=True) %}
+<div class="body list-bar">{{ filter_bar(bar, problem) }}</div>
+{% if accounts %}
 <div class="table-scroll">
   <table>
     <thead><tr><th>Address</th><th>Provider</th><th>Status</th><th>Credentials</th></tr></thead>
@@ -27,8 +28,8 @@
     </tbody>
   </table>
 </div>
-{% endcall %}
 {% else %}
-{{ empty("No account yet, or none you may see.") }}
+{{ empty("No account matches." if bar.chips else "No account yet, or none you may see.") }}
 {% endif %}
+{% endcall %}
 {% endblock %}

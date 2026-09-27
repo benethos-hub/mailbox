@@ -475,3 +475,20 @@ def test_a_new_role_has_its_editor(
         *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
     )
     assert reader.get("/ui/roles/new").status_code == 403
+
+
+def test_users_filter_by_name_role_and_state(
+    ui: TestClient, services: Services
+) -> None:
+    services.users.create_role(ADMIN, "readers", [])
+    services.users.create_user(ADMIN, "Anna", ["readers"], [])
+    bert = services.users.create_user(ADMIN, "Bert", [], [])
+    services.users.update_user(ADMIN, bert.id, disabled=True)
+    by_name = ui.get("/ui/users", params={"name": "ANN"}).text
+    assert ">Anna</a>" in by_name and ">Bert</a>" not in by_name
+    by_role = ui.get("/ui/users", params={"role": "readers"}).text
+    assert ">Anna</a>" in by_role and ">admin</a>" not in by_role
+    assert "Role: readers" in by_role
+    disabled = ui.get("/ui/users", params={"disabled": "1"}).text
+    assert ">Bert</a>" in disabled and ">Anna</a>" not in disabled
+    assert "No user matches." in ui.get("/ui/users", params={"name": "zzz"}).text

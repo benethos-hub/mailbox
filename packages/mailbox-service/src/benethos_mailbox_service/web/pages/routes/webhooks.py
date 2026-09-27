@@ -15,6 +15,7 @@ from ....data.models.webhooks import EVENT_TYPES
 from ....domain.access import Access
 from ...services import Webhooks, get_accounts
 from ..deps import Actor, Viewer, emails_of
+from ..filters import Field, filter_bar
 from ..forms import FormError, failing, first_problem
 from ..session import show_once, take_once
 from ..templates import back, render
@@ -31,12 +32,27 @@ def _readable(request: Request, caller: Access) -> list[Any]:
 async def list_webhooks(
     request: Request, caller: Viewer, webhooks: Webhooks
 ) -> HTMLResponse:
+    names = emails_of(get_accounts(request).list(caller))
+    bar = filter_bar(
+        request,
+        (
+            Field("account", "Account", "select", list(names.items())),
+            Field("failing", "failing", "flag"),
+        ),
+        search=Field("url", "URL"),
+    )
     return render(
         request,
         "pages/webhooks.html",
         page="webhooks",
-        webhooks=webhooks.list_webhooks(caller),
-        names=emails_of(get_accounts(request).list(caller)),
+        bar=bar,
+        webhooks=webhooks.list_webhooks(
+            caller,
+            url=bar.value("url") or None,
+            account=bar.value("account") or None,
+            failing=True if bar.value("failing") else None,
+        ),
+        names=names,
         can_create=caller.allows("create_webhook"),
     )
 

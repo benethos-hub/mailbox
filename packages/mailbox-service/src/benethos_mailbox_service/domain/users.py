@@ -143,9 +143,25 @@ class UserService:
 
     # --- users ----------------------------------------------------------------
 
-    def list_users(self, access: Access) -> list[User]:
+    def list_users(
+        self,
+        access: Access,
+        *,
+        name: str | None = None,
+        role: str | None = None,
+        disabled: bool | None = None,
+    ) -> list[User]:
+        """Every user, or those whose name holds ``name`` regardless of
+        case, that hold ``role``, that are disabled or not."""
         access.require("list_users")
-        return self._users.list()
+        wanted = (name or "").casefold()
+        return [
+            user
+            for user in self._users.list()
+            if wanted in user.name.casefold()
+            and (role is None or role in user.roles)
+            and (disabled is None or user.disabled == disabled)
+        ]
 
     def get_user(self, access: Access, user_id: str) -> User:
         access.require("get_user")

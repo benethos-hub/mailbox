@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, empty %}
+{% from "components/ui.html" import card, empty, filter_bar %}
 {% from "components/grants.html" import grants_of, role_tags %}
 {% block title %}Users · {{ APP_NAME }}{% endblock %}
 {% block heading %}Users{% endblock %}
@@ -8,8 +8,9 @@
 {% if can_create %}<a class="btn primary" href="/ui/users/new">New user</a>{% endif %}
 {% endblock %}
 {% block content %}
-{% if users %}
 {% call card("Users", meta=users | length, tight=True) %}
+<div class="body list-bar">{{ filter_bar(bar) }}</div>
+{% if users %}
 <div class="table-scroll">
   <table>
     <thead><tr><th>Name</th><th>Roles</th><th>Grants</th></tr></thead>
@@ -29,8 +30,8 @@
     </tbody>
   </table>
 </div>
-{% endcall %}
 {% else %}
-{{ empty("No user yet.") }}
+{{ empty("No user matches." if bar.chips else "No user yet.") }}
 {% endif %}
+{% endcall %}
 {% endblock %}

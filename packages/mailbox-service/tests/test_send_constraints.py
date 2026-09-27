@@ -8,7 +8,12 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.data.models import Grant, SentMessage
+from benethos_mailbox_service.data.models import (
+    Grant,
+    SendFilter,
+    SendRecord,
+    SentMessage,
+)
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.storage import (
     Database,
@@ -452,3 +457,53 @@ def test_sqlite_send_log(tmp_path: object) -> None:
         assert store.sent_since("usr_2", "acc_1", since, outcome="sent") == []
     finally:
         db.close()
+
+
+@pytest.mark.parametrize("kind", ["memory", "sqlite"])
+def test_the_send_log_filters(kind: str) -> None:
+    db = Database()
+    store = (
+        InMemorySendLogRepository() if kind == "memory" else SqliteSendLogRepository(db)
+    )
+    at = datetime(2026, 9, 27, 12, tzinfo=UTC)
+    for n, (user, outcome, to) in enumerate(
+        [
+            ("usr_1", "sent", "Bob@Example.org"),
+            ("usr_2", "denied", "eve@elsewhere.example"),
+            ("usr_1", "sent", "carol@example.org"),
+        ]
+    ):
+        store.add(
+            SendRecord(
+                id=f"snd_{n}",
+                created_at=at + timedelta(days=n),
+                user_id=user,
+                credential_id=None,
+                account_id="acc_1",
+                operation="send_message",
+                recipients=[to],
+                outcome=outcome,  # type: ignore[arg-type]
+            )
+        )
+
+    def ids(**fields: object) -> list[str]:
+        found = store.list(
+            "acc_1", limit=10, before=None, matching=SendFilter(**fields)
+        )
+        return [r.id for r in found]
+
+    assert ids(user_id="usr_1") == ["snd_2", "snd_0"]
+    assert ids(outcome="denied") == ["snd_1"]
+    assert ids(recipient="bob@") == ["snd_0"]
+    assert ids(recipient='"') == []  # never the JSON around the addresses
+    assert ids(after=at + timedelta(days=1)) == ["snd_2", "snd_1"]
+    assert ids(before=at + timedelta(days=1)) == ["snd_0"]
+    assert (
+        len(
+            store.list(
+                "acc_1", limit=1, before=None, matching=SendFilter(user_id="usr_1")
+            )
+        )
+        == 1
+    )
+    db.close()

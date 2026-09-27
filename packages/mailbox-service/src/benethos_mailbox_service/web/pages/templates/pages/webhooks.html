@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, empty %}
+{% from "components/ui.html" import card, empty, filter_bar %}
 {% block title %}Webhooks · {{ APP_NAME }}{% endblock %}
 {% block heading %}Webhooks{% endblock %}
 {% block subheading %}<div class="sub">Where the service posts what changed in your accounts</div>{% endblock %}
@@ -7,8 +7,9 @@
 {% if can_create %}<a class="btn primary" href="/ui/webhooks/new">New webhook</a>{% endif %}
 {% endblock %}
 {% block content %}
-{% if webhooks %}
 {% call card("Webhooks", meta=webhooks | length, tight=True) %}
+<div class="body list-bar">{{ filter_bar(bar) }}</div>
+{% if webhooks %}
 <div class="table-scroll">
   <table>
     <thead><tr><th>URL</th><th>Events</th><th>Accounts</th><th>Last delivery</th><th>State</th></tr></thead>
@@ -25,8 +26,8 @@
     </tbody>
   </table>
 </div>
-{% endcall %}
 {% else %}
-{{ empty("No webhook yet.") }}
+{{ empty("No webhook matches." if bar.chips else "No webhook yet.") }}
 {% endif %}
+{% endcall %}
 {% endblock %}

@@ -109,3 +109,17 @@ def test_hidden_without_the_right(
     assert 'href="/ui/webhooks"' not in app_client.get("/ui").text
     assert app_client.get("/ui/webhooks").status_code == 403
     assert app_client.get("/ui/webhooks/new").status_code == 403
+
+
+def test_webhooks_filter_by_url_account_and_state(
+    ready: TestClient, account_id: str
+) -> None:
+    create(ready, url="https://a.example.com/hook")
+    create(ready, url="https://b.example.com/hook", every="", accounts=account_id)
+    by_url = ready.get("/ui/webhooks", params={"url": "A.EXAMPLE"}).text
+    assert "a.example.com" in by_url and "b.example.com" not in by_url
+    by_account = ready.get("/ui/webhooks", params={"account": account_id}).text
+    # Every account includes this one.
+    assert "a.example.com" in by_account and "b.example.com" in by_account
+    failing = ready.get("/ui/webhooks", params={"failing": "1"}).text
+    assert "No webhook matches." in failing

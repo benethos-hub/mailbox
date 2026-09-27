@@ -83,6 +83,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   field, more filters folded, the active ones as chips that remove
   themselves. A page below another names the way back in a breadcrumb,
   a message has a link back to its list.
+- Sends, users, accounts and webhooks in the UI have that filter bar.
+  Sends are one list for every account the user may audit, filtered by
+  account, who, outcome, days and recipient, and paged across accounts.
+  `/ui/accounts/{account_id}/sends` leads there.
 - The configuration UI no longer takes an API token to sign in. Tokens
   are for the API and the MCP server.
 - `users create-admin` prints a one-time password instead of a token. The

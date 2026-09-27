@@ -71,13 +71,26 @@ class WebhookService:
         self._repository.add(WebhookRecord(webhook, sealed, delivery))
         return CreatedWebhook(**webhook.model_dump(), secret=secret)
 
-    def list_webhooks(self, access: Access) -> list[Webhook]:
-        """The caller's own webhooks."""
+    def list_webhooks(
+        self,
+        access: Access,
+        *,
+        url: str | None = None,
+        account: str | None = None,
+        failing: bool | None = None,
+    ) -> list[Webhook]:
+        """The caller's own webhooks. The others narrow the list: a part
+        of the URL regardless of case, an account it hears of, whether its
+        last post failed."""
         access.require("list_webhooks")
+        wanted = (url or "").casefold()
         return [
-            r.webhook
-            for r in self._repository.list()
-            if r.webhook.user_id == access.user_id
+            hook
+            for hook in (r.webhook for r in self._repository.list())
+            if hook.user_id == access.user_id
+            and wanted in hook.url.casefold()
+            and (account is None or hook.accounts is None or account in hook.accounts)
+            and (failing is None or (hook.last_error is not None) == failing)
         ]
 
     def get_webhook(self, access: Access, webhook_id: str) -> Webhook:
