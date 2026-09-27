@@ -80,6 +80,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   created or changed, and each connection resolved the name anew. A host
   that now resolves to a non-public address answers `502 provider_error`.
   The IMAP probe of discovery connects to the address it just checked.
+- A recipient pattern `*@domain` in a grant no longer accepts a local
+  part with `%` or `!`, such as `bob%evil.org@domain`, which some servers
+  route on to another host. Such an address needs its exact entry.
 
 ## [0.1.0] - 2026-09-25
 

@@ -1122,6 +1122,9 @@ with the role
   - Null means no constraint. Recipients are checked once the mail is
     composed: To, Cc and Bcc, and for a reply the recipients taken from the
     original. `send_draft` checks the stored draft.
+  - `*@domain` does not accept a local part with `%` or `!`. Some servers
+    route `bob%evil.org@domain` on to another host. Such an address passes
+    only when the grant names it exactly.
   - A refused recipient answers `403 recipient_not_allowed`, a reached
     limit `429 send_limit_reached` with `Retry-After`. A retry with its
     `Idempotency-Key` returns the stored result and is not counted again.

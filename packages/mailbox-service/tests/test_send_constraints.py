@@ -61,6 +61,10 @@ def sender(services: Services, account_id: str, **limits: object) -> dict[str, s
         ("*@example.org", "bob@example.org.evil", False),
         ("bob@example.org", "BOB@example.org", True),
         ("bob@example.org", "bobby@example.org", False),
+        # Local parts some servers route on to another host.
+        ("*@example.org", "bob%evil.org@example.org", False),
+        ("*@example.org", "evil.org!bob@example.org", False),
+        ("bob%evil.org@example.org", "bob%evil.org@example.org", True),
     ],
 )
 def test_recipient_matches(pattern: str, address: str, matches: bool) -> None:

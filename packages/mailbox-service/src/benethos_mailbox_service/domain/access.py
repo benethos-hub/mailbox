@@ -215,13 +215,20 @@ def _rule(grant: Grant) -> _Rule:
 
 
 def recipient_matches(pattern: str, address: str) -> bool:
-    """An address against ``*``, ``*@domain`` or an address, ignoring case."""
+    """An address against ``*``, ``*@domain`` or an address, ignoring case.
+    A local part with ``%`` or ``!`` matches no domain: some servers route
+    ``bob%evil.org@domain`` on to evil.org. Only its exact address does."""
     pattern, address = pattern.casefold(), address.casefold()
     if pattern == ANY_RECIPIENT:
         return True
     if pattern.startswith("*@"):
-        return address.rpartition("@")[2] == pattern[2:]
+        local, _, domain = address.rpartition("@")
+        return domain == pattern[2:] and not any(c in local for c in _ROUTING)
     return address == pattern
+
+
+# Characters of source routing in a local part (RFC 1123 5.2.16, UUCP).
+_ROUTING = "%!"
 
 
 def pattern_covers(outer: str, inner: str) -> bool:
