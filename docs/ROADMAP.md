@@ -16,7 +16,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | **done** |
 | [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | **done** |
 | [4a](#phase-4a--password-sign-in) | Password sign-in | **done** |
-| [4b](#phase-4b--ui-rework) | UI rework | |
+| [4b](#phase-4b--ui-rework) | UI rework | in progress |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
@@ -159,9 +159,20 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 4b – UI rework
 
-- A rework of the configuration UI before the providers of phase 5.
-  Scope, page types and the rules for every page in [UI.md](UI.md):
-  a proposal of 2026-09-27, not yet decided.
+A rework of the configuration UI before the providers of phase 5.
+Scope, page types and the rules for every page in [UI.md](UI.md).
+
+- The frame: palette, sidebar, top bar with breadcrumb, components (UI 3, 7)
+- The overview: you, your accounts, the service (UI 5)
+- Accounts and connecting from the address (UI 6.1)
+- Users, roles and tokens in the page types (UI 6.3)
+- Mail and sends in the page types (UI 4.4)
+- Webhooks with a delivery log (UI 6.4)
+- Status and the recovery key (UI 6.5)
+- Paging and filters on every list (UI 4.5, 4.6)
+- decided 2026-09-27: UI.md as written, the recovery key for `admin`
+  after the password, the sync state in memory, a delivery log, no
+  Changes page yet (UI 10)
 
 ## Phase 5 – More providers and the configuration UI
 
@@ -197,7 +208,7 @@ Everything real mail will depend on, before any real mailbox is connected.
     drafts, sending**, done
   - **the audit of sends**, done
   - with the new providers: the OAuth round trip
-  - recovery key, status
+  - recovery key, status: moved to phase 4b
 - Threads (6.3): for IMAP built across folders from the id mapping,
   which then also keeps `In-Reply-To` and `References`
 - Grant constraint `folders` (7.5)

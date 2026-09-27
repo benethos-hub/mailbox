@@ -1,9 +1,8 @@
 # The configuration UI: rework and rules
 
-Proposal of 2026-09-27 for phase 4b of the [roadmap](ROADMAP.md). It
-sets the scope of the rework and the rules every page follows, the
-existing ones after the rework and every page added later. What the user
-decides is marked as decided, everything else is the proposal.
+Phase 4b of the [roadmap](ROADMAP.md), decided on 2026-09-27. It sets
+the scope of the rework and the rules every page follows, the existing
+ones after the rework and every page added later.
 
 The UI is the part of the service a person uses in the browser
 ([CONCEPT 1.1](CONCEPT.md#11-inside-the-service)). It runs in the same
@@ -194,7 +193,8 @@ that cannot be shown at all is the error page with a way back.
 
 The first page after signing in. Its cards, in order:
 
-1. **You**: name, roles, what the rights add up to, the last sign-in,
+1. **You**: name, roles, what the rights add up to, the last sign-in
+   (stored with the password),
    links to your page, Password and, for the admin, Recovery key. The
    card says at a glance whether this user may read mail and send it
    anywhere, the warning the API and the MCP server also give.
@@ -258,6 +258,8 @@ the last error as a red tag with the reason. New webhook from the list:
 URL, events as tick boxes, accounts as tick boxes or "every account I may
 read". The secret is shown once on the detail page after creating, as a
 token is. The detail page has the facts, the last deliveries, and Remove.
+The service keeps the last 20 attempts of each webhook: when, the events,
+the receiver's status code and the error.
 A webhook has no Change card: the API has none, a person removes and
 recreates it.
 
@@ -265,11 +267,15 @@ recreates it.
 
 Status is one page of three cards: accounts with status, last sync and
 last error, the worker with its interval and last pass, the webhooks
-with their last delivery. Each row links where it can be fixed. It reads
-what the domain already keeps, nothing is polled for the page.
+with their last delivery. Each row links where it can be fixed. Nothing
+is polled for the page. The worker keeps its last pass and each
+account's last sync and last error in memory, so they are empty after a
+restart until the first pass.
 
 The recovery key page shows the key once after **Show**, with the
-warning of the CLI, and only to the admin. Nothing is stored or logged.
+warning of the CLI, and only to a user with the `admin` grant on every
+account. **Show** asks for the user's password again. The key is never
+stored or logged, the log only says that it was shown and to whom.
 
 ### 6.6 Changes, optional
 
@@ -359,11 +365,17 @@ These rules bind every page, the reworked ones and the ones to come.
 4. **Paging and filters** on the lists that lack them, once the frame
    has the components.
 
-## 10. Open questions
+## 10. Decided
 
-- Does the overview's Service card belong to everyone with
-  `accounts.read`, or only to `users.manage`?
-- Should the change feed page be built at all?
-- Accounts, Users and Roles paging: with a cursor in the repositories, or
-  is a limit of a few hundred rows enough for this service?
-- The exact palette values after seeing them on the screen.
+- 2026-09-27: the rework as this file describes it.
+- 2026-09-27: the recovery key only for the `admin` grant, after the
+  password once more (6.5).
+- 2026-09-27: the sync state in the worker's memory, the last sign-in
+  stored (5, 6.5).
+- 2026-09-27: a delivery log for webhooks (6.4).
+- 2026-09-27: the Changes page not in phase 4b (6.6).
+
+Still open: the exact palette values after seeing them on the screen.
+The Service card of the overview shows to everyone with `accounts.read`,
+and Accounts, Users and Roles list everything with the pager hidden,
+until a need shows otherwise.
