@@ -7,7 +7,6 @@ import sqlite3
 
 from ...models import Account, AccountStatus
 from ..accounts import SettingsDict
-from ..table import missing
 from .database import Database
 
 
@@ -64,10 +63,9 @@ class SqliteAccountRepository:
         )
 
     def _row(self, account_id: str) -> sqlite3.Row:
-        row = self._db.one("SELECT * FROM accounts WHERE id = ?", (account_id,))
-        if row is None:
-            raise missing("account", account_id)
-        return row
+        return self._db.must_find(
+            "SELECT * FROM accounts WHERE id = ?", (account_id,), "account", account_id
+        )
 
 
 def _account(row: sqlite3.Row) -> Account:

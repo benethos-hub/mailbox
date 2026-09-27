@@ -8,7 +8,6 @@ import sqlite3
 from datetime import datetime
 
 from ...models.webhooks import Webhook
-from ..table import missing
 from ..webhooks import Attempt, Delivery, Sealed, WebhookRecord
 from .database import Database, iso, parse_iso
 
@@ -43,10 +42,14 @@ class SqliteWebhookRepository:
         )
 
     def get(self, webhook_id: str) -> WebhookRecord:
-        row = self._db.one("SELECT * FROM webhooks WHERE id = ?", (webhook_id,))
-        if row is None:
-            raise missing("webhook", webhook_id)
-        return _record(row)
+        return _record(
+            self._db.must_find(
+                "SELECT * FROM webhooks WHERE id = ?",
+                (webhook_id,),
+                "webhook",
+                webhook_id,
+            )
+        )
 
     def list(self) -> list[WebhookRecord]:
         rows = self._db.query("SELECT * FROM webhooks ORDER BY created_at, id")

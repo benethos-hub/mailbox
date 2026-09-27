@@ -310,6 +310,15 @@ class Database:
             row: sqlite3.Row | None = self._connection.execute(sql, params).fetchone()
             return row
 
+    def must_find(
+        self, sql: str, params: tuple[Any, ...], what: str, row_id: str
+    ) -> sqlite3.Row:
+        """``one`` for a row that must be there: NotFoundError when not."""
+        row = self.one(sql, params)
+        if row is None:
+            raise missing(what, row_id)
+        return row
+
     def execute(self, sql: str, params: tuple[Any, ...] = ()) -> int:
         """One statement in a transaction of its own. Returns the rows it changed."""
         with self.transaction() as db:
