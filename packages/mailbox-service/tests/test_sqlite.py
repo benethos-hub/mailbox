@@ -342,8 +342,8 @@ def test_each_migration_module_is_in_the_list_at_its_number() -> None:
     }
     numbers = []
     for name, module in found.items():
-        named = re.fullmatch(r"v(\d\d)_\w+", name)
-        assert named, f"{name} is not named vNN_<subject>"
+        named = re.fullmatch(r"v(\d{4})_\w+", name)
+        assert named, f"{name} is not named vNNNN_<subject>"
         numbers.append(int(named[1]))
         assert module.MIGRATION is MIGRATIONS[numbers[-1] - 1], name
     assert sorted(numbers) == list(range(1, SCHEMA_VERSION + 1))

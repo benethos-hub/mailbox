@@ -341,7 +341,7 @@ rule 1.
 - `CHANGELOG.md` gets an entry under `[Unreleased]` in the same commit as the
   change, written for someone using the API.
 - A change to the database schema is a new migration: a module
-  `vNN_<subject>.py` in `data/storage/sqlite/migrations/` with the next
+  `vNNNN_<subject>.py` in `data/storage/sqlite/migrations/` with the next
   number, added to `MIGRATIONS` there. Its docstring says what it does and
   why. Each statement stands alone, and a step in Python goes into
   `before`. A migration that shipped in a release is never changed:
