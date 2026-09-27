@@ -1199,9 +1199,9 @@ once. The first sign-in to the UI asks for a password of its own. All
 further users, passwords and tokens are made in the UI, tokens also
 through the API.
 
-**Decided 2026-09-27:** there is no built-in admin key. `MAILBOX_SERVICE_KEY`
-is gone. Every caller is a user, and so every call names one in the
-audit. Tests and live checks create a user and a token of their own.
+**Decided 2026-09-27:** every caller is a user, and so every call names
+one in the audit. Tests and live checks create a user and a token of
+their own.
 
 #### Audit log
 

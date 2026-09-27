@@ -4,13 +4,14 @@
 
 Starts a service of its own with a throwaway database, as mcp_stdio.py
 does, and adds the first test account through the API. Then it uses the
-UI the way a browser does. It signs in with the admin key and connects the
-second test account through discovery and the form. It makes a user, a
-role and a token and signs in with that token. It reads mail, opens the
-pages and follows their forms. It writes on the test accounts only: a
-folder and a draft on the first, which it removes again, and one mail
-from the first to the second, deleted for good on both sides. Credentials
-and mail content are never printed.
+UI the way a browser does. It signs in as the user `users create-admin`
+made and connects the second test account through discovery and the
+form. It makes a user, a role and a token, uses the token on the API,
+and sets the user's password, which the user changes at its sign-in.
+It reads mail, opens the pages and follows their forms. It writes on the
+test accounts only: a folder and a draft on the first, which it removes
+again, and one mail from the first to the second, deleted for good on
+both sides. Credentials and mail content are never printed.
 """
 
 from __future__ import annotations

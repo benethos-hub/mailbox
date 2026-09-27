@@ -33,8 +33,7 @@ design early.
 - CI, ruff, mypy, pytest with an 80 % coverage floor
 - FastAPI app in three layers (`web` → `domain` → `data`, 1.1), checked by
   an architecture test
-- Bearer authentication with one static admin key (removed in phase 4a),
-  one error envelope
+- Bearer authentication, one error envelope
 - OpenAPI 3.1 export with stable `operationId`s and contract tests (6.8)
 - Accounts, folders and messages as read routes on the in-memory adapter
 - MCP server skeleton over stdio and streamable HTTP with `list_accounts`
@@ -151,11 +150,11 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **`users create-admin` with a one-time password, `users set-password`
   on the host (7.5)**, done: every live check with a service of its own
   starts that way
-- **No built-in admin key: `MAILBOX_SERVICE_KEY` removed, tests and live
-  checks use a user and a token (7.5)**, done
+- **Every caller is a user: tests and live checks use a user and a
+  token (7.5)**, done
 - **Sign-ins in the service log, a brake per user name (1, 7.5)**, done
 - decided 2026-09-27: the UI takes passwords only, tokens are for the API
-  and MCP, no admin key, a one-time password for the first admin, a
+  and MCP, every caller a user, a one-time password for the first admin, a
   second factor later (IDEAS)
 
 ## Phase 4b – UI rework

@@ -74,8 +74,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The built-in admin key `MAILBOX_SERVICE_KEY`. Every call is made by a
   user, so the audit names one. Make the first user with
   `users create-admin` and a token for the API on its page in the UI. A
-  service that still has the variable set logs a warning at start. A send
-  from the UI has no token in the audit (`credential_id` null).
+  send from the UI has no token in the audit (`credential_id` null).
 
 ### Fixed
 

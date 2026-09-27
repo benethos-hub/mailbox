@@ -143,8 +143,8 @@ Users, roles and tokens are managed in the UI (Users, Roles) or under
 `/v1/users` and `/v1/roles`. A token is shown once, when it is created.
 Give each script and each assistant its own user with only the rights it
 needs. Until `users create-admin` has made the first user, the API
-answers `503 setup_required`. There is no built-in admin key: every call
-is made by a user, so the audit names one.
+answers `503 setup_required`. Every call is made by a user, so the
+audit names one.
 
 ## Changes and webhooks
 

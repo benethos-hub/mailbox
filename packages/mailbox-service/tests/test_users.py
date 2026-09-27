@@ -101,7 +101,7 @@ def test_me_lists_the_limits_of_every_sending_grant(
     ]
 
 
-def test_the_admin_key_is_warned(client: TestClient, account_id: str) -> None:
+def test_an_admin_is_warned(client: TestClient, account_id: str) -> None:
     [account] = client.get("/v1/me").json()["accounts"]
     assert account["warnings"] == ["read_and_send_anywhere"]
 

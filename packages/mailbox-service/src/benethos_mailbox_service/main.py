@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
@@ -113,11 +112,6 @@ def build_services(
     make without ``provider_factory``. Tests hand in tables."""
     repos = open_repositories(settings.storage, settings.database_path)
     vault = CredentialVault(repos.keys, repos.credentials, key_provider(settings))
-    if os.environ.get("MAILBOX_SERVICE_KEY"):
-        logging.getLogger(__name__).warning(
-            "MAILBOX_SERVICE_KEY is set but no longer read: there is no admin "
-            "key. Sign in as a user, see `users create-admin`"
-        )
     clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
     # One guard for every connection the service makes to a host a user
     # typed: the lookups of autodiscovery and the servers of an account.
