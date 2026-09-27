@@ -196,6 +196,23 @@ async def test_a_password_through_the_api(
     assert client.post(f"/v1/users/{me}/password", json={}).status_code == 409
 
 
+async def test_a_name_is_kept_without_the_spaces_around_it(
+    client: TestClient, services: Services
+) -> None:
+    made = client.post("/v1/users", json={"name": " Admin2 ", "ui_sign_in": True})
+    assert made.json()["name"] == "Admin2"
+    again = client.post("/v1/users", json={"name": "admin2"})
+    assert again.status_code == 409
+    password = client.post(f"/v1/users/{made.json()['id']}/password", json={})
+    await services.auth.sign_in("Admin2", password.json()["password"], source="t")
+    renamed = client.patch(f"/v1/users/{made.json()['id']}", json={"name": " B "})
+    assert renamed.json()["name"] == "B"
+    long = client.post("/v1/users", json={"name": "x" * 201})
+    assert long.status_code == 400
+    role = client.post("/v1/roles", json={"id": " readers ", "grants": []})
+    assert role.json()["id"] == "readers"
+
+
 def test_token_lifecycle(client: TestClient, app_client: TestClient) -> None:
     user = client.post("/v1/users", json={"name": "script", "grants": [READ_A]}).json()
     created = client.post(f"/v1/users/{user['id']}/tokens", json={"name": "laptop"})

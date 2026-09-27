@@ -142,7 +142,7 @@ class AuthService:
         hands out much. A wrong one counts against the user's name as a
         failed sign-in does."""
         user = self._users.get(access.user_id)
-        key = user.name.casefold()[:MAX_NAME]
+        key = user.name.strip().casefold()[:MAX_NAME]
         self._names.check(key)
         matched = len(password) <= MAX_LENGTH and await self.passwords.matches(
             user.id, password
@@ -175,7 +175,8 @@ class AuthService:
         """The user with this name, regardless of case."""
         wanted = name.strip().casefold()
         return next(
-            (u for u in self._users.list() if u.name.casefold() == wanted), None
+            (u for u in self._users.list() if u.name.strip().casefold() == wanted),
+            None,
         )
 
     def authenticate(

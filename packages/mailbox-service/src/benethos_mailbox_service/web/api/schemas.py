@@ -133,7 +133,8 @@ class UserCreate(BaseModel):
         default=False,
         description=(
             "May sign in to the configuration UI. Without: an API user, "
-            "tokens only. A password is then set in the UI."
+            "tokens only. A password is then set in the UI or with "
+            "`POST /v1/users/{user_id}/password`."
         ),
     )
 

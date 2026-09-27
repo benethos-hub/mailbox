@@ -24,7 +24,7 @@ from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundErr
 from . import permissions
 from .access import Access, SendLimit
 from .adapters import Adapters
-from .auth import AuthService, TokenState
+from .auth import MAX_NAME, AuthService, TokenState
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ class UserService:
         """A user with every right, and a one-time password for it, to be
         changed at the first sign-in. For the command line on the host
         only: it checks no caller."""
-        _named("a user", name)
+        name = _named("a user", name)
         self._require_free(name)
         user = User(
             id=new_id("usr"),
@@ -202,7 +202,7 @@ class UserService:
     ) -> User:
         """A new user. Without ``ui_sign_in`` an API user: tokens only."""
         access.require("create_user")
-        _named("a user", name)
+        name = _named("a user", name)
         self._require_free(name)
         user = User(
             id=new_id("usr"),
@@ -231,7 +231,7 @@ class UserService:
         sign-in."""
         access.require("update_user")
         if name is not None:
-            _named("a user", name)
+            name = _named("a user", name)
             self._require_free(name, user_id)
         user = self._users.get(user_id)
         self._require_covers_user(access, user)
@@ -372,7 +372,7 @@ class UserService:
         expires_at: datetime | None = None,
     ) -> tuple[ApiToken, str]:
         access.require("create_token")
-        _named("a token", name)
+        name = _named("a token", name)
         self._require_covers_user(access, self._users.get(user_id))
         return self._auth.issue_token(user_id, name, expires_at)
 
@@ -395,7 +395,7 @@ class UserService:
 
     def create_role(self, access: Access, role_id: str, grants: list[Grant]) -> Role:
         access.require("create_role")
-        _named("a role", role_id)
+        role_id = _named("a role", role_id)
         if role_id in {role.id for role in self._roles.list()}:
             raise ConflictError(f"role {role_id} exists")
         return self._save_role(access, Role(id=role_id, grants=grants))
@@ -466,9 +466,14 @@ class UserService:
             raise ForbiddenError("cannot grant or manage rights the caller lacks")
 
 
-def _named(what: str, name: str) -> None:
-    if not name.strip():
+def _named(what: str, name: str) -> str:
+    """The name as it is kept: without the spaces around it."""
+    name = name.strip()
+    if not name:
         raise BadRequestError(f"{what} needs a name")
+    if len(name) > MAX_NAME:
+        raise BadRequestError(f"the name of {what} has {MAX_NAME} characters at most")
+    return name
 
 
 def _validate(grants: Iterable[Grant]) -> None:
