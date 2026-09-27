@@ -35,8 +35,8 @@ class SqliteWebhookRepository:
                 secret.ciphertext,
                 delivery.cursor,
                 delivery.attempts,
-                _time(delivery.next_attempt_at),
-                _time(hook.last_delivery_at),
+                iso(delivery.next_attempt_at),
+                iso(hook.last_delivery_at),
                 hook.last_error,
             ),
         )
@@ -77,8 +77,8 @@ class SqliteWebhookRepository:
             (
                 delivery.cursor,
                 delivery.attempts,
-                _time(delivery.next_attempt_at),
-                _time(last_delivery_at),
+                iso(delivery.next_attempt_at),
+                iso(last_delivery_at),
                 last_error,
                 webhook_id,
             ),
@@ -131,10 +131,6 @@ class SqliteWebhookRepository:
         ]
 
 
-def _time(value: datetime | None) -> str | None:
-    return iso(value) if value is not None else None
-
-
 def _record(row: sqlite3.Row) -> WebhookRecord:
     accounts = row["accounts"]
     return WebhookRecord(
@@ -145,17 +141,13 @@ def _record(row: sqlite3.Row) -> WebhookRecord:
             accounts=json.loads(accounts) if accounts is not None else None,
             user_id=row["user_id"],
             created_at=parse_iso(row["created_at"]),
-            last_delivery_at=(
-                parse_iso(row["last_delivery_at"]) if row["last_delivery_at"] else None
-            ),
+            last_delivery_at=parse_iso(row["last_delivery_at"]),
             last_error=row["last_error"],
         ),
         secret=Sealed(row["key_id"], row["nonce"], row["ciphertext"]),
         delivery=Delivery(
             cursor=row["cursor"],
             attempts=row["attempts"],
-            next_attempt_at=(
-                parse_iso(row["next_attempt_at"]) if row["next_attempt_at"] else None
-            ),
+            next_attempt_at=parse_iso(row["next_attempt_at"]),
         ),
     )
