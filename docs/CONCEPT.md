@@ -1009,6 +1009,10 @@ the data, rather than a readable file.
 service. Rights belong to the user. A bearer token is only one way for a
 user to prove who it is.
 
+The model as one piece, how a right is resolved and shown, and the
+changes proposed to it: [PERMISSIONS.md](PERMISSIONS.md). This section
+keeps the decisions and the details.
+
 Terms, since "account" is taken:
 
 | Term | Meaning | Route |
