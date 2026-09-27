@@ -196,6 +196,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- `users` and `keys init` and `keys import` refuse to run with
+  `MAILBOX_SERVICE_STORAGE=memory`, as `backup` did. Before, they
+  reported success for a user or a data key that vanished with the
+  command.
 - A backup file that cannot be read or written, and a client secret file
   that is missing, are named in one line by the commands. Before, they
   ended with a traceback.

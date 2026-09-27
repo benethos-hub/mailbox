@@ -127,7 +127,7 @@ def _users(args: argparse.Namespace) -> None:
 
     from .main import opened
 
-    settings = Settings()
+    settings = _stored(Settings(), "users")
     with opened(settings) as services:
         if args.users_command == "create-admin":
             user, password = anyio.run(services.users.create_admin, args.name)
@@ -155,7 +155,7 @@ def _keys(command: str) -> None:
         return
     from .main import opened
 
-    with opened(Settings()) as services:
+    with opened(_stored(Settings(), "keys")) as services:
         if command == "init":
             recovery = services.vault.initialize()
             print(
@@ -187,9 +187,7 @@ def _backup(target: list[str], recovery_key: bool) -> None:
         return
     if len(target) != 1:
         raise _UsageError("use `backup FILE` or `backup verify FILE`")
-    settings = Settings()
-    if settings.storage != "sqlite":
-        raise _UsageError("backups need MAILBOX_SERVICE_STORAGE=sqlite")
+    settings = _stored(Settings(), "backups")
     with opened(settings) as services:
         assert services.database is not None
         manifest = create_backup(
@@ -233,6 +231,14 @@ def _restore(source: Path, recovery_key: bool, replace_master_key: bool) -> None
         "need reconnecting.",
         file=sys.stderr,
     )
+
+
+def _stored(settings: Settings, what: str) -> Settings:
+    """``settings``, if they keep what the command writes: in memory it
+    would vanish with the command."""
+    if settings.storage != "sqlite":
+        raise _UsageError(f"{what} need MAILBOX_SERVICE_STORAGE=sqlite")
+    return settings
 
 
 def _master_key(settings: Settings) -> bytes:

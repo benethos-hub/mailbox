@@ -232,6 +232,25 @@ def test_create_admin_command(
     assert "a user named owner exists" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize(
+    "command",
+    [["users", "create-admin"], ["users", "set-password", "admin"], ["keys", "init"]],
+)
+def test_commands_that_write_need_a_database(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    command: list[str],
+) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "memory")
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_FILE", str(tmp_path / "master.key"))
+    assert main(command) == 1
+    assert "need MAILBOX_SERVICE_STORAGE=sqlite" in capsys.readouterr().err
+    assert not (tmp_path / "master.key").exists()
+
+
 def test_set_password_command(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
