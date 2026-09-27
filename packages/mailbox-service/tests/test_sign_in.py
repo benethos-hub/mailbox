@@ -230,9 +230,7 @@ async def test_a_name_guessed_at_from_many_addresses_waits_a_minute() -> None:
 
 async def test_an_older_hash_is_made_anew_at_the_sign_in(services: Services) -> None:
     user = services.users.create_user(ADMIN, "Anna", [], [READER], ui_sign_in=True)
-    older = Passwords(
-        services.auth.passwords._repository, PasswordHasher(Scrypt(3, 1, 1))
-    )
+    older = Passwords(services.repositories.passwords, PasswordHasher(Scrypt(3, 1, 1)))
     before = await older.set(user.id, "Anna", SECRET, must_change=False)
     await services.auth.sign_in("Anna", SECRET, source="10.0.0.1")
     after = services.auth.passwords.stored(user.id)

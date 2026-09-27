@@ -16,6 +16,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
+from benethos_mailbox_service.common.clock import utc_now
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.http import ApiClient
 from benethos_mailbox_service.data.models import Grant, ProviderType
@@ -392,11 +393,14 @@ def factory(
     return build_provider(kind, settings, credentials)
 
 
-def services_with(endpoint: TokenEndpoint) -> Services:
+def services_with(
+    endpoint: TokenEndpoint, clock: Callable[[], datetime] = utc_now
+) -> Services:
     services = build_services(
         Settings(storage="memory"),
         provider_factory=factory,
         oauth_clients={ProviderType.MICROSOFT: oauth_client(endpoint)},
+        clock=clock,
     )
     services.vault.initialize()
     return services
@@ -433,9 +437,8 @@ async def test_a_state_is_used_once() -> None:
 
 
 async def test_a_state_expires() -> None:
-    services = services_with(TokenEndpoint())
     clock = Clock()
-    services.oauth._clock = clock  # type: ignore[attr-defined]
+    services = services_with(TokenEndpoint(), clock)
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
     clock.now += timedelta(minutes=11)
     with pytest.raises(BadRequestError, match="unknown or expired"):

@@ -100,6 +100,10 @@ class SessionStore:
         if session_id:
             self._sessions.pop(session_id, None)
 
+    def __len__(self) -> int:
+        """How many sessions it holds, idle ones not yet swept among them."""
+        return len(self._sessions)
+
 
 def store_of(request: Request) -> SessionStore:
     store: SessionStore = request.app.state.ui_sessions

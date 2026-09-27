@@ -345,8 +345,9 @@ def test_idle_sessions_are_swept_on_sign_in() -> None:
     forgotten = store.create(SIGNED)
     now[0] += IDLE + timedelta(minutes=1)
     fresh = store.create(SIGNED)
-    assert forgotten not in store._sessions
-    assert fresh in store._sessions
+    assert len(store) == 1
+    assert store.get(fresh) is not None
+    assert store.get(forgotten) is None
 
 
 # --- the frame ------------------------------------------------------------------------

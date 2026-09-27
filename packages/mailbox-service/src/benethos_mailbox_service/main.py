@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncIterator, Iterator, Mapping
+from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from contextlib import ExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime
 from functools import partial
 
 import anyio
@@ -18,6 +19,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
 from . import __version__, web
+from .common.clock import utc_now
 from .config import Settings
 from .data.discovery import default_sources, preset_hosts
 from .data.http import (
@@ -89,15 +91,15 @@ class Services:
     deliveries: WebhookDispatcher
     status: StatusService
     recovery: RecoveryKey
-    worker: SyncWorker | None = None
     # Every repository behind the services, closed with them.
-    repositories: Repositories | None = None
+    repositories: Repositories
+    worker: SyncWorker | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
 
     @property
     def store(self) -> Store | None:
         """What holds the records, for a backup. None in memory."""
-        return self.repositories.store if self.repositories else None
+        return self.repositories.store
 
     async def aclose(self) -> None:
         """Every connection and the database, when the service stops."""
@@ -109,8 +111,7 @@ class Services:
     def close(self) -> None:
         """The store alone: for the command line, which connects to
         nothing."""
-        if self.repositories is not None:
-            self.repositories.close()
+        self.repositories.close()
 
 
 def build_services(
@@ -122,12 +123,14 @@ def build_services(
     lookup: Lookup | None = None,
     password_hasher: PasswordHasher | None = None,
     keys: KeyProvider | None = None,
+    clock: Callable[[], datetime] = utc_now,
 ) -> Services:
     """``resolve`` answers DNS for the host check that autodiscovery and the
     hosts of an account pass (CONCEPT 5.8, rule 6), ``lookup`` the same
     for the check at every connection to a mail server, which adapters
     make without ``provider_factory``. Tests hand in tables. ``keys``
-    replaces the key provider the settings name."""
+    replaces the key provider the settings name, ``clock`` the time of
+    every service."""
     repos = open_repositories(settings.storage, settings.database_path)
     vault = CredentialVault(
         repos.keys, repos.credentials, keys or key_provider(settings)
@@ -140,13 +143,13 @@ def build_services(
         internal_hosts=settings.discovery_internal_hosts,
         lookup=lookup or host_addresses_now,
     )
-    changes = ChangeFeed(repos.changes, days=settings.changes_days)
+    changes = ChangeFeed(repos.changes, days=settings.changes_days, clock=clock)
     if provider_factory is None:
         provider_factory = partial(build_provider, pick=fetcher.connect_address)
     adapters = Adapters(
         repos.accounts, vault, provider_factory, oauth=clients, changes=changes
     )
-    sync = SyncService(adapters, repos.index, feed=changes)
+    sync = SyncService(adapters, repos.index, feed=changes, clock=clock)
     accounts = AccountService(
         repos.accounts,
         vault,
@@ -160,16 +163,21 @@ def build_services(
         repos.users,
         repos.roles,
         repos.tokens,
-        Passwords(repos.passwords, password_hasher),
+        Passwords(repos.passwords, password_hasher, clock=clock),
+        clock=clock,
     )
     worker = (
         SyncWorker(
-            adapters, sync, interval=settings.sync_interval, push=settings.sync_idle
+            adapters,
+            sync,
+            interval=settings.sync_interval,
+            push=settings.sync_idle,
+            clock=clock,
         )
         if settings.sync_interval
         else None
     )
-    webhooks = WebhookService(repos.webhooks, vault, changes)
+    webhooks = WebhookService(repos.webhooks, vault, changes, clock=clock)
     return Services(
         accounts=accounts,
         adapters=adapters,
@@ -178,7 +186,11 @@ def build_services(
             repos.users, repos.roles, repos.tokens, adapters, auth, repos.webhooks
         ),
         mailbox=MailboxService(
-            adapters, sync, Idempotency(repos.idempotency), SendControl(repos.sends)
+            adapters,
+            sync,
+            Idempotency(repos.idempotency, clock=clock),
+            SendControl(repos.sends, clock=clock),
+            clock=clock,
         ),
         discovery=discovery or build_discovery(settings, fetcher),
         sync=sync,
@@ -186,7 +198,7 @@ def build_services(
         changes=changes,
         worker=worker,
         vault=vault,
-        oauth=OAuthService(accounts, adapters, clients),
+        oauth=OAuthService(accounts, adapters, clients, clock=clock),
         webhooks=webhooks,
         deliveries=WebhookDispatcher(
             repos.webhooks,
@@ -202,6 +214,7 @@ def build_services(
                 first_retry=settings.webhook_first_retry,
                 longest_retry=settings.webhook_longest_retry,
             ),
+            clock=clock,
         ),
         status=StatusService(accounts, sync, worker, webhooks),
         recovery=RecoveryKey(auth, vault),

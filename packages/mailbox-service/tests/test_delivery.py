@@ -83,7 +83,7 @@ def hook(client: TestClient, **fields: Any) -> dict[str, Any]:
 
 
 def stored(services: Services, webhook_id: str) -> Any:
-    return services.webhooks._repository.get(webhook_id)  # type: ignore[attr-defined]
+    return services.repositories.webhooks.get(webhook_id)
 
 
 async def test_a_signed_post_of_what_happened(
@@ -225,7 +225,7 @@ async def test_a_failed_post_is_tried_again_later(
     assert record.delivery.attempts == 0
     assert record.webhook.last_error is None
     # Both posts are in the delivery log, the newest first.
-    logged = services.webhooks._repository.attempts(created["id"])  # type: ignore[attr-defined]
+    logged = services.repositories.webhooks.attempts(created["id"])
     assert [(a.status, a.error, a.events) for a in logged] == [
         (200, None, 1),
         (503, "the receiver answered 503", 1),

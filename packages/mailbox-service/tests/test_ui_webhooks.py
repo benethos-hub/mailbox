@@ -58,7 +58,7 @@ def test_the_list_names_the_state(
     listed = ready.get("/ui/webhooks").text
     assert f'href="{page}"' in listed and "me@example.com" in listed
     assert '<span class="tag ok">ok</span>' in listed
-    repository = services.webhooks._repository  # type: ignore[attr-defined]
+    repository = services.repositories.webhooks
     record = repository.get(webhook_id)
     repository.update(
         webhook_id,

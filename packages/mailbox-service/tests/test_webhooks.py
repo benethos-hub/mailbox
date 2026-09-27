@@ -62,7 +62,7 @@ def test_create_answers_the_secret_once(
 
 def test_the_secret_is_kept_sealed(client: TestClient, ready: Services) -> None:
     body = client.post("/v1/webhooks", json=HOOK).json()
-    record = ready.webhooks._repository.get(body["id"])  # type: ignore[attr-defined]
+    record = ready.repositories.webhooks.get(body["id"])
     assert body["secret"].encode() not in record.secret.ciphertext
     opened = ready.vault.unseal(sealed_label(body["id"]), record.secret)
     assert opened.get_secret_value() == body["secret"]
@@ -76,7 +76,7 @@ def test_a_new_webhook_hears_what_comes_from_now_on(
 ) -> None:
     client.patch(f"/v1/accounts/{account_id}/messages/m0", json={"unread": False})
     body = client.post("/v1/webhooks", json=HOOK).json()
-    record = ready.webhooks._repository.get(body["id"])  # type: ignore[attr-defined]
+    record = ready.repositories.webhooks.get(body["id"])
     assert record.delivery.cursor == ready.changes.last() == 1
 
 
@@ -159,7 +159,7 @@ def test_deleting_a_user_removes_its_webhooks(
     gone = theirs.post("/v1/webhooks", json=HOOK).json()["id"]
     mine = client.post("/v1/webhooks", json=HOOK).json()["id"]
     assert client.delete(f"/v1/users/{made['id']}").status_code == 204
-    left = [r.webhook.id for r in ready.webhooks._repository.list()]  # type: ignore[attr-defined]
+    left = [r.webhook.id for r in ready.repositories.webhooks.list()]
     assert left == [mine]
     assert gone not in left
 

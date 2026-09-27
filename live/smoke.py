@@ -270,7 +270,7 @@ def main() -> int:
         print(f"\n== sync {account_id}")
         try:
             anyio.run(services.sync.sync_account, account_id)
-            states = services.sync._index.folder_states(account_id)
+            states = services.index.folder_states(account_id)
             run.check("one pass", True, f"{len(states)} folders indexed")
             anyio.run(services.sync.sync_account, account_id)
             run.check("a second pass right after", True)
