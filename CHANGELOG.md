@@ -82,6 +82,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The MCP server refuses a `MAILBOX_MCP_LOG_LEVEL` or `MAILBOX_MCP_PORT`
+  it cannot use with a message, as it does `MAILBOX_MCP_TRANSPORT`.
+  Before, it stopped with a traceback.
 - The MCP server does not start without `MAILBOX_SERVICE_TOKEN` and
   names the variable. Before, it stopped with the service's `401`.
 - The health check of the service image asks the port

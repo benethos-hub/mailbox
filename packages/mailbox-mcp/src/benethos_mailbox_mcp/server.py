@@ -649,6 +649,7 @@ async def _at_start() -> set[str]:
 
 
 TRANSPORTS = ("stdio", "streamable-http")
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 
 
 def _env(name: str, default: str) -> str:
@@ -665,7 +666,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--transport", choices=TRANSPORTS, default=_env("TRANSPORT", "stdio")
     )
     parser.add_argument("--host", default=_env("HOST", "127.0.0.1"))
-    parser.add_argument("--port", type=int, default=int(_env("PORT", "8000")))
+    # A default given as text passes through type, so a bad port from the
+    # environment is refused like one on the command line.
+    parser.add_argument("--port", type=int, default=_env("PORT", "8000"))
     parser.add_argument("--path", default=_env("PATH", "/mcp"))
     parser.add_argument(
         "--allowed-hosts",
@@ -681,9 +684,24 @@ def _build_parser() -> argparse.ArgumentParser:
         "--log-level",
         default=_env("LOG_LEVEL", "INFO"),
         type=str.upper,
-        choices=("DEBUG", "INFO", "WARNING", "ERROR"),
+        choices=LOG_LEVELS,
     )
     return parser
+
+
+def _check_environment(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> None:
+    """argparse checks choices on the command line only, not a default
+    read from the environment."""
+    for name, value, allowed in (
+        ("TRANSPORT", args.transport, TRANSPORTS),
+        ("LOG_LEVEL", args.log_level, LOG_LEVELS),
+    ):
+        if value not in allowed:
+            parser.error(
+                f"MAILBOX_MCP_{name} must be one of {', '.join(allowed)}, not {value!r}"
+            )
 
 
 def _csv(value: str) -> list[str]:
@@ -702,8 +720,7 @@ def configure_logging(level: str) -> None:
 def main(argv: list[str] | None = None) -> None:
     parser = _build_parser()
     args = parser.parse_args(argv)
-    if args.transport not in TRANSPORTS:
-        parser.error(f"unknown transport {args.transport!r}")
+    _check_environment(parser, args)
     configure_logging(args.log_level)
     try:
         operations = anyio.run(_at_start)
