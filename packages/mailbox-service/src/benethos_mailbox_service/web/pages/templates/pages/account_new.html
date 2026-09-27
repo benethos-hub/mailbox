@@ -45,7 +45,7 @@
 </form>
 {% endmacro %}
 
-<section class="card step">
+<section class="card">
   <header><h2>1. The address</h2></header>
   <div class="body">
     <form class="toolbar" method="post" action="/ui/accounts/discover">
@@ -58,7 +58,7 @@
 </section>
 
 {% if retry %}
-<section class="card step">
+<section class="card">
   <header><h2>2. Your servers</h2><span class="meta">The provider refused. Nothing was stored.</span></header>
   <div class="body">
     {{ connect_form(email, retry.settings, provider=retry.provider, folded=False, display_name=retry.display_name, error=retry.error, hint="Tried against the provider first, then stored encrypted. Never shown again.") }}

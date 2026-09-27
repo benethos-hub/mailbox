@@ -35,7 +35,7 @@
 {# A list that belongs to the record of a detail page, e.g. its tokens.
    The caller gives the table, and ``new_row`` as the last part. #}
 {% macro related(title, count=None, meta=None) %}
-<section class="card related">
+<section class="card">
   <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}</header>
   {{ caller() }}
 </section>

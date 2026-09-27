@@ -12,6 +12,7 @@ from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.domain.auth import SignedIn
 from benethos_mailbox_service.main import Services
 from benethos_mailbox_service.web.pages.session import IDLE, SessionStore
+from benethos_mailbox_service.web.pages.templates import STATIC_DIR, TEMPLATE_DIR
 
 from .conftest import ADMIN, UI_PASSWORD, browser_admin, browser_user
 from .ui_helpers import csrf_of, post, sign_in, try_sign_in
@@ -521,3 +522,19 @@ def test_every_editor_has_a_way_back(
     assert (
         f'<a class="btn" href="{back.format(account_id=account_id)}">Cancel</a>' in text
     )
+
+
+def test_every_class_a_template_names_is_styled() -> None:
+    """A class without a rule in app.css is a leftover or a typo, as the
+    hidden "Select" heading of the mail list once was."""
+    css = (STATIC_DIR / "css" / "app.css").read_text(encoding="utf-8")
+    styled = set(re.findall(r"\.([a-zA-Z][\w-]*)", css))
+    unstyled = set()
+    for template in TEMPLATE_DIR.rglob("*.html"):
+        text = template.read_text(encoding="utf-8")
+        # Only fixed classes: one computed by the template is left out.
+        for names in re.findall(r'class="([^"{}]*)"', text):
+            unstyled |= {
+                f"{template.name}: {n}" for n in names.split() if n not in styled
+            }
+    assert not unstyled, sorted(unstyled)
