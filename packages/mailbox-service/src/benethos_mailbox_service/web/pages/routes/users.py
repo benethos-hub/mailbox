@@ -14,7 +14,7 @@ from ....data.models import Grant, Role
 from ....domain.access import Access
 from ....domain.users import UserService
 from ...services import Users, get_accounts, get_users
-from ..deps import Actor, Viewer, emails_of
+from ..deps import Actor, Viewer, account_names
 from ..effective import view_of
 from ..filters import Field, filter_bar
 from ..forms import FormError, failing
@@ -35,11 +35,6 @@ router = APIRouter()
 
 # Longer than that is a token without an end: leave the field empty for one.
 MAX_TOKEN_DAYS = 3650
-
-
-def _account_names(request: Request, caller: Access) -> dict[str, str]:
-    """Emails of the accounts the caller sees, to show a grant readably."""
-    return emails_of(get_accounts(request).list(caller))
 
 
 # A refused editor comes back with this status, what was typed, the reason.
@@ -102,7 +97,7 @@ async def list_users(request: Request, caller: Viewer, users: Users) -> HTMLResp
             disabled=True if bar.value("disabled") else None,
             ui_sign_in=False if bar.value("api_only") else None,
         ),
-        names=_account_names(request, caller),
+        names=account_names(request, caller),
         can_create=caller.allows("create_user"),
     )
 
@@ -220,7 +215,7 @@ def _user_page(
         role_choices=_role_choices(
             request, caller, [*found.roles, *(typed["roles"] if typed else [])]
         ),
-        names=_account_names(request, caller),
+        names=account_names(request, caller),
         is_me=found.id == caller.user_id,
         can_update=caller.allows("update_user"),
         can_delete=caller.allows("delete_user") and found.id != caller.user_id,
@@ -350,7 +345,7 @@ async def list_roles(request: Request, caller: Viewer, users: Users) -> HTMLResp
         page="roles",
         roles=roles,
         used=_used_by(request, caller, roles),
-        names=_account_names(request, caller),
+        names=account_names(request, caller),
         can_create=caller.allows("create_role"),
     )
 
@@ -423,7 +418,7 @@ def _role_page(
         err=err,
         role=found,
         holders=holders,
-        names=_account_names(request, caller),
+        names=account_names(request, caller),
         can_update=caller.allows("replace_role"),
         can_delete=caller.allows("delete_role"),
         **_editor(request, caller, found.grants, _typed_rows(form)),

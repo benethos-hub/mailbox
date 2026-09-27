@@ -46,5 +46,10 @@ def emails_of(accounts: Iterable[Account]) -> dict[str, str]:
     return {account.id: account.email for account in accounts}
 
 
+def account_names(request: Request, caller: Access) -> dict[str, str]:
+    """``emails_of`` every account the caller sees."""
+    return emails_of(get_accounts(request).list(caller))
+
+
 Viewer = Annotated[Access, Depends(signed_in)]
 Actor = Annotated[Access, Depends(changing)]

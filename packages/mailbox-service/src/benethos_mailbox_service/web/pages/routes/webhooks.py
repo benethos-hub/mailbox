@@ -14,7 +14,7 @@ from ....data.models import WebhookCreate
 from ....data.models.webhooks import EVENT_TYPES
 from ....domain.access import Access
 from ...services import Webhooks, get_accounts
-from ..deps import Actor, Viewer, emails_of
+from ..deps import Actor, Viewer, account_names
 from ..filters import Field, filter_bar
 from ..forms import FormError, failing, first_problem
 from ..session import show_once, take_once
@@ -32,7 +32,7 @@ def _readable(request: Request, caller: Access) -> list[Any]:
 async def list_webhooks(
     request: Request, caller: Viewer, webhooks: Webhooks
 ) -> HTMLResponse:
-    names = emails_of(get_accounts(request).list(caller))
+    names = account_names(request, caller)
     bar = filter_bar(
         request,
         (
@@ -128,7 +128,7 @@ async def webhook(
         "pages/webhook.html",
         page="webhooks",
         webhook=found,
-        names=emails_of(get_accounts(request).list(caller)),
+        names=account_names(request, caller),
         secret=take_once(request, f"secret:{webhook_id}"),
         can_delete=caller.allows("delete_webhook"),
     )
