@@ -56,7 +56,6 @@ class Capability(StrEnum):
 
     SEND = "send"
     DRAFTS = "drafts"
-    THREADS = "threads"
     LABELS = "labels"  # a message can sit in several folders at once
     SERVER_SEARCH = "server_search"
     PUSH = "push"  # change notifications without polling, wait_for_change
