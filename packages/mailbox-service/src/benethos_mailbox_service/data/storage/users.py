@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol
 
 from ...errors import ConflictError
@@ -43,6 +44,11 @@ class TokenRepository(Protocol):
 
     def save(self, token: ApiToken) -> None: ...
 
+    def touch(self, token_id: str, when: datetime) -> None:
+        """Set ``last_used_at`` alone. Nothing else of the row changes, so
+        a revocation saved meanwhile stays."""
+        ...
+
     def delete_for_user(self, user_id: str) -> None: ...
 
 
@@ -79,6 +85,10 @@ class InMemoryTokenRepository:
         if other is not None and other.id != token.id:
             raise ConflictError(f"token {other.id} has the same hash")
         self._tokens.put(token.id, token)
+
+    def touch(self, token_id: str, when: datetime) -> None:
+        token = self._tokens.get(token_id)
+        self._tokens.put(token_id, token.model_copy(update={"last_used_at": when}))
 
     def delete_for_user(self, user_id: str) -> None:
         for token in self.list_for_user(user_id):

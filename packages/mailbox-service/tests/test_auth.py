@@ -5,7 +5,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.data.models import Grant, ProviderType, Role, User
+from benethos_mailbox_service.data.models import (
+    ApiToken,
+    Grant,
+    ProviderType,
+    Role,
+    User,
+)
 from benethos_mailbox_service.data.storage import (
     InMemoryRoleRepository,
     InMemoryTokenRepository,
@@ -99,6 +105,27 @@ def test_revoked_token(service: AuthService) -> None:
     record, plain = service.issue_token("usr_reader", "laptop")
     service.revoke_token(record.id)
     service.revoke_token(record.id)  # idempotent
+    with pytest.raises(UnauthorizedError, match="revoked"):
+        service.authenticate(plain)
+
+
+def test_a_revocation_during_an_authentication_stays(
+    service: AuthService, repos, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    record, plain = service.issue_token("usr_reader", "laptop")
+    tokens = repos[2]
+    found = tokens.find_by_hash
+
+    def revoked_meanwhile(token_hash: str) -> ApiToken | None:
+        token = found(token_hash)
+        patch.undo()
+        service.revoke_token(record.id)  # another request, between the reads
+        return token
+
+    with monkeypatch.context() as patch:
+        patch.setattr(tokens, "find_by_hash", revoked_meanwhile)
+        service.authenticate(plain)
+    assert tokens.get(record.id).revoked_at == NOW
     with pytest.raises(UnauthorizedError, match="revoked"):
         service.authenticate(plain)
 

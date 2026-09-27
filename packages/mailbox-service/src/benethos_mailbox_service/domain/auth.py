@@ -263,6 +263,6 @@ class AuthService:
             raise UnauthorizedError("invalid or revoked token") from None
         if user.disabled:
             raise UnauthorizedError("user is disabled")
-        self._tokens.save(token.model_copy(update={"last_used_at": now}))
+        self._tokens.touch(token.id, now)
         roles = {role.id: role for role in self._roles.list()}
         return Access.for_user(user, roles, token.id)

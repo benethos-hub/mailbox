@@ -162,6 +162,20 @@ def test_tokens_round_trip(stores: Stores) -> None:
         repo.get("tok_1")
 
 
+def test_touching_a_token_changes_its_last_use_alone(stores: Stores) -> None:
+    stores.users.save(User(id="usr_1", name="u"))
+    repo = stores.tokens
+    token = ApiToken(
+        id="tok_1", user_id="usr_1", name="t", token_hash="h", created_at=NOW
+    )
+    repo.save(token)
+    revoked = token.model_copy(update={"revoked_at": NOW})
+    repo.save(revoked)
+    later = datetime(2026, 9, 24, 13, 0, tzinfo=UTC)
+    repo.touch("tok_1", later)
+    assert repo.get("tok_1") == revoked.model_copy(update={"last_used_at": later})
+
+
 def test_a_token_hash_is_held_once_and_a_save_replaces_the_whole(
     stores: Stores,
 ) -> None:

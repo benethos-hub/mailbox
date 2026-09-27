@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import datetime
 
 from ...models import ApiToken, Grant, Role, User
 from ..table import missing
@@ -102,6 +103,11 @@ class SqliteTokenRepository:
                 iso(token.last_used_at),
                 iso(token.revoked_at),
             ),
+        )
+
+    def touch(self, token_id: str, when: datetime) -> None:
+        self._db.execute(
+            "UPDATE tokens SET last_used_at = ? WHERE id = ?", (iso(when), token_id)
         )
 
     def delete_for_user(self, user_id: str) -> None:

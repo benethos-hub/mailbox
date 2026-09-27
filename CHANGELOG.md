@@ -179,6 +179,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   tenant's administrators may set to anything. The sign-in asks for
   `User.Read` instead of `openid`, `email` and `profile`. Accounts
   connected before keep working. A new sign-in shows the new permission.
+- A token revoked while a request with it was being checked stays
+  revoked. Before, that request could save the token back as it had read
+  it, and the revocation was lost.
 
 ## [0.1.0] - 2026-09-25
 

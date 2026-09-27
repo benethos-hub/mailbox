@@ -49,11 +49,13 @@ Since = Annotated[
 _bearer = HTTPBearer(auto_error=False, scheme_name="bearerAuth")
 
 
-def authenticate(
+async def authenticate(
     request: Request,
     auth: Auth,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> Access:
+    # On the event loop, not in a worker thread: two requests never check
+    # a token and count a failed attempt at the same time.
     presented = credentials.credentials if credentials else None
     return auth.authenticate(presented, source=client_address(request))
 
