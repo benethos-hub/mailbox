@@ -10,6 +10,7 @@ the requests, blocks a rejected login and pauses an unreachable server.
 
 from __future__ import annotations
 
+import itertools
 import logging
 import threading
 import time
@@ -239,7 +240,10 @@ class ImapProvider:
         return await self._run(lambda: self._list_drafts(limit, cursor))
 
     async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
-        return await self._run(lambda: self._save_draft(raw, replaces))
+        attempts = itertools.count()
+        return await self._run(
+            lambda: self._save_draft(raw, replaces, retried=next(attempts) > 0)
+        )
 
     async def get_draft(self, draft_id: str) -> bytes:
         return await self._run(lambda: self._get_draft(draft_id))
@@ -439,10 +443,19 @@ class ImapProvider:
         drafts = mappers.folder_id(self._drafts_folder())
         return self._list_messages(drafts, limit, cursor)
 
-    def _save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
+    def _save_draft(
+        self, raw: bytes, replaces: str | None, *, retried: bool = False
+    ) -> MessageSummary:
         drafts = self._drafts_folder()
         # Checked before the new one is stored: a wrong id changes nothing.
         old = self._draft_place(replaces, drafts) if replaces else None
+        if old is not None and not retried:
+            # A retried step may have removed it already, after it stored
+            # the new one, which _append then finds by its Message-ID.
+            validity, uid = old
+            found, _ = self._open_writable(drafts, validity, [uid])
+            if uid not in found:
+                raise NotFoundError(f"draft {replaces} not found")
         saved = self._append(drafts, raw, ["\\Draft", "\\Seen"])
         if saved is None:
             raise ProviderError("the draft was stored but cannot be found again")

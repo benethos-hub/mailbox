@@ -117,6 +117,17 @@ async def test_replacing_a_draft_removes_the_old_one(box: FakeMailBox) -> None:
         await imap.get_draft(first.id)
 
 
+async def test_replacing_a_draft_that_is_gone_stores_nothing(box: FakeMailBox) -> None:
+    imap = provider(box)
+    first = await imap.save_draft(draft_bytes("One"), None)
+    await imap.delete_draft(first.id)
+    appends = [c for c in box.calls if c[0] == "append"]
+    with pytest.raises(NotFoundError, match="not found"):
+        await imap.save_draft(draft_bytes("Two"), first.id)
+    assert [c for c in box.calls if c[0] == "append"] == appends
+    assert (await imap.list_drafts(limit=10, cursor=None)).items == []
+
+
 async def test_a_draft_reads_back_as_stored(box: FakeMailBox) -> None:
     imap = provider(box)
     saved = await imap.save_draft(draft_bytes(), None)

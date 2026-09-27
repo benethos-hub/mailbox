@@ -187,6 +187,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `400`. Before, it went on from its positions under the new parameters,
   and the folder of the new request was ignored. Cursors handed out
   before this version are refused once.
+- Replacing a draft that is gone answers `404` on IMAP accounts too, and
+  stores nothing. Before, IMAP stored the new draft beside it and
+  answered success, so a second draft appeared.
 - Deleting a user removes its webhooks. Before, they stayed, posted
   nothing, and nobody could list or remove them. The database moves to
   schema 13, which drops those of users deleted before.
