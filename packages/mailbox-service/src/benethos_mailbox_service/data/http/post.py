@@ -18,7 +18,7 @@ from collections.abc import Mapping
 import httpx
 
 from ...errors import ProviderError, ProviderUnavailableError
-from .base import new_client, parse_url, unreachable
+from .base import new_client, parse_url, pinned_request, unreachable
 from .safe import Resolve, host_addresses, unwrapped
 
 TIMEOUT = 10.0
@@ -69,15 +69,15 @@ class WebhookPoster:
         refused = [a for a in addresses if not is_receiver_address(a)]
         if refused:
             raise ProviderError(f"refused to post to {host}: not an address to post to")
-        pinned = target.copy_with(host=addresses[0])
-        extensions = {"sni_hostname": host} if target.scheme == "https" else {}
         async with new_client(self._transport, self._timeout) as client:
-            request = client.build_request(
+            request = pinned_request(
+                client,
                 "POST",
-                pinned,
+                target,
+                host,
+                addresses[0],
+                headers=headers,
                 content=body,
-                headers={**headers, "Host": target.netloc.decode("ascii")},
-                extensions=extensions,
             )
             try:
                 response = await client.send(request, stream=True)
