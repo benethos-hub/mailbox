@@ -117,6 +117,20 @@ def test_chosen_accounts_only(world) -> None:  # type: ignore[no-untyped-def]
     assert flat == ["b10", "b8", "c6", "c4", "b2"]
 
 
+def test_a_cursor_continues_its_own_search_alone(world) -> None:  # type: ignore[no-untyped-def]
+    _, client, _, _ = world
+    first = client.get("/v1/messages", params={"limit": 1, "folder": "inbox"}).json()
+    cursor = first["next_cursor"]
+    same = client.get(
+        "/v1/messages", params={"limit": 1, "folder": "inbox", "cursor": cursor}
+    )
+    assert same.status_code == 200
+    for other in ({"folder": "archive"}, {"folder": "inbox", "q": "a"}):
+        answer = client.get("/v1/messages", params={"cursor": cursor, **other})
+        assert answer.status_code == 400
+        assert "another search" in answer.json()["error"]["message"]
+
+
 def test_folder_role_per_account(world) -> None:  # type: ignore[no-untyped-def]
     _, client, _, _ = world
     archive = _walk(client, limit=10, folder="archive")

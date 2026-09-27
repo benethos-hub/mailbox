@@ -307,9 +307,12 @@ class MailboxService:
             if a in existing and access.allows("list_all_messages", a)
         ]
         failures: list[AccountFailure] = []
+        query = merge.fingerprint(folder_role, search)
         if cursor:
             positions = {
-                a: p for a, p in merge.decode_cursor(cursor).items() if a in visible
+                a: p
+                for a, p in merge.decode_cursor(cursor, query).items()
+                if a in visible
             }
         else:
             positions = await self._start(visible, folder_role, failures)
@@ -349,7 +352,7 @@ class MailboxService:
         more = any(not p.done for p in positions.values())
         return MessagePage(
             items=[published[owner].pop(0) for _, owner in taken],
-            next_cursor=merge.encode_cursor(positions) if more else None,
+            next_cursor=merge.encode_cursor(positions, query) if more else None,
             incomplete=failures,
         )
 

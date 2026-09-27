@@ -182,6 +182,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   around them, in the API as in the UI, and a user name has 200
   characters at most. Before, the API kept " Admin" with its space: it
   could not sign in, and "Admin" could be created beside it.
+- A cursor of `GET /v1/messages` continues the search it came from and
+  no other. With another `folder` or other search parameters it answers
+  `400`. Before, it went on from its positions under the new parameters,
+  and the folder of the new request was ignored. Cursors handed out
+  before this version are refused once.
 - Deleting a user removes its webhooks. Before, they stayed, posted
   nothing, and nobody could list or remove them. The database moves to
   schema 13, which drops those of users deleted before.
