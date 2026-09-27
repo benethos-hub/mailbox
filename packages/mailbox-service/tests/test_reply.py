@@ -62,6 +62,14 @@ def test_references_carry_the_chain() -> None:
     assert compose.references(raw) == ("<3@x>", ("<1@x>", "<2@x>", "<3@x>"))
 
 
+def test_references_folded_by_the_sender() -> None:
+    raw = (
+        b"Message-ID: <3@x>\r\nReferences: <1@x>\r\n <2@x>\r\n"
+        b"In-Reply-To: <2@x>\r\n\r\nbody"
+    )
+    assert compose.references(raw) == ("<3@x>", ("<1@x>", "<2@x>", "<3@x>"))
+
+
 def test_references_from_in_reply_to_alone() -> None:
     raw = b"Message-ID: <3@x>\r\nIn-Reply-To: <2@x>\r\n\r\nbody"
     assert compose.references(raw) == ("<3@x>", ("<2@x>", "<3@x>"))

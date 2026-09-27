@@ -22,6 +22,7 @@ from ...errors import BadRequestError
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
 from .fields import ascii_domain
 from .fields import message_id as one_message_id
+from .parse import ParsedMessage
 from .text import from_html
 
 # Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
@@ -168,12 +169,13 @@ def outgoing(draft: bytes, date: datetime, message_id: str) -> Outgoing:
 
 def references(original_raw: bytes) -> tuple[str | None, tuple[str, ...]]:
     """The original's Message-ID, and the References a reply carries: the
-    original's own, then its Message-ID (RFC 5322 3.6.4)."""
-    headers = BytesHeaderParser(policy=default).parsebytes(original_raw)
-    message_id = one_message_id(headers.get("Message-ID"))
-    chain = tuple(str(headers.get("References") or "").split())
-    if not chain:
-        chain = tuple(str(headers.get("In-Reply-To") or "").split()[:1])
+    original's own, then its Message-ID (RFC 5322 3.6.4). Read as
+    ``convert`` reads them."""
+    original = ParsedMessage(original_raw)
+    message_id = original.message_id
+    chain = tuple(original.references)
+    if not chain and original.in_reply_to:
+        chain = (original.in_reply_to,)
     return message_id, (*chain, message_id) if message_id else chain
 
 

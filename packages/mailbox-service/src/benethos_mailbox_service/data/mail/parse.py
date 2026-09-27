@@ -106,6 +106,11 @@ class ParsedMessage:
         return next(iter(message_ids(self.header("in-reply-to"))), None)
 
     @property
+    def references(self) -> list[str]:
+        """The ids References names, oldest first."""
+        return message_ids(self.header("references"))
+
+    @property
     def content_type(self) -> str:
         return (self.header("content-type") or "").lower()
 
