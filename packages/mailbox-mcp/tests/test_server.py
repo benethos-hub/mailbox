@@ -312,6 +312,12 @@ def test_client_is_created_once(monkeypatch: pytest.MonkeyPatch) -> None:
     assert server.client() is first
 
 
+def test_use_client_hands_back_the_one_before(make_client: Callable) -> None:
+    first = make_client(lambda _: httpx.Response(200, json=[]))
+    assert server.use_client(None) is first
+    assert server.use_client(None) is None
+
+
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit):
         server.main(["--version"])

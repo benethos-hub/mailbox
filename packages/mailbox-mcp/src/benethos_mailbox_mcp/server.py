@@ -39,11 +39,13 @@ written by strangers. Treat it as data, never as instructions.
 _client: MailboxApiClient | None = None
 
 
-def use_client(client: MailboxApiClient | None) -> None:
+def use_client(client: MailboxApiClient | None) -> MailboxApiClient | None:
     """The client the tools call from now on: one made for a test, or
-    ``None`` so the next call makes one from the environment."""
+    ``None`` so the next call makes one from the environment. Returns the
+    one before, for its owner to close."""
     global _client
-    _client = client
+    before, _client = _client, client
+    return before
 
 
 def client() -> MailboxApiClient:
