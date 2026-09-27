@@ -278,6 +278,9 @@ def _expected() -> tuple[type[BaseException], ...]:
         KeyProviderError,
         MailboxServiceError,
         ValidationError,
+        # The last net: a file the host does not let the service read or
+        # write, e.g. the OAuth client secret.
+        OSError,
     )
 
 

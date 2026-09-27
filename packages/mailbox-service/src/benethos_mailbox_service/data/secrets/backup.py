@@ -42,9 +42,13 @@ def create_backup(
     if target.exists():
         raise BackupError(f"{target} exists, refusing to overwrite it")
     data = db.snapshot()
+    try:
+        schema_version = inspect_snapshot(data)
+    except ValueError as exc:
+        raise BackupError(f"the database cannot be backed up: {exc}") from None
     manifest = Manifest(
         service_version=service_version,
-        schema_version=inspect_snapshot(data),
+        schema_version=schema_version,
         created_at=datetime.now(UTC).isoformat(),
         sha256=hashlib.sha256(data).hexdigest(),
     )
@@ -57,12 +61,18 @@ def write_backup(
 ) -> None:
     header = MAGIC + json.dumps(asdict(manifest)).encode() + b"\n"
     nonce, ciphertext = cipher.encrypt(_backup_key(master_key), data, header)
-    create_private(target, header + nonce + ciphertext)
+    try:
+        create_private(target, header + nonce + ciphertext)
+    except OSError as exc:
+        raise BackupError(f"{target} cannot be written: {exc.strerror}") from None
 
 
 def read_backup(source: Path, master_key: bytes) -> tuple[Manifest, bytes]:
     """Decrypt and check a backup. Raises ``BackupError`` on any doubt."""
-    raw = source.read_bytes()
+    try:
+        raw = source.read_bytes()
+    except OSError as exc:
+        raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
     if not raw.startswith(MAGIC):
         raise BackupError(f"{source} is not a backup of this service")
     end = raw.find(b"\n", len(MAGIC))

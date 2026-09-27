@@ -367,3 +367,34 @@ def test_backup_command_errors(
     monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "memory")
     assert main(["backup", str(machine / "x.bak")]) == 1
     assert "MAILBOX_SERVICE_STORAGE=sqlite" in capsys.readouterr().err
+
+
+def test_files_that_cannot_be_read_or_written(
+    machine: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _populate()
+    assert main(["backup", "verify", str(machine / "missing.bak")]) == 1
+    assert "missing.bak cannot be read" in capsys.readouterr().err
+    blocker = machine / "a-file"
+    blocker.write_text("")
+    assert main(["backup", str(blocker / "mailbox.bak")]) == 1
+    assert "mailbox.bak cannot be written" in capsys.readouterr().err
+
+
+def test_a_client_secret_file_that_is_missing(
+    machine: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    missing = machine / "no-such-secret"
+    monkeypatch.setenv("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID", "client-1")
+    monkeypatch.setenv(
+        "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE", str(missing)
+    )
+
+    def never(*args: object, **kwargs: object) -> None:
+        raise AssertionError("the service must not start")
+
+    monkeypatch.setattr("uvicorn.run", never)
+    assert main(["serve"]) == 1
+    assert "no-such-secret" in capsys.readouterr().err
