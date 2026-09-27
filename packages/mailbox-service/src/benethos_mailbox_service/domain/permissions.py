@@ -47,7 +47,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # Cannot be taken back either.
     "send": ("send_message", "send_draft"),
     # Who sent what to whom, never content.
-    "audit": ("list_sends",),
+    "audit": ("list_sends", "list_all_sends"),
     "accounts.manage": (
         "discover_account",
         # Connecting needs create_account, signing in again update_account:

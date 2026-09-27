@@ -295,6 +295,29 @@ def test_the_audit_across_accounts_keeps_a_deleted_one(
     assert services.mailbox.list_all_sends(named, limit=10).items == []
 
 
+def test_the_audit_of_every_account(
+    app_client: TestClient, client: TestClient, services: Services, account_id: str
+) -> None:
+    other = client.post(
+        "/v1/accounts", json={"provider": "memory", "email": "o@example.com"}
+    ).json()["id"]
+    for account in (account_id, other):
+        client.post(f"/v1/accounts/{account}/send", json=mail("a@x.org"))
+    first = client.get("/v1/sends", params={"limit": 1}).json()
+    second = client.get(
+        "/v1/sends", params={"limit": 1, "cursor": first["next_cursor"]}
+    ).json()
+    assert {r["account_id"] for r in first["items"] + second["items"]} == {
+        account_id,
+        other,
+    }
+    auditor = bearer_for(services, Grant(accounts=[account_id], allow=["audit"]))
+    mine = app_client.get("/v1/sends", headers=auditor).json()["items"]
+    assert [r["account_id"] for r in mine] == [account_id]
+    sender_only = sender(services, account_id)
+    assert app_client.get("/v1/sends", headers=sender_only).json()["items"] == []
+
+
 def test_the_audit_needs_its_right(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:

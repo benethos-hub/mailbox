@@ -1,4 +1,4 @@
-"""Messages and changes across accounts."""
+"""Messages, changes and sends across accounts."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from ....data.models import ChangePage, FolderRole, MessagePage
+from ....data.models import ChangePage, FolderRole, MessagePage, Page, SendRecord
 from ..deps import Caller, Limit, Mailbox, Search, Since
 from ..errors import CHANGES_ERRORS
 
@@ -55,3 +55,13 @@ async def list_all_changes(
     return mailbox.list_all_changes(
         caller, account_ids=accounts, since=since, limit=limit
     )
+
+
+@router.get("/sends")
+async def list_all_sends(
+    caller: Caller, mailbox: Mailbox, limit: Limit = 50, cursor: str | None = None
+) -> Page[SendRecord]:
+    """The audit of sends of every account the caller may audit, newest
+    first. An account deleted since stays in it for a caller whose grant
+    names every account."""
+    return mailbox.list_all_sends(caller, limit=limit, cursor=cursor)

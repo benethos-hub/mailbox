@@ -59,7 +59,7 @@ The groups as `domain/permissions.py` holds them today:
 | `mail.delete` | `delete_message_permanent`, `delete_folder` | an account |
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
 | `send` | `send_message`, `send_draft` | an account |
-| `audit` | `list_sends` | an account |
+| `audit` | `list_sends`, `list_all_sends` | an account |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, and `discover_account`, `create_account`, `start_oauth` | an account, the last three every account |
 | `webhooks.manage` | `list_webhooks`, `create_webhook`, `delete_webhook` | the service |
 | `users.manage` | users, tokens, passwords, roles: fourteen rights | the service |
@@ -152,7 +152,9 @@ from becoming a way up:
   warning per account goes into the server's instructions, since a mail
   with injected instructions could carry data out through a user that
   reads mail and sends anywhere.
-- **Audit**: sends in the database (`/v1/accounts/{id}/sends`, UI Sends).
+- **Audit**: sends in the database (`/v1/accounts/{id}/sends`,
+  `/v1/sends`, UI Sends).
+
   Sign-ins, failed sign-ins, password changes and rights changes in the
   service log.
 

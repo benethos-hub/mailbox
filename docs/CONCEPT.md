@@ -675,6 +675,7 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
 | POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
 | GET | `{acc}/sends` | the audit of sends, newest first |
+| GET | `/v1/sends` | the audit of sends of every account the caller may audit, newest first |
 
 **Decided 2026-09-24, reply and forward:**
 
@@ -1101,7 +1102,7 @@ with the role
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
-  | `audit` | `list_sends` |
+  | `audit` | `list_sends`, `list_all_sends` |
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
   | `webhooks.manage` | `list_webhooks`, `create_webhook`, `delete_webhook`. Not account-bound |
   | `users.manage` | users, their tokens, roles. Not account-bound |
@@ -1242,7 +1243,10 @@ account, operation, recipients, outcome (`sent`, `denied` by a grant,
 `failed`), error code, refused recipients and the Message-ID. It keeps no
 reference to account or user, so it outlives both.
 `GET /v1/accounts/{account_id}/sends` reads it, newest first, with the
-right `list_sends` (group `audit`).
+right `list_sends` (group `audit`). `GET /v1/sends` (`list_all_sends`)
+reads it across the accounts the caller may audit, deleted ones
+included for a grant on every account.
+
 
 #### Endpoints
 

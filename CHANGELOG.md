@@ -8,7 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `GET /v1/sends` (`list_all_sends`, in `audit`): the audit of sends of
+  every account the caller may audit, newest first, as the UI's sends
+  page shows it.
 - `ui_sign_in` on a user, in `POST /v1/users`, `PATCH
+
   /v1/users/{user_id}` and every user in an answer: whether it may sign
   in to the configuration UI. Without it the user is an API user and
   works with tokens only. Switched off, its password is deleted and its
