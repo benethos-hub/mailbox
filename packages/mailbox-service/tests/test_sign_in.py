@@ -8,7 +8,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, User
 from benethos_mailbox_service.data.secrets import PasswordHasher, Scrypt
 from benethos_mailbox_service.data.storage import (
@@ -27,20 +26,13 @@ from benethos_mailbox_service.errors import (
     SetupRequiredError,
     UnauthorizedError,
 )
-from benethos_mailbox_service.main import Services, build_services
+from benethos_mailbox_service.main import Services
 
-from .conftest import ADMIN
+from .conftest import ADMIN, CHEAP
 
-CHEAP = PasswordHasher(Scrypt(log_n=4, r=1, p=1))
 SECRET = "correct horse battery staple"
 OTHER = "a different long passphrase"
 READER = Grant(accounts=["*"], allow=["mail.read"])
-
-
-@pytest.fixture
-def services() -> Services:
-    settings = Settings(storage="memory")
-    return build_services(settings, password_hasher=CHEAP)
 
 
 async def anna(services: Services, password: str = SECRET) -> User:

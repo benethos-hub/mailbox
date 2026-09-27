@@ -125,7 +125,7 @@ def box() -> FakeMailBox:
 
 
 @pytest.fixture
-def services(
+def imap_services(
     box: FakeMailBox, smtp: FakeSmtpServer, monkeypatch: pytest.MonkeyPatch
 ) -> Services:
     monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
@@ -141,15 +141,15 @@ def services(
             sleep=lambda seconds: None,
         )
 
-    services = build_services(Settings(storage="memory"), provider_factory=factory)
-    services.vault.initialize()
-    return services
+    imap_services = build_services(Settings(storage="memory"), provider_factory=factory)
+    imap_services.vault.initialize()
+    return imap_services
 
 
 @pytest.fixture
-def account_id(services: Services) -> str:
+def imap_account_id(imap_services: Services) -> str:
     return create_account(
-        services.accounts,
+        imap_services.accounts,
         ProviderType.IMAP,
         "me@example.com",
         settings={
@@ -161,9 +161,9 @@ def account_id(services: Services) -> str:
     ).id
 
 
-async def original_id(services: Services, account_id: str) -> str:
-    page = await services.mailbox.list_messages(
-        ADMIN, account_id, folder_id=None, search=None, limit=5, cursor=None
+async def original_id(imap_services: Services, imap_account_id: str) -> str:
+    page = await imap_services.mailbox.list_messages(
+        ADMIN, imap_account_id, folder_id=None, search=None, limit=5, cursor=None
     )
     return page.items[0].id
 
@@ -172,14 +172,14 @@ Sender = Callable[..., Awaitable[EmailMessage]]
 
 
 @pytest.fixture
-def send(services: Services, smtp: FakeSmtpServer, account_id: str) -> Sender:
+def send(imap_services: Services, smtp: FakeSmtpServer, imap_account_id: str) -> Sender:
     """Sends through the service. The result is the message as the SMTP server
     got it."""
 
     async def run(reference: MessageReference, **fields: object) -> EmailMessage:
-        await services.mailbox.outgoing.send_message(
+        await imap_services.mailbox.outgoing.send_message(
             ADMIN,
-            account_id,
+            imap_account_id,
             OutgoingMessage.model_validate({"reference": reference, **fields}),
         )
         mail = message_from_bytes(smtp.sent[-1].raw, policy=default)
@@ -197,9 +197,9 @@ def plain(mail: EmailMessage) -> str:
 
 
 async def test_reply(
-    send: Sender, services: Services, account_id: str, box: FakeMailBox
+    send: Sender, imap_services: Services, imap_account_id: str, box: FakeMailBox
 ) -> None:
-    message_id = await original_id(services, account_id)
+    message_id = await original_id(imap_services, imap_account_id)
     mail = await send(
         MessageReference(message_id=message_id, action="reply"),
         text="Danke!",
@@ -218,9 +218,9 @@ async def test_reply(
 
 
 async def test_reply_all_leaves_out_this_account(
-    send: Sender, smtp: FakeSmtpServer, services: Services, account_id: str
+    send: Sender, smtp: FakeSmtpServer, imap_services: Services, imap_account_id: str
 ) -> None:
-    message_id = await original_id(services, account_id)
+    message_id = await original_id(imap_services, imap_account_id)
     mail = await send(
         MessageReference(message_id=message_id, action="reply_all"),
     )
@@ -231,9 +231,9 @@ async def test_reply_all_leaves_out_this_account(
 
 
 async def test_named_recipients_win(
-    send: Sender, services: Services, account_id: str
+    send: Sender, imap_services: Services, imap_account_id: str
 ) -> None:
-    message_id = await original_id(services, account_id)
+    message_id = await original_id(imap_services, imap_account_id)
     mail = await send(
         MessageReference(message_id=message_id, action="reply"),
         to=[Recipient(email="dave@example.com")],
@@ -244,9 +244,9 @@ async def test_named_recipients_win(
 
 
 async def test_forward_inline_with_the_attachments(
-    send: Sender, services: Services, account_id: str, box: FakeMailBox
+    send: Sender, imap_services: Services, imap_account_id: str, box: FakeMailBox
 ) -> None:
-    message_id = await original_id(services, account_id)
+    message_id = await original_id(imap_services, imap_account_id)
     mail = await send(
         MessageReference(message_id=message_id, action="forward"),
         to=[Recipient(email="dave@example.com")],
@@ -263,9 +263,9 @@ async def test_forward_inline_with_the_attachments(
 
 
 async def test_forward_as_attachment(
-    send: Sender, services: Services, account_id: str
+    send: Sender, imap_services: Services, imap_account_id: str
 ) -> None:
-    message_id = await original_id(services, account_id)
+    message_id = await original_id(imap_services, imap_account_id)
     mail = await send(
         MessageReference(
             message_id=message_id, action="forward", forward_as="attachment"
@@ -278,37 +278,44 @@ async def test_forward_as_attachment(
     assert inner["Subject"] == "Angebot"
 
 
-def test_a_forward_needs_recipients(services: Services, account_id: str) -> None:
-    client = TestClient(create_app(Settings(storage="memory"), services))
-    message_id = anyio.run(original_id, services, account_id)
+def test_a_forward_needs_recipients(
+    imap_services: Services, imap_account_id: str
+) -> None:
+    client = TestClient(create_app(Settings(storage="memory"), imap_services))
+    message_id = anyio.run(original_id, imap_services, imap_account_id)
     answer = client.post(
-        f"/v1/accounts/{account_id}/send",
+        f"/v1/accounts/{imap_account_id}/send",
         json={"reference": {"message_id": message_id, "action": "forward"}},
         headers=bearer_for(
-            services, Grant(accounts=[account_id], allow=["send", "mail.read"])
+            imap_services,
+            Grant(accounts=[imap_account_id], allow=["send", "mail.read"]),
         ),
     )
     assert answer.status_code == 400
     assert "recipient" in answer.json()["error"]["message"]
 
 
-def test_answering_needs_the_right_to_read(services: Services, account_id: str) -> None:
-    client = TestClient(create_app(Settings(storage="memory"), services))
+def test_answering_needs_the_right_to_read(
+    imap_services: Services, imap_account_id: str
+) -> None:
+    client = TestClient(create_app(Settings(storage="memory"), imap_services))
 
-    message_id = anyio.run(original_id, services, account_id)
-    only_send = bearer_for(services, Grant(accounts=[account_id], allow=["send"]))
+    message_id = anyio.run(original_id, imap_services, imap_account_id)
+    only_send = bearer_for(
+        imap_services, Grant(accounts=[imap_account_id], allow=["send"])
+    )
     answer = client.post(
-        f"/v1/accounts/{account_id}/send",
+        f"/v1/accounts/{imap_account_id}/send",
         json={"reference": {"message_id": message_id, "action": "reply"}},
         headers=only_send,
     )
     assert answer.status_code == 403
     assert "get_message" in answer.json()["error"]["message"]
     both = bearer_for(
-        services, Grant(accounts=[account_id], allow=["send", "mail.read"])
+        imap_services, Grant(accounts=[imap_account_id], allow=["send", "mail.read"])
     )
     answer = client.post(
-        f"/v1/accounts/{account_id}/send",
+        f"/v1/accounts/{imap_account_id}/send",
         json={"reference": {"message_id": message_id, "action": "reply"}},
         headers=both,
     )
@@ -316,9 +323,9 @@ def test_answering_needs_the_right_to_read(services: Services, account_id: str) 
 
 
 async def test_a_reply_without_quote_keeps_the_thread(
-    send: Sender, services: Services, account_id: str, box: FakeMailBox
+    send: Sender, imap_services: Services, imap_account_id: str, box: FakeMailBox
 ) -> None:
-    message_id = await original_id(services, account_id)
+    message_id = await original_id(imap_services, imap_account_id)
     mail = await send(
         MessageReference(message_id=message_id, action="reply", quote=False),
         text="Danke!\n\n> quoted before",
@@ -330,9 +337,9 @@ async def test_a_reply_without_quote_keeps_the_thread(
 
 
 async def test_a_forward_without_quote_adds_nothing_of_the_original(
-    send: Sender, services: Services, account_id: str
+    send: Sender, imap_services: Services, imap_account_id: str
 ) -> None:
-    message_id = await original_id(services, account_id)
+    message_id = await original_id(imap_services, imap_account_id)
     mail = await send(
         MessageReference(message_id=message_id, action="forward", quote=False),
         to=[Recipient(email="dave@example.com")],
@@ -346,36 +353,36 @@ async def test_a_forward_without_quote_adds_nothing_of_the_original(
 # --- line breaks the original carries ---------------------------------------------
 
 
-async def _id_of(services: Services, account_id: str, subject: str) -> str:
-    page = await services.mailbox.list_messages(
-        ADMIN, account_id, folder_id=None, search=None, limit=10, cursor=None
+async def _id_of(imap_services: Services, imap_account_id: str, subject: str) -> str:
+    page = await imap_services.mailbox.list_messages(
+        ADMIN, imap_account_id, folder_id=None, search=None, limit=10, cursor=None
     )
     [found] = [m for m in page.items if m.subject == subject]
     return found.id
 
 
 async def test_a_reply_folds_a_line_separator_in_the_subject(
-    send: Sender, services: Services, account_id: str, box: FakeMailBox
+    send: Sender, imap_services: Services, imap_account_id: str, box: FakeMailBox
 ) -> None:
     """A sender's subject may carry U+2028, which the standard library
     refuses in a header. The reply's subject is on one line."""
     subject = "Ang ebot"
     encoded = "=?utf-8?b?" + base64.b64encode(subject.encode()).decode() + "?="
     box.add("INBOX", 2, make_message(encoded))
-    message_id = await _id_of(services, account_id, subject)
+    message_id = await _id_of(imap_services, imap_account_id, subject)
     mail = await send(MessageReference(message_id=message_id, action="reply"))
     assert mail["Subject"] == "Re: Ang ebot"
 
 
 async def test_a_forward_folds_a_line_break_in_an_attachment_name(
-    send: Sender, services: Services, account_id: str, box: FakeMailBox
+    send: Sender, imap_services: Services, imap_account_id: str, box: FakeMailBox
 ) -> None:
     # The standard library refuses to write such a name, so it is put into
     # the bytes afterwards, as a sender's software might.
     raw = make_message("Files", attachments=[("PLACEHOLDER", "text/plain", b"x")])
     assert raw.count(b'filename="PLACEHOLDER"') == 1
     box.add("INBOX", 2, raw.replace(b'"PLACEHOLDER"', b'"=?utf-8?q?a=0Ab.txt?="'))
-    message_id = await _id_of(services, account_id, "Files")
+    message_id = await _id_of(imap_services, imap_account_id, "Files")
     mail = await send(
         MessageReference(message_id=message_id, action="forward"),
         to=[Recipient(email="dave@example.com")],
