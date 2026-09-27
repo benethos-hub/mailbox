@@ -29,7 +29,7 @@ def test_me_for_a_limited_user(app_client: TestClient, services: Services) -> No
     create_account(services.accounts, ProviderType.MEMORY, "b@example.com")
     headers = bearer_for(services, Grant(accounts=[a], allow=["mail.read"]))
     me = app_client.get("/v1/me", headers=headers).json()
-    assert me["name"] == "limited"
+    assert me["name"].startswith("limited-")
     assert me["accounts"] == [
         {
             "id": a,

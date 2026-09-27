@@ -122,7 +122,7 @@ def test_a_user_token_signs_in_with_its_rights(
     headers = bearer_for(services, Grant(accounts=[account_id], allow=["mail.read"]))
     sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
     page = app_client.get("/ui").text
-    assert "Signed in as <strong>limited</strong>" in page
+    assert "Signed in as <strong>limited-" in page
     assert "mail.read" in page
     assert "reads and sends anywhere" not in page
 

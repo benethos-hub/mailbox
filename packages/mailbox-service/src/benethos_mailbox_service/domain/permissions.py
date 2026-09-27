@@ -67,6 +67,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "list_tokens",
         "create_token",
         "revoke_token",
+        "set_password",
         "list_roles",
         "create_role",
         "get_role",

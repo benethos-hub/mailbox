@@ -169,7 +169,9 @@ async def test_a_creator_that_is_gone_hears_nothing(
     )
     limited = TestClient(client.app, headers=headers)
     hook(limited)
-    [user] = [u for u in services.users.list_users(ADMIN) if u.name == "limited"]
+    [user] = [
+        u for u in services.users.list_users(ADMIN) if u.name.startswith("limited")
+    ]
     client.delete(f"/v1/users/{user.id}")
     mark_read(client, account_id, "m0")
     await services.deliveries.deliver_due()

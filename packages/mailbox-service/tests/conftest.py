@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import os
 from datetime import UTC, datetime
 from typing import Any
@@ -150,11 +151,16 @@ def client(settings: Settings, services: Services) -> TestClient:
     return TestClient(app, headers={"Authorization": f"Bearer {API_KEY}"})
 
 
+# Names are unique: each limited user gets a number.
+_LIMITED = itertools.count(1)
+
+
 def bearer_for(
     services: Services, *grants: Grant, roles: list[str] | None = None
 ) -> dict[str, str]:
     """A user with these grants, and the header of a fresh token for it."""
-    user = services.users.create_user(ADMIN, "limited", roles or [], list(grants))
+    name = f"limited-{next(_LIMITED)}"
+    user = services.users.create_user(ADMIN, name, roles or [], list(grants))
     _, plain = services.auth.issue_token(user.id, "test")
     return {"Authorization": f"Bearer {plain}"}
 

@@ -44,6 +44,7 @@ from .data.secrets import (
     KeyProvider,
     KeyProviderError,
     KeyringKeyProvider,
+    PasswordHasher,
 )
 from .data.storage import Database, MessageIndexRepository, open_repositories
 from .domain.accounts import AccountService
@@ -55,6 +56,7 @@ from .domain.discovery import DiscoveryService
 from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
 from .domain.oauth import OAuthService
+from .domain.passwords import Passwords
 from .domain.sending import SendControl
 from .domain.sync import SyncService
 from .domain.users import UserService
@@ -102,6 +104,7 @@ def build_services(
     oauth_clients: Mapping[ProviderType, OAuthClient] | None = None,
     resolve: Resolve | None = None,
     lookup: Lookup | None = None,
+    password_hasher: PasswordHasher | None = None,
 ) -> Services:
     """``resolve`` answers DNS for the host check that autodiscovery and the
     hosts of an account pass (CONCEPT 5.8, rule 6), ``lookup`` the same
@@ -134,7 +137,13 @@ def build_services(
         changes=changes,
     )
     sync = SyncService(adapters, repos.index, feed=changes)
-    auth = AuthService(repos.users, repos.roles, repos.tokens, admin_key=admin_key)
+    auth = AuthService(
+        repos.users,
+        repos.roles,
+        repos.tokens,
+        admin_key=admin_key,
+        passwords=Passwords(repos.passwords, password_hasher),
+    )
     return Services(
         accounts=accounts,
         adapters=adapters,

@@ -1,4 +1,4 @@
-"""Users, their tokens and roles, managed through the API.
+"""Users, their tokens, passwords and roles.
 
 No escalation: a caller can only hand out rights it holds itself, and can
 only manage a user whose rights it holds itself.
@@ -128,6 +128,7 @@ class UserService:
     ) -> User:
         access.require("create_user")
         _named("a user", name)
+        self._require_free(name)
         user = User(id=new_id("usr"), name=name, roles=roles, grants=grants)
         self._check_grantable(access, user.roles, user.grants)
         self._users.save(user)
@@ -146,6 +147,7 @@ class UserService:
         access.require("update_user")
         if name is not None:
             _named("a user", name)
+            self._require_free(name, user_id)
         user = self._users.get(user_id)
         self._require_covers_user(access, user)
         changes = {
@@ -170,7 +172,47 @@ class UserService:
         if user_id == access.user_id:
             raise ConflictError("a user cannot delete itself")
         self._tokens.delete_for_user(user_id)
+        self._auth.passwords.delete(user_id)
         self._users.delete(user_id)
+
+    def _require_free(self, name: str, user_id: str | None = None) -> None:
+        """A person signs in with the name: one user per name, whatever
+        the case."""
+        taken = self._auth.user_named(name)
+        if taken is not None and taken.id != user_id:
+            raise ConflictError(f"a user named {taken.name} exists")
+
+    # --- passwords ------------------------------------------------------------
+
+    def has_password(self, access: Access, user_id: str) -> bool:
+        """Whether the user can sign in to the UI."""
+        if user_id != access.user_id:
+            access.require("get_user")
+        return self._auth.passwords.stored(user_id) is not None
+
+    async def change_password(self, access: Access, current: str, new: str) -> datetime:
+        """The caller's own password, with the current one. Returns the new
+        stamp, which keeps the caller's session and ends its others."""
+        user = self._users.get(access.user_id)
+        if not await self._auth.passwords.matches(user.id, current):
+            raise BadRequestError("the current password is not right")
+        if new == current:
+            raise BadRequestError("the new password is the current one")
+        stored = await self._auth.passwords.set(
+            user.id, user.name, new, must_change=False
+        )
+        return stored.updated_at
+
+    async def set_password(self, access: Access, user_id: str, new: str) -> None:
+        """Another user's password, within the caller's rights: whoever sets
+        it can sign in as that user. It must be changed at the next
+        sign-in."""
+        access.require("set_password")
+        user = self._users.get(user_id)
+        self._require_covers_user(access, user)
+        if user_id == access.user_id:
+            raise ConflictError("change your own password with the current one")
+        await self._auth.passwords.set(user.id, user.name, new, must_change=True)
 
     # --- tokens ---------------------------------------------------------------
 

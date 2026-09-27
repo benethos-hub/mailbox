@@ -7,16 +7,23 @@ whether it is valid and whose rights it carries.
 from __future__ import annotations
 
 import hashlib
+import logging
 import secrets
 import string
 from collections.abc import Callable
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Literal
 
 from ..common.clock import utc_now
 from ..common.ids import new_id
-from ..data.models import ApiToken
-from ..data.storage import RoleRepository, TokenRepository, UserRepository
+from ..data.models import ApiToken, User
+from ..data.storage import (
+    InMemoryPasswordRepository,
+    RoleRepository,
+    TokenRepository,
+    UserRepository,
+)
 from ..errors import (
     BadRequestError,
     NotFoundError,
@@ -24,7 +31,10 @@ from ..errors import (
     UnauthorizedError,
 )
 from .access import Access
+from .passwords import Passwords
 from .throttle import SignInThrottle
+
+log = logging.getLogger(__name__)
 
 TOKEN_PREFIX = "mbx_"
 _ALPHABET = string.ascii_letters + string.digits
@@ -34,6 +44,26 @@ _TOKEN_LENGTH = 64
 ADMIN_KEY_USER_ID = "usr_admin_key"
 
 TokenState = Literal["active", "expired", "revoked"]
+
+# A user name that fails this often in the window waits this long, from
+# any address: slower guessing at one account from many addresses, and
+# never a long lockout of its owner.
+NAME_LIMIT = 10
+NAME_WINDOW = timedelta(minutes=15)
+NAME_LOCKOUT = timedelta(minutes=1)
+WRONG = "wrong user name or password"
+
+
+@dataclass(frozen=True)
+class SignedIn:
+    """Who signed in with a password, for a session of the UI."""
+
+    user_id: str
+    # The password was set by someone else: it must be changed first.
+    must_change: bool
+    # When the password was set. The session keeps it and ends once the
+    # password changes.
+    stamp: datetime
 
 
 def hash_token(token: str) -> str:
@@ -55,6 +85,7 @@ class AuthService:
         admin_key: str | None = None,
         clock: Callable[[], datetime] = utc_now,
         throttle: SignInThrottle | None = None,
+        passwords: Passwords | None = None,
     ) -> None:
         self._users = users
         self._roles = roles
@@ -62,6 +93,59 @@ class AuthService:
         self._admin_key = admin_key or None
         self._clock = clock
         self._throttle = throttle or SignInThrottle(clock=clock)
+        self._names = SignInThrottle(
+            limit=NAME_LIMIT, window=NAME_WINDOW, lockout=NAME_LOCKOUT, clock=clock
+        )
+        self.passwords = passwords or Passwords(InMemoryPasswordRepository())
+
+    async def sign_in(self, name: str, password: str, *, source: str) -> SignedIn:
+        """The user behind a name and a password. A wrong name, a wrong
+        password and a disabled user answer alike, in the same time. The
+        source and the name are slowed down after failures."""
+        if self._users.count() == 0:
+            raise SetupRequiredError(
+                "no user exists: run `benethos-mailbox-service users create-admin`"
+            )
+        key = name.strip().casefold()
+        self._throttle.check(source)
+        self._names.check(key)
+        user = self.user_named(name)
+        matched = await self.passwords.matches(user.id if user else None, password)
+        stored = self.passwords.stored(user.id) if user is not None else None
+        if not matched or user is None or user.disabled or stored is None:
+            self._throttle.failed(source)
+            self._names.failed(key)
+            # The name only when it is a user's: a password typed into the
+            # name field must not end up in the log.
+            who = f"{user.name} ({user.id})" if user is not None else "an unknown name"
+            log.warning("failed sign-in to the UI as %s from %s", who, source)
+            raise UnauthorizedError(WRONG)
+        self._throttle.succeeded(source)
+        self._names.succeeded(key)
+        log.info("sign-in to the UI as %s (%s) from %s", user.name, user.id, source)
+        return SignedIn(user.id, stored.must_change, stored.updated_at)
+
+    def session_access(self, user_id: str, stamp: datetime) -> Access:
+        """What the user of a UI session may do now. Raises when the user
+        is gone or disabled, or its password changed since the sign-in."""
+        try:
+            user = self._users.get(user_id)
+        except NotFoundError:
+            raise UnauthorizedError("the user no longer exists") from None
+        if user.disabled:
+            raise UnauthorizedError("user is disabled")
+        stored = self.passwords.stored(user_id)
+        if stored is None or stored.updated_at != stamp:
+            raise UnauthorizedError("the password changed: sign in again")
+        roles = {role.id: role for role in self._roles.list()}
+        return Access.for_user(user, roles)
+
+    def user_named(self, name: str) -> User | None:
+        """The user with this name, regardless of case."""
+        wanted = name.strip().casefold()
+        return next(
+            (u for u in self._users.list() if u.name.casefold() == wanted), None
+        )
 
     def authenticate(
         self, presented: str | None, *, source: str | None = None
