@@ -247,12 +247,9 @@ class MailboxApiClient:
         """One account's messages, or with ``account_id`` None, those of
         every account the caller may read. ``folder`` is an id or a role.
         Across accounts it must be a role."""
-        path = (
-            _path("accounts", account_id, "messages") if account_id else "/v1/messages"
-        )
         found = await self.request(
             "GET",
-            path,
+            _scoped(account_id, "messages"),
             params={
                 "folder": folder,
                 "q": text,
@@ -275,8 +272,11 @@ class MailboxApiClient:
     ) -> Changes:
         """The changes of one account, or with ``account_id`` None, of every
         account the caller may read, after the point ``since``."""
-        path = _path("accounts", account_id, "changes") if account_id else "/v1/changes"
-        found = await self.request("GET", path, params={"since": since, "limit": limit})
+        found = await self.request(
+            "GET",
+            _scoped(account_id, "changes"),
+            params={"since": since, "limit": limit},
+        )
         return Changes(
             changes=[
                 {key: str(change[key]) for key in ("type", "id", "account_id", "at")}
@@ -474,6 +474,12 @@ def _recipient(recipient: Recipient) -> dict[str, str]:
 def _path(*parts: str) -> str:
     """A path below ``/v1``, each part quoted: an id comes from the model."""
     return "/v1/" + "/".join(quote(part, safe="") for part in parts)
+
+
+def _scoped(account_id: str | None, what: str) -> str:
+    """``what`` of one account, or with ``account_id`` None, of every
+    account the caller may use."""
+    return _path("accounts", account_id, what) if account_id else _path(what)
 
 
 def _given(values: Mapping[str, Any] | None) -> dict[str, Any]:
