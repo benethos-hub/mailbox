@@ -8,6 +8,7 @@ constraint as ConflictError, anything else as StorageError.
 
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import stat
@@ -21,6 +22,8 @@ from typing import Any, overload
 from ....errors import ConflictError, StorageError
 from ...files import LockedError, create_private, exclusive_lock
 from ..table import missing
+
+log = logging.getLogger(__name__)
 
 MIGRATIONS: list[str] = [
     # 1: accounts, users, roles, tokens
@@ -361,12 +364,19 @@ class Database:
             )
         for version in range(current, SCHEMA_VERSION):
             with self.transaction() as db:
+                renamed = _renamed_by_9(db) if version == 8 else []
                 for statement in _statements(MIGRATIONS[version]):
                     db.execute(statement)
                 db.execute(
                     "INSERT OR REPLACE INTO meta (key, value)"
                     " VALUES ('schema_version', ?)",
                     (str(version + 1),),
+                )
+            for old, new in renamed:
+                log.warning(
+                    "user %s renamed to %s: the name was taken regardless of case",
+                    old,
+                    new,
                 )
 
 
@@ -401,6 +411,15 @@ def parse_iso(value: str | None) -> datetime | None: ...
 def parse_iso(value: str | None) -> datetime | None:
     """The time a TEXT column holds, None for NULL."""
     return datetime.fromisoformat(value) if value else None
+
+
+def _renamed_by_9(db: sqlite3.Connection) -> list[tuple[str, str]]:
+    """The names migration 9 is about to change, before and after."""
+    rows = db.execute(
+        "SELECT id, name FROM users WHERE rowid NOT IN"
+        " (SELECT MIN(rowid) FROM users GROUP BY lower(name))"
+    ).fetchall()
+    return [(row["name"], f"{row['name']}-{row['id'][4:12]}") for row in rows]
 
 
 def service_lock(path: Path) -> Path:

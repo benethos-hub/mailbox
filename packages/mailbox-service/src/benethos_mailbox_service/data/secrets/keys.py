@@ -64,7 +64,7 @@ class EnvKeyProvider:
         self._value = value
 
     def load(self) -> bytes | None:
-        return decode_recovery(self._value) if self._value else None
+        return _held(self._value, self) if self._value else None
 
     def store(self, key: bytes, *, replace: bool = False) -> None:
         raise KeyProviderError(
@@ -86,9 +86,10 @@ class FileKeyProvider:
         try:
             if not self._path.exists():
                 return None
-            return decode_recovery(self._path.read_text(encoding="utf-8"))
+            text = self._path.read_text(encoding="utf-8")
         except OSError as exc:
             raise KeyProviderError(f"cannot read {self._path}: {exc}") from None
+        return _held(text, self)
 
     def store(self, key: bytes, *, replace: bool = False) -> None:
         if self._path.exists() and not replace:
@@ -117,7 +118,7 @@ class KeyringKeyProvider:
 
         with _keyring_failures("read"):
             value = keyring.get_password(KEYRING_SERVICE, KEYRING_USERNAME)
-        return decode_recovery(value) if value else None
+        return _held(value, self) if value else None
 
     def store(self, key: bytes, *, replace: bool = False) -> None:
         import keyring
@@ -134,6 +135,14 @@ class KeyringKeyProvider:
 
     def describe(self) -> str:
         return "the operating system's credential store"
+
+
+def _held(text: str, provider: KeyProvider) -> bytes:
+    """The key a provider holds as text, or an error that names where."""
+    try:
+        return decode_recovery(text)
+    except KeyProviderError:
+        raise KeyProviderError(f"{provider.describe()} holds no recovery key") from None
 
 
 @contextmanager

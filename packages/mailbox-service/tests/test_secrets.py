@@ -100,6 +100,18 @@ def test_recovery_key_rejects_garbage(text: str) -> None:
         decode_recovery(text)
 
 
+def test_a_key_file_without_a_key_is_named(tmp_path: Path) -> None:
+    path = tmp_path / "master.key"
+    path.write_text("not a key\n", encoding="utf-8")
+    with pytest.raises(KeyProviderError, match="master.key holds no recovery key"):
+        FileKeyProvider(path).load()
+
+
+def test_an_environment_without_a_key_is_named() -> None:
+    with pytest.raises(KeyProviderError, match="MASTER_KEY holds no recovery key"):
+        EnvKeyProvider("not a key").load()
+
+
 # --- key providers ------------------------------------------------------------
 
 

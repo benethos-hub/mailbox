@@ -196,6 +196,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- A key provider whose content is no recovery key is named in the error,
+  e.g. `the key file ... holds no recovery key`. Before, the error said
+  only `not a recovery key`.
 - The service refuses to start with a log level uvicorn does not know, a
   port outside 1 to 65535, or a longest webhook retry shorter than the
   first, and names the setting. Before, the log level ended in a
