@@ -168,6 +168,9 @@ async def get_message(
 
 
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+# An image goes to the model in one piece, base64 in the result. Larger
+# ones go by name only.
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_PAGES = 10
 # Image types Claude takes as images.
 IMAGE_TYPES = frozenset({"image/png", "image/jpeg", "image/gif", "image/webp"})
@@ -216,6 +219,11 @@ async def get_attachment(
         raise ToolError(
             f"the attachment has more than the {MAX_ATTACHMENT_BYTES} bytes "
             "this tool hands over"
+        )
+    if kind in IMAGE_TYPES and len(found.data) > MAX_IMAGE_BYTES:
+        return _result(
+            f"{head} Images over {MAX_IMAGE_BYTES} bytes go by name only.\n\n"
+            + render.foreign(source, name)
         )
     if kind in IMAGE_TYPES:
         return _result(

@@ -231,7 +231,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   IMAP without it answer `400` that the login cannot carry it. Before,
   IMAP answered `500`, and SMTP answered `400` with a message that
   quoted one character of the password and its position.
+- `get_attachment` of the MCP server hands an image to the model only up
+  to 5 MB, larger ones by name. The PDF pages of one call share 12
+  megapixels, so ten pages each come smaller than three. Before, an image
+  of 10 MB and ten pages of 4 megapixels each went into one result.
 - The MCP server no longer logs the URL of each request to the service
+
   at `INFO`. httpx wrote it, with search terms and message ids, into the
   log files of the MCP client.
 - A request body larger than 40 MB is refused with `413

@@ -171,7 +171,28 @@ async def test_a_charset_python_does_not_know(make_client: Callable) -> None:
     assert "Grüße" in text.text  # type: ignore[attr-defined]
 
 
+def test_many_pages_share_the_budget_of_one_call() -> None:
+    rendered = pdf.render(make_pdf(10), first=1, count=10)
+    pixels = sum(width * height for width, height in map(png_size, rendered.images))
+    assert len(rendered.images) == 10
+    # Each side of a page is rounded up to whole pixels.
+    assert pixels <= pdf.MAX_TOTAL_PIXELS * 1.01
+    single = png_size(pdf.render(make_pdf(1), first=1, count=1).images[0])
+    assert pixels < 10 * single[0] * single[1]
+
+
+async def test_a_large_image_goes_by_name_only(
+    make_client: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(server, "MAX_IMAGE_BYTES", 10)
+    make_client(serving(b"\x89PNG" + b"x" * 20, "image/png", "photo.png"))
+    [text] = await call()
+    assert "by name only" in text.text  # type: ignore[attr-defined]
+    assert "photo.png" in text.text  # type: ignore[attr-defined]
+
+
 def test_a_huge_page_is_rendered_within_the_budget() -> None:
+
     picture = pdf.render(make_pdf(1, width=20000, height=20000), first=1, count=1)
     width, height = png_size(picture.images[0])
     assert width * height <= pdf.MAX_PIXELS
