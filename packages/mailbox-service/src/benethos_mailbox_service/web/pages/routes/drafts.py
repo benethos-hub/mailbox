@@ -27,7 +27,6 @@ from ..mailform import (
     sent_text,
     show,
     show_again,
-    uploads,
 )
 from ..navigation import mail_trail
 from ..rights import mail_rights
@@ -41,7 +40,7 @@ async def drafts(
     request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
-    page = await mailbox.list_drafts(
+    page = await mailbox.outgoing.list_drafts(
         caller, account_id, limit=PAGE_SIZE, cursor=request.query_params.get("cursor")
     )
     return render(
@@ -53,7 +52,9 @@ async def drafts(
         messages=page.items,
         pages=page_links(request, page.next_cursor),
         fields={},
+        emails=None,
         open_as="drafts",
+        selectable=False,
         can_write=mail_rights(caller, account_id)["write"],
     )
 
@@ -86,16 +87,6 @@ async def draft(
     )
 
 
-def _unchanged(form: Any, stored: Message) -> bool:
-    """Whether the form holds the draft as it is stored."""
-    values = _stored_values(stored)
-    same = all(
-        " ".join(str(form.get(key) or "").split()) == " ".join(values[key].split())
-        for key in values
-    )
-    return same and not uploads(form) and not form.getlist("drop")
-
-
 def _kept(stored: Message, form: Any) -> list[str]:
     """The ids of the draft's attachments that stay."""
     dropped = set(form.getlist("drop"))
@@ -114,25 +105,23 @@ async def draft_submit(
     stored: Message | None = None
     try:
         if doing == "delete":
-            await mailbox.delete_draft(caller, account_id, draft_id)
+            await mailbox.outgoing.delete_draft(caller, account_id, draft_id)
             return back(request, f"/ui/accounts/{account_id}/drafts", "Draft deleted.")
         stored = await mailbox.get_message(caller, account_id, draft_id)
-        if not _unchanged(form, stored):
-            fields = await read_fields(form)
-            if stored.reference is not None:
-                fields["reference"] = stored.reference.model_copy(
-                    update={"quote": False}
-                )
-            await mailbox.update_draft(
-                caller,
-                account_id,
-                draft_id,
-                build(DraftMessage, fields),
-                keep_attachments=_kept(stored, form),
-            )
+        fields = await read_fields(form)
+        if stored.reference is not None:
+            fields["reference"] = stored.reference.model_copy(update={"quote": False})
+        # A draft sent as it is stored is not stored again (the domain).
+        await mailbox.outgoing.update_draft(
+            caller,
+            account_id,
+            draft_id,
+            build(DraftMessage, fields),
+            keep_attachments=_kept(stored, form),
+        )
         if doing != "send":
             return back(request, here, "Draft saved.")
-        result = await mailbox.send_draft(
+        result = await mailbox.outgoing.send_draft(
             caller,
             account_id,
             draft_id,

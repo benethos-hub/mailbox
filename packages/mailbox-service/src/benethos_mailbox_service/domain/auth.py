@@ -18,12 +18,7 @@ from typing import Literal
 from ..common.clock import utc_now
 from ..common.ids import new_id
 from ..data.models import ApiToken, User
-from ..data.storage import (
-    InMemoryPasswordRepository,
-    RoleRepository,
-    TokenRepository,
-    UserRepository,
-)
+from ..data.storage import RoleRepository, TokenRepository, UserRepository
 from ..errors import (
     BadRequestError,
     NotFoundError,
@@ -83,9 +78,9 @@ class AuthService:
         users: UserRepository,
         roles: RoleRepository,
         tokens: TokenRepository,
+        passwords: Passwords,
         clock: Callable[[], datetime] = utc_now,
         throttle: SignInThrottle | None = None,
-        passwords: Passwords | None = None,
     ) -> None:
         self._users = users
         self._roles = roles
@@ -95,16 +90,13 @@ class AuthService:
         self._names = SignInThrottle(
             limit=NAME_LIMIT, window=NAME_WINDOW, lockout=NAME_LOCKOUT, clock=clock
         )
-        self.passwords = passwords or Passwords(InMemoryPasswordRepository())
+        self.passwords = passwords
 
     async def sign_in(self, name: str, password: str, *, source: str) -> SignedIn:
         """The user behind a name and a password. A wrong name, a wrong
         password and a disabled user answer alike, in the same time. The
         source and the name are slowed down after failures."""
-        if self._users.count() == 0:
-            raise SetupRequiredError(
-                "no user exists: run `benethos-mailbox-service users create-admin`"
-            )
+        self._require_users()
         key = name.strip().casefold()[:MAX_NAME]
         self._throttle.check(source)
         self._names.check(key)
@@ -142,7 +134,7 @@ class AuthService:
         hands out much. A wrong one counts against the user's name as a
         failed sign-in does."""
         user = self._users.get(access.user_id)
-        key = user.name.casefold()[:MAX_NAME]
+        key = user.name.strip().casefold()[:MAX_NAME]
         self._names.check(key)
         matched = len(password) <= MAX_LENGTH and await self.passwords.matches(
             user.id, password
@@ -168,14 +160,14 @@ class AuthService:
         stored = self.passwords.stored(user_id)
         if stored is None or stored.updated_at != stamp:
             raise UnauthorizedError("the password changed: sign in again")
-        roles = {role.id: role for role in self._roles.list()}
-        return Access.for_user(user, roles)
+        return self._access(user)
 
     def user_named(self, name: str) -> User | None:
         """The user with this name, regardless of case."""
         wanted = name.strip().casefold()
         return next(
-            (u for u in self._users.list() if u.name.casefold() == wanted), None
+            (u for u in self._users.list() if u.name.strip().casefold() == wanted),
+            None,
         )
 
     def authenticate(
@@ -186,10 +178,7 @@ class AuthService:
         too often is locked out for a while (``RateLimitedError``), before
         the credential is looked at. A request that carries a session the
         service made itself passes no source."""
-        if self._users.count() == 0:
-            raise SetupRequiredError(
-                "no user exists: run `benethos-mailbox-service users create-admin`"
-            )
+        self._require_users()
         if not presented:
             raise UnauthorizedError("missing bearer token")
         if source is not None:
@@ -214,14 +203,15 @@ class AuthService:
             return None
         if user.disabled:
             return None
-        roles = {role.id: role for role in self._roles.list()}
-        return Access.for_user(user, roles)
+        return self._access(user)
 
     def issue_token(
         self, user_id: str, name: str, expires_at: datetime | None = None
     ) -> tuple[ApiToken, str]:
         """A new token for a user. The plain token is returned once only."""
         self._users.get(user_id)
+        if expires_at is not None and expires_at.utcoffset() is None:
+            raise BadRequestError("expires_at needs a time zone")
         if expires_at is not None and expires_at <= self._clock():
             raise BadRequestError("the token would be expired already")
         plain = new_token()
@@ -263,6 +253,16 @@ class AuthService:
             raise UnauthorizedError("invalid or revoked token") from None
         if user.disabled:
             raise UnauthorizedError("user is disabled")
-        self._tokens.save(token.model_copy(update={"last_used_at": now}))
+        self._tokens.touch(token.id, now)
+        return self._access(user, token.id)
+
+    def _access(self, user: User, credential_id: str | None = None) -> Access:
+        """What the user may do now, through its grants and its roles."""
         roles = {role.id: role for role in self._roles.list()}
-        return Access.for_user(user, roles, token.id)
+        return Access.for_user(user, roles, credential_id)
+
+    def _require_users(self) -> None:
+        if self._users.count() == 0:
+            raise SetupRequiredError(
+                "no user exists: run `benethos-mailbox-service users create-admin`"
+            )

@@ -16,6 +16,7 @@ from benethos_mailbox_service.data.models import (
     Folder,
     FolderRole,
     Grant,
+    OutgoingAttachment,
     ProviderType,
     Recipient,
 )
@@ -115,6 +116,17 @@ async def test_replacing_a_draft_removes_the_old_one(box: FakeMailBox) -> None:
     assert second.id != first.id
     with pytest.raises(NotFoundError):
         await imap.get_draft(first.id)
+
+
+async def test_replacing_a_draft_that_is_gone_stores_nothing(box: FakeMailBox) -> None:
+    imap = provider(box)
+    first = await imap.save_draft(draft_bytes("One"), None)
+    await imap.delete_draft(first.id)
+    appends = [c for c in box.calls if c[0] == "append"]
+    with pytest.raises(NotFoundError, match="not found"):
+        await imap.save_draft(draft_bytes("Two"), first.id)
+    assert [c for c in box.calls if c[0] == "append"] == appends
+    assert (await imap.list_drafts(limit=10, cursor=None)).items == []
 
 
 async def test_a_draft_reads_back_as_stored(box: FakeMailBox) -> None:
@@ -246,6 +258,20 @@ def test_replacing_a_draft_keeps_the_attachments_named(
     assert now["attachments"] == []
 
 
+def test_kept_attachments_come_from_a_draft_alone(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    headers = bearer_for(services, Grant(accounts=[account_id], allow=["drafts"]))
+    # m0 is in the inbox, not a draft.
+    answer = app_client.put(
+        drafts_url(account_id, "m0"),
+        json={"subject": "x", "keep_attachments": ["att_0"]},
+        headers=headers,
+    )
+    assert answer.status_code == 404
+    assert "attachment" not in answer.json()["error"]["message"]
+
+
 def test_a_reply_draft_keeps_its_reference(client: TestClient, account_id: str) -> None:
     created = client.post(
         drafts_url(account_id),
@@ -322,7 +348,7 @@ async def test_a_retried_save_stores_the_draft_once(
     services, account_id = on_imap
     box.copyuid = False  # no APPENDUID: the draft is found by its Message-ID
     box.failures = [None, OSError("connection reset")]
-    draft = await services.mailbox.create_draft(
+    draft = await services.mailbox.outgoing.create_draft(
         ADMIN, account_id, DraftMessage(subject="Once", text="x")
     )
     assert list(box.folders["Drafts"].messages) == [1]
@@ -339,23 +365,62 @@ async def test_a_replaced_draft_keeps_its_id(
 ) -> None:
     services, account_id = on_imap
     mailbox = services.mailbox
-    first = await mailbox.create_draft(
+    first = await mailbox.outgoing.create_draft(
         ADMIN, account_id, DraftMessage(subject="One", text="x")
     )
-    second = await mailbox.update_draft(
+    second = await mailbox.outgoing.update_draft(
         ADMIN, account_id, first.id, DraftMessage(subject="Two", text="y")
     )
     assert second.id == first.id
     assert list(box.folders["Drafts"].messages) == [2]
     message = await mailbox.get_message(ADMIN, account_id, first.id)
     assert message.subject == "Two"
-    listed = await mailbox.list_drafts(ADMIN, account_id, limit=10, cursor=None)
+    listed = await mailbox.outgoing.list_drafts(
+        ADMIN, account_id, limit=10, cursor=None
+    )
     assert [d.id for d in listed.items] == [first.id]
 
-    await mailbox.delete_draft(ADMIN, account_id, first.id)
+    await mailbox.outgoing.delete_draft(ADMIN, account_id, first.id)
     assert not box.folders["Drafts"].messages
     with pytest.raises(NotFoundError):
         await mailbox.get_message(ADMIN, account_id, first.id)
+
+
+async def test_a_draft_sent_as_stored_is_not_stored_again(
+    box: FakeMailBox, on_imap: tuple[Services, str]
+) -> None:
+    services, account_id = on_imap
+    outgoing = services.mailbox.outgoing
+    draft = DraftMessage(
+        to=[Recipient(email="bob@example.com", name="Bob")],
+        subject="Plan",
+        text="First line\nsecond line",
+        attachments=[
+            OutgoingAttachment(
+                filename="a.txt", content_type="text/plain", data=b"YQ=="
+            )
+        ],
+    )
+    first = await outgoing.create_draft(ADMIN, account_id, draft)
+    appends = [c for c in box.calls if c[0] == "append"]
+    # The same, as a form sends it back: the stored attachment kept.
+    again = draft.model_copy(
+        update={"text": "First line  second line", "attachments": []}
+    )
+    same = await outgoing.update_draft(
+        ADMIN, account_id, first.id, again, keep_attachments=["att_0"]
+    )
+    assert same.id == first.id
+    assert [c for c in box.calls if c[0] == "append"] == appends
+    # A changed subject, or an attachment dropped, is stored.
+    for changed, keep in (
+        (again.model_copy(update={"subject": "Plan B"}), ["att_0"]),
+        (again, []),
+    ):
+        await outgoing.update_draft(
+            ADMIN, account_id, first.id, changed, keep_attachments=keep
+        )
+    assert len([c for c in box.calls if c[0] == "append"]) == len(appends) + 2
 
 
 async def test_a_draft_id_that_left_the_drafts_folder(
@@ -363,12 +428,12 @@ async def test_a_draft_id_that_left_the_drafts_folder(
 ) -> None:
     """Another client moved the draft away: it is no draft any more."""
     services, account_id = on_imap
-    draft = await services.mailbox.create_draft(
+    draft = await services.mailbox.outgoing.create_draft(
         ADMIN, account_id, DraftMessage(subject="One", text="x")
     )
     box.other_client_moves("Drafts", 1, "INBOX", 2)
     with pytest.raises(NotFoundError):
-        await services.mailbox.delete_draft(ADMIN, account_id, draft.id)
+        await services.mailbox.outgoing.delete_draft(ADMIN, account_id, draft.id)
     assert box.folders["INBOX"].messages
 
 

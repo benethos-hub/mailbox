@@ -26,6 +26,11 @@ URL_ENV = "MAILBOX_SERVICE_URL"
 TOKEN_ENV = "MAILBOX_SERVICE_TOKEN"
 # Allows http to a host other than this machine, e.g. between containers.
 ALLOW_HTTP_ENV = "MAILBOX_SERVICE_ALLOW_HTTP"
+# Seconds to wait: for the service to take the connection, for an answer,
+# and for an attachment, which may be large.
+CONNECT_TIMEOUT = 5.0
+TIMEOUT = 30.0
+ATTACHMENT_TIMEOUT = 120.0
 
 # An address with an optional display name.
 Recipient = tuple[str, str | None]
@@ -112,18 +117,23 @@ class MailboxApiClient:
         transport: httpx.AsyncBaseTransport | None = None,
         allow_http: bool | None = None,
     ) -> None:
-        """Raises when the URL would carry the token unencrypted to another
-        machine, unless ``allow_http`` (else ``MAILBOX_SERVICE_ALLOW_HTTP``)
-        says so."""
+        """Raises without a token, and when the URL would carry the token
+        unencrypted to another machine, unless ``allow_http`` (else
+        ``MAILBOX_SERVICE_ALLOW_HTTP``) says so."""
         self.base_url = (base_url or os.environ.get(URL_ENV) or DEFAULT_URL).rstrip("/")
         if allow_http is None:
             allow_http = os.environ.get(ALLOW_HTTP_ENV, "") in ("1", "true", "yes")
         _check_url(self.base_url, allow_http)
         token = token if token is not None else os.environ.get(TOKEN_ENV, "")
+        if not token:
+            raise ToolError(
+                f"{TOKEN_ENV} is not set. Make a token on your user's page in "
+                "the service's UI and set it."
+            )
         self._http = httpx.AsyncClient(
             base_url=self.base_url,
-            headers={"Authorization": f"Bearer {token}"} if token else {},
-            timeout=httpx.Timeout(30.0, connect=5.0),
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=httpx.Timeout(TIMEOUT, connect=CONNECT_TIMEOUT),
             transport=transport,
         )
 
@@ -159,13 +169,22 @@ class MailboxApiClient:
     async def _send(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
             response = await self._http.request(method, path, **kwargs)
-        except httpx.TransportError:
-            raise self._unreachable() from None
+        except httpx.TransportError as exc:
+            raise self._failure(exc, TIMEOUT) from None
         if response.is_error:
             raise _api_error(response)
         return response
 
-    def _unreachable(self) -> ServiceUnavailableError:
+    def _failure(self, exc: httpx.TransportError, seconds: float) -> ToolError:
+        """What went wrong on the way: a service that answers too slowly is
+        running, one that cannot be reached is not."""
+        if isinstance(exc, httpx.TimeoutException) and not isinstance(
+            exc, httpx.ConnectTimeout
+        ):
+            return ToolError(
+                f"The mailbox service did not answer within {seconds:g} s. "
+                "Try a narrower request."
+            )
         return ServiceUnavailableError(
             f"The mailbox service is not reachable at {self.base_url}. "
             "Start it with `benethos-mailbox-service serve`."
@@ -228,12 +247,9 @@ class MailboxApiClient:
         """One account's messages, or with ``account_id`` None, those of
         every account the caller may read. ``folder`` is an id or a role.
         Across accounts it must be a role."""
-        path = (
-            _path("accounts", account_id, "messages") if account_id else "/v1/messages"
-        )
         found = await self.request(
             "GET",
-            path,
+            _scoped(account_id, "messages"),
             params={
                 "folder": folder,
                 "q": text,
@@ -256,8 +272,11 @@ class MailboxApiClient:
     ) -> Changes:
         """The changes of one account, or with ``account_id`` None, of every
         account the caller may read, after the point ``since``."""
-        path = _path("accounts", account_id, "changes") if account_id else "/v1/changes"
-        found = await self.request("GET", path, params={"since": since, "limit": limit})
+        found = await self.request(
+            "GET",
+            _scoped(account_id, "changes"),
+            params={"since": since, "limit": limit},
+        )
         return Changes(
             changes=[
                 {key: str(change[key]) for key in ("type", "id", "account_id", "at")}
@@ -282,7 +301,11 @@ class MailboxApiClient:
             "accounts", account_id, "messages", message_id, "attachments", attachment_id
         )
         try:
-            async with self._http.stream("GET", path) as response:
+            async with self._http.stream(
+                "GET",
+                path,
+                timeout=httpx.Timeout(ATTACHMENT_TIMEOUT, connect=CONNECT_TIMEOUT),
+            ) as response:
                 if response.is_error:
                     await response.aread()
                     raise _api_error(response)
@@ -295,8 +318,8 @@ class MailboxApiClient:
                     if read > max_bytes:
                         complete = False
                         break
-        except httpx.TransportError:
-            raise self._unreachable() from None
+        except httpx.TransportError as exc:
+            raise self._failure(exc, ATTACHMENT_TIMEOUT) from None
         media, _, options = response.headers.get(
             "content-type", "application/octet-stream"
         ).partition(";")
@@ -451,6 +474,12 @@ def _recipient(recipient: Recipient) -> dict[str, str]:
 def _path(*parts: str) -> str:
     """A path below ``/v1``, each part quoted: an id comes from the model."""
     return "/v1/" + "/".join(quote(part, safe="") for part in parts)
+
+
+def _scoped(account_id: str | None, what: str) -> str:
+    """``what`` of one account, or with ``account_id`` None, of every
+    account the caller may use."""
+    return _path("accounts", account_id, what) if account_id else _path(what)
 
 
 def _given(values: Mapping[str, Any] | None) -> dict[str, Any]:

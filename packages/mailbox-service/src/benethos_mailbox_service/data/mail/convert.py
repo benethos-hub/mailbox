@@ -6,10 +6,11 @@ the bytes. What only a protocol knows (ids, folders, flags) the adapter adds.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from ...errors import NotFoundError
-from ..models import Attachment, AttachmentContent
+from ..models import Address, Attachment, AttachmentContent, MessageReference
 from .compose import REFERENCE_HEADER, read_reference
 from .parse import ParsedMessage
 
@@ -21,6 +22,8 @@ def summary_fields(msg: ParsedMessage) -> dict[str, Any]:
         "from": msg.sender,
         "to": msg.to,
         "date": msg.date,
+        # From the header alone: parts that are attached come in a
+        # multipart/mixed, those the body shows in a multipart/related.
         "has_attachments": msg.content_type.startswith("multipart/mixed"),
     }
 
@@ -30,7 +33,7 @@ def thread_fields(msg: ParsedMessage) -> dict[str, Any]:
     answers, and the reference a draft of this service keeps."""
     return {
         "message_id_header": msg.message_id,
-        "in_reply_to": msg.header("in-reply-to"),
+        "in_reply_to": msg.in_reply_to,
         "reference": read_reference(msg.header(REFERENCE_HEADER)),
     }
 
@@ -56,8 +59,38 @@ def message_fields(msg: ParsedMessage) -> dict[str, Any]:
         "text_body": msg.text,
         "html_body": msg.html,
         "attachments": attachments,
-        "has_attachments": bool(attachments),
+        "has_attachments": any(part.attached for part in msg.attachments),
     }
+
+
+@dataclass(frozen=True)
+class StoredDraft:
+    """What a stored draft holds, in the terms a new version of it uses."""
+
+    to: list[Address]
+    cc: list[Address]
+    bcc: list[Address]
+    reply_to: list[Address]
+    subject: str | None
+    text: str | None
+    html: str | None
+    reference: MessageReference | None
+    attachment_ids: list[str]
+
+
+def stored_draft(raw: bytes) -> StoredDraft:
+    msg = ParsedMessage(raw)
+    return StoredDraft(
+        to=msg.to,
+        cc=msg.cc,
+        bcc=msg.bcc,
+        reply_to=msg.reply_to,
+        subject=msg.subject,
+        text=msg.text,
+        html=msg.html,
+        reference=read_reference(msg.header(REFERENCE_HEADER)),
+        attachment_ids=[attachment_id(i) for i in range(len(msg.attachments))],
+    )
 
 
 def attachment_id(index: int) -> str:

@@ -132,6 +132,18 @@ def test_other_changes_look_nothing_up(world: World) -> None:
     assert world.lookups == []
 
 
+def test_settings_sent_as_stored_look_nothing_up(world: World) -> None:
+    """The UI sends every field of its form: the domain finds what changed."""
+    account = world.create(host="imap.example.org").json()
+    world.lookups.clear()
+    same = world.client.patch(
+        f"/v1/accounts/{account['id']}",
+        json={"settings": {"host": "imap.example.org", "smtp_host": None}},
+    )
+    assert same.status_code == 200, same.text
+    assert world.lookups == []
+
+
 @pytest.mark.usefixtures("master_key")
 def test_a_host_that_turns_private_later_is_not_connected_to() -> None:
     # Public when the account is checked, private when the adapter connects.

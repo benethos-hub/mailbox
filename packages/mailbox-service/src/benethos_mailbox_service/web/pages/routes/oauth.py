@@ -20,7 +20,7 @@ from ...services import OAuth
 from ...urls import oauth_callback
 from ..deps import Actor, Viewer
 from ..forms import failing
-from ..templates import back, local_path, render
+from ..templates import back, render
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ async def start(
     form = await request.form()
     account_id = str(form.get("account_id") or "") or None
     fallback = f"/ui/accounts/{account_id}" if account_id else "/ui/accounts/new"
-    here = local_path(str(form.get("back") or ""), fallback)
+    here = fallback
     kind = _provider(provider)
     if kind is None:
         return back(request, here, error=f"Unknown provider: {provider}")

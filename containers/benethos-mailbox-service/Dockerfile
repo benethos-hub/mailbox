@@ -54,7 +54,7 @@ VOLUME /data
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4)"]
+    CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('MAILBOX_SERVICE_PORT', '8080'), timeout=4)"]
 
 ENTRYPOINT ["benethos-mailbox-service"]
 CMD ["serve"]

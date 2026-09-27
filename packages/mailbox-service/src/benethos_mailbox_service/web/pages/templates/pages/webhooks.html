@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, empty, filter_bar %}
+{% from "components/ui.html" import card, empty, filter_bar, webhook_state %}
 {% block title %}Webhooks · {{ APP_NAME }}{% endblock %}
 {% block heading %}Webhooks{% endblock %}
 {% block subheading %}<div class="sub">Where the service posts what changed in your accounts</div>{% endblock %}
@@ -20,7 +20,7 @@
         <td>{% for event in hook.events %}<span class="tag">{{ event }}</span> {% endfor %}</td>
         <td>{% if hook.accounts is none %}every account you may read{% else %}{% for account in hook.accounts %}{{ names.get(account, account) }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</td>
         <td>{{ hook.last_delivery_at | when }}</td>
-        <td>{% if hook.last_error %}<span class="tag bad">failing</span><span class="sub">{{ hook.last_error }}</span>{% else %}<span class="tag ok">ok</span>{% endif %}</td>
+        <td>{{ webhook_state(hook.last_error) }}</td>
       </tr>
       {% endfor %}
     </tbody>

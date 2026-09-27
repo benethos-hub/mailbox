@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_service.__main__ import main
@@ -12,6 +13,7 @@ from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.secrets import (
     FileKeyProvider,
+    backup,
     cipher,
     decode_recovery,
 )
@@ -25,7 +27,7 @@ from benethos_mailbox_service.data.secrets.backup import (
     write_backup,
 )
 from benethos_mailbox_service.data.storage import Database, inspect_snapshot
-from benethos_mailbox_service.main import Services, build_services
+from benethos_mailbox_service.main import Services, build_services, create_app
 
 from .conftest import create_account
 
@@ -67,9 +69,9 @@ def _populate() -> tuple[str, str]:
 def test_backup_and_restore_round_trip(machine: Path) -> None:
     account_id, _ = _populate()
     services = _services()
-    assert services.database is not None
+    assert services.store is not None
     master = services.vault.master_key()
-    manifest = create_backup(services.database, master, machine / "b.bak", "9.9.9")
+    manifest = create_backup(services.store, master, machine / "b.bak", "9.9.9")
     create_account(services.accounts, ProviderType.MEMORY, "later@example.com")
     services.close()
 
@@ -92,9 +94,9 @@ def test_backup_and_restore_round_trip(machine: Path) -> None:
 def test_restore_moves_a_leftover_journal_with_the_old_file(machine: Path) -> None:
     _populate()
     services = _services()
-    assert services.database is not None
+    assert services.store is not None
     master = services.vault.master_key()
-    create_backup(services.database, master, machine / "b.bak", "9.9.9")
+    create_backup(services.store, master, machine / "b.bak", "9.9.9")
     services.close()
     path = Settings().database_path
     journal = path.with_name(path.name + "-journal")
@@ -109,14 +111,81 @@ def test_restore_moves_a_leftover_journal_with_the_old_file(machine: Path) -> No
     restored.close()
 
 
+def _backed_up(machine: Path) -> tuple[bytes, Path]:
+    """The master key and a database with one account, backed up."""
+    _populate()
+    services = _services()
+    assert services.store is not None
+    master = services.vault.master_key()
+    create_backup(services.store, master, machine / "b.bak", "9.9.9")
+    services.close()
+    return master, Settings().database_path
+
+
+def test_restore_refuses_while_the_service_runs(machine: Path) -> None:
+    master, path = _backed_up(machine)
+    before = path.read_bytes()
+    running = _services()
+    assert running.store is not None
+    with running.store.serving() as held:
+        assert held
+        with pytest.raises(BackupError, match="the service is running"):
+            restore_backup(machine / "b.bak", master, path)
+    running.close()
+    assert path.read_bytes() == before
+    assert list(path.parent.glob("mailbox.db.before-restore-*")) == []
+    # Stopped, the restore goes through.
+    restore_backup(machine / "b.bak", master, path)
+
+
+def test_the_app_marks_its_database_while_it_serves(machine: Path) -> None:
+    master, path = _backed_up(machine)
+    with TestClient(create_app(Settings())) as client:
+        assert client.get("/health").status_code == 200
+        with pytest.raises(BackupError, match="the service is running"):
+            restore_backup(machine / "b.bak", master, path)
+    restore_backup(machine / "b.bak", master, path)
+
+
+def test_a_second_service_on_the_database_is_noted(
+    machine: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    _backed_up(machine)
+    first = _services()
+    assert first.store is not None
+    with first.store.serving(), TestClient(create_app(Settings())):
+        pass
+    first.close()
+    assert "another service uses this database" in caplog.text
+
+
+def test_a_restore_that_fails_leaves_the_database_in_place(
+    machine: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    master, path = _backed_up(machine)
+    before = path.read_bytes()
+    staged = path.with_name(path.name + ".restoring")
+    staged.write_bytes(b"left by a restore that crashed")
+
+    def broken(path: Path) -> None:
+        raise sqlite3.OperationalError("disk I/O error")
+
+    monkeypatch.setattr(backup, "migrate_file", broken)
+    with pytest.raises(sqlite3.OperationalError):
+        restore_backup(machine / "b.bak", master, path)
+    assert path.read_bytes() == before
+    assert not staged.exists()
+    assert list(path.parent.glob("mailbox.db.before-restore-*")) == []
+
+
 def test_backup_never_overwrites(machine: Path) -> None:
     _populate()
     services = _services()
-    assert services.database is not None
+    assert services.store is not None
     (machine / "b.bak").write_bytes(b"x")
     with pytest.raises(BackupError, match="refusing"):
         create_backup(
-            services.database, services.vault.master_key(), machine / "b.bak", "1"
+            services.store, services.vault.master_key(), machine / "b.bak", "1"
         )
     services.close()
 
@@ -124,9 +193,9 @@ def test_backup_never_overwrites(machine: Path) -> None:
 def _backup_file(machine: Path) -> tuple[Path, bytes]:
     _populate()
     services = _services()
-    assert services.database is not None
+    assert services.store is not None
     master = services.vault.master_key()
-    create_backup(services.database, master, machine / "b.bak", "1")
+    create_backup(services.store, master, machine / "b.bak", "1")
     services.close()
     return machine / "b.bak", master
 
@@ -247,6 +316,41 @@ def test_backup_verify_restore_commands(
     assert main(["backup", "verify", str(target), "--recovery-key"]) == 0
 
 
+def test_a_restore_keeps_another_master_key_unless_told(
+    machine: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    account_id, recovery = _populate()
+    target = machine / "mailbox.bak"
+    assert main(["backup", str(target)]) == 0
+
+    # Another machine with a database and a master key of its own.
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(machine / "other-data"))
+    other_key_file = machine / "other-secret" / "master.key"
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_FILE", str(other_key_file))
+    assert main(["keys", "init"]) == 0
+    own = FileKeyProvider(other_key_file).load()
+    before = Settings().database_path.read_bytes()
+    capsys.readouterr()
+
+    monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
+    assert main(["restore", str(target), "--recovery-key"]) == 1
+    assert "holds another master key" in capsys.readouterr().err
+    assert FileKeyProvider(other_key_file).load() == own
+    assert Settings().database_path.read_bytes() == before
+
+    assert main(["restore", str(target), "--replace-master-key"]) == 1
+    assert "goes with --recovery-key" in capsys.readouterr().err
+
+    monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
+    assert main(["restore", str(target), "--recovery-key", "--replace-master-key"]) == 0
+    assert FileKeyProvider(other_key_file).load() == decode_recovery(recovery)
+    services = _services()
+    assert services.vault.read(account_id, "password").get_secret_value() == "hunter2"
+    services.close()
+
+
 def test_backup_command_errors(
     machine: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -262,3 +366,34 @@ def test_backup_command_errors(
     monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "memory")
     assert main(["backup", str(machine / "x.bak")]) == 1
     assert "MAILBOX_SERVICE_STORAGE=sqlite" in capsys.readouterr().err
+
+
+def test_files_that_cannot_be_read_or_written(
+    machine: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _populate()
+    assert main(["backup", "verify", str(machine / "missing.bak")]) == 1
+    assert "missing.bak cannot be read" in capsys.readouterr().err
+    blocker = machine / "a-file"
+    blocker.write_text("")
+    assert main(["backup", str(blocker / "mailbox.bak")]) == 1
+    assert "mailbox.bak cannot be written" in capsys.readouterr().err
+
+
+def test_a_client_secret_file_that_is_missing(
+    machine: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    missing = machine / "no-such-secret"
+    monkeypatch.setenv("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID", "client-1")
+    monkeypatch.setenv(
+        "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE", str(missing)
+    )
+
+    def never(*args: object, **kwargs: object) -> None:
+        raise AssertionError("the service must not start")
+
+    monkeypatch.setattr("uvicorn.run", never)
+    assert main(["serve"]) == 1
+    assert "no-such-secret" in capsys.readouterr().err

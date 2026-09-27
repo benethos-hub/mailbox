@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import string
+from datetime import datetime
 from typing import Protocol
 
 from ...errors import ConflictError
@@ -43,12 +45,30 @@ class TokenRepository(Protocol):
 
     def save(self, token: ApiToken) -> None: ...
 
+    def touch(self, token_id: str, when: datetime) -> None:
+        """Set ``last_used_at`` alone. Nothing else of the row changes, so
+        a revocation saved meanwhile stays."""
+        ...
+
     def delete_for_user(self, user_id: str) -> None: ...
+
+
+# SQLite's NOCASE: ASCII letters alone.
+_NOCASE = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
 
 
 class InMemoryUserRepository(TableRepository[User]):
     def __init__(self) -> None:
         super().__init__("user")
+
+    def save(self, user: User) -> None:
+        """A name is unique regardless of case, as the SQLite index keeps it."""
+        name = user.name.translate(_NOCASE)
+        if any(
+            u.id != user.id and u.name.translate(_NOCASE) == name for u in self.list()
+        ):
+            raise ConflictError(f"a user named {user.name} exists")
+        super().save(user)
 
     def count(self) -> int:
         return len(self._rows)
@@ -79,6 +99,10 @@ class InMemoryTokenRepository:
         if other is not None and other.id != token.id:
             raise ConflictError(f"token {other.id} has the same hash")
         self._tokens.put(token.id, token)
+
+    def touch(self, token_id: str, when: datetime) -> None:
+        token = self._tokens.get(token_id)
+        self._tokens.put(token_id, token.model_copy(update={"last_used_at": when}))
 
     def delete_for_user(self, user_id: str) -> None:
         for token in self.list_for_user(user_id):

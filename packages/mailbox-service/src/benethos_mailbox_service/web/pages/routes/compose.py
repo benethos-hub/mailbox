@@ -51,14 +51,14 @@ async def compose_submit(
     try:
         fields = {**await read_fields(form), "reference": reference_of(form)}
         if form.get("do") == "send":
-            result = await mailbox.send_message(
+            result = await mailbox.outgoing.send_message(
                 caller,
                 account_id,
                 build(OutgoingMessage, fields),
                 str(form.get("idempotency_key") or "") or None,
             )
             return back(request, f"/ui/accounts/{account_id}/mail", sent_text(result))
-        saved = await mailbox.create_draft(
+        saved = await mailbox.outgoing.create_draft(
             caller, account_id, build(DraftMessage, fields)
         )
     except (ComposeError, MailboxServiceError) as exc:

@@ -24,12 +24,15 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 import httpx
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
+from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.domain import permissions
 from benethos_mailbox_service.domain.access import Access
-from benethos_mailbox_service.main import Services
+from benethos_mailbox_service.main import Services, build_services, create_app
 
 ENV_FILE = Path(__file__).with_name(".env")
 T = TypeVar("T")
@@ -160,11 +163,12 @@ def user_token(
     allow: list[str],
     **constraints: Any,
 ) -> str:
-    """A user with ``allow`` on the accounts, and a token for it."""
+    """A user with ``allow`` on the accounts, and a token for it. User
+    names are unique, so each gets a random end."""
     user = client.post(
         "/v1/users",
         json={
-            "name": f"live check {'+'.join(allow)}",
+            "name": f"live check {'+'.join(allow)} {secrets.token_hex(3)}",
             "grants": [{"accounts": account_ids, "allow": allow, **constraints}],
         },
     ).json()
@@ -246,10 +250,12 @@ def service_env(
     data_dir: str, port: int, master_key: str | None = None
 ) -> dict[str, str]:
     """The environment of a service on ``port`` with SQLite in ``data_dir``,
-    the master key in the environment, and no background sync."""
+    the master key in the environment, and no background sync. The service
+    runs in ``data_dir`` (``run_dir``): the settings of the developer's
+    config/ folder, such as a public URL or an OAuth app, stay out."""
     return {
         **os.environ,
-        "MAILBOX_SERVICE_DATA_DIR": data_dir,
+        "MAILBOX_SERVICE_DATA_DIR": str(Path(data_dir).resolve()),
         "MAILBOX_SERVICE_STORAGE": "sqlite",
         "MAILBOX_SERVICE_KEY_PROVIDER": "env",
         "MAILBOX_SERVICE_MASTER_KEY": master_key or encode_recovery(cipher.new_key()),
@@ -260,6 +266,15 @@ def service_env(
     }
 
 
+def run_dir(env: dict[str, str]) -> str:
+    """Where a service of a script runs: its data directory. Settings read
+    config/benethos-mailbox-service/.env from the working directory, and
+    there is none there."""
+    folder = Path(env["MAILBOX_SERVICE_DATA_DIR"])
+    folder.mkdir(parents=True, exist_ok=True)
+    return str(folder)
+
+
 def start_service(
     env: dict[str, str], url: str, init_keys: bool = True
 ) -> subprocess.Popen[bytes]:
@@ -267,11 +282,16 @@ def start_service(
     command = program("benethos-mailbox-service")
     if init_keys:
         subprocess.run(
-            [command, "keys", "init"], env=env, check=True, capture_output=True
+            [command, "keys", "init"],
+            env=env,
+            cwd=run_dir(env),
+            check=True,
+            capture_output=True,
         )
     process = subprocess.Popen(
         [command, "serve"],
         env=env,
+        cwd=run_dir(env),
         stdout=subprocess.DEVNULL,
         # Nobody reads it: a pipe would fill up and block the service.
         stderr=subprocess.DEVNULL,
@@ -288,6 +308,24 @@ class Admin:
     name: str
     password: str
     token: str
+
+
+def in_process_service() -> tuple[Services, TestClient]:
+    """The service in this process: in memory, under a new master key, and
+    a client that calls its API with a token of a user with every right."""
+    settings = Settings(
+        storage="memory",
+        key_provider="env",
+        master_key=SecretStr(encode_recovery(cipher.new_key())),
+        sync_interval=0,
+    )
+    services = build_services(settings)
+    services.vault.initialize()
+    client = TestClient(
+        create_app(settings, services),
+        headers={"Authorization": f"Bearer {admin_token(services)}"},
+    )
+    return services, client
 
 
 def admin_token(services: Services, name: str = "live") -> str:
@@ -329,6 +367,7 @@ def bootstrap(env: dict[str, str], url: str) -> Admin:
     made = subprocess.run(
         [program("benethos-mailbox-service"), "users", "create-admin"],
         env=env,
+        cwd=run_dir(env),
         check=True,
         capture_output=True,
         text=True,

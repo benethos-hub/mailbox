@@ -82,7 +82,7 @@ def test_rows_round_trip() -> None:
         g0_allow=rows[0].groups,
         g0_more=rows[0].more,
         g0_recipients=rows[0].recipients,
-        g0_max=str(rows[0].max_sends_per_day),
+        g0_max=rows[0].max_per_day,
     )
     assert read_grants(_form(**fields)) == [grant]
 
@@ -92,6 +92,12 @@ def test_a_bad_recipient_is_named() -> None:
         read_grants(
             _form(grants="1", g0_accounts="*", g0_allow="send", g0_recipients="nobody")
         )
+
+
+def test_the_row_count_is_capped_before_the_rows_are_read() -> None:
+    with pytest.raises(GrantFormError, match="100 grants at most"):
+        read_grants(_form(grants="2000000000"))
+    assert read_grants(_form(grants="100")) == []
 
 
 def test_sends_per_day_must_be_a_number() -> None:
@@ -267,7 +273,7 @@ def test_token_days_must_be_a_number(ui: TestClient, services: Services) -> None
         f"/ui/users/{user.id}/tokens",
         {"name": "t", "days": "99999999999"},
     )
-    assert "up to 3650" in answer.text
+    assert "from 1 to 3650" in answer.text
     assert services.users.list_tokens(ADMIN, user.id) == []
 
 
@@ -297,6 +303,7 @@ def test_create_change_and_delete_a_role(ui: TestClient, services: Services) -> 
     page = ui.get("/ui/roles/reader").text
     assert "holder" in page
     refused = post(ui, "/ui/roles/reader/delete")
+
     assert "is used by" in refused.text
     services.users.delete_user(ADMIN, holder.id)
     deleted = post(ui, "/ui/roles/reader/delete")
@@ -480,7 +487,7 @@ def test_a_new_role_has_its_editor(
     created = post(ui, "/ui/roles", {"id": "helpers", "grants": "0"})
     assert "Role helpers created." in created.text
     refused = post(ui, "/ui/roles", {"id": "", "grants": "0"})
-    assert str(refused.url).endswith("/ui/roles/new")
+    assert refused.status_code == 400 and "Cancel" in refused.text
 
     reader = TestClient(app_client.app)
     sign_in(
@@ -522,3 +529,104 @@ def test_a_new_user_is_an_api_user_by_default(
     assert "API only" in listed
     user = services.auth.user_named("script")
     assert user is not None and user.ui_sign_in is False
+
+
+# --- a refused editor keeps what was typed (docs/UI.md 4.7) ------------------------
+
+
+def test_a_refused_new_user_keeps_what_was_typed(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    services.users.create_role(ADMIN, "readers", [])
+    services.users.create_user(ADMIN, "taken", [], [])
+    refused = post(
+        ui,
+        "/ui/users",
+        {
+            "name": "Taken",
+            "signs_in_to": "ui",
+            "roles": "readers",
+            "grants": "1",
+            "g0_accounts": account_id,
+            "g0_allow": "mail.read",
+            "g0_recipients": "*@example.org",
+            "g0_max": "7",
+        },
+    )
+    assert refused.status_code == 400
+    page = refused.text
+    assert 'role="alert"' in page and "taken" in page.lower()
+    assert 'name="name" value="Taken"' in page
+    assert 'value="ui" checked' in page
+    assert 'value="readers" checked' in page
+    assert f'name="g0_accounts" value="{account_id}" checked' in page
+    assert 'name="g0_allow" value="mail.read" checked' in page
+    assert "*@example.org</textarea>" in page and 'value="7"' in page
+
+
+def test_a_refused_change_keeps_what_was_typed(
+    ui: TestClient, services: Services
+) -> None:
+    user = services.users.create_user(ADMIN, "someone", [], [])
+    refused = post(
+        ui,
+        f"/ui/users/{user.id}",
+        {
+            "name": "Renamed",
+            "ui_sign_in_shown": "1",
+            "disabled": "1",
+            "grants": "1",
+            "g0_accounts": "*",
+            "g0_allow": "mail.read",
+            "g0_max": "many",
+        },
+    )
+    assert refused.status_code == 400
+    page = refused.text
+    assert "sends per day must be a number" in page
+    assert 'name="name" value="Renamed"' in page
+    assert 'name="disabled" value="1" checked' in page
+    assert '<details class="fold" open>' in page and 'value="many"' in page
+    assert services.users.get_user(ADMIN, user.id).name == "someone"
+
+
+@pytest.mark.parametrize("days", ["soon", "0", "3651"])
+def test_a_refused_token_keeps_its_name(
+    ui: TestClient, services: Services, days: str
+) -> None:
+    user = services.users.create_user(ADMIN, "bot", [], [])
+    refused = post(ui, f"/ui/users/{user.id}/tokens", {"name": "laptop", "days": days})
+    assert refused.status_code == 400
+    assert "Days valid must be a whole number from 1 to 3650" in refused.text
+    assert 'name="name" value="laptop"' in refused.text
+    assert f'name="days" value="{days}"' in refused.text
+    assert services.users.list_tokens(ADMIN, user.id) == []
+
+
+def test_a_refused_role_keeps_its_rows(ui: TestClient, services: Services) -> None:
+    fields = {"grants": "1", "g0_accounts": "*", "g0_allow": "mail.read"}
+    refused = post(ui, "/ui/roles", {"id": "helpers", **fields, "g0_max": "x"})
+    assert refused.status_code == 400
+    assert 'name="id" value="helpers"' in refused.text
+    assert 'name="g0_max" inputmode="numeric" value="x"' in refused.text
+    services.users.create_role(ADMIN, "readers", [])
+    changed = post(ui, "/ui/roles/readers", {**fields, "g0_more": "no_such_right"})
+    assert changed.status_code == 400
+    assert 'value="no_such_right"' in changed.text
+    assert services.users.get_role(ADMIN, "readers").grants == []
+
+
+def test_a_page_looks_its_session_up_once(
+    ui: TestClient, services: Services, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = services.users.create_user(ADMIN, "bot", [], [])
+    looked_up = []
+    lookup = services.auth.session_access
+
+    def counted(*args: object) -> Access:
+        looked_up.append(args)
+        return lookup(*args)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(services.auth, "session_access", counted)
+    ui.get(f"/ui/users/{user.id}")
+    assert len(looked_up) == 1

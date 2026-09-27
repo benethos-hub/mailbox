@@ -24,7 +24,7 @@ import anyio
 import httpx
 
 from ...errors import ProviderError, ProviderUnavailableError
-from .base import new_client, parse_url, read_capped, unreachable
+from .base import new_client, parse_url, pinned_request, read_capped, unreachable
 
 TIMEOUT = 5.0
 MAX_BYTES = 256 * 1024
@@ -175,13 +175,7 @@ class SafeFetcher:
         self, client: httpx.AsyncClient, target: httpx.URL, host: str, address: str
     ) -> bytes | str | None:
         """The body, the next location of a redirect, or None."""
-        pinned = target.copy_with(host=address)
-        request = client.build_request(
-            "GET",
-            pinned,
-            headers={"Host": target.netloc.decode("ascii")},
-            extensions={"sni_hostname": host},
-        )
+        request = pinned_request(client, "GET", target, host, address)
         response = await client.send(request, stream=True)
         try:
             if response.is_redirect:

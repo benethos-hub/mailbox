@@ -8,7 +8,7 @@ configuration UI share one check.
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 
 from ..data.models import Grant, Role, User
@@ -112,11 +112,7 @@ class Access:
         """Whether the account exists for this caller at all: some right on
         it that is about existing accounts."""
         about_accounts = permissions.ACCOUNT_FREE | permissions.ALL_ACCOUNTS
-        return any(
-            (rule.accounts is None or account_id in rule.accounts)
-            and rule.operations - about_accounts
-            for rule in self._rules
-        )
+        return any(rule.operations - about_accounts for rule in self._on(account_id))
 
     def anywhere(self, operation: str) -> bool:
         """Whether the operation is allowed on at least one account, or
@@ -142,10 +138,7 @@ class Access:
         """The limits of every grant that allows ``operation`` on the
         account. A send is allowed when one of them allows it."""
         return [
-            rule.limit
-            for rule in self._rules
-            if operation in rule.operations
-            and (rule.accounts is None or account_id in rule.accounts)
+            rule.limit for rule in self._on(account_id) if operation in rule.operations
         ]
 
     def sending_limits(self, account_id: str) -> list[SendLimit]:
@@ -153,9 +146,8 @@ class Access:
         account, each grant once."""
         return [
             rule.limit
-            for rule in self._rules
+            for rule in self._on(account_id)
             if rule.operations & SEND_OPERATIONS
-            and (rule.accounts is None or account_id in rule.accounts)
         ]
 
     def sends_anywhere(self, account_id: str) -> bool:
@@ -167,18 +159,25 @@ class Access:
 
     def covers(self, grants: Iterable[Grant]) -> bool:
         """Whether every right in ``grants`` is one this caller holds itself,
-        sending no wider than its own grants allow."""
+        sending no wider than its own grants allow. A name that is no right
+        (any more) grants nothing and asks for nothing: new grants are
+        checked for such names before."""
         for grant in grants:
-            limit = _rule(grant).limit
-            for operation in permissions.expand(grant.allow):
+            rule = _rule(grant)
+            for operation in rule.operations:
                 if operation in permissions.ACCOUNT_FREE:
                     if not self.allows(operation):
                         return False
                 elif ALL_ACCOUNTS in grant.accounts:
-                    if not self._allows_everywhere(operation, limit):
+                    if not self._allows_everywhere(operation, rule.limit):
                         return False
+                elif operation in permissions.ALL_ACCOUNTS:
+                    # Such as create_account: a grant on named accounts
+                    # grants it nowhere, so it asks for nothing.
+                    continue
                 elif not all(
-                    self._allows_within(operation, a, limit) for a in grant.accounts
+                    self._allows_within(operation, a, rule.limit)
+                    for a in grant.accounts
                 ):
                     return False
         return True
@@ -209,10 +208,18 @@ class Access:
 
     def _allows_everywhere(self, operation: str, limit: SendLimit) -> bool:
         return any(
-            rule.accounts is None
-            and operation in rule.operations
+            operation in rule.operations
             and (operation not in SEND_OPERATIONS or limit.within(rule.limit))
+            for rule in self._on(None)
+        )
+
+    def _on(self, account_id: str | None) -> Iterator[_Rule]:
+        """The rules that reach the account. None: those on every account."""
+        return (
+            rule
             for rule in self._rules
+            if rule.accounts is None
+            or (account_id is not None and account_id in rule.accounts)
         )
 
 

@@ -19,9 +19,11 @@ from .schemas import ErrorResponse
 DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
     status: {"model": ErrorResponse, "description": text}
     for status, text in {
+        400: "The request is not valid, e.g. a cursor or a right",
         401: "Missing or wrong bearer token",
         403: "The caller lacks the right for this operation",
         404: "Account or resource not found",
+        409: "The request conflicts with what is stored, e.g. a name taken",
         501: "The provider cannot do this",
         502: "The provider failed or rejected the credentials",
         503: "No user exists yet",
@@ -56,8 +58,15 @@ def http_error(exc: HTTPException) -> JSONResponse:
     """Framework errors (auth, unknown route) in the same envelope, so a
     client parses one error shape. Request validation keeps FastAPI's 422
     format, which the schema documents on its own (``validation_error``)."""
-    code = HTTPStatus(exc.status_code).phrase.lower().replace(" ", "_")
+    code = _CODES.get(exc.status_code) or HTTPStatus(
+        exc.status_code
+    ).phrase.lower().replace(" ", "_")
     return error_response(exc.status_code, code, str(exc.detail), exc.headers)
+
+
+# Codes that do not follow the reason phrase, which differs between
+# Python versions for 413.
+_CODES = {413: "payload_too_large"}
 
 
 def validation_error(exc: RequestValidationError) -> JSONResponse:

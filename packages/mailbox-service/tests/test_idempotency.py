@@ -26,7 +26,11 @@ from benethos_mailbox_service.data.storage import (
     StoredResult,
 )
 from benethos_mailbox_service.domain.idempotency import Idempotency
-from benethos_mailbox_service.errors import IdempotencyConflictError, ProviderError
+from benethos_mailbox_service.errors import (
+    IdempotencyConflictError,
+    ProviderError,
+    StorageError,
+)
 from benethos_mailbox_service.main import Services
 
 from .conftest import bearer_for
@@ -84,6 +88,25 @@ def test_a_key_is_the_callers_own(
     assert first != other
     assert (first_again, other_again) == (first, other)
     assert len(outbox(services, account_id)) == 2
+
+
+def test_a_retry_after_failed_bookkeeping_does_not_send_again(
+    client: TestClient,
+    services: Services,
+    account_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def broken(*args: object) -> None:
+        raise StorageError("the database is locked")
+
+    # The provider accepted the mail: the change log after it fails.
+    monkeypatch.setattr(services.sync, "changed", broken)
+    url = f"/v1/accounts/{account_id}/send"
+    first = client.post(url, json=BODY, headers={"Idempotency-Key": "k1"})
+    again = client.post(url, json=BODY, headers={"Idempotency-Key": "k1"})
+    assert first.status_code == again.status_code == 200
+    assert again.json() == first.json()
+    assert len(outbox(services, account_id)) == 1
 
 
 def test_without_a_key_every_request_sends(
@@ -177,6 +200,26 @@ async def test_a_failure_is_not_stored() -> None:
         )
     result = await idempotency.run(
         "acc", "k", "send_message", request, flaky, SendResult, user_id="usr"
+    )
+    assert result == RESULT
+
+
+async def test_a_result_that_cannot_be_stored_still_answers() -> None:
+    class Full(InMemoryIdempotencyRepository):
+        def put(self, *args: object) -> None:
+            raise StorageError("the disk is full")
+
+    async def action() -> SendResult:
+        return RESULT
+
+    result = await Idempotency(Full()).run(
+        "acc",
+        "k",
+        "send_message",
+        SendResult(message_id_header="request"),
+        action,
+        SendResult,
+        user_id="usr",
     )
     assert result == RESULT
 

@@ -36,7 +36,7 @@
   <div class="form-grid">
     <div class="field">
       <label for="f-display_name">Display name</label>
-      <input id="f-display_name" name="display_name" value="{{ account.display_name or '' }}" />
+      <input id="f-display_name" name="display_name" value="{{ typed.display_name if typed else (account.display_name or '') }}" />
     </div>
     {% if not signs_in_with_oauth %}
     <div class="field">
@@ -47,9 +47,9 @@
     {% endif %}
   </div>
   {% if not signs_in_with_oauth %}
-  <details class="fold">
+  <details class="fold"{% if typed %} open{% endif %}>
     <summary>Servers</summary>
-    {{ connection_fields(account.settings, security, editing=True) }}
+    {{ connection_fields(typed.settings if typed else account.settings, security, editing=True) }}
   </details>
   {% endif %}
   <div class="form-actions"><button class="primary" type="submit">Save</button></div>

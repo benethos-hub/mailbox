@@ -8,18 +8,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from email import message_from_bytes
+from email.headerregistry import Address as HeaderAddress
 from email.message import EmailMessage
 from email.parser import BytesHeaderParser, BytesParser
 from email.policy import SMTP, default
-from email.utils import format_datetime, formataddr, getaddresses, make_msgid
+from email.utils import format_datetime, getaddresses, make_msgid
 from html import escape
 from typing import NamedTuple
 
 from pydantic import ValidationError
 
+from ...errors import BadRequestError
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
 from .fields import ascii_domain
 from .fields import message_id as one_message_id
+from .parse import ParsedMessage
 from .text import from_html
 
 # Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
@@ -45,8 +48,8 @@ def read_reference(value: str | None) -> MessageReference | None:
 
 
 def new_message_id(sender_email: str) -> str:
-    """A fresh ``Message-ID`` in the sender's domain."""
-    return make_msgid(domain=sender_email.rpartition("@")[2] or None)
+    """A fresh ``Message-ID`` in the sender's domain, in punycode."""
+    return make_msgid(domain=_wire(sender_email).rpartition("@")[2] or None)
 
 
 @dataclass(frozen=True)
@@ -77,8 +80,12 @@ def message(
     A ``draft`` keeps its Bcc recipients, and ``reference`` in a header of
     its own. ``outgoing`` takes both out again before the draft is sent."""
     # 7bit: a body beyond ASCII is encoded, since the message is handed to
-    # SMTP servers without asking for 8BITMIME.
-    mail = EmailMessage(policy=SMTP.clone(cte_type="7bit"))
+    # SMTP servers without asking for 8BITMIME. An address with a local
+    # part beyond ASCII makes it a message for SMTPUTF8 (RFC 6532), whose
+    # headers are UTF-8: an encoded word is not allowed in an address.
+    everyone = [sender, *message.to, *message.cc, *message.bcc, *message.reply_to]
+    utf8 = any(not _wire(r.email).isascii() for r in everyone)
+    mail = EmailMessage(policy=SMTP.clone(cte_type="7bit", utf8=utf8))
     mail["From"] = _address(sender)
     # Values that came out of another message, the original of a reply or a
     # forward, are folded onto one line here. What a caller wrote was checked
@@ -162,12 +169,13 @@ def outgoing(draft: bytes, date: datetime, message_id: str) -> Outgoing:
 
 def references(original_raw: bytes) -> tuple[str | None, tuple[str, ...]]:
     """The original's Message-ID, and the References a reply carries: the
-    original's own, then its Message-ID (RFC 5322 3.6.4)."""
-    headers = BytesHeaderParser(policy=default).parsebytes(original_raw)
-    message_id = one_message_id(headers.get("Message-ID"))
-    chain = tuple(str(headers.get("References") or "").split())
-    if not chain:
-        chain = tuple(str(headers.get("In-Reply-To") or "").split()[:1])
+    original's own, then its Message-ID (RFC 5322 3.6.4). Read as
+    ``convert`` reads them."""
+    original = ParsedMessage(original_raw)
+    message_id = original.message_id
+    chain = tuple(original.references)
+    if not chain and original.in_reply_to:
+        chain = (original.in_reply_to,)
     return message_id, (*chain, message_id) if message_id else chain
 
 
@@ -221,7 +229,11 @@ def quoted_html(original: Message, html: str, heading: str) -> str:
 
 
 def _who(address: Address | None) -> str:
-    return _formatted(address.name, address.email) if address else "unknown"
+    """Who wrote the original, for people to read."""
+    if address is None:
+        return "unknown"
+    name = one_line(address.name or "")
+    return f"{name} <{address.email}>" if name else address.email
 
 
 def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
@@ -246,5 +258,16 @@ def _address(recipient: Recipient) -> str:
 
 
 def _formatted(name: str | None, email: str) -> str:
-    """``Name <address>``, the name on one line whatever message it came from."""
-    return formataddr((one_line(name or ""), email))
+    """``Name <address>`` for a header, the name on one line whatever message
+    it came from, the domain in punycode."""
+    local, _, domain = _wire(email).rpartition("@")
+    return str(
+        HeaderAddress(display_name=one_line(name or ""), username=local, domain=domain)
+    )
+
+
+def _wire(email: str) -> str:
+    try:
+        return ascii_domain(email)
+    except UnicodeError:
+        raise BadRequestError(f"the domain of {email} cannot be encoded") from None

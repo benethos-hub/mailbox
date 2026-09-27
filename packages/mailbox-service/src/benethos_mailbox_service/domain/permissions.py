@@ -47,7 +47,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # Cannot be taken back either.
     "send": ("send_message", "send_draft"),
     # Who sent what to whom, never content.
-    "audit": ("list_sends",),
+    "audit": ("list_sends", "list_all_sends"),
     "accounts.manage": (
         "discover_account",
         # Connecting needs create_account, signing in again update_account:
@@ -76,7 +76,12 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
     # Webhooks hear of the accounts their creator may read, checked when
     # they are posted.
-    "webhooks.manage": ("list_webhooks", "create_webhook", "delete_webhook"),
+    "webhooks.manage": (
+        "list_webhooks",
+        "get_webhook",
+        "create_webhook",
+        "delete_webhook",
+    ),
 }
 
 # Operations that do not act on one account. A grant allows them regardless
@@ -146,7 +151,8 @@ def expand_known(names: Iterable[str]) -> tuple[frozenset[str], list[str]]:
     """``expand`` for names read back from storage: the operations of the
     names still known, and the names that are not. A right renamed since
     the grant was written grants nothing, and must not lock everyone out."""
-    unknown = [n for n in names if n != ADMIN and n not in GROUPS and n not in GROUP_OF]
+    known = known_names()
+    unknown = [n for n in names if n not in known]
     return expand(n for n in names if n not in unknown), unknown
 
 

@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from email.message import EmailMessage
 from typing import Any
 
 from imapclient import testable_imapclient
 from pydantic import SecretStr
 
-from benethos_mailbox_service.data.mail import fields
+from benethos_mailbox_service.data.mail import convert, fields
+from benethos_mailbox_service.data.mail.parse import ParsedMessage
 from benethos_mailbox_service.data.models import FolderRole
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.protocols.imap import (
@@ -146,3 +148,55 @@ def test_unicode_address_leaves_plain_and_broken_domains_alone() -> None:
     assert fields.unicode_address("me@example.com") == "me@example.com"
     assert fields.unicode_address("no-at-sign") == "no-at-sign"
     assert fields.unicode_address("x@xn--.de") == "x@xn--.de"
+
+
+# --- thread headers, folded by the sender ---------------------------------------------
+
+
+def test_a_folded_in_reply_to_comes_unfolded() -> None:
+    raw = (
+        b"Subject: Re: Plan\r\nMessage-ID:\r\n <b@example.com>\r\n"
+        b"In-Reply-To: <a@example.com>\r\n <older@example.com>\r\n\r\nYes\r\n"
+    )
+    fields_of = convert.thread_fields(ParsedMessage(raw))
+    assert fields_of["message_id_header"] == "<b@example.com>"
+    assert fields_of["in_reply_to"] == "<a@example.com>"
+
+
+# --- what counts as an attachment -----------------------------------------------------
+
+
+def _html_with_image() -> bytes:
+    mail = EmailMessage()
+    mail["Subject"] = "Newsletter"
+    mail.set_content("Hello")
+    mail.add_alternative('<p>Hello <img src="cid:logo"></p>', subtype="html")
+    html = mail.get_payload()[1]
+    html.add_related(b"\x89PNG", maintype="image", subtype="png", cid="<logo>")
+    return mail.as_bytes()
+
+
+def _inline_pdf() -> bytes:
+    mail = EmailMessage()
+    mail["Subject"] = "Invoice"
+    mail.set_content("Attached")
+    mail.add_attachment(
+        b"%PDF", maintype="application", subtype="pdf", filename="invoice.pdf"
+    )
+    part = mail.get_payload()[1]
+    part.replace_header("Content-Disposition", 'inline; filename="invoice.pdf"')
+    return mail.as_bytes()
+
+
+def test_an_image_the_html_shows_is_no_attachment() -> None:
+    parsed = ParsedMessage(_html_with_image())
+    opened = convert.message_fields(parsed)
+    assert len(opened["attachments"]) == 1  # listed, to be fetched by cid
+    assert opened["has_attachments"] is False
+    assert convert.summary_fields(parsed)["has_attachments"] is False
+
+
+def test_a_file_marked_inline_is_an_attachment() -> None:
+    parsed = ParsedMessage(_inline_pdf())
+    assert convert.message_fields(parsed)["has_attachments"] is True
+    assert convert.summary_fields(parsed)["has_attachments"] is True

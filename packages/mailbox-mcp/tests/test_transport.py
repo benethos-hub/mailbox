@@ -15,8 +15,12 @@ from benethos_mailbox_mcp import server, transport
 TOKEN = "s3cret-token"
 
 
+# Whether a request got past the guard to the app behind it.
+reached: list[bool] = []
+
+
 async def inner(scope: Any, receive: Any, send: Any) -> None:
-    inner.reached = True  # type: ignore[attr-defined]
+    reached.append(True)
     await send({"type": "http.response.start", "status": 200, "headers": []})
     await send({"type": "http.response.body", "body": b"ok"})
 
@@ -24,7 +28,7 @@ async def inner(scope: Any, receive: Any, send: Any) -> None:
 def call(
     headers: list[tuple[bytes, bytes]], scope_type: str = "http"
 ) -> dict[str, Any]:
-    inner.reached = False  # type: ignore[attr-defined]
+    reached.clear()
     sent: list[dict[str, Any]] = []
 
     async def send(message: dict[str, Any]) -> None:
@@ -40,7 +44,7 @@ def call(
         "status": start["status"] if start else None,
         "headers": dict(start["headers"]) if start else {},
         "body": b"".join(m.get("body", b"") for m in sent),
-        "reached": inner.reached,  # type: ignore[attr-defined]
+        "reached": bool(reached),
     }
 
 
@@ -206,7 +210,15 @@ def started(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "build_server",
         lambda ops: Stdio() if seen.get("want_stdio") else real_build(ops),
     )
-    for name in ("TRANSPORT", "HOST", "PORT", "PATH", "ALLOWED_HOSTS", "BEARER_TOKEN"):
+    for name in (
+        "TRANSPORT",
+        "HOST",
+        "PORT",
+        "PATH",
+        "ALLOWED_HOSTS",
+        "BEARER_TOKEN",
+        "LOG_LEVEL",
+    ):
         monkeypatch.delenv(f"MAILBOX_MCP_{name}", raising=False)
     return seen
 
@@ -260,9 +272,24 @@ def test_stdio_ignores_a_token(
     assert "app" not in started
 
 
-def test_an_unknown_transport_from_the_environment(
-    started: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("name", "value", "said"),
+    [
+        ("TRANSPORT", "carrier-pigeon", "MAILBOX_MCP_TRANSPORT must be one of"),
+        ("LOG_LEVEL", "verbose", "MAILBOX_MCP_LOG_LEVEL must be one of"),
+        ("PORT", "eighty", "invalid int value: 'eighty'"),
+    ],
+)
+def test_a_bad_value_from_the_environment(
+    started: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    name: str,
+    value: str,
+    said: str,
 ) -> None:
-    monkeypatch.setenv("MAILBOX_MCP_TRANSPORT", "carrier-pigeon")
+    monkeypatch.setenv(f"MAILBOX_MCP_{name}", value)
     with pytest.raises(SystemExit):
         server.main([])
+    assert said in capsys.readouterr().err
+    assert not started

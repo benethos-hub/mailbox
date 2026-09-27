@@ -17,9 +17,15 @@ from pydantic import SecretStr
 
 from ..common.clock import utc_now
 from ..common.ids import new_id
-from ..data.models import CreatedWebhook, Webhook, WebhookCreate
+from ..data.models import (
+    CreatedWebhook,
+    Webhook,
+    WebhookCreate,
+    WebhookDetail,
+    WebhookPost,
+)
 from ..data.secrets import CredentialVault
-from ..data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
+from ..data.storage import Delivery, WebhookRecord, WebhookRepository
 from ..errors import BadRequestError, NotFoundError
 from .access import Access
 from .changes import ChangeFeed
@@ -93,17 +99,24 @@ class WebhookService:
             and (failing is None or (hook.last_error is not None) == failing)
         ]
 
-    def get_webhook(self, access: Access, webhook_id: str) -> Webhook:
-        """One of the caller's own webhooks."""
-        access.require("list_webhooks")
-        return self._own(access, webhook_id).webhook
-
-    def attempts(self, access: Access, webhook_id: str) -> list[Attempt]:
-        """The last posts to one of the caller's own webhooks, newest
+    def get_webhook(self, access: Access, webhook_id: str) -> WebhookDetail:
+        """One of the caller's own webhooks, with its last posts, newest
         first."""
-        access.require("list_webhooks")
-        self._own(access, webhook_id)
-        return self._repository.attempts(webhook_id)
+        access.require("get_webhook")
+        hook = self._own(access, webhook_id).webhook
+        return WebhookDetail(
+            **hook.model_dump(),
+            deliveries=[
+                WebhookPost(
+                    delivery_id=a.delivery_id,
+                    at=a.at,
+                    events=a.events,
+                    status=a.status,
+                    error=a.error,
+                )
+                for a in self._repository.attempts(webhook_id)
+            ],
+        )
 
     def delete_webhook(self, access: Access, webhook_id: str) -> None:
         access.require("delete_webhook")

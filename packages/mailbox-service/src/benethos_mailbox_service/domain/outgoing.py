@@ -1,23 +1,25 @@
 """Sending and drafts: a message composed from the account's address, a
 reply or forward made from its original, drafts kept until they are sent.
 
-``MailboxService`` hands its sending and draft operations to ``Outgoing``.
-Callers keep using the mailbox service.
+``MailboxService`` holds it as ``outgoing``, where both front ends reach
+it.
 """
 
 from __future__ import annotations
 
 import base64
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from typing import TypeVar
 
 from pydantic import BaseModel
 
 from ..common.clock import utc_now
-from ..data.mail import compose
+from ..data.mail import compose, convert
 from ..data.models import (
+    Address,
     DraftMessage,
     Message,
     MessageReference,
@@ -96,7 +98,8 @@ class Outgoing:
             access, "send_message", account_id, raw, recipients, message_id
         )
         if message.reference is not None and original is not None:
-            await self._mark_answered(account_id, message.reference, original)
+            with _after_sending("the original is not marked"):
+                await self._mark_answered(account_id, message.reference, original)
         return result
 
     async def _deliver(
@@ -126,11 +129,17 @@ class Outgoing:
     async def _send_result(
         self, account_id: str, message_id: str, sent: SentMessage
     ) -> SendResult:
+        """What the caller learns of a send. The message is sent already: the
+        bookkeeping here is logged when it fails, never raised, or a client
+        would send again."""
         copy_id = None
-        if sent.sent_copy is not None:
-            copy = await self._calls.published_one(account_id, sent.sent_copy)
-            copy_id = copy.id
-        self._calls.changed(account_id, "message.sent", [copy_id or message_id])
+        try:
+            if sent.sent_copy is not None:
+                copy = await self._calls.published_one(account_id, sent.sent_copy)
+                copy_id = copy.id
+            self._calls.changed(account_id, "message.sent", [copy_id or message_id])
+        except Exception:
+            log.exception("sent, but the sent copy or the change was not recorded")
         return SendResult(
             message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
         )
@@ -159,7 +168,7 @@ class Outgoing:
     ) -> Page[SendRecord]:
         """The sends of every account the caller may audit, newest first."""
         return self._sends.list_all_sends(
-            access, self._calls.ids(), limit=limit, cursor=cursor, matching=matching
+            access, limit=limit, cursor=cursor, matching=matching
         )
 
     # --- composing ------------------------------------------------------------------
@@ -280,6 +289,15 @@ class Outgoing:
         attachments of the stored draft that go into the new one, before
         those the draft brings."""
         _require(access, "update_draft", account_id, draft)
+        # The draft, before anything of it is read: whoever may write
+        # drafts may not read other mail this way.
+        raw = await self._calls.on_message(
+            account_id, draft_id, lambda p, native: p.get_draft(native)
+        )
+        if _same(convert.stored_draft(raw), draft, keep_attachments):
+            # Stored as it is: the provider is left alone.
+            stored = await self._calls.message(account_id, draft_id)
+            return await self._calls.published_one(account_id, stored)
         if keep_attachments:
             kept = [
                 await self._kept_attachment(account_id, draft_id, attachment_id)
@@ -341,12 +359,11 @@ class Outgoing:
             access, "send_draft", account_id, out.raw, recipients, out.message_id
         )
         # Sent: from here on nothing may fail, or a client would send again.
-        try:
+        with _after_sending("the draft is still there"):
             await self._delete_draft(account_id, draft_id)
-        except MailboxServiceError as exc:
-            log.warning("sent, but the draft is still there: %s", exc.message)
         if out.reference is not None:
-            await self._mark_from_draft(account_id, out.reference)
+            with _after_sending("the original is not marked"):
+                await self._mark_from_draft(account_id, out.reference)
         return result
 
     async def _mark_from_draft(self, account_id: str, header: str) -> None:
@@ -373,6 +390,18 @@ class Outgoing:
             account_id, draft_id, lambda p, native: p.delete_draft(native)
         )
         self._calls.forget(account_id, draft_id)
+
+
+@contextmanager
+def _after_sending(what: str) -> Iterator[None]:
+    """A step after the message went out. It may fail, but only into the
+    log: the send succeeded, and a client told otherwise sends again."""
+    try:
+        yield
+    except MailboxServiceError as exc:
+        log.warning("sent, but %s: %s", what, exc.message)
+    except Exception:
+        log.exception("sent, but %s", what)
 
 
 class _DraftToSend(BaseModel):
@@ -408,3 +437,37 @@ def _addressed(recipients: list[str]) -> list[str]:
     if not recipients:
         raise BadRequestError("a message needs at least one recipient")
     return _limited(recipients)
+
+
+def _same(
+    stored: convert.StoredDraft, draft: DraftMessage, keep: list[str] | None
+) -> bool:
+    """Whether ``draft`` is the draft as it is stored: the same addresses,
+    subject, bodies and original, every attachment kept and none added.
+    Whitespace counts as one space, as a form sends a text back."""
+    if draft.attachments or sorted(keep or []) != sorted(stored.attachment_ids):
+        return False
+    if draft.reference is not None and draft.reference.quote:
+        return False  # composing adds the quote again
+
+    def people(values: list[Recipient] | list[Address]) -> list[tuple[str, str]]:
+        return [(v.email.lower(), (v.name or "").strip()) for v in values]
+
+    def words(value: str | None) -> str:
+        return " ".join((value or "").split())
+
+    def original(reference: MessageReference | None) -> tuple[str, ...] | None:
+        if reference is None:
+            return None
+        return (reference.message_id, reference.action, reference.forward_as)
+
+    return (
+        people(draft.to) == people(stored.to)
+        and people(draft.cc) == people(stored.cc)
+        and people(draft.bcc) == people(stored.bcc)
+        and people(draft.reply_to) == people(stored.reply_to)
+        and words(draft.subject) == words(stored.subject)
+        and (draft.text is None or words(draft.text) == words(stored.text))
+        and words(draft.html) == words(stored.html)
+        and original(draft.reference) == original(stored.reference)
+    )

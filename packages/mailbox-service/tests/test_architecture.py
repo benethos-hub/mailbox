@@ -136,6 +136,35 @@ def test_shared_helpers_use_the_standard_library_only() -> None:
     assert not violations, "common/ beyond the stdlib:\n  " + "\n  ".join(violations)
 
 
+def test_the_domain_picks_no_storage() -> None:
+    """Which store is used is decided where the app is assembled. A domain
+    service that makes its own would keep data where nobody looks."""
+    violations = []
+    for name, path in _modules():
+        if _own_part(name) != "domain":
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    if alias.name.startswith(("InMemory", "Sqlite")):
+                        violations.append(f"{name}:{node.lineno} {alias.name}")
+    assert not violations, "storage chosen in the domain:\n  " + "\n  ".join(violations)
+
+
+def test_the_database_stays_behind_the_storage_package() -> None:
+    """Outside ``data/storage`` the store is reached through the package,
+    so another database replaces ``sqlite/`` and nothing else."""
+    inside = f"{PACKAGE}.data.storage"
+    violations = [
+        f"{name}:{line} imports {imported}"
+        for name, path in _modules()
+        if not name.startswith(inside)
+        for imported, line in _imports(path)
+        if imported.startswith(f"{inside}.sqlite")
+    ]
+    assert not violations, "SQLite reached directly:\n  " + "\n  ".join(violations)
+
+
 def test_web_framework_stays_in_the_web_layer() -> None:
     violations = []
     for name, path in _modules():

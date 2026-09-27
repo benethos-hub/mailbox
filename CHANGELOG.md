@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `GET /v1/sends` (`list_all_sends`, in `audit`): the audit of sends of
+  every account the caller may audit, newest first, as the UI's sends
+  page shows it.
+- `GET /v1/webhooks/{webhook_id}` (`get_webhook`, in `webhooks.manage`):
+  one of the caller's webhooks with its last 20 posts, each with the
+  number of events, the receiver's answer and the error.
+- `POST /v1/users/{user_id}/password` (`set_password`, in
+  `users.manage`): a password for a user with UI sign-in, to be changed
+  at its next sign-in. Without a password in the request the service
+  makes a one-time password and answers it once. The rules are those of
+  the UI: the caller covers the user, and neither the caller itself nor
+  an API user gets one (`409`).
 - `ui_sign_in` on a user, in `POST /v1/users`, `PATCH
   /v1/users/{user_id}` and every user in an answer: whether it may sign
   in to the configuration UI. Without it the user is an API user and
@@ -70,6 +82,40 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The MCP server refuses a `MAILBOX_MCP_LOG_LEVEL` or `MAILBOX_MCP_PORT`
+  it cannot use with a message, as it does `MAILBOX_MCP_TRANSPORT`.
+  Before, it stopped with a traceback.
+- The MCP server does not start without `MAILBOX_SERVICE_TOKEN` and
+  names the variable. Before, it stopped with the service's `401`.
+- The health check of the service image asks the port
+  `MAILBOX_SERVICE_PORT` names. Before, another port made the container
+  unhealthy for good.
+- In `compose.yaml` the allowed Host values of the MCP server follow
+  `MAILBOX_MCP_PORT`. Before, another port answered `421`.
+- An HTML attachment reaches the model of the MCP server as the text a
+  reader sees, as an HTML body does. Before, it came as markup with its
+  hidden parts.
+- `list_drafts` of the MCP server carries a `note` that `to` and
+  `subject` may be the words of the mail a draft answers, as
+  `search_messages` does for `from` and `subject`.
+- The MCP server leaves out more hidden text of an HTML mail: a font
+  below 2px, opacity below 0.1, text pushed far off the page, a box of
+  height 0 with its overflow hidden, and text in the colour of its own
+  background.
+- The MCP server tells a slow answer of the service from a service that
+  is not running: a request waits 30 seconds, an attachment 120. Before,
+  a timeout said the service was not reachable.
+- `update_draft` with the draft as it is stored, every attachment kept,
+  stores nothing and answers the stored draft. Before, the provider
+  stored it again. The UI did this check on its own so far.
+- The OpenAPI document names `400` and `409` on every route under `/v1`,
+  as the service answers them.
+- A refused editor in the configuration UI is shown again with what was
+  typed and the reason, and answers `400`: users, tokens, roles, an
+  account's settings, webhooks and folders. The password is left out.
+  Before, it went back to an empty editor with the reason alone.
+- A cursor from another folder of an IMAP account answers
+  `invalid cursor`, like every other cursor the service did not hand out.
 - A new user is an API user unless `ui_sign_in` is set. Existing users
   with a password keep their UI sign-in, those without are API users.
   Setting a password for an API user is refused with `409`.
@@ -115,6 +161,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Removed
 
+- IMAP accounts with `auth: xoauth2` answer `501 not_supported`. Nothing
+  renewed their access token, so the login was rejected within the hour
+  and the account blocked. They come back with a token refresher.
 - The built-in admin key `MAILBOX_SERVICE_KEY`. Every call is made by a
   user, so the audit names one. Make the first user with
   `users create-admin` and a token for the API on its page in the UI. A
@@ -133,6 +182,129 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The IMAP sync could miss a change in the folder its connection had
   selected last, e.g. a new mail in the inbox: the server answered STATUS
   for that folder from an older view. The sync now sends a NOOP first.
+- A send the provider accepted answers with its result, even when the
+  service cannot record the sent copy, the change or the audit entry
+  afterwards. Before, such a failure answered `500`, stored nothing for
+  the `Idempotency-Key`, and a retry with the same key sent the mail a
+  second time.
+- An unexpected error with one account or one webhook is logged and the
+  sync worker and the webhook posts go on. Before, it ended both for the
+  life of the process, while the API went on answering.
+- A login the mail server refuses for now no longer blocks the account.
+  IMAP answers with `[UNAVAILABLE]`, `[INUSE]`, `[LIMIT]` or
+  `[SERVERBUG]`, or a text such as "too many connections", and SMTP
+  answers with a 4xx code, now count as `502 provider_unavailable` and
+  are tried again later. Before, they counted as a rejected credential
+  and the account stayed blocked until it was verified.
+- A user or role whose stored grant names a right that a release renamed
+  stays manageable. Before, every change to it, its tokens and its
+  password answered `400 unknown right`. New grants still refuse such a
+  name.
+- A user with `accounts.manage` or `admin` on named accounts can manage
+  itself and hand out what it holds. Before, those groups name
+  `create_account` and the like, which only a grant on `*` gives, so the
+  user could not even rename itself.
+- A mail from or to an address with an international domain is sent,
+  with the domain in punycode in its headers and its Message-ID. Before,
+  composing it answered `500`. An address whose local part goes beyond
+  ASCII makes a message with UTF-8 headers, for servers with SMTPUTF8.
+- `expires_at` of `POST /v1/users/{user_id}/tokens` needs a time zone,
+  e.g. `2026-12-31T23:59:59Z`. Without one it answers `422`. Before, it
+  answered `500`.
+- The sends page of the UI lists the sends of deleted accounts too, for
+  a user whose `audit` grant names every account, as
+  `GET /v1/accounts/{account_id}/sends` does. Before, it listed existing
+  accounts only.
+- The names of users, tokens and roles are kept without the spaces
+  around them, in the API as in the UI, and a user name has 200
+  characters at most. Before, the API kept " Admin" with its space: it
+  could not sign in, and "Admin" could be created beside it.
+- A cursor of `GET /v1/messages` continues the search it came from and
+  no other. With another `folder` or other search parameters it answers
+  `400`. Before, it went on from its positions under the new parameters,
+  and the folder of the new request was ignored. Cursors handed out
+  before this version are refused once.
+- An SMTP server that refuses an XOAUTH2 token counts as a rejected
+  login, `502 provider_auth_failed`. Before, the service answered the
+  server's challenge with the token again until smtplib gave up, and it
+  counted as a failure of the server.
+- A token made in the UI is valid for 1 day at least. Before, `0` made a
+  token that had run out when it was shown.
+- `port` and `smtp_port` in the settings of an IMAP account must be a
+  whole number from 1 to 65535, else the account answers `400`. Before,
+  a word answered `500`.
+- `openapi` prints the document whatever key provider and OAuth app the
+  settings name. Before, it failed when the key file or the client secret
+  file was missing.
+- A key provider whose content is no recovery key is named in the error,
+  e.g. `the key file ... holds no recovery key`. Before, the error said
+  only `not a recovery key`.
+- The service refuses to start with a log level uvicorn does not know, a
+  port outside 1 to 65535, or a longest webhook retry shorter than the
+  first, and names the setting. Before, the log level ended in a
+  traceback and the retry was capped quietly.
+- `users` and `keys init` and `keys import` refuse to run with
+  `MAILBOX_SERVICE_STORAGE=memory`, as `backup` did. Before, they
+  reported success for a user or a data key that vanished with the
+  command.
+- A backup file that cannot be read or written, and a client secret file
+  that is missing, are named in one line by the commands. Before, they
+  ended with a traceback.
+- A database of a newer schema, e.g. after a downgrade, is named in one
+  line by every command. Before, each ended with a traceback.
+- The database stores every time in UTC. A time with another offset was
+  stored as given and compared wrongly with the others. The service
+  itself always passed UTC.
+- Sending from an IMAP account goes to the SMTP server while the IMAP
+  server rests after it was unreachable. Before, the send was refused
+  with "the mail server was unreachable".
+- Verifying a Microsoft account asks Microsoft again for an access token
+  when a refresh was refused before. Before, only a new sign-in or a
+  restart of the service did.
+- `has_attachments` means one thing in a list and in the message: a part
+  a person sees as an attachment. An image the HTML shows in its place
+  is none, a file marked inline, as Apple Mail sends a PDF, is one.
+  Before, an opened HTML mail with inline images had attachments and the
+  same mail in a list had none.
+- `in_reply_to` of a message is one Message-ID, the first the header
+  names. Before, a header the sender had folded came with its line break
+  and every id in it.
+- A top-level folder of a Microsoft account has `parent_id` null, as on
+  IMAP. Before, it named the mailbox's root folder, which no list shows.
+- `max_requests_per_minute` in the settings of an IMAP account must be a
+  number above 0, else the account answers `400`. Before, a word or a
+  negative number answered `500`.
+- A message that another IMAP client removes while the service changes
+  its flags is answered as not found, in `batch_messages` too. Before,
+  it was missing from the answer.
+- Moving a message whose Message-ID holds characters beyond ASCII on an
+  IMAP server without COPYUID answers with the move. Before, the move
+  went through and the request answered `500`.
+- A search with text and `has_attachments=false` on a Microsoft account
+  leaves out mail with attachments. Before, `false` was ignored there.
+- On IMAP, a write the service tried again after the connection dropped
+  answers with its result when the first try went through: a folder
+  made, renamed or deleted, a message deleted. Before, it answered `409`
+  or `404` for its own work.
+- Replacing a draft that is gone answers `404` on IMAP accounts too, and
+  stores nothing. Before, IMAP stored the new draft beside it and
+  answered success, so a second draft appeared.
+- Deleting a user removes its webhooks. Before, they stayed, posted
+  nothing, and nobody could list or remove them. The database moves to
+  schema 13, which drops those of users deleted before.
+- `restore` refuses while the service runs on the database, as CONCEPT
+  7.8 promised. A running service holds the lock file `mailbox.db.lock`
+  beside its database. Before, on Linux the running service went on
+  writing into the old file and the restore was lost at its next start,
+  and on Windows the restore ended with a traceback.
+- `restore` writes and migrates the backup beside the database first,
+  then puts it in place in one step. Before, a crash in between left no
+  database, and the next start created an empty one.
+- `restore --recovery-key` no longer overwrites another master key the
+  key provider holds, which the previous database needs. It refuses
+  before restoring, and `--replace-master-key` overwrites it. The
+  keyring provider now refuses to store over another key, as the file
+  provider did.
 
 ### Security
 
@@ -179,6 +351,42 @@ adheres to [Semantic Versioning](https://semver.org/).
   tenant's administrators may set to anything. The sign-in asks for
   `User.Read` instead of `openid`, `email` and `profile`. Accounts
   connected before keep working. A new sign-in shows the new permission.
+- A password beyond ASCII no longer leaks into an error. IMAP logs in
+  with it by SASL PLAIN, where the server offers `AUTH=PLAIN`. SMTP and
+  IMAP without it answer `400` that the login cannot carry it. Before,
+  IMAP answered `500`, and SMTP answered `400` with a message that
+  quoted one character of the password and its position.
+- `get_attachment` of the MCP server hands an image to the model only up
+  to 5 MB, larger ones by name. The PDF pages of one call share 12
+  megapixels, so ten pages each come smaller than three. Before, an image
+  of 10 MB and ten pages of 4 megapixels each went into one result.
+- The MCP server no longer logs the URL of each request to the service
+  at `INFO`. httpx wrote it, with search terms and message ids, into the
+  log files of the MCP client.
+- `keep_attachments` of `PUT /v1/accounts/{account_id}/drafts/{draft_id}`
+  reads attachments of that draft alone. Before, a message id outside
+  the drafts made the service fetch that message's attachment for a
+  caller with the right to write drafts only, and the answer told
+  whether the id existed.
+- `PUT /v1/roles/{role_id}` needs the caller to cover every user who
+  holds the role, as a change to those users would. Before, a delegated
+  administrator could shrink a role that a stronger user held.
+- An OAuth sign-in that comes back to another signed-in user answers as
+  an unknown one and stays open for the user who started it. Before, it
+  answered that someone else started it and ended it.
+- A webhook may not post to the metadata services of AWS over IPv6
+  (`fd00:ec2::254`) and of Alibaba Cloud (`100.100.100.200`). Their
+  ranges stay open for receivers in a private network or a VPN.
+- A request body larger than 40 MB is refused with `413
+  payload_too_large`, in the API and in the UI, before the service reads
+  it whole. Before, any size was read, and only a send checked the 25 MB
+  of attachments afterwards.
+- The grant editor of the UI takes 100 grants at most. Before, the row
+  count came from the form unchecked, and a large one held up the
+  service for minutes.
+- A token revoked while a request with it was being checked stays
+  revoked. Before, that request could save the token back as it had read
+  it, and the revocation was lost.
 
 ## [0.1.0] - 2026-09-25
 

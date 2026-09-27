@@ -123,14 +123,19 @@ A template for the settings file with every option:
 | `users set-password NAME` | gives the user a new one-time password and prints it, and switches its UI sign-in on |
 | `backup FILE` | writes an encrypted backup, while the service runs |
 | `backup verify FILE [--recovery-key]` | checks a backup |
-| `restore FILE [--recovery-key]` | replaces the database with a backup. Stop the service first. |
+| `restore FILE [--recovery-key [--replace-master-key]]` | replaces the database with a backup. Stop the service first. |
 | `openapi` | prints the OpenAPI document |
 
 A backup holds accounts, users, rights, token hashes and the encrypted
 credentials, never mail. It is encrypted as a whole and opens only with
 the master key or the recovery key, which are not in it. `restore` keeps
-the previous database beside the restored one. With `--recovery-key` it
-reads the recovery key from stdin, for a new machine.
+the previous database beside the restored one. It refuses while a
+service runs on the database: a running service holds the lock file
+`mailbox.db.lock` beside it. With `--recovery-key` it reads the recovery
+key from stdin, for a new machine. When the key provider holds another
+master key there, `restore` refuses: the database kept beside the
+restored one opens with that key alone. Note its recovery key, then pass
+`--replace-master-key`.
 
 ## Users, rights and tokens
 
@@ -142,7 +147,8 @@ recipients and to a number of mails per day. Every send is recorded in an
 audit. `GET /v1/me` shows what a token may do.
 
 Users, roles and tokens are managed in the UI (Users, Roles) or under
-`/v1/users` and `/v1/roles`. A token is shown once, when it is created.
+`/v1/users` and `/v1/roles`. A token is shown once, when it is created,
+and so is a one-time password from `POST /v1/users/{user_id}/password`.
 Give each script and each assistant its own user with only the rights it
 needs. Until `users create-admin` has made the first user, the API
 answers `503 setup_required`. Every call is made by a user, so the

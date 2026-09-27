@@ -22,7 +22,7 @@ from benethos_mailbox_service.data.storage import (
     WebhookRepository,
 )
 from benethos_mailbox_service.domain.webhooks import sealed_label
-from benethos_mailbox_service.errors import NotFoundError
+from benethos_mailbox_service.errors import ConflictError, NotFoundError
 from benethos_mailbox_service.main import Services
 
 from .conftest import bearer_for, create_account
@@ -62,7 +62,7 @@ def test_create_answers_the_secret_once(
 
 def test_the_secret_is_kept_sealed(client: TestClient, ready: Services) -> None:
     body = client.post("/v1/webhooks", json=HOOK).json()
-    record = ready.webhooks._repository.get(body["id"])  # type: ignore[attr-defined]
+    record = ready.repositories.webhooks.get(body["id"])
     assert body["secret"].encode() not in record.secret.ciphertext
     opened = ready.vault.unseal(sealed_label(body["id"]), record.secret)
     assert opened.get_secret_value() == body["secret"]
@@ -76,7 +76,7 @@ def test_a_new_webhook_hears_what_comes_from_now_on(
 ) -> None:
     client.patch(f"/v1/accounts/{account_id}/messages/m0", json={"unread": False})
     body = client.post("/v1/webhooks", json=HOOK).json()
-    record = ready.webhooks._repository.get(body["id"])  # type: ignore[attr-defined]
+    record = ready.repositories.webhooks.get(body["id"])
     assert record.delivery.cursor == ready.changes.last() == 1
 
 
@@ -142,6 +142,28 @@ def test_each_user_sees_and_removes_only_its_own(
     assert client.delete(f"/v1/webhooks/{mine}").status_code == 404
 
 
+def test_deleting_a_user_removes_its_webhooks(
+    client: TestClient, ready: Services
+) -> None:
+    made = client.post(
+        "/v1/users",
+        json={
+            "name": "hooks",
+            "grants": [{"accounts": ["*"], "allow": ["webhooks.manage"]}],
+        },
+    ).json()
+    token = client.post(f"/v1/users/{made['id']}/tokens", json={"name": "t"}).json()
+    theirs = TestClient(
+        client.app, headers={"Authorization": f"Bearer {token['token']}"}
+    )
+    gone = theirs.post("/v1/webhooks", json=HOOK).json()["id"]
+    mine = client.post("/v1/webhooks", json=HOOK).json()["id"]
+    assert client.delete(f"/v1/users/{made['id']}").status_code == 204
+    left = [r.webhook.id for r in ready.repositories.webhooks.list()]
+    assert left == [mine]
+    assert gone not in left
+
+
 def test_webhooks_need_their_right(client: TestClient, ready: Services) -> None:
     reader = TestClient(
         client.app,
@@ -203,6 +225,12 @@ def test_the_store_keeps_a_webhook(store: WebhookRepository) -> None:
         store.delete("whk_1")
 
 
+def test_an_id_that_exists_is_a_conflict(store: WebhookRepository) -> None:
+    store.add(record(1))
+    with pytest.raises(ConflictError):
+        store.add(record(1))
+
+
 def test_the_store_keeps_how_delivery_stands(store: WebhookRepository) -> None:
     store.add(record(1))
     later = Delivery(cursor=9, attempts=2, next_attempt_at=AT)
@@ -213,6 +241,24 @@ def test_the_store_keeps_how_delivery_stands(store: WebhookRepository) -> None:
     assert found.webhook.last_error == "503 from receiver"
     # Gone meanwhile: nothing happens.
     store.update("whk_9", later, last_delivery_at=None, last_error=None)
+
+
+def test_the_store_removes_the_webhooks_of_a_user(store: WebhookRepository) -> None:
+    store.add(record(1))
+    store.add(record(2))
+    other = record(3)
+    store.add(
+        WebhookRecord(
+            webhook=other.webhook.model_copy(update={"user_id": "usr_2"}),
+            secret=other.secret,
+            delivery=other.delivery,
+        )
+    )
+    store.add_attempt(attempt(1), keep=3)
+    assert store.delete_for_user("usr_1") == 2
+    assert [r.webhook.id for r in store.list()] == ["whk_3"]
+    assert store.attempts("whk_1") == []
+    assert store.delete_for_user("usr_1") == 0
 
 
 def attempt(n: int, webhook_id: str = "whk_1") -> Attempt:

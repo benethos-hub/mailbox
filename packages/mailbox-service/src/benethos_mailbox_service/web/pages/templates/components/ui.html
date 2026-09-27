@@ -21,6 +21,25 @@
 </section>
 {% endmacro %}
 
+{# Whether a webhook's last post went through. ``detail``: the error
+   under the tag. #}
+{% macro webhook_state(error, detail=True) %}{% if error %}<span class="tag bad">failing</span>{% if detail %}<span class="sub">{{ error }}</span>{% endif %}{% else %}<span class="tag ok">ok</span>{% endif %}{% endmacro %}
+
+{# Rights as tags: groups first, then single operations. #}
+{% macro rights_tags(groups, operations) %}{% for group in groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for operation in operations %}<span class="tag mono">{{ operation }}</span> {% endfor %}{% endmacro %}
+
+{# A secret the service shows once, e.g. a new token: ``title``, the
+   value in one selectable piece, and the caller says what to do with it. #}
+{% macro secret_card(title, value) %}
+<section class="card">
+  <header><h2>{{ title }}</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
+  <div class="body">
+    <p class="muted">{{ caller() }}</p>
+    <code class="secret">{{ value }}</code>
+  </div>
+</section>
+{% endmacro %}
+
 {# The first card of a detail page: what the record is, read-only. The
    caller gives ``fact`` lines. #}
 {% macro facts(title, tags=None) %}
@@ -35,7 +54,7 @@
 {# A list that belongs to the record of a detail page, e.g. its tokens.
    The caller gives the table, and ``new_row`` as the last part. #}
 {% macro related(title, count=None, meta=None) %}
-<section class="card related">
+<section class="card">
   <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}</header>
   {{ caller() }}
 </section>

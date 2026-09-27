@@ -14,12 +14,17 @@ from datetime import datetime
 
 from ..common.ids import new_id
 from ..data.models import AccountStatus, ApiToken, Grant, Role, User
-from ..data.storage import RoleRepository, TokenRepository, UserRepository
+from ..data.storage import (
+    RoleRepository,
+    TokenRepository,
+    UserRepository,
+    WebhookRepository,
+)
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from . import permissions
 from .access import Access, SendLimit
 from .adapters import Adapters
-from .auth import AuthService, TokenState
+from .auth import MAX_NAME, AuthService, TokenState
 
 log = logging.getLogger(__name__)
 
@@ -59,12 +64,14 @@ class UserService:
         tokens: TokenRepository,
         adapters: Adapters,
         auth: AuthService,
+        webhooks: WebhookRepository,
     ) -> None:
         self._users = users
         self._roles = roles
         self._tokens = tokens
         self._adapters = adapters
         self._auth = auth
+        self._webhooks = webhooks
 
     # --- the caller itself --------------------------------------------------
 
@@ -116,7 +123,7 @@ class UserService:
         """A user with every right, and a one-time password for it, to be
         changed at the first sign-in. For the command line on the host
         only: it checks no caller."""
-        _named("a user", name)
+        name = _named("a user", name)
         self._require_free(name)
         user = User(
             id=new_id("usr"),
@@ -142,10 +149,18 @@ class UserService:
         return user, await self._one_time(user)
 
     async def _one_time(self, user: User) -> str:
-        password = secrets.token_urlsafe(ONE_TIME_BYTES)
-        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
-        log.info("a one-time password for %s (%s) on the host", user.name, user.id)
+        password = await self._force(user, None, "on the host")
+        assert password is not None
         return password
+
+    async def _force(self, user: User, new: str | None, by: str) -> str | None:
+        """A password the user must change at its next sign-in: ``new``, or
+        without it a random one, which is returned to be shown once."""
+        password = secrets.token_urlsafe(ONE_TIME_BYTES) if new is None else new
+        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
+        what = "a one-time password for" if new is None else "set the password of"
+        log.info("%s %s (%s) %s", what, user.name, user.id, by)
+        return password if new is None else None
 
     # --- users ----------------------------------------------------------------
 
@@ -187,7 +202,7 @@ class UserService:
     ) -> User:
         """A new user. Without ``ui_sign_in`` an API user: tokens only."""
         access.require("create_user")
-        _named("a user", name)
+        name = _named("a user", name)
         self._require_free(name)
         user = User(
             id=new_id("usr"),
@@ -216,7 +231,7 @@ class UserService:
         sign-in."""
         access.require("update_user")
         if name is not None:
-            _named("a user", name)
+            name = _named("a user", name)
             self._require_free(name, user_id)
         user = self._users.get(user_id)
         self._require_covers_user(access, user)
@@ -237,7 +252,9 @@ class UserService:
             if value is not None
         }
         updated = user.model_copy(update=changes)
-        self._check_grantable(access, updated.roles, updated.grants)
+        # Only grants given now must name known rights. A stored one may
+        # name a right a release renamed, and grants nothing by it.
+        self._check_grantable(access, updated.roles, updated.grants, grants or [])
         self._users.save(updated)
         if user.ui_sign_in and not updated.ui_sign_in:
             self._auth.passwords.delete(user_id)
@@ -258,7 +275,18 @@ class UserService:
             raise ConflictError("a user cannot delete itself")
         self._tokens.delete_for_user(user_id)
         self._auth.passwords.delete(user_id)
+        # Its webhooks would post by nobody's rights, and nobody could
+        # remove them.
+        removed = self._webhooks.delete_for_user(user_id)
         self._users.delete(user_id)
+        log.info(
+            "%s (%s) deleted %s (%s) and its %d webhooks",
+            access.name,
+            access.user_id,
+            user.name,
+            user.id,
+            removed,
+        )
 
     def _require_free(self, name: str, user_id: str | None = None) -> None:
         """A person signs in with the name: one user per name, whatever
@@ -296,33 +324,20 @@ class UserService:
         log.info("%s (%s) changed its password", user.name, user.id)
         return stored.updated_at
 
-    async def set_password(self, access: Access, user_id: str, new: str) -> None:
+    async def set_password(
+        self, access: Access, user_id: str, new: str | None = None
+    ) -> str | None:
         """Another user's password, within the caller's rights: whoever sets
-        it can sign in as that user. It must be changed at the next
-        sign-in."""
+        it can sign in as that user. Without ``new`` the service makes a
+        one-time password and returns it, to be shown once. Either must be
+        changed at the next sign-in."""
         user = self._settable(access, user_id)
-        await self._auth.passwords.set(user.id, user.name, new, must_change=True)
-        log.info(
-            "%s (%s) set the password of %s (%s)",
-            access.name,
-            access.user_id,
-            user.name,
-            user.id,
-        )
+        return await self._force(user, new, f"by {access.name} ({access.user_id})")
 
     async def one_time_password(self, access: Access, user_id: str) -> str:
-        """A new random password for another user, within the caller's
-        rights, to be changed at the next sign-in. Shown once."""
-        user = self._settable(access, user_id)
-        password = secrets.token_urlsafe(ONE_TIME_BYTES)
-        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
-        log.info(
-            "%s (%s) made a one-time password for %s (%s)",
-            access.name,
-            access.user_id,
-            user.name,
-            user.id,
-        )
+        """``set_password`` without a password: the one the service made."""
+        password = await self.set_password(access, user_id)
+        assert password is not None
         return password
 
     def _settable(self, access: Access, user_id: str) -> User:
@@ -357,7 +372,7 @@ class UserService:
         expires_at: datetime | None = None,
     ) -> tuple[ApiToken, str]:
         access.require("create_token")
-        _named("a token", name)
+        name = _named("a token", name)
         self._require_covers_user(access, self._users.get(user_id))
         return self._auth.issue_token(user_id, name, expires_at)
 
@@ -380,14 +395,18 @@ class UserService:
 
     def create_role(self, access: Access, role_id: str, grants: list[Grant]) -> Role:
         access.require("create_role")
-        _named("a role", role_id)
+        role_id = _named("a role", role_id)
         if role_id in {role.id for role in self._roles.list()}:
             raise ConflictError(f"role {role_id} exists")
         return self._save_role(access, Role(id=role_id, grants=grants))
 
     def replace_role(self, access: Access, role_id: str, grants: list[Grant]) -> Role:
+        """The role's holders change with it: the caller must be able to
+        manage each of them, as for a change to the user itself."""
         access.require("replace_role")
         self._require_covers(access, self._roles.get(role_id).grants)
+        for holder in self._holders(role_id):
+            self._require_covers_user(access, holder)
         return self._save_role(access, Role(id=role_id, grants=grants))
 
     def delete_role(self, access: Access, role_id: str) -> None:
@@ -417,9 +436,15 @@ class UserService:
         return role
 
     def _check_grantable(
-        self, access: Access, role_ids: list[str], grants: list[Grant]
+        self,
+        access: Access,
+        role_ids: list[str],
+        grants: list[Grant],
+        new: list[Grant] | None = None,
     ) -> None:
-        _validate(grants)
+        """The caller covers ``grants`` and the roles. ``new``, the grants
+        given now, all of them unless said, name known rights."""
+        _validate(grants if new is None else new)
         self._require_covers(access, [*grants, *self._role_grants(role_ids)])
 
     def _role_grants(self, role_ids: Iterable[str]) -> list[Grant]:
@@ -441,9 +466,14 @@ class UserService:
             raise ForbiddenError("cannot grant or manage rights the caller lacks")
 
 
-def _named(what: str, name: str) -> None:
-    if not name.strip():
+def _named(what: str, name: str) -> str:
+    """The name as it is kept: without the spaces around it."""
+    name = name.strip()
+    if not name:
         raise BadRequestError(f"{what} needs a name")
+    if len(name) > MAX_NAME:
+        raise BadRequestError(f"the name of {what} has {MAX_NAME} characters at most")
+    return name
 
 
 def _validate(grants: Iterable[Grant]) -> None:

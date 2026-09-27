@@ -19,6 +19,7 @@ from benethos_mailbox_service.data.storage import (
     SqliteUserRepository,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
+from benethos_mailbox_service.data.storage.sqlite.database import MIGRATIONS, iso
 from benethos_mailbox_service.errors import (
     ConflictError,
     NotFoundError,
@@ -43,6 +44,32 @@ def test_schema_is_migrated(db: Database) -> None:
     assert db.schema_version() == SCHEMA_VERSION
 
 
+def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
+    path = tmp_path / "old.db"
+    Database(path).close()
+    raw = sqlite3.connect(path)
+    with raw:
+        raw.execute(
+            "INSERT INTO users (id, name, roles, grants)"
+            " VALUES ('usr_1', 'u', '[]', '[]')"
+        )
+        raw.execute(
+            "INSERT INTO keys (key_id, nonce, ciphertext) VALUES ('k1', x'00', x'00')"
+        )
+        for hook, user in (("whk_1", "usr_1"), ("whk_2", "usr_gone")):
+            raw.execute(
+                "INSERT INTO webhooks (id, user_id, url, events, created_at, key_id,"
+                " nonce, ciphertext, cursor) VALUES (?, ?, 'https://h', '[]', '',"
+                " 'k1', x'00', x'00', 0)",
+                (hook, user),
+            )
+        raw.execute("UPDATE meta SET value = '12' WHERE key = 'schema_version'")
+    raw.close()
+    db = Database(path)
+    assert [r[0] for r in db.query("SELECT id FROM webhooks")] == ["whk_1"]
+    db.close()
+
+
 def test_a_newer_schema_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "new.db"
     Database(path).close()
@@ -50,8 +77,25 @@ def test_a_newer_schema_is_refused(tmp_path: Path) -> None:
     with raw:
         raw.execute("UPDATE meta SET value = '999' WHERE key = 'schema_version'")
     raw.close()
-    with pytest.raises(RuntimeError, match="newer"):
+    with pytest.raises(StorageError, match="newer"):
         Database(path)
+
+
+def test_the_cli_names_a_newer_schema(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "sqlite")
+    path = Settings().database_path
+    Database(path).close()
+    raw = sqlite3.connect(path)
+    with raw:
+        raw.execute("UPDATE meta SET value = '999' WHERE key = 'schema_version'")
+    raw.close()
+    assert main(["users", "set-password", "admin"]) == 1
+    assert "database schema 999 is newer" in capsys.readouterr().err
 
 
 def test_deleting_a_user_cascades_to_its_tokens(db: Database) -> None:
@@ -188,6 +232,25 @@ def test_create_admin_command(
     assert "a user named owner exists" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize(
+    "command",
+    [["users", "create-admin"], ["users", "set-password", "admin"], ["keys", "init"]],
+)
+def test_commands_that_write_need_a_database(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    command: list[str],
+) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "memory")
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_FILE", str(tmp_path / "master.key"))
+    assert main(command) == 1
+    assert "need MAILBOX_SERVICE_STORAGE=sqlite" in capsys.readouterr().err
+    assert not (tmp_path / "master.key").exists()
+
+
 def test_set_password_command(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -243,3 +306,22 @@ def test_a_readable_database_file_is_narrowed(tmp_path: Path) -> None:
     path.chmod(0o644)
     Database(path).close()
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+def test_times_are_stored_in_utc() -> None:
+    earlier = iso(datetime.fromisoformat("2026-09-27T14:00:00+02:00"))
+    later = iso(datetime(2026, 9, 27, 12, 30, tzinfo=UTC))
+    assert earlier == "2026-09-27T12:00:00+00:00"
+    # Stored in UTC, the earlier time sorts first as text too.
+    assert earlier is not None and later is not None and earlier < later
+    with pytest.raises(ValueError, match="without a zone"):
+        iso(datetime(2026, 9, 27, 12, 0))
+
+
+def test_each_migration_step_is_one_statement() -> None:
+    """Executed one by one: a second statement in a step would be cut off
+    by sqlite3, one that ended early would be refused."""
+    for number, steps in enumerate(MIGRATIONS, 1):
+        for step in steps:
+            assert not sqlite3.complete_statement(step), (number, step)
+            assert sqlite3.complete_statement(step + ";"), (number, step)

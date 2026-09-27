@@ -5,8 +5,15 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.data.models import Grant, ProviderType, Role, User
+from benethos_mailbox_service.data.models import (
+    ApiToken,
+    Grant,
+    ProviderType,
+    Role,
+    User,
+)
 from benethos_mailbox_service.data.storage import (
+    InMemoryPasswordRepository,
     InMemoryRoleRepository,
     InMemoryTokenRepository,
     InMemoryUserRepository,
@@ -18,14 +25,16 @@ from benethos_mailbox_service.domain.auth import (
     hash_token,
     new_token,
 )
+from benethos_mailbox_service.domain.passwords import Passwords
 from benethos_mailbox_service.errors import (
+    BadRequestError,
     NotFoundError,
     SetupRequiredError,
     UnauthorizedError,
 )
 from benethos_mailbox_service.main import Services
 
-from .conftest import bearer_for, create_account
+from .conftest import CHEAP, bearer_for, create_account
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -41,6 +50,10 @@ class Clock:
 @pytest.fixture
 def clock() -> Clock:
     return Clock()
+
+
+def passwords() -> Passwords:
+    return Passwords(InMemoryPasswordRepository(), CHEAP)
 
 
 @pytest.fixture
@@ -64,7 +77,7 @@ def service(repos, clock: Clock) -> AuthService:
     roles.save(
         Role(id="readers", grants=[Grant(accounts=["acc_a"], allow=["mail.read"])])
     )
-    return AuthService(users, roles, tokens, clock=clock)
+    return AuthService(users, roles, tokens, passwords(), clock=clock)
 
 
 def test_token_format() -> None:
@@ -103,6 +116,32 @@ def test_revoked_token(service: AuthService) -> None:
         service.authenticate(plain)
 
 
+def test_a_revocation_during_an_authentication_stays(
+    service: AuthService, repos, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    record, plain = service.issue_token("usr_reader", "laptop")
+    tokens = repos[2]
+    found = tokens.find_by_hash
+
+    def revoked_meanwhile(token_hash: str) -> ApiToken | None:
+        token = found(token_hash)
+        patch.undo()
+        service.revoke_token(record.id)  # another request, between the reads
+        return token
+
+    with monkeypatch.context() as patch:
+        patch.setattr(tokens, "find_by_hash", revoked_meanwhile)
+        service.authenticate(plain)
+    assert tokens.get(record.id).revoked_at == NOW
+    with pytest.raises(UnauthorizedError, match="revoked"):
+        service.authenticate(plain)
+
+
+def test_an_expiry_without_a_time_zone_is_refused(service: AuthService) -> None:
+    with pytest.raises(BadRequestError, match="time zone"):
+        service.issue_token("usr_reader", "t", expires_at=datetime(2027, 1, 1))
+
+
 def test_expired_token(service: AuthService, clock: Clock) -> None:
     _, plain = service.issue_token(
         "usr_reader", "t", expires_at=NOW + timedelta(days=1)
@@ -136,7 +175,7 @@ def test_token_for_unknown_user(service: AuthService) -> None:
 
 def test_nothing_configured_asks_for_setup(repos) -> None:
     with pytest.raises(SetupRequiredError, match="create-admin"):
-        AuthService(*repos).authenticate("anything")
+        AuthService(*repos, passwords()).authenticate("anything")
 
 
 # --- through the API -------------------------------------------------------

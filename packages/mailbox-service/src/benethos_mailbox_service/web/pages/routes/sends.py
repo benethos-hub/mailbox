@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, time
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 
 from ....data.models import SendFilter
@@ -80,11 +80,11 @@ async def sends(
     account_id = bar.value("account")
     cursor = request.query_params.get("cursor")
     if account_id:
-        page = mailbox.list_sends(
+        page = mailbox.outgoing.list_sends(
             caller, account_id, limit=PAGE_SIZE, cursor=cursor, matching=matching
         )
     else:
-        page = mailbox.list_all_sends(
+        page = mailbox.outgoing.list_all_sends(
             caller, limit=PAGE_SIZE, cursor=cursor, matching=matching
         )
     return render(
@@ -99,9 +99,3 @@ async def sends(
         names=names,
         pages=page_links(request, page.next_cursor),
     )
-
-
-@router.get("/accounts/{account_id}/sends")
-async def account_sends(account_id: str) -> RedirectResponse:
-    """The list above, for one account."""
-    return RedirectResponse(f"/ui/sends?account={account_id}", status_code=303)

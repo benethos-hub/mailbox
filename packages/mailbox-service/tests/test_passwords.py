@@ -143,7 +143,9 @@ def test_names_are_unique_regardless_of_case(tmp_path: Path) -> None:
     db.close()
 
 
-def test_the_migration_renames_a_name_taken_twice(tmp_path: Path) -> None:
+def test_the_migration_renames_a_name_taken_twice(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     path = tmp_path / "old.db"
     Database(path).close()
     raw = sqlite3.connect(path)
@@ -160,6 +162,7 @@ def test_the_migration_renames_a_name_taken_twice(tmp_path: Path) -> None:
     db = Database(path)
     names = sorted(u.name for u in SqliteUserRepository(db).list())
     assert names == ["Anna", "anna-22222222"]
+    assert "user anna renamed to anna-22222222" in caplog.text
     db.close()
 
 

@@ -144,14 +144,34 @@ def test_create_rename_move_and_delete_a_folder(
     assert "Folder deleted." in deleted.text
 
 
-def test_a_bad_folder_name_is_named(ui: TestClient, account_id: str) -> None:
+def test_a_bad_folder_name_is_named(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    _with_trash(services, account_id)
     answer = post(
         ui,
         f"/ui/accounts/{account_id}/folders",
-        {"name": "a*b"},
+        {"name": "a*b", "shown": "archive", "parent": "archive"},
     )
+    assert answer.status_code == 400
     assert 'class="notice err"' in answer.text
     assert "without" in answer.text
+    # The page of the folder the form was on, with what was typed.
+    assert 'name="name" value="a*b"' in answer.text
+    assert 'name="parent" value="archive" checked' in answer.text
+
+
+def test_a_refused_rename_or_move_keeps_what_was_typed(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    adapter = _with_trash(services, account_id)
+    base = f"/ui/accounts/{account_id}/folders"
+    renamed = post(ui, f"{base}/rename", {"folder": "archive", "name": "Old%"})
+    assert renamed.status_code == 400
+    assert 'id="f-rename" name="name" value="Old%"' in renamed.text
+    moved = post(ui, f"{base}/move", {"folder": "archive", "parent": "nowhere"})
+    assert moved.status_code == 400 and "This folder" in moved.text
+    assert [f.name for f in adapter.folders].count("Archive") == 1
 
 
 # --- composing and sending ------------------------------------------------------------

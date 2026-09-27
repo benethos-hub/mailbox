@@ -18,6 +18,7 @@ from benethos_mailbox_service.data.http import ApiClient
 from benethos_mailbox_service.data.models import (
     FolderRole,
     MessageFilter,
+    MessageSummary,
     MessageUpdate,
     ProviderType,
 )
@@ -55,6 +56,7 @@ class Tokens:
     def __init__(self, *values: str) -> None:
         self.values = list(values)
         self.rejected = 0
+        self.forgotten = 0
 
     async def access_token(self) -> SecretStr:
         return SecretStr(self.values[0])
@@ -63,6 +65,9 @@ class Tokens:
         self.rejected += 1
         if len(self.values) > 1:
             self.values.pop(0)
+
+    def forget_refusal(self) -> None:
+        self.forgotten += 1
 
 
 @pytest.fixture
@@ -97,6 +102,17 @@ def test_flags_go_into_the_filter() -> None:
     assert "hasAttachments eq true" in params["$filter"]
     assert "receivedDateTime ge 2026-09-01T00:00:00Z" in params["$filter"]
     assert rest is None
+
+
+def test_a_text_search_for_mail_without_attachments_checks_each_result() -> None:
+    params, rest = mappers.query(MessageFilter(text="plan", has_attachments=False))
+    assert "hasAttachments" not in params["$search"]
+    assert rest == MessageFilter(has_attachments=False)
+    with_file = MessageSummary(id="m", folder_ids=[], has_attachments=True)
+    assert not mappers.keeps(with_file, rest)
+    assert mappers.keeps(with_file.model_copy(update={"has_attachments": False}), rest)
+    params, rest = mappers.query(MessageFilter(text="plan", has_attachments=True))
+    assert "hasAttachments:true" in params["$search"] and rest is None
 
 
 def test_text_goes_into_the_search() -> None:
@@ -276,7 +292,10 @@ async def test_folders_are_created_renamed_moved_deleted(graph: FakeGraph) -> No
     renamed = await provider.update_folder(inner.id, "Inside", top.id)
     assert renamed.name == "Inside" and renamed.id == inner.id
     lifted = await provider.update_folder(inner.id, "Inside", None)
-    assert lifted.parent_id == graph.root
+    # The mailbox's root is Graph's parent of the top: for us there is none.
+    assert lifted.parent_id is None and top.parent_id is None
+    listed = {f.id: f.parent_id for f in await provider.list_folders()}
+    assert listed[top.id] is None and listed[inner.id] is None
     assert await provider.folder_contents(inner.id) == []
     await provider.delete_folder(inner.id)
     assert inner.id not in graph.folders
@@ -332,15 +351,21 @@ async def test_draft_calls_reach_drafts_only(graph: FakeGraph) -> None:
 
 async def test_a_refused_token_is_renewed_once(graph: FakeGraph) -> None:
     tokens = Tokens("stale", TOKEN)
-    await adapter(graph, tokens).verify()
+    await adapter(graph, tokens).list_folders()
     assert tokens.rejected == 1
 
 
 async def test_refused_twice_asks_for_a_new_sign_in(graph: FakeGraph) -> None:
     tokens = Tokens("stale", "also-stale")
     with pytest.raises(ProviderAuthError, match="sign in again"):
-        await adapter(graph, tokens).verify()
+        await adapter(graph, tokens).list_folders()
     assert tokens.rejected == 1
+
+
+async def test_verify_asks_a_refused_refresh_again(graph: FakeGraph) -> None:
+    tokens = Tokens(TOKEN)
+    await adapter(graph, tokens).verify()
+    assert tokens.forgotten == 1
 
 
 async def test_throttling() -> None:

@@ -47,13 +47,16 @@ FOLDER_FIELDS = (
 )
 
 
-def folder(item: dict[str, Any], roles: dict[str, FolderRole]) -> Folder:
+def folder(item: dict[str, Any], roles: dict[str, FolderRole], root: str) -> Folder:
+    """A mail folder. Graph names the mailbox's root folder, which no list
+    shows, as the parent of the top ones: for us they have none."""
     folder_id = str(item["id"])
+    parent = item.get("parentFolderId")
     return Folder(
         id=folder_id,
         name=str(item.get("displayName") or ""),
         role=roles.get(folder_id),
-        parent_id=item.get("parentFolderId"),
+        parent_id=None if parent == root else parent,
         total=item.get("totalItemCount"),
         unread=item.get("unreadItemCount"),
     )
@@ -169,7 +172,7 @@ def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter |
     the ordered property first in the filter, hence the always-true date.
     With text: ``$search``, which allows no ``$filter`` or ``$orderby``.
     Its results come newest first, under ids the adapter translates. Read
-    state and star are then checked here.
+    state, star and the absence of attachments are then checked here.
     """
     search = search or MessageFilter()
     texts = []
@@ -188,8 +191,12 @@ def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter |
             texts.append(f"received>={search.after.isoformat()}")
         if search.before:
             texts.append(f"received<{search.before.isoformat()}")
-        left = MessageFilter(unread=search.unread, starred=search.starred)
-        rest = left if left.unread is not None or left.starred is not None else None
+        # KQL finds messages with attachments, not those without.
+        without = False if search.has_attachments is False else None
+        left = MessageFilter(
+            unread=search.unread, starred=search.starred, has_attachments=without
+        )
+        rest = left if left != MessageFilter() else None
         return {
             "$search": '"' + " ".join(t.replace('"', "'") for t in texts) + '"'
         }, rest
@@ -213,5 +220,9 @@ def keeps(item: MessageSummary, rest: MessageFilter | None) -> bool:
     if rest is None:
         return True
     if rest.unread is not None and item.unread != rest.unread:
+        return False
+    if rest.has_attachments is not None and item.has_attachments != (
+        rest.has_attachments
+    ):
         return False
     return rest.starred is None or item.starred == rest.starred

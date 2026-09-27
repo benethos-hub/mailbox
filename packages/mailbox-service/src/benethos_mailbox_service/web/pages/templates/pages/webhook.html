@@ -1,17 +1,14 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb, card, danger_card, empty, fact, facts, related with context %}
+{% from "components/ui.html" import breadcrumb, card, danger_card, empty, fact, facts, related, secret_card, webhook_state with context %}
 {% block title %}Webhook · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ webhook.url }}{% endblock %}
 {% block subheading %}{{ breadcrumb([("Webhooks", "/ui/webhooks"), (webhook.url, None)]) }}{% endblock %}
 {% block content %}
 {% if secret %}
-{% call card("Signing secret", tags='<span class="tag warn">shown this once</span>' | safe) %}
-  <p class="muted">Keep it with the receiver. It checks <span class="mono">X-Mailbox-Signature</span> with it. Only this service keeps it besides, encrypted.</p>
-  <code class="secret">{{ secret }}</code>
-{% endcall %}
+{% call secret_card("Signing secret", secret) %}Keep it with the receiver. It checks <span class="mono">X-Mailbox-Signature</span> with it. Only this service keeps it besides, encrypted.{% endcall %}
 {% endif %}
 
-{% set state %}{% if webhook.last_error %}<span class="tag bad">failing</span>{% else %}<span class="tag ok">ok</span>{% endif %}{% endset %}
+{% set state %}{{ webhook_state(webhook.last_error, detail=False) }}{% endset %}
 {% call facts("Webhook", tags=state) %}
   {{ fact("URL", webhook.url, cls="mono") }}
   {% call fact("Events") %}{% for event in webhook.events %}<span class="tag">{{ event }}</span> {% endfor %}{% endcall %}
@@ -22,14 +19,14 @@
   {{ fact("Id", webhook.id, cls="mono") }}
 {% endcall %}
 
-{% call related("Last deliveries", count=attempts | length, meta="the newest 20 posts") %}
+{% call related("Last deliveries", count=webhook.deliveries | length, meta="the newest 20 posts") %}
   <div class="body tight">
-    {% if attempts %}
+    {% if webhook.deliveries %}
     <div class="table-scroll">
       <table>
         <thead><tr><th>When</th><th class="num">Events</th><th>Answer</th><th>Delivery</th></tr></thead>
         <tbody>
-          {% for attempt in attempts %}
+          {% for attempt in webhook.deliveries %}
           <tr>
             <td>{{ attempt.at | when }}</td>
             <td class="num">{{ attempt.events }}</td>

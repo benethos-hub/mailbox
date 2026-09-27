@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import TypeVar
@@ -25,6 +26,8 @@ from ..errors import IdempotencyConflictError
 from .locks import KeyedLocks
 
 R = TypeVar("R", bound=BaseModel)
+
+log = logging.getLogger(__name__)
 
 KEEP = timedelta(hours=24)
 
@@ -66,12 +69,17 @@ class Idempotency:
                     )
                 return result_type.model_validate_json(stored.result)
             result = await action()
-            self._store.put(
-                account_id,
-                user_id,
-                key,
-                StoredResult(operation, fingerprint, result.model_dump_json(), now),
-            )
+            # Done, e.g. sent: the result goes to the caller even when it
+            # cannot be stored, or the caller would take it for a failure.
+            try:
+                self._store.put(
+                    account_id,
+                    user_id,
+                    key,
+                    StoredResult(operation, fingerprint, result.model_dump_json(), now),
+                )
+            except Exception:
+                log.exception("the result for an Idempotency-Key was not stored")
             return result
 
 

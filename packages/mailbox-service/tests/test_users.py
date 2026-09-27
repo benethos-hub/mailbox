@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import Grant, ProviderType
@@ -131,6 +132,87 @@ def test_user_lifecycle(client: TestClient) -> None:
     assert client.get(f"/v1/users/{user['id']}").status_code == 404
 
 
+def test_a_user_with_a_renamed_right_stays_manageable(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    grant = {"accounts": ["*"], "allow": ["mail.read", "drafts"]}
+    user = client.post("/v1/users", json={"name": "old", "grants": [grant]}).json()
+    # A release renames the group: the stored grant names a right that is gone.
+    monkeypatch.delitem(permissions.GROUPS, "drafts")
+    renamed = client.patch(f"/v1/users/{user['id']}", json={"name": "renewed"})
+    assert renamed.status_code == 200
+    assert (
+        client.post(f"/v1/users/{user['id']}/tokens", json={"name": "t"}).status_code
+        == 201
+    )
+    assert client.delete(f"/v1/users/{user['id']}").status_code == 204
+
+
+def test_an_admin_of_one_account_manages_itself(
+    app_client: TestClient, services: Services
+) -> None:
+    own = Grant(accounts=["acc_a"], allow=["admin"])
+    headers = bearer_for(services, own)
+    me = app_client.get("/v1/me", headers=headers).json()
+    renamed = app_client.patch(
+        f"/v1/users/{me['user_id']}", json={"name": "renamed"}, headers=headers
+    )
+    assert renamed.status_code == 200
+    made = app_client.post(
+        "/v1/users",
+        json={"name": "like-me", "grants": [own.model_dump()]},
+        headers=headers,
+    )
+    assert made.status_code == 201
+
+
+def test_a_token_expiry_needs_a_time_zone(client: TestClient) -> None:
+    user = client.post("/v1/users", json={"name": "naive"}).json()
+    url = f"/v1/users/{user['id']}/tokens"
+    naive = client.post(url, json={"name": "t", "expires_at": "2099-01-01T00:00:00"})
+    assert naive.status_code == 422
+    aware = client.post(url, json={"name": "t", "expires_at": "2099-01-01T00:00:00Z"})
+    assert aware.status_code == 201
+
+
+async def test_a_password_through_the_api(
+    client: TestClient, services: Services
+) -> None:
+    user = client.post("/v1/users", json={"name": "person", "ui_sign_in": True}).json()
+    url = f"/v1/users/{user['id']}/password"
+    made = client.post(url, json={})
+    assert made.status_code == 200
+    one_time = made.json()["password"]
+    signed = await services.auth.sign_in("person", one_time, source="test")
+    assert signed.must_change
+    chosen = client.post(url, json={"password": "a passphrase chosen for them"})
+    assert chosen.json() == {"password": None, "must_change": True}
+    await services.auth.sign_in("person", "a passphrase chosen for them", source="t")
+    # An API user has no password, and nobody sets its own this way.
+    api_user = client.post("/v1/users", json={"name": "script"}).json()
+    refused = client.post(f"/v1/users/{api_user['id']}/password", json={})
+    assert refused.status_code == 409
+    me = client.get("/v1/me").json()["user_id"]
+    assert client.post(f"/v1/users/{me}/password", json={}).status_code == 409
+
+
+async def test_a_name_is_kept_without_the_spaces_around_it(
+    client: TestClient, services: Services
+) -> None:
+    made = client.post("/v1/users", json={"name": " Admin2 ", "ui_sign_in": True})
+    assert made.json()["name"] == "Admin2"
+    again = client.post("/v1/users", json={"name": "admin2"})
+    assert again.status_code == 409
+    password = client.post(f"/v1/users/{made.json()['id']}/password", json={})
+    await services.auth.sign_in("Admin2", password.json()["password"], source="t")
+    renamed = client.patch(f"/v1/users/{made.json()['id']}", json={"name": " B "})
+    assert renamed.json()["name"] == "B"
+    long = client.post("/v1/users", json={"name": "x" * 201})
+    assert long.status_code == 400
+    role = client.post("/v1/roles", json={"id": " readers ", "grants": []})
+    assert role.json()["id"] == "readers"
+
+
 def test_token_lifecycle(client: TestClient, app_client: TestClient) -> None:
     user = client.post("/v1/users", json={"name": "script", "grants": [READ_A]}).json()
     created = client.post(f"/v1/users/{user['id']}/tokens", json={"name": "laptop"})
@@ -259,6 +341,25 @@ def test_cannot_escalate_through_a_role(
         "/v1/users", json={"name": "x", "roles": ["all"]}, headers=headers
     )
     assert response.status_code == 403
+
+
+def test_cannot_change_the_role_of_a_stronger_user(
+    app_client: TestClient, client: TestClient, services: Services
+) -> None:
+    client.post("/v1/roles", json={"id": "readers", "grants": [READ_A]})
+    client.post(
+        "/v1/users",
+        json={
+            "name": "strong",
+            "roles": ["readers"],
+            "grants": [{"accounts": ["*"], "allow": ["admin"]}],
+        },
+    )
+    headers = _manager(services)
+    # The manager covers the role, but not the admin who holds it.
+    shrunk = app_client.put("/v1/roles/readers", json={"grants": []}, headers=headers)
+    assert shrunk.status_code == 403
+    assert client.get("/v1/roles/readers").json()["grants"] != []
 
 
 def test_cannot_manage_a_stronger_user(

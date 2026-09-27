@@ -28,7 +28,7 @@ from urllib.parse import urlsplit
 from ..common.clock import utc_now
 from ..data.models import Account, ProviderType
 from ..data.providers import OAuthClient, authorize_url, new_pkce
-from ..errors import BadRequestError, ForbiddenError, NotSupportedError
+from ..errors import BadRequestError, NotSupportedError
 from .access import Access
 from .accounts import AccountService
 from .adapters import REFRESH_TOKEN, Adapters
@@ -105,16 +105,18 @@ class OAuthService:
     async def finish(
         self, access: Access, provider: ProviderType, state: str, code: str
     ) -> Account:
-        """The account the sign-in connected, or signed in again."""
-        pending = self._pending.pop(state, None)
+        """The account the sign-in connected, or signed in again. Another
+        user's sign-in answers as an unknown one and stays open for its
+        owner."""
+        pending = self._pending.get(state)
+        if pending is None or pending.user_id != access.user_id:
+            raise BadRequestError("this sign-in is unknown or expired: start again")
+        del self._pending[state]
         if (
-            pending is None
-            or pending.provider is not provider
+            pending.provider is not provider
             or self._clock() - pending.started > VALID_FOR
         ):
             raise BadRequestError("this sign-in is unknown or expired: start again")
-        if pending.user_id != access.user_id:
-            raise ForbiddenError("this sign-in was started by someone else")
         client = self._client(provider)
         tokens = await client.exchange(code, pending.redirect_uri, pending.verifier)
         if tokens.refresh_token is None:

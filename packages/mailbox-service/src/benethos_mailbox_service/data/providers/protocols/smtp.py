@@ -118,12 +118,21 @@ class SmtpSession:
                     # SASL XOAUTH2: user, bearer token, separated by ^A.
                     answer = f"user={login.username}\1auth=Bearer {login.secret}\1\1"
                     connection.ehlo_or_helo_if_needed()
+                    # A server that refuses the token sends a challenge with
+                    # the reason and wants an empty line back (RFC 7628
+                    # 3.2.2), then answers 535.
                     connection.auth(
                         "XOAUTH2",
-                        lambda challenge=None: answer,
+                        lambda challenge=None: answer if challenge is None else "",
                         initial_response_ok=True,
                     )
                 else:
+                    if not (login.username + login.secret).isascii():
+                        # smtplib writes AUTH in ASCII alone.
+                        raise BadRequestError(
+                            "the user name or password goes beyond ASCII, "
+                            "which the login to the mail server cannot carry"
+                        )
                     connection.login(login.username, login.secret)
             yield connection
         finally:
@@ -147,9 +156,18 @@ def _errors() -> Iterator[None]:
             yield
         except (BadRequestError, ProviderAuthError, ProviderError):
             raise
-        except UnicodeError as exc:
-            raise BadRequestError(f"an address cannot go on the wire: {exc}") from None
-        except smtplib.SMTPAuthenticationError:
+        except UnicodeError:
+            # Never the error's text: it quotes the character, which may be
+            # part of a secret.
+            raise BadRequestError(
+                "a value beyond ASCII cannot go to the mail server"
+            ) from None
+        except smtplib.SMTPAuthenticationError as exc:
+            if 400 <= exc.smtp_code < 500:
+                # 454 4.7.0 and the like: try again later.
+                raise ProviderUnavailableError(
+                    f"the mail server refused the login for now ({exc.smtp_code})"
+                ) from None
             raise ProviderAuthError("the mail server rejected the login") from None
         except smtplib.SMTPServerDisconnected as exc:
             raise ProviderUnavailableError(

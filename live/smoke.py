@@ -26,14 +26,10 @@ import sys
 from typing import Any
 
 import anyio
-from _common import Run, accounts, admin_token, imap_settings, read_env
+from _common import Run, accounts, imap_settings, in_process_service, read_env
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
-from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import MailboxServiceError
-from benethos_mailbox_service.main import build_services, create_app
 
 
 def unread_ids(client: TestClient, account_id: str) -> set[str]:
@@ -232,18 +228,7 @@ def main() -> int:
     args = parser.parse_args()
 
     env = read_env()
-    settings = Settings(
-        storage="memory",
-        key_provider="env",
-        master_key=SecretStr(encode_recovery(cipher.new_key())),
-        sync_interval=0,
-    )
-    services = build_services(settings)
-    services.vault.initialize()
-    client = TestClient(
-        create_app(settings, services),
-        headers={"Authorization": f"Bearer {admin_token(services)}"},
-    )
+    services, client = in_process_service()
     run = Run()
     used: dict[str, dict[str, Any]] = {}
     ids = [
@@ -285,7 +270,7 @@ def main() -> int:
         print(f"\n== sync {account_id}")
         try:
             anyio.run(services.sync.sync_account, account_id)
-            states = services.sync._index.folder_states(account_id)
+            states = services.index.folder_states(account_id)
             run.check("one pass", True, f"{len(states)} folders indexed")
             anyio.run(services.sync.sync_account, account_id)
             run.check("a second pass right after", True)

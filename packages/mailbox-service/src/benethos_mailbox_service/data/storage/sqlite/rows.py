@@ -8,7 +8,6 @@ import sqlite3
 from collections.abc import Callable
 from typing import Generic, TypeVar
 
-from ..table import missing
 from .database import Database
 
 T = TypeVar("T")
@@ -28,10 +27,14 @@ class SqliteRows(Generic[T]):
         return [self._of(row) for row in rows]
 
     def get(self, row_id: str) -> T:
-        row = self._db.one(f"SELECT * FROM {self._table} WHERE id = ?", (row_id,))
-        if row is None:
-            raise missing(self._what, row_id)
-        return self._of(row)
+        return self._of(
+            self._db.must_find(
+                f"SELECT * FROM {self._table} WHERE id = ?",
+                (row_id,),
+                self._what,
+                row_id,
+            )
+        )
 
     def delete(self, row_id: str) -> None:
         self._db.must_change(

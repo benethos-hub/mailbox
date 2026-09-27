@@ -1,0 +1,60 @@
+"""The size of a request body, for both front ends.
+
+A request whose body is larger than ``MAX_BODY`` is refused with ``413``
+before the service reads it all: when its ``Content-Length`` says so,
+at once, and when it comes in chunks, as soon as it grows past the limit.
+"""
+
+from __future__ import annotations
+
+from starlette.exceptions import HTTPException
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+# The largest mail the service sends carries 25 MB of attachments, which
+# base64 in a JSON body makes about 34 MB.
+MAX_BODY = 40 * 1024 * 1024
+
+
+class BodyLimit:
+    """ASGI middleware. The body is counted where the app reads it, so the
+    refusal is an ``HTTPException`` that the front end of the request
+    answers in its own way."""
+
+    def __init__(self, app: ASGIApp, limit: int | None = None) -> None:
+        self._app = app
+        self._limit = MAX_BODY if limit is None else limit
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self._app(scope, receive, send)
+            return
+        declared = _content_length(scope)
+        received = 0
+
+        async def limited() -> Message:
+            nonlocal received
+            if declared is not None and declared > self._limit:
+                raise self._too_large()
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self._limit:
+                    raise self._too_large()
+            return message
+
+        await self._app(scope, limited, send)
+
+    def _too_large(self) -> HTTPException:
+        return HTTPException(
+            413, f"the request is larger than {self._limit // (1024 * 1024)} MB"
+        )
+
+
+def _content_length(scope: Scope) -> int | None:
+    for name, value in scope["headers"]:
+        if name == b"content-length":
+            try:
+                return int(value)
+            except ValueError:
+                return None
+    return None

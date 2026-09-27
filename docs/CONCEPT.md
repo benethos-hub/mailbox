@@ -234,10 +234,12 @@ parsing). The adapter boundary keeps the choice reversible: if thread usage
 becomes a bottleneck with many accounts, only `data/providers/imap/`
 changes.
 
-**Three auth modes from the start:** password, app password, and SASL
-XOAUTH2 with a token refresher. XOAUTH2 matters beyond Google and Microsoft:
-it is the only non-password way into Yahoo and AOL, once a provider grants
-it. Server extensions used where offered: `IDLE` (push), `CONDSTORE` /
+**Three auth modes planned:** password, app password, and SASL XOAUTH2
+with a token refresher. XOAUTH2 matters beyond Google and Microsoft: it
+is the only non-password way into Yahoo and AOL, once a provider grants
+it. Password and app password work. XOAUTH2 waits for the refresher: the
+IMAP and SMTP modules speak it, but an account with `auth: xoauth2`
+answers `501` until the service can renew its token. Server extensions used where offered: `IDLE` (push), `CONDSTORE` /
 `QRESYNC` (cheap delta), `UIDPLUS` and `MOVE`, `OBJECTID` (stable ids, 4.1).
 
 Gmail and Microsoft accounts *could* run over IMAP too, but their native
@@ -632,8 +634,8 @@ Rules of the implementation (phase 2):
 | GET | `{acc}/messages/{id}/raw` | RFC 822 source (`message/rfc822`) |
 | GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, streamed |
 | POST | `{acc}/messages/batch` | bulk `update` / `move` / `delete` for up to 100 ids, per-id result |
-| GET | `{acc}/threads` | thread list (capability `threads`) |
-| GET | `{acc}/threads/{thread_id}` | thread with its message summaries |
+| GET | `{acc}/threads` | thread list, **planned** (6.3, ROADMAP) |
+| GET | `{acc}/threads/{thread_id}` | thread with its message summaries, **planned** |
 
 **Decided 2026-09-24, changing messages:**
 
@@ -675,6 +677,7 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
 | POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
 | GET | `{acc}/sends` | the audit of sends, newest first |
+| GET | `/v1/sends` | the audit of sends of every account the caller may audit, newest first |
 
 **Decided 2026-09-24, reply and forward:**
 
@@ -741,7 +744,7 @@ request that fails stores nothing and may be tried again.
 | GET | `{acc}/changes?since=<state>` | created / updated / deleted message ids since a state token, plus a new state |
 | GET | `/v1/changes?since=<state>` | the same across all accounts (`list_all_changes`) |
 | GET / POST | `/v1/webhooks` | list, register (URL, events, account filter) |
-| DELETE | `/v1/webhooks/{webhook_id}` | remove |
+| GET / DELETE | `/v1/webhooks/{webhook_id}` | one webhook with its last 20 posts to the receiver, remove |
 
 Events: `message.created`, `message.updated`, `message.deleted`,
 `message.sent`, `account.needs_reauth`. Payloads carry ids only, signed with
@@ -796,7 +799,9 @@ time up to an hour, 8 times in all (the settings
 After the last try its events are dropped and the webhook notes why in
 `last_error`. The connection goes to the address that was checked. A host
 in the local network passes, link-local, multicast and unspecified
-addresses do not, and redirects are not followed.
+addresses do not, nor the metadata services of cloud hosts outside
+link-local that are known (AWS over IPv6, Alibaba Cloud). Redirects are
+not followed.
 
 ### 6.6 Listing, search and pagination
 
@@ -1096,14 +1101,14 @@ with the role
   | Group | Operations |
   |---|---|
   | `accounts.read` | `list_accounts`, `get_account` |
-  | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes`, `list_all_changes` |
+  | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_changes`, `list_all_changes`, and the planned `list_threads`, `get_thread` |
   | `mail.write` | `update_message`, `delete_message` to trash, `batch_messages`, `create_folder`, `update_folder` |
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
-  | `audit` | `list_sends` |
+  | `audit` | `list_sends`, `list_all_sends` |
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
-  | `webhooks.manage` | `list_webhooks`, `create_webhook`, `delete_webhook`. Not account-bound |
+  | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook`. Not account-bound |
   | `users.manage` | users, their tokens, roles. Not account-bound |
   | `admin` | everything, and `show_recovery_key` (the recovery key in the UI, [UI.md](UI.md) 6.5), which only `admin` on every account gives and no grant names |
 
@@ -1184,8 +1189,10 @@ with the role
     password set by someone else must be changed at the next sign-in.
     `users set-password <name>` on the host sets one without the UI, for
     a forgotten password of the last administrator.
-  - Not in the API: a password is for a person at a browser. A user
-    without one cannot sign in to the UI.
+  - In the API, `POST /v1/users/{user_id}/password` (`set_password`)
+    does the same, with a password or with none, when the service makes
+    a one-time password and answers it once. A user without a password
+    cannot sign in to the UI.
 - **The UI sign-in switch** (**decided 2026-09-27**): `ui_sign_in` on
   the user says whether it may sign in to the UI at all. Without it the
   user is an API user: tokens only.
@@ -1199,7 +1206,9 @@ with the role
     reason. Setting a password or a one-time password is refused.
     Tokens keep working.
   - Switched on: the user still has no password. It gets a one-time
-    password as a new user does, and changes it at the first sign-in.
+    password as a new user does, on its page in the UI or with
+    `POST /v1/users/{user_id}/password`, and changes it at the first
+    sign-in.
   - Who switches: a user with `update_user`, for users whose rights it
     covers, as for any change of a user. Not for itself: a user cannot
     lock itself out of the UI. Nor can it disable itself, as it cannot
@@ -1242,7 +1251,9 @@ account, operation, recipients, outcome (`sent`, `denied` by a grant,
 `failed`), error code, refused recipients and the Message-ID. It keeps no
 reference to account or user, so it outlives both.
 `GET /v1/accounts/{account_id}/sends` reads it, newest first, with the
-right `list_sends` (group `audit`).
+right `list_sends` (group `audit`). `GET /v1/sends` (`list_all_sends`)
+reads it across the accounts the caller may audit, deleted ones
+included for a grant on every account.
 
 #### Endpoints
 
@@ -1254,6 +1265,7 @@ right `list_sends` (group `audit`).
 | GET / PATCH / DELETE | `/v1/users/{user_id}` | `users.manage`. Name, roles, grants, disabled, `ui_sign_in` |
 | GET / POST | `/v1/users/{user_id}/tokens` | `users.manage`. POST returns the token once |
 | DELETE | `/v1/users/{user_id}/tokens/{token_id}` | `users.manage`. Revoke |
+| POST | `/v1/users/{user_id}/password` | `users.manage`. A password to change at the next sign-in, or a one-time password answered once |
 | GET / POST | `/v1/roles` | `users.manage` |
 | GET / PUT / DELETE | `/v1/roles/{role_id}` | `users.manage` |
 
@@ -1304,8 +1316,11 @@ What applies in both modes:
    messages, which is JSON, carries a note that `from` and `subject` are
    the sender's words. This lowers the risk, it does not remove it.
 2. **Show the model what a person sees.** The HTML to text conversion drops
-   hidden content: `display:none`, zero-size or invisible text, comments.
-   Hidden text is a common carrier of injected instructions.
+   hidden content: `display:none`, text too small or too faint to read,
+   text pushed off the page or cut to nothing, text in the colour of its
+   own background, comments. Hidden text is a common carrier of injected
+   instructions. What an inline style does not show, such as text in the
+   colour of the page around it, still gets through, marked as foreign.
 3. **Recipient constraints** on the grant (`recipients`, 7.5): send only to
    the own domain, or to listed addresses. The strongest single measure
    when the model may send.
@@ -1384,7 +1399,7 @@ one or two `operationId`s.
 | `list_folders` | read | `list_folders` |
 | `search_messages` | read | `list_all_messages` across accounts, or `list_messages` for one |
 | `get_message` | read | `get_message`, body shortened, `max_chars` param |
-| `get_thread` | read | `get_thread` |
+| `get_thread` | read | `get_thread`, **planned** with threads (6.3) |
 | `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
 | `whats_new` | read | `list_all_changes` across accounts, or `list_changes` for one, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash |
@@ -1399,7 +1414,8 @@ one or two `operationId`s.
 **Decided 2026-09-24, attachments:** `get_attachment` hands images over
 as images, the pages of a PDF as PNG images (a page range, a few pages at
 a time), text types as text inside the foreign-content marker, and other
-types by name, type and size only. The conversion happens in the MCP
+types by name, type and size only. An HTML attachment becomes text as an
+HTML body does, its hidden parts left out. The conversion happens in the MCP
 server. The API keeps handing out the attachment as it is. A PDF sent as
 an embedded resource was refused by claude.ai in a test: it takes such a
 blob for an image.

@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import AwareDatetime, BaseModel, Field, SecretStr
 
 from ...data.models import ApiToken, DraftMessage, Grant, ProviderType
 
@@ -133,7 +133,8 @@ class UserCreate(BaseModel):
         default=False,
         description=(
             "May sign in to the configuration UI. Without: an API user, "
-            "tokens only. A password is then set in the UI."
+            "tokens only. A password is then set in the UI or with "
+            "`POST /v1/users/{user_id}/password`."
         ),
     )
 
@@ -165,7 +166,9 @@ class RoleReplace(BaseModel):
 
 class TokenCreate(BaseModel):
     name: str
-    expires_at: datetime | None = None
+    expires_at: AwareDatetime | None = Field(
+        default=None, description="With a time zone, e.g. 2026-12-31T23:59:59Z"
+    )
 
 
 class TokenInfo(BaseModel):
@@ -191,3 +194,25 @@ class TokenInfo(BaseModel):
 
 class TokenCreated(TokenInfo):
     token: str = Field(description="The token itself. Shown this once only.")
+
+
+class PasswordSet(BaseModel):
+    password: SecretStr | None = Field(
+        default=None,
+        description=(
+            "The new password. Without it the service makes a one-time "
+            "password and answers it."
+        ),
+    )
+
+
+class PasswordSetResult(BaseModel):
+    password: str | None = Field(
+        description=(
+            "The one-time password the service made, shown this once. Null "
+            "when the request named the password."
+        )
+    )
+    must_change: bool = Field(
+        default=True, description="The user changes it at its next sign-in."
+    )

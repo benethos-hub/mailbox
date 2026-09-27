@@ -8,206 +8,250 @@ constraint as ConflictError, anything else as StorageError.
 
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import stat
 import threading
 from collections.abc import Iterator
-from contextlib import contextmanager
-from datetime import datetime
+from contextlib import ExitStack, contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, overload
 
 from ....errors import ConflictError, StorageError
-from ...files import create_private
+from ...files import LockedError, create_private, exclusive_lock
 from ..table import missing
 
-MIGRATIONS: list[str] = [
+log = logging.getLogger(__name__)
+
+MIGRATIONS: list[list[str]] = [
     # 1: accounts, users, roles, tokens
-    """
-    CREATE TABLE accounts (
-        id TEXT PRIMARY KEY,
-        provider TEXT NOT NULL,
-        email TEXT NOT NULL,
-        display_name TEXT,
-        status TEXT NOT NULL,
-        settings TEXT NOT NULL DEFAULT '{}'
-    );
-    CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        roles TEXT NOT NULL DEFAULT '[]',
-        grants TEXT NOT NULL DEFAULT '[]',
-        disabled INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE roles (
-        id TEXT PRIMARY KEY,
-        grants TEXT NOT NULL DEFAULT '[]'
-    );
-    CREATE TABLE tokens (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        name TEXT NOT NULL,
-        token_hash TEXT NOT NULL UNIQUE,
-        created_at TEXT NOT NULL,
-        expires_at TEXT,
-        last_used_at TEXT,
-        revoked_at TEXT
-    );
-    """,
+    [
+        """
+        CREATE TABLE accounts (
+            id TEXT PRIMARY KEY,
+            provider TEXT NOT NULL,
+            email TEXT NOT NULL,
+            display_name TEXT,
+            status TEXT NOT NULL,
+            settings TEXT NOT NULL DEFAULT '{}'
+        )
+        """,
+        """
+        CREATE TABLE users (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            roles TEXT NOT NULL DEFAULT '[]',
+            grants TEXT NOT NULL DEFAULT '[]',
+            disabled INTEGER NOT NULL DEFAULT 0
+        )
+        """,
+        """
+        CREATE TABLE roles (
+            id TEXT PRIMARY KEY,
+            grants TEXT NOT NULL DEFAULT '[]'
+        )
+        """,
+        """
+        CREATE TABLE tokens (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            expires_at TEXT,
+            last_used_at TEXT,
+            revoked_at TEXT
+        )
+        """,
+    ],
     # 2: the wrapped data key and encrypted credentials
-    """
-    CREATE TABLE keys (
-        key_id TEXT PRIMARY KEY,
-        nonce BLOB NOT NULL,
-        ciphertext BLOB NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE credentials (
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        field TEXT NOT NULL,
-        key_id TEXT NOT NULL REFERENCES keys(key_id),
-        nonce BLOB NOT NULL,
-        ciphertext BLOB NOT NULL,
-        updated_at TEXT NOT NULL,
-        PRIMARY KEY (account_id, field)
-    );
-    """,
+    [
+        """
+        CREATE TABLE keys (
+            key_id TEXT PRIMARY KEY,
+            nonce BLOB NOT NULL,
+            ciphertext BLOB NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        """
+        CREATE TABLE credentials (
+            account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            field TEXT NOT NULL,
+            key_id TEXT NOT NULL REFERENCES keys(key_id),
+            nonce BLOB NOT NULL,
+            ciphertext BLOB NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (account_id, field)
+        )
+        """,
+    ],
     # 3: the id mapping and the state of each folder
-    """
-    CREATE TABLE message_index (
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        id TEXT NOT NULL,
-        native_id TEXT NOT NULL,
-        folder_id TEXT NOT NULL,
-        header TEXT,
-        PRIMARY KEY (account_id, id),
-        UNIQUE (account_id, native_id)
-    );
-    CREATE INDEX message_index_folder ON message_index (account_id, folder_id);
-    CREATE TABLE folder_states (
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        folder_id TEXT NOT NULL,
-        state TEXT NOT NULL,
-        PRIMARY KEY (account_id, folder_id)
-    );
-    """,
+    [
+        """
+        CREATE TABLE message_index (
+            account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            id TEXT NOT NULL,
+            native_id TEXT NOT NULL,
+            folder_id TEXT NOT NULL,
+            header TEXT,
+            PRIMARY KEY (account_id, id),
+            UNIQUE (account_id, native_id)
+        )
+        """,
+        "CREATE INDEX message_index_folder ON message_index (account_id, folder_id)",
+        """
+        CREATE TABLE folder_states (
+            account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            folder_id TEXT NOT NULL,
+            state TEXT NOT NULL,
+            PRIMARY KEY (account_id, folder_id)
+        )
+        """,
+    ],
     # 4: results of requests with an Idempotency-Key
-    """
-    CREATE TABLE idempotency (
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        key TEXT NOT NULL,
-        operation TEXT NOT NULL,
-        request_hash TEXT NOT NULL,
-        result TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        PRIMARY KEY (account_id, key)
-    );
-    CREATE INDEX idempotency_created ON idempotency (created_at);
-    """,
+    [
+        """
+        CREATE TABLE idempotency (
+            account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            key TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            request_hash TEXT NOT NULL,
+            result TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (account_id, key)
+        )
+        """,
+        "CREATE INDEX idempotency_created ON idempotency (created_at)",
+    ],
     # 5: the audit of sends. It outlives its account and user, so no references
-    """
-    CREATE TABLE sends (
-        id TEXT PRIMARY KEY,
-        created_at TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        credential_id TEXT,
-        account_id TEXT NOT NULL,
-        operation TEXT NOT NULL,
-        recipients TEXT NOT NULL,
-        outcome TEXT NOT NULL,
-        error TEXT,
-        refused TEXT NOT NULL,
-        message_id_header TEXT
-    );
-    CREATE INDEX sends_account ON sends (account_id, created_at);
-    CREATE INDEX sends_user ON sends (user_id, account_id, created_at);
-    """,
+    [
+        """
+        CREATE TABLE sends (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            credential_id TEXT,
+            account_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            recipients TEXT NOT NULL,
+            outcome TEXT NOT NULL,
+            error TEXT,
+            refused TEXT NOT NULL,
+            message_id_header TEXT
+        )
+        """,
+        "CREATE INDEX sends_account ON sends (account_id, created_at)",
+        "CREATE INDEX sends_user ON sends (user_id, account_id, created_at)",
+    ],
     # 6: the change log behind the change feed
-    """
-    CREATE TABLE changes (
-        seq INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        message_id TEXT NOT NULL,
-        type TEXT NOT NULL,
-        at TEXT NOT NULL
-    );
-    CREATE INDEX changes_account ON changes (account_id, seq);
-    CREATE INDEX changes_at ON changes (at);
-    """,
+    [
+        """
+        CREATE TABLE changes (
+            seq INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            message_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            at TEXT NOT NULL
+        )
+        """,
+        "CREATE INDEX changes_account ON changes (account_id, seq)",
+        "CREATE INDEX changes_at ON changes (at)",
+    ],
     # 7: webhooks, their sealed secret and where their delivery stands
-    """
-    CREATE TABLE webhooks (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        url TEXT NOT NULL,
-        events TEXT NOT NULL,
-        accounts TEXT,
-        created_at TEXT NOT NULL,
-        key_id TEXT NOT NULL REFERENCES keys(key_id),
-        nonce BLOB NOT NULL,
-        ciphertext BLOB NOT NULL,
-        cursor INTEGER NOT NULL,
-        attempts INTEGER NOT NULL DEFAULT 0,
-        next_attempt_at TEXT,
-        last_delivery_at TEXT,
-        last_error TEXT
-    );
-    """,
+    [
+        """
+        CREATE TABLE webhooks (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            url TEXT NOT NULL,
+            events TEXT NOT NULL,
+            accounts TEXT,
+            created_at TEXT NOT NULL,
+            key_id TEXT NOT NULL REFERENCES keys(key_id),
+            nonce BLOB NOT NULL,
+            ciphertext BLOB NOT NULL,
+            cursor INTEGER NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            next_attempt_at TEXT,
+            last_delivery_at TEXT,
+            last_error TEXT
+        )
+        """,
+    ],
     # 8: an Idempotency-Key counts per account and user. The results kept
     # are a cache of 24 hours, so the old ones are dropped
-    """
-    DROP TABLE idempotency;
-    CREATE TABLE idempotency (
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        user_id TEXT NOT NULL,
-        key TEXT NOT NULL,
-        operation TEXT NOT NULL,
-        request_hash TEXT NOT NULL,
-        result TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        PRIMARY KEY (account_id, user_id, key)
-    );
-    CREATE INDEX idempotency_created ON idempotency (created_at);
-    """,
+    [
+        "DROP TABLE idempotency",
+        """
+        CREATE TABLE idempotency (
+            account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            user_id TEXT NOT NULL,
+            key TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            request_hash TEXT NOT NULL,
+            result TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (account_id, user_id, key)
+        )
+        """,
+        "CREATE INDEX idempotency_created ON idempotency (created_at)",
+    ],
     # 9: passwords, and user names that are unique regardless of case, the
     # name being what a person signs in with. A name taken twice before
-    # gets part of its id, so the index can be made
-    """
-    UPDATE users SET name = name || '-' || substr(id, 5, 8)
-        WHERE rowid NOT IN (SELECT MIN(rowid) FROM users GROUP BY lower(name));
-    CREATE UNIQUE INDEX users_name ON users (name COLLATE NOCASE);
-    CREATE TABLE passwords (
-        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-        hash TEXT NOT NULL,
-        must_change INTEGER NOT NULL DEFAULT 0,
-        updated_at TEXT NOT NULL
-    );
-    """,
+    # gets part of its id, so the index can be made. lower() and NOCASE
+    # fold ASCII letters alone: two names that differ in the case of
+    # another letter, such as Ä and ä, both stay. The domain compares names
+    # with casefold() and refuses such a second name since.
+    [
+        """
+        UPDATE users SET name = name || '-' || substr(id, 5, 8)
+            WHERE rowid NOT IN (SELECT MIN(rowid) FROM users GROUP BY lower(name))
+        """,
+        "CREATE UNIQUE INDEX users_name ON users (name COLLATE NOCASE)",
+        """
+        CREATE TABLE passwords (
+            user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            hash TEXT NOT NULL,
+            must_change INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL
+        )
+        """,
+    ],
     # 10: when a user last signed in to the UI
-    """
-    ALTER TABLE passwords ADD COLUMN last_sign_in_at TEXT;
-    """,
+    [
+        "ALTER TABLE passwords ADD COLUMN last_sign_in_at TEXT",
+    ],
     # 11: the last posts to each webhook, for its delivery log
-    """
-    CREATE TABLE webhook_attempts (
-        seq INTEGER PRIMARY KEY AUTOINCREMENT,
-        webhook_id TEXT NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
-        delivery_id TEXT NOT NULL,
-        at TEXT NOT NULL,
-        events INTEGER NOT NULL,
-        status INTEGER,
-        error TEXT
-    );
-    CREATE INDEX webhook_attempts_webhook ON webhook_attempts (webhook_id, seq);
-    """,
+    [
+        """
+        CREATE TABLE webhook_attempts (
+            seq INTEGER PRIMARY KEY AUTOINCREMENT,
+            webhook_id TEXT NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+            delivery_id TEXT NOT NULL,
+            at TEXT NOT NULL,
+            events INTEGER NOT NULL,
+            status INTEGER,
+            error TEXT
+        )
+        """,
+        "CREATE INDEX webhook_attempts_webhook ON webhook_attempts (webhook_id, seq)",
+    ],
     # 12: whether a user may sign in to the UI. Those with a password so
     # far keep it, those without are API users
-    """
-    ALTER TABLE users ADD COLUMN ui_sign_in INTEGER NOT NULL DEFAULT 0;
-    UPDATE users SET ui_sign_in = 1 WHERE id IN (SELECT user_id FROM passwords);
-    """,
+    [
+        "ALTER TABLE users ADD COLUMN ui_sign_in INTEGER NOT NULL DEFAULT 0",
+        "UPDATE users SET ui_sign_in = 1 WHERE id IN (SELECT user_id FROM passwords)",
+    ],
+    # 13: webhooks go with the user who made them. Those of users deleted
+    # before were posted to by nobody's rights, and nobody could remove them
+    [
+        "DELETE FROM webhooks WHERE user_id NOT IN (SELECT id FROM users)",
+    ],
 ]
+
 
 SCHEMA_VERSION = len(MIGRATIONS)
 
@@ -217,6 +261,7 @@ class Database:
     path it lives in memory, for tests."""
 
     def __init__(self, path: Path | None = None) -> None:
+        self._path = path
         if path is not None:
             path.parent.mkdir(parents=True, exist_ok=True)
             _owner_only(path)
@@ -232,6 +277,10 @@ class Database:
             self._connection.execute("PRAGMA foreign_keys = ON")
             # Freed pages are overwritten, so deleted secrets do not linger.
             self._connection.execute("PRAGMA secure_delete = ON")
+            # Case folded as Python folds it, beyond ASCII too.
+            self._connection.create_function(
+                "casefold", 1, _casefold, deterministic=True
+            )
         try:
             self._migrate()
         except BaseException:
@@ -293,6 +342,15 @@ class Database:
             row: sqlite3.Row | None = self._connection.execute(sql, params).fetchone()
             return row
 
+    def must_find(
+        self, sql: str, params: tuple[Any, ...], what: str, row_id: str
+    ) -> sqlite3.Row:
+        """``one`` for a row that must be there: NotFoundError when not."""
+        row = self.one(sql, params)
+        if row is None:
+            raise missing(what, row_id)
+        return row
+
     def execute(self, sql: str, params: tuple[Any, ...] = ()) -> int:
         """One statement in a transaction of its own. Returns the rows it changed."""
         with self.transaction() as db:
@@ -305,6 +363,20 @@ class Database:
         the row is not there."""
         if not self.execute(sql, params):
             raise missing(what, row_id)
+
+    @contextmanager
+    def serving(self) -> Iterator[bool]:
+        """Mark the database as used by a running service, for as long as
+        the block runs, so that a restore refuses to replace it. Yields
+        False when another service marked it already."""
+        with ExitStack() as held:
+            if self._path is not None:
+                try:
+                    held.enter_context(exclusive_lock(service_lock(self._path)))
+                except LockedError:
+                    yield False
+                    return
+            yield True
 
     def schema_version(self) -> int:
         row = self.one("SELECT value FROM meta WHERE key = 'schema_version'")
@@ -331,18 +403,25 @@ class Database:
             )
         current = self.schema_version()
         if current > SCHEMA_VERSION:
-            raise RuntimeError(
+            raise StorageError(
                 f"database schema {current} is newer than this version supports "
-                f"({SCHEMA_VERSION})"
+                f"({SCHEMA_VERSION}): run a newer version of the service"
             )
         for version in range(current, SCHEMA_VERSION):
             with self.transaction() as db:
-                for statement in _statements(MIGRATIONS[version]):
+                renamed = _renamed_by_9(db) if version == 8 else []
+                for statement in MIGRATIONS[version]:
                     db.execute(statement)
                 db.execute(
                     "INSERT OR REPLACE INTO meta (key, value)"
                     " VALUES ('schema_version', ?)",
                     (str(version + 1),),
+                )
+            for old, new in renamed:
+                log.warning(
+                    "user %s renamed to %s: the name was taken regardless of case",
+                    old,
+                    new,
                 )
 
 
@@ -359,8 +438,13 @@ def translated() -> Iterator[None]:
 
 
 def iso(value: datetime | None) -> str | None:
-    """A time as the TEXT columns hold it."""
-    return value.isoformat() if value else None
+    """A time as the TEXT columns hold it: in UTC, so that times compare
+    as text. A time without a zone is refused."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        raise ValueError("a time without a zone cannot be stored")
+    return value.astimezone(UTC).isoformat()
 
 
 @overload
@@ -372,6 +456,29 @@ def parse_iso(value: str | None) -> datetime | None: ...
 def parse_iso(value: str | None) -> datetime | None:
     """The time a TEXT column holds, None for NULL."""
     return datetime.fromisoformat(value) if value else None
+
+
+def _casefold(value: str | None) -> str | None:
+    return value.casefold() if isinstance(value, str) else value
+
+
+def _renamed_by_9(db: sqlite3.Connection) -> list[tuple[str, str]]:
+    """The names migration 9 is about to change, before and after."""
+    rows = db.execute(
+        "SELECT id, name FROM users WHERE rowid NOT IN"
+        " (SELECT MIN(rowid) FROM users GROUP BY lower(name))"
+    ).fetchall()
+    return [(row["name"], f"{row['name']}-{row['id'][4:12]}") for row in rows]
+
+
+def migrate_file(path: Path) -> None:
+    """Bring the database file at ``path`` to this version's schema."""
+    Database(path).close()
+
+
+def service_lock(path: Path) -> Path:
+    """The lock file a running service holds beside its database."""
+    return path.with_name(path.name + ".lock")
 
 
 def _owner_only(path: Path) -> None:
@@ -403,7 +510,3 @@ def inspect_snapshot(data: bytes) -> int:
     if row is None:
         raise ValueError("not a database of this service")
     return int(row[0])
-
-
-def _statements(script: str) -> list[str]:
-    return [part.strip() for part in script.split(";") if part.strip()]

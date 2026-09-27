@@ -6,7 +6,13 @@ from __future__ import annotations
 from .accounts import SqliteAccountRepository
 from .changes import SqliteChangeLogRepository
 from .credentials import SqliteCredentialRepository, SqliteKeyRepository
-from .database import SCHEMA_VERSION, Database, inspect_snapshot
+from .database import (
+    SCHEMA_VERSION,
+    Database,
+    inspect_snapshot,
+    migrate_file,
+    service_lock,
+)
 from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
 from .passwords import SqlitePasswordRepository
@@ -30,4 +36,6 @@ __all__ = [
     "SqliteUserRepository",
     "SqliteWebhookRepository",
     "inspect_snapshot",
+    "migrate_file",
+    "service_lock",
 ]

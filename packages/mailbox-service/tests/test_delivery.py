@@ -9,6 +9,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import anyio
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -82,7 +83,7 @@ def hook(client: TestClient, **fields: Any) -> dict[str, Any]:
 
 
 def stored(services: Services, webhook_id: str) -> Any:
-    return services.webhooks._repository.get(webhook_id)  # type: ignore[attr-defined]
+    return services.repositories.webhooks.get(webhook_id)
 
 
 async def test_a_signed_post_of_what_happened(
@@ -114,6 +115,25 @@ async def test_a_signed_post_of_what_happened(
     listed = client.get("/v1/webhooks").json()[0]
     assert listed["last_delivery_at"] is not None
     assert listed["last_error"] is None
+
+
+async def test_the_api_shows_a_webhook_with_its_posts(
+    client: TestClient, services: Services, account_id: str, receiver: Receiver
+) -> None:
+    created = hook(client)
+    mark_read(client, account_id, "m0")
+    receiver.status = 500
+    await services.deliveries.deliver_due()
+    shown = client.get(f"/v1/webhooks/{created['id']}").json()
+    assert shown["url"] == URL and "secret" not in shown
+    [post] = shown["deliveries"]
+    assert (post["events"], post["status"]) == (1, 500)
+    assert post["error"] == "the receiver answered 500"
+    other = TestClient(
+        client.app,
+        headers=bearer_for(services, Grant(accounts=["*"], allow=["webhooks.manage"])),
+    )
+    assert other.get(f"/v1/webhooks/{created['id']}").status_code == 404
 
 
 def test_the_signature_is_hmac_sha256_of_time_and_body() -> None:
@@ -205,7 +225,7 @@ async def test_a_failed_post_is_tried_again_later(
     assert record.delivery.attempts == 0
     assert record.webhook.last_error is None
     # Both posts are in the delivery log, the newest first.
-    logged = services.webhooks._repository.attempts(created["id"])  # type: ignore[attr-defined]
+    logged = services.repositories.webhooks.attempts(created["id"])
     assert [(a.status, a.error, a.events) for a in logged] == [
         (200, None, 1),
         (503, "the receiver answered 503", 1),
@@ -355,6 +375,11 @@ async def test_addresses_no_receiver_has_are_refused(address: str) -> None:
         ("::1", True),
         ("93.184.215.14", True),
         ("169.254.169.254", False),
+        ("fd00:ec2::254", False),
+        ("100.100.100.200", False),
+        ("::ffff:100.100.100.200", False),
+        ("fd12:3456::7", True),
+        ("100.101.102.103", True),
         ("::ffff:169.254.169.254", False),
         ("64:ff9b::a9fe:a9fe", False),
         ("64:ff9b::a00:5", True),
@@ -370,3 +395,46 @@ async def test_a_host_that_does_not_resolve() -> None:
 
     with pytest.raises(ProviderUnavailableError, match="does not resolve"):
         await WebhookPoster(resolve=nowhere).post(URL, b"{}", {})
+
+
+async def test_a_bug_with_one_webhook_does_not_stop_the_others(
+    client: TestClient,
+    services: Services,
+    account_id: str,
+    receiver: Receiver,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    first = hook(client)
+    hook(client)
+    mark_read(client, account_id, "m0")
+    receiver.failure = KeyError("a bug")
+    await services.deliveries.deliver_due()
+    receiver.failure = None
+    await services.deliveries.deliver_due()
+    assert len(receiver.posts) == 4  # both tried, then both again
+    assert f"webhook {first['id']} failed" in caplog.text
+
+
+async def test_a_failed_round_does_not_end_the_dispatcher(
+    services: Services,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    rounds: list[int] = []
+
+    async def deliver_due() -> None:
+        rounds.append(1)
+        raise RuntimeError("the database is gone")
+
+    monkeypatch.setattr(services.deliveries, "deliver_due", deliver_due)
+    with anyio.CancelScope() as scope:
+
+        async def sleep(seconds: float) -> None:
+            if len(rounds) == 2:
+                scope.cancel()
+            await anyio.sleep(0)
+
+        monkeypatch.setattr(services.deliveries, "_sleep", sleep)
+        await services.deliveries.run()
+    assert len(rounds) == 2
+    assert "a round of webhook posts failed" in caplog.text

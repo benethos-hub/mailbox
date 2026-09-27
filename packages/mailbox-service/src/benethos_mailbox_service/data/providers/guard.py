@@ -49,14 +49,9 @@ class Guard:
 
     def check(self) -> None:
         """Refuse at once while a login stands rejected or the server rests."""
+        self._check_login()
         with self._state:
-            rejected = self._login_rejected
             wait = self._paused_until - self._clock()
-        if rejected:
-            raise ProviderAuthError(
-                "the server rejected the login before: no new attempt until the "
-                "credential is replaced or the account is verified"
-            )
         if wait > 0:
             raise ProviderUnavailableError(
                 f"the mail server was unreachable: next attempt in {math.ceil(wait)}s"
@@ -84,11 +79,12 @@ class Guard:
             self._paused_until = 0.0
 
     def once(self, step: Callable[[], T]) -> T:
-        """Run ``step`` once, paced, refused while a login stands rejected
-        or the server rests, and a rejected login inside blocks further
-        attempts. For a connection made and dropped within the step, such
-        as a send over SMTP."""
-        self.check()
+        """Run ``step`` once, paced, refused while a login stands rejected,
+        and a rejected login inside blocks further attempts. For a
+        connection made and dropped within the step, such as a send over
+        SMTP. The pause of ``attempts`` does not hold it back: the step may
+        reach another server."""
+        self._check_login()
         self.acquire()
         with self.refused_logins():
             return step()
@@ -121,6 +117,15 @@ class Guard:
         self._pause()
         assert last is not None
         raise last
+
+    def _check_login(self) -> None:
+        with self._state:
+            rejected = self._login_rejected
+        if rejected:
+            raise ProviderAuthError(
+                "the server rejected the login before: no new attempt until the "
+                "credential is replaced or the account is verified"
+            )
 
     def _pause(self) -> None:
         with self._state:

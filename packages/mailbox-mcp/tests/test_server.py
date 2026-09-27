@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections.abc import Callable
 from pathlib import Path
 
 import httpx
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
 from benethos_mailbox_mcp import __version__, render, server
 from benethos_mailbox_mcp.client import MailboxApiClient
@@ -239,13 +241,81 @@ async def test_a_tool_call_through_the_server(api: Callable) -> None:
     assert "Inbox" in json.dumps(result, default=str)
 
 
+EVERY_OPERATION = {need for tool in server.TOOLS for need in tool.needs}
+
+
+@pytest.mark.parametrize(
+    ("tool", "arguments", "field"),
+    [
+        ("search_messages", {"limit": 0}, "limit"),
+        ("search_messages", {"limit": server.MAX_LIMIT + 1}, "limit"),
+        ("whats_new", {"limit": server.MAX_CHANGES + 1}, "limit"),
+        (
+            "get_message",
+            {"account_id": "acc_1", "message_id": "m", "max_chars": 199},
+            "max_chars",
+        ),
+        (
+            "get_attachment",
+            {
+                "account_id": "acc_1",
+                "message_id": "m",
+                "attachment_id": "a",
+                "pages": server.MAX_PAGES + 1,
+            },
+            "pages",
+        ),
+        (
+            "update_messages",
+            {"account_id": "acc_1", "message_ids": [], "unread": True},
+            "message_ids",
+        ),
+        (
+            "update_messages",
+            {
+                "account_id": "acc_1",
+                "message_ids": [f"m{n}" for n in range(server.MAX_BATCH + 1)],
+                "unread": True,
+            },
+            "message_ids",
+        ),
+        (
+            "send_message",
+            {
+                "account_id": "acc_1",
+                "to": [f"r{n}@example.com" for n in range(101)],
+                "subject": "s",
+                "text": "t",
+            },
+            "to",
+        ),
+    ],
+)
+async def test_the_server_refuses_arguments_out_of_bounds(
+    api: Callable, tool: str, arguments: dict[str, object], field: str
+) -> None:
+    """The bounds live in the tools' signatures: the server checks them
+    before a tool runs, and nothing reaches the service."""
+    fake = api([])
+    with pytest.raises(SdkToolError, match=rf"(?s)validation error.*\n{field}\n"):
+        await server.build_server(EVERY_OPERATION).call_tool(tool, arguments)
+    assert fake.calls == []
+
+
 # --- the command line ------------------------------------------------------------
 
 
-def test_client_is_created_once() -> None:
+def test_client_is_created_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
     first = server.client()
     assert isinstance(first, MailboxApiClient)
     assert server.client() is first
+
+
+def test_use_client_hands_back_the_one_before(make_client: Callable) -> None:
+    first = make_client(lambda _: httpx.Response(200, json=[]))
+    assert server.use_client(None) is first
+    assert server.use_client(None) is None
 
 
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -275,7 +345,20 @@ def test_main_runs_stdio_with_the_allowed_tools(
     assert runs == [(set(READ), "stdio")]
 
 
+def test_the_log_names_no_request_url(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    for name in ("httpx", "httpcore"):
+        monkeypatch.setattr(logging.getLogger(name), "level", logging.NOTSET)
+    server.configure_logging("INFO")
+    with caplog.at_level(logging.INFO):
+        logging.getLogger("httpx").info("HTTP Request: GET /v1/messages?q=invoice")
+    assert "invoice" not in caplog.text
+    assert logging.getLogger("httpx").getEffectiveLevel() == logging.WARNING
+
+
 def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
+
     async def unreachable() -> set[str]:
         raise ToolError("The mailbox service is not reachable")
 
@@ -284,10 +367,16 @@ def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
         server.main([])
 
 
+def test_main_without_a_token() -> None:
+    with pytest.raises(SystemExit, match="MAILBOX_SERVICE_TOKEN is not set"):
+        server.main([])
+
+
 def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> None:
     """The start runs in an event loop of its own. A client made there would
     carry connections of a closed loop into the server's."""
 
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
     made: list[MailboxApiClient] = []
 
     async def operations() -> set[str]:

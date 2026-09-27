@@ -117,6 +117,31 @@ async def test_unreachable_service_says_what_to_do(make_client: Callable) -> Non
     await client.aclose()
 
 
+async def test_a_slow_answer_is_no_unreachable_service(make_client: Callable) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("slow", request=request)
+
+    client = make_client(handler)
+    with pytest.raises(ToolError, match="did not answer within 30 s") as caught:
+        await client.request("GET", "/v1/messages")
+    assert not isinstance(caught.value, ServiceUnavailableError)
+    with pytest.raises(ToolError, match="within 120 s"):
+        await client.get_attachment("acc_1", "msg_1", "att_0", max_bytes=10)
+    await client.aclose()
+
+
+async def test_a_connection_that_times_out_is_unreachable(
+    make_client: Callable,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectTimeout("no answer", request=request)
+
+    client = make_client(handler)
+    with pytest.raises(ServiceUnavailableError, match="not reachable"):
+        await client.request("GET", "/v1/accounts")
+    await client.aclose()
+
+
 def recording(seen: list[httpx.Request]) -> httpx.MockTransport:
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request)
@@ -149,7 +174,7 @@ async def test_url_and_token_from_environment(
     ],
 )
 def test_urls_that_keep_the_token_safe(url: str) -> None:
-    MailboxApiClient(base_url=url, allow_http=False)
+    MailboxApiClient(base_url=url, token="tok", allow_http=False)
 
 
 @pytest.mark.parametrize(
@@ -161,24 +186,29 @@ def test_http_to_another_machine_needs_to_be_allowed(
 ) -> None:
     monkeypatch.delenv("MAILBOX_SERVICE_ALLOW_HTTP", raising=False)
     with pytest.raises(ToolError, match="MAILBOX_SERVICE_ALLOW_HTTP=1"):
-        MailboxApiClient(base_url=url)
+        MailboxApiClient(base_url=url, token="tok")
     monkeypatch.setenv("MAILBOX_SERVICE_ALLOW_HTTP", "1")
-    MailboxApiClient(base_url=url)
+    MailboxApiClient(base_url=url, token="tok")
 
 
 @pytest.mark.parametrize("url", ["ftp://mail.example.org", "mail.example.org"])
 def test_only_http_and_https(url: str) -> None:
     with pytest.raises(ToolError, match="http or https"):
-        MailboxApiClient(base_url=url, allow_http=True)
+        MailboxApiClient(base_url=url, token="tok", allow_http=True)
 
 
 async def test_defaults_without_environment() -> None:
     seen: list[httpx.Request] = []
-    client = MailboxApiClient(transport=recording(seen))
+    client = MailboxApiClient(token="tok", transport=recording(seen))
     await client.request("GET", "/v1/accounts")
     await client.aclose()
     assert str(seen[0].url).startswith(DEFAULT_URL)
-    assert "authorization" not in seen[0].headers
+
+
+@pytest.mark.parametrize("token", [None, ""])
+def test_no_token_names_the_variable(token: str | None) -> None:
+    with pytest.raises(ToolError, match="MAILBOX_SERVICE_TOKEN is not set"):
+        MailboxApiClient(token=token)
 
 
 async def test_ids_are_quoted_in_paths(make_client: Callable) -> None:

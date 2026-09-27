@@ -104,6 +104,15 @@ def test_an_account_id_is_taken_once(stores: Stores) -> None:
     assert stores.accounts.get("acc_1").email == "a@example.com"
 
 
+def test_a_user_name_is_unique_regardless_of_case(stores: Stores) -> None:
+    repo = stores.users
+    repo.save(User(id="usr_1", name="admin"))
+    with pytest.raises(ConflictError):
+        repo.save(User(id="usr_2", name="ADMIN"))
+    repo.save(User(id="usr_1", name="Admin"))
+    assert [u.name for u in repo.list()] == ["Admin"]
+
+
 def test_users_round_trip(stores: Stores) -> None:
     repo = stores.users
     user = User(
@@ -160,6 +169,20 @@ def test_tokens_round_trip(stores: Stores) -> None:
     assert repo.list_for_user("usr_1") == []
     with pytest.raises(NotFoundError):
         repo.get("tok_1")
+
+
+def test_touching_a_token_changes_its_last_use_alone(stores: Stores) -> None:
+    stores.users.save(User(id="usr_1", name="u"))
+    repo = stores.tokens
+    token = ApiToken(
+        id="tok_1", user_id="usr_1", name="t", token_hash="h", created_at=NOW
+    )
+    repo.save(token)
+    revoked = token.model_copy(update={"revoked_at": NOW})
+    repo.save(revoked)
+    later = datetime(2026, 9, 24, 13, 0, tzinfo=UTC)
+    repo.touch("tok_1", later)
+    assert repo.get("tok_1") == revoked.model_copy(update={"last_used_at": later})
 
 
 def test_a_token_hash_is_held_once_and_a_save_replaces_the_whole(

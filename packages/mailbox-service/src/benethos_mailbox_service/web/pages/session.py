@@ -100,6 +100,10 @@ class SessionStore:
         if session_id:
             self._sessions.pop(session_id, None)
 
+    def __len__(self) -> int:
+        """How many sessions it holds, idle ones not yet swept among them."""
+        return len(self._sessions)
+
 
 def store_of(request: Request) -> SessionStore:
     store: SessionStore = request.app.state.ui_sessions
@@ -128,12 +132,18 @@ def current(request: Request) -> tuple[UiSession, Access]:
 
 def show_once(request: Request, key: str, value: str) -> None:
     """Keep ``value`` for the next page that asks for ``key``."""
-    current(request)[0].once[key] = value
+    _session(request).once[key] = value
 
 
 def take_once(request: Request, key: str) -> str | None:
     """What ``show_once`` kept under ``key``, once."""
-    return current(request)[0].once.pop(key, None)
+    return _session(request).once.pop(key, None)
+
+
+def _session(request: Request) -> UiSession:
+    """The session ``current`` found for this request, else looked up."""
+    found: UiSession | None = getattr(request.state, "ui_session", None)
+    return found if found is not None else current(request)[0]
 
 
 def csrf_ok(session: UiSession, presented: str | None) -> bool:

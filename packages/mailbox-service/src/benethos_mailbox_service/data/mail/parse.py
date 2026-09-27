@@ -18,7 +18,7 @@ from typing import Any
 from imap_tools import MailMessage
 
 from ..models import Address
-from .fields import OCTET_STREAM, message_id, unicode_address
+from .fields import OCTET_STREAM, message_id, message_ids, unicode_address
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,17 @@ class ParsedAttachment:
     size: int
     inline: bool
     payload: bytes
+    # Set when the body refers to the part, e.g. an image in the HTML.
+    content_id: str | None = None
+    # "attachment", "inline" or "" when the part names none.
+    disposition: str = ""
+
+    @property
+    def attached(self) -> bool:
+        """Whether a person sees it as an attachment: not a part the body
+        shows in its place, such as an image in the HTML. A file a client
+        marked inline, as Apple Mail does with a PDF, is one."""
+        return self.content_id is None or self.disposition == "attachment"
 
 
 class ParsedMessage:
@@ -90,6 +101,16 @@ class ParsedMessage:
         return message_id(self.header("message-id"))
 
     @property
+    def in_reply_to(self) -> str | None:
+        """The first id In-Reply-To names: a folded header comes unfolded."""
+        return next(iter(message_ids(self.header("in-reply-to"))), None)
+
+    @property
+    def references(self) -> list[str]:
+        """The ids References names, oldest first."""
+        return message_ids(self.header("references"))
+
+    @property
     def content_type(self) -> str:
         return (self.header("content-type") or "").lower()
 
@@ -110,6 +131,8 @@ class ParsedMessage:
                 size=part.size,
                 inline=(part.content_disposition or "").lower() == "inline",
                 payload=part.payload,
+                content_id=part.content_id or None,
+                disposition=(part.content_disposition or "").lower(),
             )
             for part in self._parsed.attachments
         ]

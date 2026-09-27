@@ -9,6 +9,7 @@ sent, denied or failed, with its recipients and never its content.
 
 from __future__ import annotations
 
+import logging
 import math
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
@@ -28,6 +29,8 @@ from ..errors import (
 from . import paging
 from .access import Access
 from .locks import KeyedLocks
+
+log = logging.getLogger(__name__)
 
 WINDOW = timedelta(hours=24)
 CURSOR = "s_"
@@ -90,7 +93,13 @@ class SendControl:
             except Exception:
                 record("failed", error="internal_error")
                 raise
-            record("sent", refused=sent.refused, message_id_header=message_id_header)
+            # Sent: from here on nothing may fail, or a client would send again.
+            try:
+                record(
+                    "sent", refused=sent.refused, message_id_header=message_id_header
+                )
+            except Exception:
+                log.exception("sent, but not recorded in the audit")
             return sent
 
     def _allow(
@@ -132,15 +141,17 @@ class SendControl:
     def list_all_sends(
         self,
         access: Access,
-        account_ids: list[str],
         *,
         limit: int,
         cursor: str | None = None,
         matching: SendFilter | None = None,
     ) -> Page[SendRecord]:
         """The audit of every account the caller may audit, merged newest
-        first."""
-        audited = [a for a in account_ids if access.allows("list_sends", a)]
+        first. The audit outlives an account: a deleted one is still in it,
+        for a caller whose grant names every account."""
+        audited = [
+            a for a in self._store.account_ids() if access.allows("list_sends", a)
+        ]
         return self._page(audited, limit, cursor, matching)
 
     def list_sends(

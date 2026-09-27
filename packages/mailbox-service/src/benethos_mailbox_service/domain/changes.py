@@ -18,11 +18,7 @@ from datetime import datetime, timedelta
 from ..common import opaque
 from ..common.clock import utc_now
 from ..data.models import CHANGE_TYPES, Change, ChangePage, Event, EventType
-from ..data.storage import (
-    ChangeLogRepository,
-    InMemoryChangeLogRepository,
-    LoggedChange,
-)
+from ..data.storage import ChangeLogRepository, LoggedChange
 from ..errors import BadRequestError, ChangesExpiredError
 
 STATE = "chs_"
@@ -34,12 +30,12 @@ PURGE_EVERY = timedelta(hours=1)
 class ChangeFeed:
     def __init__(
         self,
-        log: ChangeLogRepository | None = None,
+        log: ChangeLogRepository,
         *,
         days: int = DEFAULT_DAYS,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
-        self._log = log if log is not None else InMemoryChangeLogRepository()
+        self._log = log
         self._keep = timedelta(days=days)
         self._clock = clock
         self._purged_at: datetime | None = None

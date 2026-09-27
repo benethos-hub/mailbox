@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Response
 
-from ....data.models import CreatedWebhook, Webhook, WebhookCreate
+from ....data.models import CreatedWebhook, Webhook, WebhookCreate, WebhookDetail
 from ..deps import Caller, Webhooks
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
@@ -25,6 +25,15 @@ async def create_webhook(
     only time it is shown. Each post carries the events since the last one,
     of the accounts the caller may read with `list_changes`."""
     return webhooks.create_webhook(caller, request)
+
+
+@router.get("/{webhook_id}")
+async def get_webhook(
+    webhook_id: str, caller: Caller, webhooks: Webhooks
+) -> WebhookDetail:
+    """One of the caller's webhooks, with its last posts to the receiver:
+    when, how many events, what it answered and why a post failed."""
+    return webhooks.get_webhook(caller, webhook_id)
 
 
 @router.delete("/{webhook_id}", status_code=204)

@@ -10,6 +10,7 @@ on this origin.
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
@@ -18,7 +19,7 @@ from pydantic import ValidationError
 from ....data.mail.text import from_html
 from ....data.models import Folder, FolderRole, Message, MessageFilter
 from ....domain.access import Access
-from ....domain.mailbox import find_folder
+from ....domain.mailbox import MailboxService, find_folder
 from ...responses import download
 from ...search import FIELDS, FLAGS, filter_from
 from ...services import Mailbox, get_accounts
@@ -132,6 +133,8 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
         incomplete=page.incomplete,
         pages=page_links(request, page.next_cursor),
         emails=emails_of(accounts),
+        open_as="mail",
+        selectable=False,
         chosen=chosen,
         role=role.value,
         bar=mail_bar(request, places),
@@ -140,14 +143,40 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
     )
 
 
+# The folder forms of an account's mail page, as a page shows them first:
+# a new folder, and the name or parent of the one shown.
+FOLDER_FORMS: dict[str, Any] = {
+    "new": "",
+    "inside": False,
+    "name": None,
+    "moving": False,
+    "parent": None,
+}
+
+
 @router.get("/accounts/{account_id}/mail")
 async def account_mail(
     request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
 ) -> HTMLResponse:
     """One folder of one account, beside the account's folders."""
+    wanted = request.query_params.get("folder") or FolderRole.INBOX.value
+    return await account_mail_page(request, caller, account_id, mailbox, wanted)
+
+
+async def account_mail_page(
+    request: Request,
+    caller: Access,
+    account_id: str,
+    mailbox: MailboxService,
+    wanted: str,
+    typed: dict[str, Any] | None = None,
+    err: str | None = None,
+) -> HTMLResponse:
+    """The folder ``wanted`` of one account. With ``typed`` a folder form
+    shows what was typed (see ``FOLDER_FORMS``) and ``err`` why it was
+    refused."""
     account = account_of(request, caller, account_id)
     folders = await mailbox.list_folders(caller, account_id)
-    wanted = request.query_params.get("folder") or FolderRole.INBOX.value
     current = find_folder(folders, wanted)
     if current is None:
         return error_page(request, 404, f"The account has no folder {wanted}.")
@@ -170,6 +199,9 @@ async def account_mail(
         request,
         "pages/account_mail.html",
         page="mail",
+        status_code=400 if err else 200,
+        err=err,
+        typed={**FOLDER_FORMS, **(typed or {})},
         account=account,
         tree=_tree(folders),
         current=current,
@@ -180,9 +212,15 @@ async def account_mail(
         fields=fields,
         problem=problem,
         can=can,
+        emails=None,
+        open_as="mail",
         selectable=can["change"] or can["trash"] or can["purge"],
-        here=str(request.url.path)
-        + (f"?{request.url.query}" if request.url.query else ""),
+        here=(
+            str(request.url.path)
+            + (f"?{request.url.query}" if request.url.query else "")
+            if request.method == "GET"
+            else f"/ui/accounts/{account_id}/mail?{urlencode({'folder': current.id})}"
+        ),
     )
 
 

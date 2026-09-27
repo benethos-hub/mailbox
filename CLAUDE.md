@@ -126,6 +126,7 @@ packages/
         __init__.py       # install: both front ends, errors to the right one
         services.py       # the domain services as dependencies, for both
         urls.py           # this service's public address, OAuth callback
+        limits.py         # the size of a request body, for both
         api/              # the JSON API: /health open, the rest under /v1
           deps.py         # bearer authentication, services per request
           schemas.py      # shapes that exist only at the HTTP boundary
@@ -151,7 +152,7 @@ packages/
         oauth.py          # OAuthService: connect or sign in again by OAuth
         mailbox.py        # MailboxService: folders and messages, the facade
         calls.py          # provider calls under our stable ids, many at once
-        outgoing.py       # sending and drafts, reached through MailboxService
+        outgoing.py       # sending and drafts, as MailboxService.outgoing
         merge.py          # lists across accounts: merge order, cursor
         replies.py        # replies and forwards made from the original
         discovery.py      # DiscoveryService: trust, ranking, cache, limits
@@ -249,7 +250,10 @@ Three layers, imports only point down: `web/` → `domain/` → `data/`.
 
 `tests/test_architecture.py` checks the direction, the cross-cutting
 modules, that `common/` stays on the standard library, that FastAPI stays in
-`web/` (and `main.py`), and that providers are reached through the registry. An import that breaks a rule fails the suite.
+`web/` (and `main.py`), that providers are reached through the registry,
+that the domain picks no storage implementation, and that SQLite is
+reached through `data/storage/` alone. An import that breaks a rule
+fails the suite.
 
 ## Encapsulation and replaceable parts
 

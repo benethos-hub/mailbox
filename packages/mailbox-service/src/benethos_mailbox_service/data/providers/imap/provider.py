@@ -10,6 +10,7 @@ the requests, blocks a rejected login and pauses an unreachable server.
 
 from __future__ import annotations
 
+import itertools
 import logging
 import threading
 import time
@@ -154,8 +155,16 @@ class ImapProvider:
         if not username:
             raise BadRequestError("an IMAP account needs settings.username")
         auth = settings.get("auth", "password")
-        if auth not in ("password", "xoauth2"):
-            raise BadRequestError("settings.auth must be 'password' or 'xoauth2'")
+        if auth == "xoauth2":
+            # Nothing renews the access token yet (CONCEPT 5.1): the login
+            # would be rejected within the hour.
+            raise NotSupportedError(
+                "IMAP with OAuth (settings.auth 'xoauth2') is not supported yet: "
+                "the service cannot renew the token. Use a password or an app "
+                "password."
+            )
+        if auth != "password":
+            raise BadRequestError("settings.auth must be 'password'")
         self._server = ImapServer(
             host=str(host),
             port=rules.port_of(settings, "port", DEFAULT_PORTS[security]),
@@ -163,16 +172,16 @@ class ImapProvider:
             pick=pick,
         )
         self._username = str(username)
-        self._auth = str(auth)
+
         self._credentials = credentials
-        per_minute = float(
-            settings.get("max_requests_per_minute") or DEFAULT_REQUESTS_PER_MINUTE
+        per_minute = rules.rate_of(
+            settings, "max_requests_per_minute", DEFAULT_REQUESTS_PER_MINUTE
         )
         self._guard = Guard(per_minute, clock=clock, sleep=sleep, jitter=jitter)
         self._smtp = SmtpSender.from_settings(
             settings,
             self._username,
-            self._auth,
+            "password",
             self._secret,
             self._guard,
             smtp_factory,
@@ -239,7 +248,9 @@ class ImapProvider:
         return await self._run(lambda: self._list_drafts(limit, cursor))
 
     async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
-        return await self._run(lambda: self._save_draft(raw, replaces))
+        return await self._retrying(
+            lambda retried: self._save_draft(raw, replaces, retried=retried)
+        )
 
     async def get_draft(self, draft_id: str) -> bytes:
         return await self._run(lambda: self._get_draft(draft_id))
@@ -248,22 +259,26 @@ class ImapProvider:
         await self._run(lambda: self._delete_draft(draft_id))
 
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
-        return await self._run(lambda: self._create_folder(name, parent_id))
+        return await self._retrying(
+            lambda retried: self._create_folder(name, parent_id, retried)
+        )
 
     async def update_folder(
         self, folder_id: str, name: str, parent_id: str | None
     ) -> Folder:
-        return await self._run(lambda: self._update_folder(folder_id, name, parent_id))
+        return await self._retrying(
+            lambda retried: self._update_folder(folder_id, name, parent_id, retried)
+        )
 
     async def delete_folder(self, folder_id: str) -> None:
-        await self._run(lambda: self._delete_folder(folder_id))
+        await self._retrying(lambda retried: self._delete_folder(folder_id, retried))
 
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxServiceError]:
         return await self._per_folder(
             message_ids,
-            lambda folder, validity, uids: self._update_in_folder(
+            lambda folder, validity, uids, _: self._update_in_folder(
                 folder, validity, uids, changes
             ),
         )
@@ -273,15 +288,15 @@ class ImapProvider:
     ) -> dict[str, MessageSummary | None | MailboxServiceError]:
         return await self._per_folder(
             message_ids,
-            lambda folder, validity, uids: self._delete_in_folder(
-                folder, validity, uids, permanent
+            lambda folder, validity, uids, retried: self._delete_in_folder(
+                folder, validity, uids, permanent, retried
             ),
         )
 
     async def _per_folder(
         self,
         message_ids: list[str],
-        work: Callable[[str, int, list[int]], dict[int, T | MailboxServiceError]],
+        work: Callable[[str, int, list[int], bool], dict[int, T | MailboxServiceError]],
     ) -> dict[str, T | MailboxServiceError]:
         """Run ``work`` once per folder, each under the lock. A failure of
         the connection or the login stops everything. Any other failure
@@ -290,7 +305,9 @@ class ImapProvider:
         results: dict[str, T | MailboxServiceError] = dict(unknown)
         for (folder, validity), by_uid in folders.items():
             try:
-                done = await self._run(partial(work, folder, validity, list(by_uid)))
+                done = await self._retrying(
+                    partial(work, folder, validity, list(by_uid))
+                )
             except rules.FATAL:
                 raise
             except MailboxServiceError as exc:
@@ -363,7 +380,7 @@ class ImapProvider:
         if cursor:
             cursor_folder, expected_validity, before = mappers.parse_cursor(cursor)
             if cursor_folder != folder:
-                raise BadRequestError("the cursor belongs to another folder")
+                raise rules.invalid_cursor()
         validity = self._session.select(folder)
         if expected_validity is not None and expected_validity != validity:
             raise BadRequestError("the folder changed on the server: start again")
@@ -439,10 +456,19 @@ class ImapProvider:
         drafts = mappers.folder_id(self._drafts_folder())
         return self._list_messages(drafts, limit, cursor)
 
-    def _save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
+    def _save_draft(
+        self, raw: bytes, replaces: str | None, *, retried: bool = False
+    ) -> MessageSummary:
         drafts = self._drafts_folder()
         # Checked before the new one is stored: a wrong id changes nothing.
         old = self._draft_place(replaces, drafts) if replaces else None
+        if old is not None and not retried:
+            # A retried step may have removed it already, after it stored
+            # the new one, which _append then finds by its Message-ID.
+            validity, uid = old
+            found, _ = self._open_writable(drafts, validity, [uid])
+            if uid not in found:
+                raise NotFoundError(f"draft {replaces} not found")
         saved = self._append(drafts, raw, ["\\Draft", "\\Seen"])
         if saved is None:
             raise ProviderError("the draft was stored but cannot be found again")
@@ -487,20 +513,27 @@ class ImapProvider:
 
     # --- folders --------------------------------------------------------------------
 
-    def _create_folder(self, name: str, parent_id: str | None) -> Folder:
+    def _create_folder(
+        self, name: str, parent_id: str | None, retried: bool = False
+    ) -> Folder:
         raws = self._session.list_folders()
         full = self._full_name(raws, name, parent_id)
         if full in _names(raws):
+            if retried:
+                return self._folder(full)  # the first try made it
             raise ConflictError(f"a folder {name} exists there already")
         self._session.create_folder(full)
         return self._folder(full)
 
     def _update_folder(
-        self, folder_id: str, name: str, parent_id: str | None
+        self, folder_id: str, name: str, parent_id: str | None, retried: bool = False
     ) -> Folder:
         raws = self._session.list_folders()
         old = mappers.folder_name(folder_id)
         if old not in _names(raws):
+            new = self._full_name(raws, name, parent_id)
+            if retried and new in _names(raws):
+                return self._folder(new)  # the first try renamed it
             raise NotFoundError(f"folder {folder_id} not found")
         new = self._full_name(raws, name, parent_id)
         if new == old:
@@ -512,9 +545,11 @@ class ImapProvider:
         self._session.rename_folder(old, new)
         return self._folder(new)
 
-    def _delete_folder(self, folder_id: str) -> None:
+    def _delete_folder(self, folder_id: str, retried: bool = False) -> None:
         name = mappers.folder_name(folder_id)
         if name not in _names(self._session.list_folders()):
+            if retried:
+                return  # the first try deleted it
             raise NotFoundError(f"folder {folder_id} not found")
         self._session.delete_folder(name)
 
@@ -578,7 +613,10 @@ class ImapProvider:
         for (to_add, to_remove), plan_uids in plans.items():
             self._session.store_flags(plan_uids, list(to_add), list(to_remove))
         if plans:
-            found = {int(m.uid): m for m in self._session.fetch_headers(list(found))}
+            stored = list(found)
+            found = {int(m.uid): m for m in self._session.fetch_headers(stored)}
+            # Expunged by another client between the two fetches.
+            results.update(_missing(stored, found))
         if target is None:
             results.update(
                 {
@@ -596,12 +634,21 @@ class ImapProvider:
         return results
 
     def _delete_in_folder(
-        self, folder: str, validity: int, uids: list[int], permanent: bool
+        self,
+        folder: str,
+        validity: int,
+        uids: list[int],
+        permanent: bool,
+        retried: bool = False,
     ) -> dict[int, MessageSummary | None | MailboxServiceError]:
         found, _ = self._open_writable(folder, validity, uids)
         results: dict[int, MessageSummary | None | MailboxServiceError] = dict(
             _missing(uids, found)
         )
+        if retried:
+            # Gone from the folder: the first try deleted or moved them,
+            # to a place this try cannot name.
+            results = {uid: None for uid in results}
         if not found:
             return results
         if permanent:
@@ -635,7 +682,7 @@ class ImapProvider:
         target_validity = self._session.select(target)
         for uid, message in found.items():
             header = message.message_id
-            if uid not in new_uids and header:
+            if uid not in new_uids and header and _searchable(header):
                 # No COPYUID: find it by its Message-ID, if that is unambiguous.
                 matches = self._session.search_message_id(header)
                 if len(matches) == 1:
@@ -759,6 +806,13 @@ class ImapProvider:
     async def _run(self, operation: Callable[[], T]) -> T:
         return await anyio.to_thread.run_sync(self._locked, operation)
 
+    async def _retrying(self, operation: Callable[[bool], T]) -> T:
+        """``_run`` for a write the guard may run again. ``operation``
+        learns whether this is a retry, so that finding its work done
+        counts as done, not as a conflict or a missing item."""
+        attempts = itertools.count()
+        return await self._run(lambda: operation(next(attempts) > 0))
+
     def _locked(self, operation: Callable[[], T]) -> T:
         def step() -> T:
             self._folders = None
@@ -771,14 +825,10 @@ class ImapProvider:
 
     def _secret(self) -> str:
         """The credential for the login, decrypted for this one use."""
-        field = "access_token" if self._auth == "xoauth2" else "password"
-        return self._credentials(field).get_secret_value()
+        return self._credentials("password").get_secret_value()
 
     def _login(self, session: ImapSession) -> None:
-        if self._auth == "xoauth2":
-            session.login_oauth(self._username, self._secret())
-        else:
-            session.login(self._username, self._secret())
+        session.login(self._username, self._secret())
 
 
 def _by_folder(
@@ -828,3 +878,10 @@ def _criteria(search: MessageFilter, before_uid: int | None) -> SearchCriteria:
         mixed=search.has_attachments,
         before_uid=before_uid,
     )
+
+
+def _searchable(header: str) -> bool:
+    """Whether a SEARCH can carry the Message-ID: a sender may write any
+    bytes there, and imaplib writes commands in printable ASCII. Without
+    it the next sync follows the moved message."""
+    return header.isascii() and header.isprintable()

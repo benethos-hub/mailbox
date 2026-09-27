@@ -25,11 +25,12 @@
       {% if can.create_folder %}
       <form class="body" method="post" action="/ui/accounts/{{ account.id }}/folders">
         {{ csrf_field() }}
+        <input type="hidden" name="shown" value="{{ current.id }}" />
         <div class="field">
           <label for="f-new-folder">New folder</label>
-          <input id="f-new-folder" name="name" required />
+          <input id="f-new-folder" name="name" value="{{ typed.new }}" required />
         </div>
-        <label class="check"><input type="checkbox" name="parent" value="{{ current.id }}" /> inside {{ current.name }}</label>
+        <label class="check"><input type="checkbox" name="parent" value="{{ current.id }}"{% if typed.inside %} checked{% endif %} /> inside {{ current.name }}</label>
         <div class="form-actions"><button class="small" type="submit">Create</button></div>
       </form>
       {% endif %}
@@ -45,7 +46,7 @@
           <input type="hidden" name="folder" value="{{ current.id }}" />
           <div class="field">
             <label for="f-rename">Name</label>
-            <input id="f-rename" name="name" value="{{ current.name }}" required />
+            <input id="f-rename" name="name" value="{{ typed.name if typed.name is not none else current.name }}" required />
           </div>
           <div class="form-actions"><button class="small" type="submit">Rename</button></div>
         </form>
@@ -56,7 +57,7 @@
             <label for="f-parent">Inside</label>
             <select id="f-parent" name="parent">
               <option value="">the top</option>
-              {{ folder_options(tree, [current.id], selected=current.parent_id) }}
+              {{ folder_options(tree, [current.id], selected=typed.parent if typed.moving else current.parent_id) }}
             </select>
           </div>
           <div class="form-actions"><button class="small" type="submit">Move</button></div>

@@ -58,14 +58,14 @@ class SyncService:
         self,
         adapters: Adapters,
         index: MessageIndexRepository,
+        feed: ChangeFeed,
         new_id: Callable[[], str] = new_message_id,
-        feed: ChangeFeed | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._adapters = adapters
         self._index = index
         self._new_id = new_id
-        self._feed = feed if feed is not None else ChangeFeed()
+        self._feed = feed
         self._clock = clock
         self._locks: KeyedLocks[str] = KeyedLocks()
         self._states: dict[str, SyncState] = {}
@@ -151,6 +151,11 @@ class SyncService:
             self._index.relocate(
                 account_id, replace(entry, native_id=native, folder_id=folder_id)
             )
+
+    def forget_account(self, account_id: str) -> None:
+        """An account is deleted: its ids and its sync state go."""
+        self._index.forget_account(account_id)
+        self._states.pop(account_id, None)
 
     def forget(self, account_id: str, message_id: str) -> None:
         """A message is gone for good: its id answers 404 from now on."""

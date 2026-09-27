@@ -76,7 +76,31 @@ def encrypted(settings: ProviderSettings, key: str, protocol: str) -> str:
 
 
 def port_of(settings: ProviderSettings, key: str, default: int) -> int:
-    return int(settings.get(key) or default)
+    """A port from the settings: a whole number from 1 to 65535."""
+    value = settings.get(key)
+    if value is None or value == "":
+        return default
+    try:
+        port = 0 if isinstance(value, bool) else int(value)
+    except (TypeError, ValueError):
+        port = 0
+    if not 1 <= port <= 65535:
+        raise BadRequestError(f"settings.{key} must be a port from 1 to 65535")
+    return port
+
+
+def rate_of(settings: ProviderSettings, key: str, default: float) -> float:
+    """A rate per minute from the settings: a number above 0."""
+    value = settings.get(key)
+    if value is None or value == "":
+        return default
+    try:
+        rate = 0.0 if isinstance(value, bool) else float(value)
+    except (TypeError, ValueError):
+        rate = 0.0
+    if not rate > 0 or rate == float("inf"):
+        raise BadRequestError(f"settings.{key} must be a number above 0")
+    return rate
 
 
 def hosts_in(settings: Mapping[str, object]) -> list[tuple[str, str, int]]:

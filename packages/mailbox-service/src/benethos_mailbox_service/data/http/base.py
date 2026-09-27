@@ -1,8 +1,10 @@
 """What both HTTP wrappers share: the client as this service configures
-it, a body read up to a limit, and a failure to reach a host as this
-project's error."""
+it, a request pinned to a checked address, a body read up to a limit,
+and a failure to reach a host as this project's error."""
 
 from __future__ import annotations
+
+from collections.abc import Mapping
 
 import httpx
 
@@ -20,6 +22,28 @@ def new_client(
         follow_redirects=False,
         trust_env=False,
         verify=True,
+    )
+
+
+def pinned_request(
+    client: httpx.AsyncClient,
+    method: str,
+    target: httpx.URL,
+    host: str,
+    address: str,
+    *,
+    headers: Mapping[str, str] | None = None,
+    content: bytes | None = None,
+) -> httpx.Request:
+    """A request for ``target`` sent to ``address``, the address that was
+    checked: the name is not resolved again. The Host header and SNI keep
+    ``host``, so the certificate is checked against the name."""
+    return client.build_request(
+        method,
+        target.copy_with(host=address),
+        content=content,
+        headers={**(headers or {}), "Host": target.netloc.decode("ascii")},
+        extensions={"sni_hostname": host} if target.scheme == "https" else {},
     )
 
 

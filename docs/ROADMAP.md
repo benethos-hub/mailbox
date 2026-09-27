@@ -61,7 +61,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 **Done.**
 
 - **`imap` adapter (5.1):** folders, list, search, get, attachments, raw
-  source. Password, app password and XOAUTH2. One shared connection per
+  source. Password and app password. XOAUTH2 on the wire, refused for
+  accounts until a token refresher exists (5.1). One shared connection per
   account
 - **Being a good client (5.9):** rate limiter per account, no retry of a
   failed login, backoff, `IMAP ID`

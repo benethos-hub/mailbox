@@ -6,6 +6,7 @@ from dataclasses import replace
 from typing import Any
 
 from fastapi.testclient import TestClient
+from starlette.datastructures import FormData
 
 from benethos_mailbox_service.data.models import (
     Candidate,
@@ -178,22 +179,13 @@ def test_a_failed_connect_never_echoes_the_password(ui: TestClient) -> None:
     assert "s3cret-pw" not in answer.text
 
 
-def test_only_changed_settings_are_sent() -> None:
-    from benethos_mailbox_service.web.pages.routes.accounts import (
-        SETTING_FIELDS,
-        _changed,
-    )
+def test_the_settings_as_the_form_sent_them() -> None:
+    from benethos_mailbox_service.web.pages.routes.accounts import _submitted
 
-    current = {"host": "imap.a.org", "port": 993, "username": "me"}
-    every = set(SETTING_FIELDS)
-    same = {"host": "imap.a.org", "port": 993, "username": "me"}
-    assert _changed(current, same, every) == {}
-    moved = {**same, "host": "imap.b.org"}
-    assert _changed(current, moved, every) == {"host": "imap.b.org"}
-    emptied = {"host": "imap.a.org", "username": "me"}
-    assert _changed(current, emptied, every) == {"port": None}
+    form = FormData([("host", "imap.a.org"), ("port", ""), ("username", "me")])
+    assert _submitted(form) == {"host": "imap.a.org", "port": None, "username": "me"}
     # A form that sends only the name removes nothing.
-    assert _changed(current, {}, {"display_name", "csrf_token"}) == {}
+    assert _submitted(FormData([("display_name", "x")])) == {}
 
 
 def test_the_form_shows_the_settings(ui: TestClient, client: TestClient) -> None:
@@ -223,3 +215,35 @@ def test_accounts_filter_by_address_provider_and_status(
     by_provider = ui.get("/ui/accounts", params={"provider": "memory"}).text
     assert "two@example.org" in by_provider and "Provider: memory" in by_provider
     assert "Filter:" in ui.get("/ui/accounts", params={"provider": "pigeon"}).text
+
+
+def test_a_refused_change_keeps_what_was_typed(
+    ui: TestClient, client: TestClient
+) -> None:
+    created = client.post(
+        "/v1/accounts",
+        json={
+            "provider": "memory",
+            "email": "c@example.org",
+            "settings": {"host": "imap.example.org"},
+        },
+    ).json()
+    url = f"/ui/accounts/{created['id']}"
+    # Here the keys do not exist yet, so a new password cannot be stored.
+    refused = post(
+        ui,
+        url,
+        {
+            "display_name": "Kept",
+            "host": "imap2.example.org",
+            "port": "10993",
+            "password": "s3cret-pw",
+        },
+    )
+    assert refused.status_code == 400
+    assert 'class="notice err"' in refused.text
+    assert 'name="display_name" value="Kept"' in refused.text
+    assert 'name="host" value="imap2.example.org"' in refused.text
+    assert 'value="10993"' in refused.text
+    assert "s3cret-pw" not in refused.text
+    assert 'name="host" value="imap.example.org"' in ui.get(url).text

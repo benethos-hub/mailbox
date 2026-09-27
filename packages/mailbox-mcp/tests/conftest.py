@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncIterator, Callable
 from typing import Any, NamedTuple
 
 import httpx
@@ -23,14 +23,26 @@ def no_configuration_from_this_machine(monkeypatch: pytest.MonkeyPatch) -> None:
             monkeypatch.delenv(name)
 
 
+@pytest.fixture
+def made() -> list[MailboxApiClient]:
+    """The clients a test made through ``make_client``."""
+    return []
+
+
 @pytest.fixture(autouse=True)
-def no_client_left_behind() -> Iterator[None]:
+async def no_client_left_behind(made: list[MailboxApiClient]) -> AsyncIterator[None]:
+    """After each test its clients are closed, the one the tools used
+    among them, and the next test's tools make their own."""
     yield
-    server.use_client(None)
+    left = server.use_client(None)
+    if left is not None and left not in made:
+        made.append(left)
+    for client in made:
+        await client.aclose()
 
 
 @pytest.fixture
-def make_client() -> Callable[[Handler], MailboxApiClient]:
+def make_client(made: list[MailboxApiClient]) -> Callable[[Handler], MailboxApiClient]:
     """Build a client answered by ``handler`` and install it for the tools."""
 
     def make(handler: Handler) -> MailboxApiClient:
@@ -40,6 +52,7 @@ def make_client() -> Callable[[Handler], MailboxApiClient]:
             transport=httpx.MockTransport(handler),
         )
         server.use_client(client)
+        made.append(client)
         return client
 
     return make

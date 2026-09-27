@@ -136,7 +136,11 @@ class ImapSession:
         return self._client is not None
 
     def login(self, username: str, password: str) -> None:
-        self._log_in(lambda c: c.login(username, password), "login")
+        if (username + password).isascii():
+            self._log_in(lambda c: c.login(username, password), "login")
+        else:
+            # LOGIN carries ASCII alone. SASL PLAIN carries UTF-8 (RFC 4616).
+            self._log_in(lambda c: _plain_login(c, username, password), "login")
 
     def login_oauth(self, username: str, access_token: str) -> None:
         self._log_in(lambda c: c.oauth2_login(username, access_token), "token")
@@ -154,6 +158,10 @@ class ImapSession:
                 if isinstance(cause, imaplib.IMAP4.abort | OSError):
                     raise ProviderUnavailableError(
                         f"the mail server dropped the connection during the {what}"
+                    ) from None
+                if _for_now(str(exc)):
+                    raise ProviderUnavailableError(
+                        f"the mail server refused the {what} for now"
                     ) from None
                 raise ProviderAuthError(f"the server rejected the {what}") from None
             except BaseException:
@@ -611,6 +619,34 @@ def _uidvalidity(answer: Any) -> int:
     return int(value)
 
 
+# RFC 5530 response codes. The first say the credential is wrong, the
+# second that the server cannot take a login now: too many connections,
+# a mailbox in use, a store that is down. A refusal without a code counts
+# as a rejected credential, as most servers answer a wrong password so.
+_REJECTED = ("[AUTHENTICATIONFAILED]", "[AUTHORIZATIONFAILED]", "[EXPIRED]")
+_FOR_NOW = ("[UNAVAILABLE]", "[INUSE]", "[LIMIT]", "[SERVERBUG]")
+_FOR_NOW_TEXT = re.compile(r"too many|try again later", re.IGNORECASE)
+
+
+def _for_now(refusal: str) -> bool:
+    """Whether the server's refusal of a login is temporary."""
+    upper = refusal.upper()
+    if any(code in upper for code in _REJECTED):
+        return False
+    return any(code in upper for code in _FOR_NOW) or bool(
+        _FOR_NOW_TEXT.search(refusal)
+    )
+
+
+def _plain_login(client: Any, username: str, password: str) -> None:
+    if b"AUTH=PLAIN" not in client.capabilities():
+        raise BadRequestError(
+            "the user name or password goes beyond ASCII, and the mail server "
+            "offers no AUTH=PLAIN, which could carry it"
+        )
+    client.plain_login(username, password)
+
+
 def _quietly_logout(client: Any) -> None:
     try:
         client.logout()
@@ -632,4 +668,10 @@ def _errors() -> Iterator[None]:
         except imaplib.IMAP4.error as exc:
             raise ProviderError(
                 f"the mail server answered with an error: {exc}"
+            ) from None
+        except UnicodeError:
+            # imaplib writes commands in ASCII. Never the error's text: it
+            # quotes the character, which may be part of a secret.
+            raise BadRequestError(
+                "a value beyond ASCII cannot go to the mail server"
             ) from None

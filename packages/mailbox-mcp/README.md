@@ -117,7 +117,7 @@ MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos
 | Option | Environment | Default |
 |---|---|---|
 | – | `MAILBOX_SERVICE_URL` | `http://127.0.0.1:8080`, where the service answers |
-| – | `MAILBOX_SERVICE_TOKEN` | none, the token of the user it acts as |
+| – | `MAILBOX_SERVICE_TOKEN` | none and required, the token of the user it acts as |
 | – | `MAILBOX_SERVICE_ALLOW_HTTP` | off. `1` allows `http` to a host other than this machine |
 | `--transport` | `MAILBOX_MCP_TRANSPORT` | `stdio`, or `streamable-http` |
 | `--host` | `MAILBOX_MCP_HOST` | `127.0.0.1` |
@@ -213,8 +213,10 @@ docker compose --profile mcp up -d
 ```
 
 Clients connect to `http://127.0.0.1:8000/mcp` with
-`Authorization: Bearer $MAILBOX_MCP_BEARER_TOKEN`. Behind a reverse proxy,
-set `MAILBOX_MCP_ALLOWED_HOSTS` to the host name clients use. Both tokens
+`Authorization: Bearer $MAILBOX_MCP_BEARER_TOKEN`. `MAILBOX_MCP_PORT`
+publishes another port, and the allowed Host values follow it. Behind a
+reverse proxy, set `MAILBOX_MCP_ALLOWED_HOSTS` to the host name clients
+use. Both tokens
 are environment variables and show in `docker inspect`.
 
 ## Tools
@@ -228,7 +230,7 @@ the tools that fit:
 | `list_folders` | `mail.read` | folders with id, name, role and counts |
 | `search_messages` | `mail.read` | find mail by text, sender, recipient, subject, days, flags, attachments, in one account or all |
 | `get_message` | `mail.read` | one mail as plain text, cut to `max_chars` |
-| `get_attachment` | `mail.read` | an attachment: images as images, PDF pages as PNG images (`first_page`, `pages`, up to 10), text as text, other types by name only |
+| `get_attachment` | `mail.read` | an attachment: images up to 5 MB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 12 megapixels together), text as text, HTML as the text a reader sees, other types by name only |
 | `whats_new` | `mail.read` | mail created, updated or deleted since the `state` of an earlier call, ids only, in one account or all |
 | `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), or into the trash |
 | `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
@@ -260,5 +262,7 @@ the mail first. With `drafts` alone it writes drafts for a person to send.
 Mail content comes back inside `<mail-content>` markers, the headers and
 attachment names as much as the body. Strangers wrote it, so it is data,
 not instructions. A list of messages, which is JSON, carries a `note`
-saying the same of `from` and `subject`. HTML is turned into text without
-its hidden parts.
+saying the same of `from` and `subject`, a list of drafts of `to` and
+`subject`, which a reply takes from the mail it answers. HTML is turned
+into text without its hidden parts: text not shown, too small or faint
+to read, pushed off the page or in the colour of its own background.

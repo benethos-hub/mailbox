@@ -139,6 +139,18 @@ class FakeMailBox:
         entry = self.folders[source].messages.pop(uid)
         self.add(target, new_uid, *entry)
 
+    def lose_the_reply(self, command: str) -> None:
+        """The server does ``command`` once, then the connection drops
+        before its answer arrives."""
+        real = getattr(self, command)
+
+        def done_then_dropped(*args: object) -> object:
+            real(*args)
+            setattr(self, command, real)
+            raise OSError("connection reset")
+
+        setattr(self, command, done_then_dropped)
+
     # --- IMAPClient ---------------------------------------------------------------
 
     def capabilities(self) -> tuple[bytes, ...]:
@@ -150,12 +162,20 @@ class FakeMailBox:
 
     def login(self, username: str, password: str) -> bytes:
         self.calls.append(("login", username))
+        password.encode("ascii")  # imaplib writes the command in ASCII
         if self.login_failure is not None:
             failure, self.login_failure = self.login_failure, None
             try:
                 raise failure
             except Exception as exc:
                 raise LoginError(str(exc))  # noqa: B904 - as imapclient does
+        if password != self.password:
+            raise LoginError("b'[AUTHENTICATIONFAILED] Authentication failed.'")
+        self.logins += 1
+        return b"Logged in"
+
+    def plain_login(self, identity: str, password: str) -> bytes:
+        self.calls.append(("plain", identity))
         if password != self.password:
             raise LoginError("b'[AUTHENTICATIONFAILED] Authentication failed.'")
         self.logins += 1
@@ -330,6 +350,9 @@ class FakeMailBox:
             if failure is not None:
                 raise failure
         words = [criteria] if isinstance(criteria, str) else list(criteria)
+        for word in words if charset is None else []:
+            # Without a charset imapclient sends the criteria as ASCII.
+            str(word).encode("ascii")
         self.calls.append(("search", tuple(words), charset))
         found = []
         for uid, (raw, flags) in self.folders[self.selected].messages.items():

@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
+from ...errors import ConflictError
 from ..models.webhooks import Webhook
 from .table import missing
 
@@ -66,6 +67,10 @@ class WebhookRepository(Protocol):
 
     def delete(self, webhook_id: str) -> None: ...
 
+    def delete_for_user(self, user_id: str) -> int:
+        """Remove every webhook of a user. Returns how many there were."""
+        ...
+
     def update(
         self,
         webhook_id: str,
@@ -93,6 +98,9 @@ class InMemoryWebhookRepository:
         self._attempts: dict[str, list[Attempt]] = {}
 
     def add(self, record: WebhookRecord) -> None:
+        """A new webhook. An id that exists is a conflict, as it is in SQL."""
+        if record.webhook.id in self._records:
+            raise ConflictError(f"webhook {record.webhook.id} exists already")
         self._records[record.webhook.id] = record
 
     def get(self, webhook_id: str) -> WebhookRecord:
@@ -108,6 +116,12 @@ class InMemoryWebhookRepository:
         self.get(webhook_id)
         del self._records[webhook_id]
         self._attempts.pop(webhook_id, None)
+
+    def delete_for_user(self, user_id: str) -> int:
+        owned = [r.webhook.id for r in self.list() if r.webhook.user_id == user_id]
+        for webhook_id in owned:
+            self.delete(webhook_id)
+        return len(owned)
 
     def update(
         self,

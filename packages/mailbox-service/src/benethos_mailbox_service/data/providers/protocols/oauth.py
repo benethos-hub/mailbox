@@ -298,6 +298,9 @@ class RefreshingTokens:
     def reject(self) -> None:
         self._current = None
 
+    def forget_refusal(self) -> None:
+        self._refused = None
+
     def _spent(self, tokens: Tokens) -> bool:
         return tokens.expires_at - MARGIN <= self._clock()
 

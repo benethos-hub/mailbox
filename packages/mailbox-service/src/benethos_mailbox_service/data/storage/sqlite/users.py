@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import datetime
 
 from ...models import ApiToken, Grant, Role, User
-from ..table import missing
 from .database import Database, iso, parse_iso
 from .rows import SqliteRows
 
@@ -74,10 +74,11 @@ class SqliteTokenRepository:
         return [_token(r) for r in rows]
 
     def get(self, token_id: str) -> ApiToken:
-        row = self._db.one("SELECT * FROM tokens WHERE id = ?", (token_id,))
-        if row is None:
-            raise missing("token", token_id)
-        return _token(row)
+        return _token(
+            self._db.must_find(
+                "SELECT * FROM tokens WHERE id = ?", (token_id,), "token", token_id
+            )
+        )
 
     def find_by_hash(self, token_hash: str) -> ApiToken | None:
         row = self._db.one("SELECT * FROM tokens WHERE token_hash = ?", (token_hash,))
@@ -102,6 +103,11 @@ class SqliteTokenRepository:
                 iso(token.last_used_at),
                 iso(token.revoked_at),
             ),
+        )
+
+    def touch(self, token_id: str, when: datetime) -> None:
+        self._db.execute(
+            "UPDATE tokens SET last_used_at = ? WHERE id = ?", (iso(when), token_id)
         )
 
     def delete_for_user(self, user_id: str) -> None:

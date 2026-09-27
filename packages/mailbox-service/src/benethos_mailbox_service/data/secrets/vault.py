@@ -79,14 +79,15 @@ class CredentialVault:
         self._dek = (key_id, dek)
         return encode_recovery(kek)
 
-    def import_master_key(self, kek: bytes) -> None:
+    def import_master_key(self, kek: bytes, *, replace: bool = False) -> None:
         """Store a master key from a recovery key, after checking it opens the
-        data key of this database."""
+        data key of this database. ``replace`` overwrites another key the
+        provider holds."""
         wrapped = self._keys.active()
         if wrapped is None:
             raise SetupRequiredError("no data key to open: run `keys init` instead")
         self._unwrap(kek, wrapped)
-        self._provider.store(kek)
+        self._provider.store(kek, replace=replace)
 
     def master_key(self) -> bytes:
         """The master key from the provider. For backups, which derive from it."""

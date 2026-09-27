@@ -9,6 +9,7 @@ import pytest
 from pydantic import SecretStr
 
 from benethos_mailbox_service.data.models import FolderRole, MessageFilter
+from benethos_mailbox_service.data.providers.guard import Guard
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.protocols.imap import (
     ImapServer,
@@ -18,6 +19,7 @@ from benethos_mailbox_service.data.providers.protocols.imap import (
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
+    NotSupportedError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
@@ -224,7 +226,7 @@ async def test_other_folder_and_selected_read_only(server: FakeMailBox) -> None:
 
 async def test_cursor_of_another_folder_is_refused(server: FakeMailBox) -> None:
     cursor = mappers.cursor("Sent", 1, 10)
-    with pytest.raises(BadRequestError, match="another folder"):
+    with pytest.raises(BadRequestError, match="^invalid cursor$"):
         await provider(server).list_messages(None, limit=10, cursor=cursor, search=None)
 
 
@@ -321,8 +323,19 @@ async def test_wrong_password(server: FakeMailBox) -> None:
         await provider(server).list_folders()
 
 
-async def test_xoauth2(server: FakeMailBox) -> None:
-    await provider(server, auth="xoauth2").list_folders()
+def test_imap_with_oauth_waits_for_a_token_refresher(server: FakeMailBox) -> None:
+    with pytest.raises(NotSupportedError, match="cannot renew the token"):
+        provider(server, auth="xoauth2")
+    with pytest.raises(BadRequestError, match="settings.auth"):
+        provider(server, auth="kerberos")
+
+
+def test_the_session_logs_in_with_xoauth2(server: FakeMailBox) -> None:
+    # Kept for the refresher to come: the wire part works.
+    server.password = "token"
+    ImapSession(ImapServer("h", 993, "tls"), client_factory=server).login_oauth(
+        "me@example.com", "token"
+    )
     assert ("xoauth2", "me@example.com") in server.calls
 
 
@@ -406,6 +419,20 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
         await imap.list_folders()  # the success in between reset the count
 
 
+def test_a_pause_of_the_mail_server_holds_no_send_back() -> None:
+    time = FakeTime()
+    guard = Guard(60, clock=time.clock, sleep=time.sleep)
+
+    def unreachable() -> None:
+        raise ProviderUnavailableError("the server did not answer")
+
+    with pytest.raises(ProviderUnavailableError):
+        guard.attempts(unreachable, drop=lambda: None)
+    with pytest.raises(ProviderUnavailableError, match="next attempt"):
+        guard.check()
+    assert guard.once(lambda: "sent") == "sent"
+
+
 async def test_a_dropped_connection_during_the_login_is_no_rejection(
     server: FakeMailBox,
 ) -> None:
@@ -418,6 +445,65 @@ async def test_a_dropped_connection_during_the_login_is_no_rejection(
     assert logins == [("login", "me@example.com")] * 2
     assert ("logout",) in server.calls
     assert server.logins == 1
+
+
+@pytest.mark.parametrize(
+    "refusal",
+    [
+        "b'[UNAVAILABLE] Temporary authentication failure.'",
+        "b'[INUSE] Mailbox is locked by another session.'",
+        "b'[LIMIT] Maximum number of connections exceeded.'",
+        "b'[ALERT] Too many simultaneous connections.'",
+        "b'Server busy, try again later.'",
+    ],
+)
+async def test_a_login_refused_for_now_is_no_rejection(
+    server: FakeMailBox, refusal: str
+) -> None:
+    server.login_failure = imaplib.IMAP4.error(refusal)
+    imap = provider(server)
+    # Unavailable, so the guard tries again, and the second login succeeds.
+    await imap.list_folders()
+    assert [c for c in server.calls if c[0] == "login"] == [
+        ("login", "me@example.com")
+    ] * 2
+
+
+@pytest.mark.parametrize(
+    "refusal",
+    [
+        "b'[AUTHENTICATIONFAILED] Too many failed logins, try again later.'",
+        "b'[EXPIRED] The password has expired.'",
+        "b'Login failed.'",
+    ],
+)
+async def test_a_login_refused_for_good_blocks(
+    server: FakeMailBox, refusal: str
+) -> None:
+    server.login_failure = imaplib.IMAP4.error(refusal)
+    imap = provider(server)
+    with pytest.raises(ProviderAuthError, match="rejected the login"):
+        await imap.list_folders()
+    with pytest.raises(ProviderAuthError, match="no new attempt"):
+        await imap.list_folders()
+
+
+def test_a_password_beyond_ascii_goes_by_sasl_plain(server: FakeMailBox) -> None:
+    server.password = "pässwort"
+    server.announced.append("AUTH=PLAIN")
+    session = ImapSession(ImapServer("h", 993, "tls"), client_factory=server)
+    session.login("me@example.com", "pässwort")
+    assert ("plain", "me@example.com") in server.calls
+    assert ("login", "me@example.com") not in server.calls
+
+
+def test_a_password_beyond_ascii_needs_auth_plain(server: FakeMailBox) -> None:
+    server.password = "pässwort"
+    session = ImapSession(ImapServer("h", 993, "tls"), client_factory=server)
+    with pytest.raises(BadRequestError, match="no AUTH=PLAIN") as refused:
+        session.login("me@example.com", "pässwort")
+    assert "ä" not in refused.value.message
+    assert ("logout",) in server.calls
 
 
 async def test_a_rejected_login_is_not_tried_again(server: FakeMailBox) -> None:
@@ -441,6 +527,29 @@ async def test_verify_with_a_still_wrong_password(server: FakeMailBox) -> None:
         await imap.verify()
     with pytest.raises(ProviderAuthError, match="no new attempt"):
         await imap.list_folders()
+
+
+@pytest.mark.parametrize("rate", ["fast", -5, 0, True, "inf"])
+def test_a_rate_that_is_no_rate_is_refused(server: FakeMailBox, rate: object) -> None:
+    with pytest.raises(BadRequestError, match="max_requests_per_minute"):
+        provider(server, max_requests_per_minute=rate)
+
+
+@pytest.mark.parametrize("key", ["port", "smtp_port"])
+@pytest.mark.parametrize("port", ["imap", "99.5", 0, 70000, True])
+def test_a_port_that_is_no_port_is_refused(
+    server: FakeMailBox, key: str, port: object
+) -> None:
+    with pytest.raises(BadRequestError, match=f"settings.{key} must be a port"):
+        provider(server, smtp_host="smtp.example.com", **{key: port})
+
+
+def test_a_port_given_as_text(server: FakeMailBox) -> None:
+    provider(server, port="993", smtp_host="smtp.example.com", smtp_port="465")
+
+
+def test_a_rate_given_as_text(server: FakeMailBox) -> None:
+    provider(server, max_requests_per_minute="30")
 
 
 async def test_requests_are_paced(server: FakeMailBox) -> None:

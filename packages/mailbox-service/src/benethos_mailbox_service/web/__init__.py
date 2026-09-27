@@ -22,12 +22,14 @@ from ..errors import MailboxServiceError
 from . import api, pages
 from .api.errors import api_error, http_error, validation_error
 from .errors import status_of
+from .limits import BodyLimit
 from .pages.errors import error_page
 
 
 def install(app: FastAPI) -> None:
     api.install(app)
     pages.install(app)
+    app.add_middleware(BodyLimit)
 
     @app.exception_handler(MailboxServiceError)
     async def _domain_error(request: Request, exc: MailboxServiceError) -> Response:

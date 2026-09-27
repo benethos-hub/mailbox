@@ -54,6 +54,25 @@ async def test_a_new_folder_goes_into_the_personal_namespace(
     assert (folder.name, folder.subscribed) == ("Projekte", True)
 
 
+async def test_a_retried_step_counts_its_own_work_as_done(
+    below_inbox: FakeMailBox,
+) -> None:
+    imap = provider(below_inbox)
+    below_inbox.lose_the_reply("create_folder")
+    made = await imap.create_folder("Projekte", None)
+    assert made.name == "Projekte"
+    below_inbox.lose_the_reply("rename_folder")
+    renamed = await imap.update_folder(made.id, "Archiv", None)
+    assert renamed.name == "Archiv"
+    below_inbox.lose_the_reply("delete_folder")
+    await imap.delete_folder(renamed.id)
+    assert "INBOX.Archiv" not in below_inbox.folders
+    # Without a retry, the same finding is a conflict.
+    await imap.create_folder("Kunden", None)
+    with pytest.raises(ConflictError):
+        await imap.create_folder("Kunden", None)
+
+
 async def test_a_subfolder(below_inbox: FakeMailBox) -> None:
     imap = provider(below_inbox)
     parent = await imap.create_folder("Kunden", None)

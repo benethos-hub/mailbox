@@ -15,6 +15,7 @@ lives in its URL.
 
 from __future__ import annotations
 
+import inspect
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
@@ -22,6 +23,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from ...errors import MailboxServiceError
 from .deps import CsrfRefused
 from .errors import error_page
 from .forms import Failed
@@ -84,6 +86,9 @@ def security_headers(sign_in_hosts: list[str]) -> list[tuple[bytes, bytes]]:
     ]
 
 
+STATIC = f"{PATH}/static"
+
+
 def owns(request: Request) -> bool:
     """Whether the request is one for the UI."""
     return request.url.path.startswith(PATH)
@@ -91,7 +96,7 @@ def owns(request: Request) -> bool:
 
 def install(app: FastAPI) -> None:
     app.state.ui_sessions = SessionStore()
-    app.mount(f"{PATH}/static", StaticFiles(directory=STATIC_DIR), name="ui-static")
+    app.mount(STATIC, StaticFiles(directory=STATIC_DIR), name="ui-static")
     for area in AREAS:
         app.include_router(area.router, prefix=PATH, include_in_schema=False)
 
@@ -119,6 +124,12 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(Failed)
     async def _failed(request: Request, exc: Failed) -> Response:
+        if exc.again is not None:
+            try:
+                page = exc.again(exc.error)
+                return await page if inspect.isawaitable(page) else page
+            except MailboxServiceError:
+                pass  # the page itself is gone: back with the message
         return back(request, exc.path, error=exc.error)
 
     @app.exception_handler(CsrfRefused)
@@ -146,9 +157,18 @@ class _Security:
             await self.app(scope, receive, send)
             return
 
+        headers = self.headers
+        if scope["path"].startswith(STATIC):
+            # The same for every user: kept, and asked again before use,
+            # which the file's ETag answers with 304.
+            headers = [
+                (name, b"no-cache" if name == b"cache-control" else value)
+                for name, value in headers
+            ]
+
         async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
-                message["headers"] = [*message.get("headers", []), *self.headers]
+                message["headers"] = [*message.get("headers", []), *headers]
             await send(message)
 
         await self.app(scope, receive, send_with_headers)

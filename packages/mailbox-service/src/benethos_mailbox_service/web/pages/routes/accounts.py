@@ -10,7 +10,10 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
 from ....data.models import AccountStatus, ProviderType
+from ....domain.access import Access
+from ....domain.accounts import AccountService
 from ....domain.discovery import connectable, sign_ins
+from ....domain.status import StatusService
 from ....errors import MailboxServiceError
 from ...errors import status_of
 from ...services import Accounts, Discoverer, Status, get_oauth
@@ -47,22 +50,15 @@ def _settings(form: Any) -> dict[str, str | int | bool]:
     return found
 
 
-def _changed(
-    current: dict[str, str | int | bool],
-    submitted: dict[str, str | int | bool],
-    sent: set[str],
-) -> dict[str, str | int | bool | None]:
-    """What the form changes: new or different values, and ``None`` for a
-    field that was sent empty. A field the form did not send changes
-    nothing. The domain logs in only for settings that differ from the
-    stored ones; leaving the unchanged out keeps the request small."""
-    changed: dict[str, str | int | bool | None] = {
-        key: value for key, value in submitted.items() if current.get(key) != value
-    }
+def _submitted(form: Any) -> dict[str, str | int | bool | None]:
+    """The settings the form sent, ``None`` for a field sent empty. A field
+    the form did not send is left out and changes nothing. The domain
+    compares them with the stored ones."""
+    submitted: dict[str, str | int | bool | None] = dict(_settings(form))
     for key in SETTING_FIELDS:
-        if key in current and key in sent and key not in submitted:
-            changed[key] = None
-    return changed
+        if key in form and key not in submitted:
+            submitted[key] = None
+    return submitted
 
 
 def _password(form: Any) -> dict[str, SecretStr]:
@@ -204,11 +200,37 @@ async def account(
     accounts: Accounts,
     status: Status,
 ) -> HTMLResponse:
+    return _account_page(request, caller, account_id, accounts, status)
+
+
+def _account_page(
+    request: Request,
+    caller: Access,
+    account_id: str,
+    accounts: AccountService,
+    status: StatusService,
+    form: Any = None,
+    err: str | None = None,
+) -> HTMLResponse:
+    """An account's page. With ``form`` its editor shows what was typed,
+    the password left out."""
     found = accounts.get(caller, account_id)
     return render(
         request,
         "pages/account.html",
         page="accounts",
+        status_code=400 if err else 200,
+        err=err,
+        typed=(
+            {
+                "display_name": str(form.get("display_name") or "").strip(),
+                "settings": {
+                    key: str(form.get(key) or "").strip() for key in SETTING_FIELDS
+                },
+            }
+            if form is not None
+            else None
+        ),
         account=found,
         can_read=caller.allows("list_messages", account_id),
         can_audit=caller.allows("list_sends", account_id),
@@ -223,7 +245,11 @@ async def account(
 
 @router.post("/accounts/{account_id}")
 async def update_account(
-    request: Request, caller: Actor, account_id: str, accounts: Accounts
+    request: Request,
+    caller: Actor,
+    account_id: str,
+    accounts: Accounts,
+    status: Status,
 ) -> Response:
     form = await request.form()
     here = f"/ui/accounts/{account_id}"
@@ -233,13 +259,16 @@ async def update_account(
             "display_name": str(form.get("display_name") or "").strip() or None,
             "rename": True,
         }
-    with failing(here):
-        existing = accounts.get(caller, account_id)
-        settings = _changed(existing.settings, _settings(form), set(form.keys()))
+    with failing(
+        here,
+        again=lambda err: _account_page(
+            request, caller, account_id, accounts, status, form, err
+        ),
+    ):
         await accounts.update(
             caller,
             account_id,
-            settings=settings,
+            settings=_submitted(form),
             credentials=_password(form),
             **changes,
         )

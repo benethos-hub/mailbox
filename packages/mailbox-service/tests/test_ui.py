@@ -12,6 +12,7 @@ from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.domain.auth import SignedIn
 from benethos_mailbox_service.main import Services
 from benethos_mailbox_service.web.pages.session import IDLE, SessionStore
+from benethos_mailbox_service.web.pages.templates import STATIC_DIR, TEMPLATE_DIR
 
 from .conftest import ADMIN, UI_PASSWORD, browser_admin, browser_user
 from .ui_helpers import csrf_of, post, sign_in, try_sign_in
@@ -157,7 +158,7 @@ def test_the_start_page_shows_whole_groups_and_single_operations(
     )
     page = app_client.get("/ui").text
     assert '<span class="tag accent">mail.read</span>' in page
-    assert '<span class="tag">send_draft</span>' in page
+    assert '<span class="tag mono">send_draft</span>' in page
     # A single operation does not show as its whole group.
     assert '<span class="tag accent">send</span>' not in page
 
@@ -344,8 +345,9 @@ def test_idle_sessions_are_swept_on_sign_in() -> None:
     forgotten = store.create(SIGNED)
     now[0] += IDLE + timedelta(minutes=1)
     fresh = store.create(SIGNED)
-    assert forgotten not in store._sessions
-    assert fresh in store._sessions
+    assert len(store) == 1
+    assert store.get(fresh) is not None
+    assert store.get(forgotten) is None
 
 
 # --- the frame ------------------------------------------------------------------------
@@ -381,6 +383,15 @@ def test_security_headers_on_the_ui_only(ui: TestClient, client: TestClient) -> 
     assert "script-src 'self'" in policy and "frame-ancestors 'none'" in policy
     assert page.headers["cache-control"] == "no-store"
     assert "content-security-policy" not in client.get("/v1/me").headers
+
+
+def test_static_files_are_kept_and_asked_again(ui: TestClient) -> None:
+    first = ui.get("/ui/static/css/app.css")
+    assert first.headers["cache-control"] == "no-cache"
+    again = ui.get(
+        "/ui/static/css/app.css", headers={"if-none-match": first.headers["etag"]}
+    )
+    assert again.status_code == 304
 
 
 def test_no_inline_script(ui: TestClient) -> None:
@@ -492,3 +503,50 @@ def test_every_text_colour_is_readable_on_its_backgrounds() -> None:
         for text, background in pairs:
             ratio = _contrast(tokens[text], tokens[background])
             assert ratio >= 4.5, f"{mode}: {text} on {background} is {ratio:.2f}:1"
+
+
+@pytest.mark.parametrize(
+    ("page", "back"),
+    [
+        ("/ui/accounts/new", "/ui/accounts"),
+        ("/ui/users/new", "/ui/users"),
+        ("/ui/roles/new", "/ui/roles"),
+        ("/ui/webhooks/new", "/ui/webhooks"),
+        ("/ui/accounts/{account_id}/compose", "/ui/accounts/{account_id}/mail"),
+    ],
+)
+def test_every_editor_has_a_way_back(
+    ui: TestClient, account_id: str, page: str, back: str
+) -> None:
+    """docs/UI.md 4.3: an editor page has Cancel back where it came from."""
+    text = ui.get(page.format(account_id=account_id)).text
+    assert (
+        f'<a class="btn" href="{back.format(account_id=account_id)}">Cancel</a>' in text
+    )
+
+
+def test_every_class_a_template_names_is_styled() -> None:
+    """A class without a rule in app.css is a leftover or a typo, as the
+    hidden "Select" heading of the mail list once was."""
+    css = (STATIC_DIR / "css" / "app.css").read_text(encoding="utf-8")
+    styled = set(re.findall(r"\.([a-zA-Z][\w-]*)", css))
+    unstyled = set()
+    for template in TEMPLATE_DIR.rglob("*.html"):
+        text = template.read_text(encoding="utf-8")
+        # Only fixed classes: one computed by the template is left out.
+        for names in re.findall(r'class="([^"{}]*)"', text):
+            unstyled |= {
+                f"{template.name}: {n}" for n in names.split() if n not in styled
+            }
+    assert not unstyled, sorted(unstyled)
+
+
+def test_no_template_marks_text_as_safe() -> None:
+    """Everything a page shows is escaped. Markup a card needs comes from a
+    macro, never from a string marked safe."""
+    marked = [
+        template.name
+        for template in TEMPLATE_DIR.rglob("*.html")
+        if re.search(r"\|\s*safe\b", template.read_text(encoding="utf-8"))
+    ]
+    assert marked == []

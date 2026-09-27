@@ -60,7 +60,7 @@
     </div>
     <div class="field">
       <label for="f-g{{ i }}_max">Sends per day</label>
-      <input id="f-g{{ i }}_max" name="g{{ i }}_max" inputmode="numeric" value="{{ row.max_sends_per_day if row.max_sends_per_day is not none else '' }}" />
+      <input id="f-g{{ i }}_max" name="g{{ i }}_max" inputmode="numeric" value="{{ row.max_per_day }}" />
       <span class="hint">From one account, in any 24 hours. Empty: no limit.</span>
     </div>
     <div class="field wide">

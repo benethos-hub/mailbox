@@ -45,13 +45,17 @@ class TokenSource(Protocol):
         revocation: the next call fetches a new one."""
         ...
 
+    def forget_refusal(self) -> None:
+        """A refresh the provider refused is asked again with the next call,
+        e.g. when an account is verified. Until then it is not."""
+        ...
+
 
 class Capability(StrEnum):
     """What an adapter can do beyond the read-only core."""
 
     SEND = "send"
     DRAFTS = "drafts"
-    THREADS = "threads"
     LABELS = "labels"  # a message can sit in several folders at once
     SERVER_SEARCH = "server_search"
     PUSH = "push"  # change notifications without polling, wait_for_change

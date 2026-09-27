@@ -29,7 +29,11 @@ class KeyProvider(Protocol):
         """The master key, or ``None`` if this provider holds none."""
         ...
 
-    def store(self, key: bytes) -> None: ...
+    def store(self, key: bytes, *, replace: bool = False) -> None:
+        """Keep ``key``. Refuses to overwrite another key the provider
+        holds, unless ``replace``: the key it holds may be the only one
+        that opens some database."""
+        ...
 
     def describe(self) -> str:
         """Where the key lives, for messages to the person at the machine."""
@@ -60,9 +64,9 @@ class EnvKeyProvider:
         self._value = value
 
     def load(self) -> bytes | None:
-        return decode_recovery(self._value) if self._value else None
+        return _held(self._value, self) if self._value else None
 
-    def store(self, key: bytes) -> None:
+    def store(self, key: bytes, *, replace: bool = False) -> None:
         raise KeyProviderError(
             "the env key provider cannot store a key: set MAILBOX_SERVICE_MASTER_KEY "
             "to the recovery key instead"
@@ -82,15 +86,23 @@ class FileKeyProvider:
         try:
             if not self._path.exists():
                 return None
-            return decode_recovery(self._path.read_text(encoding="utf-8"))
+            text = self._path.read_text(encoding="utf-8")
         except OSError as exc:
             raise KeyProviderError(f"cannot read {self._path}: {exc}") from None
+        return _held(text, self)
 
-    def store(self, key: bytes) -> None:
-        if self._path.exists():
+    def store(self, key: bytes, *, replace: bool = False) -> None:
+        if self._path.exists() and not replace:
             raise KeyProviderError(f"{self._path} exists, refusing to overwrite it")
+        text = (encode_recovery(key) + "\n").encode("utf-8")
         try:
-            create_private(self._path, (encode_recovery(key) + "\n").encode("utf-8"))
+            if not replace:
+                create_private(self._path, text)
+                return
+            staged = self._path.with_name(self._path.name + ".new")
+            staged.unlink(missing_ok=True)
+            create_private(staged, text)
+            staged.replace(self._path)
         except OSError as exc:
             raise KeyProviderError(f"cannot write {self._path}: {exc}") from None
 
@@ -106,17 +118,31 @@ class KeyringKeyProvider:
 
         with _keyring_failures("read"):
             value = keyring.get_password(KEYRING_SERVICE, KEYRING_USERNAME)
-        return decode_recovery(value) if value else None
+        return _held(value, self) if value else None
 
-    def store(self, key: bytes) -> None:
+    def store(self, key: bytes, *, replace: bool = False) -> None:
         import keyring
 
+        held = None if replace else self.load()
+        if held is not None and held != key:
+            raise KeyProviderError(
+                "the operating system's credential store holds another master "
+                "key, refusing to overwrite it"
+            )
         with _keyring_failures("write"):
             value = encode_recovery(key)
             keyring.set_password(KEYRING_SERVICE, KEYRING_USERNAME, value)
 
     def describe(self) -> str:
         return "the operating system's credential store"
+
+
+def _held(text: str, provider: KeyProvider) -> bytes:
+    """The key a provider holds as text, or an error that names where."""
+    try:
+        return decode_recovery(text)
+    except KeyProviderError:
+        raise KeyProviderError(f"{provider.describe()} holds no recovery key") from None
 
 
 @contextmanager

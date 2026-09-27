@@ -174,12 +174,13 @@ class MicrosoftProvider:
 
     async def list_folders(self) -> list[Folder]:
         roles = await self._folder_roles()
+        root = await self._root_id()
         params = {"$select": mappers.FOLDER_FIELDS, "$top": str(PAGE_SIZE)}
         found: list[Folder] = []
         waiting = await self._all("/me/mailFolders", params)
         while waiting:
             item = waiting.pop(0)
-            found.append(mappers.folder(item, roles))
+            found.append(mappers.folder(item, roles, root))
             if item.get("childFolderCount"):
                 waiting.extend(
                     await self._all(
@@ -195,7 +196,7 @@ class MicrosoftProvider:
             else "/me/mailFolders"
         )
         item = await self._json("POST", path, json_body={"displayName": name})
-        return mappers.folder(item, await self._folder_roles())
+        return mappers.folder(item, await self._folder_roles(), await self._root_id())
 
     async def update_folder(
         self, folder_id: str, name: str, parent_id: str | None
@@ -209,7 +210,7 @@ class MicrosoftProvider:
             item = await self._json(
                 "POST", f"{path}/move", json_body={"destinationId": parent_id or root}
             )
-        return mappers.folder(item, await self._folder_roles())
+        return mappers.folder(item, await self._folder_roles(), root)
 
     async def _root_id(self) -> str:
         if self._root is None:
@@ -264,41 +265,49 @@ class MicrosoftProvider:
         """
         ids: dict[str, str] = {}
         wanted = [item for item in items if item.get("internetMessageId")]
-        for start in range(0, len(wanted), BATCH_SIZE):
-            chunk = wanted[start : start + BATCH_SIZE]
-            requests = []
-            for n, item in enumerate(chunk):
-                header = str(item["internetMessageId"]).replace("'", "''")
-                query = urlencode(
-                    {
-                        "$select": "id,parentFolderId",
-                        "$filter": f"internetMessageId eq '{header}'",
-                    }
-                )
-                requests.append(
-                    {
-                        "id": str(n),
-                        "method": "GET",
-                        "url": f"/me/messages?{query}",
-                        "headers": {"Prefer": IMMUTABLE_IDS},
-                    }
-                )
+        urls = []
+        for item in wanted:
+            header = str(item["internetMessageId"]).replace("'", "''")
+            query = urlencode(
+                {
+                    "$select": "id,parentFolderId",
+                    "$filter": f"internetMessageId eq '{header}'",
+                }
+            )
+            urls.append(f"/me/messages?{query}")
+        for n, body in (await self._batch(urls)).items():
+            item = wanted[n]
+            found = body.get("value") or []
+            same = [
+                f
+                for f in found
+                if f.get("parentFolderId") == item.get("parentFolderId")
+            ]
+            if len(same) == 1:
+                ids[item["id"]] = str(same[0]["id"])
+        return [{**item, "id": ids.get(item["id"], item["id"])} for item in items]
+
+    async def _batch(self, urls: list[str]) -> dict[int, dict[str, Any]]:
+        """GET each of ``urls`` under immutable ids, twenty to a JSON
+        batch. The body of each answered with 200, by its index."""
+        bodies: dict[int, dict[str, Any]] = {}
+        for start in range(0, len(urls), BATCH_SIZE):
+            requests = [
+                {
+                    "id": str(start + n),
+                    "method": "GET",
+                    "url": url,
+                    "headers": {"Prefer": IMMUTABLE_IDS},
+                }
+                for n, url in enumerate(urls[start : start + BATCH_SIZE])
+            ]
             answer = await self._json(
                 "POST", "/$batch", json_body={"requests": requests}
             )
             for reply in answer.get("responses") or []:
-                if reply.get("status") != 200:
-                    continue
-                item = chunk[int(reply["id"])]
-                found = (reply.get("body") or {}).get("value") or []
-                same = [
-                    f
-                    for f in found
-                    if f.get("parentFolderId") == item.get("parentFolderId")
-                ]
-                if len(same) == 1:
-                    ids[item["id"]] = str(same[0]["id"])
-        return [{**item, "id": ids.get(item["id"], item["id"])} for item in items]
+                if reply.get("status") == 200:
+                    bodies[int(reply["id"])] = reply.get("body") or {}
+        return bodies
 
     async def get_message(self, message_id: str) -> Message:
         path = f"/me/messages/{_id(message_id)}"
@@ -478,27 +487,14 @@ class MicrosoftProvider:
 
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
         """Twenty to a JSON batch. A message that is gone is left out."""
-        found: dict[str, str | None] = {}
-        for start in range(0, len(message_ids), BATCH_SIZE):
-            chunk = message_ids[start : start + BATCH_SIZE]
-            requests = [
-                {
-                    "id": str(n),
-                    "method": "GET",
-                    "url": f"/me/messages/{_id(message_id)}?$select=internetMessageId",
-                    "headers": {"Prefer": IMMUTABLE_IDS},
-                }
-                for n, message_id in enumerate(chunk)
-            ]
-            answer = await self._json(
-                "POST", "/$batch", json_body={"requests": requests}
-            )
-            for reply in answer.get("responses") or []:
-                if reply.get("status") != 200:
-                    continue
-                body = reply.get("body") or {}
-                found[chunk[int(reply["id"])]] = body.get("internetMessageId")
-        return found
+        urls = [
+            f"/me/messages/{_id(message_id)}?$select=internetMessageId"
+            for message_id in message_ids
+        ]
+        return {
+            message_ids[n]: body.get("internetMessageId")
+            for n, body in (await self._batch(urls)).items()
+        }
 
     async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
         """A delta query of the folder's messages. The token is Graph's
@@ -537,6 +533,7 @@ class MicrosoftProvider:
 
     async def verify(self) -> None:
         self._roles = None
+        self._tokens.forget_refusal()
         await self._call("GET", "/me/mailFolders/inbox", params={"$select": "id"})
 
     async def close(self) -> None:
@@ -554,11 +551,11 @@ def _own_path(link: str) -> str:
     must not carry the token elsewhere."""
     parts = urlsplit(link)
     if (parts.scheme or parts.netloc) and f"{parts.scheme}://{parts.netloc}" != GRAPH:
-        raise BadRequestError("invalid cursor")
+        raise rules.invalid_cursor()
     # A full link names the version, but a cursor handed out before does not.
     rest = parts.path.removeprefix(VERSION) if parts.netloc else parts.path
     if not rest.startswith("/me/") or ".." in rest:
-        raise BadRequestError("invalid cursor")
+        raise rules.invalid_cursor()
     return f"{rest}?{parts.query}" if parts.query else rest
 
 

@@ -20,6 +20,8 @@ DPI = 150
 # hostile PDF can declare one of metres, so a page larger than this is
 # rendered smaller, never in more pixels.
 MAX_PIXELS = 4_000_000
+# Pixels of all pages of one call at most: more pages each get fewer.
+MAX_TOTAL_PIXELS = 12_000_000
 
 
 @dataclass(frozen=True)
@@ -30,7 +32,8 @@ class Pages:
 
 
 def render(data: bytes, first: int, count: int, dpi: int = DPI) -> Pages:
-    """Pages ``first`` to ``first + count - 1`` as PNG, as far as they exist."""
+    """Pages ``first`` to ``first + count - 1`` as PNG, as far as they exist,
+    within MAX_TOTAL_PIXELS together."""
     try:
         document = pdfium.PdfDocument(data)
     except pdfium.PdfiumError as exc:
@@ -39,11 +42,15 @@ def render(data: bytes, first: int, count: int, dpi: int = DPI) -> Pages:
         total = len(document)
         if first > total:
             raise ToolError(f"the PDF has {total} pages, there is no page {first}")
+        numbers = range(first, min(first + count, total + 1))
+        budget = min(MAX_PIXELS, MAX_TOTAL_PIXELS // len(numbers))
         images = []
-        for number in range(first, min(first + count, total + 1)):
+        for number in numbers:
             page = document[number - 1]
             try:
-                bitmap = page.render(scale=_scale(page, dpi), rev_byteorder=True)
+                bitmap = page.render(
+                    scale=_scale(page, dpi, budget), rev_byteorder=True
+                )
                 images.append(
                     _png(
                         bytes(bitmap.buffer),
@@ -60,13 +67,13 @@ def render(data: bytes, first: int, count: int, dpi: int = DPI) -> Pages:
         document.close()
 
 
-def _scale(page: pdfium.PdfPage, dpi: int) -> float:
+def _scale(page: pdfium.PdfPage, dpi: int, budget: int) -> float:
     """``dpi`` as a scale on the page's points, reduced so that the page
-    stays within MAX_PIXELS."""
+    stays within ``budget`` pixels."""
     width, height = page.get_size()
     scale = dpi / 72
     pixels = max(width, 1.0) * max(height, 1.0) * scale * scale
-    return scale if pixels <= MAX_PIXELS else scale * (MAX_PIXELS / pixels) ** 0.5
+    return scale if pixels <= budget else scale * (budget / pixels) ** 0.5
 
 
 def _png(pixels: bytes, width: int, height: int, stride: int, channels: int) -> bytes:

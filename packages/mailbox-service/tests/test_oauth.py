@@ -16,6 +16,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
+from benethos_mailbox_service.common.clock import utc_now
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.http import ApiClient
 from benethos_mailbox_service.data.models import Grant, ProviderType
@@ -120,7 +121,7 @@ def granted(
     return 200, body
 
 
-def client(
+def oauth_client(
     endpoint: TokenEndpoint, clock: Callable[[], datetime] = lambda: NOW
 ) -> OAuthClient:
     app = App(microsoft_endpoints(), "client-1", SecretStr("app-secret"))
@@ -158,7 +159,7 @@ async def test_a_refresh_asks_only_for_what_the_adapter_needs() -> None:
     # A refresh token granted before User.Read was asked for does not
     # cover it: asking for it again would end the account's access.
     endpoint = TokenEndpoint(granted(), granted("at-2"))
-    oauth = client(endpoint)
+    oauth = oauth_client(endpoint)
     await oauth.exchange("c", REDIRECT, "v")
     await oauth.refresh(SecretStr("rt-1"))
     exchanged, refreshed = (set(form["scope"].split()) for form in endpoint.forms)
@@ -187,7 +188,7 @@ def test_identity_from_the_id_token() -> None:
 
 async def test_the_code_is_exchanged() -> None:
     endpoint = TokenEndpoint(granted(id_token=id_token(email="me@example.org")))
-    tokens = await client(endpoint).exchange("the-code", REDIRECT, "the-verifier")
+    tokens = await oauth_client(endpoint).exchange("the-code", REDIRECT, "the-verifier")
     [form] = endpoint.forms
     assert form["grant_type"] == "authorization_code"
     assert form["code"] == "the-code" and form["code_verifier"] == "the-verifier"
@@ -207,14 +208,14 @@ async def test_the_mailbox_says_who_signed_in_not_the_id_token() -> None:
         200,
         {"mail": "Me@Example.org", "userPrincipalName": "x", "displayName": "Me"},
     )
-    tokens = await client(endpoint).exchange("c", REDIRECT, "v")
+    tokens = await oauth_client(endpoint).exchange("c", REDIRECT, "v")
     assert tokens.identity == Identity(email="me@example.org", name="Me")
 
 
 async def test_without_a_mail_address_the_sign_in_name() -> None:
     endpoint = TokenEndpoint(granted())
     endpoint.profile = (200, {"mail": None, "userPrincipalName": "me@outlook.example"})
-    tokens = await client(endpoint).exchange("c", REDIRECT, "v")
+    tokens = await oauth_client(endpoint).exchange("c", REDIRECT, "v")
     assert tokens.identity == Identity(email="me@outlook.example", name=None)
 
 
@@ -223,7 +224,7 @@ async def test_a_profile_that_does_not_answer(answer: tuple[int, Any]) -> None:
     endpoint = TokenEndpoint(granted(id_token=id_token(email="me@example.org")))
     endpoint.profile = answer
     with pytest.raises(ProviderError, match="whose mailbox"):
-        await client(endpoint).exchange("c", REDIRECT, "v")
+        await oauth_client(endpoint).exchange("c", REDIRECT, "v")
 
 
 @pytest.mark.parametrize(
@@ -238,7 +239,7 @@ async def test_a_profile_that_does_not_answer(answer: tuple[int, Any]) -> None:
 async def test_refusals(error: str, kind: type[Exception]) -> None:
     endpoint = TokenEndpoint((400, {"error": error, "error_description": "x"}))
     with pytest.raises(kind) as raised:
-        await client(endpoint).refresh(SecretStr("rt-secret"))
+        await oauth_client(endpoint).refresh(SecretStr("rt-secret"))
     assert error in str(raised.value)
     assert "rt-secret" not in str(raised.value) and "app-secret" not in str(
         raised.value
@@ -290,7 +291,7 @@ async def test_the_access_token_is_refreshed_before_it_runs_out() -> None:
         kept["refresh"] = value
 
     source = RefreshingTokens(
-        client(endpoint, clock), lambda: kept["refresh"], store, clock
+        oauth_client(endpoint, clock), lambda: kept["refresh"], store, clock
     )
     assert (await source.access_token()).get_secret_value() == "at-1"
     assert (await source.access_token()).get_secret_value() == "at-1"
@@ -309,7 +310,11 @@ async def test_a_rejected_token_is_fetched_anew() -> None:
     endpoint = TokenEndpoint(granted("at-1", None), granted("at-2", None))
     current = Tokens(SecretStr("at-0"), NOW + timedelta(hours=1), None)
     source = RefreshingTokens(
-        client(endpoint), lambda: SecretStr("rt"), lambda _: None, lambda: NOW, current
+        oauth_client(endpoint),
+        lambda: SecretStr("rt"),
+        lambda _: None,
+        lambda: NOW,
+        current,
     )
     assert (await source.access_token()).get_secret_value() == "at-0"
     source.reject()
@@ -319,12 +324,23 @@ async def test_a_rejected_token_is_fetched_anew() -> None:
 async def test_a_refused_refresh_is_not_asked_again() -> None:
     endpoint = TokenEndpoint((400, {"error": "invalid_grant"}), granted())
     source = RefreshingTokens(
-        client(endpoint), lambda: SecretStr("rt"), lambda _: None, lambda: NOW
+        oauth_client(endpoint), lambda: SecretStr("rt"), lambda _: None, lambda: NOW
     )
     for _ in range(2):
         with pytest.raises(ProviderAuthError, match="sign in again"):
             await source.access_token()
     assert len(endpoint.forms) == 1
+
+
+async def test_a_forgotten_refusal_is_asked_again() -> None:
+    endpoint = TokenEndpoint((400, {"error": "invalid_grant"}), granted("at-1", None))
+    source = RefreshingTokens(
+        oauth_client(endpoint), lambda: SecretStr("rt"), lambda _: None, lambda: NOW
+    )
+    with pytest.raises(ProviderAuthError):
+        await source.access_token()
+    source.forget_refusal()
+    assert (await source.access_token()).get_secret_value() == "at-1"
 
 
 async def test_a_gateway_page_instead_of_json() -> None:
@@ -340,7 +356,7 @@ async def test_a_gateway_page_instead_of_json() -> None:
 async def test_refreshes_at_once_share_one_request() -> None:
     endpoint = TokenEndpoint(granted())
     source = RefreshingTokens(
-        client(endpoint), lambda: SecretStr("rt"), lambda _: None, lambda: NOW
+        oauth_client(endpoint), lambda: SecretStr("rt"), lambda _: None, lambda: NOW
     )
     tokens = await asyncio.gather(*(source.access_token() for _ in range(5)))
     assert {t.get_secret_value() for t in tokens} == {"at-1"}
@@ -377,11 +393,14 @@ def factory(
     return build_provider(kind, settings, credentials)
 
 
-def services_with(endpoint: TokenEndpoint) -> Services:
+def services_with(
+    endpoint: TokenEndpoint, clock: Callable[[], datetime] = utc_now
+) -> Services:
     services = build_services(
         Settings(storage="memory"),
         provider_factory=factory,
-        oauth_clients={ProviderType.MICROSOFT: client(endpoint)},
+        oauth_clients={ProviderType.MICROSOFT: oauth_client(endpoint)},
+        clock=clock,
     )
     services.vault.initialize()
     return services
@@ -418,9 +437,8 @@ async def test_a_state_is_used_once() -> None:
 
 
 async def test_a_state_expires() -> None:
-    services = services_with(TokenEndpoint())
     clock = Clock()
-    services.oauth._clock = clock  # type: ignore[attr-defined]
+    services = services_with(TokenEndpoint(), clock)
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
     clock.now += timedelta(minutes=11)
     with pytest.raises(BadRequestError, match="unknown or expired"):
@@ -439,11 +457,15 @@ async def test_only_the_starter_cancels_a_sign_in() -> None:
 
 
 async def test_a_sign_in_belongs_to_who_started_it() -> None:
-    services = services_with(TokenEndpoint())
+    services = services_with(TokenEndpoint(granted(id_token=id_token(email="a@b.c"))))
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
     other = Access.admin("usr_other", "other admin")
-    with pytest.raises(ForbiddenError, match="someone else"):
+    # Answered as an unknown one, so nobody learns it exists.
+    with pytest.raises(BadRequestError, match="unknown or expired"):
         await services.oauth.finish(other, ProviderType.MICROSOFT, state, "c")
+    # And it stays open for whoever started it.
+    await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
+    assert len(services.adapters.ids()) == 1
 
 
 def test_connecting_needs_the_right() -> None:

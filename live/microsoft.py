@@ -19,7 +19,9 @@ owner only. The first run makes that user with `users create-admin`.
 connected through the UI. The check then reads folders and mail, makes a
 folder and a reply draft and removes them, and sends one mail from the
 Microsoft test account to the first test account, which it deletes for
-good on both sides afterwards. The change feed must name the copy in
+good on both sides afterwards. At the end every mail of this check left
+in either account, of this run or an earlier one, is deleted for good,
+found by the subject's prefix. The change feed must name the copy in
 Sent Items, which the service learns of through Graph delta queries only.
 For that the worker polls every 20 seconds while the check runs, without
 IMAP IDLE. Credentials and mail content are never printed.
@@ -53,6 +55,8 @@ from _common import (
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
 SYNC_INTERVAL = 20
+# Every mail the check sends starts with it, so a later run finds leftovers.
+SUBJECT = "mailbox-service microsoft live check"
 DATA = Path("data/live-microsoft")
 PORT = 8080
 URL = f"http://localhost:{PORT}"
@@ -216,7 +220,43 @@ def check(
 
     print("\n== sending, to the first test account only")
     since = client.get(f"{base}/changes").json()["state"]
-    subject = f"mailbox-service microsoft live check {secrets.token_hex(4)}"
+    subject = f"{SUBJECT} {secrets.token_hex(4)}"
+    try:
+        _send_and_check(run, client, ms_id, bot, bot_id, since, subject)
+    finally:
+        _sweep(client, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")])
+
+
+def _sweep(client: httpx.Client, places: list[tuple[str, str]]) -> None:
+    """What this check left of its mails, deleted for good: a mail that
+    arrived after the check gave up, or one of an earlier run."""
+    removed = 0
+    for account_id, folder in places:
+        page = client.get(
+            f"/v1/accounts/{account_id}/messages",
+            params={"folder": folder, "subject": SUBJECT, "limit": 20},
+        ).json()
+        for message in page.get("items", []):
+            if str(message.get("subject") or "").startswith(SUBJECT):
+                gone = client.delete(
+                    f"/v1/accounts/{account_id}/messages/{message['id']}",
+                    params={"permanent": "true"},
+                )
+                removed += gone.status_code == 204
+    if removed:
+        print(f"      cleanup: {removed} mail(s) of the check deleted for good")
+
+
+def _send_and_check(
+    run: Run,
+    client: httpx.Client,
+    ms_id: str,
+    bot: dict[str, str],
+    bot_id: str,
+    since: str,
+    subject: str,
+) -> None:
+    base = f"/v1/accounts/{ms_id}"
     sent = client.post(
         f"{base}/send",
         json={

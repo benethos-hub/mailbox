@@ -59,9 +59,9 @@ The groups as `domain/permissions.py` holds them today:
 | `mail.delete` | `delete_message_permanent`, `delete_folder` | an account |
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
 | `send` | `send_message`, `send_draft` | an account |
-| `audit` | `list_sends` | an account |
+| `audit` | `list_sends`, `list_all_sends` | an account |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, and `discover_account`, `create_account`, `start_oauth` | an account, the last three every account |
-| `webhooks.manage` | `list_webhooks`, `create_webhook`, `delete_webhook` | the service |
+| `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |
 | `users.manage` | users, tokens, passwords, roles: fourteen rights | the service |
 | `admin` | everything, and `show_recovery_key`, which no grant names | the service |
 
@@ -114,8 +114,9 @@ from becoming a way up:
   a password to a user needs the giver to cover that user's effective
   rights. A token or a password for another user means signing in as
   that user, so it is bound by the same rule.
-- **A role is changed only by someone who covers it**, since every
-  holder gains what is added. A role in use cannot be deleted.
+- **A role is changed only by someone who covers it** and every user
+  who holds it, since every holder gains what is added and loses what is
+  taken. A role in use cannot be deleted.
 - **Nobody locks itself out.** A user cannot delete or disable itself
   and cannot take its own UI sign-in.
 - **The recovery key is `admin` only**, after the password again.
@@ -150,7 +151,8 @@ from becoming a way up:
   warning per account goes into the server's instructions, since a mail
   with injected instructions could carry data out through a user that
   reads mail and sends anywhere.
-- **Audit**: sends in the database (`/v1/accounts/{id}/sends`, UI Sends).
+- **Audit**: sends in the database (`/v1/accounts/{id}/sends`,
+  `/v1/sends`, UI Sends).
   Sign-ins, failed sign-ins, password changes and rights changes in the
   service log.
 

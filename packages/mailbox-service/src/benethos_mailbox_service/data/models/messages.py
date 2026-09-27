@@ -61,9 +61,10 @@ class MessageSummary(BaseModel):
     )
     has_attachments: bool = Field(
         default=False,
-        description="In a list of an IMAP account, whether the message is "
-        "multipart/mixed, which a list can tell without reading the message. "
-        "The message itself says whether it has attachments.",
+        description="Whether the message has a part a person sees as an "
+        "attachment, not one the body shows in its place such as an image in "
+        "the HTML. In a list of an IMAP account it is read from the header: "
+        "whether the message is multipart/mixed.",
     )
 
     model_config = {"populate_by_name": True, "serialize_by_alias": True}

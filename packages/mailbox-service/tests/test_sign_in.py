@@ -8,7 +8,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, User
 from benethos_mailbox_service.data.secrets import PasswordHasher, Scrypt
 from benethos_mailbox_service.data.storage import (
@@ -27,20 +26,13 @@ from benethos_mailbox_service.errors import (
     SetupRequiredError,
     UnauthorizedError,
 )
-from benethos_mailbox_service.main import Services, build_services
+from benethos_mailbox_service.main import Services
 
-from .conftest import ADMIN
+from .conftest import ADMIN, CHEAP
 
-CHEAP = PasswordHasher(Scrypt(log_n=4, r=1, p=1))
 SECRET = "correct horse battery staple"
 OTHER = "a different long passphrase"
 READER = Grant(accounts=["*"], allow=["mail.read"])
-
-
-@pytest.fixture
-def services() -> Services:
-    settings = Settings(storage="memory")
-    return build_services(settings, password_hasher=CHEAP)
 
 
 async def anna(services: Services, password: str = SECRET) -> User:
@@ -238,9 +230,7 @@ async def test_a_name_guessed_at_from_many_addresses_waits_a_minute() -> None:
 
 async def test_an_older_hash_is_made_anew_at_the_sign_in(services: Services) -> None:
     user = services.users.create_user(ADMIN, "Anna", [], [READER], ui_sign_in=True)
-    older = Passwords(
-        services.auth.passwords._repository, PasswordHasher(Scrypt(3, 1, 1))
-    )
+    older = Passwords(services.repositories.passwords, PasswordHasher(Scrypt(3, 1, 1)))
     before = await older.set(user.id, "Anna", SECRET, must_change=False)
     await services.auth.sign_in("Anna", SECRET, source="10.0.0.1")
     after = services.auth.passwords.stored(user.id)

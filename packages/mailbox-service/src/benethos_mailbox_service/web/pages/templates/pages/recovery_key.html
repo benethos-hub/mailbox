@@ -1,14 +1,11 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, csrf_field with context %}
+{% from "components/ui.html" import card, csrf_field, secret_card with context %}
 {% block title %}Recovery key · {{ APP_NAME }}{% endblock %}
 {% block heading %}Recovery key{% endblock %}
 {% block subheading %}<div class="sub">The master key written out: it opens every stored secret</div>{% endblock %}
 {% block content %}
 {% if key %}
-{% call card("Recovery key", tags='<span class="tag warn">shown this once</span>' | safe) %}
-  <p class="muted">Keep it apart from any backup: without it, a backup cannot be restored on another machine. Whoever holds it can read every stored password and token.</p>
-  <code class="secret">{{ key }}</code>
-{% endcall %}
+{% call secret_card("Recovery key", key) %}Keep it apart from any backup: without it, a backup cannot be restored on another machine. Whoever holds it can read every stored password and token.{% endcall %}
 {% else %}
 {% call card("Show the recovery key") %}
   <div class="notice warn">Show it only where nobody looks over your shoulder. The service log notes that it was shown, and to whom.</div>
