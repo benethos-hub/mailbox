@@ -480,7 +480,6 @@ def test_a_password_beyond_ascii_needs_auth_plain(server: FakeMailBox) -> None:
 
 
 async def test_a_rejected_login_is_not_tried_again(server: FakeMailBox) -> None:
-
     server.password = "changed"
     imap = provider(server)
     with pytest.raises(ProviderAuthError, match="rejected the login"):

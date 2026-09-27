@@ -547,7 +547,6 @@ def test_the_send_log_filters(kind: str) -> None:
 
     assert store.account_ids() == ["acc_1"]
     assert ids(user_id="usr_1") == ["snd_2", "snd_0"]
-
     assert ids(outcome="denied") == ["snd_1"]
     assert ids(recipient="bob@") == ["snd_0"]
     assert ids(recipient='"') == []  # never the JSON around the addresses

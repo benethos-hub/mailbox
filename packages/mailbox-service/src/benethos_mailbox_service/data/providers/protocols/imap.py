@@ -648,7 +648,6 @@ def _plain_login(client: Any, username: str, password: str) -> None:
 
 
 def _quietly_logout(client: Any) -> None:
-
     try:
         client.logout()
     except (imaplib.IMAP4.error, OSError):

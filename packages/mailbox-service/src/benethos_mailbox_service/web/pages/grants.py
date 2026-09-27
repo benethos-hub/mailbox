@@ -115,7 +115,6 @@ def read_grants(form: Any) -> list[Grant]:
     if count > MAX_ROWS:
         raise GrantFormError(f"an editor holds {MAX_ROWS} grants at most")
     grants = []
-
     for index in range(count):
         prefix = f"g{index}_"
         if form.get(prefix + "remove"):

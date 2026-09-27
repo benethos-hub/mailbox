@@ -130,7 +130,6 @@ def test_covers_what_the_caller_holds_on_named_accounts(right: str) -> None:
 
 
 def test_covers_star_needs_star() -> None:
-
     a = access(Grant(accounts=["*"], allow=["mail.read"]))
     assert a.covers([Grant(accounts=["*"], allow=["list_messages"])])
     assert Access.admin("x", "x").covers([Grant(accounts=["*"], allow=["admin"])])

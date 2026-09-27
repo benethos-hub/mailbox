@@ -152,7 +152,6 @@ class SendControl:
         audited = [
             a for a in self._store.account_ids() if access.allows("list_sends", a)
         ]
-
         return self._page(audited, limit, cursor, matching)
 
     def list_sends(

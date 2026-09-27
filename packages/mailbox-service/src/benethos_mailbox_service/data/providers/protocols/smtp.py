@@ -159,7 +159,6 @@ def _errors() -> Iterator[None]:
             raise BadRequestError(
                 "a value beyond ASCII cannot go to the mail server"
             ) from None
-
         except smtplib.SMTPAuthenticationError as exc:
             if 400 <= exc.smtp_code < 500:
                 # 454 4.7.0 and the like: try again later.

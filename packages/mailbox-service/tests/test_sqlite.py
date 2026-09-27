@@ -70,7 +70,6 @@ def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
 
 
 def test_a_newer_schema_is_refused(tmp_path: Path) -> None:
-
     path = tmp_path / "new.db"
     Database(path).close()
     raw = sqlite3.connect(path)

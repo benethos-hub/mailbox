@@ -12,7 +12,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   every account the caller may audit, newest first, as the UI's sends
   page shows it.
 - `ui_sign_in` on a user, in `POST /v1/users`, `PATCH
-
   /v1/users/{user_id}` and every user in an answer: whether it may sign
   in to the configuration UI. Without it the user is an API user and
   works with tokens only. Switched off, its password is deleted and its
@@ -171,14 +170,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `GET /v1/accounts/{account_id}/sends` does. Before, it listed existing
   accounts only.
 - Deleting a user removes its webhooks. Before, they stayed, posted
-
-
-
   nothing, and nobody could list or remove them. The database moves to
   schema 13, which drops those of users deleted before.
-
-
-
 - `restore` refuses while the service runs on the database, as CONCEPT
   7.8 promised. A running service holds the lock file `mailbox.db.lock`
   beside its database. Before, on Linux the running service went on
@@ -192,7 +185,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   before restoring, and `--replace-master-key` overwrites it. The
   keyring provider now refuses to store over another key, as the file
   provider did.
-
 
 ### Security
 
@@ -249,7 +241,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   megapixels, so ten pages each come smaller than three. Before, an image
   of 10 MB and ten pages of 4 megapixels each went into one result.
 - The MCP server no longer logs the URL of each request to the service
-
   at `INFO`. httpx wrote it, with search terms and message ids, into the
   log files of the MCP client.
 - `keep_attachments` of `PUT /v1/accounts/{account_id}/drafts/{draft_id}`
@@ -261,22 +252,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   holds the role, as a change to those users would. Before, a delegated
   administrator could shrink a role that a stronger user held.
 - An OAuth sign-in that comes back to another signed-in user answers as
-
   an unknown one and stays open for the user who started it. Before, it
   answered that someone else started it and ended it.
 - A request body larger than 40 MB is refused with `413
-
-
-
-
   payload_too_large`, in the API and in the UI, before the service reads
   it whole. Before, any size was read, and only a send checked the 25 MB
   of attachments afterwards.
 - The grant editor of the UI takes 100 grants at most. Before, the row
   count came from the form unchecked, and a large one held up the
   service for minutes.
-
-
 - A token revoked while a request with it was being checked stays
   revoked. Before, that request could save the token back as it had read
   it, and the revocation was lost.

@@ -137,7 +137,6 @@ master key there, `restore` refuses: the database kept beside the
 restored one opens with that key alone. Note its recovery key, then pass
 `--replace-master-key`.
 
-
 ## Users, rights and tokens
 
 Every route under `/v1` needs `Authorization: Bearer <token>`. Only

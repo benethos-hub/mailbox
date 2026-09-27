@@ -176,7 +176,6 @@ def test_a_token_expiry_needs_a_time_zone(client: TestClient) -> None:
 
 
 def test_token_lifecycle(client: TestClient, app_client: TestClient) -> None:
-
     user = client.post("/v1/users", json={"name": "script", "grants": [READ_A]}).json()
     created = client.post(f"/v1/users/{user['id']}/tokens", json={"name": "laptop"})
     assert created.status_code == 201

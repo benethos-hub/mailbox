@@ -261,7 +261,6 @@ def test_kept_attachments_come_from_a_draft_alone(
 
 
 def test_a_reply_draft_keeps_its_reference(client: TestClient, account_id: str) -> None:
-
     created = client.post(
         drafts_url(account_id),
         json={"reference": {"message_id": "m1", "action": "reply"}, "text": "Gern."},

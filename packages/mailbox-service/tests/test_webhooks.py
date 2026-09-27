@@ -256,7 +256,6 @@ def test_the_store_removes_the_webhooks_of_a_user(store: WebhookRepository) -> N
 
 
 def attempt(n: int, webhook_id: str = "whk_1") -> Attempt:
-
     return Attempt(webhook_id, f"dlv_{n}", AT, n, 500 + n, f"failure {n}")
 
 

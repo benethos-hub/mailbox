@@ -117,7 +117,6 @@ class OAuthService:
             or self._clock() - pending.started > VALID_FOR
         ):
             raise BadRequestError("this sign-in is unknown or expired: start again")
-
         client = self._client(provider)
         tokens = await client.exchange(code, pending.redirect_uri, pending.verifier)
         if tokens.refresh_token is None:

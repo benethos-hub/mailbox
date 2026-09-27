@@ -1247,7 +1247,6 @@ right `list_sends` (group `audit`). `GET /v1/sends` (`list_all_sends`)
 reads it across the accounts the caller may audit, deleted ones
 included for a grant on every account.
 
-
 #### Endpoints
 
 | Method | Path | Right |

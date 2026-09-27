@@ -696,7 +696,6 @@ def configure_logging(level: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-
     parser = _build_parser()
     args = parser.parse_args(argv)
     if args.transport not in TRANSPORTS:

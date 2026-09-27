@@ -117,7 +117,6 @@ from becoming a way up:
 - **A role is changed only by someone who covers it** and every user
   who holds it, since every holder gains what is added and loses what is
   taken. A role in use cannot be deleted.
-
 - **Nobody locks itself out.** A user cannot delete or disable itself
   and cannot take its own UI sign-in.
 - **The recovery key is `admin` only**, after the password again.
@@ -154,7 +153,6 @@ from becoming a way up:
   reads mail and sends anywhere.
 - **Audit**: sends in the database (`/v1/accounts/{id}/sends`,
   `/v1/sends`, UI Sends).
-
   Sign-ins, failed sign-ins, password changes and rights changes in the
   service log.
 

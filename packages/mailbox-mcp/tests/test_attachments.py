@@ -192,7 +192,6 @@ async def test_a_large_image_goes_by_name_only(
 
 
 def test_a_huge_page_is_rendered_within_the_budget() -> None:
-
     picture = pdf.render(make_pdf(1, width=20000, height=20000), first=1, count=1)
     width, height = png_size(picture.images[0])
     assert width * height <= pdf.MAX_PIXELS

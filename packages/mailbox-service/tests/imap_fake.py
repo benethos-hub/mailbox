@@ -170,7 +170,6 @@ class FakeMailBox:
         return b"Logged in"
 
     def oauth2_login(self, username: str, token: str) -> bytes:
-
         self.calls.append(("xoauth2", username))
         if token != self.password:
             raise LoginError("b'invalid token'")

@@ -77,7 +77,6 @@ def test_a_password_beyond_ascii_is_refused_without_naming_it() -> None:
 
 
 def test_xoauth2() -> None:
-
     fake = FakeSmtpServer(password="token")
     session(fake).verify(SmtpLogin("me@example.com", "token", "xoauth2"))
     assert ("auth", "XOAUTH2") in fake.calls
