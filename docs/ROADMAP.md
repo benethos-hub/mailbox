@@ -227,7 +227,9 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   - recovery key, status: moved to phase 4b
 - Threads (6.3): for IMAP built across folders from the id mapping,
   which then also keeps `In-Reply-To` and `References`
-- Grant constraint `folders` (7.5)
+- Users, roles and rights: the changes of [PERMISSIONS.md](PERMISSIONS.md)
+  section 8, a proposal of 2026-09-27, among them the grant constraint
+  `folders` (7.5)
 - `pop3` adapter (5.2)
 
 ## Keeping this file current
