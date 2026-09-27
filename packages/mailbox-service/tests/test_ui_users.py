@@ -94,7 +94,14 @@ def test_a_bad_recipient_is_named() -> None:
         )
 
 
+def test_the_row_count_is_capped_before_the_rows_are_read() -> None:
+    with pytest.raises(GrantFormError, match="100 grants at most"):
+        read_grants(_form(grants="2000000000"))
+    assert read_grants(_form(grants="100")) == []
+
+
 def test_sends_per_day_must_be_a_number() -> None:
+
     with pytest.raises(GrantFormError, match="must be a number"):
         read_grants(_form(grants="1", g0_accounts="*", g0_allow="send", g0_max="x"))
 

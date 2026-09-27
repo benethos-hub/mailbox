@@ -60,6 +60,10 @@ def group_hint(name: str) -> str:
 
 _SPLIT = re.compile(r"[\s,;]+")
 
+# Rows one editor may hold. The count comes from the form, so it is
+# checked before anything loops over it.
+MAX_ROWS = 100
+
 
 class GrantFormError(FormError):
     """A grant row that is not a valid grant."""
@@ -108,7 +112,10 @@ def read_grants(form: Any) -> list[Grant]:
         count = int(str(form.get("grants") or "0"))
     except ValueError:
         count = 0
+    if count > MAX_ROWS:
+        raise GrantFormError(f"an editor holds {MAX_ROWS} grants at most")
     grants = []
+
     for index in range(count):
         prefix = f"g{index}_"
         if form.get(prefix + "remove"):

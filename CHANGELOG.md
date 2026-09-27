@@ -211,6 +211,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   payload_too_large`, in the API and in the UI, before the service reads
   it whole. Before, any size was read, and only a send checked the 25 MB
   of attachments afterwards.
+- The grant editor of the UI takes 100 grants at most. Before, the row
+  count came from the form unchecked, and a large one held up the
+  service for minutes.
+
 
 - A token revoked while a request with it was being checked stays
   revoked. Before, that request could save the token back as it had read
