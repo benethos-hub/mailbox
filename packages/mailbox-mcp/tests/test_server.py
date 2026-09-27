@@ -8,6 +8,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
 from benethos_mailbox_mcp import __version__, render, server
 from benethos_mailbox_mcp.client import MailboxApiClient
@@ -238,6 +239,67 @@ async def test_a_tool_call_through_the_server(api: Callable) -> None:
         "list_folders", {"account_id": "acc_1"}
     )
     assert "Inbox" in json.dumps(result, default=str)
+
+
+EVERY_OPERATION = {need for tool in server.TOOLS for need in tool.needs}
+
+
+@pytest.mark.parametrize(
+    ("tool", "arguments", "field"),
+    [
+        ("search_messages", {"limit": 0}, "limit"),
+        ("search_messages", {"limit": server.MAX_LIMIT + 1}, "limit"),
+        ("whats_new", {"limit": server.MAX_CHANGES + 1}, "limit"),
+        (
+            "get_message",
+            {"account_id": "acc_1", "message_id": "m", "max_chars": 199},
+            "max_chars",
+        ),
+        (
+            "get_attachment",
+            {
+                "account_id": "acc_1",
+                "message_id": "m",
+                "attachment_id": "a",
+                "pages": server.MAX_PAGES + 1,
+            },
+            "pages",
+        ),
+        (
+            "update_messages",
+            {"account_id": "acc_1", "message_ids": [], "unread": True},
+            "message_ids",
+        ),
+        (
+            "update_messages",
+            {
+                "account_id": "acc_1",
+                "message_ids": [f"m{n}" for n in range(server.MAX_BATCH + 1)],
+                "unread": True,
+            },
+            "message_ids",
+        ),
+        (
+            "send_message",
+            {
+                "account_id": "acc_1",
+                "to": [f"r{n}@example.com" for n in range(101)],
+                "subject": "s",
+                "text": "t",
+            },
+            "to",
+        ),
+    ],
+)
+async def test_the_server_refuses_arguments_out_of_bounds(
+    api: Callable, tool: str, arguments: dict[str, object], field: str
+) -> None:
+    """The bounds live in the tools' signatures: the server checks them
+    before a tool runs, and nothing reaches the service."""
+    fake = api([])
+    with pytest.raises(SdkToolError, match=rf"(?s)validation error.*\n{field}\n"):
+        await server.build_server(EVERY_OPERATION).call_tool(tool, arguments)
+    assert fake.calls == []
 
 
 # --- the command line ------------------------------------------------------------
