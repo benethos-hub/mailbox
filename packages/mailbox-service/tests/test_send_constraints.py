@@ -31,6 +31,7 @@ from benethos_mailbox_service.errors import (
     ProviderError,
     RecipientNotAllowedError,
     SendLimitError,
+    StorageError,
 )
 from benethos_mailbox_service.main import Services
 
@@ -413,6 +414,23 @@ def test_a_failed_send_is_recorded_and_not_counted() -> None:
     [record] = store.list("acc_1", limit=10, before=None)
     assert (record.outcome, record.error) == ("failed", "provider_error")
     asyncio.run(control.send(access, "send_message", "acc_1", ["a@x.org"], sent, "<m>"))
+
+
+def test_a_send_the_audit_cannot_record_is_still_sent(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class Full(InMemorySendLogRepository):
+        def add(self, record: SendRecord) -> None:
+            raise StorageError("the disk is full")
+
+    access = Access("usr_1", "u", [Grant(accounts=["acc_1"], allow=["send"])])
+    result = asyncio.run(
+        SendControl(Full()).send(
+            access, "send_message", "acc_1", ["a@x.org"], sent, "<m>"
+        )
+    )
+    assert result == asyncio.run(sent())
+    assert "sent, but not recorded in the audit" in caplog.text
 
 
 def test_no_grant_at_all_allows_nothing() -> None:

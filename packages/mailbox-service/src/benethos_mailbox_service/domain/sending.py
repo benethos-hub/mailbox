@@ -9,6 +9,7 @@ sent, denied or failed, with its recipients and never its content.
 
 from __future__ import annotations
 
+import logging
 import math
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
@@ -28,6 +29,8 @@ from ..errors import (
 from . import paging
 from .access import Access
 from .locks import KeyedLocks
+
+log = logging.getLogger(__name__)
 
 WINDOW = timedelta(hours=24)
 CURSOR = "s_"
@@ -90,7 +93,13 @@ class SendControl:
             except Exception:
                 record("failed", error="internal_error")
                 raise
-            record("sent", refused=sent.refused, message_id_header=message_id_header)
+            # Sent: from here on nothing may fail, or a client would send again.
+            try:
+                record(
+                    "sent", refused=sent.refused, message_id_header=message_id_header
+                )
+            except Exception:
+                log.exception("sent, but not recorded in the audit")
             return sent
 
     def _allow(

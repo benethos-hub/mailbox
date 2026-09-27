@@ -133,6 +133,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The IMAP sync could miss a change in the folder its connection had
   selected last, e.g. a new mail in the inbox: the server answered STATUS
   for that folder from an older view. The sync now sends a NOOP first.
+- A send the provider accepted answers with its result, even when the
+  service cannot record the sent copy, the change or the audit entry
+  afterwards. Before, such a failure answered `500`, stored nothing for
+  the `Idempotency-Key`, and a retry with the same key sent the mail a
+  second time.
 
 ### Security
 

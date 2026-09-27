@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import base64
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from typing import TypeVar
 
@@ -96,7 +97,8 @@ class Outgoing:
             access, "send_message", account_id, raw, recipients, message_id
         )
         if message.reference is not None and original is not None:
-            await self._mark_answered(account_id, message.reference, original)
+            with _after_sending("the original is not marked"):
+                await self._mark_answered(account_id, message.reference, original)
         return result
 
     async def _deliver(
@@ -126,11 +128,17 @@ class Outgoing:
     async def _send_result(
         self, account_id: str, message_id: str, sent: SentMessage
     ) -> SendResult:
+        """What the caller learns of a send. The message is sent already: the
+        bookkeeping here is logged when it fails, never raised, or a client
+        would send again."""
         copy_id = None
-        if sent.sent_copy is not None:
-            copy = await self._calls.published_one(account_id, sent.sent_copy)
-            copy_id = copy.id
-        self._calls.changed(account_id, "message.sent", [copy_id or message_id])
+        try:
+            if sent.sent_copy is not None:
+                copy = await self._calls.published_one(account_id, sent.sent_copy)
+                copy_id = copy.id
+            self._calls.changed(account_id, "message.sent", [copy_id or message_id])
+        except Exception:
+            log.exception("sent, but the sent copy or the change was not recorded")
         return SendResult(
             message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
         )
@@ -341,12 +349,11 @@ class Outgoing:
             access, "send_draft", account_id, out.raw, recipients, out.message_id
         )
         # Sent: from here on nothing may fail, or a client would send again.
-        try:
+        with _after_sending("the draft is still there"):
             await self._delete_draft(account_id, draft_id)
-        except MailboxServiceError as exc:
-            log.warning("sent, but the draft is still there: %s", exc.message)
         if out.reference is not None:
-            await self._mark_from_draft(account_id, out.reference)
+            with _after_sending("the original is not marked"):
+                await self._mark_from_draft(account_id, out.reference)
         return result
 
     async def _mark_from_draft(self, account_id: str, header: str) -> None:
@@ -373,6 +380,18 @@ class Outgoing:
             account_id, draft_id, lambda p, native: p.delete_draft(native)
         )
         self._calls.forget(account_id, draft_id)
+
+
+@contextmanager
+def _after_sending(what: str) -> Iterator[None]:
+    """A step after the message went out. It may fail, but only into the
+    log: the send succeeded, and a client told otherwise sends again."""
+    try:
+        yield
+    except MailboxServiceError as exc:
+        log.warning("sent, but %s: %s", what, exc.message)
+    except Exception:
+        log.exception("sent, but %s", what)
 
 
 class _DraftToSend(BaseModel):
