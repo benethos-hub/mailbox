@@ -79,6 +79,9 @@ REST client can do too.
   a password (7.5), no longer with an API token. Tokens are for the API
   and the MCP server alone.
 
+  How the pages look and behave, and the rules a new page follows, are
+  in [UI.md](UI.md).
+
   Rules of the implementation: the session lives on the server, the cookie
   (`HttpOnly`, `SameSite=Strict`, path `/ui`) carries only a random id, and
   the session holds the id of its user. Every request loads that user
