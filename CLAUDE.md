@@ -155,6 +155,7 @@ packages/
         changes.py        # ChangeFeed: records created, updated, deleted
         worker.py         # SyncWorker: polling and IDLE in the background
         status.py         # StatusService: accounts, sync and webhooks at a glance
+        recovery.py       # RecoveryKey: the master key shown once, to admin
         idempotency.py    # Idempotency-Key: a retried send returns its result
         locks.py          # KeyedLocks: one asyncio lock per key, for the services
         sending.py        # SendControl: grant constraints on sending, send audit

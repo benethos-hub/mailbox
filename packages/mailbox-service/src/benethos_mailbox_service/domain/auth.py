@@ -130,6 +130,23 @@ class AuthService:
         previous = self.passwords.signed_in(user.id)
         return SignedIn(user.id, stored.must_change, stored.updated_at, previous)
 
+    async def confirm(self, access: Access, password: str) -> None:
+        """The signed-in user's password once more, before a step that
+        hands out much. A wrong one counts against the user's name as a
+        failed sign-in does."""
+        user = self._users.get(access.user_id)
+        key = user.name.casefold()[:MAX_NAME]
+        self._names.check(key)
+        matched = len(password) <= MAX_LENGTH and await self.passwords.matches(
+            user.id, password
+        )
+        if not matched:
+            self._names.failed(key)
+            log.warning(
+                "a wrong password to confirm a step: %s (%s)", user.name, user.id
+            )
+            raise BadRequestError("the password is not right")
+
     def session_access(self, user_id: str, stamp: datetime) -> Access:
         """What the user of a UI session may do now. Raises when the user
         is gone or disabled, or its password changed since the sign-in."""

@@ -12,6 +12,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   page to create one that shows its secret once, and a page per webhook
   with its last deliveries. The service keeps the last 20 posts of each
   webhook: when, how many events, the receiver's answer and the error.
+- A status page in the UI: each account with its status, last sync and
+  last error, the sync worker, and the user's webhooks. It asks no
+  provider. The sync state is kept in memory, so it starts empty.
+- A recovery key page in the UI, for a user with `admin` on every
+  account. It shows the key once, after the password is typed again, and
+  the service log notes to whom. The right `show_recovery_key` comes
+  with `admin` alone and cannot be granted by name.
 - A change feed: `GET /v1/accounts/{account_id}/changes` and
   `GET /v1/changes` (`list_changes`, `list_all_changes`, both in
   `mail.read`) name each message created, updated or deleted since a

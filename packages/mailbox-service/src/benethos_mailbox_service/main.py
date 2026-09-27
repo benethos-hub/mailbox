@@ -57,6 +57,7 @@ from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
 from .domain.oauth import OAuthService
 from .domain.passwords import Passwords
+from .domain.recovery import RecoveryKey
 from .domain.sending import SendControl
 from .domain.status import StatusService
 from .domain.sync import SyncService
@@ -81,6 +82,7 @@ class Services:
     webhooks: WebhookService
     deliveries: WebhookDispatcher
     status: StatusService
+    recovery: RecoveryKey
     worker: SyncWorker | None = None
     database: Database | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
@@ -184,6 +186,7 @@ def build_services(
             ),
         ),
         status=StatusService(accounts, sync, worker, webhooks),
+        recovery=RecoveryKey(auth, vault),
         database=repos.database,
         oauth_clients=clients,
     )

@@ -36,6 +36,7 @@ from .routes import (
     messages,
     oauth,
     sends,
+    status,
     users,
     webhooks,
 )
@@ -59,6 +60,7 @@ AREAS = (
     drafts,
     sends,
     oauth,
+    status,
     users,
     webhooks,
 )

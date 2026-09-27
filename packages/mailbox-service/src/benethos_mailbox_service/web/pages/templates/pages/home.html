@@ -13,7 +13,7 @@
   {% call fact("Beyond one account") %}{% for group in view.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for op in view.operations %}<span class="tag">{{ op }}</span> {% endfor %}{% endcall %}
   {% endif %}
   {% call fact("Last sign-in") %}{% if previous_sign_in %}{{ previous_sign_in | when }}, before this one{% else %}this is the first{% endif %}{% endcall %}
-  {% call fact("Go to") %}{% if own_page %}<a href="{{ own_page }}">Your page</a> · {% endif %}<a href="/ui/password">Password</a>{% endcall %}
+  {% call fact("Go to") %}{% if own_page %}<a href="{{ own_page }}">Your page</a> · {% endif %}<a href="/ui/password">Password</a>{% if can_recover %} · <a href="/ui/recovery-key">Recovery key</a>{% endif %}{% endcall %}
 {% endcall %}
 {% if anywhere %}
 <div class="notice warn">You may read mail and send it to any address on at least one account. A mail with injected instructions could use that to carry data out. A grant with recipients narrows sending.</div>
