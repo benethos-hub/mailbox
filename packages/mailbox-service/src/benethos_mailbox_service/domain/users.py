@@ -6,6 +6,7 @@ only manage a user whose rights it holds itself.
 
 from __future__ import annotations
 
+import secrets
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
@@ -18,6 +19,9 @@ from . import permissions
 from .access import Access, SendLimit
 from .adapters import Adapters
 from .auth import AuthService, TokenState
+
+# A one-time password of 18 random bytes: 24 characters, 144 bits.
+ONE_TIME_BYTES = 18
 
 
 @dataclass(frozen=True)
@@ -97,17 +101,33 @@ class UserService:
 
     # --- setup ----------------------------------------------------------------
 
-    def create_admin(self, name: str) -> tuple[User, str]:
-        """A user with every right, and a token for it. For the command line
-        on the host only: it checks no caller."""
+    async def create_admin(self, name: str) -> tuple[User, str]:
+        """A user with every right, and a one-time password for it, to be
+        changed at the first sign-in. For the command line on the host
+        only: it checks no caller."""
+        _named("a user", name)
+        self._require_free(name)
         user = User(
             id=new_id("usr"),
             name=name,
             grants=[Grant(accounts=["*"], allow=[permissions.ADMIN])],
         )
         self._users.save(user)
-        _, plain = self._auth.issue_token(user.id, "created on the command line")
-        return user, plain
+        return user, await self._one_time(user)
+
+    async def reset_password(self, name: str) -> tuple[User, str]:
+        """A new one-time password for the user of this name, to be changed
+        at the next sign-in. For the command line on the host only, when
+        nobody who could set it can sign in: it checks no caller."""
+        user = self._auth.user_named(name)
+        if user is None:
+            raise NotFoundError(f"no user is named {name}")
+        return user, await self._one_time(user)
+
+    async def _one_time(self, user: User) -> str:
+        password = secrets.token_urlsafe(ONE_TIME_BYTES)
+        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
+        return password
 
     # --- users ----------------------------------------------------------------
 

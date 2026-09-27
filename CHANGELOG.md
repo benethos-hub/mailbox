@@ -55,6 +55,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - The configuration UI no longer takes an API token to sign in. Tokens
   are for the API and the MCP server.
+- `users create-admin` prints a one-time password instead of a token. The
+  first sign-in to the UI asks for a password of one's own. A second user
+  of the same name is refused. `users set-password NAME` gives a user a
+  new one-time password, e.g. when the last administrator forgot theirs.
 - The last two places with the old name use the new one. A draft marks
   what it replies to with `X-Mailbox-Service-Reference` (was
   `X-Mailbox-Api-Reference`), and a backup starts with
