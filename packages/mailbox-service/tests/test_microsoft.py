@@ -288,7 +288,10 @@ async def test_folders_are_created_renamed_moved_deleted(graph: FakeGraph) -> No
     renamed = await provider.update_folder(inner.id, "Inside", top.id)
     assert renamed.name == "Inside" and renamed.id == inner.id
     lifted = await provider.update_folder(inner.id, "Inside", None)
-    assert lifted.parent_id == graph.root
+    # The mailbox's root is Graph's parent of the top: for us there is none.
+    assert lifted.parent_id is None and top.parent_id is None
+    listed = {f.id: f.parent_id for f in await provider.list_folders()}
+    assert listed[top.id] is None and listed[inner.id] is None
     assert await provider.folder_contents(inner.id) == []
     await provider.delete_folder(inner.id)
     assert inner.id not in graph.folders

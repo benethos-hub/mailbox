@@ -191,6 +191,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- A top-level folder of a Microsoft account has `parent_id` null, as on
+  IMAP. Before, it named the mailbox's root folder, which no list shows.
 - `max_requests_per_minute` in the settings of an IMAP account must be a
   number above 0, else the account answers `400`. Before, a word or a
   negative number answered `500`.

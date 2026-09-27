@@ -47,13 +47,16 @@ FOLDER_FIELDS = (
 )
 
 
-def folder(item: dict[str, Any], roles: dict[str, FolderRole]) -> Folder:
+def folder(item: dict[str, Any], roles: dict[str, FolderRole], root: str) -> Folder:
+    """A mail folder. Graph names the mailbox's root folder, which no list
+    shows, as the parent of the top ones: for us they have none."""
     folder_id = str(item["id"])
+    parent = item.get("parentFolderId")
     return Folder(
         id=folder_id,
         name=str(item.get("displayName") or ""),
         role=roles.get(folder_id),
-        parent_id=item.get("parentFolderId"),
+        parent_id=None if parent == root else parent,
         total=item.get("totalItemCount"),
         unread=item.get("unreadItemCount"),
     )

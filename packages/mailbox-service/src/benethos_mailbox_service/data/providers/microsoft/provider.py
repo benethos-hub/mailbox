@@ -174,12 +174,13 @@ class MicrosoftProvider:
 
     async def list_folders(self) -> list[Folder]:
         roles = await self._folder_roles()
+        root = await self._root_id()
         params = {"$select": mappers.FOLDER_FIELDS, "$top": str(PAGE_SIZE)}
         found: list[Folder] = []
         waiting = await self._all("/me/mailFolders", params)
         while waiting:
             item = waiting.pop(0)
-            found.append(mappers.folder(item, roles))
+            found.append(mappers.folder(item, roles, root))
             if item.get("childFolderCount"):
                 waiting.extend(
                     await self._all(
@@ -195,7 +196,7 @@ class MicrosoftProvider:
             else "/me/mailFolders"
         )
         item = await self._json("POST", path, json_body={"displayName": name})
-        return mappers.folder(item, await self._folder_roles())
+        return mappers.folder(item, await self._folder_roles(), await self._root_id())
 
     async def update_folder(
         self, folder_id: str, name: str, parent_id: str | None
@@ -209,7 +210,7 @@ class MicrosoftProvider:
             item = await self._json(
                 "POST", f"{path}/move", json_body={"destinationId": parent_id or root}
             )
-        return mappers.folder(item, await self._folder_roles())
+        return mappers.folder(item, await self._folder_roles(), root)
 
     async def _root_id(self) -> str:
         if self._root is None:
