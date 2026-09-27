@@ -82,6 +82,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `list_drafts` of the MCP server carries a `note` that `to` and
+  `subject` may be the words of the mail a draft answers, as
+  `search_messages` does for `from` and `subject`.
 - The MCP server leaves out more hidden text of an HTML mail: a font
   below 2px, opacity below 0.1, text pushed far off the page, a box of
   height 0 with its overflow hidden, and text in the colour of its own

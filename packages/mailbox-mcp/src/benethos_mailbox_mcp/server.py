@@ -382,6 +382,7 @@ async def list_drafts(
     return {
         "drafts": [render.draft(item) for item in page.items],
         "next_cursor": page.next_cursor,
+        "note": render.DRAFTS_NOTE,
     }
 
 

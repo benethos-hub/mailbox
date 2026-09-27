@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import pytest
 
-from benethos_mailbox_mcp import server
+from benethos_mailbox_mcp import render, server
 from benethos_mailbox_mcp.errors import ToolError
 
 DRAFTS = "/v1/accounts/acc_1/drafts"
@@ -32,6 +32,7 @@ async def test_list_drafts(api: Callable) -> None:
             }
         ],
         "next_cursor": None,
+        "note": render.DRAFTS_NOTE,
     }
     assert handler.calls == [("GET", DRAFTS, {"limit": "5"}, None)]
 
