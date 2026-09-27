@@ -49,6 +49,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MAILBOX-SERVICE-BACKUP 1` (was `MAILBOX-API-BACKUP 1`). A backup
   made by 0.1.0 is refused. A draft saved by 0.1.0 loses its reference,
   and the old header stays in the mail when that draft is sent.
+- User names are unique regardless of case, since a person will sign in
+  with one. The database moves to schema 9. Of two users with the same
+  name, the later one gets part of its id appended.
 
 ### Fixed
 
