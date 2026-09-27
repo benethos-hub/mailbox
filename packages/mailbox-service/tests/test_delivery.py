@@ -9,6 +9,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import anyio
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -370,3 +371,46 @@ async def test_a_host_that_does_not_resolve() -> None:
 
     with pytest.raises(ProviderUnavailableError, match="does not resolve"):
         await WebhookPoster(resolve=nowhere).post(URL, b"{}", {})
+
+
+async def test_a_bug_with_one_webhook_does_not_stop_the_others(
+    client: TestClient,
+    services: Services,
+    account_id: str,
+    receiver: Receiver,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    first = hook(client)
+    hook(client)
+    mark_read(client, account_id, "m0")
+    receiver.failure = KeyError("a bug")
+    await services.deliveries.deliver_due()
+    receiver.failure = None
+    await services.deliveries.deliver_due()
+    assert len(receiver.posts) == 4  # both tried, then both again
+    assert f"webhook {first['id']} failed" in caplog.text
+
+
+async def test_a_failed_round_does_not_end_the_dispatcher(
+    services: Services,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    rounds: list[int] = []
+
+    async def deliver_due() -> None:
+        rounds.append(1)
+        raise RuntimeError("the database is gone")
+
+    monkeypatch.setattr(services.deliveries, "deliver_due", deliver_due)
+    with anyio.CancelScope() as scope:
+
+        async def sleep(seconds: float) -> None:
+            if len(rounds) == 2:
+                scope.cancel()
+            await anyio.sleep(0)
+
+        monkeypatch.setattr(services.deliveries, "_sleep", sleep)
+        await services.deliveries.run()
+    assert len(rounds) == 2
+    assert "a round of webhook posts failed" in caplog.text

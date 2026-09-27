@@ -138,6 +138,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   afterwards. Before, such a failure answered `500`, stored nothing for
   the `Idempotency-Key`, and a retry with the same key sent the mail a
   second time.
+- An unexpected error with one account or one webhook is logged and the
+  sync worker and the webhook posts go on. Before, it ended both for the
+  life of the process, while the API went on answering.
 
 ### Security
 

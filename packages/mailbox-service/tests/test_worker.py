@@ -232,3 +232,76 @@ async def test_the_status_names_what_needs_attention(
     assert not status.may_see(nobody)
     with pytest.raises(ForbiddenError):
         status.status(nobody)
+
+
+async def test_a_bug_in_one_account_does_not_stop_the_round(
+    services: Services,  # noqa: F811
+    account_id: str,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    memory = await services.accounts.create(ADMIN, ProviderType.MEMORY, "m@example.com")
+    synced: list[str] = []
+
+    async def sync_account(account: str) -> None:
+        if account == account_id:
+            raise KeyError("a bug")
+        synced.append(account)
+
+    monkeypatch.setattr(services.sync, "watched", lambda account: True)
+    monkeypatch.setattr(services.sync, "sync_account", sync_account)
+    await worker(services, push=False).poll()
+    assert synced == [memory.id]
+    assert f"sync of {account_id} failed" in caplog.text
+    assert "KeyError" in caplog.text
+
+
+async def test_a_bug_while_watching_pauses_and_tries_again(
+    services: Services,  # noqa: F811
+    account_id: str,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    slept: list[float] = []
+
+    async def note(seconds: float) -> None:
+        slept.append(seconds)
+        monkeypatch.setattr(services.sync, "watched", lambda account: False)
+
+    async def broken(*args: object) -> None:
+        raise KeyError("a bug")
+
+    monkeypatch.setattr(services.sync, "watched", lambda account: True)
+    monkeypatch.setattr(services.adapters, "call", broken)
+    await SyncWorker(services.adapters, services.sync, interval=300, sleep=note).watch(
+        account_id
+    )
+    assert len(slept) == 1
+    assert f"watching {account_id} failed" in caplog.text
+
+
+async def test_a_failed_round_does_not_end_the_worker(
+    services: Services,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    rounds: list[int] = []
+
+    async def poll(watchers: object = None) -> None:
+        rounds.append(1)
+        raise RuntimeError("the index is gone")
+
+    with anyio.CancelScope() as scope:
+
+        async def sleep(seconds: float) -> None:
+            if len(rounds) == 2:
+                scope.cancel()
+            await anyio.sleep(0)
+
+        background = SyncWorker(
+            services.adapters, services.sync, interval=300, sleep=sleep
+        )
+        monkeypatch.setattr(background, "poll", poll)
+        await background.run()
+    assert len(rounds) == 2
+    assert "a sync round failed" in caplog.text

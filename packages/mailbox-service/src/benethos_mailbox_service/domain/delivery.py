@@ -101,9 +101,12 @@ class WebhookDispatcher:
         self._sleep = sleep
 
     async def run(self) -> None:
-        """Until cancelled."""
+        """Until cancelled. A failure ends a round, never the dispatcher."""
         while True:
-            await self.deliver_due()
+            try:
+                await self.deliver_due()
+            except Exception:
+                log.exception("a round of webhook posts failed")
             await self._sleep(POLL)
 
     async def deliver_due(self) -> None:
@@ -115,6 +118,9 @@ class WebhookDispatcher:
                         break
             except MailboxServiceError as exc:
                 log.warning("webhook %s: %s", record.webhook.id, exc.message)
+            except Exception:
+                # A bug with one webhook must not stop the others.
+                log.exception("webhook %s failed", record.webhook.id)
 
     async def _deliver(self, webhook_id: str) -> bool:
         """One post, if one is due. True when more events wait."""

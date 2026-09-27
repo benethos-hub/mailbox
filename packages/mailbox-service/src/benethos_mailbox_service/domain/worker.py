@@ -82,10 +82,13 @@ class SyncWorker:
         )
 
     async def run(self) -> None:
-        """Until cancelled."""
+        """Until cancelled. A failure ends a round, never the worker."""
         async with anyio.create_task_group() as watchers:
             while True:
-                await self.poll(watchers)
+                try:
+                    await self.poll(watchers)
+                except Exception:
+                    log.exception("a sync round failed")
                 await self._sleep(self._interval)
 
     async def poll(self, watchers: TaskGroup | None = None) -> None:
@@ -102,6 +105,9 @@ class SyncWorker:
                 continue  # deleted meanwhile
             except MailboxServiceError as exc:
                 log.warning("sync of %s failed: %s", account_id, exc.message)
+            except Exception:
+                # A bug in one adapter must not stop the sync of the others.
+                log.exception("sync of %s failed", account_id)
         self._last_pass_at = self._clock()
 
     async def watch(self, account_id: str) -> None:
@@ -124,14 +130,15 @@ class SyncWorker:
                     return  # _wanted is false now, until the account is verified
                 except NotFoundError:
                     return  # deleted meanwhile
-                except MailboxServiceError as exc:
+                except Exception as exc:
                     failures += 1
                     pause = backoff(failures - 1, FIRST_RETRY, LONGEST_RETRY)
                     log.warning(
                         "watching %s failed, next try in %.0fs: %s",
                         account_id,
                         pause,
-                        exc.message,
+                        _reason(exc),
+                        exc_info=not isinstance(exc, MailboxServiceError),
                     )
                     await self._sleep(pause)
         except NotFoundError:
@@ -151,3 +158,10 @@ class SyncWorker:
             and account_id not in self._no_push
             and Capability.PUSH in self._adapters.capabilities(account_id)
         )
+
+
+def _reason(exc: Exception) -> str:
+    """The message of one of our errors, else the kind of the failure."""
+    if isinstance(exc, MailboxServiceError):
+        return exc.message
+    return type(exc).__name__
