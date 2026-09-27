@@ -1,21 +1,15 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, anywhere_tag, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, new_row, related with context %}
+{% from "components/ui.html" import action, anywhere_tag, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, new_row, related, secret_card with context %}
 {% from "components/grants.html" import grant_editor, grants_of, role_checks, role_tags %}
 {% block title %}{{ user.name }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ user.name }}{% endblock %}
 {% block subheading %}{{ breadcrumb([("Users", "/ui/users"), (user.name, None)]) }}{% endblock %}
 {% block content %}
 {% if new_token %}
-{% call card("New token", tags='<span class="tag warn">shown this once</span>' | safe) %}
-  <p class="muted">Copy it now. Only its hash is kept. It cannot be shown again.</p>
-  <code class="secret">{{ new_token }}</code>
-{% endcall %}
+{% call secret_card("New token", new_token) %}Copy it now. Only its hash is kept. It cannot be shown again.{% endcall %}
 {% endif %}
 {% if new_password %}
-{% call card("One-time password", tags='<span class="tag warn">shown this once</span>' | safe) %}
-  <p class="muted">Pass it to {{ user.name }} over a safe channel. It must be changed at the first sign-in.</p>
-  <code class="secret">{{ new_password }}</code>
-{% endcall %}
+{% call secret_card("One-time password", new_password) %}Pass it to {{ user.name }} over a safe channel. It must be changed at the first sign-in.{% endcall %}
 {% endif %}
 
 {% set state %}{% if is_me %}<span class="tag accent">you</span> {% endif %}{% if not user.ui_sign_in %}<span class="tag">API only</span> {% endif %}{% if user.disabled %}<span class="tag bad">disabled</span>{% else %}<span class="tag ok">active</span>{% endif %}{% endset %}

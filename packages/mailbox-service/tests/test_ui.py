@@ -538,3 +538,14 @@ def test_every_class_a_template_names_is_styled() -> None:
                 f"{template.name}: {n}" for n in names.split() if n not in styled
             }
     assert not unstyled, sorted(unstyled)
+
+
+def test_no_template_marks_text_as_safe() -> None:
+    """Everything a page shows is escaped. Markup a card needs comes from a
+    macro, never from a string marked safe."""
+    marked = [
+        template.name
+        for template in TEMPLATE_DIR.rglob("*.html")
+        if re.search(r"\|\s*safe\b", template.read_text(encoding="utf-8"))
+    ]
+    assert marked == []

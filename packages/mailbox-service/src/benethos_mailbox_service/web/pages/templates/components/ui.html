@@ -21,6 +21,18 @@
 </section>
 {% endmacro %}
 
+{# A secret the service shows once, e.g. a new token: ``title``, the
+   value in one selectable piece, and the caller says what to do with it. #}
+{% macro secret_card(title, value) %}
+<section class="card">
+  <header><h2>{{ title }}</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
+  <div class="body">
+    <p class="muted">{{ caller() }}</p>
+    <code class="secret">{{ value }}</code>
+  </div>
+</section>
+{% endmacro %}
+
 {# The first card of a detail page: what the record is, read-only. The
    caller gives ``fact`` lines. #}
 {% macro facts(title, tags=None) %}
