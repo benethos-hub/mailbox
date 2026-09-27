@@ -13,6 +13,7 @@ from benethos_mailbox_service.data.models import (
     User,
 )
 from benethos_mailbox_service.data.storage import (
+    InMemoryPasswordRepository,
     InMemoryRoleRepository,
     InMemoryTokenRepository,
     InMemoryUserRepository,
@@ -24,6 +25,7 @@ from benethos_mailbox_service.domain.auth import (
     hash_token,
     new_token,
 )
+from benethos_mailbox_service.domain.passwords import Passwords
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
@@ -32,7 +34,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import Services
 
-from .conftest import bearer_for, create_account
+from .conftest import CHEAP, bearer_for, create_account
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -48,6 +50,10 @@ class Clock:
 @pytest.fixture
 def clock() -> Clock:
     return Clock()
+
+
+def passwords() -> Passwords:
+    return Passwords(InMemoryPasswordRepository(), CHEAP)
 
 
 @pytest.fixture
@@ -71,7 +77,7 @@ def service(repos, clock: Clock) -> AuthService:
     roles.save(
         Role(id="readers", grants=[Grant(accounts=["acc_a"], allow=["mail.read"])])
     )
-    return AuthService(users, roles, tokens, clock=clock)
+    return AuthService(users, roles, tokens, passwords(), clock=clock)
 
 
 def test_token_format() -> None:
@@ -169,7 +175,7 @@ def test_token_for_unknown_user(service: AuthService) -> None:
 
 def test_nothing_configured_asks_for_setup(repos) -> None:
     with pytest.raises(SetupRequiredError, match="create-admin"):
-        AuthService(*repos).authenticate("anything")
+        AuthService(*repos, passwords()).authenticate("anything")
 
 
 # --- through the API -------------------------------------------------------

@@ -18,12 +18,7 @@ from typing import Literal
 from ..common.clock import utc_now
 from ..common.ids import new_id
 from ..data.models import ApiToken, User
-from ..data.storage import (
-    InMemoryPasswordRepository,
-    RoleRepository,
-    TokenRepository,
-    UserRepository,
-)
+from ..data.storage import RoleRepository, TokenRepository, UserRepository
 from ..errors import (
     BadRequestError,
     NotFoundError,
@@ -83,9 +78,9 @@ class AuthService:
         users: UserRepository,
         roles: RoleRepository,
         tokens: TokenRepository,
+        passwords: Passwords,
         clock: Callable[[], datetime] = utc_now,
         throttle: SignInThrottle | None = None,
-        passwords: Passwords | None = None,
     ) -> None:
         self._users = users
         self._roles = roles
@@ -95,7 +90,7 @@ class AuthService:
         self._names = SignInThrottle(
             limit=NAME_LIMIT, window=NAME_WINDOW, lockout=NAME_LOCKOUT, clock=clock
         )
-        self.passwords = passwords or Passwords(InMemoryPasswordRepository())
+        self.passwords = passwords
 
     async def sign_in(self, name: str, password: str, *, source: str) -> SignedIn:
         """The user behind a name and a password. A wrong name, a wrong

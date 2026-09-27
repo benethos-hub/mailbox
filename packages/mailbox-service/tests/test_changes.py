@@ -277,7 +277,7 @@ def test_old_changes_are_purged_as_new_ones_come_in() -> None:
 def test_purging_waits_an_hour_between_two_runs() -> None:
     t0 = datetime(2026, 9, 25, tzinfo=UTC)
     now = t0
-    feed = ChangeFeed(days=1, clock=lambda: now)
+    feed = ChangeFeed(InMemoryChangeLogRepository(), days=1, clock=lambda: now)
     feed.record("acc_1", "message.created", ["msg_1"])
     now = t0 + timedelta(hours=23, minutes=30)
     feed.purge()  # too early for msg_1
@@ -294,7 +294,7 @@ def test_purging_waits_an_hour_between_two_runs() -> None:
 
 
 def test_a_change_is_recorded_once_per_message() -> None:
-    feed = ChangeFeed()
+    feed = ChangeFeed(InMemoryChangeLogRepository())
     feed.record("acc_1", "message.updated", ["msg_1", "msg_1", "msg_2"])
     assert [e.event.id for e in feed.after(["acc_1"], 0, limit=10)] == [
         "msg_1",

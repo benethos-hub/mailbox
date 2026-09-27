@@ -144,7 +144,7 @@ def build_services(
         repos.users,
         repos.roles,
         repos.tokens,
-        passwords=Passwords(repos.passwords, password_hasher),
+        Passwords(repos.passwords, password_hasher),
     )
     worker = (
         SyncWorker(

@@ -13,7 +13,10 @@ import pytest
 from benethos_mailbox_service.data.http import ApiClient
 from benethos_mailbox_service.data.providers import Capability, MailProvider
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
-from benethos_mailbox_service.data.storage import InMemoryMessageIndexRepository
+from benethos_mailbox_service.data.storage import (
+    InMemoryChangeLogRepository,
+    InMemoryMessageIndexRepository,
+)
 from benethos_mailbox_service.domain.changes import ChangeFeed
 from benethos_mailbox_service.domain.sync import SyncService
 from benethos_mailbox_service.errors import ChangesExpiredError
@@ -73,7 +76,10 @@ def sync(graph: FakeGraph, clock: Clock) -> SyncService:
     )
     adapters: Any = OneAdapter(provider)
     return SyncService(
-        adapters, InMemoryMessageIndexRepository(), feed=ChangeFeed(), clock=clock
+        adapters,
+        InMemoryMessageIndexRepository(),
+        feed=ChangeFeed(InMemoryChangeLogRepository()),
+        clock=clock,
     )
 
 

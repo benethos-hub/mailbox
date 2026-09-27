@@ -58,14 +58,14 @@ class SyncService:
         self,
         adapters: Adapters,
         index: MessageIndexRepository,
+        feed: ChangeFeed,
         new_id: Callable[[], str] = new_message_id,
-        feed: ChangeFeed | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._adapters = adapters
         self._index = index
         self._new_id = new_id
-        self._feed = feed if feed is not None else ChangeFeed()
+        self._feed = feed
         self._clock = clock
         self._locks: KeyedLocks[str] = KeyedLocks()
         self._states: dict[str, SyncState] = {}
