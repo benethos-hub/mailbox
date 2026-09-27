@@ -51,18 +51,14 @@ import anyio
 from _common import (
     Run,
     accounts,
-    admin_token,
+    in_process_service,
     messages_with_subject,
     read_env,
     register,
 )
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
-from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import MailboxServiceError
-from benethos_mailbox_service.main import build_services, create_app
 
 IDLE_WAIT = 90.0
 FLAGGED = chr(92) + "Flagged"
@@ -426,18 +422,7 @@ def main() -> int:
     base = f"mailbox-service-live-{token}"
     folder = base
 
-    settings = Settings(
-        storage="memory",
-        key_provider="env",
-        master_key=SecretStr(encode_recovery(cipher.new_key())),
-        sync_interval=0,
-    )
-    services = build_services(settings)
-    services.vault.initialize()
-    client = TestClient(
-        create_app(settings, services),
-        headers={"Authorization": f"Bearer {admin_token(services)}"},
-    )
+    services, client = in_process_service()
     run = Run()
     other: OtherClient | None = None
     print(f"== {receiver['email']} receives from {sender['email']}")

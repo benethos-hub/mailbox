@@ -24,12 +24,15 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 import httpx
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
+from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.domain import permissions
 from benethos_mailbox_service.domain.access import Access
-from benethos_mailbox_service.main import Services
+from benethos_mailbox_service.main import Services, build_services, create_app
 
 ENV_FILE = Path(__file__).with_name(".env")
 T = TypeVar("T")
@@ -304,6 +307,24 @@ class Admin:
     name: str
     password: str
     token: str
+
+
+def in_process_service() -> tuple[Services, TestClient]:
+    """The service in this process: in memory, under a new master key, and
+    a client that calls its API with a token of a user with every right."""
+    settings = Settings(
+        storage="memory",
+        key_provider="env",
+        master_key=SecretStr(encode_recovery(cipher.new_key())),
+        sync_interval=0,
+    )
+    services = build_services(settings)
+    services.vault.initialize()
+    client = TestClient(
+        create_app(settings, services),
+        headers={"Authorization": f"Bearer {admin_token(services)}"},
+    )
+    return services, client
 
 
 def admin_token(services: Services, name: str = "live") -> str:
