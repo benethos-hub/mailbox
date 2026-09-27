@@ -118,9 +118,12 @@ class SmtpSession:
                     # SASL XOAUTH2: user, bearer token, separated by ^A.
                     answer = f"user={login.username}\1auth=Bearer {login.secret}\1\1"
                     connection.ehlo_or_helo_if_needed()
+                    # A server that refuses the token sends a challenge with
+                    # the reason and wants an empty line back (RFC 7628
+                    # 3.2.2), then answers 535.
                     connection.auth(
                         "XOAUTH2",
-                        lambda challenge=None: answer,
+                        lambda challenge=None: answer if challenge is None else "",
                         initial_response_ok=True,
                     )
                 else:

@@ -52,9 +52,15 @@ class FakeSmtpConnection:
         return None
 
     def auth(self, mechanism: str, answer: Any, initial_response_ok: bool) -> None:
+        """Like smtplib against a server: a refused token gets a 334
+        challenge with the reason, and smtplib gives up after five."""
         self._server.calls.append(("auth", mechanism))
-        if f"auth=Bearer {self._server.password}" not in answer():
-            raise smtplib.SMTPAuthenticationError(535, b"invalid token")
+        if f"auth=Bearer {self._server.password}" in answer():
+            return
+        for _ in range(5):
+            if answer(b'{"status":"401","schemes":"bearer"}') == "":
+                raise smtplib.SMTPAuthenticationError(535, b"invalid token")
+        raise smtplib.SMTPException("Server AUTH mechanism infinite loop.")
 
     def has_extn(self, name: str) -> bool:
         return name.lower() in self._server.extensions

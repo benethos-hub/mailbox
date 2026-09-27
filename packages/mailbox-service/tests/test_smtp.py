@@ -76,6 +76,12 @@ def test_a_password_beyond_ascii_is_refused_without_naming_it() -> None:
     assert ("login", "me@example.com") not in fake.calls
 
 
+def test_a_refused_xoauth2_token_is_a_rejected_login() -> None:
+    fake = FakeSmtpServer(password="fresh token")
+    with pytest.raises(ProviderAuthError):
+        session(fake).verify(SmtpLogin("me@example.com", "stale", "xoauth2"))
+
+
 def test_xoauth2() -> None:
     fake = FakeSmtpServer(password="token")
     session(fake).verify(SmtpLogin("me@example.com", "token", "xoauth2"))

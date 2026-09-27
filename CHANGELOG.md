@@ -187,6 +187,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `400`. Before, it went on from its positions under the new parameters,
   and the folder of the new request was ignored. Cursors handed out
   before this version are refused once.
+- An SMTP server that refuses an XOAUTH2 token counts as a rejected
+  login, `502 provider_auth_failed`. Before, the service answered the
+  server's challenge with the token again until smtplib gave up, and it
+  counted as a failure of the server.
 - Moving a message whose Message-ID holds characters beyond ASCII on an
   IMAP server without COPYUID answers with the move. Before, the move
   went through and the request answered `500`.
