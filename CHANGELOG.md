@@ -253,7 +253,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   the drafts made the service fetch that message's attachment for a
   caller with the right to write drafts only, and the answer told
   whether the id existed.
+- `PUT /v1/roles/{role_id}` needs the caller to cover every user who
+  holds the role, as a change to those users would. Before, a delegated
+  administrator could shrink a role that a stronger user held.
 - An OAuth sign-in that comes back to another signed-in user answers as
+
   an unknown one and stays open for the user who started it. Before, it
   answered that someone else started it and ended it.
 - A request body larger than 40 MB is refused with `413

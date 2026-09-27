@@ -114,8 +114,10 @@ from becoming a way up:
   a password to a user needs the giver to cover that user's effective
   rights. A token or a password for another user means signing in as
   that user, so it is bound by the same rule.
-- **A role is changed only by someone who covers it**, since every
-  holder gains what is added. A role in use cannot be deleted.
+- **A role is changed only by someone who covers it** and every user
+  who holds it, since every holder gains what is added and loses what is
+  taken. A role in use cannot be deleted.
+
 - **Nobody locks itself out.** A user cannot delete or disable itself
   and cannot take its own UI sign-in.
 - **The recovery key is `admin` only**, after the password again.

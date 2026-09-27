@@ -406,8 +406,12 @@ class UserService:
         return self._save_role(access, Role(id=role_id, grants=grants))
 
     def replace_role(self, access: Access, role_id: str, grants: list[Grant]) -> Role:
+        """The role's holders change with it: the caller must be able to
+        manage each of them, as for a change to the user itself."""
         access.require("replace_role")
         self._require_covers(access, self._roles.get(role_id).grants)
+        for holder in self._holders(role_id):
+            self._require_covers_user(access, holder)
         return self._save_role(access, Role(id=role_id, grants=grants))
 
     def delete_role(self, access: Access, role_id: str) -> None:

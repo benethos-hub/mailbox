@@ -306,6 +306,25 @@ def test_cannot_escalate_through_a_role(
     assert response.status_code == 403
 
 
+def test_cannot_change_the_role_of_a_stronger_user(
+    app_client: TestClient, client: TestClient, services: Services
+) -> None:
+    client.post("/v1/roles", json={"id": "readers", "grants": [READ_A]})
+    client.post(
+        "/v1/users",
+        json={
+            "name": "strong",
+            "roles": ["readers"],
+            "grants": [{"accounts": ["*"], "allow": ["admin"]}],
+        },
+    )
+    headers = _manager(services)
+    # The manager covers the role, but not the admin who holds it.
+    shrunk = app_client.put("/v1/roles/readers", json={"grants": []}, headers=headers)
+    assert shrunk.status_code == 403
+    assert client.get("/v1/roles/readers").json()["grants"] != []
+
+
 def test_cannot_manage_a_stronger_user(
     app_client: TestClient, client: TestClient, services: Services
 ) -> None:
