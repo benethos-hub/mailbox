@@ -117,6 +117,10 @@ def sent_text(result: SendResult) -> str:
     return f"Sent.{refused}"
 
 
+# The heading of a reply or forward, by its action.
+ACTION_NAMES = {"reply": "Reply", "reply_all": "Reply to all", "forward": "Forward"}
+
+
 def show(
     request: Request,
     caller: Access,
@@ -131,12 +135,22 @@ def show(
 ) -> HTMLResponse:
     """The form with ``values``, and for a stored draft with its id."""
     account_id = account.id
+    # What the draft answers: a stored one says it, a new one's form.
+    verb = (
+        stored.reference.action
+        if stored is not None and stored.reference is not None
+        else values.get("action", "")
+    )
+    action_name = ACTION_NAMES.get(verb, "")
     return render(
         request,
         "pages/compose.html",
         page="mail",
         status_code=status_code,
         account=account,
+        verb=verb,
+        action_name=action_name,
+        title="Draft" if draft_id else (action_name or "New message"),
         trail=[
             *mail_trail(account),
             *([("Drafts", f"/ui/accounts/{account_id}/drafts")] if draft_id else []),

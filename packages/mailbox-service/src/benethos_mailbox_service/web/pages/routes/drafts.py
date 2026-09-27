@@ -52,7 +52,9 @@ async def drafts(
         messages=page.items,
         pages=page_links(request, page.next_cursor),
         fields={},
+        emails=None,
         open_as="drafts",
+        selectable=False,
         can_write=mail_rights(caller, account_id)["write"],
     )
 

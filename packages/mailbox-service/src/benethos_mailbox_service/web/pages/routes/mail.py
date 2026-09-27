@@ -133,6 +133,8 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
         incomplete=page.incomplete,
         pages=page_links(request, page.next_cursor),
         emails=emails_of(accounts),
+        open_as="mail",
+        selectable=False,
         chosen=chosen,
         role=role.value,
         bar=mail_bar(request, places),
@@ -210,6 +212,8 @@ async def account_mail_page(
         fields=fields,
         problem=problem,
         can=can,
+        emails=None,
+        open_as="mail",
         selectable=can["change"] or can["trash"] or can["purge"],
         here=(
             str(request.url.path)

@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import breadcrumb, csrf_field with context %}
-{% set verb = stored.reference.action if stored is not none and stored.reference is not none else values.get("action", "") %}
-{% set action_name = {"reply": "Reply", "reply_all": "Reply to all", "forward": "Forward"}.get(verb, "") %}
-{% set title = ("Draft" if draft_id else (action_name or "New message")) %}
+
 {% block title %}{{ title }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ title }}{% endblock %}
 {% block subheading %}{{ breadcrumb(trail + [(title, None)]) }}{% endblock %}
