@@ -82,6 +82,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The health check of the service image asks the port
+  `MAILBOX_SERVICE_PORT` names. Before, another port made the container
+  unhealthy for good.
 - In `compose.yaml` the allowed Host values of the MCP server follow
   `MAILBOX_MCP_PORT`. Before, another port answered `421`.
 - `list_drafts` of the MCP server carries a `note` that `to` and
