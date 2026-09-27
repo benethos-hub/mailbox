@@ -420,6 +420,47 @@ async def test_a_dropped_connection_during_the_login_is_no_rejection(
     assert server.logins == 1
 
 
+@pytest.mark.parametrize(
+    "refusal",
+    [
+        "b'[UNAVAILABLE] Temporary authentication failure.'",
+        "b'[INUSE] Mailbox is locked by another session.'",
+        "b'[LIMIT] Maximum number of connections exceeded.'",
+        "b'[ALERT] Too many simultaneous connections.'",
+        "b'Server busy, try again later.'",
+    ],
+)
+async def test_a_login_refused_for_now_is_no_rejection(
+    server: FakeMailBox, refusal: str
+) -> None:
+    server.login_failure = imaplib.IMAP4.error(refusal)
+    imap = provider(server)
+    # Unavailable, so the guard tries again, and the second login succeeds.
+    await imap.list_folders()
+    assert [c for c in server.calls if c[0] == "login"] == [
+        ("login", "me@example.com")
+    ] * 2
+
+
+@pytest.mark.parametrize(
+    "refusal",
+    [
+        "b'[AUTHENTICATIONFAILED] Too many failed logins, try again later.'",
+        "b'[EXPIRED] The password has expired.'",
+        "b'Login failed.'",
+    ],
+)
+async def test_a_login_refused_for_good_blocks(
+    server: FakeMailBox, refusal: str
+) -> None:
+    server.login_failure = imaplib.IMAP4.error(refusal)
+    imap = provider(server)
+    with pytest.raises(ProviderAuthError, match="rejected the login"):
+        await imap.list_folders()
+    with pytest.raises(ProviderAuthError, match="no new attempt"):
+        await imap.list_folders()
+
+
 async def test_a_rejected_login_is_not_tried_again(server: FakeMailBox) -> None:
     server.password = "changed"
     imap = provider(server)

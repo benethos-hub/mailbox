@@ -60,6 +60,14 @@ def test_a_rejected_login() -> None:
     assert fake.calls[-1] == ("quit",)
 
 
+def test_a_login_refused_for_now_is_no_rejection() -> None:
+    fake = FakeSmtpServer(
+        login_refusal=(454, b"4.7.0 Temporary authentication failure")
+    )
+    with pytest.raises(ProviderUnavailableError, match="for now"):
+        session(fake).verify(LOGIN)
+
+
 def test_xoauth2() -> None:
     fake = FakeSmtpServer(password="token")
     session(fake).verify(SmtpLogin("me@example.com", "token", "xoauth2"))

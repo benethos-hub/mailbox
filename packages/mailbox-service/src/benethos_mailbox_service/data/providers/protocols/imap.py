@@ -155,6 +155,10 @@ class ImapSession:
                     raise ProviderUnavailableError(
                         f"the mail server dropped the connection during the {what}"
                     ) from None
+                if _for_now(str(exc)):
+                    raise ProviderUnavailableError(
+                        f"the mail server refused the {what} for now"
+                    ) from None
                 raise ProviderAuthError(f"the server rejected the {what}") from None
             except BaseException:
                 _quietly_logout(client)
@@ -609,6 +613,25 @@ def _uidvalidity(answer: Any) -> int:
     if value is None:
         raise ProviderError("the mail server reported no UIDVALIDITY")
     return int(value)
+
+
+# RFC 5530 response codes. The first say the credential is wrong, the
+# second that the server cannot take a login now: too many connections,
+# a mailbox in use, a store that is down. A refusal without a code counts
+# as a rejected credential, as most servers answer a wrong password so.
+_REJECTED = ("[AUTHENTICATIONFAILED]", "[AUTHORIZATIONFAILED]", "[EXPIRED]")
+_FOR_NOW = ("[UNAVAILABLE]", "[INUSE]", "[LIMIT]", "[SERVERBUG]")
+_FOR_NOW_TEXT = re.compile(r"too many|try again later", re.IGNORECASE)
+
+
+def _for_now(refusal: str) -> bool:
+    """Whether the server's refusal of a login is temporary."""
+    upper = refusal.upper()
+    if any(code in upper for code in _REJECTED):
+        return False
+    return any(code in upper for code in _FOR_NOW) or bool(
+        _FOR_NOW_TEXT.search(refusal)
+    )
 
 
 def _quietly_logout(client: Any) -> None:

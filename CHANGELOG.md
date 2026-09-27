@@ -141,6 +141,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - An unexpected error with one account or one webhook is logged and the
   sync worker and the webhook posts go on. Before, it ended both for the
   life of the process, while the API went on answering.
+- A login the mail server refuses for now no longer blocks the account.
+  IMAP answers with `[UNAVAILABLE]`, `[INUSE]`, `[LIMIT]` or
+  `[SERVERBUG]`, or a text such as "too many connections", and SMTP
+  answers with a 4xx code, now count as `502 provider_unavailable` and
+  are tried again later. Before, they counted as a rejected credential
+  and the account stayed blocked until it was verified.
 
 ### Security
 

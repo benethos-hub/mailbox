@@ -25,6 +25,8 @@ class FakeSmtpServer:
     sent: list[Sent] = field(default_factory=list)
     calls: list[tuple[Any, ...]] = field(default_factory=list)
     failure: Exception | None = None
+    # The server's answer to a login, whatever the password.
+    login_refusal: tuple[int, bytes] | None = None
     extensions: set[str] = field(default_factory=set)
 
     # the connection factory signature SmtpSession expects
@@ -41,6 +43,8 @@ class FakeSmtpConnection:
 
     def login(self, username: str, password: str) -> None:
         self._server.calls.append(("login", username))
+        if self._server.login_refusal is not None:
+            raise smtplib.SMTPAuthenticationError(*self._server.login_refusal)
         if password != self._server.password:
             raise smtplib.SMTPAuthenticationError(535, b"authentication failed")
 

@@ -149,7 +149,12 @@ def _errors() -> Iterator[None]:
             raise
         except UnicodeError as exc:
             raise BadRequestError(f"an address cannot go on the wire: {exc}") from None
-        except smtplib.SMTPAuthenticationError:
+        except smtplib.SMTPAuthenticationError as exc:
+            if 400 <= exc.smtp_code < 500:
+                # 454 4.7.0 and the like: try again later.
+                raise ProviderUnavailableError(
+                    f"the mail server refused the login for now ({exc.smtp_code})"
+                ) from None
             raise ProviderAuthError("the mail server rejected the login") from None
         except smtplib.SMTPServerDisconnected as exc:
             raise ProviderUnavailableError(
