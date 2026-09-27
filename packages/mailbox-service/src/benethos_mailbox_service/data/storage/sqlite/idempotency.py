@@ -12,10 +12,11 @@ class SqliteIdempotencyRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    def get(self, account_id: str, key: str) -> StoredResult | None:
+    def get(self, account_id: str, user_id: str, key: str) -> StoredResult | None:
         row = self._db.one(
-            "SELECT * FROM idempotency WHERE account_id = ? AND key = ?",
-            (account_id, key),
+            "SELECT * FROM idempotency"
+            " WHERE account_id = ? AND user_id = ? AND key = ?",
+            (account_id, user_id, key),
         )
         if row is None:
             return None
@@ -26,12 +27,16 @@ class SqliteIdempotencyRepository:
             created_at=parse_iso(row["created_at"]),
         )
 
-    def put(self, account_id: str, key: str, stored: StoredResult) -> None:
+    def put(
+        self, account_id: str, user_id: str, key: str, stored: StoredResult
+    ) -> None:
         self._db.execute(
-            "INSERT OR REPLACE INTO idempotency (account_id, key, operation,"
-            " request_hash, result, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO idempotency (account_id, user_id, key,"
+            " operation, request_hash, result, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 account_id,
+                user_id,
                 key,
                 stored.operation,
                 stored.request_hash,

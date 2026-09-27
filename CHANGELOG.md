@@ -83,6 +83,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A recipient pattern `*@domain` in a grant no longer accepts a local
   part with `%` or `!`, such as `bob%evil.org@domain`, which some servers
   route on to another host. Such an address needs its exact entry.
+- An `Idempotency-Key` counts per account and user. Before, another user
+  who sent the same key on the same account got `409
+  idempotency_conflict`, e.g. a second MCP client sending the same mail.
+  The database moves to schema 8, and the stored results of the last 24
+  hours are dropped.
 
 ## [0.1.0] - 2026-09-25
 

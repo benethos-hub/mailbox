@@ -19,9 +19,11 @@ class StoredResult:
 
 
 class IdempotencyRepository(Protocol):
-    def get(self, account_id: str, key: str) -> StoredResult | None: ...
+    def get(self, account_id: str, user_id: str, key: str) -> StoredResult | None: ...
 
-    def put(self, account_id: str, key: str, stored: StoredResult) -> None: ...
+    def put(
+        self, account_id: str, user_id: str, key: str, stored: StoredResult
+    ) -> None: ...
 
     def purge(self, before: datetime) -> None:
         """Forget every result created before ``before``."""
@@ -34,13 +36,15 @@ class IdempotencyRepository(Protocol):
 
 class InMemoryIdempotencyRepository:
     def __init__(self) -> None:
-        self._items: dict[tuple[str, str], StoredResult] = {}
+        self._items: dict[tuple[str, str, str], StoredResult] = {}
 
-    def get(self, account_id: str, key: str) -> StoredResult | None:
-        return self._items.get((account_id, key))
+    def get(self, account_id: str, user_id: str, key: str) -> StoredResult | None:
+        return self._items.get((account_id, user_id, key))
 
-    def put(self, account_id: str, key: str, stored: StoredResult) -> None:
-        self._items[(account_id, key)] = stored
+    def put(
+        self, account_id: str, user_id: str, key: str, stored: StoredResult
+    ) -> None:
+        self._items[(account_id, user_id, key)] = stored
 
     def purge(self, before: datetime) -> None:
         for item in [k for k, v in self._items.items() if v.created_at < before]:

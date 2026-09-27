@@ -708,9 +708,10 @@ is a later option (see IDEAS.md).
 
 `Idempotency-Key`: the result of the first request is stored for 24 hours.
 The same key with the same body returns the stored result, with a different
-body `409 idempotency_conflict`. A key counts per account and per caller:
-the same key from another user is a conflict, never the first caller's
-result. Requests with the same key run one after the other, so a retry
+body `409 idempotency_conflict`. A key counts per account and per user:
+the same key from another user is a request of its own, never the first
+user's result. Two MCP clients, whose keys follow from the call, do not
+meet. Requests with the same key run one after the other, so a retry
 that arrives while the first is still sending waits for its result. A
 request that fails stores nothing and may be tried again.
 
