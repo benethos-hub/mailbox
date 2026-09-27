@@ -63,6 +63,8 @@ class SignedIn:
     # When the password was set. The session keeps it and ends once the
     # password changes.
     stamp: datetime
+    # The sign-in before this one, to show the user.
+    previous: datetime | None = None
 
 
 def hash_token(token: str) -> str:
@@ -125,7 +127,8 @@ class AuthService:
         self._throttle.succeeded(source)
         self._names.succeeded(key)
         log.info("sign-in to the UI as %s (%s) from %s", user.name, user.id, source)
-        return SignedIn(user.id, stored.must_change, stored.updated_at)
+        previous = self.passwords.signed_in(user.id)
+        return SignedIn(user.id, stored.must_change, stored.updated_at, previous)
 
     def session_access(self, user_id: str, stamp: datetime) -> Access:
         """What the user of a UI session may do now. Raises when the user

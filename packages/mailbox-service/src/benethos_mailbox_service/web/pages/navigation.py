@@ -31,7 +31,7 @@ def navigation(caller: Access) -> list[Group]:
     """The groups of the sidebar, each with the entries the caller may
     open. A group without entries is left out."""
     mailboxes = []
-    if caller.has_accounts() or caller.allows("create_account"):
+    if caller.anywhere("list_accounts") or caller.allows("create_account"):
         mailboxes.append(Entry("accounts", "Accounts", "▤", "/ui/accounts"))
     if caller.anywhere("list_sends"):
         mailboxes.append(Entry("sends", "Sends", "⇢", "/ui/sends"))

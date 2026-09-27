@@ -19,11 +19,13 @@ from benethos_mailbox_service.data.storage import (
     SqliteUserRepository,
     StoredPassword,
 )
+from benethos_mailbox_service.domain.passwords import Passwords
 from benethos_mailbox_service.errors import ConflictError
 
 # Cheap, so the tests run fast. The service uses Scrypt().
 CHEAP = Scrypt(log_n=4, r=1, p=1)
 NOW = datetime(2026, 9, 27, 12, 0, tzinfo=UTC)
+LATER = datetime(2026, 9, 28, 8, 0, tzinfo=UTC)
 
 
 def test_a_hash_verifies_its_password_only() -> None:
@@ -99,8 +101,26 @@ def test_store_round_trip(store: PasswordRepository) -> None:
     changed = StoredPassword("scrypt$y", must_change=False, updated_at=NOW)
     store.set("usr_a", changed)
     assert store.get("usr_a") == changed
+    store.signed_in("usr_a", LATER)
+    assert store.get("usr_a") == StoredPassword("scrypt$y", False, NOW, LATER)
     store.delete("usr_a")
     assert store.get("usr_a") is None
+    store.signed_in("usr_a", LATER)
+    assert store.get("usr_a") is None
+
+
+async def test_a_sign_in_is_noted_and_outlives_a_new_password() -> None:
+    now = [NOW]
+    passwords = Passwords(
+        InMemoryPasswordRepository(), PasswordHasher(CHEAP), clock=lambda: now[0]
+    )
+    await passwords.set("usr_a", "anna", "a long enough passphrase", must_change=False)
+    assert passwords.signed_in("usr_a") is None
+    now[0] = LATER
+    assert passwords.signed_in("usr_a") == NOW
+    await passwords.set("usr_a", "anna", "another long passphrase", must_change=False)
+    stored = passwords.stored("usr_a")
+    assert stored is not None and stored.last_sign_in_at == LATER
 
 
 def test_a_password_goes_with_its_user(tmp_path: Path) -> None:

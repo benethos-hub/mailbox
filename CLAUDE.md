@@ -129,6 +129,7 @@ packages/
           routes/         # one router per resource
         pages/            # the configuration UI under /ui, not in OpenAPI
           deps.py         # who is signed in, the CSRF check
+          navigation.py   # the sidebar entries a caller may open
           session.py      # sign-in with a token, server-side sessions
           templates.py    # Jinja2: filters, render, Post/Redirect/Get
           grants.py       # the grant editor's rows, read back into grants
@@ -152,6 +153,7 @@ packages/
         sync.py           # SyncService: stable message ids, the sync pass
         changes.py        # ChangeFeed: records created, updated, deleted
         worker.py         # SyncWorker: polling and IDLE in the background
+        status.py         # StatusService: accounts, sync and webhooks at a glance
         idempotency.py    # Idempotency-Key: a retried send returns its result
         locks.py          # KeyedLocks: one asyncio lock per key, for the services
         sending.py        # SendControl: grant constraints on sending, send audit

@@ -269,6 +269,18 @@ tr.unread td.name { font-weight: 650; }
 
 .empty { padding: 32px var(--pad); text-align: center; color: var(--text-muted); }
 
+.card .body > p:first-child { margin-top: 0; }
+.card .body > p:last-child { margin-bottom: 0; }
+.small-print { font-size: 13px; }
+
+/* Lines to act on, each with its link, e.g. what needs attention. */
+ul.lines { list-style: none; margin: 0 0 12px; padding: 0; }
+ul.lines li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+ul.lines li:last-child { border-bottom: 0; }
+
 /* A secret shown once, e.g. a new token: selectable in one piece. */
 .secret {
   display: block;

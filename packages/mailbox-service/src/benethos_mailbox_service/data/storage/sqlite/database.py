@@ -184,6 +184,10 @@ MIGRATIONS: list[str] = [
         updated_at TEXT NOT NULL
     );
     """,
+    # 10: when a user last signed in to the UI
+    """
+    ALTER TABLE passwords ADD COLUMN last_sign_in_at TEXT;
+    """,
 ]
 
 SCHEMA_VERSION = len(MIGRATIONS)

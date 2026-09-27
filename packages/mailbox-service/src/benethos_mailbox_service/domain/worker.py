@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from datetime import datetime
 
 import anyio
 from anyio.abc import TaskGroup
 
+from ..common.clock import utc_now
 from ..data.models import AccountStatus
 from ..data.providers import Capability, backoff
 from ..errors import (
@@ -37,6 +40,18 @@ Sleep = Callable[[float], Awaitable[None]]
 log = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class WorkerState:
+    """What the worker does, for the status page. In memory only."""
+
+    interval: float
+    push: bool
+    # When the last round over every account ended. None before the first.
+    last_pass_at: datetime | None
+    # Accounts a watcher waits on for the server to report a change.
+    watching: frozenset[str]
+
+
 class SyncWorker:
     def __init__(
         self,
@@ -46,14 +61,25 @@ class SyncWorker:
         interval: float,
         push: bool = True,
         sleep: Sleep = anyio.sleep,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._adapters = adapters
         self._sync = sync
         self._interval = interval
         self._push = push
         self._sleep = sleep
+        self._clock = clock
         self._watching: set[str] = set()
         self._no_push: set[str] = set()
+        self._last_pass_at: datetime | None = None
+
+    def state(self) -> WorkerState:
+        return WorkerState(
+            interval=self._interval,
+            push=self._push,
+            last_pass_at=self._last_pass_at,
+            watching=frozenset(self._watching),
+        )
 
     async def run(self) -> None:
         """Until cancelled."""
@@ -76,6 +102,7 @@ class SyncWorker:
                 continue  # deleted meanwhile
             except MailboxServiceError as exc:
                 log.warning("sync of %s failed: %s", account_id, exc.message)
+        self._last_pass_at = self._clock()
 
     async def watch(self, account_id: str) -> None:
         """Wait for changes the server reports, and sync on each."""

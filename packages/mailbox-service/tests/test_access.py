@@ -137,13 +137,6 @@ def test_operations_on_an_account() -> None:
     }
 
 
-def test_has_accounts_needs_a_right_on_an_account() -> None:
-    assert access(Grant(accounts=["acc_a"], allow=["mail.read"])).has_accounts()
-    assert access(Grant(accounts=["*"], allow=["send"])).has_accounts()
-    assert not access(Grant(accounts=[], allow=["mail.read"])).has_accounts()
-    assert not access(Grant(accounts=["*"], allow=["users.manage"])).has_accounts()
-
-
 def test_anywhere_finds_a_right_on_some_account() -> None:
     a = access(
         Grant(accounts=["acc_a"], allow=["audit"]),

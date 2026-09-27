@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from ..passwords import StoredPassword
 from .database import Database, iso, parse_iso
 
@@ -18,15 +20,30 @@ class SqlitePasswordRepository:
             hash=row["hash"],
             must_change=bool(row["must_change"]),
             updated_at=parse_iso(row["updated_at"]),
+            last_sign_in_at=parse_iso(row["last_sign_in_at"]),
         )
 
     def set(self, user_id: str, stored: StoredPassword) -> None:
         self._db.execute(
-            "INSERT INTO passwords (user_id, hash, must_change, updated_at)"
-            " VALUES (?, ?, ?, ?)"
+            "INSERT INTO passwords"
+            " (user_id, hash, must_change, updated_at, last_sign_in_at)"
+            " VALUES (?, ?, ?, ?, ?)"
             " ON CONFLICT(user_id) DO UPDATE SET hash = excluded.hash,"
-            " must_change = excluded.must_change, updated_at = excluded.updated_at",
-            (user_id, stored.hash, int(stored.must_change), iso(stored.updated_at)),
+            " must_change = excluded.must_change, updated_at = excluded.updated_at,"
+            " last_sign_in_at = excluded.last_sign_in_at",
+            (
+                user_id,
+                stored.hash,
+                int(stored.must_change),
+                iso(stored.updated_at),
+                iso(stored.last_sign_in_at),
+            ),
+        )
+
+    def signed_in(self, user_id: str, at: datetime) -> None:
+        self._db.execute(
+            "UPDATE passwords SET last_sign_in_at = ? WHERE user_id = ?",
+            (iso(at), user_id),
         )
 
     def delete(self, user_id: str) -> None:

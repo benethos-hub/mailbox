@@ -166,6 +166,36 @@ def test_an_admin_is_warned(ui: TestClient, account_id: str) -> None:
     assert "reads and sends anywhere" in ui.get("/ui").text
 
 
+def test_the_overview_starts_with_the_user(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    services.users.create_role(ADMIN, "readers", [])
+    name, password = browser_user(
+        services, Grant(accounts=[account_id], allow=["mail.read"]), roles=["readers"]
+    )
+    sign_in(app_client, name, password)
+    page = app_client.get("/ui").text
+    assert "<h2>You</h2>" in page and "readers" in page
+    assert "this is the first" in page
+    # The account opens its mail. Its page needs get_account.
+    assert f'href="/ui/accounts/{account_id}/mail"' in page
+    assert f'href="/ui/accounts/{account_id}"' not in page
+    # Without accounts.read, no service card.
+    assert "<h2>Service</h2>" not in page
+
+    again = TestClient(app_client.app)
+    sign_in(again, name, password)
+    assert "before this one" in again.get("/ui").text
+
+
+def test_the_overview_shows_the_service_to_who_may_list_accounts(
+    ui: TestClient, account_id: str
+) -> None:
+    page = ui.get("/ui").text
+    assert "<h2>Service</h2>" in page
+    assert "sync worker" in page
+
+
 # --- the session ----------------------------------------------------------------------
 
 
@@ -325,8 +355,8 @@ def test_the_sidebar_shows_what_the_user_may_open(
         *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
     )
     page = app_client.get("/ui").text
-    assert 'href="/ui/accounts"' in page and 'href="/ui/mail"' in page
-    for hidden in ("/ui/sends", "/ui/users", "/ui/roles"):
+    assert 'href="/ui/mail"' in page
+    for hidden in ("/ui/accounts", "/ui/sends", "/ui/users", "/ui/roles"):
         assert f'href="{hidden}"' not in page, hidden
     assert ">Service<" not in page
     # Without users.manage the name is no link to a page it cannot open.
