@@ -45,6 +45,11 @@ class TokenSource(Protocol):
         revocation: the next call fetches a new one."""
         ...
 
+    def forget_refusal(self) -> None:
+        """A refresh the provider refused is asked again with the next call,
+        e.g. when an account is verified. Until then it is not."""
+        ...
+
 
 class Capability(StrEnum):
     """What an adapter can do beyond the read-only core."""

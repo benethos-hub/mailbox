@@ -327,6 +327,17 @@ async def test_a_refused_refresh_is_not_asked_again() -> None:
     assert len(endpoint.forms) == 1
 
 
+async def test_a_forgotten_refusal_is_asked_again() -> None:
+    endpoint = TokenEndpoint((400, {"error": "invalid_grant"}), granted("at-1", None))
+    source = RefreshingTokens(
+        client(endpoint), lambda: SecretStr("rt"), lambda _: None, lambda: NOW
+    )
+    with pytest.raises(ProviderAuthError):
+        await source.access_token()
+    source.forget_refusal()
+    assert (await source.access_token()).get_secret_value() == "at-1"
+
+
 async def test_a_gateway_page_instead_of_json() -> None:
     def gateway(request: httpx.Request) -> httpx.Response:
         return httpx.Response(502, text="<html>bad gateway</html>")

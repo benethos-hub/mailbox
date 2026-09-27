@@ -538,6 +538,7 @@ class MicrosoftProvider:
 
     async def verify(self) -> None:
         self._roles = None
+        self._tokens.forget_refusal()
         await self._call("GET", "/me/mailFolders/inbox", params={"$select": "id"})
 
     async def close(self) -> None:

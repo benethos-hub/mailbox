@@ -194,6 +194,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- Verifying a Microsoft account asks Microsoft again for an access token
+  when a refresh was refused before. Before, only a new sign-in or a
+  restart of the service did.
 - `has_attachments` means one thing in a list and in the message: a part
   a person sees as an attachment. An image the HTML shows in its place
   is none, a file marked inline, as Apple Mail sends a PDF, is one.

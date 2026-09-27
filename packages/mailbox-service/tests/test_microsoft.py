@@ -56,6 +56,7 @@ class Tokens:
     def __init__(self, *values: str) -> None:
         self.values = list(values)
         self.rejected = 0
+        self.forgotten = 0
 
     async def access_token(self) -> SecretStr:
         return SecretStr(self.values[0])
@@ -64,6 +65,9 @@ class Tokens:
         self.rejected += 1
         if len(self.values) > 1:
             self.values.pop(0)
+
+    def forget_refusal(self) -> None:
+        self.forgotten += 1
 
 
 @pytest.fixture
@@ -347,15 +351,21 @@ async def test_draft_calls_reach_drafts_only(graph: FakeGraph) -> None:
 
 async def test_a_refused_token_is_renewed_once(graph: FakeGraph) -> None:
     tokens = Tokens("stale", TOKEN)
-    await adapter(graph, tokens).verify()
+    await adapter(graph, tokens).list_folders()
     assert tokens.rejected == 1
 
 
 async def test_refused_twice_asks_for_a_new_sign_in(graph: FakeGraph) -> None:
     tokens = Tokens("stale", "also-stale")
     with pytest.raises(ProviderAuthError, match="sign in again"):
-        await adapter(graph, tokens).verify()
+        await adapter(graph, tokens).list_folders()
     assert tokens.rejected == 1
+
+
+async def test_verify_asks_a_refused_refresh_again(graph: FakeGraph) -> None:
+    tokens = Tokens(TOKEN)
+    await adapter(graph, tokens).verify()
+    assert tokens.forgotten == 1
 
 
 async def test_throttling() -> None:
