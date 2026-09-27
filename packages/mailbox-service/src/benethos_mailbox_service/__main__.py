@@ -127,8 +127,11 @@ def _users(args: argparse.Namespace) -> None:
             user, password = anyio.run(services.users.create_admin, args.name)
             done = f"Created user {user.id} ({user.name}) with every right"
         else:
+            before = services.auth.user_named(args.name)
             user, password = anyio.run(services.users.reset_password, args.name)
             done = f"Gave {user.name} ({user.id}) a new password"
+            if before is not None and not before.ui_sign_in:
+                done += ", and its UI sign-in, which was off,"
     print(
         f"{done} in {settings.database_path}. Sign in to the UI with this "
         "one-time password, shown this once. The UI then asks for one of "

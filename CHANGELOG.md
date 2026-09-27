@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `ui_sign_in` on a user, in `POST /v1/users`, `PATCH
+  /v1/users/{user_id}` and every user in an answer: whether it may sign
+  in to the configuration UI. Without it the user is an API user and
+  works with tokens only. Switched off, its password is deleted and its
+  UI sessions end. The UI asks for it when a user is made, shows API
+  users with a tag and filters by it.
 - Webhooks in the configuration UI: a list with the state of each, a
   page to create one that shows its secret once, and a page per webhook
   with its last deliveries. The service keeps the last 20 posts of each
@@ -64,6 +70,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A new user is an API user unless `ui_sign_in` is set. Existing users
+  with a password keep their UI sign-in, those without are API users.
+  Setting a password for an API user is refused with `409`.
+  `users set-password` on the host switches the UI sign-in on.
 - The configuration UI has a lighter, bluish look. The sidebar shows only
   the pages the signed-in user may open, grouped as Mailboxes and
   Service.
@@ -112,6 +122,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A user could disable itself and so lock out its own session and
+  tokens. `PATCH /v1/users/{user_id}` now refuses that with `409`, as
+  deleting oneself already was.
 - `benethos-mailbox-service` requires fastapi 0.129.1, pydantic 2.12 and
   defusedxml 0.7.1 at least. With defusedxml 0.7.0, a broken autoconfig
   file ended discovery with an unhandled error. With an older fastapi,

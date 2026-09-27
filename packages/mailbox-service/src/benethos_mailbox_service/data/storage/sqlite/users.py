@@ -17,17 +17,18 @@ class SqliteUserRepository(SqliteRows[User]):
 
     def save(self, user: User) -> None:
         self._db.execute(
-            "INSERT INTO users (id, name, roles, grants, disabled)"
-            " VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO users (id, name, roles, grants, disabled, ui_sign_in)"
+            " VALUES (?, ?, ?, ?, ?, ?)"
             " ON CONFLICT(id) DO UPDATE SET name = excluded.name,"
             " roles = excluded.roles, grants = excluded.grants,"
-            " disabled = excluded.disabled",
+            " disabled = excluded.disabled, ui_sign_in = excluded.ui_sign_in",
             (
                 user.id,
                 user.name,
                 json.dumps(user.roles),
                 _grants_json(user.grants),
                 int(user.disabled),
+                int(user.ui_sign_in),
             ),
         )
 
@@ -42,6 +43,7 @@ def _user(row: sqlite3.Row) -> User:
         roles=json.loads(row["roles"]),
         grants=_grants(row["grants"]),
         disabled=bool(row["disabled"]),
+        ui_sign_in=bool(row["ui_sign_in"]),
     )
 
 

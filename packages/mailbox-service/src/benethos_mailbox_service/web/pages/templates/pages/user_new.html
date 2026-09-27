@@ -13,12 +13,12 @@
         <label for="f-name">Name</label>
         <input id="f-name" name="name" required autofocus placeholder="e.g. claude-desktop" />
       </div>
-      {% if can_set_password %}
       <div class="field">
-        <span class="label">Sign-in to the UI</span>
-        <label class="check"><input type="checkbox" name="one_time" value="1" checked /> make a one-time password, shown once, changed at the first sign-in</label>
+        <span class="label">Signs in to</span>
+        <label class="check"><input type="radio" name="signs_in_to" value="api" checked /> the API only, with tokens</label>
+        <label class="check"><input type="radio" name="signs_in_to" value="ui" /> the UI and the API</label>
+        {% if can_set_password %}<label class="check"><input type="checkbox" name="one_time" value="1" checked /> with the UI: make a one-time password, shown once, changed at the first sign-in</label>{% endif %}
       </div>
-      {% endif %}
     </div>
     {% if role_choices %}{{ role_checks(role_choices, []) }}{% endif %}
   {% endcall %}

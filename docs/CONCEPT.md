@@ -1198,7 +1198,8 @@ with the role
     password as a new user does, and changes it at the first sign-in.
   - Who switches: a user with `update_user`, for users whose rights it
     covers, as for any change of a user. Not for itself: a user cannot
-    lock itself out of the UI.
+    lock itself out of the UI. Nor can it disable itself, as it cannot
+    delete itself.
   - On the host, `users set-password <name>` switches it on as well and
     says so. It is the way back in when nobody can sign in.
   - In the API: `ui_sign_in` on the user, in `POST /v1/users` (false

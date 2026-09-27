@@ -41,6 +41,13 @@ class User(BaseModel):
     roles: list[str] = Field(default_factory=list)
     grants: list[Grant] = Field(default_factory=list)
     disabled: bool = False
+    ui_sign_in: bool = Field(
+        default=False,
+        description=(
+            "Whether the user may sign in to the configuration UI with a "
+            "password. Without it, the user works with tokens only."
+        ),
+    )
 
 
 class Role(BaseModel):
