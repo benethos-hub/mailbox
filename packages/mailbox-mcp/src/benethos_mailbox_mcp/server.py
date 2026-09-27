@@ -240,9 +240,12 @@ async def get_attachment(
             + render.foreign(source, name),
             images=[(image, "image/png") for image in rendered.images],
         )
-    text, note = render.cut(
-        found.data.decode(found.charset or "utf-8", errors="replace"), max_chars
-    )
+    decoded = found.data.decode(found.charset or "utf-8", errors="replace")
+    if kind == "text/html":
+        # What a person sees of it, as of an HTML body: hidden parts out.
+        decoded = render.html_to_text(decoded)
+        head += " As text, made from its HTML."
+    text, note = render.cut(decoded, max_chars)
     shortened = f" {note[0].upper()}{note[1:]}." if note else ""
     return _result(
         f"{head}{shortened}\n\n" + render.foreign(source, f"{name}\n\n{text}")

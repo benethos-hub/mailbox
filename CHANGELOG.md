@@ -87,6 +87,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   unhealthy for good.
 - In `compose.yaml` the allowed Host values of the MCP server follow
   `MAILBOX_MCP_PORT`. Before, another port answered `421`.
+- An HTML attachment reaches the model of the MCP server as the text a
+  reader sees, as an HTML body does. Before, it came as markup with its
+  hidden parts.
 - `list_drafts` of the MCP server carries a `note` that `to` and
   `subject` may be the words of the mail a draft answers, as
   `search_messages` does for `from` and `subject`.

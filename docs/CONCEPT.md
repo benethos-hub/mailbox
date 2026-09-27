@@ -1414,7 +1414,8 @@ one or two `operationId`s.
 **Decided 2026-09-24, attachments:** `get_attachment` hands images over
 as images, the pages of a PDF as PNG images (a page range, a few pages at
 a time), text types as text inside the foreign-content marker, and other
-types by name, type and size only. The conversion happens in the MCP
+types by name, type and size only. An HTML attachment becomes text as an
+HTML body does, its hidden parts left out. The conversion happens in the MCP
 server. The API keeps handing out the attachment as it is. A PDF sent as
 an embedded resource was refused by claude.ai in a test: it takes such a
 blob for an image.
