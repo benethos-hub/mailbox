@@ -68,17 +68,19 @@ class SqliteSendLogRepository:
                 if value is not None:
                     where.append(column)
                     params.append(value)
-        query = (
+            if matching.recipient:
+                # In the JSON of the recipients a LIKE would also match
+                # quotes and commas: the part is looked for in each address.
+                where.append(
+                    "EXISTS (SELECT 1 FROM json_each(recipients)"
+                    " WHERE instr(casefold(value), ?) > 0)"
+                )
+                params.append(matching.recipient.casefold())
+        rows = self._db.query(
             f"SELECT * FROM sends WHERE {' AND '.join(where)}"
-            " ORDER BY created_at DESC, id DESC"
+            " ORDER BY created_at DESC, id DESC LIMIT ?",
+            (*params, limit),
         )
-        if matching is not None and matching.recipient:
-            # In the JSON of the recipients a LIKE would also match quotes
-            # and commas: the part is looked for in each address instead.
-            rows = self._db.query(query, tuple(params))
-            found = [_record(row) for row in rows]
-            return [r for r in found if matching.matches(r)][:limit]
-        rows = self._db.query(f"{query} LIMIT ?", (*params, limit))
         return [_record(row) for row in rows]
 
     def account_ids(self) -> builtins.list[str]:

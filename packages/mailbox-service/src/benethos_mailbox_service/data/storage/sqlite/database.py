@@ -245,6 +245,10 @@ class Database:
             self._connection.execute("PRAGMA foreign_keys = ON")
             # Freed pages are overwritten, so deleted secrets do not linger.
             self._connection.execute("PRAGMA secure_delete = ON")
+            # Case folded as Python folds it, beyond ASCII too.
+            self._connection.create_function(
+                "casefold", 1, _casefold, deterministic=True
+            )
         try:
             self._migrate()
         except BaseException:
@@ -411,6 +415,10 @@ def parse_iso(value: str | None) -> datetime | None: ...
 def parse_iso(value: str | None) -> datetime | None:
     """The time a TEXT column holds, None for NULL."""
     return datetime.fromisoformat(value) if value else None
+
+
+def _casefold(value: str | None) -> str | None:
+    return value.casefold() if isinstance(value, str) else value
 
 
 def _renamed_by_9(db: sqlite3.Connection) -> list[tuple[str, str]]:

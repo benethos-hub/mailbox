@@ -524,6 +524,7 @@ def test_the_send_log_filters(kind: str) -> None:
             ("usr_1", "sent", "Bob@Example.org"),
             ("usr_2", "denied", "eve@elsewhere.example"),
             ("usr_1", "sent", "carol@example.org"),
+            ("usr_3", "sent", "jörg@example.org"),
         ]
     ):
         store.add(
@@ -550,7 +551,8 @@ def test_the_send_log_filters(kind: str) -> None:
     assert ids(outcome="denied") == ["snd_1"]
     assert ids(recipient="bob@") == ["snd_0"]
     assert ids(recipient='"') == []  # never the JSON around the addresses
-    assert ids(after=at + timedelta(days=1)) == ["snd_2", "snd_1"]
+    assert ids(recipient="JÖRG") == ["snd_3"]  # folded beyond ASCII too
+    assert ids(after=at + timedelta(days=1)) == ["snd_3", "snd_2", "snd_1"]
     assert ids(before=at + timedelta(days=1)) == ["snd_0"]
     assert (
         len(
