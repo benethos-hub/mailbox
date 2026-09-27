@@ -57,6 +57,9 @@ class SqliteWebhookRepository:
             "DELETE FROM webhooks WHERE id = ?", (webhook_id,), "webhook", webhook_id
         )
 
+    def delete_for_user(self, user_id: str) -> int:
+        return self._db.execute("DELETE FROM webhooks WHERE user_id = ?", (user_id,))
+
     def update(
         self,
         webhook_id: str,

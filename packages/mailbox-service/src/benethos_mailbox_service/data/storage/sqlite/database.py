@@ -207,7 +207,13 @@ MIGRATIONS: list[str] = [
     ALTER TABLE users ADD COLUMN ui_sign_in INTEGER NOT NULL DEFAULT 0;
     UPDATE users SET ui_sign_in = 1 WHERE id IN (SELECT user_id FROM passwords);
     """,
+    # 13: webhooks go with the user who made them. Those of users deleted
+    # before were posted to by nobody's rights, and nobody could remove them
+    """
+    DELETE FROM webhooks WHERE user_id NOT IN (SELECT id FROM users);
+    """,
 ]
+
 
 SCHEMA_VERSION = len(MIGRATIONS)
 

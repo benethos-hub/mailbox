@@ -14,7 +14,12 @@ from datetime import datetime
 
 from ..common.ids import new_id
 from ..data.models import AccountStatus, ApiToken, Grant, Role, User
-from ..data.storage import RoleRepository, TokenRepository, UserRepository
+from ..data.storage import (
+    RoleRepository,
+    TokenRepository,
+    UserRepository,
+    WebhookRepository,
+)
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from . import permissions
 from .access import Access, SendLimit
@@ -59,12 +64,14 @@ class UserService:
         tokens: TokenRepository,
         adapters: Adapters,
         auth: AuthService,
+        webhooks: WebhookRepository,
     ) -> None:
         self._users = users
         self._roles = roles
         self._tokens = tokens
         self._adapters = adapters
         self._auth = auth
+        self._webhooks = webhooks
 
     # --- the caller itself --------------------------------------------------
 
@@ -260,7 +267,18 @@ class UserService:
             raise ConflictError("a user cannot delete itself")
         self._tokens.delete_for_user(user_id)
         self._auth.passwords.delete(user_id)
+        # Its webhooks would post by nobody's rights, and nobody could
+        # remove them.
+        removed = self._webhooks.delete_for_user(user_id)
         self._users.delete(user_id)
+        log.info(
+            "%s (%s) deleted %s (%s) and its %d webhooks",
+            access.name,
+            access.user_id,
+            user.name,
+            user.id,
+            removed,
+        )
 
     def _require_free(self, name: str, user_id: str | None = None) -> None:
         """A person signs in with the name: one user per name, whatever

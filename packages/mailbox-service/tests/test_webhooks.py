@@ -142,6 +142,28 @@ def test_each_user_sees_and_removes_only_its_own(
     assert client.delete(f"/v1/webhooks/{mine}").status_code == 404
 
 
+def test_deleting_a_user_removes_its_webhooks(
+    client: TestClient, ready: Services
+) -> None:
+    made = client.post(
+        "/v1/users",
+        json={
+            "name": "hooks",
+            "grants": [{"accounts": ["*"], "allow": ["webhooks.manage"]}],
+        },
+    ).json()
+    token = client.post(f"/v1/users/{made['id']}/tokens", json={"name": "t"}).json()
+    theirs = TestClient(
+        client.app, headers={"Authorization": f"Bearer {token['token']}"}
+    )
+    gone = theirs.post("/v1/webhooks", json=HOOK).json()["id"]
+    mine = client.post("/v1/webhooks", json=HOOK).json()["id"]
+    assert client.delete(f"/v1/users/{made['id']}").status_code == 204
+    left = [r.webhook.id for r in ready.webhooks._repository.list()]  # type: ignore[attr-defined]
+    assert left == [mine]
+    assert gone not in left
+
+
 def test_webhooks_need_their_right(client: TestClient, ready: Services) -> None:
     reader = TestClient(
         client.app,
@@ -215,7 +237,26 @@ def test_the_store_keeps_how_delivery_stands(store: WebhookRepository) -> None:
     store.update("whk_9", later, last_delivery_at=None, last_error=None)
 
 
+def test_the_store_removes_the_webhooks_of_a_user(store: WebhookRepository) -> None:
+    store.add(record(1))
+    store.add(record(2))
+    other = record(3)
+    store.add(
+        WebhookRecord(
+            webhook=other.webhook.model_copy(update={"user_id": "usr_2"}),
+            secret=other.secret,
+            delivery=other.delivery,
+        )
+    )
+    store.add_attempt(attempt(1), keep=3)
+    assert store.delete_for_user("usr_1") == 2
+    assert [r.webhook.id for r in store.list()] == ["whk_3"]
+    assert store.attempts("whk_1") == []
+    assert store.delete_for_user("usr_1") == 0
+
+
 def attempt(n: int, webhook_id: str = "whk_1") -> Attempt:
+
     return Attempt(webhook_id, f"dlv_{n}", AT, n, 500 + n, f"failure {n}")
 
 

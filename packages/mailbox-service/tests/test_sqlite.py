@@ -43,7 +43,34 @@ def test_schema_is_migrated(db: Database) -> None:
     assert db.schema_version() == SCHEMA_VERSION
 
 
+def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
+    path = tmp_path / "old.db"
+    Database(path).close()
+    raw = sqlite3.connect(path)
+    with raw:
+        raw.execute(
+            "INSERT INTO users (id, name, roles, grants)"
+            " VALUES ('usr_1', 'u', '[]', '[]')"
+        )
+        raw.execute(
+            "INSERT INTO keys (key_id, nonce, ciphertext) VALUES ('k1', x'00', x'00')"
+        )
+        for hook, user in (("whk_1", "usr_1"), ("whk_2", "usr_gone")):
+            raw.execute(
+                "INSERT INTO webhooks (id, user_id, url, events, created_at, key_id,"
+                " nonce, ciphertext, cursor) VALUES (?, ?, 'https://h', '[]', '',"
+                " 'k1', x'00', x'00', 0)",
+                (hook, user),
+            )
+        raw.execute("UPDATE meta SET value = '12' WHERE key = 'schema_version'")
+    raw.close()
+    db = Database(path)
+    assert [r[0] for r in db.query("SELECT id FROM webhooks")] == ["whk_1"]
+    db.close()
+
+
 def test_a_newer_schema_is_refused(tmp_path: Path) -> None:
+
     path = tmp_path / "new.db"
     Database(path).close()
     raw = sqlite3.connect(path)

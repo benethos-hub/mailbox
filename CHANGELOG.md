@@ -155,6 +155,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   itself and hand out what it holds. Before, those groups name
   `create_account` and the like, which only a grant on `*` gives, so the
   user could not even rename itself.
+- Deleting a user removes its webhooks. Before, they stayed, posted
+  nothing, and nobody could list or remove them. The database moves to
+  schema 13, which drops those of users deleted before.
+
 
 
 - `restore` refuses while the service runs on the database, as CONCEPT

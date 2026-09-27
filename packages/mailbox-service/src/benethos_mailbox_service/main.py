@@ -158,7 +158,9 @@ def build_services(
         accounts=accounts,
         adapters=adapters,
         auth=auth,
-        users=UserService(repos.users, repos.roles, repos.tokens, adapters, auth),
+        users=UserService(
+            repos.users, repos.roles, repos.tokens, adapters, auth, repos.webhooks
+        ),
         mailbox=MailboxService(
             adapters, sync, Idempotency(repos.idempotency), SendControl(repos.sends)
         ),
