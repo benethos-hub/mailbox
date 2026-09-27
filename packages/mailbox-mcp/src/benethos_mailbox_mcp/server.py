@@ -678,13 +678,22 @@ def _csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def configure_logging(level: str) -> None:
+    # stderr only: on stdio, stdout carries the JSON-RPC stream.
+    logging.basicConfig(level=level, stream=sys.stderr)
+    # httpx names every request with its URL at INFO, and a URL carries
+    # search terms and message ids. The client keeps this log in its files.
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.WARNING)
+
+
 def main(argv: list[str] | None = None) -> None:
+
     parser = _build_parser()
     args = parser.parse_args(argv)
     if args.transport not in TRANSPORTS:
         parser.error(f"unknown transport {args.transport!r}")
-    # stderr only: on stdio, stdout carries the JSON-RPC stream.
-    logging.basicConfig(level=args.log_level, stream=sys.stderr)
+    configure_logging(args.log_level)
     try:
         operations = anyio.run(_at_start)
     except ToolError as exc:

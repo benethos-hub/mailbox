@@ -231,7 +231,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   IMAP without it answer `400` that the login cannot carry it. Before,
   IMAP answered `500`, and SMTP answered `400` with a message that
   quoted one character of the password and its position.
+- The MCP server no longer logs the URL of each request to the service
+  at `INFO`. httpx wrote it, with search terms and message ids, into the
+  log files of the MCP client.
 - A request body larger than 40 MB is refused with `413
+
 
   payload_too_large`, in the API and in the UI, before the service reads
   it whole. Before, any size was read, and only a send checked the 25 MB

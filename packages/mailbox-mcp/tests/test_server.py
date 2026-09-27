@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -275,7 +276,20 @@ def test_main_runs_stdio_with_the_allowed_tools(
     assert runs == [(set(READ), "stdio")]
 
 
+def test_the_log_names_no_request_url(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    for name in ("httpx", "httpcore"):
+        monkeypatch.setattr(logging.getLogger(name), "level", logging.NOTSET)
+    server.configure_logging("INFO")
+    with caplog.at_level(logging.INFO):
+        logging.getLogger("httpx").info("HTTP Request: GET /v1/messages?q=invoice")
+    assert "invoice" not in caplog.text
+    assert logging.getLogger("httpx").getEffectiveLevel() == logging.WARNING
+
+
 def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
+
     async def unreachable() -> set[str]:
         raise ToolError("The mailbox service is not reachable")
 
