@@ -43,7 +43,6 @@ __all__ = [
     "DiscoverySource",
     "Finding",
     "Query",
-    "SafeFetcher",
     "default_sources",
     "placeholders",
     "preset_hosts",

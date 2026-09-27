@@ -19,11 +19,12 @@ from fastapi.routing import APIRoute
 
 from . import __version__, web
 from .config import Settings
-from .data.discovery import SafeFetcher, default_sources, preset_hosts
+from .data.discovery import default_sources, preset_hosts
 from .data.http import (
     ApiClient,
     Lookup,
     Resolve,
+    SafeFetcher,
     WebhookPoster,
     host_addresses,
     host_addresses_now,
