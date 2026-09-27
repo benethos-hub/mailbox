@@ -18,6 +18,7 @@ from benethos_mailbox_service.data.http import ApiClient
 from benethos_mailbox_service.data.models import (
     FolderRole,
     MessageFilter,
+    MessageSummary,
     MessageUpdate,
     ProviderType,
 )
@@ -97,6 +98,17 @@ def test_flags_go_into_the_filter() -> None:
     assert "hasAttachments eq true" in params["$filter"]
     assert "receivedDateTime ge 2026-09-01T00:00:00Z" in params["$filter"]
     assert rest is None
+
+
+def test_a_text_search_for_mail_without_attachments_checks_each_result() -> None:
+    params, rest = mappers.query(MessageFilter(text="plan", has_attachments=False))
+    assert "hasAttachments" not in params["$search"]
+    assert rest == MessageFilter(has_attachments=False)
+    with_file = MessageSummary(id="m", folder_ids=[], has_attachments=True)
+    assert not mappers.keeps(with_file, rest)
+    assert mappers.keeps(with_file.model_copy(update={"has_attachments": False}), rest)
+    params, rest = mappers.query(MessageFilter(text="plan", has_attachments=True))
+    assert "hasAttachments:true" in params["$search"] and rest is None
 
 
 def test_text_goes_into_the_search() -> None:
