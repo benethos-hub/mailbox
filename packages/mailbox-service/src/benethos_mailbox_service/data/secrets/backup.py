@@ -16,8 +16,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..files import LockedError, create_private, exclusive_lock
-from ..storage import Database, inspect_snapshot
-from ..storage.sqlite import SCHEMA_VERSION, service_lock
+from ..storage import (
+    SCHEMA_VERSION,
+    Store,
+    inspect_snapshot,
+    migrate_file,
+    service_lock,
+)
 from . import cipher
 
 MAGIC = b"MAILBOX-SERVICE-BACKUP 1\n"
@@ -37,11 +42,11 @@ class Manifest:
 
 
 def create_backup(
-    db: Database, master_key: bytes, target: Path, service_version: str
+    store: Store, master_key: bytes, target: Path, service_version: str
 ) -> Manifest:
     if target.exists():
         raise BackupError(f"{target} exists, refusing to overwrite it")
-    data = db.snapshot()
+    data = store.snapshot()
     try:
         schema_version = inspect_snapshot(data)
     except ValueError as exc:
@@ -129,8 +134,7 @@ def _replace(target: Path, data: bytes) -> None:
     _remove(staged)  # from a restore that crashed
     create_private(staged, data)
     try:
-        # Opening migrates an older schema forward.
-        Database(staged).close()
+        migrate_file(staged)
     except BaseException:
         _remove(staged)
         raise

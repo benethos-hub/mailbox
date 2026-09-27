@@ -151,6 +151,20 @@ def test_the_domain_picks_no_storage() -> None:
     assert not violations, "storage chosen in the domain:\n  " + "\n  ".join(violations)
 
 
+def test_the_database_stays_behind_the_storage_package() -> None:
+    """Outside ``data/storage`` the store is reached through the package,
+    so another database replaces ``sqlite/`` and nothing else."""
+    inside = f"{PACKAGE}.data.storage"
+    violations = [
+        f"{name}:{line} imports {imported}"
+        for name, path in _modules()
+        if not name.startswith(inside)
+        for imported, line in _imports(path)
+        if imported.startswith(f"{inside}.sqlite")
+    ]
+    assert not violations, "SQLite reached directly:\n  " + "\n  ".join(violations)
+
+
 def test_web_framework_stays_in_the_web_layer() -> None:
     violations = []
     for name, path in _modules():

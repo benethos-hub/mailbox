@@ -47,7 +47,12 @@ from .data.secrets import (
     KeyringKeyProvider,
     PasswordHasher,
 )
-from .data.storage import Database, MessageIndexRepository, open_repositories
+from .data.storage import (
+    MessageIndexRepository,
+    Repositories,
+    Store,
+    open_repositories,
+)
 from .domain.accounts import AccountService
 from .domain.adapters import Adapters
 from .domain.auth import AuthService
@@ -85,8 +90,14 @@ class Services:
     status: StatusService
     recovery: RecoveryKey
     worker: SyncWorker | None = None
-    database: Database | None = None
+    # Every repository behind the services, closed with them.
+    repositories: Repositories | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
+
+    @property
+    def store(self) -> Store | None:
+        """What holds the records, for a backup. None in memory."""
+        return self.repositories.store if self.repositories else None
 
     async def aclose(self) -> None:
         """Every connection and the database, when the service stops."""
@@ -96,10 +107,10 @@ class Services:
         self.close()
 
     def close(self) -> None:
-        """The database alone: for the command line, which connects to
+        """The store alone: for the command line, which connects to
         nothing."""
-        if self.database is not None:
-            self.database.close()
+        if self.repositories is not None:
+            self.repositories.close()
 
 
 def build_services(
@@ -190,7 +201,7 @@ def build_services(
         ),
         status=StatusService(accounts, sync, worker, webhooks),
         recovery=RecoveryKey(auth, vault),
-        database=repos.database,
+        repositories=repos,
         oauth_clients=clients,
     )
 
@@ -263,8 +274,8 @@ def create_app(
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         with ExitStack() as serving:
-            if services.database is not None and not serving.enter_context(
-                services.database.serving()
+            if services.store is not None and not serving.enter_context(
+                services.store.serving()
             ):
                 logging.getLogger(__name__).warning(
                     "another service uses this database: a restore cannot "

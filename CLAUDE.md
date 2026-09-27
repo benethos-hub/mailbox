@@ -251,8 +251,9 @@ Three layers, imports only point down: `web/` → `domain/` → `data/`.
 `tests/test_architecture.py` checks the direction, the cross-cutting
 modules, that `common/` stays on the standard library, that FastAPI stays in
 `web/` (and `main.py`), that providers are reached through the registry,
-and that the domain picks no storage implementation. An import that
-breaks a rule fails the suite.
+that the domain picks no storage implementation, and that SQLite is
+reached through `data/storage/` alone. An import that breaks a rule
+fails the suite.
 
 ## Encapsulation and replaceable parts
 

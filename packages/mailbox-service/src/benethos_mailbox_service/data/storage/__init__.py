@@ -6,9 +6,10 @@ in memory for tests and ``storage = memory``, else SQLite.
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol
 
 from .accounts import AccountRepository, InMemoryAccountRepository
 from .changes import ChangeLogRepository, InMemoryChangeLogRepository, LoggedChange
@@ -34,6 +35,7 @@ from .index import (
 from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
+    SCHEMA_VERSION,
     Database,
     SqliteAccountRepository,
     SqliteChangeLogRepository,
@@ -48,6 +50,8 @@ from .sqlite import (
     SqliteUserRepository,
     SqliteWebhookRepository,
     inspect_snapshot,
+    migrate_file,
+    service_lock,
 )
 from .users import (
     InMemoryRoleRepository,
@@ -67,6 +71,22 @@ from .webhooks import (
 )
 
 
+class Store(Protocol):
+    """What holds the records of all repositories: an image of it for a
+    backup, the mark of a running service, and closing."""
+
+    def snapshot(self) -> bytes:
+        """A consistent image of every record, taken while it is in use."""
+        ...
+
+    def serving(self) -> AbstractContextManager[bool]:
+        """Mark the store as used by a running service while the block
+        runs. False when another service marked it already."""
+        ...
+
+    def close(self) -> None: ...
+
+
 @dataclass(frozen=True)
 class Repositories:
     """One of each, on the same store."""
@@ -83,12 +103,12 @@ class Repositories:
     sends: SendLogRepository
     changes: ChangeLogRepository
     webhooks: WebhookRepository
-    # The database behind them, for backups and for closing. None in memory.
-    database: Database | None = None
+    # The store behind them, for backups and for closing. None in memory.
+    store: Store | None = None
 
     def close(self) -> None:
-        if self.database is not None:
-            self.database.close()
+        if self.store is not None:
+            self.store.close()
 
 
 def open_repositories(
@@ -123,13 +143,17 @@ def open_repositories(
         sends=SqliteSendLogRepository(db),
         changes=SqliteChangeLogRepository(db),
         webhooks=SqliteWebhookRepository(db),
-        database=db,
+        store=db,
     )
 
 
 __all__ = [
+    "SCHEMA_VERSION",
     "Repositories",
+    "Store",
+    "migrate_file",
     "open_repositories",
+    "service_lock",
     "ChangeLogRepository",
     "InMemoryChangeLogRepository",
     "LoggedChange",

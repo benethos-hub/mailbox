@@ -189,9 +189,9 @@ def _backup(target: list[str], recovery_key: bool) -> None:
         raise _UsageError("use `backup FILE` or `backup verify FILE`")
     settings = _stored(Settings(), "backups")
     with opened(settings) as services:
-        assert services.database is not None
+        assert services.store is not None
         manifest = create_backup(
-            services.database,
+            services.store,
             services.vault.master_key(),
             Path(target[0]),
             __version__,

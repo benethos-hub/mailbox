@@ -422,6 +422,11 @@ def _renamed_by_9(db: sqlite3.Connection) -> list[tuple[str, str]]:
     return [(row["name"], f"{row['name']}-{row['id'][4:12]}") for row in rows]
 
 
+def migrate_file(path: Path) -> None:
+    """Bring the database file at ``path`` to this version's schema."""
+    Database(path).close()
+
+
 def service_lock(path: Path) -> Path:
     """The lock file a running service holds beside its database."""
     return path.with_name(path.name + ".lock")

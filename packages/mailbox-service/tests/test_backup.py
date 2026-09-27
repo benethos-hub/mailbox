@@ -69,9 +69,9 @@ def _populate() -> tuple[str, str]:
 def test_backup_and_restore_round_trip(machine: Path) -> None:
     account_id, _ = _populate()
     services = _services()
-    assert services.database is not None
+    assert services.store is not None
     master = services.vault.master_key()
-    manifest = create_backup(services.database, master, machine / "b.bak", "9.9.9")
+    manifest = create_backup(services.store, master, machine / "b.bak", "9.9.9")
     create_account(services.accounts, ProviderType.MEMORY, "later@example.com")
     services.close()
 
@@ -94,9 +94,9 @@ def test_backup_and_restore_round_trip(machine: Path) -> None:
 def test_restore_moves_a_leftover_journal_with_the_old_file(machine: Path) -> None:
     _populate()
     services = _services()
-    assert services.database is not None
+    assert services.store is not None
     master = services.vault.master_key()
-    create_backup(services.database, master, machine / "b.bak", "9.9.9")
+    create_backup(services.store, master, machine / "b.bak", "9.9.9")
     services.close()
     path = Settings().database_path
     journal = path.with_name(path.name + "-journal")
@@ -115,9 +115,9 @@ def _backed_up(machine: Path) -> tuple[bytes, Path]:
     """The master key and a database with one account, backed up."""
     _populate()
     services = _services()
-    assert services.database is not None
+    assert services.store is not None
     master = services.vault.master_key()
-    create_backup(services.database, master, machine / "b.bak", "9.9.9")
+    create_backup(services.store, master, machine / "b.bak", "9.9.9")
     services.close()
     return master, Settings().database_path
 
@@ -126,8 +126,8 @@ def test_restore_refuses_while_the_service_runs(machine: Path) -> None:
     master, path = _backed_up(machine)
     before = path.read_bytes()
     running = _services()
-    assert running.database is not None
-    with running.database.serving() as held:
+    assert running.store is not None
+    with running.store.serving() as held:
         assert held
         with pytest.raises(BackupError, match="the service is running"):
             restore_backup(machine / "b.bak", master, path)
@@ -152,8 +152,8 @@ def test_a_second_service_on_the_database_is_noted(
 ) -> None:
     _backed_up(machine)
     first = _services()
-    assert first.database is not None
-    with first.database.serving(), TestClient(create_app(Settings())):
+    assert first.store is not None
+    with first.store.serving(), TestClient(create_app(Settings())):
         pass
     first.close()
     assert "another service uses this database" in caplog.text
@@ -167,11 +167,10 @@ def test_a_restore_that_fails_leaves_the_database_in_place(
     staged = path.with_name(path.name + ".restoring")
     staged.write_bytes(b"left by a restore that crashed")
 
-    class Broken:
-        def __init__(self, path: Path) -> None:
-            raise sqlite3.OperationalError("disk I/O error")
+    def broken(path: Path) -> None:
+        raise sqlite3.OperationalError("disk I/O error")
 
-    monkeypatch.setattr(backup, "Database", Broken)
+    monkeypatch.setattr(backup, "migrate_file", broken)
     with pytest.raises(sqlite3.OperationalError):
         restore_backup(machine / "b.bak", master, path)
     assert path.read_bytes() == before
@@ -182,11 +181,11 @@ def test_a_restore_that_fails_leaves_the_database_in_place(
 def test_backup_never_overwrites(machine: Path) -> None:
     _populate()
     services = _services()
-    assert services.database is not None
+    assert services.store is not None
     (machine / "b.bak").write_bytes(b"x")
     with pytest.raises(BackupError, match="refusing"):
         create_backup(
-            services.database, services.vault.master_key(), machine / "b.bak", "1"
+            services.store, services.vault.master_key(), machine / "b.bak", "1"
         )
     services.close()
 
@@ -194,9 +193,9 @@ def test_backup_never_overwrites(machine: Path) -> None:
 def _backup_file(machine: Path) -> tuple[Path, bytes]:
     _populate()
     services = _services()
-    assert services.database is not None
+    assert services.store is not None
     master = services.vault.master_key()
-    create_backup(services.database, master, machine / "b.bak", "1")
+    create_backup(services.store, master, machine / "b.bak", "1")
     services.close()
     return machine / "b.bak", master
 
