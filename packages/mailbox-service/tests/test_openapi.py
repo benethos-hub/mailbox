@@ -49,7 +49,9 @@ def test_protected_routes_declare_bearer_and_errors() -> None:
     for path, op in _operations():
         if path.startswith(API_PREFIX):
             assert op["security"] == [{"bearerAuth": []}], path
-            assert {"401", "404", "502"} <= set(op["responses"]), path
+            assert {"400", "401", "403", "404", "409", "502", "503"} <= set(
+                op["responses"]
+            ), path
 
 
 def test_the_search_form_uses_the_query_names_of_the_api() -> None:

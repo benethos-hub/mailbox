@@ -49,6 +49,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -71,6 +81,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -136,6 +156,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -158,6 +188,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -227,6 +267,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -249,6 +299,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -322,6 +382,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -344,6 +414,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -435,6 +515,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -457,6 +547,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -551,6 +651,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -573,6 +683,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -650,6 +770,16 @@
           "204": {
             "description": "Successful Response"
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -672,6 +802,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -769,6 +909,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -791,6 +941,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -881,6 +1041,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -903,6 +1073,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -997,6 +1177,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1019,6 +1209,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -1114,6 +1314,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1136,6 +1346,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -1210,6 +1430,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1232,6 +1462,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -1305,6 +1545,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1327,6 +1577,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -1418,6 +1678,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1440,6 +1710,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -1534,6 +1814,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1556,6 +1846,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -1633,6 +1933,16 @@
           "204": {
             "description": "Successful Response"
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1655,6 +1965,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -1729,6 +2049,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1751,6 +2081,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -1824,6 +2164,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1846,6 +2196,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -1937,6 +2297,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -1959,6 +2329,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -2054,6 +2434,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -2076,6 +2466,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -2153,6 +2553,16 @@
           "204": {
             "description": "Successful Response"
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -2175,6 +2585,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -2261,6 +2681,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -2283,6 +2713,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -2364,6 +2804,16 @@
               }
             }
           },
+          "400": {
+            "description": "Not a valid email address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -2394,6 +2844,16 @@
               }
             }
           },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "501": {
             "description": "The provider cannot do this",
             "content": {
@@ -2416,16 +2876,6 @@
           },
           "503": {
             "description": "No user exists yet",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Not a valid email address",
             "content": {
               "application/json": {
                 "schema": {
@@ -2507,6 +2957,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -2529,6 +2989,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -2835,6 +3305,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -2857,6 +3337,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -2986,6 +3476,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -3008,6 +3508,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -3124,6 +3634,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -3146,6 +3666,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -3236,6 +3766,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -3258,6 +3798,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -3353,6 +3903,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -3375,6 +3935,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -3481,6 +4051,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -3503,6 +4083,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -3590,6 +4180,16 @@
           "204": {
             "description": "Successful Response"
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -3612,6 +4212,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -3907,6 +4517,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -3929,6 +4549,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -4024,6 +4654,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -4046,6 +4686,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -4150,6 +4800,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -4172,6 +4832,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -4271,6 +4941,16 @@
           "204": {
             "description": "Successful Response"
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -4293,6 +4973,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -4410,6 +5100,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -4432,6 +5132,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -4557,6 +5267,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -4579,6 +5299,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -4696,6 +5426,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -4718,6 +5458,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -4843,6 +5593,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -4865,6 +5625,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -4960,6 +5730,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -4982,6 +5762,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -5088,6 +5878,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -5110,6 +5910,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -5197,6 +6007,16 @@
           "204": {
             "description": "Successful Response"
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -5219,6 +6039,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -5335,6 +6165,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -5357,6 +6197,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -5464,6 +6314,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -5486,6 +6346,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -5577,6 +6447,16 @@
               "message/rfc822": {}
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -5599,6 +6479,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -5699,6 +6589,16 @@
               "application/octet-stream": {}
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -5721,6 +6621,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -5796,6 +6706,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -5818,6 +6738,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -5892,6 +6822,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -5914,6 +6854,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -6006,6 +6956,16 @@
               }
             }
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -6028,6 +6988,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {
@@ -6105,6 +7075,16 @@
           "204": {
             "description": "Successful Response"
           },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or wrong bearer token",
             "content": {
@@ -6127,6 +7107,16 @@
           },
           "404": {
             "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
             "content": {
               "application/json": {
                 "schema": {

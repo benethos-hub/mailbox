@@ -19,9 +19,11 @@ from .schemas import ErrorResponse
 DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
     status: {"model": ErrorResponse, "description": text}
     for status, text in {
+        400: "The request is not valid, e.g. a cursor or a right",
         401: "Missing or wrong bearer token",
         403: "The caller lacks the right for this operation",
         404: "Account or resource not found",
+        409: "The request conflicts with what is stored, e.g. a name taken",
         501: "The provider cannot do this",
         502: "The provider failed or rejected the credentials",
         503: "No user exists yet",

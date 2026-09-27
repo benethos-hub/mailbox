@@ -82,6 +82,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The OpenAPI document names `400` and `409` on every route under `/v1`,
+  as the service answers them.
 - A refused editor in the configuration UI is shown again with what was
   typed and the reason, and answers `400`: users, tokens, roles, an
   account's settings, webhooks and folders. The password is left out.
