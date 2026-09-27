@@ -104,6 +104,15 @@ def test_an_account_id_is_taken_once(stores: Stores) -> None:
     assert stores.accounts.get("acc_1").email == "a@example.com"
 
 
+def test_a_user_name_is_unique_regardless_of_case(stores: Stores) -> None:
+    repo = stores.users
+    repo.save(User(id="usr_1", name="admin"))
+    with pytest.raises(ConflictError):
+        repo.save(User(id="usr_2", name="ADMIN"))
+    repo.save(User(id="usr_1", name="Admin"))
+    assert [u.name for u in repo.list()] == ["Admin"]
+
+
 def test_users_round_trip(stores: Stores) -> None:
     repo = stores.users
     user = User(

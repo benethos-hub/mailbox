@@ -172,7 +172,10 @@ MIGRATIONS: list[str] = [
     """,
     # 9: passwords, and user names that are unique regardless of case, the
     # name being what a person signs in with. A name taken twice before
-    # gets part of its id, so the index can be made
+    # gets part of its id, so the index can be made. lower() and NOCASE
+    # fold ASCII letters alone: two names that differ in the case of
+    # another letter, such as Ä and ä, both stay. The domain compares names
+    # with casefold() and refuses such a second name since.
     """
     UPDATE users SET name = name || '-' || substr(id, 5, 8)
         WHERE rowid NOT IN (SELECT MIN(rowid) FROM users GROUP BY lower(name));

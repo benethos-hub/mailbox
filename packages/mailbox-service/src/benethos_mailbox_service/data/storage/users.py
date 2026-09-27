@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import string
 from datetime import datetime
 from typing import Protocol
 
@@ -52,9 +53,22 @@ class TokenRepository(Protocol):
     def delete_for_user(self, user_id: str) -> None: ...
 
 
+# SQLite's NOCASE: ASCII letters alone.
+_NOCASE = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
+
+
 class InMemoryUserRepository(TableRepository[User]):
     def __init__(self) -> None:
         super().__init__("user")
+
+    def save(self, user: User) -> None:
+        """A name is unique regardless of case, as the SQLite index keeps it."""
+        name = user.name.translate(_NOCASE)
+        if any(
+            u.id != user.id and u.name.translate(_NOCASE) == name for u in self.list()
+        ):
+            raise ConflictError(f"a user named {user.name} exists")
+        super().save(user)
 
     def count(self) -> int:
         return len(self._rows)

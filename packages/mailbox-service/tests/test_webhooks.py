@@ -22,7 +22,7 @@ from benethos_mailbox_service.data.storage import (
     WebhookRepository,
 )
 from benethos_mailbox_service.domain.webhooks import sealed_label
-from benethos_mailbox_service.errors import NotFoundError
+from benethos_mailbox_service.errors import ConflictError, NotFoundError
 from benethos_mailbox_service.main import Services
 
 from .conftest import bearer_for, create_account
@@ -223,6 +223,12 @@ def test_the_store_keeps_a_webhook(store: WebhookRepository) -> None:
         store.get("whk_1")
     with pytest.raises(NotFoundError):
         store.delete("whk_1")
+
+
+def test_an_id_that_exists_is_a_conflict(store: WebhookRepository) -> None:
+    store.add(record(1))
+    with pytest.raises(ConflictError):
+        store.add(record(1))
 
 
 def test_the_store_keeps_how_delivery_stands(store: WebhookRepository) -> None:

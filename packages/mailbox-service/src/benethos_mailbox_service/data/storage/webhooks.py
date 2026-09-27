@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
+from ...errors import ConflictError
 from ..models.webhooks import Webhook
 from .table import missing
 
@@ -97,6 +98,9 @@ class InMemoryWebhookRepository:
         self._attempts: dict[str, list[Attempt]] = {}
 
     def add(self, record: WebhookRecord) -> None:
+        """A new webhook. An id that exists is a conflict, as it is in SQL."""
+        if record.webhook.id in self._records:
+            raise ConflictError(f"webhook {record.webhook.id} exists already")
         self._records[record.webhook.id] = record
 
     def get(self, webhook_id: str) -> WebhookRecord:
