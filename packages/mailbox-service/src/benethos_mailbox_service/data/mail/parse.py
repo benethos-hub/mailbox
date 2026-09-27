@@ -28,6 +28,17 @@ class ParsedAttachment:
     size: int
     inline: bool
     payload: bytes
+    # Set when the body refers to the part, e.g. an image in the HTML.
+    content_id: str | None = None
+    # "attachment", "inline" or "" when the part names none.
+    disposition: str = ""
+
+    @property
+    def attached(self) -> bool:
+        """Whether a person sees it as an attachment: not a part the body
+        shows in its place, such as an image in the HTML. A file a client
+        marked inline, as Apple Mail does with a PDF, is one."""
+        return self.content_id is None or self.disposition == "attachment"
 
 
 class ParsedMessage:
@@ -115,6 +126,8 @@ class ParsedMessage:
                 size=part.size,
                 inline=(part.content_disposition or "").lower() == "inline",
                 payload=part.payload,
+                content_id=part.content_id or None,
+                disposition=(part.content_disposition or "").lower(),
             )
             for part in self._parsed.attachments
         ]

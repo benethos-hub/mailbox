@@ -194,6 +194,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- `has_attachments` means one thing in a list and in the message: a part
+  a person sees as an attachment. An image the HTML shows in its place
+  is none, a file marked inline, as Apple Mail sends a PDF, is one.
+  Before, an opened HTML mail with inline images had attachments and the
+  same mail in a list had none.
 - `in_reply_to` of a message is one Message-ID, the first the header
   names. Before, a header the sender had folded came with its line break
   and every id in it.

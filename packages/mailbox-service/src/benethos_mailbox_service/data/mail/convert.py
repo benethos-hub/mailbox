@@ -21,6 +21,8 @@ def summary_fields(msg: ParsedMessage) -> dict[str, Any]:
         "from": msg.sender,
         "to": msg.to,
         "date": msg.date,
+        # From the header alone: parts that are attached come in a
+        # multipart/mixed, those the body shows in a multipart/related.
         "has_attachments": msg.content_type.startswith("multipart/mixed"),
     }
 
@@ -56,7 +58,7 @@ def message_fields(msg: ParsedMessage) -> dict[str, Any]:
         "text_body": msg.text,
         "html_body": msg.html,
         "attachments": attachments,
-        "has_attachments": bool(attachments),
+        "has_attachments": any(part.attached for part in msg.attachments),
     }
 
 
