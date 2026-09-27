@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import builtins
 import json
 import sqlite3
 from datetime import datetime
 
 from ...models.webhooks import Webhook
 from ..table import missing
-from ..webhooks import Delivery, Sealed, WebhookRecord
+from ..webhooks import Attempt, Delivery, Sealed, WebhookRecord
 from .database import Database, iso, parse_iso
 
 
@@ -76,6 +77,52 @@ class SqliteWebhookRepository:
                 webhook_id,
             ),
         )
+
+    def add_attempt(self, attempt: Attempt, *, keep: int) -> None:
+        with self._db.transaction():
+            if (
+                self._db.one(
+                    "SELECT 1 FROM webhooks WHERE id = ?", (attempt.webhook_id,)
+                )
+                is None
+            ):
+                return
+            self._db.execute(
+                "INSERT INTO webhook_attempts"
+                " (webhook_id, delivery_id, at, events, status, error)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    attempt.webhook_id,
+                    attempt.delivery_id,
+                    iso(attempt.at),
+                    attempt.events,
+                    attempt.status,
+                    attempt.error,
+                ),
+            )
+            self._db.execute(
+                "DELETE FROM webhook_attempts WHERE webhook_id = ? AND seq NOT IN"
+                " (SELECT seq FROM webhook_attempts WHERE webhook_id = ?"
+                " ORDER BY seq DESC LIMIT ?)",
+                (attempt.webhook_id, attempt.webhook_id, keep),
+            )
+
+    def attempts(self, webhook_id: str) -> builtins.list[Attempt]:
+        rows = self._db.query(
+            "SELECT * FROM webhook_attempts WHERE webhook_id = ? ORDER BY seq DESC",
+            (webhook_id,),
+        )
+        return [
+            Attempt(
+                webhook_id=row["webhook_id"],
+                delivery_id=row["delivery_id"],
+                at=parse_iso(row["at"]),
+                events=row["events"],
+                status=row["status"],
+                error=row["error"],
+            )
+            for row in rows
+        ]
 
 
 def _time(value: datetime | None) -> str | None:

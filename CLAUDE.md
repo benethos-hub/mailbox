@@ -73,7 +73,11 @@ done. Update the roadmap in the same commit that finishes an item.
   in the UI and make a token there, as an operator would.
   `uv run python live/ui.py` checks it against the test accounts. It sends
   one mail from the first test account to the second and deletes it for
-  good on both sides.
+  good on both sides. It also opens the status, adds and removes a
+  webhook, shows the recovery key of its own service and makes a user
+  with a one-time password.
+  How the pages look and behave, and the checklist for a new page:
+  `docs/UI.md`.
 - Microsoft accounts: `docs/microsoft.md` sets up the app registration.
   `uv run python live/microsoft.py --connect` once (a person signs in in
   the browser), then `uv run python live/microsoft.py` checks the adapter
@@ -129,6 +133,8 @@ packages/
           routes/         # one router per resource
         pages/            # the configuration UI under /ui, not in OpenAPI
           deps.py         # who is signed in, the CSRF check
+          navigation.py   # the sidebar entries a caller may open, breadcrumbs
+          filters.py      # the filter bar of a list: its fields and chips
           session.py      # sign-in with a token, server-side sessions
           templates.py    # Jinja2: filters, render, Post/Redirect/Get
           grants.py       # the grant editor's rows, read back into grants
@@ -152,6 +158,8 @@ packages/
         sync.py           # SyncService: stable message ids, the sync pass
         changes.py        # ChangeFeed: records created, updated, deleted
         worker.py         # SyncWorker: polling and IDLE in the background
+        status.py         # StatusService: accounts, sync and webhooks at a glance
+        recovery.py       # RecoveryKey: the master key shown once, to admin
         idempotency.py    # Idempotency-Key: a retried send returns its result
         locks.py          # KeyedLocks: one asyncio lock per key, for the services
         sending.py        # SendControl: grant constraints on sending, send audit

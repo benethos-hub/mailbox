@@ -63,11 +63,14 @@ class Access:
         name: str,
         grants: Iterable[Grant],
         credential_id: str | None = None,
+        roles: Iterable[str] = (),
     ) -> None:
         self.user_id = user_id
         self.name = name
         # The token the caller presented, None for a session of the UI.
         self.credential_id = credential_id
+        # The roles whose grants are among ``grants``, to show them.
+        self.roles = tuple(roles)
         self._rules = tuple(_rule(grant) for grant in grants)
 
     @classmethod
@@ -79,7 +82,7 @@ class Access:
             role = roles.get(role_id)
             if role is not None:
                 grants.extend(role.grants)
-        return cls(user.id, user.name, grants, credential_id)
+        return cls(user.id, user.name, grants, credential_id, user.roles)
 
     @classmethod
     def admin(cls, user_id: str, name: str) -> Access:
@@ -112,6 +115,16 @@ class Access:
         return any(
             (rule.accounts is None or account_id in rule.accounts)
             and rule.operations - about_accounts
+            for rule in self._rules
+        )
+
+    def anywhere(self, operation: str) -> bool:
+        """Whether the operation is allowed on at least one account, or
+        without one."""
+        return self.allows(operation) or any(
+            operation in rule.operations
+            and operation not in permissions.ALL_ACCOUNTS
+            and (rule.accounts is None or bool(rule.accounts))
             for rule in self._rules
         )
 

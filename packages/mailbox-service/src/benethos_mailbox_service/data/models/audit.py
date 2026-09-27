@@ -35,3 +35,25 @@ class SendRecord(BaseModel):
         description="Recipients the server refused while it accepted others.",
     )
     message_id_header: str | None = None
+
+
+class SendFilter(BaseModel):
+    """What narrows the audit of sends. Each field set must match."""
+
+    user_id: str | None = None
+    outcome: SendOutcome | None = None
+    # A part of a recipient's address, regardless of case.
+    recipient: str | None = None
+    # Sends at or after this time, and before that one.
+    after: datetime | None = None
+    before: datetime | None = None
+
+    def matches(self, record: SendRecord) -> bool:
+        wanted = (self.recipient or "").casefold()
+        return (
+            (self.user_id is None or record.user_id == self.user_id)
+            and (self.outcome is None or record.outcome == self.outcome)
+            and (not wanted or any(wanted in r.casefold() for r in record.recipients))
+            and (self.after is None or record.created_at >= self.after)
+            and (self.before is None or record.created_at < self.before)
+        )

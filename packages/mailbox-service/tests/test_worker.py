@@ -12,8 +12,14 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import AccountStatus, ProviderType
 from benethos_mailbox_service.domain import worker as worker_module
+from benethos_mailbox_service.domain.access import Access
+from benethos_mailbox_service.domain.status import StatusService
 from benethos_mailbox_service.domain.worker import SyncWorker
-from benethos_mailbox_service.errors import NotFoundError, ProviderAuthError
+from benethos_mailbox_service.errors import (
+    ForbiddenError,
+    NotFoundError,
+    ProviderAuthError,
+)
 from benethos_mailbox_service.main import Services, create_app
 
 from .conftest import ADMIN
@@ -180,3 +186,49 @@ async def test_a_rejected_login_ends_the_watcher(
     server.password = "changed"
     await worker(services).watch(account_id)  # ends by itself
     assert services.adapters.status(account_id) is AccountStatus.NEEDS_REAUTH
+
+
+async def test_the_worker_and_the_sync_keep_their_state(
+    services: Services,  # noqa: F811
+    account_id: str,  # noqa: F811
+    server: FakeMailBox,  # noqa: F811
+) -> None:
+    before = worker(services)
+    assert before.state().last_pass_at is None
+    assert services.sync.state(account_id).last_sync_at is None
+    await before.poll()
+    synced = services.sync.state(account_id)
+    assert synced.last_sync_at is not None and synced.last_error is None
+    assert before.state().last_pass_at is not None
+    assert before.state().interval == 300
+
+    # A new message makes the next pass search, and the search fails.
+    server.add("INBOX", 10, make_message("Arrived"))
+    server.failures = [OSError("gone")] * 3
+    await before.poll()
+    failed = services.sync.state(account_id)
+    assert failed.last_sync_at == synced.last_sync_at
+    assert failed.last_error is not None and failed.last_error_at is not None
+
+
+async def test_the_status_names_what_needs_attention(
+    services: Services,  # noqa: F811
+    account_id: str,  # noqa: F811
+    server: FakeMailBox,  # noqa: F811
+) -> None:
+    status = StatusService(
+        services.accounts, services.sync, worker(services), services.webhooks
+    )
+    assert [h.account.id for h in status.status(ADMIN).accounts] == [account_id]
+    assert status.status(ADMIN).attention == []
+    server.password = "changed"
+    with pytest.raises(ProviderAuthError):
+        await services.sync.sync_account(account_id)
+    [health] = status.status(ADMIN).attention
+    assert health.account.status is AccountStatus.NEEDS_REAUTH
+    assert health.sync.last_error is not None and health.synced
+
+    nobody = Access("usr_n", "nobody", [])
+    assert not status.may_see(nobody)
+    with pytest.raises(ForbiddenError):
+        status.status(nobody)

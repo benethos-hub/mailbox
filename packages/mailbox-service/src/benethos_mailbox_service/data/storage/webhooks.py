@@ -3,6 +3,7 @@ stores. The domain decides what is posted, and when."""
 
 from __future__ import annotations
 
+import builtins
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
@@ -28,6 +29,21 @@ class Delivery:
     cursor: int
     attempts: int = 0
     next_attempt_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class Attempt:
+    """One post to a webhook's receiver, for the delivery log."""
+
+    webhook_id: str
+    delivery_id: str
+    at: datetime
+    # How many events the post carried.
+    events: int
+    # What the receiver answered. None when it could not be reached.
+    status: int | None
+    # Why the post failed. None when the receiver took it.
+    error: str | None
 
 
 @dataclass(frozen=True)
@@ -61,10 +77,20 @@ class WebhookRepository(Protocol):
         """A webhook that is gone meanwhile changes nothing."""
         ...
 
+    def add_attempt(self, attempt: Attempt, *, keep: int) -> None:
+        """Logs a post, keeping the newest ``keep`` of the webhook. A
+        webhook that is gone meanwhile logs nothing."""
+        ...
+
+    def attempts(self, webhook_id: str) -> builtins.list[Attempt]:
+        """The logged posts, newest first."""
+        ...
+
 
 class InMemoryWebhookRepository:
     def __init__(self) -> None:
         self._records: dict[str, WebhookRecord] = {}
+        self._attempts: dict[str, list[Attempt]] = {}
 
     def add(self, record: WebhookRecord) -> None:
         self._records[record.webhook.id] = record
@@ -81,6 +107,7 @@ class InMemoryWebhookRepository:
     def delete(self, webhook_id: str) -> None:
         self.get(webhook_id)
         del self._records[webhook_id]
+        self._attempts.pop(webhook_id, None)
 
     def update(
         self,
@@ -97,3 +124,12 @@ class InMemoryWebhookRepository:
             update={"last_delivery_at": last_delivery_at, "last_error": last_error}
         )
         self._records[webhook_id] = replace(record, webhook=webhook, delivery=delivery)
+
+    def add_attempt(self, attempt: Attempt, *, keep: int) -> None:
+        if attempt.webhook_id not in self._records:
+            return
+        logged = [attempt, *self._attempts.get(attempt.webhook_id, [])]
+        self._attempts[attempt.webhook_id] = logged[:keep]
+
+    def attempts(self, webhook_id: str) -> builtins.list[Attempt]:
+        return list(self._attempts.get(webhook_id, []))

@@ -167,6 +167,25 @@ async def test_setting_a_password_needs_the_right_and_the_rights(
         await services.users.set_password(caller, helper.id, "yet another passphrase")
 
 
+async def test_a_one_time_password_signs_in_once_and_is_noted(
+    services: Services,
+) -> None:
+    user = services.users.create_user(ADMIN, "Anna", [], [READER])
+    assert services.users.last_sign_in(ADMIN, user.id) is None
+    password = await services.users.one_time_password(ADMIN, user.id)
+    assert len(password) >= 24
+    signed = await services.auth.sign_in("anna", password, source="10.0.0.1")
+    assert signed.must_change is True and signed.previous is None
+    assert services.users.last_sign_in(ADMIN, user.id) is not None
+    again = await services.auth.sign_in("anna", password, source="10.0.0.1")
+    assert again.previous is not None
+    # Without users.manage no password for anyone, its own included.
+    with pytest.raises(ForbiddenError):
+        await services.users.one_time_password(
+            services.auth.session_access(user.id, again.stamp), user.id
+        )
+
+
 async def test_names_are_unique_regardless_of_case(services: Services) -> None:
     user = await anna(services)
     with pytest.raises(ConflictError, match="Anna exists"):

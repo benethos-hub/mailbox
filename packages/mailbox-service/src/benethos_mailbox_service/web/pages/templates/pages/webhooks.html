@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import card, empty, filter_bar %}
+{% block title %}Webhooks · {{ APP_NAME }}{% endblock %}
+{% block heading %}Webhooks{% endblock %}
+{% block subheading %}<div class="sub">Where the service posts what changed in your accounts</div>{% endblock %}
+{% block actions %}
+{% if can_create %}<a class="btn primary" href="/ui/webhooks/new">New webhook</a>{% endif %}
+{% endblock %}
+{% block content %}
+{% call card("Webhooks", meta=webhooks | length, tight=True) %}
+<div class="body list-bar">{{ filter_bar(bar) }}</div>
+{% if webhooks %}
+<div class="table-scroll">
+  <table>
+    <thead><tr><th>URL</th><th>Events</th><th>Accounts</th><th>Last delivery</th><th>State</th></tr></thead>
+    <tbody>
+      {% for hook in webhooks %}
+      <tr>
+        <td class="name"><a class="mono" href="/ui/webhooks/{{ hook.id }}">{{ hook.url }}</a></td>
+        <td>{% for event in hook.events %}<span class="tag">{{ event }}</span> {% endfor %}</td>
+        <td>{% if hook.accounts is none %}every account you may read{% else %}{% for account in hook.accounts %}{{ names.get(account, account) }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</td>
+        <td>{{ hook.last_delivery_at | when }}</td>
+        <td>{% if hook.last_error %}<span class="tag bad">failing</span><span class="sub">{{ hook.last_error }}</span>{% else %}<span class="tag ok">ok</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+{{ empty("No webhook matches." if bar.chips else "No webhook yet.") }}
+{% endif %}
+{% endcall %}
+{% endblock %}

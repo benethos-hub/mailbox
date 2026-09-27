@@ -1,46 +1,77 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import anywhere_tag, empty %}
+{% from "components/ui.html" import anywhere_tag, card, empty, fact, facts %}
+{% from "components/grants.html" import role_tags %}
 {% block title %}Overview · {{ APP_NAME }}{% endblock %}
 {% block heading %}Overview{% endblock %}
 {% block subheading %}<div class="sub">Signed in as {{ rights.name }}</div>{% endblock %}
 {% block content %}
-{% if rights.accounts %}
-<section class="card">
-  <header><h2>Your accounts</h2><span class="meta">{{ rights.accounts | length }}</span></header>
-  <div class="body tight">
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>Account</th><th>You may</th><th></th></tr></thead>
-        <tbody>
-          {% for account in rights.accounts %}
-          <tr>
-            <td class="name">
-              {{ account.email }}
-              <span class="sub">{{ account.display_name | or_missing }} · <span class="mono">{{ account.id[:16] }}…</span></span>
-            </td>
-            <td>
-              {% for group in rows[account.id].groups %}<span class="tag accent">{{ group }}</span> {% endfor %}
-              {% for op in rows[account.id].operations %}<span class="tag">{{ op }}</span> {% endfor %}
-            </td>
-            <td>
-              {% if "read_and_send_anywhere" in account.warnings %}{{ anywhere_tag() }}{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
+{% call facts("You") %}
+  {{ fact("Name", rights.name) }}
+  {% call fact("Roles") %}{{ role_tags(rights.roles) }}{% endcall %}
+  {% call fact("Accounts") %}{{ rows | length }} you may use{% endcall %}
+  {% if view.groups or view.operations %}
+  {% call fact("Beyond one account") %}{% for group in view.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for op in view.operations %}<span class="tag">{{ op }}</span> {% endfor %}{% endcall %}
+  {% endif %}
+  {% call fact("Last sign-in") %}{% if previous_sign_in %}{{ previous_sign_in | when }}, before this one{% else %}this is the first{% endif %}{% endcall %}
+  {% call fact("Go to") %}{% if own_page %}<a href="{{ own_page }}">Your page</a> · {% endif %}<a href="/ui/password">Password</a>{% if can_recover %} · <a href="/ui/recovery-key">Recovery key</a>{% endif %}{% endcall %}
+{% endcall %}
+{% if anywhere %}
+<div class="notice warn">You may read mail and send it to any address on at least one account. A mail with injected instructions could use that to carry data out. A grant with recipients narrows sending.</div>
+{% endif %}
+
+{% if rows %}
+{% call card("Your accounts", meta=rows | length, tight=True) %}
+<div class="table-scroll">
+  <table>
+    <thead><tr><th>Account</th><th>Status</th><th>You may</th><th></th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      {% set account = row.rights %}
+      <tr>
+        <td class="name">
+          {% if row.page %}<a href="{{ row.page }}">{{ account.email }}</a>{% else %}{{ account.email }}{% endif %}
+          <span class="sub">{{ account.display_name | or_missing }}</span>
+        </td>
+        <td>{% include "partials/account_status.html" %}</td>
+        <td>
+          {% for group in row.view.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}
+          {% for op in row.view.operations %}<span class="tag">{{ op }}</span> {% endfor %}
+          {% if "read_and_send_anywhere" in account.warnings %}{{ anywhere_tag() }}{% endif %}
+        </td>
+        <td class="actions">{% if row.mail %}<a class="btn small" href="{{ row.mail }}">Mail</a>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endcall %}
 {% else %}
 {{ empty("No account yet, or none you may use.") }}
 {% endif %}
-{% if rights.operations %}
-<section class="card">
-  <header><h2>Beyond one account</h2></header>
-  <div class="body">
-    {% for op in rights.operations %}<span class="tag">{{ op }}</span> {% endfor %}
-  </div>
-</section>
+
+{% if service is not none %}
+{% call card("Service") %}
+{% if not service.attention and not service.failing %}
+<p class="ok">All is well: every account is connected and syncs, every webhook delivers.</p>
+{% else %}
+<ul class="lines">
+  {% for health in service.attention %}
+  <li>
+    <a href="/ui/accounts/{{ health.account.id }}">{{ health.account.email }}</a>
+    {% set account = health.account %}{% include "partials/account_status.html" %}
+    {% if health.sync.last_error %}<span class="muted">sync failed {{ health.sync.last_error_at | when }}: {{ health.sync.last_error }}</span>{% endif %}
+  </li>
+  {% endfor %}
+  {% for webhook in service.failing %}
+  <li><a class="mono" href="/ui/webhooks/{{ webhook.id }}">{{ webhook.url }}</a> <span class="tag bad">failing</span> <span class="muted">{{ webhook.last_error }}</span></li>
+  {% endfor %}
+</ul>
+{% endif %}
+<p class="muted small-print">
+  {% if service.worker is none %}The sync worker is switched off.
+  {% elif service.worker.last_pass_at %}The sync worker's last pass ended {{ service.worker.last_pass_at | when }}. It runs every {{ service.worker.interval | round | int }} seconds.
+  {% else %}The sync worker has not finished its first pass yet.{% endif %}
+</p>
+{% endcall %}
 {% endif %}
 {% endblock %}

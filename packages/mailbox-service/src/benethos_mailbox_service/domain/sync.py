@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Awaitable, Callable, Iterable
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
 
@@ -42,6 +42,17 @@ def new_message_id() -> str:
     return new_id("msg")
 
 
+@dataclass(frozen=True)
+class SyncState:
+    """How the passes of one account went, since the service started.
+    Kept in memory only."""
+
+    last_sync_at: datetime | None = None
+    # The last pass that failed, and why. Cleared by one that succeeds.
+    last_error: str | None = None
+    last_error_at: datetime | None = None
+
+
 class SyncService:
     def __init__(
         self,
@@ -57,6 +68,7 @@ class SyncService:
         self._feed = feed if feed is not None else ChangeFeed()
         self._clock = clock
         self._locks: KeyedLocks[str] = KeyedLocks()
+        self._states: dict[str, SyncState] = {}
 
     @property
     def feed(self) -> ChangeFeed:
@@ -201,10 +213,22 @@ class SyncService:
             return
         lock = self._locks.get(account_id)
         async with lock:
-            if self.mapped(account_id):
-                await self._sync(account_id)
-            else:
-                await self._sync_delta(account_id)
+            state = self.state(account_id)
+            try:
+                if self.mapped(account_id):
+                    await self._sync(account_id)
+                else:
+                    await self._sync_delta(account_id)
+            except MailboxServiceError as exc:
+                self._states[account_id] = replace(
+                    state, last_error=exc.message, last_error_at=self._clock()
+                )
+                raise
+            self._states[account_id] = SyncState(last_sync_at=self._clock())
+
+    def state(self, account_id: str) -> SyncState:
+        """How the passes of the account went since the start."""
+        return self._states.get(account_id, SyncState())
 
     async def _sync_delta(self, account_id: str) -> None:
         """Ask every folder what changed since its last token. A folder asked

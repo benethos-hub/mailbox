@@ -85,10 +85,15 @@ ACCOUNT_FREE: frozenset[str] = frozenset(
     GROUPS["users.manage"] + GROUPS["webhooks.manage"]
 )
 
-# Operations that act on accounts which may not exist yet. They need a grant
-# on every account ("*").
-ALL_ACCOUNTS: frozenset[str] = frozenset(
-    {"discover_account", "create_account", "start_oauth"}
+# Rights only ``admin`` gives, in no group and not to be granted by name.
+# Showing the recovery key hands out the master key, which opens every
+# stored secret.
+ADMIN_ONLY: frozenset[str] = frozenset({"show_recovery_key"})
+
+# Operations that act on accounts which may not exist yet, or on all of
+# them. They need a grant on every account ("*").
+ALL_ACCOUNTS: frozenset[str] = (
+    frozenset({"discover_account", "create_account", "start_oauth"}) | ADMIN_ONLY
 )
 
 GROUP_OF: dict[str, str] = {op: group for group, ops in GROUPS.items() for op in ops}
@@ -127,6 +132,7 @@ def expand(names: Iterable[str]) -> frozenset[str]:
     for name in names:
         if name == ADMIN:
             result.update(GROUP_OF)
+            result.update(ADMIN_ONLY)
         elif name in GROUPS:
             result.update(GROUPS[name])
         elif name in GROUP_OF:

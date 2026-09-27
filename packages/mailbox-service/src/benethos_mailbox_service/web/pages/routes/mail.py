@@ -24,11 +24,35 @@ from ...search import FIELDS, FLAGS, filter_from
 from ...services import Mailbox, get_accounts
 from ..deps import Viewer, account_of, emails_of
 from ..errors import error_page
+from ..filters import Field, FilterBar, Kind, filter_bar
 from ..forms import first_problem
+from ..navigation import mail_trail
 from ..rights import mail_rights
 from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
+
+# The search of every message list, by the API's query names (web.search).
+SEARCH = Field("q", "Search text")
+LABELS: dict[str, tuple[str, Kind]] = {
+    "from": ("From", "text"),
+    "to": ("To", "text"),
+    "subject": ("Subject", "text"),
+    "after": ("From day", "date"),
+    "before": ("Before day", "date"),
+    "unread": ("unread", "flag"),
+    "starred": ("starred", "flag"),
+    "has_attachments": ("with attachments", "flag"),
+}
+MAIL_FILTERS = tuple(Field(name, label, kind) for name, (label, kind) in LABELS.items())
+
+
+def mail_bar(
+    request: Request,
+    extra: tuple[Field, ...] = (),
+    keep: list[tuple[str, str]] | None = None,
+) -> FilterBar:
+    return filter_bar(request, (*extra, *MAIL_FILTERS), search=SEARCH, keep=keep or [])
 
 
 def _search(request: Request) -> tuple[MessageFilter | None, dict[str, str], str]:
@@ -90,6 +114,16 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
         limit=PAGE_SIZE,
         cursor=request.query_params.get("cursor"),
     )
+    places = (
+        Field(
+            "folder",
+            "Folder",
+            "select",
+            [(r.value, r.value) for r in FolderRole if r is not FolderRole.INBOX],
+            blank=FolderRole.INBOX.value,
+        ),
+        Field("account", "Accounts", "checks", [(a.id, a.email) for a in accounts]),
+    )
     return render(
         request,
         "pages/mail.html",
@@ -97,12 +131,10 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
         messages=page.items,
         incomplete=page.incomplete,
         pages=page_links(request, page.next_cursor),
-        accounts=accounts,
         emails=emails_of(accounts),
         chosen=chosen,
-        keep=[("folder", role.value), *(("account", a) for a in chosen)],
-        roles=[r.value for r in FolderRole],
         role=role.value,
+        bar=mail_bar(request, places),
         fields=fields,
         problem=problem,
     )
@@ -141,7 +173,8 @@ async def account_mail(
         account=account,
         tree=_tree(folders),
         current=current,
-        keep=[("folder", current.id)],
+        trail=[*mail_trail(account), (_counted(current), None)],
+        bar=mail_bar(request, keep=[("folder", current.id)]),
         messages=page.items,
         pages=page_links(request, page.next_cursor),
         fields=fields,
@@ -164,15 +197,19 @@ async def message(
         if caller.allows("list_folders", account_id)
         else []
     )
+    names = {f.id: f.name for f in folders}
+    folder = found.folder_ids[0] if found.folder_ids else None
+    trail = mail_trail(account, (folder, names.get(folder, folder)) if folder else None)
     return render(
         request,
         "pages/message.html",
         page="mail",
         account=account,
+        trail=[*trail, (found.subject or "(no subject)", None)],
+        back_to=trail[-1][1],
         message=found,
         body=_body(found),
         from_html=not found.text_body and bool(found.html_body),
-        folder_names={f.id: f.name for f in folders},
         tree=_tree(folders),
         in_trash=any(
             f.role is FolderRole.TRASH for f in folders if f.id in found.folder_ids
@@ -181,6 +218,14 @@ async def message(
         can_raw=caller.allows("get_message_raw", account_id),
         can_attachment=caller.allows("get_attachment", account_id),
     )
+
+
+def _counted(folder: Folder) -> str:
+    """A folder's name with how many messages it holds."""
+    if folder.total is None:
+        return folder.name
+    unread = f", {folder.unread} unread" if folder.unread else ""
+    return f"{folder.name} · {folder.total} messages{unread}"
 
 
 def _body(message: Message) -> str:

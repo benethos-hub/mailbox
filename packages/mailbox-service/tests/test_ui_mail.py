@@ -31,6 +31,41 @@ def test_search_narrows_the_list(ui: TestClient, account_id: str) -> None:
     assert "Hello 0" in unread and "Hello 2" not in unread
 
 
+def test_active_filters_are_chips_that_remove_themselves(
+    ui: TestClient, account_id: str
+) -> None:
+    page = ui.get(
+        f"/ui/accounts/{account_id}/mail",
+        params={"folder": "inbox", "q": "invoice", "unread": "1"},
+    ).text
+    chips = dict(
+        (label, html.unescape(link))
+        for link, label in re.findall(
+            r'<a class="chip" href="([^"]+)"[^>]*>([^<]+?) <span', page
+        )
+    )
+    assert set(chips) == {"Search text: invoice", "unread"}
+    # Removing one keeps the other and the folder, never as a chip itself.
+    assert chips["unread"].endswith("?folder=inbox&q=invoice")
+    assert f'href="/ui/accounts/{account_id}/mail?folder=inbox">Clear' in page
+    # A flag of More filters is set: the fold is open.
+    assert '<details class="fold" open>' in page
+
+
+def test_the_mail_of_every_account_filters_by_account_and_folder(
+    ui: TestClient, account_id: str
+) -> None:
+    page = ui.get("/ui/mail", params={"account": account_id, "folder": "sent"}).text
+    assert "Folder: sent" in page and "Accounts: me@example.com" in page
+    assert '<option value="">inbox</option>' in page
+
+
+def test_a_message_leads_back_to_its_list(ui: TestClient, account_id: str) -> None:
+    page = ui.get(f"/ui/accounts/{account_id}/mail/m1").text
+    assert "Back to the list" in page
+    assert '<a href="/ui/mail">Mail</a>' in page  # the breadcrumb
+
+
 def test_a_bad_search_is_named_not_run(ui: TestClient) -> None:
     page = ui.get("/ui/mail", params={"after": "someday"})
     assert page.status_code == 200

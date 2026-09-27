@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Protocol
 
 from ...errors import ConflictError
-from ..models import SendOutcome, SendRecord
+from ..models import SendFilter, SendOutcome, SendRecord
 
 
 class SendLogRepository(Protocol):
@@ -21,9 +21,15 @@ class SendLogRepository(Protocol):
         ...
 
     def list(
-        self, account_id: str, *, limit: int, before: tuple[datetime, str] | None
+        self,
+        account_id: str,
+        *,
+        limit: int,
+        before: tuple[datetime, str] | None,
+        matching: SendFilter | None = None,
     ) -> list[SendRecord]:
-        """Newest first, those older than ``before`` (time, id) if given."""
+        """Newest first, those older than ``before`` (time, id) if given,
+        and only those ``matching``."""
         ...
 
 
@@ -49,10 +55,20 @@ class InMemorySendLogRepository:
         )
 
     def list(
-        self, account_id: str, *, limit: int, before: tuple[datetime, str] | None
+        self,
+        account_id: str,
+        *,
+        limit: int,
+        before: tuple[datetime, str] | None,
+        matching: SendFilter | None = None,
     ) -> list[SendRecord]:
         found = sorted(
-            (r for r in self._records if r.account_id == account_id),
+            (
+                r
+                for r in self._records
+                if r.account_id == account_id
+                and (matching is None or matching.matches(r))
+            ),
             key=lambda r: (r.created_at, r.id),
             reverse=True,
         )

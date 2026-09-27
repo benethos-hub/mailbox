@@ -1,65 +1,70 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, credentials, csrf_field, danger_card with context %}
+{% from "components/ui.html" import action, breadcrumb, card, credentials, csrf_field, danger_card, fact, facts with context %}
 {% from "components/connection.html" import connection_fields %}
 {% block title %}{{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ account.email }}{% endblock %}
-{% block subheading %}<div class="sub">{{ account.display_name | or_missing }}</div>{% endblock %}
+{% block subheading %}{{ breadcrumb([("Accounts", "/ui/accounts"), (account.email, None)]) }}{% endblock %}
 {% block actions %}
-{% if can_read %}<a class="btn" href="/ui/accounts/{{ account.id }}/mail">Mail</a>{% endif %}
-{% if can_audit %}<a class="btn" href="/ui/accounts/{{ account.id }}/sends">Sends</a>{% endif %}
+{% if can_audit %}<a class="btn" href="/ui/sends?account={{ account.id }}">Sends</a>{% endif %}
 {% if can_verify %}{{ action("/ui/accounts/" ~ account.id ~ "/verify", "Verify", cls="") }}{% endif %}
+{% if can_read %}<a class="btn primary" href="/ui/accounts/{{ account.id }}/mail">Mail</a>{% endif %}
 {% endblock %}
 {% block content %}
-{% if signs_in_with_oauth and can_update %}
-<section class="card">
-  <header><h2>Sign-in</h2></header>
-  <div class="body toolbar">
-    {% if account.status.value == "needs_reauth" %}<div class="notice warn grow">{{ account.provider.value | capitalize }} no longer accepts this service's token: sign in again.</div>{% else %}<span class="muted grow">Signed in with {{ account.provider.value | capitalize }}. Sign in again after a password change or when access was revoked.</span>{% endif %}
-    <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/start">
-      {{ csrf_field() }}
-      <input type="hidden" name="account_id" value="{{ account.id }}" />
-      <button class="{{ 'primary' if account.status.value == 'needs_reauth' else '' }}" type="submit">Sign in again</button>
-    </form>
-  </div>
-</section>
+{% if account.status.value == "needs_reauth" %}
+<div class="notice err" role="alert">{% if signs_in_with_oauth %}{{ account.provider.value | capitalize }} no longer accepts this service's token: sign in again below.{% else %}The provider refused the stored password: enter the new one below.{% endif %}</div>
 {% endif %}
-<section class="card">
-  <header><h2>Account</h2></header>
-  <div class="body">
-    <dl class="facts">
-      <dt>Id</dt><dd class="mono">{{ account.id }}</dd>
-      <dt>Provider</dt><dd>{{ account.provider.value }}</dd>
-      <dt>IMAP</dt><dd>{{ account.settings.get("host") | or_missing }}{% if account.settings.get("port") %}:{{ account.settings.port }}{% endif %}</dd>
-      <dt>SMTP</dt><dd>{{ account.settings.get("smtp_host") | or_missing }}{% if account.settings.get("smtp_port") %}:{{ account.settings.smtp_port }}{% endif %}</dd>
-      <dt>Status</dt><dd>{% include "partials/account_status.html" %}</dd>
-      <dt>Credentials</dt>
-      <dd>{{ credentials(account.credentials) }}</dd>
-    </dl>
-  </div>
-</section>
 
-{% if can_update and not signs_in_with_oauth %}
-<section class="card">
-  <header><h2>Change</h2><span class="meta">A new password or new servers are tried first. Nothing is stored unless the provider accepts them.</span></header>
-  <div class="body">
-    <form method="post" action="/ui/accounts/{{ account.id }}">
-      {{ csrf_field() }}
-      <div class="form-grid">
-        <div class="field">
-          <label for="f-display_name">Display name</label>
-          <input id="f-display_name" name="display_name" value="{{ account.display_name or '' }}" />
-        </div>
-        <div class="field">
-          <label for="f-password">New password</label>
-          <input id="f-password" name="password" type="password" autocomplete="new-password" />
-          <span class="hint">Empty: unchanged.</span>
-        </div>
-      </div>
-      <div class="fold">{{ connection_fields(account.settings, security, editing=True) }}</div>
-      <div class="form-actions"><button class="primary" type="submit">Save</button></div>
-    </form>
+{% set status_tag %}{% include "partials/account_status.html" %}{% endset %}
+{% call facts("Account", tags=status_tag) %}
+  {{ fact("Display name", account.display_name) }}
+  {{ fact("Provider", account.provider.value) }}
+  {% if not signs_in_with_oauth %}
+  {% call fact("IMAP") %}{{ account.settings.get("host") | or_missing }}{% if account.settings.get("port") %}:{{ account.settings.port }}{% endif %}{% endcall %}
+  {% call fact("SMTP") %}{{ account.settings.get("smtp_host") | or_missing }}{% if account.settings.get("smtp_port") %}:{{ account.settings.smtp_port }}{% endif %}{% endcall %}
+  {% endif %}
+  {% call fact("Credentials") %}{{ credentials(account.credentials) }}{% endcall %}
+  {% if sync is not none %}
+  {% call fact("Last sync") %}{{ sync.last_sync_at | when }}{% if sync.last_error %} <span class="tag bad">failed {{ sync.last_error_at | when }}</span> <span class="muted">{{ sync.last_error }}</span>{% endif %}{% endcall %}
+  {% endif %}
+  {{ fact("Id", account.id, cls="mono") }}
+{% endcall %}
+
+{% if can_update %}
+{% call card("Change", meta="A new password or new servers are tried first. Nothing is stored unless the provider accepts them." if not signs_in_with_oauth else None) %}
+<form method="post" action="/ui/accounts/{{ account.id }}">
+  {{ csrf_field() }}
+  <div class="form-grid">
+    <div class="field">
+      <label for="f-display_name">Display name</label>
+      <input id="f-display_name" name="display_name" value="{{ account.display_name or '' }}" />
+    </div>
+    {% if not signs_in_with_oauth %}
+    <div class="field">
+      <label for="f-password">New password</label>
+      <input id="f-password" name="password" type="password" autocomplete="new-password" />
+      <span class="hint">Empty: unchanged.</span>
+    </div>
+    {% endif %}
   </div>
-</section>
+  {% if not signs_in_with_oauth %}
+  <details class="fold">
+    <summary>Servers</summary>
+    {{ connection_fields(account.settings, security, editing=True) }}
+  </details>
+  {% endif %}
+  <div class="form-actions"><button class="primary" type="submit">Save</button></div>
+</form>
+{% if signs_in_with_oauth %}
+<div class="fold toolbar">
+  <span class="muted grow">Signed in with {{ account.provider.value | capitalize }}. Sign in again after a password change or when access was revoked.</span>
+  <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/start">
+    {{ csrf_field() }}
+    <input type="hidden" name="account_id" value="{{ account.id }}" />
+    <button class="{{ 'primary' if account.status.value == 'needs_reauth' else '' }}" type="submit">Sign in again</button>
+  </form>
+</div>
+{% endif %}
+{% endcall %}
 {% endif %}
 
 {% if can_delete %}

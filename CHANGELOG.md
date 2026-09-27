@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Webhooks in the configuration UI: a list with the state of each, a
+  page to create one that shows its secret once, and a page per webhook
+  with its last deliveries. The service keeps the last 20 posts of each
+  webhook: when, how many events, the receiver's answer and the error.
+- A status page in the UI: each account with its status, last sync and
+  last error, the sync worker, and the user's webhooks. It asks no
+  provider. The sync state is kept in memory, so it starts empty.
+- A recovery key page in the UI, for a user with `admin` on every
+  account. It shows the key once, after the password is typed again, and
+  the service log notes to whom. The right `show_recovery_key` comes
+  with `admin` alone and cannot be granted by name.
 - A change feed: `GET /v1/accounts/{account_id}/changes` and
   `GET /v1/changes` (`list_changes`, `list_all_changes`, both in
   `mail.read`) name each message created, updated or deleted since a
@@ -53,6 +64,29 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The configuration UI has a lighter, bluish look. The sidebar shows only
+  the pages the signed-in user may open, grouped as Mailboxes and
+  Service.
+- The overview of the UI starts with the signed-in user: roles, rights
+  and the sign-in before this one. For a user who may list accounts it
+  names the accounts that need attention, failing webhooks and the sync
+  worker's last pass.
+- Connecting an account in the UI starts with the address alone. The
+  ways found follow, the recommended one first, setting up by hand
+  folded below them. A refused connect shows the page again with what
+  was typed, the reason under the password. An account's page shows its
+  last sync, and an OAuth account can change its display name.
+- A new user in the UI can get a one-time password, made by the service
+  and shown once, to be changed at the first sign-in. A user's page
+  shows its last sign-in. A new role has a page of its own.
+- Every list in the UI that filters has the same filter bar: a search
+  field, more filters folded, the active ones as chips that remove
+  themselves. A page below another names the way back in a breadcrumb,
+  a message has a link back to its list.
+- Sends, users, accounts and webhooks in the UI have that filter bar.
+  Sends are one list for every account the user may audit, filtered by
+  account, who, outcome, days and recipient, and paged across accounts.
+  `/ui/accounts/{account_id}/sends` leads there.
 - The configuration UI no longer takes an API token to sign in. Tokens
   are for the API and the MCP server.
 - `users create-admin` prints a one-time password instead of a token. The

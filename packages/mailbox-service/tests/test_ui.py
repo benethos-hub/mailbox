@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 
 import pytest
@@ -165,6 +166,36 @@ def test_an_admin_is_warned(ui: TestClient, account_id: str) -> None:
     assert "reads and sends anywhere" in ui.get("/ui").text
 
 
+def test_the_overview_starts_with_the_user(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    services.users.create_role(ADMIN, "readers", [])
+    name, password = browser_user(
+        services, Grant(accounts=[account_id], allow=["mail.read"]), roles=["readers"]
+    )
+    sign_in(app_client, name, password)
+    page = app_client.get("/ui").text
+    assert "<h2>You</h2>" in page and "readers" in page
+    assert "this is the first" in page
+    # The account opens its mail. Its page needs get_account.
+    assert f'href="/ui/accounts/{account_id}/mail"' in page
+    assert f'href="/ui/accounts/{account_id}"' not in page
+    # Without accounts.read, no service card.
+    assert "<h2>Service</h2>" not in page
+
+    again = TestClient(app_client.app)
+    sign_in(again, name, password)
+    assert "before this one" in again.get("/ui").text
+
+
+def test_the_overview_shows_the_service_to_who_may_list_accounts(
+    ui: TestClient, account_id: str
+) -> None:
+    page = ui.get("/ui").text
+    assert "<h2>Service</h2>" in page
+    assert "sync worker" in page
+
+
 # --- the session ----------------------------------------------------------------------
 
 
@@ -316,6 +347,30 @@ def test_idle_sessions_are_swept_on_sign_in() -> None:
 # --- the frame ------------------------------------------------------------------------
 
 
+def test_the_sidebar_shows_what_the_user_may_open(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    sign_in(
+        app_client,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
+    page = app_client.get("/ui").text
+    assert 'href="/ui/mail"' in page
+    for hidden in ("/ui/accounts", "/ui/sends", "/ui/users", "/ui/roles"):
+        assert f'href="{hidden}"' not in page, hidden
+    assert ">Service<" not in page
+    # Without users.manage the name is no link to a page it cannot open.
+    assert "Signed in as <strong>browser-" in page
+
+
+def test_the_admin_sees_every_entry_and_its_own_page(ui: TestClient) -> None:
+    page = ui.get("/ui/users").text
+    for entry in ("/ui/accounts", "/ui/sends", "/ui/users", "/ui/roles"):
+        assert f'href="{entry}"' in page, entry
+    assert 'href="/ui/users" class="active" aria-current="page"' in page
+    assert re.search(r'Signed in as <a href="/ui/users/usr_\w+"><strong>admin', page)
+
+
 def test_security_headers_on_the_ui_only(ui: TestClient, client: TestClient) -> None:
     page = ui.get("/ui")
     policy = page.headers["content-security-policy"]
@@ -396,3 +451,40 @@ def test_page_links_carry_the_query_and_quote_the_cursor() -> None:
     more, first = page_links(request("q=a&cursor=old"), None)
     assert more is None and first == "/ui/x?q=a"
     assert page_links(request("cursor=old"), None) == (None, "/ui/x")
+
+
+def _tokens(block: str) -> dict[str, str]:
+    return dict(re.findall(r"--([a-z0-9-]+):\s*(#[0-9a-f]{6});", block))
+
+
+def _contrast(a: str, b: str) -> float:
+    def luminance(colour: str) -> float:
+        parts = [int(colour[i : i + 2], 16) / 255 for i in (1, 3, 5)]
+        r, g, b = (
+            p / 12.92 if p <= 0.03928 else ((p + 0.055) / 1.055) ** 2.4 for p in parts
+        )
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    light, dark = sorted((luminance(a), luminance(b)), reverse=True)
+    return (light + 0.05) / (dark + 0.05)
+
+
+def test_every_text_colour_is_readable_on_its_backgrounds() -> None:
+    """WCAG AA for small text, 4.5:1, in light and in dark mode."""
+    from benethos_mailbox_service.web.pages.templates import STATIC_DIR
+
+    css = (STATIC_DIR / "css" / "app.css").read_text(encoding="utf-8")
+    light = _tokens(css[: css.index("@media (prefers-color-scheme: dark)")])
+    dark = {**light, **_tokens(css[css.index("@media (prefers-color-scheme: dark)") :])}
+    texts = ("text", "text-muted", "text-faint", "accent", "ok", "bad", "warn")
+    pairs = [(t, b) for t in texts for b in ("bg", "surface", "surface-2")] + [
+        ("on-accent", "accent"),
+        ("accent", "accent-soft"),
+        ("ok", "ok-soft"),
+        ("bad", "err-soft"),
+        ("warn", "warn-soft"),
+    ]
+    for mode, tokens in (("light", light), ("dark", dark)):
+        for text, background in pairs:
+            ratio = _contrast(tokens[text], tokens[background])
+            assert ratio >= 4.5, f"{mode}: {text} on {background} is {ratio:.2f}:1"

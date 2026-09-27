@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import csrf_field, folder_options with context %}
+{% from "components/ui.html" import breadcrumb, csrf_field, filter_bar, folder_options with context %}
 {% block title %}{{ current.name }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ current.name }}{% endblock %}
-{% block subheading %}<div class="sub"><a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a>{% if current.total is not none %} · {{ current.total }} messages{% endif %}{% if current.unread %}, {{ current.unread }} unread{% endif %}</div>{% endblock %}
+{% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
 {% block actions %}
 {% if can.drafts %}<a class="btn" href="/ui/accounts/{{ account.id }}/drafts">Drafts</a>{% endif %}
 {% if can.write %}<a class="btn primary" href="/ui/accounts/{{ account.id }}/compose">Write</a>{% endif %}
@@ -75,7 +75,7 @@
   </div>
 
   <section class="card">
-    <div class="body">{% include "partials/mail_search.html" %}</div>
+    <div class="body">{{ filter_bar(bar, problem) }}</div>
     {% if selectable and messages %}
     <form id="batch" class="body toolbar" method="post" action="/ui/accounts/{{ account.id }}/mail/batch">
       {{ csrf_field() }}

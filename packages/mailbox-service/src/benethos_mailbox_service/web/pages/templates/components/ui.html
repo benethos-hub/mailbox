@@ -1,6 +1,54 @@
-{# Small shared parts. #}
+{# The parts every page is built from (docs/UI.md, section 7). A page has
+   no markup of its own for a button, a tag, a field, a card header, a
+   pager or a filter bar. #}
 
 {% macro empty(text) %}<div class="empty">{{ text }}</div>{% endmacro %}
+
+{# The line under a detail page's heading: where the page sits.
+   ``trail``: (label, url) pairs, the last one the page itself. #}
+{% macro breadcrumb(trail) %}
+<nav class="sub crumbs" aria-label="Breadcrumb">
+  {% for label, url in trail %}{% if not loop.first %}<span class="sep" aria-hidden="true">›</span>{% endif %}{% if url and not loop.last %}<a href="{{ url }}">{{ label }}</a>{% else %}<span{% if loop.last %} aria-current="page"{% endif %}>{{ label }}</span>{% endif %}{% endfor %}
+</nav>
+{% endmacro %}
+
+{# A card with a heading. ``meta``: the small line beside it, ``tags``:
+   markup at the right, ``tight``: the body without padding, for a table. #}
+{% macro card(title=None, meta=None, tags=None, tight=False, id=None) %}
+<section class="card"{% if id %} id="{{ id }}"{% endif %}>
+  {% if title %}<header><h2>{{ title }}</h2>{% if meta is not none %}<span class="meta">{{ meta }}</span>{% endif %}{% if tags %}<span class="right">{{ tags }}</span>{% endif %}</header>{% endif %}
+  <div class="body{{ ' tight' if tight }}">{{ caller() }}</div>
+</section>
+{% endmacro %}
+
+{# The first card of a detail page: what the record is, read-only. The
+   caller gives ``fact`` lines. #}
+{% macro facts(title, tags=None) %}
+<section class="card">
+  <header><h2>{{ title }}</h2>{% if tags %}<span class="right">{{ tags }}</span>{% endif %}</header>
+  <div class="body"><dl class="facts">{{ caller() }}</dl></div>
+</section>
+{% endmacro %}
+
+{% macro fact(label, value=None, cls="") %}<dt>{{ label }}</dt><dd{% if cls %} class="{{ cls }}"{% endif %}>{% if caller is defined %}{{ caller() }}{% else %}{{ value | or_missing }}{% endif %}</dd>{% endmacro %}
+
+{# A list that belongs to the record of a detail page, e.g. its tokens.
+   The caller gives the table, and ``new_row`` as the last part. #}
+{% macro related(title, count=None, meta=None) %}
+<section class="card related">
+  <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}</header>
+  {{ caller() }}
+</section>
+{% endmacro %}
+
+{# The form that adds one more to a related list, folded until opened.
+   ``open``: unfolded, e.g. when the list is still empty. #}
+{% macro new_row(label, open=False) %}
+<details class="new-row"{% if open %} open{% endif %}>
+  <summary>{{ label }}</summary>
+  <div class="body">{{ caller() }}</div>
+</details>
+{% endmacro %}
 
 {# The hidden field every form that changes something carries. #}
 {% macro csrf_field() %}<input type="hidden" name="csrf_token" value="{{ csrf }}" />{% endmacro %}
@@ -21,6 +69,56 @@
   <input id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"{% if required %} required{% endif %} {{ attrs }} />
   {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
 </div>
+{% endmacro %}
+
+{# The filter bar above a list (filters.py): the search first, more
+   filters folded, the active ones as chips under it. A GET form, so a
+   filtered list has its URL. #}
+{% macro filter_bar(bar, problem=None) %}
+<form class="filter-bar" method="get" action="{{ bar.action }}" role="search">
+  {% for name, value in bar.keep %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endfor %}
+  <div class="toolbar">
+    {% if bar.search %}<input class="grow" name="{{ bar.search.name }}" value="{{ bar.value(bar.search.name) }}" placeholder="{{ bar.search.label }}" aria-label="{{ bar.search.label }}" />{% endif %}
+    <button class="primary" type="submit">Search</button>
+  </div>
+  {% if bar.fields %}
+  <details class="fold"{% if not bar.folded %} open{% endif %}>
+    <summary>More filters</summary>
+    <div class="form-grid">
+      {% for f in bar.fields if f.kind in ("text", "date", "select") %}
+      <div class="field">
+        <label for="f-filter-{{ f.name }}">{{ f.label }}</label>
+        {% if f.kind == "select" %}
+        <select id="f-filter-{{ f.name }}" name="{{ f.name }}">
+          <option value="">{{ f.blank }}</option>
+          {% for value, label in f.options %}<option value="{{ value }}"{% if bar.has(f.name, value) %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        {% else %}
+        <input id="f-filter-{{ f.name }}" name="{{ f.name }}" type="{{ f.kind }}" value="{{ bar.value(f.name) }}" />
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% for f in bar.fields if f.kind == "checks" %}
+    <div class="field">
+      <span class="label">{{ f.label }}</span>
+      <div class="checks">{% for value, label in f.options %}<label class="check"><input type="checkbox" name="{{ f.name }}" value="{{ value }}"{% if bar.has(f.name, value) %} checked{% endif %} /> {{ label }}</label>{% endfor %}</div>
+    </div>
+    {% endfor %}
+    {% set flags = bar.fields | selectattr("kind", "equalto", "flag") | list %}
+    {% if flags %}
+    <div class="checks">{% for f in flags %}<label class="check"><input type="checkbox" name="{{ f.name }}" value="1"{% if f.name in bar.values %} checked{% endif %} /> {{ f.label }}</label>{% endfor %}</div>
+    {% endif %}
+  </details>
+  {% endif %}
+  {% if bar.chips %}
+  <div class="chips" aria-label="Active filters">
+    {% for chip in bar.chips %}<a class="chip" href="{{ chip.remove }}" title="Remove this filter">{{ chip.label }} <span aria-hidden="true">✕</span></a>{% endfor %}
+    <a class="btn small ghost" href="{{ bar.clear }}">Clear</a>
+  </div>
+  {% endif %}
+</form>
+{% if problem %}<div class="notice err" role="alert">{{ problem }}</div>{% endif %}
 {% endmacro %}
 
 {# The links below a list: to the next page, and from a later page back to
@@ -49,9 +147,10 @@
 {# The stored credentials of an account, one per line. #}
 {% macro credentials(stored) %}{% for credential in stored %}{{ credential.field }}, changed {{ credential.updated_at | when }}{% if not loop.last %}<br />{% endif %}{% else %}—{% endfor %}{% endmacro %}
 
-{# The card at the end of a page whose one button removes the thing. #}
+{# The last card of a detail page, always: its one red button removes the
+   record, after a question. ``text`` says what happens and what stays. #}
 {% macro danger_card(title, text, url, label, confirm) %}
-<section class="card">
+<section class="card danger-zone">
   <header><h2>{{ title }}</h2></header>
   <div class="body toolbar">
     <span class="muted grow">{{ text }}</span>

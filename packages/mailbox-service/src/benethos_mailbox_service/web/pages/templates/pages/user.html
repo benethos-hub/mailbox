@@ -1,67 +1,55 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, anywhere_tag, csrf_field, danger_card, empty with context %}
+{% from "components/ui.html" import action, anywhere_tag, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, new_row, related with context %}
 {% from "components/grants.html" import grant_editor, grants_of, role_checks, role_tags %}
 {% block title %}{{ user.name }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ user.name }}{% endblock %}
-{% block subheading %}<div class="sub mono">{{ user.id }}</div>{% endblock %}
+{% block subheading %}{{ breadcrumb([("Users", "/ui/users"), (user.name, None)]) }}{% endblock %}
 {% block content %}
 {% if new_token %}
-<section class="card">
-  <header><h2>New token</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
-  <div class="body">
-    <p class="muted">Copy it now. Only its hash is kept. It cannot be shown again.</p>
-    <code class="secret">{{ new_token }}</code>
-  </div>
-</section>
+{% call card("New token", tags='<span class="tag warn">shown this once</span>' | safe) %}
+  <p class="muted">Copy it now. Only its hash is kept. It cannot be shown again.</p>
+  <code class="secret">{{ new_token }}</code>
+{% endcall %}
+{% endif %}
+{% if new_password %}
+{% call card("One-time password", tags='<span class="tag warn">shown this once</span>' | safe) %}
+  <p class="muted">Pass it to {{ user.name }} over a safe channel. It must be changed at the first sign-in.</p>
+  <code class="secret">{{ new_password }}</code>
+{% endcall %}
 {% endif %}
 
-<section class="card">
-  <header>
-    <h2>Rights</h2>
-    <span class="right">
-      {% if is_me %}<span class="tag accent">you</span>{% endif %}
-      {% if user.disabled %}<span class="tag bad">disabled</span>{% else %}<span class="tag ok">active</span>{% endif %}
-    </span>
-  </header>
-  <div class="body">
-    <dl class="facts">
-      <dt>Roles</dt>
-      <dd>{{ role_tags(user.roles) }}</dd>
-      <dt>Grants</dt>
-      <dd>{{ grants_of(user.grants, names) }}</dd>
-    </dl>
-  </div>
-</section>
+{% set state %}{% if is_me %}<span class="tag accent">you</span> {% endif %}{% if user.disabled %}<span class="tag bad">disabled</span>{% else %}<span class="tag ok">active</span>{% endif %}{% endset %}
+{% call facts("User", tags=state) %}
+  {% call fact("Roles") %}{{ role_tags(user.roles) }}{% endcall %}
+  {% call fact("Grants") %}{{ grants_of(user.grants, names) }}{% endcall %}
+  {% call fact("Sign-in to the UI") %}{% if has_password %}with a password{% else %}not possible: no password yet{% endif %}{% endcall %}
+  {{ fact("Last sign-in", last_sign_in | when) }}
+  {{ fact("Id", user.id, cls="mono") }}
+{% endcall %}
 
-<section class="card">
-  <header>
-    <h2>Effective rights</h2>
-    <span class="meta">The grants of the user and of its roles together{% if user.disabled %}. They apply once the user is enabled again{% endif %}.</span>
-  </header>
-  <div class="body tight">
-    {% if effective.accounts %}
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>Account</th><th>May</th><th>Sending</th></tr></thead>
-        <tbody>
-          {% for row in effective.accounts %}
-          <tr>
-            <td class="name">{{ row.email }}{% for warning in row.warnings %}<span class="sub">{{ anywhere_tag() }}</span>{% endfor %}</td>
-            <td>{% for group in row.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for operation in row.operations %}<span class="tag mono">{{ operation }}</span> {% endfor %}</td>
-            <td>
-              {% for limit in row.sending %}
-              <div>{% if limit.recipients is none %}to anyone{% else %}to {{ limit.recipients | join(", ") }}{% endif %}, {% if limit.max_per_day is none %}no daily limit{% else %}at most {{ limit.max_per_day }} a day{% endif %}</div>
-              {% else %}<span class="muted">—</span>{% endfor %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p class="empty">No rights on any account you can see.</p>
-    {% endif %}
+{% call card("Effective rights", meta="The grants of the user and of its roles together" ~ (". They apply once the user is enabled again" if user.disabled else "") ~ ".", tight=True) %}
+  {% if effective.accounts %}
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Account</th><th>May</th><th>Sending</th></tr></thead>
+      <tbody>
+        {% for row in effective.accounts %}
+        <tr>
+          <td class="name">{{ row.email }}{% for warning in row.warnings %}<span class="sub">{{ anywhere_tag() }}</span>{% endfor %}</td>
+          <td>{% for group in row.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for operation in row.operations %}<span class="tag mono">{{ operation }}</span> {% endfor %}</td>
+          <td>
+            {% for limit in row.sending %}
+            <div>{% if limit.recipients is none %}to anyone{% else %}to {{ limit.recipients | join(", ") }}{% endif %}, {% if limit.max_per_day is none %}no daily limit{% else %}at most {{ limit.max_per_day }} a day{% endif %}</div>
+            {% else %}<span class="muted">—</span>{% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+  <p class="empty">No rights on any account you can see.</p>
+  {% endif %}
   {% if effective.groups or effective.operations %}
   <div class="body">
     <dl class="facts">
@@ -70,11 +58,10 @@
     </dl>
   </div>
   {% endif %}
-</section>
+{% endcall %}
 
 {% if can_list_tokens %}
-<section class="card">
-  <header><h2>Tokens</h2><span class="meta">{{ tokens | length }}</span></header>
+{% call related("Tokens", count=tokens | length, meta="for the API and the MCP server") %}
   <div class="body tight">
     {% if tokens %}
     <div class="table-scroll">
@@ -99,66 +86,65 @@
     {% else %}{{ empty("No token yet.") }}{% endif %}
   </div>
   {% if can_create_token %}
-  <div class="body">
+  {% call new_row("New token", open=not tokens) %}
     <form class="toolbar" method="post" action="/ui/users/{{ user.id }}/tokens">
       {{ csrf_field() }}
       <input class="grow" name="name" required placeholder="What the token is for, e.g. laptop" aria-label="Token name" />
       <input name="days" inputmode="numeric" placeholder="days valid (empty: no expiry)" aria-label="Days valid" />
       <button class="primary" type="submit">Create token</button>
     </form>
-  </div>
+  {% endcall %}
   {% endif %}
-</section>
+{% endcall %}
 {% endif %}
-
-<section class="card">
-  <header><h2>Sign-in to the UI</h2><span class="meta">{% if has_password %}with a password{% else %}not possible: no password yet{% endif %}</span></header>
-  <div class="body">
-    {% if is_me %}
-    <p><a href="/ui/password">Change your password</a></p>
-    {% elif can_set_password %}
-    <form method="post" action="/ui/users/{{ user.id }}/password">
-      {{ csrf_field() }}
-      <input type="hidden" name="name" value="{{ user.name }}" autocomplete="off" />
-      <div class="form-grid">
-        <div class="field">
-          <label for="f-new">New password</label>
-          <input id="f-new" name="new_password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required />
-        </div>
-        <div class="field">
-          <label for="f-repeat">New password again</label>
-          <input id="f-repeat" name="repeat_password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required />
-        </div>
-      </div>
-      <span class="hint">{{ user.name }} must change it at the next sign-in. Whoever sets a password can sign in as that user.</span>
-      <div class="form-actions"><button class="primary" type="submit">Set password</button></div>
-    </form>
-    {% endif %}
-  </div>
-</section>
 
 {% if can_update %}
 <form method="post" action="/ui/users/{{ user.id }}">
   {{ csrf_field() }}
-  <section class="card">
-    <header><h2>Change</h2><span class="meta">You can hand out only rights you hold yourself.</span></header>
-    <div class="body">
-      <div class="form-grid">
-        <div class="field">
-          <label for="f-name">Name</label>
-          <input id="f-name" name="name" value="{{ user.name }}" required />
-        </div>
-        <div class="field">
-          <span class="label">Access</span>
-          <label class="check"><input type="checkbox" name="disabled" value="1"{% if user.disabled %} checked{% endif %} /> disabled: it cannot sign in, its tokens are refused</label>
-        </div>
+  {% call card("Change", meta="You can hand out only rights you hold yourself.") %}
+    <div class="form-grid">
+      <div class="field">
+        <label for="f-name">Name</label>
+        <input id="f-name" name="name" value="{{ user.name }}" required />
       </div>
-      {% if role_choices %}{{ role_checks(role_choices, user.roles) }}{% endif %}
-      <div class="fold">{{ grant_editor(rows, account_choices, groups, group_ops) }}</div>
-      <div class="form-actions"><button class="primary" type="submit">Save</button></div>
+      <div class="field">
+        <span class="label">Access</span>
+        <label class="check"><input type="checkbox" name="disabled" value="1"{% if user.disabled %} checked{% endif %} /> disabled: it cannot sign in, its tokens are refused</label>
+      </div>
     </div>
-  </section>
+    {% if role_choices %}{{ role_checks(role_choices, user.roles) }}{% endif %}
+    <details class="fold">
+      <summary>Grants</summary>
+      {{ grant_editor(rows, account_choices, groups, group_ops) }}
+    </details>
+    <div class="form-actions"><button class="primary" type="submit">Save</button></div>
+  {% endcall %}
 </form>
+{% endif %}
+
+{% if is_me %}
+{% call card("Password") %}
+  <p><a href="/ui/password">Change your password</a></p>
+{% endcall %}
+{% elif can_set_password %}
+{% call card("Password", meta="Whoever sets a password can sign in as that user.") %}
+  <form method="post" action="/ui/users/{{ user.id }}/password">
+    {{ csrf_field() }}
+    <input type="hidden" name="name" value="{{ user.name }}" autocomplete="off" />
+    <div class="form-grid">
+      <div class="field">
+        <label for="f-new">New password</label>
+        <input id="f-new" name="new_password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required />
+      </div>
+      <div class="field">
+        <label for="f-repeat">New password again</label>
+        <input id="f-repeat" name="repeat_password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required />
+      </div>
+    </div>
+    <span class="hint">{{ user.name }} must change it at the next sign-in.</span>
+    <div class="form-actions"><button class="primary" type="submit">Set password</button></div>
+  </form>
+{% endcall %}
 {% endif %}
 
 {% if can_delete %}

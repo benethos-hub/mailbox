@@ -8,7 +8,9 @@ UI the way a browser does. It signs in as the user `users create-admin`
 made and connects the second test account through discovery and the
 form. It makes a user, a role and a token, uses the token on the API,
 and sets the user's password, which the user changes at its sign-in.
-It reads mail, opens the pages and follows their forms. It writes on the
+It reads mail, opens the pages and follows their forms. It opens the
+status, adds and removes a webhook, shows the recovery key of its own
+service, and makes a user with a one-time password. It writes on the
 test accounts only: a folder and a draft on the first, which it removes
 again, and one mail from the first to the second, deleted for good on
 both sides. Credentials and mail content are never printed.
@@ -65,6 +67,79 @@ def check_frame(run: Run, browser: httpx.Client, emails: list[str]) -> None:
         "security headers",
         "frame-ancestors 'none'" in home.headers.get("content-security-policy", ""),
     )
+
+
+def check_service(
+    run: Run, browser: httpx.Client, url: str, admin: Admin, emails: list[str]
+) -> None:
+    """The pages of phase 4b: status, a webhook, the recovery key and a
+    user with a one-time password. Nothing here touches a mailbox."""
+    status = browser.get("/ui/status")
+    run.check(
+        "the status names both accounts and the worker",
+        status.status_code == 200
+        and all(e in status.text.lower() for e in emails)
+        and "<h2>Sync worker</h2>" in status.text,
+    )
+    csrf = csrf_of(browser.get("/ui/webhooks").text)
+    # Port 9 (discard): nothing takes the posts, the log shows the failures.
+    hook = browser.post(
+        "/ui/webhooks",
+        data={
+            "csrf_token": csrf,
+            "url": "http://127.0.0.1:9/ui-live",
+            "events": "message.created",
+            "every": "1",
+        },
+    )
+    run.check(
+        "a webhook shows its secret once",
+        "Webhook created." in hook.text and "shown this once" in hook.text,
+    )
+    listed = browser.get("/ui/webhooks").text
+    run.check("the webhook is listed", "127.0.0.1:9/ui-live" in listed)
+    removed = browser.post(f"{hook.url.path}/delete", data={"csrf_token": csrf})
+    run.check("remove the webhook", "Webhook removed." in removed.text)
+
+    wrong = browser.post(
+        "/ui/recovery-key",
+        data={"csrf_token": csrf, "password": "not the admin password at all"},
+    )
+    run.check(
+        "the recovery key wants the password",
+        "the password is not right" in wrong.text and "<code" not in wrong.text,
+    )
+    shown = browser.post(
+        "/ui/recovery-key", data={"csrf_token": csrf, "password": admin.password}
+    )
+    key = re.search(r'<code class="secret">([^<]+)</code>', shown.text)
+    run.check("the recovery key is shown after it", key is not None)
+    run.check(
+        "and only once",
+        key is not None and key.group(1) not in browser.get("/ui/recovery-key").text,
+    )
+
+    once = browser.post(
+        "/ui/users",
+        data={
+            "csrf_token": csrf,
+            "name": "ui-live-once",
+            "grants": "0",
+            "one_time": "1",
+        },
+    )
+    password = re.search(r'<code class="secret">([^<]+)</code>', once.text)
+    if not run.check("a new user gets a one-time password", password is not None):
+        return
+    assert password is not None
+    with httpx.Client(base_url=url, timeout=60, follow_redirects=True) as other:
+        landed = ui_sign_in(other, "ui-live-once", password.group(1))
+        run.check(
+            "it signs in and must choose its own",
+            landed.url.path == "/ui/password",
+        )
+    gone = browser.post(f"{once.url.path}/delete", data={"csrf_token": csrf})
+    run.check("delete that user", "User deleted" in gone.text)
 
 
 def check_accounts(
@@ -470,7 +545,7 @@ def check_sends(
     run: Run, browser: httpx.Client, sender_id: str, receiver_email: str
 ) -> None:
     """The send before is in the audit, as sent, without its content."""
-    page = browser.get(f"/ui/accounts/{sender_id}/sends").text
+    page = browser.get("/ui/sends", params={"account": sender_id}).text
     run.check(
         "the audit names the send and its recipient",
         receiver_email in page and '<span class="tag ok">sent</span>' in page,
@@ -510,8 +585,11 @@ def main() -> int:
                 )
                 print("\n== the send audit")
                 check_sends(run, browser, account_id, test_accounts[1]["email"])
+            emails = [a["email"].lower() for a in test_accounts]
             print("\n== the frame")
-            check_frame(run, browser, [a["email"].lower() for a in test_accounts])
+            check_frame(run, browser, emails)
+            print("\n== status, webhooks, recovery key")
+            check_service(run, browser, url, admin, emails)
     return run.finish()
 
 

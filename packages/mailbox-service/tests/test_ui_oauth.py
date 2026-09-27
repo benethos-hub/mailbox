@@ -83,9 +83,22 @@ def _round_trip(client: TestClient, **fields: str) -> httpx.Response:
 def test_the_sign_in_is_offered(browser: tuple[TestClient, Services]) -> None:
     client, _ = browser
     page = client.get("/ui/accounts/new")
-    assert "Sign in with Microsoft" in page.text
+    # Connecting starts with the address and nothing else.
+    assert "Sign in with Microsoft" not in page.text
     policy = page.headers["content-security-policy"]
     assert "form-action 'self' https://login.microsoftonline.com" in policy
+
+    class NothingFound:
+        async def discover(self, caller: Any, email: str) -> Discovery:
+            return Discovery(email=email, domain="example.org")
+
+    client.app.state.services = replace(  # type: ignore[attr-defined]
+        client.app.state.services, discovery=NothingFound()
+    )
+    page = post(client, "/ui/accounts/discover", {"email": "me@example.org"})
+    # A custom domain at Microsoft is found by no source: the way stays.
+    assert "Sign in with Microsoft" in page.text
+    assert 'name="login_hint" value="me@example.org"' in page.text
 
 
 def test_off_to_the_provider(browser: tuple[TestClient, Services]) -> None:
@@ -209,7 +222,9 @@ def test_discovery_offers_the_sign_in(browser: tuple[TestClient, Services]) -> N
         client.app.state.services, discovery=Found()
     )
     page = post(client, "/ui/accounts/discover", {"email": "me@example.org"}).text
-    assert "2. Outlook.com" in page
+    assert "<h2>Outlook.com</h2>" in page and "recommended" in page
+    # Found, so setting it up by hand stays folded.
+    assert '<details class="card way">' in page
     assert 'name="login_hint" value="me@example.org"' in page
     assert "Sign in with Microsoft" in page
 

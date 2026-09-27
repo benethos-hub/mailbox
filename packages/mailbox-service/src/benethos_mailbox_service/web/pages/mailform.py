@@ -33,6 +33,7 @@ from ...errors import MailboxServiceError
 from ..errors import status_of
 from ..services import get_mailbox
 from .forms import FormError, first_problem
+from .navigation import mail_trail
 from .templates import render
 
 ACTIONS = ("reply", "reply_all", "forward")
@@ -136,6 +137,10 @@ def show(
         page="mail",
         status_code=status_code,
         account=account,
+        trail=[
+            *mail_trail(account),
+            *([("Drafts", f"/ui/accounts/{account_id}/drafts")] if draft_id else []),
+        ],
         values=values,
         draft_id=draft_id,
         original=original,

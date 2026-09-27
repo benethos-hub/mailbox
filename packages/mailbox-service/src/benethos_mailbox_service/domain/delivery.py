@@ -30,7 +30,7 @@ from .. import __version__
 from ..common.clock import utc_now
 from ..common.ids import new_id
 from ..data.secrets import CredentialVault
-from ..data.storage import Delivery, WebhookRecord, WebhookRepository
+from ..data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
 from ..errors import MailboxServiceError
 from .access import Access
 from .changes import ChangeFeed
@@ -42,6 +42,8 @@ POLL = 5.0
 # Posts of one webhook in one round, so one busy webhook does not hold up
 # the others.
 ROUND = 10
+# Posts of each webhook kept for its delivery log.
+LOGGED = 20
 
 Sleep = Callable[[float], Awaitable[None]]
 
@@ -145,16 +147,21 @@ class WebhookDispatcher:
             return False
         more = len(found) > BATCH
         batch = found[:BATCH]
+        delivery_id = new_id("dlv")
         body = json.dumps(
             {
                 "webhook_id": record.webhook.id,
-                "delivery_id": new_id("dlv"),
+                "delivery_id": delivery_id,
                 "events": [e.event.model_dump(mode="json") for e in batch],
                 "more": more,
             },
             separators=(",", ":"),
         ).encode()
-        error = await self._post(record, body, now)
+        status, error = await self._post(record, body, now)
+        self._repository.add_attempt(
+            Attempt(record.webhook.id, delivery_id, now, len(batch), status, error),
+            keep=LOGGED,
+        )
         end = batch[-1].seq
         if error is None:
             self._save(
@@ -194,8 +201,9 @@ class WebhookDispatcher:
 
     async def _post(
         self, record: WebhookRecord, body: bytes, now: datetime
-    ) -> str | None:
-        """None when the receiver took it, else why not."""
+    ) -> tuple[int | None, str | None]:
+        """What the receiver answered, and None when it took the post,
+        else why not."""
         secret = self._vault.unseal(sealed_label(record.webhook.id), record.secret)
         timestamp = int(now.timestamp())
         headers = {
@@ -209,10 +217,10 @@ class WebhookDispatcher:
         try:
             status = await self._poster.post(record.webhook.url, body, headers)
         except MailboxServiceError as exc:
-            return exc.message
+            return None, exc.message
         if 200 <= status < 300:
-            return None
-        return f"the receiver answered {status}"
+            return status, None
+        return status, f"the receiver answered {status}"
 
     def _save(
         self,

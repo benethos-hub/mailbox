@@ -57,7 +57,9 @@ from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
 from .domain.oauth import OAuthService
 from .domain.passwords import Passwords
+from .domain.recovery import RecoveryKey
 from .domain.sending import SendControl
+from .domain.status import StatusService
 from .domain.sync import SyncService
 from .domain.users import UserService
 from .domain.webhooks import WebhookService
@@ -79,6 +81,8 @@ class Services:
     oauth: OAuthService
     webhooks: WebhookService
     deliveries: WebhookDispatcher
+    status: StatusService
+    recovery: RecoveryKey
     worker: SyncWorker | None = None
     database: Database | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
@@ -142,6 +146,14 @@ def build_services(
         repos.tokens,
         passwords=Passwords(repos.passwords, password_hasher),
     )
+    worker = (
+        SyncWorker(
+            adapters, sync, interval=settings.sync_interval, push=settings.sync_idle
+        )
+        if settings.sync_interval
+        else None
+    )
+    webhooks = WebhookService(repos.webhooks, vault, changes)
     return Services(
         accounts=accounts,
         adapters=adapters,
@@ -154,16 +166,10 @@ def build_services(
         sync=sync,
         index=repos.index,
         changes=changes,
-        worker=(
-            SyncWorker(
-                adapters, sync, interval=settings.sync_interval, push=settings.sync_idle
-            )
-            if settings.sync_interval
-            else None
-        ),
+        worker=worker,
         vault=vault,
         oauth=OAuthService(accounts, adapters, clients),
-        webhooks=WebhookService(repos.webhooks, vault, changes),
+        webhooks=webhooks,
         deliveries=WebhookDispatcher(
             repos.webhooks,
             vault,
@@ -179,6 +185,8 @@ def build_services(
                 longest_retry=settings.webhook_longest_retry,
             ),
         ),
+        status=StatusService(accounts, sync, worker, webhooks),
+        recovery=RecoveryKey(auth, vault),
         database=repos.database,
         oauth_clients=clients,
     )

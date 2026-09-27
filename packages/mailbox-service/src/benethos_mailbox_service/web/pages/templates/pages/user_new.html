@@ -1,28 +1,33 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import csrf_field with context %}
+{% from "components/ui.html" import breadcrumb, card, csrf_field with context %}
 {% from "components/grants.html" import grant_editor, role_checks %}
 {% block title %}New user · {{ APP_NAME }}{% endblock %}
 {% block heading %}New user{% endblock %}
-{% block subheading %}<div class="sub">A user acts with its roles and grants. It signs in to the UI with a password you set next, and to the API with a token</div>{% endblock %}
+{% block subheading %}{{ breadcrumb([("Users", "/ui/users"), ("New user", None)]) }}{% endblock %}
 {% block content %}
 <form method="post" action="/ui/users">
   {{ csrf_field() }}
-  <section class="card">
-    <header><h2>User</h2></header>
-    <div class="body">
-      <div class="form-grid">
-        <div class="field">
-          <label for="f-name">Name</label>
-          <input id="f-name" name="name" required placeholder="e.g. claude-desktop" />
-        </div>
+  {% call card("User", meta="A user acts with its roles and grants. It signs in to the UI with a password, and to the API with a token.") %}
+    <div class="form-grid">
+      <div class="field">
+        <label for="f-name">Name</label>
+        <input id="f-name" name="name" required autofocus placeholder="e.g. claude-desktop" />
       </div>
-      {% if role_choices %}{{ role_checks(role_choices, []) }}{% endif %}
+      {% if can_set_password %}
+      <div class="field">
+        <span class="label">Sign-in to the UI</span>
+        <label class="check"><input type="checkbox" name="one_time" value="1" checked /> make a one-time password, shown once, changed at the first sign-in</label>
+      </div>
+      {% endif %}
     </div>
-  </section>
-  <section class="card">
-    <header><h2>Grants</h2><span class="meta">You can hand out only rights you hold yourself.</span></header>
-    <div class="body">{{ grant_editor(rows, account_choices, groups, group_ops) }}</div>
-  </section>
-  <div class="form-actions"><button class="primary" type="submit">Create user</button></div>
+    {% if role_choices %}{{ role_checks(role_choices, []) }}{% endif %}
+  {% endcall %}
+  {% call card("Grants", meta="You can hand out only rights you hold yourself.") %}
+    {{ grant_editor(rows, account_choices, groups, group_ops) }}
+  {% endcall %}
+  <div class="form-actions">
+    <button class="primary" type="submit">Create</button>
+    <a class="btn" href="/ui/users">Cancel</a>
+  </div>
 </form>
 {% endblock %}

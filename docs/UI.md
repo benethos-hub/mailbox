@@ -1,9 +1,8 @@
 # The configuration UI: rework and rules
 
-Proposal of 2026-09-27 for phase 4b of the [roadmap](ROADMAP.md). It
-sets the scope of the rework and the rules every page follows, the
-existing ones after the rework and every page added later. What the user
-decides is marked as decided, everything else is the proposal.
+Phase 4b of the [roadmap](ROADMAP.md), decided on 2026-09-27. It sets
+the scope of the rework and the rules every page follows, the existing
+ones after the rework and every page added later.
 
 The UI is the part of the service a person uses in the browser
 ([CONCEPT 1.1](CONCEPT.md#11-inside-the-service)). It runs in the same
@@ -88,7 +87,7 @@ The click budget, counted from the overview after signing in:
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
 | Change an account's password | 3 | Accounts, the account, Save |
 | Create a user with rights | 3 | Users, New user, Create |
-| Give a user a token | 3 | Users, the user, Create token |
+| Give a user a token | 3, 4 once it has one | Users, the user, (New token), Create token |
 | Revoke a token | 3 | Users, the user, Revoke |
 | Add a webhook | 3 | Webhooks, New webhook, Create |
 | See why a webhook fails | 1 | Webhooks |
@@ -162,7 +161,7 @@ The options per list, with the same names where the field is the same:
 
 | List | Search | More filters |
 |---|---|---|
-| Mail, Drafts | text | from, to, subject, from day, before day, unread, starred, with attachments |
+| Mail | text | folder and accounts (the mail of every account), from, to, subject, from day, before day, unread, starred, with attachments |
 | Sends | recipient | account, who, outcome, from day, before day |
 | Users | name | role, disabled |
 | Accounts | address | provider, status |
@@ -170,8 +169,12 @@ The options per list, with the same names where the field is the same:
 | Changes | – | account, event, from day |
 
 Mail's filters are the API's query parameters, a test holds them
-together (`test_openapi.py`). The others need no new API: they narrow
-lists the domain already gives.
+together (`test_openapi.py`). The others need no new API: the domain's
+list methods narrow what they give. Drafts have no filter bar: no
+provider searches its drafts. The drafts folder in Mail can be searched.
+
+Sends are one list for every account the caller may audit, the account
+one of its filters, paged with one cursor across the accounts.
 
 ### 4.6 Paging
 
@@ -194,7 +197,8 @@ that cannot be shown at all is the error page with a way back.
 
 The first page after signing in. Its cards, in order:
 
-1. **You**: name, roles, what the rights add up to, the last sign-in,
+1. **You**: name, roles, what the rights add up to, the last sign-in
+   (stored with the password),
    links to your page, Password and, for the admin, Recovery key. The
    card says at a glance whether this user may read mail and send it
    anywhere, the warning the API and the MCP server also give.
@@ -225,6 +229,8 @@ next step appears under the last one:
    - nothing found: **Set up by hand** open at once, with the server
      fields
    **Set up by hand** is always there, folded when something was found.
+   Where no source names a provider the deployment signs in with, its
+   **Sign in with** stays offered: a custom domain can be at Microsoft.
 3. **Connect.** The domain tries the servers before storing anything.
    Success lands on the account page with **connected**. A refusal comes
    back to this page with the fields kept and the reason under the
@@ -246,8 +252,10 @@ exist only here (a user, a role, a token, a folder).
 
 ### 6.3 Users, roles, tokens
 
-New user: name, a one-time password (CONCEPT 7.5), roles as tick boxes,
-grants in the grant editor. The user page shows the effective rights as
+New user: name, a one-time password (CONCEPT 7.5) that the service
+makes and shows once, as a token, roles as tick boxes, grants in the
+grant editor. New role is an editor page too. It takes the path
+`/ui/roles/new`, so the UI cannot open a role named `new`. The user page shows the effective rights as
 today, then tokens, then Change, then Danger. Roles the same without
 tokens. A token is created in the Tokens card and shown once.
 
@@ -258,6 +266,8 @@ the last error as a red tag with the reason. New webhook from the list:
 URL, events as tick boxes, accounts as tick boxes or "every account I may
 read". The secret is shown once on the detail page after creating, as a
 token is. The detail page has the facts, the last deliveries, and Remove.
+The service keeps the last 20 attempts of each webhook: when, the events,
+the receiver's status code and the error.
 A webhook has no Change card: the API has none, a person removes and
 recreates it.
 
@@ -265,11 +275,15 @@ recreates it.
 
 Status is one page of three cards: accounts with status, last sync and
 last error, the worker with its interval and last pass, the webhooks
-with their last delivery. Each row links where it can be fixed. It reads
-what the domain already keeps, nothing is polled for the page.
+with their last delivery. Each row links where it can be fixed. Nothing
+is polled for the page. The worker keeps its last pass and each
+account's last sync and last error in memory, so they are empty after a
+restart until the first pass.
 
 The recovery key page shows the key once after **Show**, with the
-warning of the CLI, and only to the admin. Nothing is stored or logged.
+warning of the CLI, and only to a user with the `admin` grant on every
+account. **Show** asks for the user's password again. The key is never
+stored or logged, the log only says that it was shown and to whom.
 
 ### 6.6 Changes, optional
 
@@ -286,18 +300,21 @@ receiver reports nothing. Built last, if at all.
   each with a soft background for tags and notices. Dark mode keeps the
   same tokens with dark values, chosen by the system.
 
-  Proposal for the tokens of `app.css`, to be tried on the screen:
+  The tokens of `app.css`. Every text colour keeps 4.5:1 (WCAG AA for
+  small text) against every background it is used on, in both modes.
+  `test_ui.py` computes it from the stylesheet.
 
   | Token | Light | Dark |
   |---|---|---|
-  | `--bg` | `#f3f6fb` | `#0f1420` |
+  | `--bg` | `#f9fbfe` | `#0f1420` |
   | `--surface` | `#ffffff` | `#171d2b` |
-  | `--surface-2` | `#e9eef7` | `#1f2736` |
-  | `--border` | `#d6deea` | `#2c3648` |
+  | `--surface-2` | `#eef3fa` | `#1f2736` |
+  | `--border` | `#dde5f0` | `#2c3648` |
   | `--text` | `#14213d` | `#e6ebf5` |
-  | `--text-muted` | `#5b6b85` | `#9aa8bf` |
-  | `--accent` | `#2b6cdb` | `#6ea0ff` |
-  | `--accent-soft` | `#e4edfb` | `#1d2c4a` |
+  | `--text-muted` | `#56657e` | `#9aa8bf` |
+  | `--text-faint` | `#5f6e86` | `#8391a8` |
+  | `--accent` | `#2560c8` | `#6ea0ff` |
+  | `--accent-soft` | `#e8f0fc` | `#1d2c4a` |
 
 - **Density**: a little more air than today. Row height 40 px, card
   padding 20 px, one type size for text and one for the small line under
@@ -359,11 +376,18 @@ These rules bind every page, the reworked ones and the ones to come.
 4. **Paging and filters** on the lists that lack them, once the frame
    has the components.
 
-## 10. Open questions
+## 10. Decided
 
-- Does the overview's Service card belong to everyone with
-  `accounts.read`, or only to `users.manage`?
-- Should the change feed page be built at all?
-- Accounts, Users and Roles paging: with a cursor in the repositories, or
-  is a limit of a few hundred rows enough for this service?
-- The exact palette values after seeing them on the screen.
+- 2026-09-27: the rework as this file describes it.
+- 2026-09-27: the recovery key only for the `admin` grant, after the
+  password once more (6.5).
+- 2026-09-27: the sync state in the worker's memory, the last sign-in
+  stored (5, 6.5).
+- 2026-09-27: a delivery log for webhooks (6.4).
+- 2026-09-27: the Changes page not in phase 4b (6.6).
+- 2026-09-27: a lighter background. The other colours follow from the
+  contrast rule of section 7.
+
+The Service card of the overview shows to everyone with `accounts.read`,
+and Accounts, Users and Roles list everything with the pager hidden,
+until a need shows otherwise.

@@ -135,3 +135,15 @@ def test_operations_on_an_account() -> None:
         "discover_account",
         "start_oauth",
     }
+
+
+def test_anywhere_finds_a_right_on_some_account() -> None:
+    a = access(
+        Grant(accounts=["acc_a"], allow=["audit"]),
+        Grant(accounts=["acc_b"], allow=["accounts.manage"]),
+    )
+    assert a.anywhere("list_sends")
+    assert not a.anywhere("send_message")
+    # Connecting needs every account, a grant on one does not count.
+    assert not a.anywhere("create_account")
+    assert access(Grant(accounts=[], allow=["users.manage"])).anywhere("list_users")

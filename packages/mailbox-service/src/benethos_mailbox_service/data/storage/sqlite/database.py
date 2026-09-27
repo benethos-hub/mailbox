@@ -184,6 +184,23 @@ MIGRATIONS: list[str] = [
         updated_at TEXT NOT NULL
     );
     """,
+    # 10: when a user last signed in to the UI
+    """
+    ALTER TABLE passwords ADD COLUMN last_sign_in_at TEXT;
+    """,
+    # 11: the last posts to each webhook, for its delivery log
+    """
+    CREATE TABLE webhook_attempts (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+        webhook_id TEXT NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+        delivery_id TEXT NOT NULL,
+        at TEXT NOT NULL,
+        events INTEGER NOT NULL,
+        status INTEGER,
+        error TEXT
+    );
+    CREATE INDEX webhook_attempts_webhook ON webhook_attempts (webhook_id, seq);
+    """,
 ]
 
 SCHEMA_VERSION = len(MIGRATIONS)

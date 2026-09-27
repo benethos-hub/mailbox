@@ -28,7 +28,7 @@ def test_the_audit_of_one_account(ui: TestClient, account_id: str) -> None:
     assert "the UI" in page  # sent from a session, not with a token
     assert "private body 4711" not in page  # never the content
     account = ui.get(f"/ui/accounts/{account_id}").text
-    assert f'href="/ui/accounts/{account_id}/sends"' in account
+    assert f'href="/ui/sends?account={account_id}"' in account
 
 
 def test_a_denied_send_is_in_the_audit(
@@ -87,3 +87,23 @@ def test_no_audit_without_the_right(
     )
     assert app_client.get(f"/ui/accounts/{account_id}/sends").status_code == 403
     assert "Nothing sent yet" in app_client.get("/ui/sends").text
+
+
+def test_filters_narrow_the_audit(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    other = create_account(services.accounts, "memory", "two@example.com").id
+    _send(ui, account_id, "bob@example.org")
+    _send(ui, other, "carol@example.org")
+    by_recipient = ui.get("/ui/sends", params={"to": "CAROL"}).text
+    assert "carol@example.org" in by_recipient and "bob@example.org" not in by_recipient
+    assert "Recipient: CAROL" in by_recipient
+    by_account = ui.get("/ui/sends", params={"account": account_id}).text
+    assert "bob@example.org" in by_account and "carol@example.org" not in by_account
+    assert "Account: me@example.com" in by_account
+    denied = ui.get("/ui/sends", params={"outcome": "denied"}).text
+    assert "Nothing sent that matches." in denied
+    later = ui.get("/ui/sends", params={"after": "2999-01-01"}).text
+    assert "bob@example.org" not in later
+    bad = ui.get("/ui/sends", params={"after": "someday"}).text
+    assert "Filter:" in bad

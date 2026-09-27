@@ -17,7 +17,7 @@ from typing import Literal
 from ..common import opaque
 from ..common.clock import utc_now
 from ..common.ids import new_id
-from ..data.models import Page, SendOutcome, SendRecord, SentMessage
+from ..data.models import Page, SendFilter, SendOutcome, SendRecord, SentMessage
 from ..data.storage import SendLogRepository
 from ..errors import (
     BadRequestError,
@@ -130,22 +130,39 @@ class SendControl:
         )
 
     def list_all_sends(
-        self, access: Access, account_ids: list[str], *, per_account: int, limit: int
-    ) -> list[SendRecord]:
-        """The latest sends of every account the caller may audit, merged
-        newest first: the newest ``per_account`` of each, ``limit`` in all."""
-        records: list[SendRecord] = []
-        for account_id in account_ids:
-            if access.allows("list_sends", account_id):
-                records += self._store.list(account_id, limit=per_account, before=None)
-        records.sort(key=lambda record: (record.created_at, record.id), reverse=True)
-        return records[:limit]
+        self,
+        access: Access,
+        account_ids: list[str],
+        *,
+        limit: int,
+        cursor: str | None = None,
+        matching: SendFilter | None = None,
+    ) -> Page[SendRecord]:
+        """The audit of every account the caller may audit, merged newest
+        first."""
+        audited = [a for a in account_ids if access.allows("list_sends", a)]
+        return self._page(audited, limit, cursor, matching)
 
     def list_sends(
-        self, access: Access, account_id: str, *, limit: int, cursor: str | None
+        self,
+        access: Access,
+        account_id: str,
+        *,
+        limit: int,
+        cursor: str | None,
+        matching: SendFilter | None = None,
     ) -> Page[SendRecord]:
         """The audit of an account, newest first."""
         access.require("list_sends", account_id)
+        return self._page([account_id], limit, cursor, matching)
+
+    def _page(
+        self,
+        account_ids: list[str],
+        limit: int,
+        cursor: str | None,
+        matching: SendFilter | None,
+    ) -> Page[SendRecord]:
         before = None
         if cursor is not None:
             try:
@@ -153,7 +170,12 @@ class SendControl:
                 before = (datetime.fromisoformat(at), str(record_id))
             except (ValueError, TypeError):
                 raise BadRequestError("invalid cursor") from None
-        records = self._store.list(account_id, limit=limit + 1, before=before)
+        records: list[SendRecord] = []
+        for account_id in account_ids:
+            records += self._store.list(
+                account_id, limit=limit + 1, before=before, matching=matching
+            )
+        records.sort(key=lambda record: (record.created_at, record.id), reverse=True)
         next_cursor = None
         if len(records) > limit:
             records = records[:limit]

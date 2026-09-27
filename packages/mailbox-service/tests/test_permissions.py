@@ -3,7 +3,9 @@ from __future__ import annotations
 import pytest
 from fastapi import APIRouter, FastAPI
 
+from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.domain import permissions
+from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.errors import BadRequestError
 from benethos_mailbox_service.main import create_app
 from benethos_mailbox_service.web import api
@@ -51,7 +53,9 @@ def test_expand_groups_operations_and_admin() -> None:
         permissions.GROUPS["mail.read"]
     )
     assert permissions.expand(["get_account"]) == {"get_account"}
-    assert permissions.expand(["admin"]) == frozenset(permissions.GROUP_OF)
+    assert permissions.expand(["admin"]) == (
+        frozenset(permissions.GROUP_OF) | permissions.ADMIN_ONLY
+    )
 
 
 def test_expand_rejects_unknown_names() -> None:
@@ -75,3 +79,15 @@ def test_known_names_cover_groups_operations_and_admin() -> None:
     assert "admin" in names
     assert "mail.read" in names
     assert "list_messages" in names
+
+
+def test_the_recovery_key_is_for_admin_on_every_account() -> None:
+    assert "show_recovery_key" not in permissions.known_names()
+    with pytest.raises(BadRequestError):
+        permissions.expand(["show_recovery_key"])
+    everywhere = Access("u", "u", [Grant(accounts=["*"], allow=["admin"])])
+    assert everywhere.allows("show_recovery_key")
+    on_one = Access("u", "u", [Grant(accounts=["acc_1"], allow=["admin"])])
+    assert not on_one.allows("show_recovery_key")
+    managers = Access("u", "u", [Grant(accounts=["*"], allow=["users.manage"])])
+    assert not managers.allows("show_recovery_key")

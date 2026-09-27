@@ -6,7 +6,7 @@ import json
 import sqlite3
 from datetime import datetime
 
-from ...models import SendOutcome, SendRecord
+from ...models import SendFilter, SendOutcome, SendRecord
 from .database import Database, iso, parse_iso
 
 
@@ -45,21 +45,39 @@ class SqliteSendLogRepository:
         return [parse_iso(row["created_at"]) for row in rows]
 
     def list(
-        self, account_id: str, *, limit: int, before: tuple[datetime, str] | None
+        self,
+        account_id: str,
+        *,
+        limit: int,
+        before: tuple[datetime, str] | None,
+        matching: SendFilter | None = None,
     ) -> list[SendRecord]:
-        if before is None:
-            rows = self._db.query(
-                "SELECT * FROM sends WHERE account_id = ?"
-                " ORDER BY created_at DESC, id DESC LIMIT ?",
-                (account_id, limit),
-            )
-        else:
-            rows = self._db.query(
-                "SELECT * FROM sends WHERE account_id = ?"
-                " AND (created_at, id) < (?, ?)"
-                " ORDER BY created_at DESC, id DESC LIMIT ?",
-                (account_id, iso(before[0]), before[1], limit),
-            )
+        where = ["account_id = ?"]
+        params: list[object] = [account_id]
+        if before is not None:
+            where.append("(created_at, id) < (?, ?)")
+            params += [iso(before[0]), before[1]]
+        if matching is not None:
+            for column, value in (
+                ("user_id = ?", matching.user_id),
+                ("outcome = ?", matching.outcome),
+                ("created_at >= ?", iso(matching.after)),
+                ("created_at < ?", iso(matching.before)),
+            ):
+                if value is not None:
+                    where.append(column)
+                    params.append(value)
+        query = (
+            f"SELECT * FROM sends WHERE {' AND '.join(where)}"
+            " ORDER BY created_at DESC, id DESC"
+        )
+        if matching is not None and matching.recipient:
+            # In the JSON of the recipients a LIKE would also match quotes
+            # and commas: the part is looked for in each address instead.
+            rows = self._db.query(query, tuple(params))
+            found = [_record(row) for row in rows]
+            return [r for r in found if matching.matches(r)][:limit]
+        rows = self._db.query(f"{query} LIMIT ?", (*params, limit))
         return [_record(row) for row in rows]
 
 

@@ -9,6 +9,7 @@ or all the memory.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime
 from typing import TypeVar
 
@@ -54,9 +55,7 @@ class Passwords:
         if matched and self._hasher.needs_rehash(stored.hash):
             # Made with older parameters: made anew, nothing else changes.
             fresh = await self._run(self._hasher.hash, password)
-            self._repository.set(
-                user_id, StoredPassword(fresh, stored.must_change, stored.updated_at)
-            )
+            self._repository.set(user_id, replace(stored, hash=fresh))
         return matched
 
     async def set(
@@ -66,9 +65,21 @@ class Passwords:
         the sessions signed in with the old password."""
         check(password, name)
         hashed = await self._run(self._hasher.hash, password)
-        stored = StoredPassword(hashed, must_change, self._clock())
+        before = self._repository.get(user_id)
+        stored = StoredPassword(
+            hashed,
+            must_change,
+            self._clock(),
+            before.last_sign_in_at if before is not None else None,
+        )
         self._repository.set(user_id, stored)
         return stored
+
+    def signed_in(self, user_id: str) -> datetime | None:
+        """Notes a sign-in now. Returns the one before, if any."""
+        before = self._repository.get(user_id)
+        self._repository.signed_in(user_id, self._clock())
+        return before.last_sign_in_at if before is not None else None
 
     def delete(self, user_id: str) -> None:
         self._repository.delete(user_id)

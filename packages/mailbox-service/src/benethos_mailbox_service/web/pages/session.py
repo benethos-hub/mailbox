@@ -45,6 +45,8 @@ class UiSession:
     must_change: bool
     csrf: str
     last_seen: datetime
+    # The sign-in before this session's, shown on the overview.
+    previous_sign_in: datetime | None = None
     # Shown on the next page only, e.g. a new token: kept here, never in a
     # URL, and gone once shown.
     once: dict[str, str] = field(default_factory=dict)
@@ -78,6 +80,7 @@ class SessionStore:
             must_change=signed.must_change,
             csrf=secrets.token_urlsafe(32),
             last_seen=now,
+            previous_sign_in=signed.previous,
         )
         return session_id
 

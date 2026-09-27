@@ -109,6 +109,10 @@ def test_change_verify_and_remove(ui: TestClient, account_id: str) -> None:
     url = f"/ui/accounts/{account_id}"
     page = ui.get(url).text
     assert account_id in page and "Remove account" in page
+    assert '<a href="/ui/accounts">Accounts</a>' in page  # the breadcrumb
+    # Facts first, then Change, then the danger card last.
+    assert page.index("<h2>Account</h2>") < page.index("<h2>Change</h2>")
+    assert page.index("<h2>Change</h2>") < page.index("Remove account")
     saved = post(ui, url, {"display_name": "Renamed"})
     assert "Saved." in saved.text and "Renamed" in saved.text
     verified = post(ui, f"{url}/verify")
@@ -158,9 +162,18 @@ def test_a_failed_connect_never_echoes_the_password(ui: TestClient) -> None:
     answer = post(
         ui,
         "/ui/accounts",
-        {"email": "x@example.org", "provider": "memory", "password": "s3cret-pw"},
+        {
+            "email": "x@example.org",
+            "provider": "memory",
+            "password": "s3cret-pw",
+            "display_name": "Kept",
+            "host": "imap.example.org",
+        },
     )
-    assert 'class="notice err"' in answer.text
+    # The page again, the reason under the password, the fields kept.
+    assert 'class="field-error"' in answer.text
+    assert 'name="email" value="x@example.org"' in answer.text
+    assert 'value="Kept"' in answer.text and 'value="imap.example.org"' in answer.text
     assert "s3cret-pw" not in str(answer.url)
     assert "s3cret-pw" not in answer.text
 
@@ -195,3 +208,18 @@ def test_the_form_shows_the_settings(ui: TestClient, client: TestClient) -> None
     page = ui.get(f"/ui/accounts/{created['id']}").text
     assert 'name="host" value="imap.example.org"' in page
     assert 'name="smtp_host" value="smtp.example.org"' in page
+
+
+def test_accounts_filter_by_address_provider_and_status(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    from .conftest import create_account
+
+    create_account(services.accounts, "memory", "two@example.org")
+    by_address = ui.get("/ui/accounts", params={"address": "TWO@"}).text
+    assert "two@example.org" in by_address and "me@example.com" not in by_address
+    by_status = ui.get("/ui/accounts", params={"status": "needs_reauth"}).text
+    assert "No account matches." in by_status
+    by_provider = ui.get("/ui/accounts", params={"provider": "memory"}).text
+    assert "two@example.org" in by_provider and "Provider: memory" in by_provider
+    assert "Filter:" in ui.get("/ui/accounts", params={"provider": "pigeon"}).text

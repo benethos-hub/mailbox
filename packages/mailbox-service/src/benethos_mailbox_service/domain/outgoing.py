@@ -27,6 +27,7 @@ from ..data.models import (
     OutgoingMessage,
     Page,
     Recipient,
+    SendFilter,
     SendRecord,
     SendResult,
     SentMessage,
@@ -135,17 +136,30 @@ class Outgoing:
         )
 
     def list_sends(
-        self, access: Access, account_id: str, *, limit: int, cursor: str | None
+        self,
+        access: Access,
+        account_id: str,
+        *,
+        limit: int,
+        cursor: str | None,
+        matching: SendFilter | None = None,
     ) -> Page[SendRecord]:
         """The audit of sends from an account, newest first."""
-        return self._sends.list_sends(access, account_id, limit=limit, cursor=cursor)
+        return self._sends.list_sends(
+            access, account_id, limit=limit, cursor=cursor, matching=matching
+        )
 
     def list_all_sends(
-        self, access: Access, *, per_account: int, limit: int
-    ) -> list[SendRecord]:
-        """The latest sends of every account the caller may audit."""
+        self,
+        access: Access,
+        *,
+        limit: int,
+        cursor: str | None = None,
+        matching: SendFilter | None = None,
+    ) -> Page[SendRecord]:
+        """The sends of every account the caller may audit, newest first."""
         return self._sends.list_all_sends(
-            access, self._calls.ids(), per_account=per_account, limit=limit
+            access, self._calls.ids(), limit=limit, cursor=cursor, matching=matching
         )
 
     # --- composing ------------------------------------------------------------------

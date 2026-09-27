@@ -9,11 +9,11 @@ from __future__ import annotations
 import logging
 import secrets
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 from ..common.ids import new_id
-from ..data.models import ApiToken, Grant, Role, User
+from ..data.models import AccountStatus, ApiToken, Grant, Role, User
 from ..data.storage import RoleRepository, TokenRepository, UserRepository
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from . import permissions
@@ -39,6 +39,7 @@ class AccountRights:
     # One entry per grant that allows sending here. A send passes when one
     # of them allows it. Empty when no grant allows sending.
     sending: list[SendLimit]
+    status: AccountStatus = AccountStatus.CONNECTED
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,7 @@ class EffectiveRights:
     name: str
     accounts: list[AccountRights]
     operations: list[str]
+    roles: list[str] = field(default_factory=list)
 
 
 class UserService:
@@ -67,7 +69,7 @@ class UserService:
     # --- the caller itself --------------------------------------------------
 
     def me(self, access: Access) -> EffectiveRights:
-        return self._effective(access, visible_to=None)
+        return self._effective(access, visible_to=None, roles=list(access.roles))
 
     def rights_of(self, access: Access, user_id: str) -> EffectiveRights:
         """What a user may do, its direct grants and those of its roles
@@ -75,9 +77,13 @@ class UserService:
         access.require("get_user")
         user = self._users.get(user_id)
         roles = {role.id: role for role in self._roles.list()}
-        return self._effective(Access.for_user(user, roles), visible_to=access)
+        return self._effective(
+            Access.for_user(user, roles), visible_to=access, roles=user.roles
+        )
 
-    def _effective(self, access: Access, visible_to: Access | None) -> EffectiveRights:
+    def _effective(
+        self, access: Access, visible_to: Access | None, roles: list[str]
+    ) -> EffectiveRights:
         accounts = []
         for account_id in self._adapters.ids():
             if visible_to is not None and not visible_to.sees(account_id):
@@ -93,6 +99,7 @@ class UserService:
                         operations=sorted(operations),
                         warnings=_warnings(access, account_id, operations),
                         sending=access.sending_limits(account_id),
+                        status=account.status,
                     )
                 )
         return EffectiveRights(
@@ -100,6 +107,7 @@ class UserService:
             name=access.name,
             accounts=accounts,
             operations=sorted(access.general_operations()),
+            roles=list(roles),
         )
 
     # --- setup ----------------------------------------------------------------
@@ -135,9 +143,25 @@ class UserService:
 
     # --- users ----------------------------------------------------------------
 
-    def list_users(self, access: Access) -> list[User]:
+    def list_users(
+        self,
+        access: Access,
+        *,
+        name: str | None = None,
+        role: str | None = None,
+        disabled: bool | None = None,
+    ) -> list[User]:
+        """Every user, or those whose name holds ``name`` regardless of
+        case, that hold ``role``, that are disabled or not."""
         access.require("list_users")
-        return self._users.list()
+        wanted = (name or "").casefold()
+        return [
+            user
+            for user in self._users.list()
+            if wanted in user.name.casefold()
+            and (role is None or role in user.roles)
+            and (disabled is None or user.disabled == disabled)
+        ]
 
     def get_user(self, access: Access, user_id: str) -> User:
         access.require("get_user")
@@ -214,6 +238,13 @@ class UserService:
             access.require("get_user")
         return self._auth.passwords.stored(user_id) is not None
 
+    def last_sign_in(self, access: Access, user_id: str) -> datetime | None:
+        """When the user last signed in to the UI."""
+        if user_id != access.user_id:
+            access.require("get_user")
+        stored = self._auth.passwords.stored(user_id)
+        return stored.last_sign_in_at if stored is not None else None
+
     async def change_password(self, access: Access, current: str, new: str) -> datetime:
         """The caller's own password, with the current one. Returns the new
         stamp, which keeps the caller's session and ends its others."""
@@ -232,11 +263,7 @@ class UserService:
         """Another user's password, within the caller's rights: whoever sets
         it can sign in as that user. It must be changed at the next
         sign-in."""
-        access.require("set_password")
-        user = self._users.get(user_id)
-        self._require_covers_user(access, user)
-        if user_id == access.user_id:
-            raise ConflictError("change your own password with the current one")
+        user = self._settable(access, user_id)
         await self._auth.passwords.set(user.id, user.name, new, must_change=True)
         log.info(
             "%s (%s) set the password of %s (%s)",
@@ -245,6 +272,30 @@ class UserService:
             user.name,
             user.id,
         )
+
+    async def one_time_password(self, access: Access, user_id: str) -> str:
+        """A new random password for another user, within the caller's
+        rights, to be changed at the next sign-in. Shown once."""
+        user = self._settable(access, user_id)
+        password = secrets.token_urlsafe(ONE_TIME_BYTES)
+        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
+        log.info(
+            "%s (%s) made a one-time password for %s (%s)",
+            access.name,
+            access.user_id,
+            user.name,
+            user.id,
+        )
+        return password
+
+    def _settable(self, access: Access, user_id: str) -> User:
+        """The user whose password the caller may set."""
+        access.require("set_password")
+        user = self._users.get(user_id)
+        self._require_covers_user(access, user)
+        if user_id == access.user_id:
+            raise ConflictError("change your own password with the current one")
+        return user
 
     # --- tokens ---------------------------------------------------------------
 

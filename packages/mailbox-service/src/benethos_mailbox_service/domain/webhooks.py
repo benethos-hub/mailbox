@@ -19,7 +19,7 @@ from ..common.clock import utc_now
 from ..common.ids import new_id
 from ..data.models import CreatedWebhook, Webhook, WebhookCreate
 from ..data.secrets import CredentialVault
-from ..data.storage import Delivery, WebhookRecord, WebhookRepository
+from ..data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
 from ..errors import BadRequestError, NotFoundError
 from .access import Access
 from .changes import ChangeFeed
@@ -71,14 +71,39 @@ class WebhookService:
         self._repository.add(WebhookRecord(webhook, sealed, delivery))
         return CreatedWebhook(**webhook.model_dump(), secret=secret)
 
-    def list_webhooks(self, access: Access) -> list[Webhook]:
-        """The caller's own webhooks."""
+    def list_webhooks(
+        self,
+        access: Access,
+        *,
+        url: str | None = None,
+        account: str | None = None,
+        failing: bool | None = None,
+    ) -> list[Webhook]:
+        """The caller's own webhooks. The others narrow the list: a part
+        of the URL regardless of case, an account it hears of, whether its
+        last post failed."""
         access.require("list_webhooks")
+        wanted = (url or "").casefold()
         return [
-            r.webhook
-            for r in self._repository.list()
-            if r.webhook.user_id == access.user_id
+            hook
+            for hook in (r.webhook for r in self._repository.list())
+            if hook.user_id == access.user_id
+            and wanted in hook.url.casefold()
+            and (account is None or hook.accounts is None or account in hook.accounts)
+            and (failing is None or (hook.last_error is not None) == failing)
         ]
+
+    def get_webhook(self, access: Access, webhook_id: str) -> Webhook:
+        """One of the caller's own webhooks."""
+        access.require("list_webhooks")
+        return self._own(access, webhook_id).webhook
+
+    def attempts(self, access: Access, webhook_id: str) -> list[Attempt]:
+        """The last posts to one of the caller's own webhooks, newest
+        first."""
+        access.require("list_webhooks")
+        self._own(access, webhook_id)
+        return self._repository.attempts(webhook_id)
 
     def delete_webhook(self, access: Access, webhook_id: str) -> None:
         access.require("delete_webhook")
