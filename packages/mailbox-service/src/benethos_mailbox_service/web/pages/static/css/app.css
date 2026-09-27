@@ -285,6 +285,7 @@ tr.unread td.name { font-weight: 650; }
 .card .body > p:first-child { margin-top: 0; }
 .card .body > p:last-child { margin-bottom: 0; }
 .small-print { font-size: 13px; }
+p.back { margin: 0; font-size: 14px; }
 
 /* Lines to act on, each with its link, e.g. what needs attention. */
 ul.lines { list-style: none; margin: 0 0 12px; padding: 0; }
@@ -411,8 +412,21 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 .folders .depth-2 a { padding-left: 32px; }
 .folders .depth-3 a { padding-left: 44px; }
 .folders .depth-4 a { padding-left: 56px; }
-.search .fold { margin-top: 10px; }
-.search .checks { margin-top: 10px; }
+/* --- the filter bar ------------------------------------------------------- */
+
+.filter-bar .fold { margin-top: 10px; }
+.filter-bar .fold .field { margin-top: 12px; }
+.filter-bar .fold > .checks { margin-top: 12px; }
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 13px;
+}
+.chip:hover { text-decoration: none; filter: brightness(.97); }
+a.btn.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
 
 /* --- the window a form opens in -------------------------------------------- */
 

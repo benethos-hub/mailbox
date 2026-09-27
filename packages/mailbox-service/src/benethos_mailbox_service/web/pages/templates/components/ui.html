@@ -71,6 +71,56 @@
 </div>
 {% endmacro %}
 
+{# The filter bar above a list (filters.py): the search first, more
+   filters folded, the active ones as chips under it. A GET form, so a
+   filtered list has its URL. #}
+{% macro filter_bar(bar, problem=None) %}
+<form class="filter-bar" method="get" action="{{ bar.action }}" role="search">
+  {% for name, value in bar.keep %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endfor %}
+  <div class="toolbar">
+    {% if bar.search %}<input class="grow" name="{{ bar.search.name }}" value="{{ bar.value(bar.search.name) }}" placeholder="{{ bar.search.label }}" aria-label="{{ bar.search.label }}" />{% endif %}
+    <button class="primary" type="submit">Search</button>
+  </div>
+  {% if bar.fields %}
+  <details class="fold"{% if not bar.folded %} open{% endif %}>
+    <summary>More filters</summary>
+    <div class="form-grid">
+      {% for f in bar.fields if f.kind in ("text", "date", "select") %}
+      <div class="field">
+        <label for="f-filter-{{ f.name }}">{{ f.label }}</label>
+        {% if f.kind == "select" %}
+        <select id="f-filter-{{ f.name }}" name="{{ f.name }}">
+          <option value="">{{ f.blank }}</option>
+          {% for value, label in f.options %}<option value="{{ value }}"{% if bar.has(f.name, value) %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        {% else %}
+        <input id="f-filter-{{ f.name }}" name="{{ f.name }}" type="{{ f.kind }}" value="{{ bar.value(f.name) }}" />
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% for f in bar.fields if f.kind == "checks" %}
+    <div class="field">
+      <span class="label">{{ f.label }}</span>
+      <div class="checks">{% for value, label in f.options %}<label class="check"><input type="checkbox" name="{{ f.name }}" value="{{ value }}"{% if bar.has(f.name, value) %} checked{% endif %} /> {{ label }}</label>{% endfor %}</div>
+    </div>
+    {% endfor %}
+    {% set flags = bar.fields | selectattr("kind", "equalto", "flag") | list %}
+    {% if flags %}
+    <div class="checks">{% for f in flags %}<label class="check"><input type="checkbox" name="{{ f.name }}" value="1"{% if f.name in bar.values %} checked{% endif %} /> {{ f.label }}</label>{% endfor %}</div>
+    {% endif %}
+  </details>
+  {% endif %}
+  {% if bar.chips %}
+  <div class="chips" aria-label="Active filters">
+    {% for chip in bar.chips %}<a class="chip" href="{{ chip.remove }}" title="Remove this filter">{{ chip.label }} <span aria-hidden="true">✕</span></a>{% endfor %}
+    <a class="btn small ghost" href="{{ bar.clear }}">Clear</a>
+  </div>
+  {% endif %}
+</form>
+{% if problem %}<div class="notice err" role="alert">{{ problem }}</div>{% endif %}
+{% endmacro %}
+
 {# The links below a list: to the next page, and from a later page back to
    the first. ``pages``: (more, first), as ``page_links`` gives them. #}
 {% macro pager(pages) %}

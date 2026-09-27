@@ -129,7 +129,8 @@ packages/
           routes/         # one router per resource
         pages/            # the configuration UI under /ui, not in OpenAPI
           deps.py         # who is signed in, the CSRF check
-          navigation.py   # the sidebar entries a caller may open
+          navigation.py   # the sidebar entries a caller may open, breadcrumbs
+          filters.py      # the filter bar of a list: its fields and chips
           session.py      # sign-in with a token, server-side sessions
           templates.py    # Jinja2: filters, render, Post/Redirect/Get
           grants.py       # the grant editor's rows, read back into grants

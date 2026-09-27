@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, csrf_field, folder_options with context %}
+{% from "components/ui.html" import action, breadcrumb, csrf_field, folder_options with context %}
 {% block title %}{{ message.subject | or_missing }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ message.subject | or_missing }}{% endblock %}
-{% block subheading %}<div class="sub"><a href="/ui/accounts/{{ account.id }}/mail">{{ account.email }}</a>{% for folder_id in message.folder_ids %} · <a href="/ui/accounts/{{ account.id }}/mail?{{ [('folder', folder_id)] | urlencode }}">{{ folder_names.get(folder_id, folder_id) }}</a>{% endfor %}</div>{% endblock %}
+{% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
 {% block actions %}
 {% if can.write %}
 {% for verb, label in [("reply", "Reply"), ("reply_all", "Reply to all"), ("forward", "Forward")] %}
@@ -12,6 +12,7 @@
 {% if can_raw %}<a class="btn" href="/ui/accounts/{{ account.id }}/mail/{{ message.id }}/raw">Download original</a>{% endif %}
 {% endblock %}
 {% block content %}
+<p class="back"><a href="{{ back_to }}">← Back to the list</a></p>
 <section class="card">
   <div class="body">
     <dl class="facts">

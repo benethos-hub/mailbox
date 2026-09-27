@@ -1,13 +1,10 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import empty, pager %}
+{% from "components/ui.html" import breadcrumb, empty, pager %}
 {% block title %}Sends · {{ APP_NAME }}{% endblock %}
 {% block heading %}Sends{% endblock %}
 {% block subheading %}
-<div class="sub">
-  {% if account is not none %}From <a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a> · <a href="/ui/sends">all accounts</a>
-  {% else %}The latest of every account you may audit{% endif %}
-  · who sent to whom, never what
-</div>
+{% if account is not none %}{{ breadcrumb([("Sends", "/ui/sends"), (account.email, None)]) }}
+{% else %}<div class="sub">The latest of every account you may audit · who sent to whom, never what</div>{% endif %}
 {% endblock %}
 {% block content %}
 {% if account is none and accounts %}

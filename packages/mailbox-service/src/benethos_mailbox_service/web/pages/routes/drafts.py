@@ -29,6 +29,7 @@ from ..mailform import (
     show_again,
     uploads,
 )
+from ..navigation import mail_trail
 from ..rights import mail_rights
 from ..templates import PAGE_SIZE, back, page_links, render
 
@@ -48,6 +49,7 @@ async def drafts(
         "pages/drafts.html",
         page="mail",
         account=account,
+        trail=[*mail_trail(account), ("Drafts", None)],
         messages=page.items,
         pages=page_links(request, page.next_cursor),
         fields={},

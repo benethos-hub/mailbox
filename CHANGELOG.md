@@ -68,6 +68,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A new user in the UI can get a one-time password, made by the service
   and shown once, to be changed at the first sign-in. A user's page
   shows its last sign-in. A new role has a page of its own.
+- Every list in the UI that filters has the same filter bar: a search
+  field, more filters folded, the active ones as chips that remove
+  themselves. A page below another names the way back in a breadcrumb,
+  a message has a link back to its list.
 - The configuration UI no longer takes an API token to sign in. Tokens
   are for the API and the MCP server.
 - `users create-admin` prints a one-time password instead of a token. The
