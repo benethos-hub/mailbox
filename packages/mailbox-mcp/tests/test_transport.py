@@ -15,8 +15,12 @@ from benethos_mailbox_mcp import server, transport
 TOKEN = "s3cret-token"
 
 
+# Whether a request got past the guard to the app behind it.
+reached: list[bool] = []
+
+
 async def inner(scope: Any, receive: Any, send: Any) -> None:
-    inner.reached = True  # type: ignore[attr-defined]
+    reached.append(True)
     await send({"type": "http.response.start", "status": 200, "headers": []})
     await send({"type": "http.response.body", "body": b"ok"})
 
@@ -24,7 +28,7 @@ async def inner(scope: Any, receive: Any, send: Any) -> None:
 def call(
     headers: list[tuple[bytes, bytes]], scope_type: str = "http"
 ) -> dict[str, Any]:
-    inner.reached = False  # type: ignore[attr-defined]
+    reached.clear()
     sent: list[dict[str, Any]] = []
 
     async def send(message: dict[str, Any]) -> None:
@@ -40,7 +44,7 @@ def call(
         "status": start["status"] if start else None,
         "headers": dict(start["headers"]) if start else {},
         "body": b"".join(m.get("body", b"") for m in sent),
-        "reached": inner.reached,  # type: ignore[attr-defined]
+        "reached": bool(reached),
     }
 
 
