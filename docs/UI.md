@@ -187,11 +187,14 @@ the layout does not change when paging arrives.
 
 ### 4.7 Messages and errors
 
-A form answers with a redirect and one message, shown once at the top of
-the next page (Post/Redirect/Get, CONCEPT 1.1). Success in green, a
-refusal in the page's own words in red, never a status code. A field that
-was wrong is shown again with its value and the reason under it. A page
-that cannot be shown at all is the error page with a way back.
+A form that goes through answers with a redirect and one message, shown
+once at the top of the next page (Post/Redirect/Get, CONCEPT 1.1).
+Success in green, a refusal in the page's own words in red, never a
+status code. An editor that is refused is shown again at once, with
+what was typed and the reason at the top, and answers `400`. A password
+is never shown again. An action without fields, such as a delete, goes
+back to its page with the reason. A page that cannot be shown at all is
+the error page with a way back.
 
 ## 5. The overview
 

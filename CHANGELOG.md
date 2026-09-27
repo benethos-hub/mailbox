@@ -82,6 +82,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A refused editor in the configuration UI is shown again with what was
+  typed and the reason, and answers `400`: users, tokens, roles, an
+  account's settings, webhooks and folders. The password is left out.
+  Before, it went back to an empty editor with the reason alone.
 - A cursor from another folder of an IMAP account answers
   `invalid cursor`, like every other cursor the service did not hand out.
 - A new user is an API user unless `ui_sign_in` is set. Existing users
