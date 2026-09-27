@@ -240,9 +240,8 @@ class ImapProvider:
         return await self._run(lambda: self._list_drafts(limit, cursor))
 
     async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
-        attempts = itertools.count()
-        return await self._run(
-            lambda: self._save_draft(raw, replaces, retried=next(attempts) > 0)
+        return await self._retrying(
+            lambda retried: self._save_draft(raw, replaces, retried=retried)
         )
 
     async def get_draft(self, draft_id: str) -> bytes:
@@ -252,22 +251,26 @@ class ImapProvider:
         await self._run(lambda: self._delete_draft(draft_id))
 
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
-        return await self._run(lambda: self._create_folder(name, parent_id))
+        return await self._retrying(
+            lambda retried: self._create_folder(name, parent_id, retried)
+        )
 
     async def update_folder(
         self, folder_id: str, name: str, parent_id: str | None
     ) -> Folder:
-        return await self._run(lambda: self._update_folder(folder_id, name, parent_id))
+        return await self._retrying(
+            lambda retried: self._update_folder(folder_id, name, parent_id, retried)
+        )
 
     async def delete_folder(self, folder_id: str) -> None:
-        await self._run(lambda: self._delete_folder(folder_id))
+        await self._retrying(lambda retried: self._delete_folder(folder_id, retried))
 
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxServiceError]:
         return await self._per_folder(
             message_ids,
-            lambda folder, validity, uids: self._update_in_folder(
+            lambda folder, validity, uids, _: self._update_in_folder(
                 folder, validity, uids, changes
             ),
         )
@@ -277,15 +280,15 @@ class ImapProvider:
     ) -> dict[str, MessageSummary | None | MailboxServiceError]:
         return await self._per_folder(
             message_ids,
-            lambda folder, validity, uids: self._delete_in_folder(
-                folder, validity, uids, permanent
+            lambda folder, validity, uids, retried: self._delete_in_folder(
+                folder, validity, uids, permanent, retried
             ),
         )
 
     async def _per_folder(
         self,
         message_ids: list[str],
-        work: Callable[[str, int, list[int]], dict[int, T | MailboxServiceError]],
+        work: Callable[[str, int, list[int], bool], dict[int, T | MailboxServiceError]],
     ) -> dict[str, T | MailboxServiceError]:
         """Run ``work`` once per folder, each under the lock. A failure of
         the connection or the login stops everything. Any other failure
@@ -294,7 +297,9 @@ class ImapProvider:
         results: dict[str, T | MailboxServiceError] = dict(unknown)
         for (folder, validity), by_uid in folders.items():
             try:
-                done = await self._run(partial(work, folder, validity, list(by_uid)))
+                done = await self._retrying(
+                    partial(work, folder, validity, list(by_uid))
+                )
             except rules.FATAL:
                 raise
             except MailboxServiceError as exc:
@@ -500,20 +505,27 @@ class ImapProvider:
 
     # --- folders --------------------------------------------------------------------
 
-    def _create_folder(self, name: str, parent_id: str | None) -> Folder:
+    def _create_folder(
+        self, name: str, parent_id: str | None, retried: bool = False
+    ) -> Folder:
         raws = self._session.list_folders()
         full = self._full_name(raws, name, parent_id)
         if full in _names(raws):
+            if retried:
+                return self._folder(full)  # the first try made it
             raise ConflictError(f"a folder {name} exists there already")
         self._session.create_folder(full)
         return self._folder(full)
 
     def _update_folder(
-        self, folder_id: str, name: str, parent_id: str | None
+        self, folder_id: str, name: str, parent_id: str | None, retried: bool = False
     ) -> Folder:
         raws = self._session.list_folders()
         old = mappers.folder_name(folder_id)
         if old not in _names(raws):
+            new = self._full_name(raws, name, parent_id)
+            if retried and new in _names(raws):
+                return self._folder(new)  # the first try renamed it
             raise NotFoundError(f"folder {folder_id} not found")
         new = self._full_name(raws, name, parent_id)
         if new == old:
@@ -525,9 +537,11 @@ class ImapProvider:
         self._session.rename_folder(old, new)
         return self._folder(new)
 
-    def _delete_folder(self, folder_id: str) -> None:
+    def _delete_folder(self, folder_id: str, retried: bool = False) -> None:
         name = mappers.folder_name(folder_id)
         if name not in _names(self._session.list_folders()):
+            if retried:
+                return  # the first try deleted it
             raise NotFoundError(f"folder {folder_id} not found")
         self._session.delete_folder(name)
 
@@ -609,12 +623,21 @@ class ImapProvider:
         return results
 
     def _delete_in_folder(
-        self, folder: str, validity: int, uids: list[int], permanent: bool
+        self,
+        folder: str,
+        validity: int,
+        uids: list[int],
+        permanent: bool,
+        retried: bool = False,
     ) -> dict[int, MessageSummary | None | MailboxServiceError]:
         found, _ = self._open_writable(folder, validity, uids)
         results: dict[int, MessageSummary | None | MailboxServiceError] = dict(
             _missing(uids, found)
         )
+        if retried:
+            # Gone from the folder: the first try deleted or moved them,
+            # to a place this try cannot name.
+            results = {uid: None for uid in results}
         if not found:
             return results
         if permanent:
@@ -771,6 +794,13 @@ class ImapProvider:
 
     async def _run(self, operation: Callable[[], T]) -> T:
         return await anyio.to_thread.run_sync(self._locked, operation)
+
+    async def _retrying(self, operation: Callable[[bool], T]) -> T:
+        """``_run`` for a write the guard may run again. ``operation``
+        learns whether this is a retry, so that finding its work done
+        counts as done, not as a conflict or a missing item."""
+        attempts = itertools.count()
+        return await self._run(lambda: operation(next(attempts) > 0))
 
     def _locked(self, operation: Callable[[], T]) -> T:
         def step() -> T:

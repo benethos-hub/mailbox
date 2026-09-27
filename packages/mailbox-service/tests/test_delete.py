@@ -46,6 +46,14 @@ async def test_from_the_trash_only_for_good(with_trash: FakeMailBox) -> None:
     assert with_trash.folders["Trash"].messages == {}
 
 
+async def test_a_retried_deletion_that_went_through_is_done(
+    server: FakeMailBox,  # noqa: F811
+) -> None:
+    server.lose_the_reply("uid_expunge")
+    assert await delete(provider(server), MESSAGE, permanent=True) is None
+    assert 3 not in server.folders["INBOX"].messages
+
+
 async def test_no_trash_no_deletion(server: FakeMailBox) -> None:  # noqa: F811
     with pytest.raises(ConflictError, match="no trash folder"):
         await delete(provider(server), MESSAGE, permanent=False)

@@ -187,6 +187,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `400`. Before, it went on from its positions under the new parameters,
   and the folder of the new request was ignored. Cursors handed out
   before this version are refused once.
+- On IMAP, a write the service tried again after the connection dropped
+  answers with its result when the first try went through: a folder
+  made, renamed or deleted, a message deleted. Before, it answered `409`
+  or `404` for its own work.
 - Replacing a draft that is gone answers `404` on IMAP accounts too, and
   stores nothing. Before, IMAP stored the new draft beside it and
   answered success, so a second draft appeared.

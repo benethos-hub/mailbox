@@ -139,6 +139,18 @@ class FakeMailBox:
         entry = self.folders[source].messages.pop(uid)
         self.add(target, new_uid, *entry)
 
+    def lose_the_reply(self, command: str) -> None:
+        """The server does ``command`` once, then the connection drops
+        before its answer arrives."""
+        real = getattr(self, command)
+
+        def done_then_dropped(*args: object) -> object:
+            real(*args)
+            setattr(self, command, real)
+            raise OSError("connection reset")
+
+        setattr(self, command, done_then_dropped)
+
     # --- IMAPClient ---------------------------------------------------------------
 
     def capabilities(self) -> tuple[bytes, ...]:
