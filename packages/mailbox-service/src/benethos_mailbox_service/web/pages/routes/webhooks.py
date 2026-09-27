@@ -60,10 +60,29 @@ async def list_webhooks(
 @router.get("/webhooks/new")
 async def new_webhook(request: Request, caller: Viewer) -> HTMLResponse:
     caller.require("create_webhook")
+    return _new_webhook_page(request, caller)
+
+
+def _new_webhook_page(
+    request: Request, caller: Access, form: Any = None, err: str | None = None
+) -> HTMLResponse:
+    """The editor of a new webhook, empty or as ``form`` held it."""
     return render(
         request,
         "pages/webhook_new.html",
         page="webhooks",
+        status_code=400 if err else 200,
+        err=err,
+        typed=(
+            {
+                "url": str(form.get("url") or "").strip(),
+                "events": [str(e) for e in form.getlist("events")],
+                "every": form.get("every") == "1",
+                "accounts": [str(a) for a in form.getlist("accounts")],
+            }
+            if form is not None
+            else None
+        ),
         events=EVENT_TYPES,
         accounts=_readable(request, caller),
     )
@@ -89,7 +108,10 @@ async def create_webhook(
     request: Request, caller: Actor, webhooks: Webhooks
 ) -> Response:
     form = await request.form()
-    with failing("/ui/webhooks/new"):
+    with failing(
+        "/ui/webhooks/new",
+        again=lambda err: _new_webhook_page(request, caller, form, err),
+    ):
         created = webhooks.create_webhook(caller, _request_of(form))
     # Shown on the next page, once, and never in the URL.
     show_once(request, f"secret:{created.id}", created.secret)

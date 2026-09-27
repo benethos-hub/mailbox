@@ -223,3 +223,35 @@ def test_accounts_filter_by_address_provider_and_status(
     by_provider = ui.get("/ui/accounts", params={"provider": "memory"}).text
     assert "two@example.org" in by_provider and "Provider: memory" in by_provider
     assert "Filter:" in ui.get("/ui/accounts", params={"provider": "pigeon"}).text
+
+
+def test_a_refused_change_keeps_what_was_typed(
+    ui: TestClient, client: TestClient
+) -> None:
+    created = client.post(
+        "/v1/accounts",
+        json={
+            "provider": "memory",
+            "email": "c@example.org",
+            "settings": {"host": "imap.example.org"},
+        },
+    ).json()
+    url = f"/ui/accounts/{created['id']}"
+    # Here the keys do not exist yet, so a new password cannot be stored.
+    refused = post(
+        ui,
+        url,
+        {
+            "display_name": "Kept",
+            "host": "imap2.example.org",
+            "port": "10993",
+            "password": "s3cret-pw",
+        },
+    )
+    assert refused.status_code == 400
+    assert 'class="notice err"' in refused.text
+    assert 'name="display_name" value="Kept"' in refused.text
+    assert 'name="host" value="imap2.example.org"' in refused.text
+    assert 'value="10993"' in refused.text
+    assert "s3cret-pw" not in refused.text
+    assert 'name="host" value="imap.example.org"' in ui.get(url).text

@@ -88,8 +88,24 @@ def test_a_webhook_needs_its_accounts(ready: TestClient) -> None:
     answer = post(ready, "/ui/webhooks", {"url": URL, "events": "message.created"})
     assert "Choose the accounts, or every account." in answer.text
     answer = post(ready, "/ui/webhooks", {"url": "ftp://x", "every": "1"})
-    assert str(answer.url).endswith("/ui/webhooks/new")
+    assert answer.status_code == 400
     assert 'class="notice err"' in answer.text
+
+
+def test_a_refused_webhook_keeps_what_was_typed(
+    ready: TestClient, account_id: str
+) -> None:
+    answer = post(
+        ready,
+        "/ui/webhooks",
+        {"url": "ftp://x", "events": "message.deleted", "accounts": account_id},
+    )
+    assert answer.status_code == 400
+    assert 'name="url" type="url" value="ftp://x"' in answer.text
+    assert 'value="message.deleted" checked' in answer.text
+    assert 'value="message.created" checked' not in answer.text
+    assert 'name="every" value="1" checked' not in answer.text
+    assert f'value="{account_id}" checked' in answer.text
 
 
 def test_remove(ready: TestClient) -> None:

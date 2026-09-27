@@ -10,7 +10,10 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
 from ....data.models import AccountStatus, ProviderType
+from ....domain.access import Access
+from ....domain.accounts import AccountService
 from ....domain.discovery import connectable, sign_ins
+from ....domain.status import StatusService
 from ....errors import MailboxServiceError
 from ...errors import status_of
 from ...services import Accounts, Discoverer, Status, get_oauth
@@ -204,11 +207,37 @@ async def account(
     accounts: Accounts,
     status: Status,
 ) -> HTMLResponse:
+    return _account_page(request, caller, account_id, accounts, status)
+
+
+def _account_page(
+    request: Request,
+    caller: Access,
+    account_id: str,
+    accounts: AccountService,
+    status: StatusService,
+    form: Any = None,
+    err: str | None = None,
+) -> HTMLResponse:
+    """An account's page. With ``form`` its editor shows what was typed,
+    the password left out."""
     found = accounts.get(caller, account_id)
     return render(
         request,
         "pages/account.html",
         page="accounts",
+        status_code=400 if err else 200,
+        err=err,
+        typed=(
+            {
+                "display_name": str(form.get("display_name") or "").strip(),
+                "settings": {
+                    key: str(form.get(key) or "").strip() for key in SETTING_FIELDS
+                },
+            }
+            if form is not None
+            else None
+        ),
         account=found,
         can_read=caller.allows("list_messages", account_id),
         can_audit=caller.allows("list_sends", account_id),
@@ -223,7 +252,11 @@ async def account(
 
 @router.post("/accounts/{account_id}")
 async def update_account(
-    request: Request, caller: Actor, account_id: str, accounts: Accounts
+    request: Request,
+    caller: Actor,
+    account_id: str,
+    accounts: Accounts,
+    status: Status,
 ) -> Response:
     form = await request.form()
     here = f"/ui/accounts/{account_id}"
@@ -233,7 +266,12 @@ async def update_account(
             "display_name": str(form.get("display_name") or "").strip() or None,
             "rename": True,
         }
-    with failing(here):
+    with failing(
+        here,
+        again=lambda err: _account_page(
+            request, caller, account_id, accounts, status, form, err
+        ),
+    ):
         existing = accounts.get(caller, account_id)
         settings = _changed(existing.settings, _settings(form), set(form.keys()))
         await accounts.update(
