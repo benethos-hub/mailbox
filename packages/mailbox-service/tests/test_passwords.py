@@ -151,6 +151,7 @@ def test_the_migration_renames_a_name_taken_twice(tmp_path: Path) -> None:
         # Back to schema 8, with a name two users share.
         raw.execute("DROP INDEX users_name")
         raw.execute("DROP TABLE passwords")
+        raw.execute("DROP TABLE webhook_attempts")
         raw.execute("UPDATE meta SET value = '8' WHERE key = 'schema_version'")
         raw.execute("INSERT INTO users (id, name) VALUES ('usr_11111111aa', 'Anna')")
         raw.execute("INSERT INTO users (id, name) VALUES ('usr_22222222bb', 'anna')")

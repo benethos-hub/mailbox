@@ -58,6 +58,7 @@ from .users import (
     UserRepository,
 )
 from .webhooks import (
+    Attempt,
     Delivery,
     InMemoryWebhookRepository,
     Sealed,
@@ -133,6 +134,7 @@ __all__ = [
     "InMemoryChangeLogRepository",
     "LoggedChange",
     "SqliteChangeLogRepository",
+    "Attempt",
     "Delivery",
     "InMemoryWebhookRepository",
     "Sealed",

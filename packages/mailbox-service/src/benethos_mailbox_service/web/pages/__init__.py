@@ -37,6 +37,7 @@ from .routes import (
     oauth,
     sends,
     users,
+    webhooks,
 )
 from .session import (
     PASSWORD_PAGE,
@@ -59,6 +60,7 @@ AREAS = (
     sends,
     oauth,
     users,
+    webhooks,
 )
 
 

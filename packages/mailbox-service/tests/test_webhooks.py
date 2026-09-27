@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import Grant, ProviderType, Webhook
 from benethos_mailbox_service.data.storage import (
+    Attempt,
     Database,
     Delivery,
     InMemoryWebhookRepository,
@@ -212,3 +213,27 @@ def test_the_store_keeps_how_delivery_stands(store: WebhookRepository) -> None:
     assert found.webhook.last_error == "503 from receiver"
     # Gone meanwhile: nothing happens.
     store.update("whk_9", later, last_delivery_at=None, last_error=None)
+
+
+def attempt(n: int, webhook_id: str = "whk_1") -> Attempt:
+    return Attempt(webhook_id, f"dlv_{n}", AT, n, 500 + n, f"failure {n}")
+
+
+def test_the_store_keeps_the_newest_attempts(store: WebhookRepository) -> None:
+    store.add(record(1))
+    store.add(record(2))
+    for n in range(4):
+        store.add_attempt(attempt(n), keep=3)
+    store.add_attempt(attempt(9, "whk_2"), keep=3)
+    assert [a.delivery_id for a in store.attempts("whk_1")] == [
+        "dlv_3",
+        "dlv_2",
+        "dlv_1",
+    ]
+    assert store.attempts("whk_1")[0] == attempt(3)
+    # Gone meanwhile: nothing is logged. Removed: its log goes with it.
+    store.add_attempt(attempt(5, "whk_9"), keep=3)
+    assert store.attempts("whk_9") == []
+    store.delete("whk_1")
+    assert store.attempts("whk_1") == []
+    assert len(store.attempts("whk_2")) == 1

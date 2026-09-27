@@ -63,7 +63,7 @@
   </li>
   {% endfor %}
   {% for webhook in service.failing %}
-  <li><span class="mono">{{ webhook.url }}</span> <span class="tag bad">failing</span> <span class="muted">{{ webhook.last_error }}</span></li>
+  <li><a class="mono" href="/ui/webhooks/{{ webhook.id }}">{{ webhook.url }}</a> <span class="tag bad">failing</span> <span class="muted">{{ webhook.last_error }}</span></li>
   {% endfor %}
 </ul>
 {% endif %}

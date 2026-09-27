@@ -41,6 +41,8 @@ def navigation(caller: Access) -> list[Group]:
         mailboxes.append(Entry("accounts", "Accounts", "▤", "/ui/accounts"))
     if caller.anywhere("list_sends"):
         mailboxes.append(Entry("sends", "Sends", "⇢", "/ui/sends"))
+    if caller.allows("list_webhooks"):
+        mailboxes.append(Entry("webhooks", "Webhooks", "⚑", "/ui/webhooks"))
     service = []
     if caller.allows("list_users"):
         service.append(Entry("users", "Users", "☺", "/ui/users"))

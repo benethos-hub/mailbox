@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Webhooks in the configuration UI: a list with the state of each, a
+  page to create one that shows its secret once, and a page per webhook
+  with its last deliveries. The service keeps the last 20 posts of each
+  webhook: when, how many events, the receiver's answer and the error.
 - A change feed: `GET /v1/accounts/{account_id}/changes` and
   `GET /v1/changes` (`list_changes`, `list_all_changes`, both in
   `mail.read`) name each message created, updated or deleted since a

@@ -204,6 +204,13 @@ async def test_a_failed_post_is_tried_again_later(
     record = stored(services, created["id"])
     assert record.delivery.attempts == 0
     assert record.webhook.last_error is None
+    # Both posts are in the delivery log, the newest first.
+    logged = services.webhooks._repository.attempts(created["id"])  # type: ignore[attr-defined]
+    assert [(a.status, a.error, a.events) for a in logged] == [
+        (200, None, 1),
+        (503, "the receiver answered 503", 1),
+    ]
+    assert logged[0].delivery_id == json.loads(receiver.posts[-1][1])["delivery_id"]
 
 
 async def test_after_the_last_attempt_the_events_are_dropped(

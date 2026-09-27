@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import breadcrumb, card, csrf_field with context %}
+{% block title %}New webhook · {{ APP_NAME }}{% endblock %}
+{% block heading %}New webhook{% endblock %}
+{% block subheading %}{{ breadcrumb([("Webhooks", "/ui/webhooks"), ("New webhook", None)]) }}{% endblock %}
+{% block content %}
+<form method="post" action="/ui/webhooks">
+  {{ csrf_field() }}
+  {% call card("Webhook", meta="Each post is signed with a secret, shown once after creating.") %}
+    <div class="form-grid">
+      <div class="field wide">
+        <label for="f-url">URL</label>
+        <input id="f-url" name="url" type="url" required autofocus placeholder="https://receiver.example.org/mail" />
+        <span class="hint">http or https. A host in the local network is allowed.</span>
+      </div>
+    </div>
+    <div class="field">
+      <span class="label">Events</span>
+      <div class="checks">
+        {% for event in events %}<label class="check"><input type="checkbox" name="events" value="{{ event }}" checked /> {{ event }}</label>{% endfor %}
+      </div>
+    </div>
+    <div class="field">
+      <span class="label">Accounts</span>
+      <div class="checks">
+        <label class="check"><input type="checkbox" name="every" value="1" checked /> every account you may read, also later ones</label>
+        {% for account in accounts %}<label class="check"><input type="checkbox" name="accounts" value="{{ account.id }}" /> {{ account.email }}</label>{% endfor %}
+      </div>
+      <span class="hint">Untick every account to choose some.</span>
+    </div>
+  {% endcall %}
+  <div class="form-actions">
+    <button class="primary" type="submit">Create</button>
+    <a class="btn" href="/ui/webhooks">Cancel</a>
+  </div>
+</form>
+{% endblock %}
