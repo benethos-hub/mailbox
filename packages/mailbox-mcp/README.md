@@ -117,7 +117,7 @@ MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos
 | Option | Environment | Default |
 |---|---|---|
 | – | `MAILBOX_SERVICE_URL` | `http://127.0.0.1:8080`, where the service answers |
-| – | `MAILBOX_SERVICE_TOKEN` | none, the token of the user it acts as |
+| – | `MAILBOX_SERVICE_TOKEN` | none and required, the token of the user it acts as |
 | – | `MAILBOX_SERVICE_ALLOW_HTTP` | off. `1` allows `http` to a host other than this machine |
 | `--transport` | `MAILBOX_MCP_TRANSPORT` | `stdio`, or `streamable-http` |
 | `--host` | `MAILBOX_MCP_HOST` | `127.0.0.1` |

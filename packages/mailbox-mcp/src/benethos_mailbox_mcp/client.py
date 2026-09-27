@@ -117,17 +117,22 @@ class MailboxApiClient:
         transport: httpx.AsyncBaseTransport | None = None,
         allow_http: bool | None = None,
     ) -> None:
-        """Raises when the URL would carry the token unencrypted to another
-        machine, unless ``allow_http`` (else ``MAILBOX_SERVICE_ALLOW_HTTP``)
-        says so."""
+        """Raises without a token, and when the URL would carry the token
+        unencrypted to another machine, unless ``allow_http`` (else
+        ``MAILBOX_SERVICE_ALLOW_HTTP``) says so."""
         self.base_url = (base_url or os.environ.get(URL_ENV) or DEFAULT_URL).rstrip("/")
         if allow_http is None:
             allow_http = os.environ.get(ALLOW_HTTP_ENV, "") in ("1", "true", "yes")
         _check_url(self.base_url, allow_http)
         token = token if token is not None else os.environ.get(TOKEN_ENV, "")
+        if not token:
+            raise ToolError(
+                f"{TOKEN_ENV} is not set. Make a token on your user's page in "
+                "the service's UI and set it."
+            )
         self._http = httpx.AsyncClient(
             base_url=self.base_url,
-            headers={"Authorization": f"Bearer {token}"} if token else {},
+            headers={"Authorization": f"Bearer {token}"},
             timeout=httpx.Timeout(TIMEOUT, connect=CONNECT_TIMEOUT),
             transport=transport,
         )

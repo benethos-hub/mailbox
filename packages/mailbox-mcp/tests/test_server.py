@@ -243,7 +243,8 @@ async def test_a_tool_call_through_the_server(api: Callable) -> None:
 # --- the command line ------------------------------------------------------------
 
 
-def test_client_is_created_once() -> None:
+def test_client_is_created_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
     first = server.client()
     assert isinstance(first, MailboxApiClient)
     assert server.client() is first
@@ -298,10 +299,16 @@ def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
         server.main([])
 
 
+def test_main_without_a_token() -> None:
+    with pytest.raises(SystemExit, match="MAILBOX_SERVICE_TOKEN is not set"):
+        server.main([])
+
+
 def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> None:
     """The start runs in an event loop of its own. A client made there would
     carry connections of a closed loop into the server's."""
 
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
     made: list[MailboxApiClient] = []
 
     async def operations() -> set[str]:

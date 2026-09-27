@@ -82,6 +82,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The MCP server does not start without `MAILBOX_SERVICE_TOKEN` and
+  names the variable. Before, it stopped with the service's `401`.
 - The health check of the service image asks the port
   `MAILBOX_SERVICE_PORT` names. Before, another port made the container
   unhealthy for good.
