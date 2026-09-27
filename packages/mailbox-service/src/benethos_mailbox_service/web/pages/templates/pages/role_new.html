@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import breadcrumb, card, csrf_field with context %}
+{% from "components/grants.html" import grant_editor %}
+{% block title %}New role · {{ APP_NAME }}{% endblock %}
+{% block heading %}New role{% endblock %}
+{% block subheading %}{{ breadcrumb([("Roles", "/ui/roles"), ("New role", None)]) }}{% endblock %}
+{% block content %}
+<form method="post" action="/ui/roles">
+  {{ csrf_field() }}
+  {% call card("Role") %}
+    <div class="form-grid">
+      <div class="field">
+        <label for="f-id">Name</label>
+        <input id="f-id" name="id" required autofocus placeholder="e.g. reader" />
+        <span class="hint">Cannot be changed later.</span>
+      </div>
+    </div>
+  {% endcall %}
+  {% call card("Grants", meta="You can hand out only rights you hold yourself.") %}
+    {{ grant_editor(rows, account_choices, groups, group_ops) }}
+  {% endcall %}
+  <div class="form-actions">
+    <button class="primary" type="submit">Create</button>
+    <a class="btn" href="/ui/roles">Cancel</a>
+  </div>
+</form>
+{% endblock %}

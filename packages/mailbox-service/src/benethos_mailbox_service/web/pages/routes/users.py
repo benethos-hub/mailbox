@@ -84,6 +84,7 @@ async def new_user(request: Request, caller: Viewer) -> HTMLResponse:
         "pages/user_new.html",
         page="users",
         role_choices=_role_choices(request, caller, []),
+        can_set_password=caller.allows("set_password"),
         **_editor(request, caller, []),
     )
 
@@ -98,7 +99,13 @@ async def create_user(request: Request, caller: Actor, users: Users) -> Response
             [str(role) for role in form.getlist("roles")],
             read_grants(form),
         )
-    return back(request, f"/ui/users/{user.id}", f"{user.name} created.")
+    here = f"/ui/users/{user.id}"
+    if "one_time" in form:
+        with failing(here, f"{user.name} created, but no password: "):
+            password = await users.one_time_password(caller, user.id)
+        # Shown on the next page, once, and never in the URL.
+        show_once(request, f"password:{user.id}", password)
+    return back(request, here, f"{user.name} created.")
 
 
 @router.get("/users/{user_id}")
@@ -118,6 +125,8 @@ async def user(
         tokens=[(token, users.token_state(token)) for token in tokens or []],
         can_list_tokens=tokens is not None,
         new_token=take_once(request, f"token:{user_id}"),
+        new_password=take_once(request, f"password:{user_id}"),
+        last_sign_in=users.last_sign_in(caller, user_id),
         role_choices=_role_choices(request, caller, found.roles),
         names=_account_names(request, caller),
         is_me=found.id == caller.user_id,
@@ -227,7 +236,16 @@ async def list_roles(request: Request, caller: Viewer, users: Users) -> HTMLResp
         used=_used_by(request, caller, roles),
         names=_account_names(request, caller),
         can_create=caller.allows("create_role"),
-        **_editor(request, caller, []),
+    )
+
+
+@router.get("/roles/new")
+async def new_role(request: Request, caller: Viewer) -> HTMLResponse:
+    """The editor of a new role. It takes the path of a role named
+    "new", whose page the UI then cannot open: the API still can."""
+    caller.require("create_role")
+    return render(
+        request, "pages/role_new.html", page="roles", **_editor(request, caller, [])
     )
 
 
@@ -243,7 +261,7 @@ def _used_by(request: Request, caller: Access, roles: list[Role]) -> dict[str, i
 async def create_role(request: Request, caller: Actor, users: Users) -> Response:
     form = await request.form()
     role_id = str(form.get("id") or "").strip()
-    with failing("/ui/roles"):
+    with failing("/ui/roles/new"):
         role = users.create_role(caller, role_id, read_grants(form))
     return back(request, _role_path(role.id), f"Role {role.id} created.")
 

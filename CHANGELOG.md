@@ -65,6 +65,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   folded below them. A refused connect shows the page again with what
   was typed, the reason under the password. An account's page shows its
   last sync, and an OAuth account can change its display name.
+- A new user in the UI can get a one-time password, made by the service
+  and shown once, to be changed at the first sign-in. A user's page
+  shows its last sign-in. A new role has a page of its own.
 - The configuration UI no longer takes an API token to sign in. Tokens
   are for the API and the MCP server.
 - `users create-admin` prints a one-time password instead of a token. The

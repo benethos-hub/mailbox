@@ -429,3 +429,49 @@ def test_the_editor_shows_what_the_mcp_server_uses(ui: TestClient) -> None:
     assert "Used by the MCP server" in used
     assert 'value="send"' in used.split("Used by the MCP server", 1)[1]
     assert 'value="mail.delete"' in rest and 'value="admin"' in rest
+
+
+def test_a_new_user_gets_a_one_time_password_shown_once(
+    ui: TestClient, app_client: TestClient
+) -> None:
+    form = ui.get("/ui/users/new").text
+    assert 'name="one_time" value="1" checked' in form
+    assert '<a href="/ui/users">Users</a>' in form  # the breadcrumb
+    created = post(ui, "/ui/users", {"name": "Otto", "grants": "0", "one_time": "1"})
+    assert "Otto created." in created.text
+    shown = re.search(r'<code class="secret">([^<]+)</code>', created.text)
+    assert shown is not None
+    assert shown.group(1) not in ui.get(str(created.url)).text
+    assert "not possible" not in created.text  # it has a password now
+
+    other = TestClient(app_client.app)
+    page = other.get("/ui/login")
+    nonce = re.search(r'name="nonce" value="([^"]+)"', page.text)
+    assert nonce is not None
+    landed = other.post(
+        "/ui/login",
+        data={"name": "otto", "password": shown.group(1), "nonce": nonce.group(1)},
+        follow_redirects=False,
+    )
+    assert landed.headers["location"] == "/ui/password"
+    last = ui.get(str(created.url)).text
+    assert "Last sign-in</dt><dd>—" not in last
+
+
+def test_a_new_role_has_its_editor(
+    ui: TestClient, app_client: TestClient, services: Services, account_id: str
+) -> None:
+    page = ui.get("/ui/roles/new")
+    assert page.status_code == 200 and "Cancel" in page.text
+    assert 'href="/ui/roles/new"' in ui.get("/ui/roles").text
+    created = post(ui, "/ui/roles", {"id": "helpers", "grants": "0"})
+    assert "Role helpers created." in created.text
+    refused = post(ui, "/ui/roles", {"id": "", "grants": "0"})
+    assert str(refused.url).endswith("/ui/roles/new")
+
+    reader = TestClient(app_client.app)
+    sign_in(
+        reader,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
+    assert reader.get("/ui/roles/new").status_code == 403

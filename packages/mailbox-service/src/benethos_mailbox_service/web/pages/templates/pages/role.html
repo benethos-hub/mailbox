@@ -1,33 +1,24 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import csrf_field, danger_card with context %}
+{% from "components/ui.html" import breadcrumb, card, csrf_field, danger_card, fact, facts with context %}
 {% from "components/grants.html" import grant_editor, grants_of %}
 {% block title %}{{ role.id }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}Role {{ role.id }}{% endblock %}
+{% block subheading %}{{ breadcrumb([("Roles", "/ui/roles"), (role.id, None)]) }}{% endblock %}
 {% block content %}
-<section class="card">
-  <header><h2>Rights</h2></header>
-  <div class="body">
-    <dl class="facts">
-      <dt>Grants</dt>
-      <dd>{{ grants_of(role.grants, names) }}</dd>
-      {% if holders is not none %}
-      <dt>Users</dt>
-      <dd>{% for user in holders %}<a class="tag" href="/ui/users/{{ user.id }}">{{ user.name }}</a> {% else %}—{% endfor %}</dd>
-      {% endif %}
-    </dl>
-  </div>
-</section>
+{% call facts("Role") %}
+  {% call fact("Grants") %}{{ grants_of(role.grants, names) }}{% endcall %}
+  {% if holders is not none %}
+  {% call fact("Users") %}{% for user in holders %}<a class="tag" href="/ui/users/{{ user.id }}">{{ user.name }}</a> {% else %}—{% endfor %}{% endcall %}
+  {% endif %}
+{% endcall %}
 
 {% if can_update %}
 <form method="post" action="/ui/roles/{{ role.id | segment }}">
   {{ csrf_field() }}
-  <section class="card">
-    <header><h2>Change</h2><span class="meta">Takes effect at once for every user with this role.</span></header>
-    <div class="body">
-      {{ grant_editor(rows, account_choices, groups, group_ops) }}
-      <div class="form-actions"><button class="primary" type="submit">Save</button></div>
-    </div>
-  </section>
+  {% call card("Change", meta="Takes effect at once for every user with this role.") %}
+    {{ grant_editor(rows, account_choices, groups, group_ops) }}
+    <div class="form-actions"><button class="primary" type="submit">Save</button></div>
+  {% endcall %}
 </form>
 {% endif %}
 

@@ -247,11 +247,7 @@ class UserService:
         """Another user's password, within the caller's rights: whoever sets
         it can sign in as that user. It must be changed at the next
         sign-in."""
-        access.require("set_password")
-        user = self._users.get(user_id)
-        self._require_covers_user(access, user)
-        if user_id == access.user_id:
-            raise ConflictError("change your own password with the current one")
+        user = self._settable(access, user_id)
         await self._auth.passwords.set(user.id, user.name, new, must_change=True)
         log.info(
             "%s (%s) set the password of %s (%s)",
@@ -260,6 +256,30 @@ class UserService:
             user.name,
             user.id,
         )
+
+    async def one_time_password(self, access: Access, user_id: str) -> str:
+        """A new random password for another user, within the caller's
+        rights, to be changed at the next sign-in. Shown once."""
+        user = self._settable(access, user_id)
+        password = secrets.token_urlsafe(ONE_TIME_BYTES)
+        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
+        log.info(
+            "%s (%s) made a one-time password for %s (%s)",
+            access.name,
+            access.user_id,
+            user.name,
+            user.id,
+        )
+        return password
+
+    def _settable(self, access: Access, user_id: str) -> User:
+        """The user whose password the caller may set."""
+        access.require("set_password")
+        user = self._users.get(user_id)
+        self._require_covers_user(access, user)
+        if user_id == access.user_id:
+            raise ConflictError("change your own password with the current one")
+        return user
 
     # --- tokens ---------------------------------------------------------------
 
