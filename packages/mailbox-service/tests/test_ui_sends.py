@@ -22,7 +22,7 @@ def _send(ui: TestClient, account_id: str, to: str) -> None:
 
 def test_the_audit_of_one_account(ui: TestClient, account_id: str) -> None:
     _send(ui, account_id, "bob@example.org")
-    page = ui.get(f"/ui/accounts/{account_id}/sends").text
+    page = ui.get(f"/ui/sends?account={account_id}").text
     assert "bob@example.org" in page and "sent" in page
     assert "<strong>admin</strong>" in page or ">admin<" in page
     assert "the UI" in page  # sent from a session, not with a token
@@ -46,7 +46,7 @@ def test_a_denied_send_is_in_the_audit(
         ),
     )
     _send(app_client, account_id, "eve@elsewhere.example")
-    page = app_client.get(f"/ui/accounts/{account_id}/sends").text
+    page = app_client.get(f"/ui/sends?account={account_id}").text
     assert "eve@elsewhere.example" in page and "denied" in page
     assert "recipient_not_allowed" in page
     assert "browser-" in page  # its own name, though it may not list users
@@ -71,7 +71,7 @@ def test_paging(
     monkeypatch.setattr(sends, "PAGE_SIZE", 1)
     _send(ui, account_id, "first@example.org")
     _send(ui, account_id, "second@example.org")
-    page = ui.get(f"/ui/accounts/{account_id}/sends").text
+    page = ui.get(f"/ui/sends?account={account_id}").text
     assert "second@example.org" in page and "first@example.org" not in page
     older = page.split('href="')[-1].split('"')[0].replace("&amp;", "&")
     assert "cursor=" in older
@@ -85,7 +85,7 @@ def test_no_audit_without_the_right(
         app_client,
         *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
     )
-    assert app_client.get(f"/ui/accounts/{account_id}/sends").status_code == 403
+    assert app_client.get(f"/ui/sends?account={account_id}").status_code == 403
     assert "Nothing sent yet" in app_client.get("/ui/sends").text
 
 

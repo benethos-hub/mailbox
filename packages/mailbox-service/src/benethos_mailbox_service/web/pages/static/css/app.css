@@ -106,7 +106,6 @@ a:hover { text-decoration: underline; }
   font-size: 17px; font-weight: 650; letter-spacing: -.01em;
 }
 .brand .mark { color: var(--accent); }
-.brand small { color: var(--text-faint); font-weight: 400; font-size: 12px; }
 
 .nav { display: flex; flex-direction: column; gap: 2px; }
 .nav a {
@@ -204,12 +203,6 @@ details.card > summary.card-summary h2 { display: inline; margin: 0; font-size: 
 .step-title { margin: 8px 0 0; font-size: 15px; font-weight: 600; }
 .card.way > header h2 { color: var(--accent); }
 
-.grid-2 {
-  display: grid; gap: var(--gap);
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  align-items: start;
-}
-
 /* Label and value, one pair per line. */
 dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; }
 dl.facts dt { color: var(--text-muted); font-size: 13px; }
@@ -292,7 +285,7 @@ tr.unread td.name { font-weight: 650; }
   color: var(--ok);
   font-size: 14px;
 }
-.notice.info { background: var(--accent-soft); color: var(--text); }
+
 .notice.warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 .notice.err { background: var(--err-soft); border-color: transparent; color: var(--bad); }
 
@@ -490,5 +483,5 @@ a.btn.ghost { border-color: transparent; background: transparent; color: var(--t
   }
   .sidebar .spacer, .sidebar .foot, .nav .section { display: none; }
   .nav { flex-direction: row; }
-  .brand small { display: none; }
+
 }
