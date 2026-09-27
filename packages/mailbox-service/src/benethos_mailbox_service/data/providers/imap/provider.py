@@ -155,8 +155,16 @@ class ImapProvider:
         if not username:
             raise BadRequestError("an IMAP account needs settings.username")
         auth = settings.get("auth", "password")
-        if auth not in ("password", "xoauth2"):
-            raise BadRequestError("settings.auth must be 'password' or 'xoauth2'")
+        if auth == "xoauth2":
+            # Nothing renews the access token yet (CONCEPT 5.1): the login
+            # would be rejected within the hour.
+            raise NotSupportedError(
+                "IMAP with OAuth (settings.auth 'xoauth2') is not supported yet: "
+                "the service cannot renew the token. Use a password or an app "
+                "password."
+            )
+        if auth != "password":
+            raise BadRequestError("settings.auth must be 'password'")
         self._server = ImapServer(
             host=str(host),
             port=rules.port_of(settings, "port", DEFAULT_PORTS[security]),
@@ -164,7 +172,7 @@ class ImapProvider:
             pick=pick,
         )
         self._username = str(username)
-        self._auth = str(auth)
+
         self._credentials = credentials
         per_minute = rules.rate_of(
             settings, "max_requests_per_minute", DEFAULT_REQUESTS_PER_MINUTE
@@ -173,7 +181,7 @@ class ImapProvider:
         self._smtp = SmtpSender.from_settings(
             settings,
             self._username,
-            self._auth,
+            "password",
             self._secret,
             self._guard,
             smtp_factory,
@@ -817,14 +825,10 @@ class ImapProvider:
 
     def _secret(self) -> str:
         """The credential for the login, decrypted for this one use."""
-        field = "access_token" if self._auth == "xoauth2" else "password"
-        return self._credentials(field).get_secret_value()
+        return self._credentials("password").get_secret_value()
 
     def _login(self, session: ImapSession) -> None:
-        if self._auth == "xoauth2":
-            session.login_oauth(self._username, self._secret())
-        else:
-            session.login(self._username, self._secret())
+        session.login(self._username, self._secret())
 
 
 def _by_folder(

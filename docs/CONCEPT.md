@@ -234,10 +234,12 @@ parsing). The adapter boundary keeps the choice reversible: if thread usage
 becomes a bottleneck with many accounts, only `data/providers/imap/`
 changes.
 
-**Three auth modes from the start:** password, app password, and SASL
-XOAUTH2 with a token refresher. XOAUTH2 matters beyond Google and Microsoft:
-it is the only non-password way into Yahoo and AOL, once a provider grants
-it. Server extensions used where offered: `IDLE` (push), `CONDSTORE` /
+**Three auth modes planned:** password, app password, and SASL XOAUTH2
+with a token refresher. XOAUTH2 matters beyond Google and Microsoft: it
+is the only non-password way into Yahoo and AOL, once a provider grants
+it. Password and app password work. XOAUTH2 waits for the refresher: the
+IMAP and SMTP modules speak it, but an account with `auth: xoauth2`
+answers `501` until the service can renew its token. Server extensions used where offered: `IDLE` (push), `CONDSTORE` /
 `QRESYNC` (cheap delta), `UIDPLUS` and `MOVE`, `OBJECTID` (stable ids, 4.1).
 
 Gmail and Microsoft accounts *could* run over IMAP too, but their native

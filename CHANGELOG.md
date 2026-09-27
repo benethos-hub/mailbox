@@ -127,6 +127,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Removed
 
+- IMAP accounts with `auth: xoauth2` answer `501 not_supported`. Nothing
+  renewed their access token, so the login was rejected within the hour
+  and the account blocked. They come back with a token refresher.
 - The built-in admin key `MAILBOX_SERVICE_KEY`. Every call is made by a
   user, so the audit names one. Make the first user with
   `users create-admin` and a token for the API on its page in the UI. A

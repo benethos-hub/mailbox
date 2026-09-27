@@ -18,6 +18,7 @@ from benethos_mailbox_service.data.providers.protocols.imap import (
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
+    NotSupportedError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
@@ -321,8 +322,19 @@ async def test_wrong_password(server: FakeMailBox) -> None:
         await provider(server).list_folders()
 
 
-async def test_xoauth2(server: FakeMailBox) -> None:
-    await provider(server, auth="xoauth2").list_folders()
+def test_imap_with_oauth_waits_for_a_token_refresher(server: FakeMailBox) -> None:
+    with pytest.raises(NotSupportedError, match="cannot renew the token"):
+        provider(server, auth="xoauth2")
+    with pytest.raises(BadRequestError, match="settings.auth"):
+        provider(server, auth="kerberos")
+
+
+def test_the_session_logs_in_with_xoauth2(server: FakeMailBox) -> None:
+    # Kept for the refresher to come: the wire part works.
+    server.password = "token"
+    ImapSession(ImapServer("h", 993, "tls"), client_factory=server).login_oauth(
+        "me@example.com", "token"
+    )
     assert ("xoauth2", "me@example.com") in server.calls
 
 
