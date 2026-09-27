@@ -82,6 +82,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- In `compose.yaml` the allowed Host values of the MCP server follow
+  `MAILBOX_MCP_PORT`. Before, another port answered `421`.
 - `list_drafts` of the MCP server carries a `note` that `to` and
   `subject` may be the words of the mail a draft answers, as
   `search_messages` does for `from` and `subject`.

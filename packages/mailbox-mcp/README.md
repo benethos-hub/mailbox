@@ -213,8 +213,10 @@ docker compose --profile mcp up -d
 ```
 
 Clients connect to `http://127.0.0.1:8000/mcp` with
-`Authorization: Bearer $MAILBOX_MCP_BEARER_TOKEN`. Behind a reverse proxy,
-set `MAILBOX_MCP_ALLOWED_HOSTS` to the host name clients use. Both tokens
+`Authorization: Bearer $MAILBOX_MCP_BEARER_TOKEN`. `MAILBOX_MCP_PORT`
+publishes another port, and the allowed Host values follow it. Behind a
+reverse proxy, set `MAILBOX_MCP_ALLOWED_HOSTS` to the host name clients
+use. Both tokens
 are environment variables and show in `docker inspect`.
 
 ## Tools
