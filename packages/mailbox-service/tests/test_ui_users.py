@@ -273,7 +273,7 @@ def test_token_days_must_be_a_number(ui: TestClient, services: Services) -> None
         f"/ui/users/{user.id}/tokens",
         {"name": "t", "days": "99999999999"},
     )
-    assert "up to 3650" in answer.text
+    assert "from 1 to 3650" in answer.text
     assert services.users.list_tokens(ADMIN, user.id) == []
 
 
@@ -590,15 +590,16 @@ def test_a_refused_change_keeps_what_was_typed(
     assert services.users.get_user(ADMIN, user.id).name == "someone"
 
 
-def test_a_refused_token_keeps_its_name(ui: TestClient, services: Services) -> None:
+@pytest.mark.parametrize("days", ["soon", "0", "3651"])
+def test_a_refused_token_keeps_its_name(
+    ui: TestClient, services: Services, days: str
+) -> None:
     user = services.users.create_user(ADMIN, "bot", [], [])
-    refused = post(
-        ui, f"/ui/users/{user.id}/tokens", {"name": "laptop", "days": "soon"}
-    )
+    refused = post(ui, f"/ui/users/{user.id}/tokens", {"name": "laptop", "days": days})
     assert refused.status_code == 400
-    assert "Days valid must be a whole number" in refused.text
+    assert "Days valid must be a whole number from 1 to 3650" in refused.text
     assert 'name="name" value="laptop"' in refused.text
-    assert 'name="days" value="soon"' in refused.text
+    assert f'name="days" value="{days}"' in refused.text
     assert services.users.list_tokens(ADMIN, user.id) == []
 
 

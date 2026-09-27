@@ -317,9 +317,9 @@ async def create_token(
             request, caller, user_id, users, token_form=form, err=err
         ),
     ):
-        if days and not (days.isdigit() and int(days) <= MAX_TOKEN_DAYS):
+        if days and not (days.isdigit() and 1 <= int(days) <= MAX_TOKEN_DAYS):
             raise FormError(
-                f"Days valid must be a whole number up to {MAX_TOKEN_DAYS}."
+                f"Days valid must be a whole number from 1 to {MAX_TOKEN_DAYS}."
             )
         expires_at = utc_now() + timedelta(days=int(days)) if days else None
         _, plain = users.create_token(caller, user_id, name, expires_at)

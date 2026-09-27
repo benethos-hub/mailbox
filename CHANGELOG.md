@@ -200,6 +200,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- A token made in the UI is valid for 1 day at least. Before, `0` made a
+  token that had run out when it was shown.
 - `port` and `smtp_port` in the settings of an IMAP account must be a
   whole number from 1 to 65535, else the account answers `400`. Before,
   a word answered `500`.
