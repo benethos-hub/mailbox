@@ -1301,7 +1301,9 @@ small and the REST-only rule is enforced by the dependency list itself. A
 test checks that no module imports the service.
 
 It reads `MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN` and calls the REST API with
-httpx. It runs over stdio or streamable HTTP. Over HTTP a bearer guard
+httpx. The URL is `https`, or `http` to this machine only, since the token
+goes with every request. `MAILBOX_SERVICE_ALLOW_HTTP=1` allows `http` to
+another host, e.g. between containers (**decided 2026-09-27**). It runs over stdio or streamable HTTP. Over HTTP a bearer guard
 admits clients with one shared token (`MAILBOX_MCP_BEARER_TOKEN`), which
 is not passed on: the server acts as the user of its own API token, for
 every client alike. Host and Origin are checked against DNS rebinding. At

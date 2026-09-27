@@ -118,6 +118,7 @@ MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos
 |---|---|---|
 | – | `MAILBOX_SERVICE_URL` | `http://127.0.0.1:8080`, where the service answers |
 | – | `MAILBOX_SERVICE_TOKEN` | none, the token of the user it acts as |
+| – | `MAILBOX_SERVICE_ALLOW_HTTP` | off. `1` allows `http` to a host other than this machine |
 | `--transport` | `MAILBOX_MCP_TRANSPORT` | `stdio`, or `streamable-http` |
 | `--host` | `MAILBOX_MCP_HOST` | `127.0.0.1` |
 | `--port` | `MAILBOX_MCP_PORT` | `8000` |
@@ -129,6 +130,11 @@ MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos
 
 The command line wins over the environment. The settings come from the
 environment only. The MCP client passes them in its configuration.
+
+`MAILBOX_SERVICE_URL` takes `https` anywhere and `http` to this machine
+only (`localhost`, `127.0.0.1`, `::1`), since the token goes with every
+request. For `http` to another host, e.g. a container beside it, set
+`MAILBOX_SERVICE_ALLOW_HTTP=1`. Without it the server does not start.
 
 ## Over HTTP
 
@@ -180,6 +186,7 @@ docker network connect mailbox mailbox-service
 docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
   -p 127.0.0.1:8000:8000 --read-only --tmpfs /tmp \
   -e MAILBOX_SERVICE_URL=http://mailbox-service:8080 \
+  -e MAILBOX_SERVICE_ALLOW_HTTP=1 \
   -e MAILBOX_SERVICE_TOKEN=<token> \
   -e MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   -e MAILBOX_MCP_ALLOWED_HOSTS=127.0.0.1:8000,localhost:8000 \

@@ -97,6 +97,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   the foreign-content marker only when it is a plain media type such as
   `image/png`. Any other value, which a sender may have chosen, counts as
   `application/octet-stream`.
+- The MCP server sends its token over `http` only to this machine.
+  `http` to another host needs `MAILBOX_SERVICE_ALLOW_HTTP=1`, else the
+  server does not start. The compose file sets it for the network between
+  the two containers.
 
 ## [0.1.0] - 2026-09-25
 
