@@ -160,7 +160,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 ## Phase 4b – UI rework
 
 - A rework of the configuration UI before the providers of phase 5.
-  Not designed yet: its scope goes into CONCEPT first.
+  Scope, page types and the rules for every page in [UI.md](UI.md):
+  a proposal of 2026-09-27, not yet decided.
 
 ## Phase 5 – More providers and the configuration UI
 
