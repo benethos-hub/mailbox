@@ -54,6 +54,26 @@ class Webhook(BaseModel):
     )
 
 
+class WebhookPost(BaseModel):
+    """One post to a webhook's receiver."""
+
+    delivery_id: str = Field(description="The `delivery_id` in the post's body.")
+    at: datetime
+    events: int = Field(description="How many events the post carried.")
+    status: int | None = Field(
+        description="What the receiver answered. Null when it could not be reached."
+    )
+    error: str | None = Field(
+        description="Why the post failed. Null when the receiver took it."
+    )
+
+
+class WebhookDetail(Webhook):
+    deliveries: list[WebhookPost] = Field(
+        description="The last posts to the receiver, newest first, up to 20."
+    )
+
+
 class CreatedWebhook(Webhook):
     secret: str = Field(
         description=(

@@ -22,14 +22,14 @@
   {{ fact("Id", webhook.id, cls="mono") }}
 {% endcall %}
 
-{% call related("Last deliveries", count=attempts | length, meta="the newest 20 posts") %}
+{% call related("Last deliveries", count=webhook.deliveries | length, meta="the newest 20 posts") %}
   <div class="body tight">
-    {% if attempts %}
+    {% if webhook.deliveries %}
     <div class="table-scroll">
       <table>
         <thead><tr><th>When</th><th class="num">Events</th><th>Answer</th><th>Delivery</th></tr></thead>
         <tbody>
-          {% for attempt in attempts %}
+          {% for attempt in webhook.deliveries %}
           <tr>
             <td>{{ attempt.at | when }}</td>
             <td class="num">{{ attempt.events }}</td>

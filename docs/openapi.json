@@ -5853,6 +5853,113 @@
       }
     },
     "/v1/webhooks/{webhook_id}": {
+      "get": {
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Get Webhook",
+        "description": "One of the caller's webhooks, with its last posts to the receiver:\nwhen, how many events, what it answered and why a post failed.",
+        "operationId": "get_webhook",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "webhook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Webhook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "webhooks.manage"
+      },
       "delete": {
         "tags": [
           "webhooks"
@@ -8724,6 +8831,153 @@
           "url"
         ],
         "title": "WebhookCreate"
+      },
+      "WebhookDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "events": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "message.created",
+                "message.updated",
+                "message.deleted",
+                "message.sent",
+                "account.needs_reauth"
+              ]
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "accounts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accounts"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "The user who created it and whose rights apply."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_delivery_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Delivery At",
+            "description": "The last post the receiver took."
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error",
+            "description": "Why the last post failed, if it did."
+          },
+          "deliveries": {
+            "items": {
+              "$ref": "#/components/schemas/WebhookPost"
+            },
+            "type": "array",
+            "title": "Deliveries",
+            "description": "The last posts to the receiver, newest first, up to 20."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "events",
+          "accounts",
+          "user_id",
+          "created_at",
+          "deliveries"
+        ],
+        "title": "WebhookDetail"
+      },
+      "WebhookPost": {
+        "properties": {
+          "delivery_id": {
+            "type": "string",
+            "title": "Delivery Id",
+            "description": "The `delivery_id` in the post's body."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "events": {
+            "type": "integer",
+            "title": "Events",
+            "description": "How many events the post carried."
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "What the receiver answered. Null when it could not be reached."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Why the post failed. Null when the receiver took it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "delivery_id",
+          "at",
+          "events",
+          "status",
+          "error"
+        ],
+        "title": "WebhookPost",
+        "description": "One post to a webhook's receiver."
       }
     },
     "securitySchemes": {

@@ -11,6 +11,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `GET /v1/sends` (`list_all_sends`, in `audit`): the audit of sends of
   every account the caller may audit, newest first, as the UI's sends
   page shows it.
+- `GET /v1/webhooks/{webhook_id}` (`get_webhook`, in `webhooks.manage`):
+  one of the caller's webhooks with its last 20 posts, each with the
+  number of events, the receiver's answer and the error.
 - `ui_sign_in` on a user, in `POST /v1/users`, `PATCH
   /v1/users/{user_id}` and every user in an answer: whether it may sign
   in to the configuration UI. Without it the user is an API user and

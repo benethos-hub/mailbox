@@ -117,6 +117,25 @@ async def test_a_signed_post_of_what_happened(
     assert listed["last_error"] is None
 
 
+async def test_the_api_shows_a_webhook_with_its_posts(
+    client: TestClient, services: Services, account_id: str, receiver: Receiver
+) -> None:
+    created = hook(client)
+    mark_read(client, account_id, "m0")
+    receiver.status = 500
+    await services.deliveries.deliver_due()
+    shown = client.get(f"/v1/webhooks/{created['id']}").json()
+    assert shown["url"] == URL and "secret" not in shown
+    [post] = shown["deliveries"]
+    assert (post["events"], post["status"]) == (1, 500)
+    assert post["error"] == "the receiver answered 500"
+    other = TestClient(
+        client.app,
+        headers=bearer_for(services, Grant(accounts=["*"], allow=["webhooks.manage"])),
+    )
+    assert other.get(f"/v1/webhooks/{created['id']}").status_code == 404
+
+
 def test_the_signature_is_hmac_sha256_of_time_and_body() -> None:
     value = signature("whsec_x", 1790000000, b'{"a":1}')
     digest = hmac.new(b"whsec_x", b'1790000000.{"a":1}', hashlib.sha256).hexdigest()

@@ -742,7 +742,7 @@ request that fails stores nothing and may be tried again.
 | GET | `{acc}/changes?since=<state>` | created / updated / deleted message ids since a state token, plus a new state |
 | GET | `/v1/changes?since=<state>` | the same across all accounts (`list_all_changes`) |
 | GET / POST | `/v1/webhooks` | list, register (URL, events, account filter) |
-| DELETE | `/v1/webhooks/{webhook_id}` | remove |
+| GET / DELETE | `/v1/webhooks/{webhook_id}` | one webhook with its last 20 posts to the receiver, remove |
 
 Events: `message.created`, `message.updated`, `message.deleted`,
 `message.sent`, `account.needs_reauth`. Payloads carry ids only, signed with
@@ -1104,7 +1104,7 @@ with the role
   | `send` | `send_message`, `send_draft` |
   | `audit` | `list_sends`, `list_all_sends` |
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
-  | `webhooks.manage` | `list_webhooks`, `create_webhook`, `delete_webhook`. Not account-bound |
+  | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook`. Not account-bound |
   | `users.manage` | users, their tokens, roles. Not account-bound |
   | `admin` | everything, and `show_recovery_key` (the recovery key in the UI, [UI.md](UI.md) 6.5), which only `admin` on every account gives and no grant names |
 

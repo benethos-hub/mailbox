@@ -61,7 +61,7 @@ The groups as `domain/permissions.py` holds them today:
 | `send` | `send_message`, `send_draft` | an account |
 | `audit` | `list_sends`, `list_all_sends` | an account |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, and `discover_account`, `create_account`, `start_oauth` | an account, the last three every account |
-| `webhooks.manage` | `list_webhooks`, `create_webhook`, `delete_webhook` | the service |
+| `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |
 | `users.manage` | users, tokens, passwords, roles: fourteen rights | the service |
 | `admin` | everything, and `show_recovery_key`, which no grant names | the service |
 

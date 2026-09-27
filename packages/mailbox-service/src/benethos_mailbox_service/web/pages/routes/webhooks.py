@@ -106,7 +106,6 @@ async def webhook(
         "pages/webhook.html",
         page="webhooks",
         webhook=found,
-        attempts=webhooks.attempts(caller, webhook_id),
         names=emails_of(get_accounts(request).list(caller)),
         secret=take_once(request, f"secret:{webhook_id}"),
         can_delete=caller.allows("delete_webhook"),

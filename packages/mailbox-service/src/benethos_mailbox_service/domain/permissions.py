@@ -76,7 +76,12 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
     # Webhooks hear of the accounts their creator may read, checked when
     # they are posted.
-    "webhooks.manage": ("list_webhooks", "create_webhook", "delete_webhook"),
+    "webhooks.manage": (
+        "list_webhooks",
+        "get_webhook",
+        "create_webhook",
+        "delete_webhook",
+    ),
 }
 
 # Operations that do not act on one account. A grant allows them regardless
