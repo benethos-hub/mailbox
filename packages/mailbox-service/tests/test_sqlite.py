@@ -19,7 +19,7 @@ from benethos_mailbox_service.data.storage import (
     SqliteUserRepository,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
-from benethos_mailbox_service.data.storage.sqlite.database import iso
+from benethos_mailbox_service.data.storage.sqlite.database import MIGRATIONS, iso
 from benethos_mailbox_service.errors import (
     ConflictError,
     NotFoundError,
@@ -316,3 +316,12 @@ def test_times_are_stored_in_utc() -> None:
     assert earlier is not None and later is not None and earlier < later
     with pytest.raises(ValueError, match="without a zone"):
         iso(datetime(2026, 9, 27, 12, 0))
+
+
+def test_each_migration_step_is_one_statement() -> None:
+    """Executed one by one: a second statement in a step would be cut off
+    by sqlite3, one that ended early would be refused."""
+    for number, steps in enumerate(MIGRATIONS, 1):
+        for step in steps:
+            assert not sqlite3.complete_statement(step), (number, step)
+            assert sqlite3.complete_statement(step + ";"), (number, step)
