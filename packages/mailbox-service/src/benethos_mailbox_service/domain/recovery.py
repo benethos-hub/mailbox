@@ -22,9 +22,6 @@ class RecoveryKey:
         self._auth = auth
         self._vault = vault
 
-    def may_show(self, access: Access) -> bool:
-        return access.allows("show_recovery_key")
-
     async def show(self, access: Access, password: str) -> str:
         access.require("show_recovery_key")
         await self._auth.confirm(access, password)

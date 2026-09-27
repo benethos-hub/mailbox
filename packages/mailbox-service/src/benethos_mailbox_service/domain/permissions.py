@@ -151,7 +151,8 @@ def expand_known(names: Iterable[str]) -> tuple[frozenset[str], list[str]]:
     """``expand`` for names read back from storage: the operations of the
     names still known, and the names that are not. A right renamed since
     the grant was written grants nothing, and must not lock everyone out."""
-    unknown = [n for n in names if n != ADMIN and n not in GROUPS and n not in GROUP_OF]
+    known = known_names()
+    unknown = [n for n in names if n not in known]
     return expand(n for n in names if n not in unknown), unknown
 
 

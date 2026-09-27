@@ -19,7 +19,7 @@ import hashlib
 import hmac
 import json
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from typing import Protocol
@@ -35,6 +35,7 @@ from ..errors import MailboxServiceError
 from .access import Access
 from .changes import ChangeFeed
 from .webhooks import sealed_label
+from .worker import Sleep
 
 BATCH = 100
 # How often the log is looked at for new events, in seconds.
@@ -44,8 +45,6 @@ POLL = 5.0
 ROUND = 10
 # Posts of each webhook kept for its delivery log.
 LOGGED = 20
-
-Sleep = Callable[[float], Awaitable[None]]
 
 log = logging.getLogger(__name__)
 

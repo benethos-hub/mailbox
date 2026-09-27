@@ -35,6 +35,7 @@ IDLE_RENEW = 25 * 60.0
 FIRST_RETRY = 60.0
 LONGEST_RETRY = 900.0
 
+# How the background loops wait. Tests pass one that returns at once.
 Sleep = Callable[[float], Awaitable[None]]
 
 log = logging.getLogger(__name__)
