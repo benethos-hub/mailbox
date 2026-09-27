@@ -3,6 +3,7 @@ what a record says and what counts against a send limit."""
 
 from __future__ import annotations
 
+import builtins
 from datetime import datetime
 from typing import Protocol
 
@@ -30,6 +31,10 @@ class SendLogRepository(Protocol):
     ) -> list[SendRecord]:
         """Newest first, those older than ``before`` (time, id) if given,
         and only those ``matching``."""
+        ...
+
+    def account_ids(self) -> builtins.list[str]:
+        """Every account the audit has a send of, whether it exists or not."""
         ...
 
 
@@ -75,3 +80,6 @@ class InMemorySendLogRepository:
         if before is not None:
             found = [r for r in found if (r.created_at, r.id) < before]
         return found[:limit]
+
+    def account_ids(self) -> builtins.list[str]:
+        return sorted({r.account_id for r in self._records})

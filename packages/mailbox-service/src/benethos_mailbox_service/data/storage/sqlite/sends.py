@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import json
 import sqlite3
 from datetime import datetime
@@ -79,6 +80,10 @@ class SqliteSendLogRepository:
             return [r for r in found if matching.matches(r)][:limit]
         rows = self._db.query(f"{query} LIMIT ?", (*params, limit))
         return [_record(row) for row in rows]
+
+    def account_ids(self) -> builtins.list[str]:
+        rows = self._db.query("SELECT DISTINCT account_id FROM sends ORDER BY 1")
+        return [row[0] for row in rows]
 
 
 def _record(row: sqlite3.Row) -> SendRecord:

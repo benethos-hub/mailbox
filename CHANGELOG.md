@@ -162,7 +162,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `expires_at` of `POST /v1/users/{user_id}/tokens` needs a time zone,
   e.g. `2026-12-31T23:59:59Z`. Without one it answers `422`. Before, it
   answered `500`.
+- The sends page of the UI lists the sends of deleted accounts too, for
+  a user whose `audit` grant names every account, as
+  `GET /v1/accounts/{account_id}/sends` does. Before, it listed existing
+  accounts only.
 - Deleting a user removes its webhooks. Before, they stayed, posted
+
 
 
   nothing, and nobody could list or remove them. The database moves to

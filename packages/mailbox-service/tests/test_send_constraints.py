@@ -35,7 +35,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import Services
 
-from .conftest import bearer_for
+from .conftest import ADMIN, bearer_for
 
 
 def mail(*to: str, subject: str = "Hi") -> dict[str, object]:
@@ -283,6 +283,18 @@ def test_the_audit_is_paged(client: TestClient, account_id: str) -> None:
     assert client.get(url, params={"cursor": "nonsense"}).status_code == 400
 
 
+def test_the_audit_across_accounts_keeps_a_deleted_one(
+    client: TestClient, services: Services, account_id: str
+) -> None:
+    client.post(f"/v1/accounts/{account_id}/send", json=mail("a@x.org"))
+    assert client.delete(f"/v1/accounts/{account_id}").status_code == 204
+    page = services.mailbox.list_all_sends(ADMIN, limit=10)
+    assert [r.account_id for r in page.items] == [account_id]
+    # A grant on named accounts audits those alone.
+    named = Access("usr_a", "a", [Grant(accounts=["acc_other"], allow=["audit"])])
+    assert services.mailbox.list_all_sends(named, limit=10).items == []
+
+
 def test_the_audit_needs_its_right(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
@@ -510,7 +522,9 @@ def test_the_send_log_filters(kind: str) -> None:
         )
         return [r.id for r in found]
 
+    assert store.account_ids() == ["acc_1"]
     assert ids(user_id="usr_1") == ["snd_2", "snd_0"]
+
     assert ids(outcome="denied") == ["snd_1"]
     assert ids(recipient="bob@") == ["snd_0"]
     assert ids(recipient='"') == []  # never the JSON around the addresses

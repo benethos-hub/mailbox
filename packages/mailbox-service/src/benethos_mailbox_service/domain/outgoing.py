@@ -167,7 +167,7 @@ class Outgoing:
     ) -> Page[SendRecord]:
         """The sends of every account the caller may audit, newest first."""
         return self._sends.list_all_sends(
-            access, self._calls.ids(), limit=limit, cursor=cursor, matching=matching
+            access, limit=limit, cursor=cursor, matching=matching
         )
 
     # --- composing ------------------------------------------------------------------

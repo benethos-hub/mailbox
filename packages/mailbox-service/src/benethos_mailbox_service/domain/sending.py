@@ -141,15 +141,18 @@ class SendControl:
     def list_all_sends(
         self,
         access: Access,
-        account_ids: list[str],
         *,
         limit: int,
         cursor: str | None = None,
         matching: SendFilter | None = None,
     ) -> Page[SendRecord]:
         """The audit of every account the caller may audit, merged newest
-        first."""
-        audited = [a for a in account_ids if access.allows("list_sends", a)]
+        first. The audit outlives an account: a deleted one is still in it,
+        for a caller whose grant names every account."""
+        audited = [
+            a for a in self._store.account_ids() if access.allows("list_sends", a)
+        ]
+
         return self._page(audited, limit, cursor, matching)
 
     def list_sends(
