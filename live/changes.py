@@ -48,7 +48,14 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 import anyio
-from _common import Run, accounts, messages_with_subject, read_env, register
+from _common import (
+    Run,
+    accounts,
+    admin_token,
+    messages_with_subject,
+    read_env,
+    register,
+)
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -421,7 +428,6 @@ def main() -> int:
 
     settings = Settings(
         storage="memory",
-        api_key=SecretStr("live-changes"),
         key_provider="env",
         master_key=SecretStr(encode_recovery(cipher.new_key())),
         sync_interval=0,
@@ -430,7 +436,7 @@ def main() -> int:
     services.vault.initialize()
     client = TestClient(
         create_app(settings, services),
-        headers={"Authorization": "Bearer live-changes"},
+        headers={"Authorization": f"Bearer {admin_token(services)}"},
     )
     run = Run()
     other: OtherClient | None = None

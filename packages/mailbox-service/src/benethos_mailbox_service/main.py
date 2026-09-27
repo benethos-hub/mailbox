@@ -44,6 +44,7 @@ from .data.secrets import (
     KeyProvider,
     KeyProviderError,
     KeyringKeyProvider,
+    PasswordHasher,
 )
 from .data.storage import Database, MessageIndexRepository, open_repositories
 from .domain.accounts import AccountService
@@ -55,6 +56,7 @@ from .domain.discovery import DiscoveryService
 from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
 from .domain.oauth import OAuthService
+from .domain.passwords import Passwords
 from .domain.sending import SendControl
 from .domain.sync import SyncService
 from .domain.users import UserService
@@ -102,6 +104,7 @@ def build_services(
     oauth_clients: Mapping[ProviderType, OAuthClient] | None = None,
     resolve: Resolve | None = None,
     lookup: Lookup | None = None,
+    password_hasher: PasswordHasher | None = None,
 ) -> Services:
     """``resolve`` answers DNS for the host check that autodiscovery and the
     hosts of an account pass (CONCEPT 5.8, rule 6), ``lookup`` the same
@@ -109,7 +112,6 @@ def build_services(
     make without ``provider_factory``. Tests hand in tables."""
     repos = open_repositories(settings.storage, settings.database_path)
     vault = CredentialVault(repos.keys, repos.credentials, key_provider(settings))
-    admin_key = settings.api_key.get_secret_value() if settings.api_key else None
     clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
     # One guard for every connection the service makes to a host a user
     # typed: the lookups of autodiscovery and the servers of an account.
@@ -134,7 +136,12 @@ def build_services(
         changes=changes,
     )
     sync = SyncService(adapters, repos.index, feed=changes)
-    auth = AuthService(repos.users, repos.roles, repos.tokens, admin_key=admin_key)
+    auth = AuthService(
+        repos.users,
+        repos.roles,
+        repos.tokens,
+        passwords=Passwords(repos.passwords, password_hasher),
+    )
     return Services(
         accounts=accounts,
         adapters=adapters,

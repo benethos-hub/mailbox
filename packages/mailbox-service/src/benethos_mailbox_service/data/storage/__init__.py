@@ -31,6 +31,7 @@ from .index import (
     InMemoryMessageIndexRepository,
     MessageIndexRepository,
 )
+from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
     Database,
@@ -40,6 +41,7 @@ from .sqlite import (
     SqliteIdempotencyRepository,
     SqliteKeyRepository,
     SqliteMessageIndexRepository,
+    SqlitePasswordRepository,
     SqliteRoleRepository,
     SqliteSendLogRepository,
     SqliteTokenRepository,
@@ -72,6 +74,7 @@ class Repositories:
     users: UserRepository
     roles: RoleRepository
     tokens: TokenRepository
+    passwords: PasswordRepository
     keys: KeyRepository
     credentials: CredentialRepository
     index: MessageIndexRepository
@@ -96,6 +99,7 @@ def open_repositories(
             users=InMemoryUserRepository(),
             roles=InMemoryRoleRepository(),
             tokens=InMemoryTokenRepository(),
+            passwords=InMemoryPasswordRepository(),
             keys=InMemoryKeyRepository(),
             credentials=InMemoryCredentialRepository(),
             index=InMemoryMessageIndexRepository(),
@@ -110,6 +114,7 @@ def open_repositories(
         users=SqliteUserRepository(db),
         roles=SqliteRoleRepository(db),
         tokens=SqliteTokenRepository(db),
+        passwords=SqlitePasswordRepository(db),
         keys=SqliteKeyRepository(db),
         credentials=SqliteCredentialRepository(db),
         index=SqliteMessageIndexRepository(db),
@@ -136,6 +141,10 @@ __all__ = [
     "WebhookRepository",
     "IdempotencyRepository",
     "InMemoryIdempotencyRepository",
+    "InMemoryPasswordRepository",
+    "PasswordRepository",
+    "SqlitePasswordRepository",
+    "StoredPassword",
     "SqliteIdempotencyRepository",
     "StoredResult",
     "IndexChanges",

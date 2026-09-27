@@ -40,7 +40,7 @@ The container image is `ghcr.io/benethos-hub/benethos-mailbox-service`. See
 
 ```sh
 benethos-mailbox-service keys init              # once: the keys; prints the recovery key
-benethos-mailbox-service users create-admin     # once: a user with every right; prints its token
+benethos-mailbox-service users create-admin     # once: a user with every right; prints a one-time password
 benethos-mailbox-service serve
 ```
 
@@ -48,14 +48,18 @@ benethos-mailbox-service serve
   store and the data key in the database. It prints a **recovery key**
   once. Keep it apart from the machine and its backups. Without it, a
   database cannot be opened on another machine.
-- `users create-admin` prints an API token once. Use it to sign in to the
-  UI, and send it as `Authorization: Bearer <token>` to the API.
+- `users create-admin` creates the user `admin` and prints a one-time
+  password once. Sign in to the UI with it. The UI then asks for a
+  password of your own, 15 characters at least. Tokens for the API are
+  made in the UI, on a user's page.
+- A forgotten password: `users set-password <name>` on the host gives
+  that user a new one-time password.
 - Both write the secret alone to standard output and everything else to
   standard error, so it can be piped straight into a password manager.
   Printed to a terminal, it stays in its scrollback, and in a container
   or CI job, in the log of that run. Clear these afterwards.
 - `serve` listens on `http://127.0.0.1:8080`:
-  - `/ui`: the configuration UI (sign in with the token)
+  - `/ui`: the configuration UI (sign in with the user name and password)
   - `/docs`: the interactive API documentation
   - `/health`: open, for health checks
 
@@ -91,7 +95,6 @@ A template for the settings file with every option:
 | `MAILBOX_SERVICE_KEY_PROVIDER` | `keyring` | where the master key lives: `keyring`, `file` or `env` |
 | `MAILBOX_SERVICE_KEY_FILE` | | the key file, for `file` |
 | `MAILBOX_SERVICE_MASTER_KEY` | | the recovery key, for `env` |
-| `MAILBOX_SERVICE_KEY` | | optional built-in admin key, for containers and tests |
 | `MAILBOX_SERVICE_SYNC_INTERVAL` | `300` | seconds between two polls of every folder. `0` switches the sync off. |
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | watch the inbox over IMAP IDLE, with a second connection per account |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
@@ -114,7 +117,8 @@ A template for the settings file with every option:
 | `keys init` | creates the keys, prints the recovery key once |
 | `keys import` | stores the master key from a recovery key read from stdin, e.g. on a new machine |
 | `keys generate` | prints a new master key for a key file or a container secret, stores nothing |
-| `users create-admin` | creates a user with every right and prints its token |
+| `users create-admin [--name N]` | creates a user with every right and prints a one-time password |
+| `users set-password NAME` | gives the user a new one-time password and prints it |
 | `backup FILE` | writes an encrypted backup, while the service runs |
 | `backup verify FILE [--recovery-key]` | checks a backup |
 | `restore FILE [--recovery-key]` | replaces the database with a backup. Stop the service first. |
@@ -138,8 +142,9 @@ audit. `GET /v1/me` shows what a token may do.
 Users, roles and tokens are managed in the UI (Users, Roles) or under
 `/v1/users` and `/v1/roles`. A token is shown once, when it is created.
 Give each script and each assistant its own user with only the rights it
-needs. With neither a user nor `MAILBOX_SERVICE_KEY`, the API answers
-`503 setup_required`.
+needs. Until `users create-admin` has made the first user, the API
+answers `503 setup_required`. Every call is made by a user, so the
+audit names one.
 
 ## Changes and webhooks
 

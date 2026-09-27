@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.main import Services
 
-from .conftest import bearer_for, create_account
+from .conftest import browser_user, create_account
 from .ui_helpers import post, sign_in
 
 
@@ -24,7 +24,8 @@ def test_the_audit_of_one_account(ui: TestClient, account_id: str) -> None:
     _send(ui, account_id, "bob@example.org")
     page = ui.get(f"/ui/accounts/{account_id}/sends").text
     assert "bob@example.org" in page and "sent" in page
-    assert "test admin" in page or "admin key" in page
+    assert "<strong>admin</strong>" in page or ">admin<" in page
+    assert "the UI" in page  # sent from a session, not with a token
     assert "private body 4711" not in page  # never the content
     account = ui.get(f"/ui/accounts/{account_id}").text
     assert f'href="/ui/accounts/{account_id}/sends"' in account
@@ -33,20 +34,22 @@ def test_the_audit_of_one_account(ui: TestClient, account_id: str) -> None:
 def test_a_denied_send_is_in_the_audit(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(
-        services,
-        Grant(
-            accounts=[account_id],
-            allow=["mail.read", "send", "audit"],
-            recipients=["*@example.org"],
+    sign_in(
+        app_client,
+        *browser_user(
+            services,
+            Grant(
+                accounts=[account_id],
+                allow=["mail.read", "send", "audit"],
+                recipients=["*@example.org"],
+            ),
         ),
     )
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
     _send(app_client, account_id, "eve@elsewhere.example")
     page = app_client.get(f"/ui/accounts/{account_id}/sends").text
     assert "eve@elsewhere.example" in page and "denied" in page
     assert "recipient_not_allowed" in page
-    assert "limited" in page  # its own name, though it may not list users
+    assert "browser-" in page  # its own name, though it may not list users
 
 
 def test_every_account_together(
@@ -78,7 +81,9 @@ def test_paging(
 def test_no_audit_without_the_right(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(services, Grant(accounts=[account_id], allow=["mail.read"]))
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
+    sign_in(
+        app_client,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
     assert app_client.get(f"/ui/accounts/{account_id}/sends").status_code == 403
     assert "Nothing sent yet" in app_client.get("/ui/sends").text

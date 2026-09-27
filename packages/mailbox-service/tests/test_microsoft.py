@@ -44,7 +44,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import build_services, create_app
 
-from .conftest import API_KEY
+from .conftest import admin_bearer
 from .graph_fake import TOKEN, FakeGraph
 from .test_oauth import TokenEndpoint, granted, id_token
 
@@ -390,7 +390,7 @@ def test_connect_read_and_send_through_the_api(
             tokens, ApiClient(transport=httpx.MockTransport(graph))
         )
 
-    config = Settings(storage="memory", api_key=SecretStr(API_KEY))
+    config = Settings(storage="memory")
     app = App(microsoft_endpoints(), "client-1", SecretStr("secret"))
     services = build_services(
         config,
@@ -402,16 +402,18 @@ def test_connect_read_and_send_through_the_api(
         },
     )
     services.vault.initialize()
-    client = TestClient(
-        create_app(config, services), headers={"Authorization": f"Bearer {API_KEY}"}
-    )
+    headers = admin_bearer(services)
+    client = TestClient(create_app(config, services), headers=headers)
     from urllib.parse import parse_qs, urlsplit
 
     started = client.post("/v1/oauth/microsoft/start", json={}).json()["url"]
     state = parse_qs(urlsplit(started).query)["state"][0]
     import anyio
 
-    caller = services.auth.authenticate(API_KEY)
+    # The one who started the sign-in finishes it.
+    caller = services.auth.authenticate(
+        headers["Authorization"].removeprefix("Bearer ")
+    )
     account = anyio.run(
         lambda: services.oauth.finish(caller, ProviderType.MICROSOFT, state, "code")
     )

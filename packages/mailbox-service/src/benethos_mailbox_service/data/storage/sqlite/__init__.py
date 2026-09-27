@@ -9,6 +9,7 @@ from .credentials import SqliteCredentialRepository, SqliteKeyRepository
 from .database import SCHEMA_VERSION, Database, inspect_snapshot
 from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
+from .passwords import SqlitePasswordRepository
 from .sends import SqliteSendLogRepository
 from .users import SqliteRoleRepository, SqliteTokenRepository, SqliteUserRepository
 from .webhooks import SqliteWebhookRepository
@@ -22,6 +23,7 @@ __all__ = [
     "SqliteIdempotencyRepository",
     "SqliteKeyRepository",
     "SqliteMessageIndexRepository",
+    "SqlitePasswordRepository",
     "SqliteRoleRepository",
     "SqliteSendLogRepository",
     "SqliteTokenRepository",

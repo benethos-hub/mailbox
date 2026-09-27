@@ -8,19 +8,30 @@ from typing import Any
 import httpx
 from fastapi.testclient import TestClient
 
-from .conftest import API_KEY
+
+def sign_in(client: TestClient, name: str, password: str, next: str = "/ui") -> None:
+    answer = try_sign_in(client, name, password, next)
+    assert answer.status_code == 303, answer.text
+    assert "notice=" not in answer.headers["location"], answer.headers["location"]
 
 
-def sign_in(client: TestClient, token: str = API_KEY, next: str = "/ui") -> None:
+def try_sign_in(
+    client: TestClient, name: str, password: str, next: str = "/ui"
+) -> httpx.Response:
+    """The sign-in form sent the way a browser sends it, not followed."""
     page = client.get("/ui/login")
     nonce = re.search(r'name="nonce" value="([^"]+)"', page.text)
     assert nonce is not None
-    answer = client.post(
+    return client.post(
         "/ui/login",
-        data={"token": token, "nonce": nonce.group(1), "next": next},
+        data={
+            "name": name,
+            "password": password,
+            "nonce": nonce.group(1),
+            "next": next,
+        },
         follow_redirects=False,
     )
-    assert answer.status_code == 303, answer.text
 
 
 def csrf_of(html: str) -> str:

@@ -35,11 +35,6 @@ class Settings(BaseSettings):
     # host the OAuth redirect is built from without a public URL. Empty:
     # only a proxy on 127.0.0.1 is believed.
     forwarded_allow_ips: str | None = None
-    # The built-in admin key. Read from MAILBOX_SERVICE_KEY, not the prefixed
-    # MAILBOX_SERVICE_API_KEY.
-    api_key: SecretStr | None = Field(
-        default=None, validation_alias="MAILBOX_SERVICE_KEY"
-    )
     log_level: str = "INFO"
     # Where the database lives. A relative path counts from the working
     # directory.

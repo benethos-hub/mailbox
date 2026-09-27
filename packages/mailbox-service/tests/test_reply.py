@@ -133,9 +133,7 @@ def services(
             sleep=lambda seconds: None,
         )
 
-    services = build_services(
-        Settings(storage="memory", api_key=SecretStr("k")), provider_factory=factory
-    )
+    services = build_services(Settings(storage="memory"), provider_factory=factory)
     services.vault.initialize()
     return services
 

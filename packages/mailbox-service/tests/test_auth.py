@@ -134,14 +134,6 @@ def test_token_for_unknown_user(service: AuthService) -> None:
         service.issue_token("usr_ghost", "t")
 
 
-def test_admin_key(repos) -> None:
-    service = AuthService(*repos, admin_key="the-key")
-    access = service.authenticate("the-key")
-    assert access.allows("delete_account", "acc_any")
-    with pytest.raises(UnauthorizedError):
-        service.authenticate("not-the-key")
-
-
 def test_nothing_configured_asks_for_setup(repos) -> None:
     with pytest.raises(SetupRequiredError, match="create-admin"):
         AuthService(*repos).authenticate("anything")

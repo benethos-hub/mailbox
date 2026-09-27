@@ -33,9 +33,16 @@ def _parser() -> argparse.ArgumentParser:
     users = commands.add_parser("users", help="manage users on this host")
     users_commands = users.add_subparsers(dest="users_command", required=True)
     create_admin = users_commands.add_parser(
-        "create-admin", help="create a user with every right and print its token"
+        "create-admin",
+        help="create a user with every right and print a one-time password",
     )
     create_admin.add_argument("--name", default="admin")
+    set_password = users_commands.add_parser(
+        "set-password",
+        help="give a user a new one-time password and print it, "
+        "e.g. when the last administrator forgot theirs",
+    )
+    set_password.add_argument("name")
 
     keys = commands.add_parser("keys", help="the master key and the data key")
     keys_commands = keys.add_subparsers(dest="keys_command", required=True)
@@ -81,7 +88,7 @@ def _run(args: argparse.Namespace) -> int:
 
         sys.stdout.write(openapi_json())
     elif args.command == "users":
-        _create_admin(args.name)
+        _users(args)
     elif args.command == "keys":
         _keys(args.keys_command)
     elif args.command == "backup":
@@ -108,18 +115,27 @@ def _run(args: argparse.Namespace) -> int:
     return 0
 
 
-def _create_admin(name: str) -> None:
+def _users(args: argparse.Namespace) -> None:
+    """The password alone goes to stdout, so it can be piped on."""
+    import anyio
+
     from .main import opened
 
     settings = Settings()
     with opened(settings) as services:
-        user, token = services.users.create_admin(name)
+        if args.users_command == "create-admin":
+            user, password = anyio.run(services.users.create_admin, args.name)
+            done = f"Created user {user.id} ({user.name}) with every right"
+        else:
+            user, password = anyio.run(services.users.reset_password, args.name)
+            done = f"Gave {user.name} ({user.id}) a new password"
     print(
-        f"Created user {user.id} ({user.name}) with every right in "
-        f"{settings.database_path}. Its token is shown this once:",
+        f"{done} in {settings.database_path}. Sign in to the UI with this "
+        "one-time password, shown this once. The UI then asks for one of "
+        "your own:",
         file=sys.stderr,
     )
-    print(token)
+    print(password)
 
 
 def _keys(command: str) -> None:

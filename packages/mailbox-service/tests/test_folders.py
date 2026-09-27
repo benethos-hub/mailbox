@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
@@ -27,7 +26,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import Services, build_services, create_app
 
-from .conftest import bearer_for, create_account
+from .conftest import admin_bearer, bearer_for, create_account
 from .imap_fake import FakeFolder, FakeMailBox
 from .test_imap import provider, server  # noqa: F401 - the fixture
 
@@ -142,12 +141,10 @@ def test_a_role_names_a_folder(messages: list[Message]) -> None:
         ],
         messages=messages,
     )
-    settings = Settings(storage="memory", api_key=SecretStr("k"))
+    settings = Settings(storage="memory")
     services = build_services(settings, provider_factory=lambda *_: adapter)
     account_id = create_account(services.accounts, ProviderType.MEMORY, "a@x.org").id
-    client = TestClient(
-        create_app(settings, services), headers={"Authorization": "Bearer k"}
-    )
+    client = TestClient(create_app(settings, services), headers=admin_bearer(services))
     url = f"/v1/accounts/{account_id}"
     created = client.post(
         f"{url}/folders", json={"name": "2026", "parent_id": "archive"}

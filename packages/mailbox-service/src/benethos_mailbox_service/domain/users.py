@@ -1,4 +1,4 @@
-"""Users, their tokens and roles, managed through the API.
+"""Users, their tokens, passwords and roles.
 
 No escalation: a caller can only hand out rights it holds itself, and can
 only manage a user whose rights it holds itself.
@@ -6,6 +6,8 @@ only manage a user whose rights it holds itself.
 
 from __future__ import annotations
 
+import logging
+import secrets
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
@@ -18,6 +20,11 @@ from . import permissions
 from .access import Access, SendLimit
 from .adapters import Adapters
 from .auth import AuthService, TokenState
+
+log = logging.getLogger(__name__)
+
+# A one-time password of 18 random bytes: 24 characters, 144 bits.
+ONE_TIME_BYTES = 18
 
 
 @dataclass(frozen=True)
@@ -97,17 +104,34 @@ class UserService:
 
     # --- setup ----------------------------------------------------------------
 
-    def create_admin(self, name: str) -> tuple[User, str]:
-        """A user with every right, and a token for it. For the command line
-        on the host only: it checks no caller."""
+    async def create_admin(self, name: str) -> tuple[User, str]:
+        """A user with every right, and a one-time password for it, to be
+        changed at the first sign-in. For the command line on the host
+        only: it checks no caller."""
+        _named("a user", name)
+        self._require_free(name)
         user = User(
             id=new_id("usr"),
             name=name,
             grants=[Grant(accounts=["*"], allow=[permissions.ADMIN])],
         )
         self._users.save(user)
-        _, plain = self._auth.issue_token(user.id, "created on the command line")
-        return user, plain
+        return user, await self._one_time(user)
+
+    async def reset_password(self, name: str) -> tuple[User, str]:
+        """A new one-time password for the user of this name, to be changed
+        at the next sign-in. For the command line on the host only, when
+        nobody who could set it can sign in: it checks no caller."""
+        user = self._auth.user_named(name)
+        if user is None:
+            raise NotFoundError(f"no user is named {name}")
+        return user, await self._one_time(user)
+
+    async def _one_time(self, user: User) -> str:
+        password = secrets.token_urlsafe(ONE_TIME_BYTES)
+        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
+        log.info("a one-time password for %s (%s) on the host", user.name, user.id)
+        return password
 
     # --- users ----------------------------------------------------------------
 
@@ -128,6 +152,7 @@ class UserService:
     ) -> User:
         access.require("create_user")
         _named("a user", name)
+        self._require_free(name)
         user = User(id=new_id("usr"), name=name, roles=roles, grants=grants)
         self._check_grantable(access, user.roles, user.grants)
         self._users.save(user)
@@ -146,6 +171,7 @@ class UserService:
         access.require("update_user")
         if name is not None:
             _named("a user", name)
+            self._require_free(name, user_id)
         user = self._users.get(user_id)
         self._require_covers_user(access, user)
         changes = {
@@ -170,7 +196,55 @@ class UserService:
         if user_id == access.user_id:
             raise ConflictError("a user cannot delete itself")
         self._tokens.delete_for_user(user_id)
+        self._auth.passwords.delete(user_id)
         self._users.delete(user_id)
+
+    def _require_free(self, name: str, user_id: str | None = None) -> None:
+        """A person signs in with the name: one user per name, whatever
+        the case."""
+        taken = self._auth.user_named(name)
+        if taken is not None and taken.id != user_id:
+            raise ConflictError(f"a user named {taken.name} exists")
+
+    # --- passwords ------------------------------------------------------------
+
+    def has_password(self, access: Access, user_id: str) -> bool:
+        """Whether the user can sign in to the UI."""
+        if user_id != access.user_id:
+            access.require("get_user")
+        return self._auth.passwords.stored(user_id) is not None
+
+    async def change_password(self, access: Access, current: str, new: str) -> datetime:
+        """The caller's own password, with the current one. Returns the new
+        stamp, which keeps the caller's session and ends its others."""
+        user = self._users.get(access.user_id)
+        if not await self._auth.passwords.matches(user.id, current):
+            raise BadRequestError("the current password is not right")
+        if new == current:
+            raise BadRequestError("the new password is the current one")
+        stored = await self._auth.passwords.set(
+            user.id, user.name, new, must_change=False
+        )
+        log.info("%s (%s) changed its password", user.name, user.id)
+        return stored.updated_at
+
+    async def set_password(self, access: Access, user_id: str, new: str) -> None:
+        """Another user's password, within the caller's rights: whoever sets
+        it can sign in as that user. It must be changed at the next
+        sign-in."""
+        access.require("set_password")
+        user = self._users.get(user_id)
+        self._require_covers_user(access, user)
+        if user_id == access.user_id:
+            raise ConflictError("change your own password with the current one")
+        await self._auth.passwords.set(user.id, user.name, new, must_change=True)
+        log.info(
+            "%s (%s) set the password of %s (%s)",
+            access.name,
+            access.user_id,
+            user.name,
+            user.id,
+        )
 
     # --- tokens ---------------------------------------------------------------
 

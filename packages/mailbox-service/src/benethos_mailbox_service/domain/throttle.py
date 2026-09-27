@@ -6,15 +6,15 @@ every attempt from that source answers "too many attempts" without the
 credential being checked, so a guesser learns nothing while locked. A
 successful sign-in clears the source's failures.
 
-The throttle knows nothing of the credential: a bearer token today, a
-password with TOTP or a passkey later all count the same way. Every
-sign-in path hands its source to ``AuthService``, which asks the throttle
-before and tells it afterwards.
+The throttle knows nothing of the credential: a bearer token, a password,
+a second factor later all count the same way. Every sign-in path hands
+its source to ``AuthService``, which asks the throttle before and tells
+it afterwards. The same class also slows down one user name.
 
 The state is in memory and per process. A restart forgets it, which is
-acceptable for what it prevents: an online guess at an operator-chosen
-admin key. The number of sources kept is capped, so spoofed sources cannot
-grow the memory without bound.
+acceptable for what it prevents: an online guess at a password. The
+number of sources kept is capped, so spoofed sources cannot grow the
+memory without bound.
 """
 
 from __future__ import annotations

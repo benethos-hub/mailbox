@@ -15,6 +15,7 @@
   {% if me %}
   <div class="foot">
     Signed in as <strong>{{ me.name }}</strong>
+    <a class="small" href="/ui/password">Password</a>
     <form method="post" action="/ui/logout">
       {{ csrf_field() }}
       <button class="small ghost" type="submit">Sign out</button>

@@ -41,9 +41,11 @@ done. Update the roadmap in the same commit that finishes an item.
   `.env.example`. Paths count from the repository root, where `uv run` is
   started. Data likewise, one folder per package under `data/` (not
   versioned): the database in `data/benethos-mailbox-service/`.
-- Run the service: once `uv run benethos-mailbox-service keys init`, then
-  `MAILBOX_SERVICE_KEY=... uv run benethos-mailbox-service serve` and
-  `http://127.0.0.1:8080/docs`.
+- Run the service: once `uv run benethos-mailbox-service keys init` and
+  `uv run benethos-mailbox-service users create-admin` (prints a one-time
+  password), then `uv run benethos-mailbox-service serve`. Sign in at
+  `http://127.0.0.1:8080/ui` as `admin`, choose a password, and make a
+  token on the user's page for the API (`/docs`).
 - Live checks: `uv run python live/smoke.py [--show]` (read-only) and
   `uv run python live/changes.py [--keep]` (sends one test mail between the test
   accounts, moves it, deletes it, and checks the change feed and a
@@ -65,7 +67,10 @@ done. Update the roadmap in the same commit that finishes an item.
   `whats_new` must name the changes of the write tools.
   `uv run python live/mcp_http.py` checks it over streamable HTTP behind
   its bearer token, read-only.
-- The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a token.
+- The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a user
+  name and a password. The live checks with a service of their own make
+  its first user with `users create-admin`, change the one-time password
+  in the UI and make a token there, as an operator would.
   `uv run python live/ui.py` checks it against the test accounts. It sends
   one mail from the first test account to the second and deletes it for
   good on both sides.
@@ -152,7 +157,8 @@ packages/
         sending.py        # SendControl: grant constraints on sending, send audit
         permissions.py    # the catalogue of rights and groups
         access.py         # Access: what one caller may do
-        auth.py           # AuthService: tokens, the admin key
+        auth.py           # AuthService: tokens, sign-in with a password
+        passwords.py      # Passwords: the rules, hashing off the event loop
         throttle.py       # SignInThrottle: a source that fails too often waits
         users.py          # UserService: users, roles, tokens
         webhooks.py       # WebhookService: register, list, remove
@@ -185,7 +191,8 @@ packages/
                           #   post.py (posts to webhook receivers)
         storage/          # own records, one module per subject, table.py
                           #   for the in-memory ones, sqlite/ the database
-        secrets/          # envelope encryption, key providers, backup
+        secrets/          # envelope encryption, key providers, backup,
+                          #   password hashes
         files.py          # files for the owner alone (0600): database, backup, key
         discovery/        # autodiscovery sources and their helpers
     tests/
@@ -278,11 +285,12 @@ noticing. Every change is measured against that.
 | Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, microsoft (planned: gmail, pop3) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/providers/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, later templates for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX (planned: JMAP well-known, Microsoft realm, SRV, guessing) | any further lookup, or one switched off |
 | HTTP | `data/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/providers/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
+| Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token | password + TOTP, OAuth client credentials |
 | MCP ↔ service | the REST API, `docs/openapi.json` | httpx client in `client.py` | a generated client |
 

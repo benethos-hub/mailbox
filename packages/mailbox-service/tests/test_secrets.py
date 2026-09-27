@@ -287,7 +287,7 @@ def test_stored_encrypted_and_never_returned(
 ) -> None:
     master = encode_recovery(cipher.new_key())
     monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", master)
-    settings = Settings(data_dir=tmp_path, storage="sqlite", api_key=SecretStr("k"))
+    settings = Settings(data_dir=tmp_path, storage="sqlite")
     services = build_services(settings)
     services.vault.initialize()
     account = create_account(

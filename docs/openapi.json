@@ -100,7 +100,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -187,7 +187,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -278,7 +278,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -373,7 +373,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -486,7 +486,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -602,7 +602,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -701,7 +701,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -813,7 +813,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -929,7 +929,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1046,7 +1046,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1142,7 +1142,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1237,7 +1237,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1350,7 +1350,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1466,7 +1466,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1565,7 +1565,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1661,7 +1661,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1756,7 +1756,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1869,7 +1869,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1986,7 +1986,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2085,7 +2085,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2193,7 +2193,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2296,7 +2296,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2439,7 +2439,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2767,7 +2767,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2918,7 +2918,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3040,7 +3040,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3157,7 +3157,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3285,7 +3285,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3394,7 +3394,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3711,7 +3711,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3828,7 +3828,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3954,7 +3954,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4075,7 +4075,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4214,7 +4214,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4361,7 +4361,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4500,7 +4500,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4647,7 +4647,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4764,7 +4764,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4892,7 +4892,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5001,7 +5001,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5139,7 +5139,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5268,7 +5268,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5381,7 +5381,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5503,7 +5503,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5600,7 +5600,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5696,7 +5696,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5802,7 +5802,7 @@
             }
           },
           "503": {
-            "description": "No user and no admin key exist yet",
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -7940,7 +7940,7 @@
               }
             ],
             "title": "Credential Id",
-            "description": "The token used, null for the admin key."
+            "description": "The token used, null for a send from the UI."
           },
           "account_id": {
             "type": "string",

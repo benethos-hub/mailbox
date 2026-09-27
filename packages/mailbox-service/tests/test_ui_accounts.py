@@ -16,7 +16,7 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.main import Services
 
-from .conftest import bearer_for
+from .conftest import browser_user
 from .ui_helpers import post, sign_in
 
 
@@ -134,10 +134,12 @@ def test_a_message_is_shown_once_and_never_taken_from_a_link(
 def test_a_reader_sees_no_forms(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(
-        services, Grant(accounts=[account_id], allow=["accounts.read", "mail.read"])
+    sign_in(
+        app_client,
+        *browser_user(
+            services, Grant(accounts=[account_id], allow=["accounts.read", "mail.read"])
+        ),
     )
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
     page = app_client.get(f"/ui/accounts/{account_id}").text
     assert "me@example.com" in page
     assert "Remove account" not in page and "New password" not in page

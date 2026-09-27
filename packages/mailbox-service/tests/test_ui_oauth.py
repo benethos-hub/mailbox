@@ -27,7 +27,7 @@ from benethos_mailbox_service.data.providers.microsoft import (
 from benethos_mailbox_service.data.providers.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.main import Services, build_services, create_app
 
-from .conftest import API_KEY, bearer_for
+from .conftest import CHEAP, admin_bearer, bearer_for, browser_admin
 from .test_oauth import TokenEndpoint, factory, granted, id_token
 from .ui_helpers import post, sign_in
 
@@ -43,13 +43,14 @@ def endpoint() -> TokenEndpoint:
 
 
 def build(endpoint: TokenEndpoint, **settings: Any) -> tuple[TestClient, Services]:
-    config = Settings(storage="memory", api_key=SecretStr(API_KEY), **settings)
+    config = Settings(storage="memory", **settings)
     app = App(microsoft_endpoints(), "client-1", SecretStr("app-secret"))
     client = OAuthClient(app, ApiClient(transport=httpx.MockTransport(endpoint)))
     services = build_services(
         config,
         provider_factory=factory,
         oauth_clients={ProviderType.MICROSOFT: client},
+        password_hasher=CHEAP,
     )
     services.vault.initialize()
     return TestClient(create_app(config, services)), services
@@ -58,7 +59,7 @@ def build(endpoint: TokenEndpoint, **settings: Any) -> tuple[TestClient, Service
 @pytest.fixture
 def browser(endpoint: TokenEndpoint) -> tuple[TestClient, Services]:
     client, services = build(endpoint)
-    sign_in(client)
+    sign_in(client, *browser_admin(services))
     return client, services
 
 
@@ -98,8 +99,8 @@ def test_off_to_the_provider(browser: tuple[TestClient, Services]) -> None:
 
 
 def test_the_redirect_uses_the_public_url(endpoint: TokenEndpoint) -> None:
-    client, _ = build(endpoint, public_url="https://mail.example.org/")
-    sign_in(client)
+    client, services = build(endpoint, public_url="https://mail.example.org/")
+    sign_in(client, *browser_admin(services))
     location = _start(client).headers["location"]
     redirect = parse_qs(urlsplit(location).query)["redirect_uri"][0]
     assert redirect == "https://mail.example.org/ui/oauth/microsoft/callback"
@@ -217,11 +218,11 @@ def test_discovery_offers_the_sign_in(browser: tuple[TestClient, Services]) -> N
 
 
 def test_the_api_starts_a_sign_in(endpoint: TokenEndpoint) -> None:
-    client, _ = build(endpoint)
+    client, services = build(endpoint)
     answer = client.post(
         "/v1/oauth/microsoft/start",
         json={"login_hint": "me@example.org"},
-        headers={"Authorization": f"Bearer {API_KEY}"},
+        headers=admin_bearer(services),
     )
     assert answer.status_code == 200, answer.text
     url = answer.json()["url"]

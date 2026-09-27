@@ -41,14 +41,40 @@ adheres to [Semantic Versioning](https://semver.org/).
   `state` of an earlier call, in one account or all. A token with
   `mail.read` gets it.
 
+- The configuration UI signs in with a user name and a password. A user
+  changes its own password under **Password** with the current one. A
+  user with the new right `set_password` (in `users.manage`) sets another
+  user's password on its page, within its own rights. That user must
+  change it at the next sign-in. A changed password signs out every
+  other session of its user. Passwords have 15 to 256 characters.
+- A wrong user name and a wrong password answer alike. After ten failures
+  in fifteen minutes a user name waits one minute, from any address, on
+  top of the lockout per client address.
+
 ### Changed
 
+- The configuration UI no longer takes an API token to sign in. Tokens
+  are for the API and the MCP server.
+- `users create-admin` prints a one-time password instead of a token. The
+  first sign-in to the UI asks for a password of one's own. A second user
+  of the same name is refused. `users set-password NAME` gives a user a
+  new one-time password, e.g. when the last administrator forgot theirs.
 - The last two places with the old name use the new one. A draft marks
   what it replies to with `X-Mailbox-Service-Reference` (was
   `X-Mailbox-Api-Reference`), and a backup starts with
   `MAILBOX-SERVICE-BACKUP 1` (was `MAILBOX-API-BACKUP 1`). A backup
   made by 0.1.0 is refused. A draft saved by 0.1.0 loses its reference,
   and the old header stays in the mail when that draft is sent.
+- User names are unique regardless of case, since a person will sign in
+  with one. The database moves to schema 9. Of two users with the same
+  name, the later one gets part of its id appended.
+
+### Removed
+
+- The built-in admin key `MAILBOX_SERVICE_KEY`. Every call is made by a
+  user, so the audit names one. Make the first user with
+  `users create-admin` and a token for the API on its page in the UI. A
+  send from the UI has no token in the audit (`credential_id` null).
 
 ### Fixed
 

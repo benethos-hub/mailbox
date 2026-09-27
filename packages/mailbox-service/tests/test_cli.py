@@ -74,4 +74,3 @@ def test_env_example_holds_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None
     from_file = Settings(_env_file=example)  # type: ignore[call-arg]
     defaults = Settings(_env_file=None)  # type: ignore[call-arg]
     assert from_file == defaults
-    assert from_file.api_key is None

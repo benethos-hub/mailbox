@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import os
 from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from benethos_mailbox_service import main
 from benethos_mailbox_service.config import Settings
@@ -27,13 +27,18 @@ from benethos_mailbox_service.data.providers import (
     build_provider,
 )
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
+from benethos_mailbox_service.data.secrets import (
+    PasswordHasher,
+    Scrypt,
+    cipher,
+    encode_recovery,
+)
+from benethos_mailbox_service.domain import permissions
 from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.domain.accounts import AccountService
 from benethos_mailbox_service.domain.auth import AuthService
 from benethos_mailbox_service.main import Services, build_services, create_app
 
-API_KEY = "test-key"
 PUBLIC = "93.184.215.14"  # what every host resolves to, without DNS
 METHODS = {"get", "post", "put", "patch", "delete"}  # of the OpenAPI document
 
@@ -70,7 +75,7 @@ def no_configuration_from_this_machine(
 
 @pytest.fixture
 def settings() -> Settings:
-    return Settings(api_key=SecretStr(API_KEY), storage="memory")
+    return Settings(storage="memory")
 
 
 @pytest.fixture
@@ -107,7 +112,7 @@ def services(settings: Settings, messages: list[Message]) -> Services:
             return MemoryProvider(messages=messages)
         return build_provider(kind, provider_settings, credentials)
 
-    return build_services(settings, provider_factory=factory)
+    return build_services(settings, provider_factory=factory, password_hasher=CHEAP)
 
 
 @pytest.fixture
@@ -147,14 +152,58 @@ def app_client(settings: Settings, services: Services) -> TestClient:
 @pytest.fixture
 def client(settings: Settings, services: Services) -> TestClient:
     app = create_app(settings, services)
-    return TestClient(app, headers={"Authorization": f"Bearer {API_KEY}"})
+    return TestClient(app, headers=admin_bearer(services))
+
+
+# Names are unique: each limited user gets a number.
+_LIMITED = itertools.count(1)
+_BROWSER = itertools.count(1)
+
+# Cheap to hash, so tests that sign in run fast. The service uses Scrypt().
+CHEAP = PasswordHasher(Scrypt(log_n=4, r=1, p=1))
+UI_PASSWORD = "a passphrase for the tests"
+
+
+def browser_user(
+    services: Services,
+    *grants: Grant,
+    roles: list[str] | None = None,
+    name: str | None = None,
+) -> tuple[str, str]:
+    """A user with these grants and a password it need not change: the
+    name and the password to sign in to the UI with."""
+    name = name or f"browser-{next(_BROWSER)}"
+    user = services.users.create_user(ADMIN, name, roles or [], list(grants))
+    asyncio.run(
+        services.auth.passwords.set(user.id, name, UI_PASSWORD, must_change=False)
+    )
+    return name, UI_PASSWORD
+
+
+def admin_bearer(services: Services) -> dict[str, str]:
+    """The header of a token of a user with every right: the API's
+    administrator in a test."""
+    name = f"api-admin-{next(_LIMITED)}"
+    user = services.users.create_user(
+        ADMIN, name, [], [Grant(accounts=["*"], allow=[permissions.ADMIN])]
+    )
+    _, plain = services.auth.issue_token(user.id, "tests")
+    return {"Authorization": f"Bearer {plain}"}
+
+
+def browser_admin(services: Services) -> tuple[str, str]:
+    """A user with every right, to sign in to the UI with."""
+    return browser_user(
+        services, Grant(accounts=["*"], allow=[permissions.ADMIN]), name="admin"
+    )
 
 
 def bearer_for(
     services: Services, *grants: Grant, roles: list[str] | None = None
 ) -> dict[str, str]:
     """A user with these grants, and the header of a fresh token for it."""
-    user = services.users.create_user(ADMIN, "limited", roles or [], list(grants))
+    name = f"limited-{next(_LIMITED)}"
+    user = services.users.create_user(ADMIN, name, roles or [], list(grants))
     _, plain = services.auth.issue_token(user.id, "test")
     return {"Authorization": f"Bearer {plain}"}
 
@@ -165,9 +214,10 @@ def create_account(accounts: AccountService, *args: Any, **kwargs: Any) -> Accou
 
 
 @pytest.fixture
-def ui(app_client: TestClient) -> TestClient:
-    """A browser signed in to the configuration UI with the admin key."""
+def ui(app_client: TestClient, services: Services) -> TestClient:
+    """A browser signed in to the configuration UI as a user with every
+    right."""
     from .ui_helpers import sign_in
 
-    sign_in(app_client)
+    sign_in(app_client, *browser_admin(services))
     return app_client

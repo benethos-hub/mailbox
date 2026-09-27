@@ -257,12 +257,10 @@ def test_every_attempt_is_in_the_audit(
     assert "Hello" not in str(page)  # never content
 
 
-def test_the_admin_key_has_no_credential_id(
-    client: TestClient, account_id: str
-) -> None:
+def test_the_audit_names_the_token(client: TestClient, account_id: str) -> None:
     client.post(f"/v1/accounts/{account_id}/send", json=mail("a@x.org"))
     [record] = client.get(f"/v1/accounts/{account_id}/sends").json()["items"]
-    assert record["credential_id"] is None
+    assert record["credential_id"].startswith("tok_")
 
 
 def test_the_audit_is_paged(client: TestClient, account_id: str) -> None:

@@ -6,7 +6,6 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
@@ -16,6 +15,7 @@ from benethos_mailbox_service.data.providers.protocols.imap import ImapSession
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.main import Services, build_services, create_app
 
+from .conftest import admin_bearer
 from .imap_fake import FakeMailBox, make_message
 
 NEW_ACCOUNT = {
@@ -49,14 +49,12 @@ def world(
             sleep=lambda seconds: None,
         )
 
-    settings = Settings(storage="memory", api_key=SecretStr("k"))
+    settings = Settings(storage="memory")
     services = build_services(settings, provider_factory=factory)
     services.vault.initialize()
     yield (
         services,
-        TestClient(
-            create_app(settings, services), headers={"Authorization": "Bearer k"}
-        ),
+        TestClient(create_app(settings, services), headers=admin_bearer(services)),
     )
 
 

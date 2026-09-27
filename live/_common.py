@@ -9,6 +9,7 @@ from here, so a script can be run from the repository root with
 from __future__ import annotations
 
 import os
+import re
 import secrets
 import shutil
 import socket
@@ -24,7 +25,11 @@ from typing import Any, TypeVar
 
 import httpx
 
+from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
+from benethos_mailbox_service.domain import permissions
+from benethos_mailbox_service.domain.access import Access
+from benethos_mailbox_service.main import Services
 
 ENV_FILE = Path(__file__).with_name(".env")
 T = TypeVar("T")
@@ -238,7 +243,7 @@ def stop(process: subprocess.Popen[bytes]) -> None:
 
 
 def service_env(
-    data_dir: str, port: int, admin_key: str, master_key: str | None = None
+    data_dir: str, port: int, master_key: str | None = None
 ) -> dict[str, str]:
     """The environment of a service on ``port`` with SQLite in ``data_dir``,
     the master key in the environment, and no background sync."""
@@ -248,7 +253,6 @@ def service_env(
         "MAILBOX_SERVICE_STORAGE": "sqlite",
         "MAILBOX_SERVICE_KEY_PROVIDER": "env",
         "MAILBOX_SERVICE_MASTER_KEY": master_key or encode_recovery(cipher.new_key()),
-        "MAILBOX_SERVICE_KEY": admin_key,
         "MAILBOX_SERVICE_HOST": "127.0.0.1",
         "MAILBOX_SERVICE_PORT": str(port),
         "MAILBOX_SERVICE_SYNC_INTERVAL": "0",
@@ -277,16 +281,98 @@ def start_service(
 
 
 @dataclass(frozen=True)
+class Admin:
+    """A user with every right: its name, its password for the UI, and a
+    token for the API."""
+
+    name: str
+    password: str
+    token: str
+
+
+def admin_token(services: Services, name: str = "live") -> str:
+    """A token of a new user with every right, for a script that runs the
+    services in its own process."""
+    caller = Access.admin("usr_live_script", "live script")
+    user = services.users.create_user(
+        caller, name, [], [Grant(accounts=["*"], allow=[permissions.ADMIN])]
+    )
+    return services.auth.issue_token(user.id, "live check")[1]
+
+
+# --- the configuration UI, the way a browser uses it ---------------------------
+
+
+def csrf_of(html: str) -> str:
+    found = re.search(r'name="csrf_token" value="([^"]+)"', html)
+    return found.group(1) if found else ""
+
+
+def ui_sign_in(browser: httpx.Client, name: str, password: str) -> httpx.Response:
+    """The sign-in form, sent with the nonce of its page."""
+    page = browser.get("/ui/login")
+    nonce = re.search(r'name="nonce" value="([^"]+)"', page.text)
+    return browser.post(
+        "/ui/login",
+        data={
+            "name": name,
+            "password": password,
+            "nonce": nonce.group(1) if nonce else "",
+        },
+    )
+
+
+def bootstrap(env: dict[str, str], url: str) -> Admin:
+    """The first user of a running service, the way an operator makes it:
+    `users create-admin` on the host prints a one-time password, the UI
+    asks for one of the user's own, and the user's page makes a token."""
+    made = subprocess.run(
+        [program("benethos-mailbox-service"), "users", "create-admin"],
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    one_time = made.stdout.strip()
+    own = secrets.token_urlsafe(18)
+    with httpx.Client(base_url=url, timeout=60, follow_redirects=True) as browser:
+        asked = ui_sign_in(browser, "admin", one_time)
+        if asked.url.path != "/ui/password":
+            sys.exit("bootstrap: the one-time password did not lead to /ui/password")
+        changed = browser.post(
+            "/ui/password",
+            data={
+                "csrf_token": csrf_of(asked.text),
+                "current_password": one_time,
+                "new_password": own,
+                "repeat_password": own,
+            },
+        )
+        users = browser.get("/ui/users").text
+        user_id = re.search(r'href="/ui/users/(usr_[0-9a-f]+)"', users)
+        if "Password changed." not in changed.text or user_id is None:
+            sys.exit("bootstrap: the password or the user page did not work")
+        made_token = browser.post(
+            f"/ui/users/{user_id.group(1)}/tokens",
+            data={"csrf_token": csrf_of(users), "name": "live check"},
+        )
+        token = re.search(r'<code class="secret">([^<]+)</code>', made_token.text)
+        if token is None:
+            sys.exit("bootstrap: no token on the user page")
+    return Admin("admin", own, token.group(1))
+
+
+@dataclass(frozen=True)
 class Service:
-    """A running service and the key that administers it."""
+    """A running service and the user that administers it."""
 
     url: str
-    admin_key: str
+    admin_user: Admin
 
     def admin(self, timeout: float = 60) -> httpx.Client:
         return httpx.Client(
             base_url=self.url,
-            headers={"Authorization": f"Bearer {self.admin_key}"},
+            headers={"Authorization": f"Bearer {self.admin_user.token}"},
             timeout=timeout,
         )
 
@@ -297,11 +383,11 @@ def throwaway_service(prefix: str) -> Iterator[Service]:
     master key that are gone at the end."""
     port = free_port()
     url = f"http://127.0.0.1:{port}"
-    admin_key = secrets.token_urlsafe(32)
     data_dir = tempfile.mkdtemp(prefix=prefix)
-    process = start_service(service_env(data_dir, port, admin_key), url)
+    env = service_env(data_dir, port)
+    process = start_service(env, url)
     try:
-        yield Service(url, admin_key)
+        yield Service(url, bootstrap(env, url))
     finally:
         stop(process)
         shutil.rmtree(Path(data_dir), ignore_errors=True)

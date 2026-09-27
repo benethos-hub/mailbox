@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
 from ....common.clock import utc_now
@@ -125,6 +125,8 @@ async def user(
         can_delete=caller.allows("delete_user") and found.id != caller.user_id,
         can_create_token=caller.allows("create_token"),
         can_revoke=caller.allows("revoke_token"),
+        has_password=users.has_password(caller, user_id),
+        can_set_password=caller.allows("set_password"),
         **_editor(request, caller, found.grants),
     )
 
@@ -154,6 +156,26 @@ async def delete_user(
     with failing(f"/ui/users/{user_id}"):
         users.delete_user(caller, user_id)
     return back(request, "/ui/users", "User deleted, and its tokens with it.")
+
+
+# --- password -------------------------------------------------------------------
+
+
+@router.post("/users/{user_id}/password")
+async def set_password(
+    request: Request,
+    caller: Actor,
+    user_id: str,
+    users: Users,
+    new_password: Annotated[str, Form()] = "",
+    repeat_password: Annotated[str, Form()] = "",
+) -> Response:
+    here = f"/ui/users/{user_id}"
+    if new_password != repeat_password:
+        return back(request, here, error="The two passwords differ.")
+    with failing(here):
+        await users.set_password(caller, user_id, new_password)
+    return back(request, here, "Password set. It must be changed at the next sign-in.")
 
 
 # --- tokens ---------------------------------------------------------------------

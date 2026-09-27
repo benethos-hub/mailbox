@@ -170,6 +170,20 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX idempotency_created ON idempotency (created_at);
     """,
+    # 9: passwords, and user names that are unique regardless of case, the
+    # name being what a person signs in with. A name taken twice before
+    # gets part of its id, so the index can be made
+    """
+    UPDATE users SET name = name || '-' || substr(id, 5, 8)
+        WHERE rowid NOT IN (SELECT MIN(rowid) FROM users GROUP BY lower(name));
+    CREATE UNIQUE INDEX users_name ON users (name COLLATE NOCASE);
+    CREATE TABLE passwords (
+        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        hash TEXT NOT NULL,
+        must_change INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL
+    );
+    """,
 ]
 
 SCHEMA_VERSION = len(MIGRATIONS)

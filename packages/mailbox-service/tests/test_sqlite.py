@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import sqlite3
 import stat
@@ -22,10 +23,11 @@ from benethos_mailbox_service.errors import (
     ConflictError,
     NotFoundError,
     StorageError,
+    UnauthorizedError,
 )
 from benethos_mailbox_service.main import build_services
 
-from .conftest import create_account
+from .conftest import CHEAP, create_account
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -142,13 +144,16 @@ def test_the_index_of_a_deleted_account_is_a_conflict(db: Database) -> None:
 
 def test_everything_survives_a_restart(tmp_path: Path) -> None:
     settings = Settings(data_dir=tmp_path, storage="sqlite")
-    first = build_services(settings)
+    first = build_services(settings, password_hasher=CHEAP)
     account = create_account(first.accounts, ProviderType.MEMORY, "a@example.com")
-    user, token = first.users.create_admin("owner")
+    user, password = asyncio.run(first.users.create_admin("owner"))
+    _, token = first.auth.issue_token(user.id, "t")
 
     first.close()
 
-    second = build_services(settings)
+    second = build_services(settings, password_hasher=CHEAP)
+    signed = asyncio.run(second.auth.sign_in("owner", password, source="host"))
+    assert signed.user_id == user.id
     access = second.auth.authenticate(token)
     assert access.user_id == user.id
     assert second.accounts.get(access, account.id) == account
@@ -166,14 +171,44 @@ def test_create_admin_command(
     monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "sqlite")
     assert main(["users", "create-admin", "--name", "owner"]) == 0
     out, err = capsys.readouterr()
-    token = out.strip()
-    assert token.startswith("mbx_")
-    assert "shown this once" in err
+    password = out.strip()
+    assert len(password) >= 15 and "\n" not in password
+    assert "one-time password, shown this once" in err
     services = build_services(Settings())
-    access = services.auth.authenticate(token)
+    signed = asyncio.run(services.auth.sign_in("owner", password, source="host"))
+    access = services.auth.session_access(signed.user_id, signed.stamp)
     services.close()
+    # A one-time password: the UI asks for one of the user's own first.
+    assert signed.must_change is True
     assert access.name == "owner"
     assert access.allows("create_user")
+
+    # A second admin of the same name is refused, and says so.
+    assert main(["users", "create-admin", "--name", "Owner"]) == 1
+    assert "a user named owner exists" in capsys.readouterr().err
+
+
+def test_set_password_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "sqlite")
+    assert main(["users", "create-admin"]) == 0
+    first = capsys.readouterr().out.strip()
+    assert main(["users", "set-password", "ADMIN"]) == 0
+    out, err = capsys.readouterr()
+    second = out.strip()
+    assert second != first and "a new password" in err
+    services = build_services(Settings())
+    signed = asyncio.run(services.auth.sign_in("admin", second, source="host"))
+    assert signed.must_change is True
+    with pytest.raises(UnauthorizedError):
+        asyncio.run(services.auth.sign_in("admin", first, source="host"))
+    services.close()
+    assert main(["users", "set-password", "nobody"]) == 1
+    assert "no user is named nobody" in capsys.readouterr().err
 
 
 def test_a_missing_data_folder_is_created(tmp_path: Path) -> None:

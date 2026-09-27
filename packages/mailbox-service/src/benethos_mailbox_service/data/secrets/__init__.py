@@ -14,6 +14,7 @@ from .keys import (
     decode_recovery,
     encode_recovery,
 )
+from .passwords import PasswordHasher, Scrypt
 from .vault import CredentialVault
 
 __all__ = [
@@ -23,6 +24,8 @@ __all__ = [
     "KeyProvider",
     "KeyProviderError",
     "KeyringKeyProvider",
+    "PasswordHasher",
+    "Scrypt",
     "decode_recovery",
     "encode_recovery",
 ]

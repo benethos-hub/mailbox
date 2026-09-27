@@ -72,15 +72,19 @@ REST client can do too.
   session cookie authenticates them.
 
   **Decided 2026-09-24:** the UI comes before the new providers and covers
-  everything the REST API does. A person signs in with an API token of its
-  user (or the admin key). Password with TOTP can follow as a credential
-  kind of its own. Its texts are English. Built with Jinja2 templates,
-  htmx and one stylesheet, without a build step.
+  everything the REST API does. Its texts are English. Built with Jinja2
+  templates, htmx and one stylesheet, without a build step.
+
+  **Decided 2026-09-27:** a person signs in to the UI with a user name and
+  a password (7.5), no longer with an API token. Tokens are for the API
+  and the MCP server alone.
 
   Rules of the implementation: the session lives on the server, the cookie
   (`HttpOnly`, `SameSite=Strict`, path `/ui`) carries only a random id, and
-  every request authenticates the token anew, so revoking it ends the
-  session. Sessions end after 8 hours without a request and with a
+  the session holds the id of its user. Every request loads that user
+  anew, so a disabled or deleted user is signed out at once. Signing in
+  starts a new session. A changed password ends every other session of
+  its user. Sessions end after 8 hours without a request and with a
   restart. A content security policy allows no inline script or style and
   no framing. A form answers with a redirect (Post/Redirect/Get). Its
   message waits in the session and is shown once, never in the URL, so a
@@ -88,7 +92,10 @@ REST client can do too.
   session, names one of its own messages by a code.
   Guessing is slowed down: a client address that fails to sign in ten
   times within fifteen minutes is locked out for fifteen minutes, on the
-  UI and on the API alike, whatever the credential kind. Behind a proxy,
+  UI and on the API alike, whatever the credential kind. A user name that
+  fails ten times within fifteen minutes waits one minute, from any
+  address. That slows guessing at one account spread over many addresses,
+  and never locks its owner out for long. Behind a proxy,
   `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` names the proxy so the client
   address comes from `X-Forwarded-For`.
 - **No HTTP below the web layer**, no decisions in the data layer,
@@ -861,7 +868,7 @@ One envelope for every error the API raises itself:
 | 501 | `not_supported` | capability missing |
 | 500 | `credential_unreadable`, `storage_error` | a stored credential cannot be decrypted, the service's own database failed |
 | 502 | `provider_error`, `provider_auth_failed`, `provider_unavailable` | upstream failed. An auth failure sets the account to `needs_reauth`, an unreachable server to `unreachable` |
-| 503 | `setup_required` | neither a user nor `MAILBOX_SERVICE_KEY` exists yet |
+| 503 | `setup_required` | no user exists yet: run `users create-admin` |
 
 ### 6.8 OpenAPI
 
@@ -1142,11 +1149,11 @@ with the role
     account run one after the other, so two cannot both pass the limit.
   - No escalation: a user with `users.manage` hands out `send_message` or
     `send_draft` only as narrow as one of its own grants for them, or
-    narrower. The admin key has no constraints.
+    narrower.
 
 #### Credentials
 
-- **API token**, the first and for now only kind:
+- **API token**, for the API and the MCP server:
   - Format `mbx_` + 64 random base62 characters, a little over 380 bits.
     Shown **once** on creation, stored as a SHA-256 hash (a random token of
     that length needs no slow hash).
@@ -1155,22 +1162,46 @@ with the role
   - A token carries the rights of its user, no more. Narrowing a single
     token below its user is left open, since a second user with fewer
     rights does the same job.
-- **Later:** password + TOTP or passkey for signing in to the configuration
-  UI, OAuth 2.0 client credentials for machines. Which credential kinds a
-  user holds decides where it can sign in. There is deliberately no "person"
-  or "service" type on the user: rights come from grants alone, and a type
+- **Password**, for the configuration UI only (**decided 2026-09-27**):
+  - The user signs in with its `name`, which is unique regardless of case.
+  - Stored as a scrypt hash with a salt of its own, from the standard
+    library. A hash made with older parameters is made anew at the next
+    sign-in.
+  - At least 15 characters, at most 256, any characters. No rules on
+    character classes (NIST SP 800-63B for a single factor).
+  - A wrong name and a wrong password answer alike, in the same time: an
+    unknown name is checked against a hash of its own.
+  - Users change their own password with the current one. A user with
+    `users.manage` sets the password of a user whose rights it covers, as
+    for tokens: whoever sets a password can sign in as that user. A
+    password set by someone else must be changed at the next sign-in.
+    `users set-password <name>` on the host sets one without the UI, for
+    a forgotten password of the last administrator.
+  - Not in the API: a password is for a person at a browser. A user
+    without one cannot sign in to the UI.
+- **Later:** TOTP or a passkey as a second factor (IDEAS), OAuth 2.0
+  client credentials for machines. Which credential kinds a user holds
+  decides where it can sign in. There is deliberately no "person" or
+  "service" type on the user: rights come from grants alone, and a type
   field would only matter to rules nobody has asked for yet.
 - A disabled user fails authentication with every credential at once.
   Rights changes take effect on the next request. Revoking a token is
   immediate.
+- Sign-ins to the UI, failed ones and changed passwords are written to
+  the service log with user name, client address and time, never a
+  password.
 
 #### Bootstrap
 
 A fresh installation has no users. `benethos-mailbox-service users create-admin`
-on the host creates the first `admin` user and prints its token once.
-`MAILBOX_SERVICE_KEY` stays as an alternative for containers and tests: when
-set, it authenticates as a built-in admin user. All further users and
-tokens are created through the API.
+on the host creates the first `admin` user and prints a one-time password
+once. The first sign-in to the UI asks for a password of its own. All
+further users, passwords and tokens are made in the UI, tokens also
+through the API.
+
+**Decided 2026-09-27:** every caller is a user, and so every call names
+one in the audit. Tests and live checks create a user and a token of
+their own.
 
 #### Audit log
 
@@ -1179,7 +1210,7 @@ secret.
 
 **Decided 2026-09-24:** the audit of sends is built first, together with
 the send limits, which count from it. Every attempt through `send_message`
-or `send_draft` is one record: time, user, token (null for the admin key),
+or `send_draft` is one record: time, user, token,
 account, operation, recipients, outcome (`sent`, `denied` by a grant,
 `failed`), error code, refused recipients and the Message-ID. It keeps no
 reference to account or user, so it outlives both.

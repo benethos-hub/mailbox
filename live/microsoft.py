@@ -11,8 +11,9 @@ confirms it as a test account (CLAUDE.md, golden rule 1). See
 docs/microsoft.md.
 
 The service runs with a database of its own in data/live-microsoft/, which
-keeps the encrypted refresh token between runs. The master key and the
-admin key live beside it, readable by the owner only.
+keeps the encrypted refresh token between runs. The master key, and the
+password and a token of its user `admin`, live beside it, readable by the
+owner only. The first run makes that user with `users create-admin`.
 
 ``--connect`` starts the service and waits until the test account is
 connected through the UI. The check then reads folders and mail, makes a
@@ -36,9 +37,11 @@ from typing import Any
 
 import httpx
 from _common import (
+    Admin,
     Run,
     Service,
     accounts,
+    bootstrap,
     messages_with_subject,
     read_env,
     register,
@@ -67,12 +70,24 @@ def _secret_file(name: str, make: Any) -> str:
     return path.read_text(encoding="utf-8").strip()
 
 
-def microsoft_env(env: dict[str, str], admin_key: str) -> dict[str, str]:
+def _admin(service: dict[str, str]) -> Admin:
+    """The service's user `admin`, made on the first run the way an
+    operator makes it, and kept in DATA."""
+    if not (DATA / "admin_token").exists():
+        made = bootstrap(service, URL)
+        _secret_file("admin_password", lambda: made.password)
+        _secret_file("admin_token", lambda: made.token)
+    return Admin(
+        "admin", _secret_file("admin_password", str), _secret_file("admin_token", str)
+    )
+
+
+def microsoft_env(env: dict[str, str]) -> dict[str, str]:
     """The service on its own database in DATA, reachable under URL, with
     the app registration of live/.env."""
     master_key = _secret_file("master_key", lambda: encode_recovery(cipher.new_key()))
     return {
-        **service_env(str(DATA), PORT, admin_key, master_key),
+        **service_env(str(DATA), PORT, master_key),
         "MAILBOX_SERVICE_PUBLIC_URL": URL,
         "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID": env["LIVE_MICROSOFT_CLIENT_ID"],
         "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET": env.get(
@@ -112,7 +127,7 @@ def microsoft_account(client: httpx.Client, email: str) -> dict[str, Any] | None
 
 
 def connect(client: httpx.Client, email: str) -> int:
-    print(f"Open {URL}/ui and sign in with the admin key in {DATA / 'admin_key'}.")
+    print(f"Open {URL}/ui and sign in as admin, password in {DATA / 'admin_password'}.")
     print("Then: Accounts, Connect an account, Sign in with Microsoft, as the")
     print("test account. Waiting up to ten minutes...")
     deadline = time.monotonic() + WAIT
@@ -262,14 +277,12 @@ def main() -> int:
             "not set up: LIVE_MICROSOFT_CLIENT_ID and LIVE_MICROSOFT_EMAIL in live/.env"
         )
         return 2
-    admin_key = _secret_file("admin_key", lambda: secrets.token_urlsafe(32))
+    service = microsoft_env(env)
     # The keys are made on the first run; the database keeps them after.
-    process = start_service(
-        microsoft_env(env, admin_key), URL, init_keys=not (DATA / "mailbox.db").exists()
-    )
+    process = start_service(service, URL, init_keys=not (DATA / "mailbox.db").exists())
     run = Run()
     try:
-        with Service(URL, admin_key).admin(timeout=120) as client:
+        with Service(URL, _admin(service)).admin(timeout=120) as client:
             if options.connect:
                 return connect(client, email)
             account = microsoft_account(client, email)
