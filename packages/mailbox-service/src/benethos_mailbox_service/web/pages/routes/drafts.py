@@ -41,7 +41,7 @@ async def drafts(
     request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
-    page = await mailbox.list_drafts(
+    page = await mailbox.outgoing.list_drafts(
         caller, account_id, limit=PAGE_SIZE, cursor=request.query_params.get("cursor")
     )
     return render(
@@ -114,7 +114,7 @@ async def draft_submit(
     stored: Message | None = None
     try:
         if doing == "delete":
-            await mailbox.delete_draft(caller, account_id, draft_id)
+            await mailbox.outgoing.delete_draft(caller, account_id, draft_id)
             return back(request, f"/ui/accounts/{account_id}/drafts", "Draft deleted.")
         stored = await mailbox.get_message(caller, account_id, draft_id)
         if not _unchanged(form, stored):
@@ -123,7 +123,7 @@ async def draft_submit(
                 fields["reference"] = stored.reference.model_copy(
                     update={"quote": False}
                 )
-            await mailbox.update_draft(
+            await mailbox.outgoing.update_draft(
                 caller,
                 account_id,
                 draft_id,
@@ -132,7 +132,7 @@ async def draft_submit(
             )
         if doing != "send":
             return back(request, here, "Draft saved.")
-        result = await mailbox.send_draft(
+        result = await mailbox.outgoing.send_draft(
             caller,
             account_id,
             draft_id,

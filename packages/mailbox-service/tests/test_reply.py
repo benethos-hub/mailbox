@@ -169,7 +169,7 @@ def send(services: Services, smtp: FakeSmtpServer, account_id: str) -> Sender:
     got it."""
 
     async def run(reference: MessageReference, **fields: object) -> EmailMessage:
-        await services.mailbox.send_message(
+        await services.mailbox.outgoing.send_message(
             ADMIN,
             account_id,
             OutgoingMessage.model_validate({"reference": reference, **fields}),

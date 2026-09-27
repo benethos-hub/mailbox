@@ -1,8 +1,8 @@
 """Sending and drafts: a message composed from the account's address, a
 reply or forward made from its original, drafts kept until they are sent.
 
-``MailboxService`` hands its sending and draft operations to ``Outgoing``.
-Callers keep using the mailbox service.
+``MailboxService`` holds it as ``outgoing``, where both front ends reach
+it.
 """
 
 from __future__ import annotations

@@ -61,16 +61,8 @@ class MailboxService:
     ) -> None:
         self._calls = Calls(adapters, sync)
         self._changes = sync.feed
-        self._outgoing = Outgoing(self._calls, idempotency, sends, clock)
-        # Sending and drafts live in ``Outgoing``. Callers reach them here.
-        self.send_message = self._outgoing.send_message
-        self.list_sends = self._outgoing.list_sends
-        self.list_drafts = self._outgoing.list_drafts
-        self.create_draft = self._outgoing.create_draft
-        self.update_draft = self._outgoing.update_draft
-        self.send_draft = self._outgoing.send_draft
-        self.delete_draft = self._outgoing.delete_draft
-        self.list_all_sends = self._outgoing.list_all_sends
+        # Sending, drafts and the audit of sends: mailbox.outgoing.send_message.
+        self.outgoing = Outgoing(self._calls, idempotency, sends, clock)
 
     # --- folders ----------------------------------------------------------------------
 

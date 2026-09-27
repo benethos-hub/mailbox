@@ -80,11 +80,11 @@ async def sends(
     account_id = bar.value("account")
     cursor = request.query_params.get("cursor")
     if account_id:
-        page = mailbox.list_sends(
+        page = mailbox.outgoing.list_sends(
             caller, account_id, limit=PAGE_SIZE, cursor=cursor, matching=matching
         )
     else:
-        page = mailbox.list_all_sends(
+        page = mailbox.outgoing.list_all_sends(
             caller, limit=PAGE_SIZE, cursor=cursor, matching=matching
         )
     return render(

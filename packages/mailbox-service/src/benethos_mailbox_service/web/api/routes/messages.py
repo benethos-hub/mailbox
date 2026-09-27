@@ -64,4 +64,4 @@ async def list_all_sends(
     """The audit of sends of every account the caller may audit, newest
     first. An account deleted since stays in it for a caller whose grant
     names every account."""
-    return mailbox.list_all_sends(caller, limit=limit, cursor=cursor)
+    return mailbox.outgoing.list_all_sends(caller, limit=limit, cursor=cursor)

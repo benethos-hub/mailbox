@@ -288,11 +288,11 @@ def test_the_audit_across_accounts_keeps_a_deleted_one(
 ) -> None:
     client.post(f"/v1/accounts/{account_id}/send", json=mail("a@x.org"))
     assert client.delete(f"/v1/accounts/{account_id}").status_code == 204
-    page = services.mailbox.list_all_sends(ADMIN, limit=10)
+    page = services.mailbox.outgoing.list_all_sends(ADMIN, limit=10)
     assert [r.account_id for r in page.items] == [account_id]
     # A grant on named accounts audits those alone.
     named = Access("usr_a", "a", [Grant(accounts=["acc_other"], allow=["audit"])])
-    assert services.mailbox.list_all_sends(named, limit=10).items == []
+    assert services.mailbox.outgoing.list_all_sends(named, limit=10).items == []
 
 
 def test_the_audit_of_every_account(

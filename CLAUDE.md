@@ -152,7 +152,7 @@ packages/
         oauth.py          # OAuthService: connect or sign in again by OAuth
         mailbox.py        # MailboxService: folders and messages, the facade
         calls.py          # provider calls under our stable ids, many at once
-        outgoing.py       # sending and drafts, reached through MailboxService
+        outgoing.py       # sending and drafts, as MailboxService.outgoing
         merge.py          # lists across accounts: merge order, cursor
         replies.py        # replies and forwards made from the original
         discovery.py      # DiscoveryService: trust, ranking, cache, limits

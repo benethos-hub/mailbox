@@ -223,13 +223,13 @@ async def test_a_draft_written_replaced_and_deleted(
 ) -> None:
     server.folders["Drafts"] = FakeFolder(uidvalidity=3, flags=("\\Drafts",))
     await services.sync.sync_account(account_id)
-    draft = await services.mailbox.create_draft(
+    draft = await services.mailbox.outgoing.create_draft(
         ADMIN, account_id, DraftMessage(subject="One", text="x")
     )
-    await services.mailbox.update_draft(
+    await services.mailbox.outgoing.update_draft(
         ADMIN, account_id, draft.id, DraftMessage(subject="Two", text="x")
     )
-    await services.mailbox.delete_draft(ADMIN, account_id, draft.id)
+    await services.mailbox.outgoing.delete_draft(ADMIN, account_id, draft.id)
     # The sync afterwards finds nothing the feed does not know yet.
     await services.sync.sync_account(account_id)
     assert recorded(services, account_id) == [

@@ -336,7 +336,7 @@ async def test_a_retried_save_stores_the_draft_once(
     services, account_id = on_imap
     box.copyuid = False  # no APPENDUID: the draft is found by its Message-ID
     box.failures = [None, OSError("connection reset")]
-    draft = await services.mailbox.create_draft(
+    draft = await services.mailbox.outgoing.create_draft(
         ADMIN, account_id, DraftMessage(subject="Once", text="x")
     )
     assert list(box.folders["Drafts"].messages) == [1]
@@ -353,20 +353,22 @@ async def test_a_replaced_draft_keeps_its_id(
 ) -> None:
     services, account_id = on_imap
     mailbox = services.mailbox
-    first = await mailbox.create_draft(
+    first = await mailbox.outgoing.create_draft(
         ADMIN, account_id, DraftMessage(subject="One", text="x")
     )
-    second = await mailbox.update_draft(
+    second = await mailbox.outgoing.update_draft(
         ADMIN, account_id, first.id, DraftMessage(subject="Two", text="y")
     )
     assert second.id == first.id
     assert list(box.folders["Drafts"].messages) == [2]
     message = await mailbox.get_message(ADMIN, account_id, first.id)
     assert message.subject == "Two"
-    listed = await mailbox.list_drafts(ADMIN, account_id, limit=10, cursor=None)
+    listed = await mailbox.outgoing.list_drafts(
+        ADMIN, account_id, limit=10, cursor=None
+    )
     assert [d.id for d in listed.items] == [first.id]
 
-    await mailbox.delete_draft(ADMIN, account_id, first.id)
+    await mailbox.outgoing.delete_draft(ADMIN, account_id, first.id)
     assert not box.folders["Drafts"].messages
     with pytest.raises(NotFoundError):
         await mailbox.get_message(ADMIN, account_id, first.id)
@@ -377,12 +379,12 @@ async def test_a_draft_id_that_left_the_drafts_folder(
 ) -> None:
     """Another client moved the draft away: it is no draft any more."""
     services, account_id = on_imap
-    draft = await services.mailbox.create_draft(
+    draft = await services.mailbox.outgoing.create_draft(
         ADMIN, account_id, DraftMessage(subject="One", text="x")
     )
     box.other_client_moves("Drafts", 1, "INBOX", 2)
     with pytest.raises(NotFoundError):
-        await services.mailbox.delete_draft(ADMIN, account_id, draft.id)
+        await services.mailbox.outgoing.delete_draft(ADMIN, account_id, draft.id)
     assert box.folders["INBOX"].messages
 
 
