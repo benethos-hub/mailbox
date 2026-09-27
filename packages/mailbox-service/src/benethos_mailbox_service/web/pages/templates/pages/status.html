@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, empty, fact, facts %}
+{% from "components/ui.html" import card, empty, fact, facts, webhook_state %}
 {% block title %}Status · {{ APP_NAME }}{% endblock %}
 {% block heading %}Status{% endblock %}
 {% block subheading %}<div class="sub">What the service knows, without asking any provider. Since the last start.</div>{% endblock %}
@@ -48,7 +48,7 @@
       <tr>
         <td class="name"><a class="mono" href="/ui/webhooks/{{ hook.id }}">{{ hook.url }}</a></td>
         <td>{{ hook.last_delivery_at | when }}</td>
-        <td>{% if hook.last_error %}<span class="tag bad">failing</span><span class="sub">{{ hook.last_error }}</span>{% else %}<span class="tag ok">ok</span>{% endif %}</td>
+        <td>{{ webhook_state(hook.last_error) }}</td>
       </tr>
       {% endfor %}
     </tbody>

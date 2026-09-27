@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, anywhere_tag, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, new_row, related, secret_card with context %}
+{% from "components/ui.html" import action, anywhere_tag, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, new_row, related, rights_tags, secret_card with context %}
 {% from "components/grants.html" import grant_editor, grants_of, role_checks, role_tags %}
 {% block title %}{{ user.name }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ user.name }}{% endblock %}
@@ -30,7 +30,7 @@
         {% for row in effective.accounts %}
         <tr>
           <td class="name">{{ row.email }}{% for warning in row.warnings %}<span class="sub">{{ anywhere_tag() }}</span>{% endfor %}</td>
-          <td>{% for group in row.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for operation in row.operations %}<span class="tag mono">{{ operation }}</span> {% endfor %}</td>
+          <td>{{ rights_tags(row.groups, row.operations) }}</td>
           <td>
             {% for limit in row.sending %}
             <div>{% if limit.recipients is none %}to anyone{% else %}to {{ limit.recipients | join(", ") }}{% endif %}, {% if limit.max_per_day is none %}no daily limit{% else %}at most {{ limit.max_per_day }} a day{% endif %}</div>
@@ -48,7 +48,7 @@
   <div class="body">
     <dl class="facts">
       <dt>Beyond accounts</dt>
-      <dd>{% for group in effective.groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for operation in effective.operations %}<span class="tag mono">{{ operation }}</span> {% endfor %}</dd>
+      <dd>{{ rights_tags(effective.groups, effective.operations) }}</dd>
     </dl>
   </div>
   {% endif %}

@@ -21,6 +21,13 @@
 </section>
 {% endmacro %}
 
+{# Whether a webhook's last post went through. ``detail``: the error
+   under the tag. #}
+{% macro webhook_state(error, detail=True) %}{% if error %}<span class="tag bad">failing</span>{% if detail %}<span class="sub">{{ error }}</span>{% endif %}{% else %}<span class="tag ok">ok</span>{% endif %}{% endmacro %}
+
+{# Rights as tags: groups first, then single operations. #}
+{% macro rights_tags(groups, operations) %}{% for group in groups %}<span class="tag accent">{{ group }}</span> {% endfor %}{% for operation in operations %}<span class="tag mono">{{ operation }}</span> {% endfor %}{% endmacro %}
+
 {# A secret the service shows once, e.g. a new token: ``title``, the
    value in one selectable piece, and the caller says what to do with it. #}
 {% macro secret_card(title, value) %}

@@ -158,7 +158,7 @@ def test_the_start_page_shows_whole_groups_and_single_operations(
     )
     page = app_client.get("/ui").text
     assert '<span class="tag accent">mail.read</span>' in page
-    assert '<span class="tag">send_draft</span>' in page
+    assert '<span class="tag mono">send_draft</span>' in page
     # A single operation does not show as its whole group.
     assert '<span class="tag accent">send</span>' not in page
 

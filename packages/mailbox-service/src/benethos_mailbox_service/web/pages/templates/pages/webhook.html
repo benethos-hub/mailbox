@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb, card, danger_card, empty, fact, facts, related, secret_card with context %}
+{% from "components/ui.html" import breadcrumb, card, danger_card, empty, fact, facts, related, secret_card, webhook_state with context %}
 {% block title %}Webhook · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ webhook.url }}{% endblock %}
 {% block subheading %}{{ breadcrumb([("Webhooks", "/ui/webhooks"), (webhook.url, None)]) }}{% endblock %}
@@ -8,7 +8,7 @@
 {% call secret_card("Signing secret", secret) %}Keep it with the receiver. It checks <span class="mono">X-Mailbox-Signature</span> with it. Only this service keeps it besides, encrypted.{% endcall %}
 {% endif %}
 
-{% set state %}{% if webhook.last_error %}<span class="tag bad">failing</span>{% else %}<span class="tag ok">ok</span>{% endif %}{% endset %}
+{% set state %}{{ webhook_state(webhook.last_error, detail=False) }}{% endset %}
 {% call facts("Webhook", tags=state) %}
   {{ fact("URL", webhook.url, cls="mono") }}
   {% call fact("Events") %}{% for event in webhook.events %}<span class="tag">{{ event }}</span> {% endfor %}{% endcall %}
