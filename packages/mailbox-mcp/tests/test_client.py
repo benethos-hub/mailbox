@@ -117,6 +117,31 @@ async def test_unreachable_service_says_what_to_do(make_client: Callable) -> Non
     await client.aclose()
 
 
+async def test_a_slow_answer_is_no_unreachable_service(make_client: Callable) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("slow", request=request)
+
+    client = make_client(handler)
+    with pytest.raises(ToolError, match="did not answer within 30 s") as caught:
+        await client.request("GET", "/v1/messages")
+    assert not isinstance(caught.value, ServiceUnavailableError)
+    with pytest.raises(ToolError, match="within 120 s"):
+        await client.get_attachment("acc_1", "msg_1", "att_0", max_bytes=10)
+    await client.aclose()
+
+
+async def test_a_connection_that_times_out_is_unreachable(
+    make_client: Callable,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectTimeout("no answer", request=request)
+
+    client = make_client(handler)
+    with pytest.raises(ServiceUnavailableError, match="not reachable"):
+        await client.request("GET", "/v1/accounts")
+    await client.aclose()
+
+
 def recording(seen: list[httpx.Request]) -> httpx.MockTransport:
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request)

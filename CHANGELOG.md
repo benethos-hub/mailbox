@@ -82,6 +82,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The MCP server tells a slow answer of the service from a service that
+  is not running: a request waits 30 seconds, an attachment 120. Before,
+  a timeout said the service was not reachable.
 - `update_draft` with the draft as it is stored, every attachment kept,
   stores nothing and answers the stored draft. Before, the provider
   stored it again. The UI did this check on its own so far.

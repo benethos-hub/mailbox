@@ -26,6 +26,11 @@ URL_ENV = "MAILBOX_SERVICE_URL"
 TOKEN_ENV = "MAILBOX_SERVICE_TOKEN"
 # Allows http to a host other than this machine, e.g. between containers.
 ALLOW_HTTP_ENV = "MAILBOX_SERVICE_ALLOW_HTTP"
+# Seconds to wait: for the service to take the connection, for an answer,
+# and for an attachment, which may be large.
+CONNECT_TIMEOUT = 5.0
+TIMEOUT = 30.0
+ATTACHMENT_TIMEOUT = 120.0
 
 # An address with an optional display name.
 Recipient = tuple[str, str | None]
@@ -123,7 +128,7 @@ class MailboxApiClient:
         self._http = httpx.AsyncClient(
             base_url=self.base_url,
             headers={"Authorization": f"Bearer {token}"} if token else {},
-            timeout=httpx.Timeout(30.0, connect=5.0),
+            timeout=httpx.Timeout(TIMEOUT, connect=CONNECT_TIMEOUT),
             transport=transport,
         )
 
@@ -159,13 +164,22 @@ class MailboxApiClient:
     async def _send(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
             response = await self._http.request(method, path, **kwargs)
-        except httpx.TransportError:
-            raise self._unreachable() from None
+        except httpx.TransportError as exc:
+            raise self._failure(exc, TIMEOUT) from None
         if response.is_error:
             raise _api_error(response)
         return response
 
-    def _unreachable(self) -> ServiceUnavailableError:
+    def _failure(self, exc: httpx.TransportError, seconds: float) -> ToolError:
+        """What went wrong on the way: a service that answers too slowly is
+        running, one that cannot be reached is not."""
+        if isinstance(exc, httpx.TimeoutException) and not isinstance(
+            exc, httpx.ConnectTimeout
+        ):
+            return ToolError(
+                f"The mailbox service did not answer within {seconds:g} s. "
+                "Try a narrower request."
+            )
         return ServiceUnavailableError(
             f"The mailbox service is not reachable at {self.base_url}. "
             "Start it with `benethos-mailbox-service serve`."
@@ -282,7 +296,11 @@ class MailboxApiClient:
             "accounts", account_id, "messages", message_id, "attachments", attachment_id
         )
         try:
-            async with self._http.stream("GET", path) as response:
+            async with self._http.stream(
+                "GET",
+                path,
+                timeout=httpx.Timeout(ATTACHMENT_TIMEOUT, connect=CONNECT_TIMEOUT),
+            ) as response:
                 if response.is_error:
                     await response.aread()
                     raise _api_error(response)
@@ -295,8 +313,8 @@ class MailboxApiClient:
                     if read > max_bytes:
                         complete = False
                         break
-        except httpx.TransportError:
-            raise self._unreachable() from None
+        except httpx.TransportError as exc:
+            raise self._failure(exc, ATTACHMENT_TIMEOUT) from None
         media, _, options = response.headers.get(
             "content-type", "application/octet-stream"
         ).partition(";")
