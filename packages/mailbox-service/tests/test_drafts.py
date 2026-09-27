@@ -246,7 +246,22 @@ def test_replacing_a_draft_keeps_the_attachments_named(
     assert now["attachments"] == []
 
 
+def test_kept_attachments_come_from_a_draft_alone(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    headers = bearer_for(services, Grant(accounts=[account_id], allow=["drafts"]))
+    # m0 is in the inbox, not a draft.
+    answer = app_client.put(
+        drafts_url(account_id, "m0"),
+        json={"subject": "x", "keep_attachments": ["att_0"]},
+        headers=headers,
+    )
+    assert answer.status_code == 404
+    assert "attachment" not in answer.json()["error"]["message"]
+
+
 def test_a_reply_draft_keeps_its_reference(client: TestClient, account_id: str) -> None:
+
     created = client.post(
         drafts_url(account_id),
         json={"reference": {"message_id": "m1", "action": "reply"}, "text": "Gern."},

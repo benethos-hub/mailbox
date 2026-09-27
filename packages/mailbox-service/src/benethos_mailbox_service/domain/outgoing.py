@@ -289,6 +289,12 @@ class Outgoing:
         those the draft brings."""
         _require(access, "update_draft", account_id, draft)
         if keep_attachments:
+            # A draft, before any attachment is read: whoever may write
+            # drafts may not read other mail this way.
+            await self._calls.on_message(
+                account_id, draft_id, lambda p, native: p.get_draft(native)
+            )
+
             kept = [
                 await self._kept_attachment(account_id, draft_id, attachment_id)
                 for attachment_id in keep_attachments

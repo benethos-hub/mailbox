@@ -243,7 +243,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
   at `INFO`. httpx wrote it, with search terms and message ids, into the
   log files of the MCP client.
+- `keep_attachments` of `PUT /v1/accounts/{account_id}/drafts/{draft_id}`
+  reads attachments of that draft alone. Before, a message id outside
+  the drafts made the service fetch that message's attachment for a
+  caller with the right to write drafts only, and the answer told
+  whether the id existed.
 - A request body larger than 40 MB is refused with `413
+
 
 
   payload_too_large`, in the API and in the UI, before the service reads
