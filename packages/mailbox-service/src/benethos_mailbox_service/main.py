@@ -130,16 +130,16 @@ def build_services(
     adapters = Adapters(
         repos.accounts, vault, provider_factory, oauth=clients, changes=changes
     )
+    sync = SyncService(adapters, repos.index, feed=changes)
     accounts = AccountService(
         repos.accounts,
         vault,
         adapters,
-        repos.index,
+        sync,
         check_host=fetcher.checked_address,
         idempotency=repos.idempotency,
         changes=changes,
     )
-    sync = SyncService(adapters, repos.index, feed=changes)
     auth = AuthService(
         repos.users,
         repos.roles,

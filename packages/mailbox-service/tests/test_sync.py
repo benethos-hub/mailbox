@@ -99,6 +99,16 @@ def contents_calls(server: FakeMailBox) -> int:
     return sum(1 for c in server.calls if c[0] == "search")
 
 
+async def test_a_deleted_account_leaves_no_sync_state(
+    services: Services, account_id: str
+) -> None:
+    await services.sync.sync_account(account_id)
+    assert services.sync.state(account_id).last_sync_at is not None
+    await services.accounts.delete(ADMIN, account_id)
+    assert services.sync.state(account_id).last_sync_at is None
+    assert services.index.folder_states(account_id) == {}
+
+
 async def test_a_missing_attachment_is_not_a_moved_message(
     services: Services, account_id: str, server: FakeMailBox
 ) -> None:

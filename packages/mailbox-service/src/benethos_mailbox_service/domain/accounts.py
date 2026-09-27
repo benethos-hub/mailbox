@@ -22,12 +22,12 @@ from ..data.secrets import CredentialVault
 from ..data.storage import (
     AccountRepository,
     IdempotencyRepository,
-    MessageIndexRepository,
 )
 from ..errors import BadRequestError, MailboxServiceError
 from .access import Access
 from .adapters import REFRESH_TOKEN, Adapters
 from .changes import ChangeFeed
+from .sync import SyncService
 
 
 class AccountService:
@@ -39,7 +39,7 @@ class AccountService:
         repository: AccountRepository,
         vault: CredentialVault,
         adapters: Adapters,
-        index: MessageIndexRepository | None = None,
+        sync: SyncService | None = None,
         check_host: HostCheck | None = None,
         idempotency: IdempotencyRepository | None = None,
         changes: ChangeFeed | None = None,
@@ -47,7 +47,7 @@ class AccountService:
         self._repository = repository
         self._vault = vault
         self._adapters = adapters
-        self._index = index
+        self._sync = sync
         self._idempotency = idempotency
         self._changes = changes
         # Every host in an account's settings passes this before the first
@@ -203,8 +203,8 @@ class AccountService:
     async def delete(self, access: Access, account_id: str) -> None:
         access.require("delete_account", account_id)
         self._vault.delete(account_id)
-        if self._index is not None:
-            self._index.forget_account(account_id)
+        if self._sync is not None:
+            self._sync.forget_account(account_id)
         if self._idempotency is not None:
             self._idempotency.forget_account(account_id)
         if self._changes is not None:

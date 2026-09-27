@@ -152,6 +152,11 @@ class SyncService:
                 account_id, replace(entry, native_id=native, folder_id=folder_id)
             )
 
+    def forget_account(self, account_id: str) -> None:
+        """An account is deleted: its ids and its sync state go."""
+        self._index.forget_account(account_id)
+        self._states.pop(account_id, None)
+
     def forget(self, account_id: str, message_id: str) -> None:
         """A message is gone for good: its id answers 404 from now on."""
         if self.mapped(account_id):
