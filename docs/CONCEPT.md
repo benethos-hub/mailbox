@@ -1185,8 +1185,10 @@ with the role
     password set by someone else must be changed at the next sign-in.
     `users set-password <name>` on the host sets one without the UI, for
     a forgotten password of the last administrator.
-  - Not in the API: a password is for a person at a browser. A user
-    without one cannot sign in to the UI.
+  - In the API, `POST /v1/users/{user_id}/password` (`set_password`)
+    does the same, with a password or with none, when the service makes
+    a one-time password and answers it once. A user without a password
+    cannot sign in to the UI.
 - **The UI sign-in switch** (**decided 2026-09-27**): `ui_sign_in` on
   the user says whether it may sign in to the UI at all. Without it the
   user is an API user: tokens only.
@@ -1200,7 +1202,9 @@ with the role
     reason. Setting a password or a one-time password is refused.
     Tokens keep working.
   - Switched on: the user still has no password. It gets a one-time
-    password as a new user does, and changes it at the first sign-in.
+    password as a new user does, on its page in the UI or with
+    `POST /v1/users/{user_id}/password`, and changes it at the first
+    sign-in.
   - Who switches: a user with `update_user`, for users whose rights it
     covers, as for any change of a user. Not for itself: a user cannot
     lock itself out of the UI. Nor can it disable itself, as it cannot
@@ -1257,6 +1261,7 @@ included for a grant on every account.
 | GET / PATCH / DELETE | `/v1/users/{user_id}` | `users.manage`. Name, roles, grants, disabled, `ui_sign_in` |
 | GET / POST | `/v1/users/{user_id}/tokens` | `users.manage`. POST returns the token once |
 | DELETE | `/v1/users/{user_id}/tokens/{token_id}` | `users.manage`. Revoke |
+| POST | `/v1/users/{user_id}/password` | `users.manage`. A password to change at the next sign-in, or a one-time password answered once |
 | GET / POST | `/v1/roles` | `users.manage` |
 | GET / PUT / DELETE | `/v1/roles/{role_id}` | `users.manage` |
 

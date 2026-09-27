@@ -9,6 +9,8 @@ from ....domain import permissions
 from ..deps import Caller, Users
 from ..schemas import (
     Me,
+    PasswordSet,
+    PasswordSetResult,
     PermissionCatalogue,
     RoleCreate,
     RoleReplace,
@@ -69,6 +71,19 @@ async def update_user(
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: str, caller: Caller, users: Users) -> None:
     users.delete_user(caller, user_id)
+
+
+@router.post("/users/{user_id}/password")
+async def set_password(
+    user_id: str, data: PasswordSet, caller: Caller, users: Users
+) -> PasswordSetResult:
+    """Give a user with UI sign-in a password, which it must change at its
+    next sign-in. Without one in the request the service makes a one-time
+    password and answers it, this once. Whoever sets a password can sign
+    in as that user: the caller must hold every right the user holds.
+    Refused for the caller itself and for an API user (`409`)."""
+    new = data.password.get_secret_value() if data.password is not None else None
+    return PasswordSetResult(password=await users.set_password(caller, user_id, new))
 
 
 @router.get("/users/{user_id}/tokens")

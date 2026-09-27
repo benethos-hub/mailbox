@@ -193,3 +193,25 @@ class TokenInfo(BaseModel):
 
 class TokenCreated(TokenInfo):
     token: str = Field(description="The token itself. Shown this once only.")
+
+
+class PasswordSet(BaseModel):
+    password: SecretStr | None = Field(
+        default=None,
+        description=(
+            "The new password. Without it the service makes a one-time "
+            "password and answers it."
+        ),
+    )
+
+
+class PasswordSetResult(BaseModel):
+    password: str | None = Field(
+        description=(
+            "The one-time password the service made, shown this once. Null "
+            "when the request named the password."
+        )
+    )
+    must_change: bool = Field(
+        default=True, description="The user changes it at its next sign-in."
+    )

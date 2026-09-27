@@ -147,7 +147,8 @@ recipients and to a number of mails per day. Every send is recorded in an
 audit. `GET /v1/me` shows what a token may do.
 
 Users, roles and tokens are managed in the UI (Users, Roles) or under
-`/v1/users` and `/v1/roles`. A token is shown once, when it is created.
+`/v1/users` and `/v1/roles`. A token is shown once, when it is created,
+and so is a one-time password from `POST /v1/users/{user_id}/password`.
 Give each script and each assistant its own user with only the rights it
 needs. Until `users create-admin` has made the first user, the API
 answers `503 setup_required`. Every call is made by a user, so the

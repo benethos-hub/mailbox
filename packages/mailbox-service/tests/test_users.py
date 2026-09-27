@@ -175,6 +175,27 @@ def test_a_token_expiry_needs_a_time_zone(client: TestClient) -> None:
     assert aware.status_code == 201
 
 
+async def test_a_password_through_the_api(
+    client: TestClient, services: Services
+) -> None:
+    user = client.post("/v1/users", json={"name": "person", "ui_sign_in": True}).json()
+    url = f"/v1/users/{user['id']}/password"
+    made = client.post(url, json={})
+    assert made.status_code == 200
+    one_time = made.json()["password"]
+    signed = await services.auth.sign_in("person", one_time, source="test")
+    assert signed.must_change
+    chosen = client.post(url, json={"password": "a passphrase chosen for them"})
+    assert chosen.json() == {"password": None, "must_change": True}
+    await services.auth.sign_in("person", "a passphrase chosen for them", source="t")
+    # An API user has no password, and nobody sets its own this way.
+    api_user = client.post("/v1/users", json={"name": "script"}).json()
+    refused = client.post(f"/v1/users/{api_user['id']}/password", json={})
+    assert refused.status_code == 409
+    me = client.get("/v1/me").json()["user_id"]
+    assert client.post(f"/v1/users/{me}/password", json={}).status_code == 409
+
+
 def test_token_lifecycle(client: TestClient, app_client: TestClient) -> None:
     user = client.post("/v1/users", json={"name": "script", "grants": [READ_A]}).json()
     created = client.post(f"/v1/users/{user['id']}/tokens", json={"name": "laptop"})

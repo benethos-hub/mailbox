@@ -14,6 +14,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `GET /v1/webhooks/{webhook_id}` (`get_webhook`, in `webhooks.manage`):
   one of the caller's webhooks with its last 20 posts, each with the
   number of events, the receiver's answer and the error.
+- `POST /v1/users/{user_id}/password` (`set_password`, in
+  `users.manage`): a password for a user with UI sign-in, to be changed
+  at its next sign-in. Without a password in the request the service
+  makes a one-time password and answers it once. The rules are those of
+  the UI: the caller covers the user, and neither the caller itself nor
+  an API user gets one (`409`).
 - `ui_sign_in` on a user, in `POST /v1/users`, `PATCH
   /v1/users/{user_id}` and every user in an answer: whether it may sign
   in to the configuration UI. Without it the user is an API user and

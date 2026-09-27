@@ -149,10 +149,18 @@ class UserService:
         return user, await self._one_time(user)
 
     async def _one_time(self, user: User) -> str:
-        password = secrets.token_urlsafe(ONE_TIME_BYTES)
-        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
-        log.info("a one-time password for %s (%s) on the host", user.name, user.id)
+        password = await self._force(user, None, "on the host")
+        assert password is not None
         return password
+
+    async def _force(self, user: User, new: str | None, by: str) -> str | None:
+        """A password the user must change at its next sign-in: ``new``, or
+        without it a random one, which is returned to be shown once."""
+        password = secrets.token_urlsafe(ONE_TIME_BYTES) if new is None else new
+        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
+        what = "a one-time password for" if new is None else "set the password of"
+        log.info("%s %s (%s) %s", what, user.name, user.id, by)
+        return password if new is None else None
 
     # --- users ----------------------------------------------------------------
 
@@ -316,33 +324,20 @@ class UserService:
         log.info("%s (%s) changed its password", user.name, user.id)
         return stored.updated_at
 
-    async def set_password(self, access: Access, user_id: str, new: str) -> None:
+    async def set_password(
+        self, access: Access, user_id: str, new: str | None = None
+    ) -> str | None:
         """Another user's password, within the caller's rights: whoever sets
-        it can sign in as that user. It must be changed at the next
-        sign-in."""
+        it can sign in as that user. Without ``new`` the service makes a
+        one-time password and returns it, to be shown once. Either must be
+        changed at the next sign-in."""
         user = self._settable(access, user_id)
-        await self._auth.passwords.set(user.id, user.name, new, must_change=True)
-        log.info(
-            "%s (%s) set the password of %s (%s)",
-            access.name,
-            access.user_id,
-            user.name,
-            user.id,
-        )
+        return await self._force(user, new, f"by {access.name} ({access.user_id})")
 
     async def one_time_password(self, access: Access, user_id: str) -> str:
-        """A new random password for another user, within the caller's
-        rights, to be changed at the next sign-in. Shown once."""
-        user = self._settable(access, user_id)
-        password = secrets.token_urlsafe(ONE_TIME_BYTES)
-        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
-        log.info(
-            "%s (%s) made a one-time password for %s (%s)",
-            access.name,
-            access.user_id,
-            user.name,
-            user.id,
-        )
+        """``set_password`` without a password: the one the service made."""
+        password = await self.set_password(access, user_id)
+        assert password is not None
         return password
 
     def _settable(self, access: Access, user_id: str) -> User:
