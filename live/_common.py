@@ -163,11 +163,12 @@ def user_token(
     allow: list[str],
     **constraints: Any,
 ) -> str:
-    """A user with ``allow`` on the accounts, and a token for it."""
+    """A user with ``allow`` on the accounts, and a token for it. User
+    names are unique, so each gets a random end."""
     user = client.post(
         "/v1/users",
         json={
-            "name": f"live check {'+'.join(allow)}",
+            "name": f"live check {'+'.join(allow)} {secrets.token_hex(3)}",
             "grants": [{"accounts": account_ids, "allow": allow, **constraints}],
         },
     ).json()
