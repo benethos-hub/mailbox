@@ -15,6 +15,7 @@ lives in its URL.
 
 from __future__ import annotations
 
+import inspect
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
@@ -22,6 +23,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from ...errors import MailboxServiceError
 from .deps import CsrfRefused
 from .errors import error_page
 from .forms import Failed
@@ -119,6 +121,12 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(Failed)
     async def _failed(request: Request, exc: Failed) -> Response:
+        if exc.again is not None:
+            try:
+                page = exc.again(exc.error)
+                return await page if inspect.isawaitable(page) else page
+            except MailboxServiceError:
+                pass  # the page itself is gone: back with the message
         return back(request, exc.path, error=exc.error)
 
     @app.exception_handler(CsrfRefused)

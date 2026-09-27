@@ -77,7 +77,11 @@ class GrantRow:
     groups: list[str]
     more: str
     recipients: str
-    max_sends_per_day: int | None
+    # As the field shows it, empty for no limit.
+    max_per_day: str
+
+
+EMPTY_ROW = GrantRow([], [], "", "", "")
 
 
 def rows_of(grants: list[Grant]) -> list[GrantRow]:
@@ -88,11 +92,48 @@ def rows_of(grants: list[Grant]) -> list[GrantRow]:
             groups=[name for name in grant.allow if name in GROUP_NAMES],
             more=" ".join(name for name in grant.allow if name not in GROUP_NAMES),
             recipients="\n".join(grant.recipients or []),
-            max_sends_per_day=grant.max_sends_per_day,
+            max_per_day=(
+                str(grant.max_sends_per_day)
+                if grant.max_sends_per_day is not None
+                else ""
+            ),
         )
         for grant in grants
     ]
-    return [*rows, GrantRow([], [], "", "", None)]
+    return [*rows, EMPTY_ROW]
+
+
+def typed_rows(form: Any) -> list[GrantRow]:
+    """The rows as they were submitted, unchecked: a refused editor shows
+    them again. Removed and empty rows are left out."""
+    rows = []
+    for index in range(min(_count(form), MAX_ROWS)):
+        prefix = f"g{index}_"
+        if form.get(prefix + "remove"):
+            continue
+        accounts = [str(v) for v in form.getlist(prefix + "accounts") if v]
+        groups = [str(v) for v in form.getlist(prefix + "allow") if v]
+        more = str(form.get(prefix + "more") or "").strip()
+        if not accounts and not groups and not more:
+            continue
+        rows.append(
+            GrantRow(
+                accounts=accounts,
+                groups=groups,
+                more=more,
+                recipients=str(form.get(prefix + "recipients") or "").strip(),
+                max_per_day=str(form.get(prefix + "max") or "").strip(),
+            )
+        )
+    return [*rows, EMPTY_ROW]
+
+
+def _count(form: Any) -> int:
+    """How many rows the form says it has."""
+    try:
+        return int(str(form.get("grants") or "0"))
+    except ValueError:
+        return 0
 
 
 def account_choices(accounts: list[Account], rows: list[GrantRow]) -> list[Any]:
@@ -108,10 +149,7 @@ def account_choices(accounts: list[Account], rows: list[GrantRow]) -> list[Any]:
 
 def read_grants(form: Any) -> list[Grant]:
     """The grants a submitted editor holds."""
-    try:
-        count = int(str(form.get("grants") or "0"))
-    except ValueError:
-        count = 0
+    count = _count(form)
     if count > MAX_ROWS:
         raise GrantFormError(f"an editor holds {MAX_ROWS} grants at most")
     grants = []

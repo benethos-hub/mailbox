@@ -105,7 +105,8 @@ def render(
     )
     for key in ("msg", "err"):
         kept = session.once.pop(key, None) if session is not None else None
-        context.setdefault(key, kept)
+        if context.get(key) is None:
+            context[key] = kept
     response: HTMLResponse = templates.TemplateResponse(
         request, template, context, status_code=status_code
     )

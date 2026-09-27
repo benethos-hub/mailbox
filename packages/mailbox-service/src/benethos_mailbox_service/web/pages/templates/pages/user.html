@@ -86,11 +86,11 @@
     {% else %}{{ empty("No token yet.") }}{% endif %}
   </div>
   {% if can_create_token %}
-  {% call new_row("New token", open=not tokens) %}
+  {% call new_row("New token", open=not tokens or typed_token) %}
     <form class="toolbar" method="post" action="/ui/users/{{ user.id }}/tokens">
       {{ csrf_field() }}
-      <input class="grow" name="name" required placeholder="What the token is for, e.g. laptop" aria-label="Token name" />
-      <input name="days" inputmode="numeric" placeholder="days valid (empty: no expiry)" aria-label="Days valid" />
+      <input class="grow" name="name" value="{{ typed_token.name if typed_token else '' }}" required placeholder="What the token is for, e.g. laptop" aria-label="Token name" />
+      <input name="days" value="{{ typed_token.days if typed_token else '' }}" inputmode="numeric" placeholder="days valid (empty: no expiry)" aria-label="Days valid" />
       <button class="primary" type="submit">Create token</button>
     </form>
   {% endcall %}
@@ -105,19 +105,19 @@
     <div class="form-grid">
       <div class="field">
         <label for="f-name">Name</label>
-        <input id="f-name" name="name" value="{{ user.name }}" required />
+        <input id="f-name" name="name" value="{{ typed.name if typed else user.name }}" required />
       </div>
       {% if not is_me %}
       <div class="field">
         <span class="label">Access</span>
         <input type="hidden" name="ui_sign_in_shown" value="1" />
-        <label class="check"><input type="checkbox" name="ui_sign_in" value="1"{% if user.ui_sign_in %} checked{% endif %} /> may sign in to the UI. Off: its password is deleted, its tokens keep working</label>
-        <label class="check"><input type="checkbox" name="disabled" value="1"{% if user.disabled %} checked{% endif %} /> disabled: it cannot sign in, its tokens are refused</label>
+        <label class="check"><input type="checkbox" name="ui_sign_in" value="1"{% if (typed.ui_sign_in if typed else user.ui_sign_in) %} checked{% endif %} /> may sign in to the UI. Off: its password is deleted, its tokens keep working</label>
+        <label class="check"><input type="checkbox" name="disabled" value="1"{% if (typed.disabled if typed else user.disabled) %} checked{% endif %} /> disabled: it cannot sign in, its tokens are refused</label>
       </div>
       {% endif %}
     </div>
-    {% if role_choices %}{{ role_checks(role_choices, user.roles) }}{% endif %}
-    <details class="fold">
+    {% if role_choices %}{{ role_checks(role_choices, typed.roles if typed else user.roles) }}{% endif %}
+    <details class="fold"{% if typed %} open{% endif %}>
       <summary>Grants</summary>
       {{ grant_editor(rows, account_choices, groups, group_ops) }}
     </details>
