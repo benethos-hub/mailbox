@@ -380,7 +380,7 @@ class ImapProvider:
         if cursor:
             cursor_folder, expected_validity, before = mappers.parse_cursor(cursor)
             if cursor_folder != folder:
-                raise BadRequestError("the cursor belongs to another folder")
+                raise rules.invalid_cursor()
         validity = self._session.select(folder)
         if expected_validity is not None and expected_validity != validity:
             raise BadRequestError("the folder changed on the server: start again")

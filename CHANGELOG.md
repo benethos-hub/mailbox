@@ -82,6 +82,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A cursor from another folder of an IMAP account answers
+  `invalid cursor`, like every other cursor the service did not hand out.
 - A new user is an API user unless `ui_sign_in` is set. Existing users
   with a password keep their UI sign-in, those without are API users.
   Setting a password for an API user is refused with `409`.

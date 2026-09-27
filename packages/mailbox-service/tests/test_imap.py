@@ -225,7 +225,7 @@ async def test_other_folder_and_selected_read_only(server: FakeMailBox) -> None:
 
 async def test_cursor_of_another_folder_is_refused(server: FakeMailBox) -> None:
     cursor = mappers.cursor("Sent", 1, 10)
-    with pytest.raises(BadRequestError, match="another folder"):
+    with pytest.raises(BadRequestError, match="^invalid cursor$"):
         await provider(server).list_messages(None, limit=10, cursor=cursor, search=None)
 
 

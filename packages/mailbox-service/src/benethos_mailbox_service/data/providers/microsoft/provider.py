@@ -556,11 +556,11 @@ def _own_path(link: str) -> str:
     must not carry the token elsewhere."""
     parts = urlsplit(link)
     if (parts.scheme or parts.netloc) and f"{parts.scheme}://{parts.netloc}" != GRAPH:
-        raise BadRequestError("invalid cursor")
+        raise rules.invalid_cursor()
     # A full link names the version, but a cursor handed out before does not.
     rest = parts.path.removeprefix(VERSION) if parts.netloc else parts.path
     if not rest.startswith("/me/") or ".." in rest:
-        raise BadRequestError("invalid cursor")
+        raise rules.invalid_cursor()
     return f"{rest}?{parts.query}" if parts.query else rest
 
 
