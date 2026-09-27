@@ -11,14 +11,13 @@ are not followed, and the answer's body is not read.
 
 from __future__ import annotations
 
-import ipaddress
 from collections.abc import Mapping
 
 import httpx
 
 from ...errors import ProviderError, ProviderUnavailableError
 from .base import new_client, parse_url, unreachable
-from .safe import Resolve, host_addresses
+from .safe import Resolve, host_addresses, unwrapped
 
 TIMEOUT = 10.0
 
@@ -26,9 +25,7 @@ TIMEOUT = 10.0
 def is_receiver_address(address: str) -> bool:
     """False for link-local, multicast, unspecified and reserved addresses,
     including IPv4 addresses wrapped in IPv6. Private and loopback pass."""
-    ip = ipaddress.ip_address(address.split("%", 1)[0])
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
-        ip = ip.ipv4_mapped
+    ip = unwrapped(address)
     return not (ip.is_link_local or ip.is_multicast or ip.is_unspecified) and not (
         ip.is_reserved and not ip.is_private
     )

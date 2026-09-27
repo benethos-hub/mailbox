@@ -52,17 +52,31 @@ async def host_addresses(host: str, port: int) -> list[str]:
 # The NAT64 prefix (RFC 6052) carries an IPv4 address in its last 32 bits.
 # Python judges 6to4 and Teredo by theirs, not this one.
 _NAT64 = ipaddress.ip_network("64:ff9b::/96")
+# Every public IPv6 address is in here (RFC 4291 2.4). Outside it Python
+# calls some ranges global that are not, e.g. ::/96 and fec0::/10.
+_GLOBAL_UNICAST = ipaddress.ip_network("2000::/3")
+
+IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
+
+
+def unwrapped(address: str) -> IPAddress:
+    """The address, an IPv4 address carried in IPv6 as the IPv4 address
+    it reaches: IPv4-mapped and NAT64."""
+    ip = ipaddress.ip_address(address.split("%", 1)[0])
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None:
+            return ip.ipv4_mapped
+        if ip in _NAT64:
+            return ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+    return ip
 
 
 def is_public_address(address: str) -> bool:
     """False for private, loopback, link-local, shared, reserved and multicast
     addresses, including IPv4 addresses wrapped in IPv6."""
-    ip = ipaddress.ip_address(address.split("%", 1)[0])
-    if isinstance(ip, ipaddress.IPv6Address):
-        if ip.ipv4_mapped is not None:
-            ip = ip.ipv4_mapped
-        elif ip in _NAT64:
-            ip = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+    ip = unwrapped(address)
+    if isinstance(ip, ipaddress.IPv6Address) and ip not in _GLOBAL_UNICAST:
+        return False
     return ip.is_global and not ip.is_multicast
 
 

@@ -70,6 +70,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   port, a path, invalid Punycode or whitespace answers `400 bad_request`.
   Before, a port or path went into the autoconfig URL, and invalid
   Punycode answered `500`.
+- The check for public addresses takes an IPv6 address as public only
+  inside `2000::/3`. Before, IPv4-compatible addresses such as `::a00:1`
+  and site-local addresses passed. Webhook receivers are judged by the
+  IPv4 address inside a NAT64 address.
 
 ## [0.1.0] - 2026-09-25
 
