@@ -67,6 +67,15 @@ the configuration UI.
 - The read-and-send warning could reach the model the same way. Today it
   is only in the log at start.
 
+## A second factor for the UI sign-in
+
+Postponed on 2026-09-27, after the password sign-in (CONCEPT 7.5).
+
+- TOTP (RFC 6238) as a credential kind beside the password: set up with a
+  QR code, confirmed with a first code, with recovery codes shown once.
+- Or a passkey (WebAuthn), which needs no shared secret.
+- Open: required for users with `users.manage`, or a choice per user.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

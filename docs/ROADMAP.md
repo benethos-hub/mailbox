@@ -15,6 +15,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [2](#phase-2--writing-and-sending) | Writing and sending | **done** |
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | **done** |
 | [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | **done** |
+| [4a](#phase-4a--password-sign-in) | Password sign-in | |
 | [4b](#phase-4b--ui-rework) | UI rework | |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
 
@@ -136,6 +137,23 @@ Everything real mail will depend on, before any real mailbox is connected.
   127.0.0.1. Their pages in the UI come with phase 4b.
 - decided 2026-09-25: IMAP and Microsoft in this phase, CONDSTORE, 7 days
   by default (CONCEPT 6.5)
+
+## Phase 4a – Password sign-in
+
+- **Passwords as a credential kind of a user: scrypt, unique names,
+  NIST rules, the same answer for a wrong name (7.5)**
+- **The UI signs in with name and password, the session holds the user,
+  a changed password ends the other sessions (1, 7.5)**
+- **Change the own password, set another user's within one's rights,
+  change at the next sign-in after that (7.5)**
+- **`users create-admin` with a one-time password, `users set-password`
+  on the host (7.5)**
+- **No built-in admin key: `MAILBOX_SERVICE_KEY` removed, tests and live
+  checks use a user and a token (7.5)**
+- **Sign-ins in the service log, a brake per user name (1, 7.5)**
+- decided 2026-09-27: the UI takes passwords only, tokens are for the API
+  and MCP, no admin key, a one-time password for the first admin, a
+  second factor later (IDEAS)
 
 ## Phase 4b – UI rework
 
