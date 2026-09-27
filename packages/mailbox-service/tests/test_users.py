@@ -166,6 +166,15 @@ def test_an_admin_of_one_account_manages_itself(
     assert made.status_code == 201
 
 
+def test_a_token_expiry_needs_a_time_zone(client: TestClient) -> None:
+    user = client.post("/v1/users", json={"name": "naive"}).json()
+    url = f"/v1/users/{user['id']}/tokens"
+    naive = client.post(url, json={"name": "t", "expires_at": "2099-01-01T00:00:00"})
+    assert naive.status_code == 422
+    aware = client.post(url, json={"name": "t", "expires_at": "2099-01-01T00:00:00Z"})
+    assert aware.status_code == 201
+
+
 def test_token_lifecycle(client: TestClient, app_client: TestClient) -> None:
 
     user = client.post("/v1/users", json={"name": "script", "grants": [READ_A]}).json()

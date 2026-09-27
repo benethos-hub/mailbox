@@ -25,6 +25,7 @@ from benethos_mailbox_service.domain.auth import (
     new_token,
 )
 from benethos_mailbox_service.errors import (
+    BadRequestError,
     NotFoundError,
     SetupRequiredError,
     UnauthorizedError,
@@ -128,6 +129,11 @@ def test_a_revocation_during_an_authentication_stays(
     assert tokens.get(record.id).revoked_at == NOW
     with pytest.raises(UnauthorizedError, match="revoked"):
         service.authenticate(plain)
+
+
+def test_an_expiry_without_a_time_zone_is_refused(service: AuthService) -> None:
+    with pytest.raises(BadRequestError, match="time zone"):
+        service.issue_token("usr_reader", "t", expires_at=datetime(2027, 1, 1))
 
 
 def test_expired_token(service: AuthService, clock: Clock) -> None:

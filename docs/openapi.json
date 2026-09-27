@@ -8111,7 +8111,8 @@
                 "type": "null"
               }
             ],
-            "title": "Expires At"
+            "title": "Expires At",
+            "description": "With a time zone, e.g. 2026-12-31T23:59:59Z"
           }
         },
         "type": "object",

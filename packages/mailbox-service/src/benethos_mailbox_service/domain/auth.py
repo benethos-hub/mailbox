@@ -222,6 +222,8 @@ class AuthService:
     ) -> tuple[ApiToken, str]:
         """A new token for a user. The plain token is returned once only."""
         self._users.get(user_id)
+        if expires_at is not None and expires_at.utcoffset() is None:
+            raise BadRequestError("expires_at needs a time zone")
         if expires_at is not None and expires_at <= self._clock():
             raise BadRequestError("the token would be expired already")
         plain = new_token()

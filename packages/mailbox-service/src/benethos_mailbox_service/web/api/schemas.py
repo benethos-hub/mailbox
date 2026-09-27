@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import AwareDatetime, BaseModel, Field, SecretStr
 
 from ...data.models import ApiToken, DraftMessage, Grant, ProviderType
 
@@ -165,7 +165,9 @@ class RoleReplace(BaseModel):
 
 class TokenCreate(BaseModel):
     name: str
-    expires_at: datetime | None = None
+    expires_at: AwareDatetime | None = Field(
+        default=None, description="With a time zone, e.g. 2026-12-31T23:59:59Z"
+    )
 
 
 class TokenInfo(BaseModel):

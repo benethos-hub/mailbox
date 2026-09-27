@@ -159,7 +159,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   with the domain in punycode in its headers and its Message-ID. Before,
   composing it answered `500`. An address whose local part goes beyond
   ASCII makes a message with UTF-8 headers, for servers with SMTPUTF8.
+- `expires_at` of `POST /v1/users/{user_id}/tokens` needs a time zone,
+  e.g. `2026-12-31T23:59:59Z`. Without one it answers `422`. Before, it
+  answered `500`.
 - Deleting a user removes its webhooks. Before, they stayed, posted
+
 
   nothing, and nobody could list or remove them. The database moves to
   schema 13, which drops those of users deleted before.
