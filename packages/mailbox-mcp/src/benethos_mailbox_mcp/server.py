@@ -502,8 +502,10 @@ class _Tool:
     open_world: bool = True
 
 
-def _reads(fn: Callable[..., Any], title: str, *needs: str) -> _Tool:
-    return _Tool(fn, title, frozenset(needs), "read")
+def _reads(
+    fn: Callable[..., Any], title: str, *needs: str, kind: str = "read"
+) -> _Tool:
+    return _Tool(fn, title, frozenset(needs), kind)
 
 
 def _changes(
@@ -550,7 +552,7 @@ TOOLS = (
         destructive=False,
         idempotent=False,
     ),
-    _Tool(list_drafts, "List drafts", frozenset({"list_drafts"}), "drafts"),
+    _reads(list_drafts, "List drafts", "list_drafts", kind="drafts"),
     _changes(
         create_draft,
         "Write a draft",
