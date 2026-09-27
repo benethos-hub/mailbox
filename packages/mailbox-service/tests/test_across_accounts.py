@@ -4,7 +4,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
@@ -19,7 +18,7 @@ from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.errors import ProviderUnavailableError
 from benethos_mailbox_service.main import Services, build_services, create_app
 
-from .conftest import bearer_for, create_account
+from .conftest import admin_bearer, bearer_for, create_account
 
 START = datetime(2026, 9, 1, tzinfo=UTC)
 
@@ -62,7 +61,7 @@ def world() -> tuple[Services, TestClient, list[str], list[Flaky]]:
     ) -> Flaky:
         return by_name[str(settings["name"])]
 
-    settings = Settings(storage="memory", api_key=SecretStr("k"))
+    settings = Settings(storage="memory")
     services = build_services(settings, provider_factory=factory)
     ids = [
         create_account(
@@ -73,9 +72,7 @@ def world() -> tuple[Services, TestClient, list[str], list[Flaky]]:
         ).id
         for n in "abc"
     ]
-    client = TestClient(
-        create_app(settings, services), headers={"Authorization": "Bearer k"}
-    )
+    client = TestClient(create_app(settings, services), headers=admin_bearer(services))
     return services, client, ids, adapters
 
 

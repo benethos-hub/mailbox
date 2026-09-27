@@ -13,7 +13,7 @@ from benethos_mailbox_service.domain.throttle import SignInThrottle
 from benethos_mailbox_service.errors import RateLimitedError
 from benethos_mailbox_service.main import Services, create_app
 
-from .conftest import API_KEY, browser_admin
+from .conftest import admin_bearer, browser_admin
 from .ui_helpers import try_sign_in
 
 NOW = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
@@ -131,8 +131,11 @@ def test_a_bad_limit_is_refused() -> None:
 # --- through the API ------------------------------------------------------------
 
 
-def test_the_api_locks_a_guessing_client_out(settings: Settings) -> None:
-    client = TestClient(create_app(settings))
+def test_the_api_locks_a_guessing_client_out(
+    settings: Settings, services: Services
+) -> None:
+    right = admin_bearer(services)
+    client = TestClient(create_app(settings, services))
     for _ in range(10):
         wrong = client.get("/v1/accounts", headers={"Authorization": "Bearer nope"})
         assert wrong.status_code == 401
@@ -140,26 +143,28 @@ def test_the_api_locks_a_guessing_client_out(settings: Settings) -> None:
     assert locked.status_code == 429
     assert locked.json()["error"]["code"] == "rate_limited"
     assert int(locked.headers["Retry-After"]) > 0
-    # While locked, the right key is not even looked at.
-    right = client.get("/v1/accounts", headers={"Authorization": f"Bearer {API_KEY}"})
-    assert right.status_code == 429
+    # While locked, the right token is not even looked at.
+    assert client.get("/v1/accounts", headers=right).status_code == 429
 
 
-def test_a_missing_token_is_no_guess(settings: Settings) -> None:
-    client = TestClient(create_app(settings))
+def test_a_missing_token_is_no_guess(settings: Settings, services: Services) -> None:
+    admin_bearer(services)
+    client = TestClient(create_app(settings, services))
     for _ in range(12):
         assert client.get("/v1/accounts").status_code == 401
 
 
-def test_a_successful_sign_in_clears_the_count(settings: Settings) -> None:
-    client = TestClient(create_app(settings))
+def test_a_successful_sign_in_clears_the_count(
+    settings: Settings, services: Services
+) -> None:
+    client = TestClient(create_app(settings, services))
     for _ in range(9):
         client.get("/v1/accounts", headers={"Authorization": "Bearer nope"})
-    ok = client.get("/v1/accounts", headers={"Authorization": f"Bearer {API_KEY}"})
+    ok = client.get("/v1/accounts", headers=admin_bearer(services))
     assert ok.status_code == 200
     for _ in range(9):
         client.get("/v1/accounts", headers={"Authorization": "Bearer nope"})
-    ok = client.get("/v1/accounts", headers={"Authorization": f"Bearer {API_KEY}"})
+    ok = client.get("/v1/accounts", headers=admin_bearer(services))
     assert ok.status_code == 200
 
 

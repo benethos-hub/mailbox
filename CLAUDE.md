@@ -41,9 +41,11 @@ done. Update the roadmap in the same commit that finishes an item.
   `.env.example`. Paths count from the repository root, where `uv run` is
   started. Data likewise, one folder per package under `data/` (not
   versioned): the database in `data/benethos-mailbox-service/`.
-- Run the service: once `uv run benethos-mailbox-service keys init`, then
-  `MAILBOX_SERVICE_KEY=... uv run benethos-mailbox-service serve` and
-  `http://127.0.0.1:8080/docs`.
+- Run the service: once `uv run benethos-mailbox-service keys init` and
+  `uv run benethos-mailbox-service users create-admin` (prints a one-time
+  password), then `uv run benethos-mailbox-service serve`. Sign in at
+  `http://127.0.0.1:8080/ui` as `admin`, choose a password, and make a
+  token on the user's page for the API (`/docs`).
 - Live checks: `uv run python live/smoke.py [--show]` (read-only) and
   `uv run python live/changes.py [--keep]` (sends one test mail between the test
   accounts, moves it, deletes it, and checks the change feed and a
@@ -65,7 +67,10 @@ done. Update the roadmap in the same commit that finishes an item.
   `whats_new` must name the changes of the write tools.
   `uv run python live/mcp_http.py` checks it over streamable HTTP behind
   its bearer token, read-only.
-- The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a token.
+- The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a user
+  name and a password. The live checks with a service of their own make
+  its first user with `users create-admin`, change the one-time password
+  in the UI and make a token there, as an operator would.
   `uv run python live/ui.py` checks it against the test accounts. It sends
   one mail from the first test account to the second and deletes it for
   good on both sides.
@@ -152,7 +157,8 @@ packages/
         sending.py        # SendControl: grant constraints on sending, send audit
         permissions.py    # the catalogue of rights and groups
         access.py         # Access: what one caller may do
-        auth.py           # AuthService: tokens, the admin key
+        auth.py           # AuthService: tokens, sign-in with a password
+        passwords.py      # Passwords: the rules, hashing off the event loop
         throttle.py       # SignInThrottle: a source that fails too often waits
         users.py          # UserService: users, roles, tokens
         webhooks.py       # WebhookService: register, list, remove

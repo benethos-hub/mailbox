@@ -33,7 +33,8 @@ design early.
 - CI, ruff, mypy, pytest with an 80 % coverage floor
 - FastAPI app in three layers (`web` → `domain` → `data`, 1.1), checked by
   an architecture test
-- Bearer authentication with one static admin key, one error envelope
+- Bearer authentication with one static admin key (removed in phase 4a),
+  one error envelope
 - OpenAPI 3.1 export with stable `operationId`s and contract tests (6.8)
 - Accounts, folders and messages as read routes on the in-memory adapter
 - MCP server skeleton over stdio and streamable HTTP with `list_accounts`

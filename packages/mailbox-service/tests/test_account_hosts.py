@@ -8,12 +8,11 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.main import build_services, create_app
 
-from .conftest import API_KEY, PUBLIC
+from .conftest import PUBLIC, admin_bearer
 
 TABLE: dict[str, list[str]] = {
     "imap.example.org": [PUBLIC],
@@ -37,7 +36,6 @@ class World:
         # DNS as a connection to a mail server finds it, later.
         self.at_connection = at_connection or TABLE
         settings = Settings(
-            api_key=SecretStr(API_KEY),
             storage="memory",
             discovery_internal_hosts=internal_hosts or [],
         )
@@ -49,7 +47,7 @@ class World:
         self.services = services
         self.client = TestClient(
             create_app(settings, services),
-            headers={"Authorization": f"Bearer {API_KEY}"},
+            headers=admin_bearer(services),
         )
 
     async def _resolve(self, host: str, port: int) -> list[str]:

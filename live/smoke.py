@@ -26,7 +26,7 @@ import sys
 from typing import Any
 
 import anyio
-from _common import Run, accounts, imap_settings, read_env
+from _common import Run, accounts, admin_token, imap_settings, read_env
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -234,7 +234,6 @@ def main() -> int:
     env = read_env()
     settings = Settings(
         storage="memory",
-        api_key=SecretStr("live-smoke"),
         key_provider="env",
         master_key=SecretStr(encode_recovery(cipher.new_key())),
         sync_interval=0,
@@ -243,7 +242,7 @@ def main() -> int:
     services.vault.initialize()
     client = TestClient(
         create_app(settings, services),
-        headers={"Authorization": "Bearer live-smoke"},
+        headers={"Authorization": f"Bearer {admin_token(services)}"},
     )
     run = Run()
     used: dict[str, dict[str, Any]] = {}
@@ -275,7 +274,7 @@ def main() -> int:
             f"{len(listed)} accounts",
         )
         run.check(
-            "GET /v1/me warns that the admin key may read and send anywhere",
+            "GET /v1/me warns that the admin may read and send anywhere",
             all(
                 "read_and_send_anywhere" in listed.get(i, {}).get("warnings", [])
                 for i in ids

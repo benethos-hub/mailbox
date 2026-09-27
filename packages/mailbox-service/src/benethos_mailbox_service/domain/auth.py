@@ -41,8 +41,6 @@ _ALPHABET = string.ascii_letters + string.digits
 # 64 characters of base62 carry a little over 380 bits.
 _TOKEN_LENGTH = 64
 
-ADMIN_KEY_USER_ID = "usr_admin_key"
-
 TokenState = Literal["active", "expired", "revoked"]
 
 # A user name that fails this often in the window waits this long, from
@@ -83,7 +81,6 @@ class AuthService:
         users: UserRepository,
         roles: RoleRepository,
         tokens: TokenRepository,
-        admin_key: str | None = None,
         clock: Callable[[], datetime] = utc_now,
         throttle: SignInThrottle | None = None,
         passwords: Passwords | None = None,
@@ -91,7 +88,6 @@ class AuthService:
         self._users = users
         self._roles = roles
         self._tokens = tokens
-        self._admin_key = admin_key or None
         self._clock = clock
         self._throttle = throttle or SignInThrottle(clock=clock)
         self._names = SignInThrottle(
@@ -161,17 +157,16 @@ class AuthService:
         too often is locked out for a while (``RateLimitedError``), before
         the credential is looked at. A request that carries a session the
         service made itself passes no source."""
-        if self._admin_key is None and self._users.count() == 0:
+        if self._users.count() == 0:
             raise SetupRequiredError(
-                "no user exists and MAILBOX_SERVICE_KEY is not set: "
-                "run `benethos-mailbox-service users create-admin`"
+                "no user exists: run `benethos-mailbox-service users create-admin`"
             )
         if not presented:
             raise UnauthorizedError("missing bearer token")
         if source is not None:
             self._throttle.check(source)
         try:
-            access = self._authenticate(presented)
+            access = self._access_for_token(presented)
         except UnauthorizedError:
             if source is not None:
                 self._throttle.failed(source)
@@ -180,21 +175,10 @@ class AuthService:
             self._throttle.succeeded(source)
         return access
 
-    def _authenticate(self, presented: str) -> Access:
-        if self._admin_key is not None and secrets.compare_digest(
-            presented.encode(), self._admin_key.encode()
-        ):
-            return Access.admin(ADMIN_KEY_USER_ID, "admin key")
-        return self._access_for_token(presented)
-
     def access_of(self, user_id: str) -> Access | None:
         """What a user may do now, for work done on its behalf outside a
         request, such as a webhook. None for a user that is gone or
-        disabled, and for the admin key once it is no longer set."""
-        if user_id == ADMIN_KEY_USER_ID:
-            if self._admin_key is None:
-                return None
-            return Access.admin(ADMIN_KEY_USER_ID, "admin key")
+        disabled."""
         try:
             user = self._users.get(user_id)
         except NotFoundError:

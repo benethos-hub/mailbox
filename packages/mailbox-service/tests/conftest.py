@@ -10,7 +10,6 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from benethos_mailbox_service import main
 from benethos_mailbox_service.config import Settings
@@ -40,7 +39,6 @@ from benethos_mailbox_service.domain.accounts import AccountService
 from benethos_mailbox_service.domain.auth import AuthService
 from benethos_mailbox_service.main import Services, build_services, create_app
 
-API_KEY = "test-key"
 PUBLIC = "93.184.215.14"  # what every host resolves to, without DNS
 METHODS = {"get", "post", "put", "patch", "delete"}  # of the OpenAPI document
 
@@ -77,7 +75,7 @@ def no_configuration_from_this_machine(
 
 @pytest.fixture
 def settings() -> Settings:
-    return Settings(api_key=SecretStr(API_KEY), storage="memory")
+    return Settings(storage="memory")
 
 
 @pytest.fixture
@@ -154,7 +152,7 @@ def app_client(settings: Settings, services: Services) -> TestClient:
 @pytest.fixture
 def client(settings: Settings, services: Services) -> TestClient:
     app = create_app(settings, services)
-    return TestClient(app, headers={"Authorization": f"Bearer {API_KEY}"})
+    return TestClient(app, headers=admin_bearer(services))
 
 
 # Names are unique: each limited user gets a number.
@@ -180,6 +178,17 @@ def browser_user(
         services.auth.passwords.set(user.id, name, UI_PASSWORD, must_change=False)
     )
     return name, UI_PASSWORD
+
+
+def admin_bearer(services: Services) -> dict[str, str]:
+    """The header of a token of a user with every right: the API's
+    administrator in a test."""
+    name = f"api-admin-{next(_LIMITED)}"
+    user = services.users.create_user(
+        ADMIN, name, [], [Grant(accounts=["*"], allow=[permissions.ADMIN])]
+    )
+    _, plain = services.auth.issue_token(user.id, "tests")
+    return {"Authorization": f"Bearer {plain}"}
 
 
 def browser_admin(services: Services) -> tuple[str, str]:

@@ -95,7 +95,6 @@ A template for the settings file with every option:
 | `MAILBOX_SERVICE_KEY_PROVIDER` | `keyring` | where the master key lives: `keyring`, `file` or `env` |
 | `MAILBOX_SERVICE_KEY_FILE` | | the key file, for `file` |
 | `MAILBOX_SERVICE_MASTER_KEY` | | the recovery key, for `env` |
-| `MAILBOX_SERVICE_KEY` | | optional built-in admin key, for containers and tests |
 | `MAILBOX_SERVICE_SYNC_INTERVAL` | `300` | seconds between two polls of every folder. `0` switches the sync off. |
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | watch the inbox over IMAP IDLE, with a second connection per account |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
@@ -143,8 +142,9 @@ audit. `GET /v1/me` shows what a token may do.
 Users, roles and tokens are managed in the UI (Users, Roles) or under
 `/v1/users` and `/v1/roles`. A token is shown once, when it is created.
 Give each script and each assistant its own user with only the rights it
-needs. With neither a user nor `MAILBOX_SERVICE_KEY`, the API answers
-`503 setup_required`.
+needs. Until `users create-admin` has made the first user, the API
+answers `503 setup_required`. There is no built-in admin key: every call
+is made by a user, so the audit names one.
 
 ## Changes and webhooks
 

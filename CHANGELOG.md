@@ -69,6 +69,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   with one. The database moves to schema 9. Of two users with the same
   name, the later one gets part of its id appended.
 
+### Removed
+
+- The built-in admin key `MAILBOX_SERVICE_KEY`. Every call is made by a
+  user, so the audit names one. Make the first user with
+  `users create-admin` and a token for the API on its page in the UI. A
+  service that still has the variable set logs a warning at start. A send
+  from the UI has no token in the audit (`credential_id` null).
+
 ### Fixed
 
 - `benethos-mailbox-service` requires fastapi 0.129.1, pydantic 2.12 and

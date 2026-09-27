@@ -8,7 +8,6 @@ import logging
 import anyio
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import AccountStatus, ProviderType
@@ -134,7 +133,7 @@ def test_the_app_starts_and_stops_the_worker(
     account_id: str,  # noqa: F811
     server: FakeMailBox,  # noqa: F811
 ) -> None:
-    settings = Settings(storage="memory", api_key=SecretStr("k"), sync_idle=False)
+    settings = Settings(storage="memory", sync_idle=False)
     running = Services(
         **{
             **services.__dict__,

@@ -6,7 +6,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, User
@@ -39,7 +38,7 @@ READER = Grant(accounts=["*"], allow=["mail.read"])
 
 @pytest.fixture
 def services() -> Services:
-    settings = Settings(storage="memory", api_key=SecretStr("k"))
+    settings = Settings(storage="memory")
     return build_services(settings, password_hasher=CHEAP)
 
 

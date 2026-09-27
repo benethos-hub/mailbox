@@ -28,6 +28,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import build_services, create_app
 
+from .conftest import admin_bearer
 from .imap_fake import FakeMailBox
 from .smtp_fake import FakeSmtpServer
 
@@ -180,13 +181,11 @@ def world(
             sleep=lambda seconds: None,
         )
 
-    settings = Settings(storage="memory", api_key=SecretStr("k"))
+    settings = Settings(storage="memory")
     services = build_services(settings, provider_factory=factory)
     services.vault.initialize()
     yield (
-        TestClient(
-            create_app(settings, services), headers={"Authorization": "Bearer k"}
-        ),
+        TestClient(create_app(settings, services), headers=admin_bearer(services)),
         smtp,
     )
 

@@ -24,7 +24,7 @@ DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
         404: "Account or resource not found",
         501: "The provider cannot do this",
         502: "The provider failed or rejected the credentials",
-        503: "No user and no admin key exist yet",
+        503: "No user exists yet",
     }.items()
 }
 

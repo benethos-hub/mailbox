@@ -23,23 +23,31 @@ from urllib.parse import parse_qs, urlsplit
 
 import httpx
 from _common import (
+    Admin,
     Run,
     accounts,
+    csrf_of,
     imap_settings,
     polled,
     read_env,
     register,
     throwaway_service,
+    ui_sign_in,
 )
 
 
-def sign_in(browser: httpx.Client, token: str) -> bool:
-    page = browser.get("/ui/login")
-    nonce = re.search(r'name="nonce" value="([^"]+)"', page.text)
-    if nonce is None:
-        return False
-    answer = browser.post("/ui/login", data={"token": token, "nonce": nonce.group(1)})
-    return answer.status_code == 200 and "Signed in as" in answer.text
+def check_sign_in(run: Run, browser: httpx.Client, admin: Admin) -> bool:
+    """The admin came from `users create-admin`: its one-time password led
+    to one of its own, which signs in (see bootstrap)."""
+    wrong = ui_sign_in(browser, admin.name, "not the password at all")
+    run.check(
+        "a wrong password is refused", "Wrong user name or password" in wrong.text
+    )
+    signed = ui_sign_in(browser, admin.name, admin.password)
+    return run.check(
+        "sign in with the password that replaced the one-time password",
+        signed.status_code == 200 and "Signed in as" in signed.text,
+    )
 
 
 def check_frame(run: Run, browser: httpx.Client, emails: list[str]) -> None:
@@ -49,7 +57,7 @@ def check_frame(run: Run, browser: httpx.Client, emails: list[str]) -> None:
         home.status_code == 200 and all(e in home.text.lower() for e in emails),
     )
     run.check(
-        "the admin key is warned: reads and sends anywhere",
+        "the admin is warned: reads and sends anywhere",
         "reads and sends anywhere" in home.text,
     )
     run.check(
@@ -58,17 +66,12 @@ def check_frame(run: Run, browser: httpx.Client, emails: list[str]) -> None:
     )
 
 
-def csrf_of(html: str) -> str:
-    found = re.search(r'name="csrf_token" value="([^"]+)"', html)
-    return found.group(1) if found else ""
-
-
 def check_accounts(
     run: Run,
     browser: httpx.Client,
     env: dict[str, str],
     account: dict[str, str],
-    admin_key: str,
+    token: str,
 ) -> str | None:
     """Connects the second test account through the UI, returns its id."""
     csrf = csrf_of(browser.get("/ui/accounts").text)
@@ -125,7 +128,7 @@ def check_accounts(
     )
     api = browser.get(
         f"/v1/accounts/{account_id}",
-        headers={"Authorization": f"Bearer {admin_key}"},
+        headers={"Authorization": f"Bearer {token}"},
     ).text
     run.check(
         "the API shows the settings, never the password",
@@ -179,28 +182,76 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
     )
     if shown is None:
         return
+    token = {"Authorization": f"Bearer {shown.group(1)}"}
     with httpx.Client(base_url=url, timeout=60, follow_redirects=True) as other:
-        run.check("sign in with the new token", sign_in(other, shown.group(1)))
+        me = other.get("/v1/me", headers=token)
+        run.check(
+            "the token works on the API, with the user's rights",
+            me.status_code == 200 and me.json()["name"] == "ui-live-reader",
+        )
+        token_id = re.search(
+            r"/tokens/(tok_[0-9a-f]+)/revoke", browser.get(user_path).text
+        )
+        if token_id is not None:
+            browser.post(
+                f"{user_path}/tokens/{token_id.group(1)}/revoke",
+                data={"csrf_token": csrf},
+            )
+        run.check(
+            "a revoked token is refused at once",
+            other.get("/v1/me", headers=token).status_code == 401,
+        )
+        run.check(
+            "the token does not sign in to the UI",
+            "Wrong user name or password"
+            in ui_sign_in(other, "ui-live-reader", shown.group(1)).text,
+        )
+        set_to = secrets.token_urlsafe(18)
+        was_set = browser.post(
+            f"{user_path}/password",
+            data={
+                "csrf_token": csrf,
+                "new_password": set_to,
+                "repeat_password": set_to,
+            },
+        )
+        run.check(
+            "set its password",
+            "must be changed at the next sign-in" in was_set.text
+            and set_to not in was_set.text,
+        )
+        asked = ui_sign_in(other, "ui-live-reader", set_to)
+        run.check(
+            "it must choose its own first",
+            asked.url.path == "/ui/password",
+        )
+        own = secrets.token_urlsafe(18)
+        changed = other.post(
+            "/ui/password",
+            data={
+                "csrf_token": csrf_of(asked.text),
+                "current_password": set_to,
+                "new_password": own,
+                "repeat_password": own,
+            },
+        )
         home = other.get("/ui").text
         run.check(
-            "it sees the first test account and may read and send",
-            "mail.read" in home and "send" in home,
+            "then it sees the first test account and may read and send",
+            "Password changed." in changed.text
+            and "mail.read" in home
+            and "send" in home,
         )
         run.check(
             "its sending is narrowed, so no warning",
             "reads and sends anywhere" not in home,
         )
-        token_id = re.search(
-            r"/tokens/(tok_[0-9a-f]+)/revoke", browser.get(user_path).text
-        )
-        if token_id is None:
-            run.check("the token can be revoked", False)
-            return
         browser.post(
-            f"{user_path}/tokens/{token_id.group(1)}/revoke", data={"csrf_token": csrf}
+            user_path,
+            data={"csrf_token": csrf, "name": "ui-live-reader", "disabled": "1"},
         )
         run.check(
-            "a revoked token is signed out at once",
+            "a disabled user is signed out at once",
             "/ui/login" in str(other.get("/ui").url),
         )
     deleted = browser.post(f"{user_path}/delete", data={"csrf_token": csrf})
@@ -433,7 +484,7 @@ def main() -> int:
     test_accounts = accounts(env)[:2]
     run = Run()
     with throwaway_service("mailbox-ui-live-") as service:
-        url, admin_key = service.url, service.admin_key
+        url, admin = service.url, service.admin_user
         with service.admin() as client:
             account_id, outcome = register(client, env, test_accounts[0])
             if not run.check(
@@ -442,10 +493,10 @@ def main() -> int:
                 return 1
         with httpx.Client(base_url=url, timeout=60, follow_redirects=True) as browser:
             print("\n== signing in")
-            if not run.check("sign in with the admin key", sign_in(browser, admin_key)):
+            if not check_sign_in(run, browser, admin):
                 return 1
             print("\n== accounts")
-            second_id = check_accounts(run, browser, env, test_accounts[1], admin_key)
+            second_id = check_accounts(run, browser, env, test_accounts[1], admin.token)
             print("\n== users, tokens, roles")
             assert account_id is not None
             check_users(run, browser, url, account_id)

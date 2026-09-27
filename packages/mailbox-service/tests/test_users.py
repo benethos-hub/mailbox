@@ -14,9 +14,9 @@ READ_A = {"accounts": ["acc_a"], "allow": ["mail.read"]}
 READ_A_OUT = {**READ_A, "recipients": None, "max_sends_per_day": None}
 
 
-def test_me_for_the_admin_key(client: TestClient, account_id: str) -> None:
+def test_me_for_an_admin(client: TestClient, account_id: str) -> None:
     me = client.get("/v1/me").json()
-    assert me["user_id"] == "usr_admin_key"
+    assert me["user_id"].startswith("usr_") and me["name"].startswith("api-admin-")
     [account] = me["accounts"]
     assert (account["id"], account["email"]) == (account_id, "me@example.com")
     assert "list_messages" in account["operations"]
@@ -117,7 +117,7 @@ def test_user_lifecycle(client: TestClient) -> None:
     user = created.json()
     assert user["id"].startswith("usr_")
     assert client.get(f"/v1/users/{user['id']}").json() == user
-    assert [u["id"] for u in client.get("/v1/users").json()] == [user["id"]]
+    assert user["id"] in [u["id"] for u in client.get("/v1/users").json()]
 
     patched = client.patch(f"/v1/users/{user['id']}", json={"disabled": True}).json()
     assert patched["disabled"] is True

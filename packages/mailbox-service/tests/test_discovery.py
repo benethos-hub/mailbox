@@ -8,7 +8,6 @@ from typing import Any
 import anyio
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.discovery import (
@@ -40,7 +39,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import build_services, create_app
 
-from .conftest import bearer_for
+from .conftest import admin_bearer, bearer_for
 
 PRESET = DiscoverySourceName.PRESET
 AUTOCONFIG = DiscoverySourceName.AUTOCONFIG
@@ -567,14 +566,12 @@ def test_settings_switch_ispdb_off(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def api() -> tuple[Any, TestClient]:
-    settings = Settings(storage="memory", api_key=SecretStr("k"))
+    settings = Settings(storage="memory")
     discovery = service(
         FakeSource(ISPDB, found(imap("imap.firma.example", ISPDB))), per_user=2
     )
     services = build_services(settings, discovery=discovery)
-    client = TestClient(
-        create_app(settings, services), headers={"Authorization": "Bearer k"}
-    )
+    client = TestClient(create_app(settings, services), headers=admin_bearer(services))
     return services, client
 
 

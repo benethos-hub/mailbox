@@ -24,7 +24,8 @@ def test_the_audit_of_one_account(ui: TestClient, account_id: str) -> None:
     _send(ui, account_id, "bob@example.org")
     page = ui.get(f"/ui/accounts/{account_id}/sends").text
     assert "bob@example.org" in page and "sent" in page
-    assert "test admin" in page or "admin key" in page
+    assert "<strong>admin</strong>" in page or ">admin<" in page
+    assert "the UI" in page  # sent from a session, not with a token
     assert "private body 4711" not in page  # never the content
     account = ui.get(f"/ui/accounts/{account_id}").text
     assert f'href="/ui/accounts/{account_id}/sends"' in account

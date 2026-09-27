@@ -27,7 +27,7 @@ from benethos_mailbox_service.data.providers.microsoft import (
 from benethos_mailbox_service.data.providers.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.main import Services, build_services, create_app
 
-from .conftest import API_KEY, CHEAP, bearer_for, browser_admin
+from .conftest import CHEAP, admin_bearer, bearer_for, browser_admin
 from .test_oauth import TokenEndpoint, factory, granted, id_token
 from .ui_helpers import post, sign_in
 
@@ -43,7 +43,7 @@ def endpoint() -> TokenEndpoint:
 
 
 def build(endpoint: TokenEndpoint, **settings: Any) -> tuple[TestClient, Services]:
-    config = Settings(storage="memory", api_key=SecretStr(API_KEY), **settings)
+    config = Settings(storage="memory", **settings)
     app = App(microsoft_endpoints(), "client-1", SecretStr("app-secret"))
     client = OAuthClient(app, ApiClient(transport=httpx.MockTransport(endpoint)))
     services = build_services(
@@ -218,11 +218,11 @@ def test_discovery_offers_the_sign_in(browser: tuple[TestClient, Services]) -> N
 
 
 def test_the_api_starts_a_sign_in(endpoint: TokenEndpoint) -> None:
-    client, _ = build(endpoint)
+    client, services = build(endpoint)
     answer = client.post(
         "/v1/oauth/microsoft/start",
         json={"login_hint": "me@example.org"},
-        headers={"Authorization": f"Bearer {API_KEY}"},
+        headers=admin_bearer(services),
     )
     assert answer.status_code == 200, answer.text
     url = answer.json()["url"]
