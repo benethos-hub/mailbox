@@ -1101,7 +1101,7 @@ with the role
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
   | `webhooks.manage` | `list_webhooks`, `create_webhook`, `delete_webhook`. Not account-bound |
   | `users.manage` | users, their tokens, roles. Not account-bound |
-  | `admin` | everything |
+  | `admin` | everything, and `show_recovery_key` (the recovery key in the UI, [UI.md](UI.md) 6.5), which only `admin` on every account gives and no grant names |
 
   Permanent deletion and sending are their own groups on purpose: they are
   the two things that cannot be taken back.

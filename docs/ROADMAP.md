@@ -16,7 +16,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [3](#phase-3--mcp-server-and-container) | MCP server and container | **done** |
 | [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | **done** |
 | [4a](#phase-4a--password-sign-in) | Password sign-in | **done** |
-| [4b](#phase-4b--ui-rework) | UI rework | in progress |
+| [4b](#phase-4b--ui-rework) | UI rework | **done** |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
@@ -162,14 +162,19 @@ Everything real mail will depend on, before any real mailbox is connected.
 A rework of the configuration UI before the providers of phase 5.
 Scope, page types and the rules for every page in [UI.md](UI.md).
 
-- The frame: palette, sidebar, top bar with breadcrumb, components (UI 3, 7)
-- The overview: you, your accounts, the service (UI 5)
-- Accounts and connecting from the address (UI 6.1)
-- Users, roles and tokens in the page types (UI 6.3)
-- Mail and sends in the page types (UI 4.4)
-- Webhooks with a delivery log (UI 6.4)
-- Status and the recovery key (UI 6.5)
-- Paging and filters on every list (UI 4.5, 4.6)
+- **The frame: palette, sidebar, top bar with breadcrumb, components
+  (UI 3, 7)**, done
+- **The overview: you, your accounts, the service (UI 5)**, done: the
+  last sign-in stored (schema 10), the sync state in memory
+- **Accounts and connecting from the address (UI 6.1)**, done
+- **Users, roles and tokens in the page types (UI 6.3)**, done
+- **Mail and sends in the page types, the filter bar with chips (UI 4.4,
+  4.5)**, done
+- **Webhooks with a delivery log (UI 6.4)**, done: the last 20 posts of
+  each (schema 11)
+- **Status and the recovery key (UI 6.5)**, done
+- **Paging and filters on every list (UI 4.5, 4.6)**, done
+- all live-checked in `live/ui.py`
 - decided 2026-09-27: UI.md as written, the recovery key for `admin`
   after the password, the sync state in memory, a delivery log, no
   Changes page yet (UI 10)

@@ -87,7 +87,7 @@ The click budget, counted from the overview after signing in:
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
 | Change an account's password | 3 | Accounts, the account, Save |
 | Create a user with rights | 3 | Users, New user, Create |
-| Give a user a token | 3 | Users, the user, Create token |
+| Give a user a token | 3, 4 once it has one | Users, the user, (New token), Create token |
 | Revoke a token | 3 | Users, the user, Revoke |
 | Add a webhook | 3 | Webhooks, New webhook, Create |
 | See why a webhook fails | 1 | Webhooks |
@@ -161,7 +161,7 @@ The options per list, with the same names where the field is the same:
 
 | List | Search | More filters |
 |---|---|---|
-| Mail, Drafts | text | from, to, subject, from day, before day, unread, starred, with attachments |
+| Mail | text | folder and accounts (the mail of every account), from, to, subject, from day, before day, unread, starred, with attachments |
 | Sends | recipient | account, who, outcome, from day, before day |
 | Users | name | role, disabled |
 | Accounts | address | provider, status |
@@ -169,8 +169,12 @@ The options per list, with the same names where the field is the same:
 | Changes | – | account, event, from day |
 
 Mail's filters are the API's query parameters, a test holds them
-together (`test_openapi.py`). The others need no new API: they narrow
-lists the domain already gives.
+together (`test_openapi.py`). The others need no new API: the domain's
+list methods narrow what they give. Drafts have no filter bar: no
+provider searches its drafts. The drafts folder in Mail can be searched.
+
+Sends are one list for every account the caller may audit, the account
+one of its filters, paged with one cursor across the accounts.
 
 ### 4.6 Paging
 
@@ -225,6 +229,8 @@ next step appears under the last one:
    - nothing found: **Set up by hand** open at once, with the server
      fields
    **Set up by hand** is always there, folded when something was found.
+   Where no source names a provider the deployment signs in with, its
+   **Sign in with** stays offered: a custom domain can be at Microsoft.
 3. **Connect.** The domain tries the servers before storing anything.
    Success lands on the account page with **connected**. A refusal comes
    back to this page with the fields kept and the reason under the
@@ -246,8 +252,10 @@ exist only here (a user, a role, a token, a folder).
 
 ### 6.3 Users, roles, tokens
 
-New user: name, a one-time password (CONCEPT 7.5), roles as tick boxes,
-grants in the grant editor. The user page shows the effective rights as
+New user: name, a one-time password (CONCEPT 7.5) that the service
+makes and shows once, as a token, roles as tick boxes, grants in the
+grant editor. New role is an editor page too. It takes the path
+`/ui/roles/new`, so the UI cannot open a role named `new`. The user page shows the effective rights as
 today, then tokens, then Change, then Danger. Roles the same without
 tokens. A token is created in the Tokens card and shown once.
 
