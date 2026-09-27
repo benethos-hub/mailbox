@@ -357,7 +357,8 @@ These rules bind every page, the reworked ones and the ones to come.
 4. **A page has the context it needs, nothing more.** `page` names the
    sidebar entry, `me` the user, `csrf` the token. A template does not
    compute what a route can pass.
-5. **Every form is Post/Redirect/Get** with one message. Every
+5. **Every form that goes through is Post/Redirect/Get** with one
+   message. A refused editor is shown again as 4.7 says. Every
    destructive form asks first. Every list with a filter is a `GET`.
 6. **Words**: the button names of 6.2, tags in lower case, headings in
    sentence case, the record's name in the heading of its detail page.
