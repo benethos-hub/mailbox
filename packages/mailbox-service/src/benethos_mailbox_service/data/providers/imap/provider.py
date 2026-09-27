@@ -671,7 +671,7 @@ class ImapProvider:
         target_validity = self._session.select(target)
         for uid, message in found.items():
             header = message.message_id
-            if uid not in new_uids and header:
+            if uid not in new_uids and header and _searchable(header):
                 # No COPYUID: find it by its Message-ID, if that is unambiguous.
                 matches = self._session.search_message_id(header)
                 if len(matches) == 1:
@@ -871,3 +871,10 @@ def _criteria(search: MessageFilter, before_uid: int | None) -> SearchCriteria:
         mixed=search.has_attachments,
         before_uid=before_uid,
     )
+
+
+def _searchable(header: str) -> bool:
+    """Whether a SEARCH can carry the Message-ID: a sender may write any
+    bytes there, and imaplib writes commands in printable ASCII. Without
+    it the next sync follows the moved message."""
+    return header.isascii() and header.isprintable()

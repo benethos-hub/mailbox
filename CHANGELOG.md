@@ -187,6 +187,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `400`. Before, it went on from its positions under the new parameters,
   and the folder of the new request was ignored. Cursors handed out
   before this version are refused once.
+- Moving a message whose Message-ID holds characters beyond ASCII on an
+  IMAP server without COPYUID answers with the move. Before, the move
+  went through and the request answered `500`.
 - A search with text and `has_attachments=false` on a Microsoft account
   leaves out mail with attachments. Before, `false` was ignored there.
 - On IMAP, a write the service tried again after the connection dropped

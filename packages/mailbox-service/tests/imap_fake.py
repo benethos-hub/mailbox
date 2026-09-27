@@ -350,6 +350,9 @@ class FakeMailBox:
             if failure is not None:
                 raise failure
         words = [criteria] if isinstance(criteria, str) else list(criteria)
+        for word in words if charset is None else []:
+            # Without a charset imapclient sends the criteria as ASCII.
+            str(word).encode("ascii")
         self.calls.append(("search", tuple(words), charset))
         found = []
         for uid, (raw, flags) in self.folders[self.selected].messages.items():
