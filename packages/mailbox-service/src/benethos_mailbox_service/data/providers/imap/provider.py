@@ -166,8 +166,8 @@ class ImapProvider:
         self._username = str(username)
         self._auth = str(auth)
         self._credentials = credentials
-        per_minute = float(
-            settings.get("max_requests_per_minute") or DEFAULT_REQUESTS_PER_MINUTE
+        per_minute = rules.rate_of(
+            settings, "max_requests_per_minute", DEFAULT_REQUESTS_PER_MINUTE
         )
         self._guard = Guard(per_minute, clock=clock, sleep=sleep, jitter=jitter)
         self._smtp = SmtpSender.from_settings(

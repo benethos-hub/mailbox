@@ -79,6 +79,20 @@ def port_of(settings: ProviderSettings, key: str, default: int) -> int:
     return int(settings.get(key) or default)
 
 
+def rate_of(settings: ProviderSettings, key: str, default: float) -> float:
+    """A rate per minute from the settings: a number above 0."""
+    value = settings.get(key)
+    if value is None or value == "":
+        return default
+    try:
+        rate = 0.0 if isinstance(value, bool) else float(value)
+    except (TypeError, ValueError):
+        rate = 0.0
+    if not rate > 0 or rate == float("inf"):
+        raise BadRequestError(f"settings.{key} must be a number above 0")
+    return rate
+
+
 def hosts_in(settings: Mapping[str, object]) -> list[tuple[str, str, int]]:
     """Every server the settings name, as (key, host, port): ``host`` with
     ``port``, ``smtp_host`` with ``smtp_port``, and any other ``*_host``.

@@ -502,6 +502,16 @@ async def test_verify_with_a_still_wrong_password(server: FakeMailBox) -> None:
         await imap.list_folders()
 
 
+@pytest.mark.parametrize("rate", ["fast", -5, 0, True, "inf"])
+def test_a_rate_that_is_no_rate_is_refused(server: FakeMailBox, rate: object) -> None:
+    with pytest.raises(BadRequestError, match="max_requests_per_minute"):
+        provider(server, max_requests_per_minute=rate)
+
+
+def test_a_rate_given_as_text(server: FakeMailBox) -> None:
+    provider(server, max_requests_per_minute="30")
+
+
 async def test_requests_are_paced(server: FakeMailBox) -> None:
     time = FakeTime()
     imap = provider(server, time, max_requests_per_minute=60)
