@@ -121,13 +121,17 @@ def build_services(
     resolve: Resolve | None = None,
     lookup: Lookup | None = None,
     password_hasher: PasswordHasher | None = None,
+    keys: KeyProvider | None = None,
 ) -> Services:
     """``resolve`` answers DNS for the host check that autodiscovery and the
     hosts of an account pass (CONCEPT 5.8, rule 6), ``lookup`` the same
     for the check at every connection to a mail server, which adapters
-    make without ``provider_factory``. Tests hand in tables."""
+    make without ``provider_factory``. Tests hand in tables. ``keys``
+    replaces the key provider the settings name."""
     repos = open_repositories(settings.storage, settings.database_path)
-    vault = CredentialVault(repos.keys, repos.credentials, key_provider(settings))
+    vault = CredentialVault(
+        repos.keys, repos.credentials, keys or key_provider(settings)
+    )
     clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
     # One guard for every connection the service makes to a host a user
     # typed: the lookups of autodiscovery and the servers of an account.
@@ -316,6 +320,9 @@ async def _running(services: Services) -> AsyncIterator[None]:
 
 
 def openapi_json() -> str:
-    """The OpenAPI document, formatted the way ``docs/openapi.json`` stores it."""
-    app = create_app(Settings(storage="memory"))
+    """The OpenAPI document, formatted the way ``docs/openapi.json`` stores it.
+    Built from the routes alone: no key, no OAuth app, nothing stored."""
+    settings = Settings(storage="memory", sync_interval=0)
+    services = build_services(settings, oauth_clients={}, keys=EnvKeyProvider(None))
+    app = create_app(settings, services)
     return json.dumps(app.openapi(), indent=2, ensure_ascii=False) + "\n"

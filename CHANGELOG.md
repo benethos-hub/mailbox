@@ -196,6 +196,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- `openapi` prints the document whatever key provider and OAuth app the
+  settings name. Before, it failed when the key file or the client secret
+  file was missing.
 - A key provider whose content is no recovery key is named in the error,
   e.g. `the key file ... holds no recovery key`. Before, the error said
   only `not a recovery key`.

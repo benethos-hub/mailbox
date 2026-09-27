@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -112,3 +113,20 @@ def test_settings_that_cannot_work_are_named(
 def test_the_log_level_in_any_case(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MAILBOX_SERVICE_LOG_LEVEL", "WARNING")
     assert Settings().log_level == "warning"
+
+
+def test_openapi_needs_no_key_and_no_oauth_app(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
+    monkeypatch.delenv("MAILBOX_SERVICE_KEY_FILE", raising=False)
+    monkeypatch.setenv("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID", "client-1")
+    monkeypatch.setenv(
+        "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE", str(tmp_path / "none")
+    )
+    assert main(["openapi"]) == 0
+    out, err = capsys.readouterr()
+    assert json.loads(out)["info"]["title"] == "Mailbox Service"
+    assert err == ""
