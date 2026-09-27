@@ -207,6 +207,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   tenant's administrators may set to anything. The sign-in asks for
   `User.Read` instead of `openid`, `email` and `profile`. Accounts
   connected before keep working. A new sign-in shows the new permission.
+- A request body larger than 40 MB is refused with `413
+  payload_too_large`, in the API and in the UI, before the service reads
+  it whole. Before, any size was read, and only a send checked the 25 MB
+  of attachments afterwards.
+
 - A token revoked while a request with it was being checked stays
   revoked. Before, that request could save the token back as it had read
   it, and the revocation was lost.
