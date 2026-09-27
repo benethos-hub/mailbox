@@ -291,6 +291,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - An OAuth sign-in that comes back to another signed-in user answers as
   an unknown one and stays open for the user who started it. Before, it
   answered that someone else started it and ended it.
+- A webhook may not post to the metadata services of AWS over IPv6
+  (`fd00:ec2::254`) and of Alibaba Cloud (`100.100.100.200`). Their
+  ranges stay open for receivers in a private network or a VPN.
 - A request body larger than 40 MB is refused with `413
   payload_too_large`, in the API and in the UI, before the service reads
   it whole. Before, any size was read, and only a send checked the 25 MB

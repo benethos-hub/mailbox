@@ -2,8 +2,9 @@
 
 A webhook is registered on purpose, so its host may be in the local
 network, e.g. an automation server. Still refused are addresses no
-receiver has: link-local ones, among them the metadata service of cloud
-hosts, multicast and unspecified addresses. The connection goes to the
+receiver has: link-local ones, among them the metadata service of most
+cloud hosts, the metadata services outside link-local that we know of,
+multicast and unspecified addresses. The connection goes to the
 address that was checked, with the host name kept for SNI and the
 certificate, so a second DNS answer cannot slip in another one. Redirects
 are not followed, and the answer's body is not read.
@@ -11,6 +12,7 @@ are not followed, and the answer's body is not read.
 
 from __future__ import annotations
 
+import ipaddress
 from collections.abc import Mapping
 
 import httpx
@@ -21,11 +23,22 @@ from .safe import Resolve, host_addresses, unwrapped
 
 TIMEOUT = 10.0
 
+# Metadata services of cloud hosts outside the link-local range, which the
+# ranges below do not catch: AWS over IPv6 in a private range, Alibaba
+# Cloud in the shared address space of 100.64.0.0/10. Those ranges stay
+# open, since a VPN such as Tailscale puts receivers there.
+METADATA = frozenset(
+    ipaddress.ip_address(a) for a in ("fd00:ec2::254", "100.100.100.200")
+)
+
 
 def is_receiver_address(address: str) -> bool:
     """False for link-local, multicast, unspecified and reserved addresses,
-    including IPv4 addresses wrapped in IPv6. Private and loopback pass."""
+    including IPv4 addresses wrapped in IPv6, and for the metadata services
+    in METADATA. Private and loopback pass."""
     ip = unwrapped(address)
+    if ip in METADATA:
+        return False
     return not (ip.is_link_local or ip.is_multicast or ip.is_unspecified) and not (
         ip.is_reserved and not ip.is_private
     )

@@ -797,7 +797,9 @@ time up to an hour, 8 times in all (the settings
 After the last try its events are dropped and the webhook notes why in
 `last_error`. The connection goes to the address that was checked. A host
 in the local network passes, link-local, multicast and unspecified
-addresses do not, and redirects are not followed.
+addresses do not, nor the metadata services of cloud hosts outside
+link-local that are known (AWS over IPv6, Alibaba Cloud). Redirects are
+not followed.
 
 ### 6.6 Listing, search and pagination
 
