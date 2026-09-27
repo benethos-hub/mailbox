@@ -9,6 +9,7 @@ import pytest
 from pydantic import SecretStr
 
 from benethos_mailbox_service.data.models import FolderRole, MessageFilter
+from benethos_mailbox_service.data.providers.guard import Guard
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.protocols.imap import (
     ImapServer,
@@ -416,6 +417,20 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
         await imap.list_messages(None, limit=1, cursor=None, search=None)
     with pytest.raises(ProviderUnavailableError, match="next attempt in 30s"):
         await imap.list_folders()  # the success in between reset the count
+
+
+def test_a_pause_of_the_mail_server_holds_no_send_back() -> None:
+    time = FakeTime()
+    guard = Guard(60, clock=time.clock, sleep=time.sleep)
+
+    def unreachable() -> None:
+        raise ProviderUnavailableError("the server did not answer")
+
+    with pytest.raises(ProviderUnavailableError):
+        guard.attempts(unreachable, drop=lambda: None)
+    with pytest.raises(ProviderUnavailableError, match="next attempt"):
+        guard.check()
+    assert guard.once(lambda: "sent") == "sent"
 
 
 async def test_a_dropped_connection_during_the_login_is_no_rejection(

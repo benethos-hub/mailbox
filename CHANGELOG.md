@@ -196,6 +196,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- Sending from an IMAP account goes to the SMTP server while the IMAP
+  server rests after it was unreachable. Before, the send was refused
+  with "the mail server was unreachable".
 - Verifying a Microsoft account asks Microsoft again for an access token
   when a refresh was refused before. Before, only a new sign-in or a
   restart of the service did.
