@@ -118,6 +118,17 @@ def test_a_right_that_no_longer_exists_does_not_block_covers() -> None:
     assert a.covers([renamed])
 
 
+@pytest.mark.parametrize("right", ["accounts.manage", "admin"])
+def test_covers_what_the_caller_holds_on_named_accounts(right: str) -> None:
+    # accounts.manage and admin name create_account and the like, which a
+    # grant on named accounts grants nowhere.
+    held = Grant(accounts=["acc_a"], allow=[right])
+    a = access(held)
+    assert a.covers([held])
+    assert not a.allows("create_account")
+    assert not a.covers([Grant(accounts=["*"], allow=["accounts.manage"])])
+
+
 def test_covers_star_needs_star() -> None:
 
     a = access(Grant(accounts=["*"], allow=["mail.read"]))

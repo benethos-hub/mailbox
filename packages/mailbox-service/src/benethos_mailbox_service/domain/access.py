@@ -179,6 +179,11 @@ class Access:
                 elif ALL_ACCOUNTS in grant.accounts:
                     if not self._allows_everywhere(operation, rule.limit):
                         return False
+                elif operation in permissions.ALL_ACCOUNTS:
+                    # Such as create_account: a grant on named accounts
+                    # grants it nowhere, so it asks for nothing.
+                    continue
+
                 elif not all(
                     self._allows_within(operation, a, rule.limit)
                     for a in grant.accounts

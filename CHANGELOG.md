@@ -151,6 +151,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   stays manageable. Before, every change to it, its tokens and its
   password answered `400 unknown right`. New grants still refuse such a
   name.
+- A user with `accounts.manage` or `admin` on named accounts can manage
+  itself and hand out what it holds. Before, those groups name
+  `create_account` and the like, which only a grant on `*` gives, so the
+  user could not even rename itself.
+
 
 - `restore` refuses while the service runs on the database, as CONCEPT
   7.8 promised. A running service holds the lock file `mailbox.db.lock`

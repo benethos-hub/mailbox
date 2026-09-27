@@ -148,7 +148,26 @@ def test_a_user_with_a_renamed_right_stays_manageable(
     assert client.delete(f"/v1/users/{user['id']}").status_code == 204
 
 
+def test_an_admin_of_one_account_manages_itself(
+    app_client: TestClient, services: Services
+) -> None:
+    own = Grant(accounts=["acc_a"], allow=["admin"])
+    headers = bearer_for(services, own)
+    me = app_client.get("/v1/me", headers=headers).json()
+    renamed = app_client.patch(
+        f"/v1/users/{me['user_id']}", json={"name": "renamed"}, headers=headers
+    )
+    assert renamed.status_code == 200
+    made = app_client.post(
+        "/v1/users",
+        json={"name": "like-me", "grants": [own.model_dump()]},
+        headers=headers,
+    )
+    assert made.status_code == 201
+
+
 def test_token_lifecycle(client: TestClient, app_client: TestClient) -> None:
+
     user = client.post("/v1/users", json={"name": "script", "grants": [READ_A]}).json()
     created = client.post(f"/v1/users/{user['id']}/tokens", json={"name": "laptop"})
     assert created.status_code == 201
