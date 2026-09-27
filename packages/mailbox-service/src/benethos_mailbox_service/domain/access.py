@@ -115,6 +115,25 @@ class Access:
             for rule in self._rules
         )
 
+    def has_accounts(self) -> bool:
+        """Whether some grant gives a right on an existing account."""
+        about_accounts = permissions.ACCOUNT_FREE | permissions.ALL_ACCOUNTS
+        return any(
+            (rule.accounts is None or rule.accounts)
+            and rule.operations - about_accounts
+            for rule in self._rules
+        )
+
+    def anywhere(self, operation: str) -> bool:
+        """Whether the operation is allowed on at least one account, or
+        without one."""
+        return self.allows(operation) or any(
+            operation in rule.operations
+            and operation not in permissions.ALL_ACCOUNTS
+            and (rule.accounts is None or bool(rule.accounts))
+            for rule in self._rules
+        )
+
     def require(self, operation: str, account_id: str | None = None) -> None:
         """Raise unless allowed: ``NotFoundError`` for an account this caller
         cannot see, ``ForbiddenError`` for a missing right."""

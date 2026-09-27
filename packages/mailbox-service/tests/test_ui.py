@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 
 import pytest
@@ -314,6 +315,30 @@ def test_idle_sessions_are_swept_on_sign_in() -> None:
 
 
 # --- the frame ------------------------------------------------------------------------
+
+
+def test_the_sidebar_shows_what_the_user_may_open(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    sign_in(
+        app_client,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
+    page = app_client.get("/ui").text
+    assert 'href="/ui/accounts"' in page and 'href="/ui/mail"' in page
+    for hidden in ("/ui/sends", "/ui/users", "/ui/roles"):
+        assert f'href="{hidden}"' not in page, hidden
+    assert ">Service<" not in page
+    # Without users.manage the name is no link to a page it cannot open.
+    assert "Signed in as <strong>browser-" in page
+
+
+def test_the_admin_sees_every_entry_and_its_own_page(ui: TestClient) -> None:
+    page = ui.get("/ui/users").text
+    for entry in ("/ui/accounts", "/ui/sends", "/ui/users", "/ui/roles"):
+        assert f'href="{entry}"' in page, entry
+    assert 'href="/ui/users" class="active" aria-current="page"' in page
+    assert re.search(r'Signed in as <a href="/ui/users/usr_\w+"><strong>admin', page)
 
 
 def test_security_headers_on_the_ui_only(ui: TestClient, client: TestClient) -> None:

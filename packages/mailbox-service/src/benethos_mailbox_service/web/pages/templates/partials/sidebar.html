@@ -1,25 +1,26 @@
 {% from "components/ui.html" import csrf_field with context %}
+{# ``nav``: the groups and entries the caller may open (navigation.py). #}
 <aside class="sidebar">
   <div class="brand"><span class="mark">✉</span> {{ APP_NAME }}</div>
-  <nav class="nav">
-    <a href="/ui" class="{{ 'active' if page == 'home' }}"><span class="icon">◫</span> Overview</a>
-    <a href="/ui/mail" class="{{ 'active' if page == 'mail' }}"><span class="icon">✉</span> Mail</a>
-    <div class="section">Service</div>
-    <a href="/ui/accounts" class="{{ 'active' if page == 'accounts' }}"><span class="icon">▤</span> Accounts</a>
-    <a href="/ui/sends" class="{{ 'active' if page == 'sends' }}"><span class="icon">⇢</span> Sends</a>
-    <div class="section">Access</div>
-    <a href="/ui/users" class="{{ 'active' if page == 'users' }}"><span class="icon">☺</span> Users</a>
-    <a href="/ui/roles" class="{{ 'active' if page == 'roles' }}"><span class="icon">◈</span> Roles</a>
+  <nav class="nav" aria-label="Main">
+    {% for group in nav %}
+    {% if group.title %}<div class="section">{{ group.title }}</div>{% endif %}
+    {% for entry in group.entries %}
+    <a href="{{ entry.url }}" class="{{ 'active' if page == entry.key }}"{% if page == entry.key %} aria-current="page"{% endif %}><span class="icon">{{ entry.icon }}</span> {{ entry.label }}</a>
+    {% endfor %}
+    {% endfor %}
   </nav>
   <div class="spacer"></div>
   {% if me %}
   <div class="foot">
-    Signed in as <strong>{{ me.name }}</strong>
-    <a class="small" href="/ui/password">Password</a>
-    <form method="post" action="/ui/logout">
-      {{ csrf_field() }}
-      <button class="small ghost" type="submit">Sign out</button>
-    </form>
+    <div class="who">Signed in as {% if own_page %}<a href="{{ own_page }}"><strong>{{ me.name }}</strong></a>{% else %}<strong>{{ me.name }}</strong>{% endif %}</div>
+    <div class="links">
+      <a href="/ui/password">Password</a>
+      <form class="inline" method="post" action="/ui/logout">
+        {{ csrf_field() }}
+        <button class="link" type="submit">Sign out</button>
+      </form>
+    </div>
   </div>
   {% endif %}
 </aside>

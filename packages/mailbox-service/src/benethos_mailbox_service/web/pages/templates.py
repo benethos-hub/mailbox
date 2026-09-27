@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 
 from ... import __version__
 from ...data.models import Address
+from .navigation import navigation, own_page
 from .session import PATH, SignInRequired, show_once
 
 HERE = Path(__file__).resolve().parent
@@ -90,15 +91,17 @@ def render(
     status_code: int = 200,
     **context: Any,
 ) -> HTMLResponse:
-    """A page, with what the layout needs: the active navigation entry, the
-    session's CSRF token, who is signed in, and the message the form before
-    left in the session."""
+    """A page, with what the layout needs: the active navigation entry and
+    the entries the caller may open, the session's CSRF token, who is
+    signed in, and the message the form before left in the session."""
     session = getattr(request.state, "ui_session", None)
     access = getattr(request.state, "access", None)
     context.update(
         page=page,
         csrf=session.csrf if session is not None else "",
         me=access,
+        nav=navigation(access) if access is not None else [],
+        own_page=own_page(access) if access is not None else None,
     )
     for key in ("msg", "err"):
         kept = session.once.pop(key, None) if session is not None else None

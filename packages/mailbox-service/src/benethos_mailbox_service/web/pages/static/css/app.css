@@ -8,53 +8,59 @@
 :root {
   color-scheme: light dark;
 
-  --bg: #f6f7f9;
+  /* Light and bluish (docs/UI.md, section 7). */
+  --bg: #f3f6fb;
   --surface: #ffffff;
-  --surface-2: #f0f2f5;
-  --border: #e2e5ea;
-  --border-strong: #cfd4dc;
+  --surface-2: #e9eef7;
+  --border: #d6deea;
+  --border-strong: #c3cede;
 
-  --text: #16181d;
-  --text-muted: #6b7280;
-  --text-faint: #9aa1ad;
+  --text: #14213d;
+  --text-muted: #5b6b85;
+  --text-faint: #8a97ad;
 
-  --accent: #3b5bdb;
-  --accent-soft: #edf0fd;
+  --accent: #2b6cdb;
+  --accent-soft: #e4edfb;
+  --on-accent: #ffffff;
   --ok: #167a4b;
+  --ok-soft: #e3f4ea;
   --bad: #c1341f;
+  --err-soft: #fdeeec;
   --warn: #a35a06;
   --warn-soft: #fdf4e6;
-  --err-soft: #fdeeec;
 
   --radius: 10px;
   --radius-sm: 6px;
   --gap: 16px;
   --pad: 20px;
-  --sidebar: 216px;
+  --row: 40px;
+  --sidebar: 224px;
 
-  --shadow: 0 1px 2px rgba(16, 20, 30, .05), 0 1px 3px rgba(16, 20, 30, .04);
+  --shadow: 0 1px 2px rgba(20, 33, 61, .05), 0 1px 3px rgba(20, 33, 61, .04);
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14161a;
-    --surface: #1c1f25;
-    --surface-2: #24282f;
-    --border: #2c313a;
-    --border-strong: #3a404a;
+    --bg: #0f1420;
+    --surface: #171d2b;
+    --surface-2: #1f2736;
+    --border: #2c3648;
+    --border-strong: #3a4659;
 
-    --text: #e8eaee;
-    --text-muted: #9aa2b1;
-    --text-faint: #6f7885;
+    --text: #e6ebf5;
+    --text-muted: #9aa8bf;
+    --text-faint: #6c7a92;
 
-    --accent: #7d94f5;
-    --accent-soft: #23293c;
+    --accent: #6ea0ff;
+    --accent-soft: #1d2c4a;
+    --on-accent: #0f1420;
     --ok: #4ac98a;
+    --ok-soft: #173326;
     --bad: #f0776a;
+    --err-soft: #3a1f1f;
     --warn: #e0a458;
-    --warn-soft: #2e2618;
-    --err-soft: #33201e;
+    --warn-soft: #33291a;
 
     --shadow: none;
   }
@@ -119,8 +125,13 @@ a:hover { text-decoration: underline; }
 }
 
 .sidebar .spacer { flex: 1; }
-.sidebar .foot { padding: 0 10px; font-size: 12px; color: var(--text-muted); }
-.sidebar .foot form { margin-top: 6px; }
+.sidebar .foot {
+  padding: 12px 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px; color: var(--text-muted);
+}
+.sidebar .foot .who { overflow-wrap: anywhere; }
+.sidebar .foot .links { display: flex; gap: 12px; margin-top: 6px; }
 
 .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
@@ -133,6 +144,9 @@ a:hover { text-decoration: underline; }
 }
 .topbar h1 { margin: 0; font-size: 18px; font-weight: 620; letter-spacing: -.01em; }
 .topbar .sub { color: var(--text-muted); font-size: 13px; }
+.crumbs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.crumbs .sep { color: var(--text-faint); }
+.crumbs [aria-current] { color: var(--text); }
 .topbar .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
 main { padding: var(--pad); display: flex; flex-direction: column; gap: var(--gap); }
@@ -164,6 +178,16 @@ footer {
 .card > header .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .card .body { padding: var(--pad); }
 .card .body.tight { padding: 0; }
+.card .body + .body { border-top: 1px solid var(--border); }
+.danger-zone > header h2 { color: var(--bad); }
+
+/* The fold that adds one more to a related list. */
+.new-row { border-top: 1px solid var(--border); }
+.new-row > summary {
+  padding: 10px var(--pad);
+  cursor: pointer; color: var(--accent); font-size: 14px;
+}
+.new-row[open] > summary { border-bottom: 1px solid var(--border); }
 
 .grid-2 {
   display: grid; gap: var(--gap);
@@ -186,7 +210,7 @@ thead th {
   position: sticky; top: 0; z-index: 5;
   background: var(--surface-2);
   border-bottom: 1px solid var(--border-strong);
-  padding: 8px 12px;
+  padding: 9px 12px;
   text-align: left;
   font-size: 12px; font-weight: 600;
   text-transform: uppercase; letter-spacing: .04em;
@@ -194,7 +218,12 @@ thead th {
   white-space: nowrap;
 }
 
-tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tbody td {
+  height: var(--row);
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--surface-2); }
 
@@ -215,7 +244,7 @@ tr.unread td.name { font-weight: 650; }
   color: var(--text-muted);
   white-space: nowrap;
 }
-.tag.ok { border-color: transparent; background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+.tag.ok { border-color: transparent; background: var(--ok-soft); color: var(--ok); }
 .tag.bad { border-color: transparent; background: var(--err-soft); color: var(--bad); }
 .tag.warn { border-color: transparent; background: var(--warn-soft); color: var(--warn); }
 .tag.accent { border-color: transparent; background: var(--accent-soft); color: var(--accent); }
@@ -229,10 +258,12 @@ tr.unread td.name { font-weight: 650; }
 .notice {
   padding: 12px 14px;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid transparent;
+  background: var(--ok-soft);
+  color: var(--ok);
   font-size: 14px;
 }
+.notice.info { background: var(--accent-soft); color: var(--text); }
 .notice.warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 .notice.err { background: var(--err-soft); border-color: transparent; color: var(--bad); }
 
@@ -272,10 +303,16 @@ button, .btn {
 }
 button:hover, .btn:hover { background: var(--surface-2); text-decoration: none; }
 button.primary, .btn.primary {
-  background: var(--accent); border-color: var(--accent); color: #fff;
+  background: var(--accent); border-color: var(--accent); color: var(--on-accent);
 }
 button.primary:hover, .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
-button.danger { color: var(--bad); }
+button.danger { color: var(--bad); border-color: var(--bad); }
+button.danger:hover { background: var(--err-soft); }
+button.link {
+  padding: 0; border: 0; background: none;
+  color: var(--accent); font-size: inherit;
+}
+button.link:hover { background: none; text-decoration: underline; }
 button.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
 button.ghost:hover { background: var(--surface-2); color: var(--text); }
 button.small, .btn.small { padding: 4px 9px; font-size: 13px; }

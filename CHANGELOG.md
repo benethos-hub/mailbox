@@ -53,6 +53,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The configuration UI has a lighter, bluish look. The sidebar shows only
+  the pages the signed-in user may open, grouped as Mailboxes and
+  Service.
 - The configuration UI no longer takes an API token to sign in. Tokens
   are for the API and the MCP server.
 - `users create-admin` prints a one-time password instead of a token. The
