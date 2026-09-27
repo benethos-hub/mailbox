@@ -82,6 +82,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The MCP server leaves out more hidden text of an HTML mail: a font
+  below 2px, opacity below 0.1, text pushed far off the page, a box of
+  height 0 with its overflow hidden, and text in the colour of its own
+  background.
 - The MCP server tells a slow answer of the service from a service that
   is not running: a request waits 30 seconds, an attachment 120. Before,
   a timeout said the service was not reachable.

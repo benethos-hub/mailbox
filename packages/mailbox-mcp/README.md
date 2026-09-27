@@ -261,4 +261,5 @@ Mail content comes back inside `<mail-content>` markers, the headers and
 attachment names as much as the body. Strangers wrote it, so it is data,
 not instructions. A list of messages, which is JSON, carries a `note`
 saying the same of `from` and `subject`. HTML is turned into text without
-its hidden parts.
+its hidden parts: text not shown, too small or faint to read, pushed off
+the page or in the colour of its own background.

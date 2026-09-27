@@ -1316,8 +1316,11 @@ What applies in both modes:
    messages, which is JSON, carries a note that `from` and `subject` are
    the sender's words. This lowers the risk, it does not remove it.
 2. **Show the model what a person sees.** The HTML to text conversion drops
-   hidden content: `display:none`, zero-size or invisible text, comments.
-   Hidden text is a common carrier of injected instructions.
+   hidden content: `display:none`, text too small or too faint to read,
+   text pushed off the page or cut to nothing, text in the colour of its
+   own background, comments. Hidden text is a common carrier of injected
+   instructions. What an inline style does not show, such as text in the
+   colour of the page around it, still gets through, marked as foreign.
 3. **Recipient constraints** on the grant (`recipients`, 7.5): send only to
    the own domain, or to listed addresses. The strongest single measure
    when the model may send.
