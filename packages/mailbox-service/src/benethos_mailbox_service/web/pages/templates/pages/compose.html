@@ -95,6 +95,7 @@
         {% if can_send %}<button class="primary" type="submit" name="do" value="send" data-confirm="Send this message now? It cannot be taken back.">Send</button>{% endif %}
         {% if can_save %}<button type="submit" name="do" value="save">{{ "Save" if draft_id else "Save as draft" }}</button>{% endif %}
         {% if can_delete %}<button class="danger" type="submit" name="do" value="delete" formnovalidate data-confirm="Delete this draft for good?">Delete draft</button>{% endif %}
+        <a class="btn" href="{{ trail[-1][1] }}">Cancel</a>
       </div>
     </div>
   </section>

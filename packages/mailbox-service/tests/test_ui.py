@@ -492,3 +492,23 @@ def test_every_text_colour_is_readable_on_its_backgrounds() -> None:
         for text, background in pairs:
             ratio = _contrast(tokens[text], tokens[background])
             assert ratio >= 4.5, f"{mode}: {text} on {background} is {ratio:.2f}:1"
+
+
+@pytest.mark.parametrize(
+    ("page", "back"),
+    [
+        ("/ui/accounts/new", "/ui/accounts"),
+        ("/ui/users/new", "/ui/users"),
+        ("/ui/roles/new", "/ui/roles"),
+        ("/ui/webhooks/new", "/ui/webhooks"),
+        ("/ui/accounts/{account_id}/compose", "/ui/accounts/{account_id}/mail"),
+    ],
+)
+def test_every_editor_has_a_way_back(
+    ui: TestClient, account_id: str, page: str, back: str
+) -> None:
+    """docs/UI.md 4.3: an editor page has Cancel back where it came from."""
+    text = ui.get(page.format(account_id=account_id)).text
+    assert (
+        f'<a class="btn" href="{back.format(account_id=account_id)}">Cancel</a>' in text
+    )
