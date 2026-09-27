@@ -13,7 +13,7 @@ from benethos_mailbox_service.data.models import Folder, FolderRole, Grant
 from benethos_mailbox_service.data.providers import MemoryProvider
 from benethos_mailbox_service.main import Services
 
-from .conftest import bearer_for, memory_of
+from .conftest import browser_user, memory_of
 from .ui_helpers import csrf_of, post, sign_in
 
 
@@ -64,8 +64,10 @@ def test_move_trash_and_purge_a_message(
 def test_a_reader_gets_no_buttons(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(services, Grant(accounts=[account_id], allow=["mail.read"]))
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
+    sign_in(
+        app_client,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
     page = app_client.get(f"/ui/accounts/{account_id}/mail/m1").text
     assert "Mark unread" not in page and "Reply" not in page and "Move" not in page
     listing = app_client.get(f"/ui/accounts/{account_id}/mail").text
@@ -312,10 +314,12 @@ def test_saving_a_draft_keeps_its_attachments(
 def test_sending_needs_its_right(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(
-        services, Grant(accounts=[account_id], allow=["mail.read", "drafts"])
+    sign_in(
+        app_client,
+        *browser_user(
+            services, Grant(accounts=[account_id], allow=["mail.read", "drafts"])
+        ),
     )
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
     form = app_client.get(f"/ui/accounts/{account_id}/compose").text
     assert "Save as draft" in form and ">Send<" not in form
     refused = post(
@@ -330,15 +334,17 @@ def test_sending_needs_its_right(
 def test_a_grant_that_narrows_recipients_is_shown(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(
-        services,
-        Grant(
-            accounts=[account_id],
-            allow=["mail.read", "send"],
-            recipients=["*@example.org"],
+    sign_in(
+        app_client,
+        *browser_user(
+            services,
+            Grant(
+                accounts=[account_id],
+                allow=["mail.read", "send"],
+                recipients=["*@example.org"],
+            ),
         ),
     )
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
     refused = post(
         app_client,
         f"/ui/accounts/{account_id}/compose",

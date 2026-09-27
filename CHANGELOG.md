@@ -41,8 +41,20 @@ adheres to [Semantic Versioning](https://semver.org/).
   `state` of an earlier call, in one account or all. A token with
   `mail.read` gets it.
 
+- The configuration UI signs in with a user name and a password. A user
+  changes its own password under **Password** with the current one. A
+  user with the new right `set_password` (in `users.manage`) sets another
+  user's password on its page, within its own rights. That user must
+  change it at the next sign-in. A changed password signs out every
+  other session of its user. Passwords have 15 to 256 characters.
+- A wrong user name and a wrong password answer alike. After ten failures
+  in fifteen minutes a user name waits one minute, from any address, on
+  top of the lockout per client address.
+
 ### Changed
 
+- The configuration UI no longer takes an API token to sign in. Tokens
+  are for the API and the MCP server.
 - The last two places with the old name use the new one. A draft marks
   what it replies to with `X-Mailbox-Service-Reference` (was
   `X-Mailbox-Api-Reference`), and a backup starts with

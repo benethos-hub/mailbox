@@ -1,11 +1,10 @@
 """Sessions of the configuration UI (CONCEPT 1, 7.5).
 
-A person signs in with an API token of its user, or the admin key. The
-session lives on the server: the cookie carries only a random id, the token
-stays in memory here and never reaches the browser again. Every request
-authenticates the token anew, so a revoked token, a disabled user or
-changed rights take effect at once, as on the API. A restart signs
-everyone out.
+A person signs in with a user name and a password. The session lives on
+the server: the cookie carries only a random id, the session the id of its
+user and when that user's password was set. Every request loads the user
+anew, so a disabled user, changed rights or a changed password take
+effect at once. A restart signs everyone out.
 
 Forms carry a CSRF token of the session, checked on every request that
 changes something. The cookie is ``HttpOnly`` and ``SameSite=Strict`` too.
@@ -23,6 +22,7 @@ from fastapi import Request
 
 from ...common.clock import utc_now
 from ...domain.access import Access
+from ...domain.auth import SignedIn
 from ...errors import MailboxServiceError
 from ..services import get_auth
 
@@ -31,11 +31,18 @@ PATH = "/ui"
 CSRF_FIELD = "csrf_token"
 CSRF_HEADER = "X-CSRF-Token"
 IDLE = timedelta(hours=8)
+# Where a password set by someone else is changed. Until then the session
+# reaches this page and signing out, nothing else.
+PASSWORD_PAGE = f"{PATH}/password"
+_WHILE_CHANGING = {PASSWORD_PAGE, f"{PATH}/logout"}
 
 
 @dataclass
 class UiSession:
-    token: str
+    user_id: str
+    # When the user's password was set: the session ends once it changes.
+    stamp: datetime
+    must_change: bool
     csrf: str
     last_seen: datetime
     # Shown on the next page only, e.g. a new token: kept here, never in a
@@ -47,20 +54,30 @@ class SignInRequired(Exception):
     """No valid session: the page answers with the sign-in page."""
 
 
+class PasswordChangeRequired(Exception):
+    """The password was set by someone else: it is changed first."""
+
+
 class SessionStore:
     def __init__(self, clock: Callable[[], datetime] = utc_now) -> None:
         self._sessions: dict[str, UiSession] = {}
         self._clock = clock
 
-    def create(self, token: str) -> str:
+    def create(self, signed: SignedIn) -> str:
+        """A new session, with an id of its own: one the browser held
+        before signing in is never taken over."""
         now = self._clock()
-        # Sessions nobody came back to would hold their token for the life
-        # of the process. Each sign-in sweeps them.
+        # Sessions nobody came back to would stay for the life of the
+        # process. Each sign-in sweeps them.
         for stale in [s for s, v in self._sessions.items() if now - v.last_seen > IDLE]:
             del self._sessions[stale]
         session_id = secrets.token_urlsafe(32)
         self._sessions[session_id] = UiSession(
-            token=token, csrf=secrets.token_urlsafe(32), last_seen=now
+            user_id=signed.user_id,
+            stamp=signed.stamp,
+            must_change=signed.must_change,
+            csrf=secrets.token_urlsafe(32),
+            last_seen=now,
         )
         return session_id
 
@@ -87,19 +104,22 @@ def store_of(request: Request) -> SessionStore:
 
 
 def current(request: Request) -> tuple[UiSession, Access]:
-    """The session and who it belongs to, or ``SignInRequired``."""
+    """The session and who it belongs to, or ``SignInRequired``. While its
+    password must be changed, ``PasswordChangeRequired`` on any other page."""
     session = store_of(request).get(request.cookies.get(COOKIE))
     if session is None:
         raise SignInRequired
     auth = get_auth(request)
     try:
-        access = auth.authenticate(session.token)
+        access = auth.session_access(session.user_id, session.stamp)
     except MailboxServiceError:
-        # Revoked, expired or disabled since the sign-in.
+        # Gone, disabled, or its password changed since the sign-in.
         store_of(request).drop(request.cookies.get(COOKIE))
         raise SignInRequired from None
     request.state.ui_session = session
     request.state.access = access
+    if session.must_change and request.url.path not in _WHILE_CHANGING:
+        raise PasswordChangeRequired
     return session, access
 
 

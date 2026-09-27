@@ -28,7 +28,13 @@ from benethos_mailbox_service.data.providers import (
     build_provider,
 )
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
+from benethos_mailbox_service.data.secrets import (
+    PasswordHasher,
+    Scrypt,
+    cipher,
+    encode_recovery,
+)
+from benethos_mailbox_service.domain import permissions
 from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.domain.accounts import AccountService
 from benethos_mailbox_service.domain.auth import AuthService
@@ -108,7 +114,7 @@ def services(settings: Settings, messages: list[Message]) -> Services:
             return MemoryProvider(messages=messages)
         return build_provider(kind, provider_settings, credentials)
 
-    return build_services(settings, provider_factory=factory)
+    return build_services(settings, provider_factory=factory, password_hasher=CHEAP)
 
 
 @pytest.fixture
@@ -153,6 +159,34 @@ def client(settings: Settings, services: Services) -> TestClient:
 
 # Names are unique: each limited user gets a number.
 _LIMITED = itertools.count(1)
+_BROWSER = itertools.count(1)
+
+# Cheap to hash, so tests that sign in run fast. The service uses Scrypt().
+CHEAP = PasswordHasher(Scrypt(log_n=4, r=1, p=1))
+UI_PASSWORD = "a passphrase for the tests"
+
+
+def browser_user(
+    services: Services,
+    *grants: Grant,
+    roles: list[str] | None = None,
+    name: str | None = None,
+) -> tuple[str, str]:
+    """A user with these grants and a password it need not change: the
+    name and the password to sign in to the UI with."""
+    name = name or f"browser-{next(_BROWSER)}"
+    user = services.users.create_user(ADMIN, name, roles or [], list(grants))
+    asyncio.run(
+        services.auth.passwords.set(user.id, name, UI_PASSWORD, must_change=False)
+    )
+    return name, UI_PASSWORD
+
+
+def browser_admin(services: Services) -> tuple[str, str]:
+    """A user with every right, to sign in to the UI with."""
+    return browser_user(
+        services, Grant(accounts=["*"], allow=[permissions.ADMIN]), name="admin"
+    )
 
 
 def bearer_for(
@@ -171,9 +205,10 @@ def create_account(accounts: AccountService, *args: Any, **kwargs: Any) -> Accou
 
 
 @pytest.fixture
-def ui(app_client: TestClient) -> TestClient:
-    """A browser signed in to the configuration UI with the admin key."""
+def ui(app_client: TestClient, services: Services) -> TestClient:
+    """A browser signed in to the configuration UI as a user with every
+    right."""
     from .ui_helpers import sign_in
 
-    sign_in(app_client)
+    sign_in(app_client, *browser_admin(services))
     return app_client

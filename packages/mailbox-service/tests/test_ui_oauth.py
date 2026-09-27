@@ -27,7 +27,7 @@ from benethos_mailbox_service.data.providers.microsoft import (
 from benethos_mailbox_service.data.providers.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.main import Services, build_services, create_app
 
-from .conftest import API_KEY, bearer_for
+from .conftest import API_KEY, CHEAP, bearer_for, browser_admin
 from .test_oauth import TokenEndpoint, factory, granted, id_token
 from .ui_helpers import post, sign_in
 
@@ -50,6 +50,7 @@ def build(endpoint: TokenEndpoint, **settings: Any) -> tuple[TestClient, Service
         config,
         provider_factory=factory,
         oauth_clients={ProviderType.MICROSOFT: client},
+        password_hasher=CHEAP,
     )
     services.vault.initialize()
     return TestClient(create_app(config, services)), services
@@ -58,7 +59,7 @@ def build(endpoint: TokenEndpoint, **settings: Any) -> tuple[TestClient, Service
 @pytest.fixture
 def browser(endpoint: TokenEndpoint) -> tuple[TestClient, Services]:
     client, services = build(endpoint)
-    sign_in(client)
+    sign_in(client, *browser_admin(services))
     return client, services
 
 
@@ -98,8 +99,8 @@ def test_off_to_the_provider(browser: tuple[TestClient, Services]) -> None:
 
 
 def test_the_redirect_uses_the_public_url(endpoint: TokenEndpoint) -> None:
-    client, _ = build(endpoint, public_url="https://mail.example.org/")
-    sign_in(client)
+    client, services = build(endpoint, public_url="https://mail.example.org/")
+    sign_in(client, *browser_admin(services))
     location = _start(client).headers["location"]
     redirect = parse_qs(urlsplit(location).query)["redirect_uri"][0]
     assert redirect == "https://mail.example.org/ui/oauth/microsoft/callback"

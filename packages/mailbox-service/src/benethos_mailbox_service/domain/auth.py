@@ -31,7 +31,7 @@ from ..errors import (
     UnauthorizedError,
 )
 from .access import Access
-from .passwords import Passwords
+from .passwords import MAX_LENGTH, Passwords
 from .throttle import SignInThrottle
 
 log = logging.getLogger(__name__)
@@ -52,6 +52,7 @@ NAME_LIMIT = 10
 NAME_WINDOW = timedelta(minutes=15)
 NAME_LOCKOUT = timedelta(minutes=1)
 WRONG = "wrong user name or password"
+MAX_NAME = 200
 
 
 @dataclass(frozen=True)
@@ -106,9 +107,14 @@ class AuthService:
             raise SetupRequiredError(
                 "no user exists: run `benethos-mailbox-service users create-admin`"
             )
-        key = name.strip().casefold()
+        key = name.strip().casefold()[:MAX_NAME]
         self._throttle.check(source)
         self._names.check(key)
+        if len(password) > MAX_LENGTH or len(name) > MAX_NAME:
+            # No password is that long: not worth a hash.
+            self._throttle.failed(source)
+            self._names.failed(key)
+            raise UnauthorizedError(WRONG)
         user = self.user_named(name)
         matched = await self.passwords.matches(user.id if user else None, password)
         stored = self.passwords.stored(user.id) if user is not None else None

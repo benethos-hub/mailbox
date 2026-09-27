@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
-import re
 from datetime import datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.domain.auth import SignedIn
 from benethos_mailbox_service.main import Services
 from benethos_mailbox_service.web.pages.session import IDLE, SessionStore
 
-from .conftest import API_KEY, bearer_for
-from .ui_helpers import csrf_of, sign_in
+from .conftest import ADMIN, UI_PASSWORD, browser_admin, browser_user
+from .ui_helpers import csrf_of, post, sign_in, try_sign_in
+
+NOW = datetime(2026, 9, 24, 12)
+SIGNED = SignedIn(user_id="usr_a", must_change=False, stamp=NOW)
 
 # --- signing in -----------------------------------------------------------------------
 
@@ -42,37 +45,57 @@ def test_htmx_is_sent_to_the_sign_in_page(app_client: TestClient) -> None:
     assert answer.headers["HX-Redirect"].startswith("/ui/login")
 
 
-def test_sign_in_sets_a_strict_session_cookie(app_client: TestClient) -> None:
-    page = app_client.get("/ui/login")
-    nonce = re.search(r'name="nonce" value="([^"]+)"', page.text)
-    assert nonce is not None
-    answer = app_client.post(
-        "/ui/login",
-        data={"token": API_KEY, "nonce": nonce.group(1)},
-        follow_redirects=False,
-    )
+def test_the_form_asks_for_name_and_password(app_client: TestClient) -> None:
+    page = app_client.get("/ui/login").text
+    assert 'name="name" autocomplete="username"' in page
+    assert 'name="password" type="password" autocomplete="current-password"' in page
+    assert "token" not in page.lower().replace("csrf", "")
+
+
+def test_sign_in_sets_a_strict_session_cookie(
+    app_client: TestClient, services: Services
+) -> None:
+    name, password = browser_admin(services)
+    answer = try_sign_in(app_client, name, password)
     cookie = answer.headers["set-cookie"]
     assert "mailbox_ui_session=" in cookie
     assert "HttpOnly" in cookie and "SameSite=strict" in cookie and "Path=/ui" in cookie
-    assert API_KEY not in cookie
+    assert password not in cookie
     assert app_client.get("/ui").status_code == 200
 
 
-def test_a_wrong_token_is_refused(app_client: TestClient) -> None:
-    page = app_client.get("/ui/login")
-    nonce = re.search(r'name="nonce" value="([^"]+)"', page.text)
-    assert nonce is not None
-    answer = app_client.post(
-        "/ui/login", data={"token": "wrong", "nonce": nonce.group(1)}
+@pytest.mark.parametrize(
+    ("name", "password"),
+    [("admin", "a wrong long passphrase"), ("nobody", UI_PASSWORD)],
+)
+def test_a_wrong_name_or_password_is_refused_alike(
+    app_client: TestClient, services: Services, name: str, password: str
+) -> None:
+    browser_admin(services)
+    answer = try_sign_in(app_client, name, password)
+    assert answer.headers["location"] == "/ui/login?notice=invalid"
+    assert (
+        "Wrong user name or password."
+        in app_client.get("/ui/login?notice=invalid").text
     )
-    assert "That token is not valid." in answer.text
     assert app_client.get("/ui", follow_redirects=False).status_code == 303
 
 
-def test_the_sign_in_form_needs_its_nonce(app_client: TestClient) -> None:
+def test_without_any_user_the_page_says_what_to_do(app_client: TestClient) -> None:
+    answer = try_sign_in(app_client, "admin", UI_PASSWORD)
+    assert answer.headers["location"] == "/ui/login?notice=setup"
+    assert "users create-admin" in app_client.get("/ui/login?notice=setup").text
+
+
+def test_the_sign_in_form_needs_its_nonce(
+    app_client: TestClient, services: Services
+) -> None:
     """Another site cannot sign this browser in to an account of its own."""
+    name, password = browser_admin(services)
     answer = app_client.post(
-        "/ui/login", data={"token": API_KEY, "nonce": "forged"}, follow_redirects=False
+        "/ui/login",
+        data={"name": name, "password": password, "nonce": "forged"},
+        follow_redirects=False,
     )
     assert answer.headers["location"] == "/ui/login?notice=expired"
     assert "The sign-in form expired" in app_client.get("/ui/login?notice=expired").text
@@ -103,26 +126,21 @@ def test_the_sign_in_page_says_only_its_own_words(
     [("/ui", "/ui"), ("//evil.example/ui", "/ui"), ("https://evil.example", "/ui")],
 )
 def test_after_sign_in_only_pages_of_the_ui(
-    app_client: TestClient, next: str, lands: str
+    app_client: TestClient, services: Services, next: str, lands: str
 ) -> None:
-    page = app_client.get("/ui/login")
-    nonce = re.search(r'name="nonce" value="([^"]+)"', page.text)
-    assert nonce is not None
-    answer = app_client.post(
-        "/ui/login",
-        data={"token": API_KEY, "nonce": nonce.group(1), "next": next},
-        follow_redirects=False,
-    )
+    answer = try_sign_in(app_client, *browser_admin(services), next=next)
     assert answer.headers["location"] == lands
 
 
-def test_a_user_token_signs_in_with_its_rights(
+def test_a_user_signs_in_with_its_rights(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(services, Grant(accounts=[account_id], allow=["mail.read"]))
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
+    sign_in(
+        app_client,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
     page = app_client.get("/ui").text
-    assert "Signed in as <strong>limited-" in page
+    assert "Signed in as <strong>browser-" in page
     assert "mail.read" in page
     assert "reads and sends anywhere" not in page
 
@@ -130,10 +148,12 @@ def test_a_user_token_signs_in_with_its_rights(
 def test_the_start_page_shows_whole_groups_and_single_operations(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(
-        services, Grant(accounts=[account_id], allow=["mail.read", "send_draft"])
+    sign_in(
+        app_client,
+        *browser_user(
+            services, Grant(accounts=[account_id], allow=["mail.read", "send_draft"])
+        ),
     )
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
     page = app_client.get("/ui").text
     assert '<span class="tag accent">mail.read</span>' in page
     assert '<span class="tag">send_draft</span>' in page
@@ -141,7 +161,7 @@ def test_the_start_page_shows_whole_groups_and_single_operations(
     assert '<span class="tag accent">send</span>' not in page
 
 
-def test_the_admin_key_is_warned(ui: TestClient, account_id: str) -> None:
+def test_an_admin_is_warned(ui: TestClient, account_id: str) -> None:
     assert "reads and sends anywhere" in ui.get("/ui").text
 
 
@@ -167,26 +187,114 @@ def test_the_csrf_token_also_comes_as_a_header(ui: TestClient) -> None:
     assert answer.status_code == 303
 
 
-def test_a_revoked_token_ends_the_session(
+def test_a_disabled_user_is_signed_out(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    user = services.users.create_user(
-        services.auth.authenticate(API_KEY),
-        "reader",
-        [],
-        [Grant(accounts=[account_id], allow=["mail.read"])],
+    name, password = browser_user(
+        services, Grant(accounts=[account_id], allow=["mail.read"])
     )
-    issued, plain = services.auth.issue_token(user.id, "ui")
-    sign_in(app_client, plain)
+    sign_in(app_client, name, password)
     assert app_client.get("/ui").status_code == 200
-    services.auth.revoke_token(issued.id)
+    user = services.auth.user_named(name)
+    assert user is not None
+    services.users.update_user(ADMIN, user.id, disabled=True)
     assert app_client.get("/ui", follow_redirects=False).status_code == 303
 
 
+def test_a_password_set_by_someone_else_is_changed_first(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    user = services.users.create_user(
+        ADMIN, "Anna", [], [Grant(accounts=[account_id], allow=["mail.read"])]
+    )
+    other = TestClient(app_client.app)
+    sign_in(other, *browser_admin(services))
+    set_to = "a password set by the admin"
+    answer = post(
+        other,
+        f"/ui/users/{user.id}/password",
+        {"new_password": set_to, "repeat_password": set_to},
+    )
+    assert "must be changed at the next sign-in" in answer.text
+    assert set_to not in answer.text
+
+    landed = try_sign_in(app_client, "anna", set_to)
+    assert landed.headers["location"] == "/ui/password"
+    # Every other page leads there first, until it is changed.
+    assert app_client.get("/ui/mail", follow_redirects=False).headers["location"] == (
+        "/ui/password"
+    )
+    page = app_client.get("/ui/password").text
+    assert "Choose one of your own" in page
+    mine = "my own long passphrase"
+    changed = post(
+        app_client,
+        "/ui/password",
+        {
+            "current_password": set_to,
+            "new_password": mine,
+            "repeat_password": mine,
+        },
+    )
+    assert "Password changed." in changed.text
+    assert app_client.get("/ui/mail").status_code == 200
+    try_sign_in(TestClient(app_client.app), "Anna", mine)
+
+
+def test_a_changed_password_signs_out_the_other_sessions(
+    app_client: TestClient, services: Services
+) -> None:
+    name, password = browser_admin(services)
+    sign_in(app_client, name, password)
+    laptop = TestClient(app_client.app)
+    sign_in(laptop, name, password)
+    new = "a brand new long passphrase"
+    changed = post(
+        app_client,
+        "/ui/password",
+        {"current_password": password, "new_password": new, "repeat_password": new},
+    )
+    assert "Other sessions are signed out." in changed.text
+    assert app_client.get("/ui").status_code == 200
+    assert laptop.get("/ui", follow_redirects=False).status_code == 303
+
+
+@pytest.mark.parametrize(
+    ("fields", "message"),
+    [
+        ({"current_password": "wrong", "new_password": "n" * 20}, "not right"),
+        ({"new_password": "short"}, "at least 15"),
+    ],
+)
+def test_a_password_change_that_fails_says_why(
+    app_client: TestClient,
+    services: Services,
+    fields: dict[str, str],
+    message: str,
+) -> None:
+    name, password = browser_admin(services)
+    sign_in(app_client, name, password)
+    data = {"current_password": password, **fields}
+    data["repeat_password"] = data["new_password"]
+    answer = post(app_client, "/ui/password", data)
+    assert message in answer.text
+    assert password not in answer.text and data["new_password"] not in answer.text
+    differ = post(
+        app_client,
+        "/ui/password",
+        {
+            "current_password": password,
+            "new_password": "n" * 20,
+            "repeat_password": "x",
+        },
+    )
+    assert "The two new passwords differ." in differ.text
+
+
 def test_an_idle_session_expires() -> None:
-    now = [datetime(2026, 9, 24, 12)]
+    now = [NOW]
     store = SessionStore(clock=lambda: now[0])
-    session_id = store.create("token")
+    session_id = store.create(SIGNED)
     now[0] += IDLE - timedelta(minutes=1)
     assert store.get(session_id) is not None
     now[0] += IDLE + timedelta(minutes=1)
@@ -196,11 +304,11 @@ def test_an_idle_session_expires() -> None:
 
 
 def test_idle_sessions_are_swept_on_sign_in() -> None:
-    now = [datetime(2026, 9, 24, 12)]
+    now = [NOW]
     store = SessionStore(clock=lambda: now[0])
-    forgotten = store.create("token")
+    forgotten = store.create(SIGNED)
     now[0] += IDLE + timedelta(minutes=1)
-    fresh = store.create("token")
+    fresh = store.create(SIGNED)
     assert forgotten not in store._sessions
     assert fresh in store._sessions
 
@@ -240,7 +348,7 @@ def test_errors_in_the_ui_are_pages(ui: TestClient, client: TestClient) -> None:
 
 
 def test_an_incomplete_form_is_a_page(app_client: TestClient) -> None:
-    answer = app_client.post("/ui/login", data={})
+    answer = app_client.get("/ui/login", params={"minutes": "soon"})
     assert answer.status_code == 400
     assert "Incomplete form" in answer.text
 

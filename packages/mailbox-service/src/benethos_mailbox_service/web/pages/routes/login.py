@@ -1,4 +1,5 @@
-"""Signing in with an API token, and out again."""
+"""Signing in with a user name and a password, out again, and changing
+the own password."""
 
 from __future__ import annotations
 
@@ -8,14 +9,23 @@ from typing import Annotated
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from ....errors import MailboxServiceError, RateLimitedError
-from ...services import get_auth
+from ....errors import RateLimitedError, SetupRequiredError, UnauthorizedError
+from ...services import Users, get_auth
 from ...urls import client_address
-from ..deps import Actor
-from ..session import COOKIE, PATH, SignInRequired, current, store_of
-from ..templates import local_path, render
+from ..deps import Actor, Viewer
+from ..forms import failing
+from ..session import (
+    COOKIE,
+    PASSWORD_PAGE,
+    PATH,
+    SignInRequired,
+    UiSession,
+    current,
+    store_of,
+)
+from ..templates import back, local_path, render
 
 router = APIRouter()
 
@@ -27,8 +37,12 @@ LOGIN_COOKIE = "mailbox_ui_login"
 # nowhere to keep a message, so the URL names one of these, never a text.
 NOTICES = {
     "expired": "The sign-in form expired. Try again.",
-    "invalid": "That token is not valid.",
+    "invalid": "Wrong user name or password.",
     "throttled": "Too many failed attempts. Try again in {minutes} minutes.",
+    "setup": (
+        "No user exists yet. Run `benethos-mailbox-service users create-admin` "
+        "on the host."
+    ),
 }
 SIGNED_OUT = "signed_out"
 
@@ -62,24 +76,31 @@ async def login_page(
 @router.post("/login")
 async def login(
     request: Request,
-    token: Annotated[str, Form()],
+    name: Annotated[str, Form()] = "",
+    password: Annotated[str, Form()] = "",
     nonce: Annotated[str, Form()] = "",
     next: Annotated[str, Form()] = PATH,
 ) -> Response:
     expected = request.cookies.get(LOGIN_COOKIE) or ""
     if not expected or not hmac.compare_digest(nonce.encode(), expected.encode()):
         return _to_login("expired")
-    auth = get_auth(request)
-    token = token.strip()
     try:
-        auth.authenticate(token, source=client_address(request))
+        signed = await get_auth(request).sign_in(
+            name, password, source=client_address(request)
+        )
     except RateLimitedError as exc:
         minutes = max(1, -(-exc.retry_after // 60))
         return _to_login("throttled", minutes=minutes)
-    except MailboxServiceError:
+    except SetupRequiredError:
+        return _to_login("setup")
+    except UnauthorizedError:
         return _to_login("invalid")
-    session_id = store_of(request).create(token)
-    response = RedirectResponse(local_path(next, PATH), status_code=303)
+    store = store_of(request)
+    # A session the browser held before is ended, never taken over.
+    store.drop(request.cookies.get(COOKIE))
+    session_id = store.create(signed)
+    target = PASSWORD_PAGE if signed.must_change else local_path(next, PATH)
+    response = RedirectResponse(target, status_code=303)
     _set(response, request, COOKIE, session_id)
     response.delete_cookie(LOGIN_COOKIE, path=PATH)
     return response
@@ -109,3 +130,36 @@ async def logout(request: Request, _: Actor) -> Response:
     response = _to_login(SIGNED_OUT)
     response.delete_cookie(COOKIE, path=PATH)
     return response
+
+
+# --- the own password -------------------------------------------------------------
+
+
+@router.get("/password")
+async def password_page(request: Request, _: Viewer) -> HTMLResponse:
+    session, _access = current(request)
+    return render(
+        request, "pages/password.html", page="password", must_change=session.must_change
+    )
+
+
+@router.post("/password")
+async def change_password(
+    request: Request,
+    caller: Actor,
+    users: Users,
+    current_password: Annotated[str, Form()] = "",
+    new_password: Annotated[str, Form()] = "",
+    repeat_password: Annotated[str, Form()] = "",
+) -> Response:
+    if new_password != repeat_password:
+        return back(request, PASSWORD_PAGE, error="The two new passwords differ.")
+    with failing(PASSWORD_PAGE):
+        stamp = await users.change_password(caller, current_password, new_password)
+    # This session carries on with the new password. Every other session
+    # of the user ends at its next request. Taken from the request, since
+    # checking it again with the old stamp would end it too.
+    session: UiSession = request.state.ui_session
+    session.stamp = stamp
+    session.must_change = False
+    return back(request, PATH, "Password changed. Other sessions are signed out.")

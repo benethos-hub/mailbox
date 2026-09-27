@@ -7,9 +7,12 @@
   <input type="hidden" name="nonce" value="{{ nonce }}" />
   <input type="hidden" name="next" value="{{ next }}" />
   <div class="field">
-    <label for="f-token">API token</label>
-    <input id="f-token" name="token" type="password" autocomplete="current-password" required autofocus />
-    <span class="hint">A token of your user, or the admin key. You act with the rights of that user.</span>
+    <label for="f-name">User name</label>
+    <input id="f-name" name="name" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus />
+  </div>
+  <div class="field">
+    <label for="f-password">Password</label>
+    <input id="f-password" name="password" type="password" autocomplete="current-password" required />
   </div>
   <div class="form-actions">
     <button class="primary" type="submit">Sign in</button>

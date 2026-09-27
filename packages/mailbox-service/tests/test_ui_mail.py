@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.data.models import Attachment, Folder, Grant
 from benethos_mailbox_service.main import Services
 
-from .conftest import bearer_for
+from .conftest import browser_user
 from .ui_helpers import sign_in
 
 
@@ -115,14 +115,16 @@ def test_attachments_and_the_original_are_downloads(
 def test_a_reader_without_attachments_sees_no_download(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(
-        services,
-        Grant(
-            accounts=[account_id],
-            allow=["list_accounts", "get_account", "list_messages", "get_message"],
+    sign_in(
+        app_client,
+        *browser_user(
+            services,
+            Grant(
+                accounts=[account_id],
+                allow=["list_accounts", "get_account", "list_messages", "get_message"],
+            ),
         ),
     )
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
     page = app_client.get(f"/ui/accounts/{account_id}/mail/m1").text
     assert "Hello" in page or "Invoice" in page
     assert "Download original" not in page

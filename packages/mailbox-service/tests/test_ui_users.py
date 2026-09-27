@@ -25,7 +25,7 @@ from benethos_mailbox_service.web.pages.grants import (
     rows_of,
 )
 
-from .conftest import ADMIN, bearer_for
+from .conftest import ADMIN, browser_user
 from .ui_helpers import post, sign_in
 
 
@@ -139,6 +139,26 @@ def test_a_user_without_a_name_is_refused(ui: TestClient) -> None:
     assert "a user needs a name" in answer.text
 
 
+def test_the_page_says_whether_a_user_can_sign_in(
+    ui: TestClient, services: Services
+) -> None:
+    bot = services.users.create_user(ADMIN, "bot", [], [])
+    page = ui.get(f"/ui/users/{bot.id}").text
+    assert "not possible: no password yet" in page
+    assert "Set password" in page
+    secret = "a password for the bot user"
+    post(
+        ui,
+        f"/ui/users/{bot.id}/password",
+        {"new_password": secret, "repeat_password": secret},
+    )
+    assert "with a password" in ui.get(f"/ui/users/{bot.id}").text
+    own = services.auth.user_named("admin")
+    assert own is not None
+    mine = ui.get(f"/ui/users/{own.id}").text
+    assert "Change your password" in mine and "Set password" not in mine
+
+
 def test_change_disable_and_delete_a_user(ui: TestClient, services: Services) -> None:
     user = services.users.create_user(
         ADMIN, "helper", [], [Grant(accounts=["*"], allow=["mail.read"])]
@@ -172,11 +192,13 @@ def test_change_disable_and_delete_a_user(ui: TestClient, services: Services) ->
 def test_no_escalation_through_the_form(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    headers = bearer_for(
-        services,
-        Grant(accounts=[account_id], allow=["users.manage", "mail.read"]),
+    sign_in(
+        app_client,
+        *browser_user(
+            services,
+            Grant(accounts=[account_id], allow=["users.manage", "mail.read"]),
+        ),
     )
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
     refused = post(
         app_client,
         "/ui/users",
@@ -277,11 +299,13 @@ def test_a_user_keeps_roles_the_editor_cannot_list(
 ) -> None:
     services.users.create_role(ADMIN, "hidden", [])
     target = services.users.create_user(ADMIN, "target", ["hidden"], [])
-    headers = bearer_for(
-        services,
-        Grant(accounts=["*"], allow=["list_users", "get_user", "update_user"]),
+    sign_in(
+        app_client,
+        *browser_user(
+            services,
+            Grant(accounts=["*"], allow=["list_users", "get_user", "update_user"]),
+        ),
     )
-    sign_in(app_client, headers["Authorization"].removeprefix("Bearer "))
     page = app_client.get(f"/ui/users/{target.id}").text
     assert 'name="roles" value="hidden" checked' in page
     post(

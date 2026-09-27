@@ -38,7 +38,13 @@ from .routes import (
     sends,
     users,
 )
-from .session import PATH, SessionStore, SignInRequired
+from .session import (
+    PASSWORD_PAGE,
+    PATH,
+    PasswordChangeRequired,
+    SessionStore,
+    SignInRequired,
+)
 from .templates import STATIC_DIR, back, is_htmx
 
 AREAS = (
@@ -99,6 +105,13 @@ def install(app: FastAPI) -> None:
         if is_htmx(request):
             return Response(status_code=204, headers={"HX-Redirect": target})
         return RedirectResponse(target, status_code=303)
+
+    @app.exception_handler(PasswordChangeRequired)
+    async def _change_password(request: Request, _: PasswordChangeRequired) -> Response:
+        """A password someone else set is changed before anything else."""
+        if is_htmx(request):
+            return Response(status_code=204, headers={"HX-Redirect": PASSWORD_PAGE})
+        return RedirectResponse(PASSWORD_PAGE, status_code=303)
 
     @app.exception_handler(Failed)
     async def _failed(request: Request, exc: Failed) -> Response:

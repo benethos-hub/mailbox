@@ -11,9 +11,10 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.domain.throttle import SignInThrottle
 from benethos_mailbox_service.errors import RateLimitedError
-from benethos_mailbox_service.main import create_app
+from benethos_mailbox_service.main import Services, create_app
 
-from .conftest import API_KEY
+from .conftest import API_KEY, browser_admin
+from .ui_helpers import try_sign_in
 
 NOW = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
 
@@ -165,26 +166,27 @@ def test_a_successful_sign_in_clears_the_count(settings: Settings) -> None:
 # --- through the UI, the same throttle ------------------------------------------
 
 
-def test_the_ui_says_when_a_client_is_locked_out(settings: Settings) -> None:
-    client = TestClient(create_app(settings))
+def test_the_ui_says_when_a_client_is_locked_out(
+    settings: Settings, services: Services
+) -> None:
+    client = TestClient(create_app(settings, services))
+    name, password = browser_admin(services)
     for _ in range(10):
-        page = client.get("/ui/login")
-        nonce = page.text.split('name="nonce" value="')[1].split('"')[0]
-        client.post("/ui/login", data={"token": "nope", "nonce": nonce})
-    page = client.get("/ui/login")
-    nonce = page.text.split('name="nonce" value="')[1].split('"')[0]
-    answer = client.post("/ui/login", data={"token": API_KEY, "nonce": nonce})
-    assert "Too many failed attempts" in answer.text
-    assert "Try again in 15 minutes" in answer.text
+        try_sign_in(client, name, "a wrong long passphrase")
+    answer = try_sign_in(client, name, password)
+    assert answer.headers["location"] == "/ui/login?notice=throttled&minutes=15"
+    page = client.get(answer.headers["location"]).text
+    assert "Too many failed attempts. Try again in 15 minutes." in page
     assert "mailbox_ui_session" not in client.cookies
 
 
-def test_a_wrong_token_on_the_api_counts_for_the_ui_too(settings: Settings) -> None:
-    client = TestClient(create_app(settings))
+def test_a_wrong_token_on_the_api_counts_for_the_ui_too(
+    settings: Settings, services: Services
+) -> None:
+    client = TestClient(create_app(settings, services))
+    name, password = browser_admin(services)
     for _ in range(10):
         client.get("/v1/accounts", headers={"Authorization": "Bearer nope"})
-    page = client.get("/ui/login")
-    nonce = page.text.split('name="nonce" value="')[1].split('"')[0]
-    answer = client.post("/ui/login", data={"token": API_KEY, "nonce": nonce})
-    assert "Too many failed attempts" in answer.text
+    answer = try_sign_in(client, name, password)
+    assert "notice=throttled" in answer.headers["location"]
     assert "mailbox_ui_session" not in client.cookies

@@ -111,6 +111,32 @@
 </section>
 {% endif %}
 
+<section class="card">
+  <header><h2>Sign-in to the UI</h2><span class="meta">{% if has_password %}with a password{% else %}not possible: no password yet{% endif %}</span></header>
+  <div class="body">
+    {% if is_me %}
+    <p><a href="/ui/password">Change your password</a></p>
+    {% elif can_set_password %}
+    <form method="post" action="/ui/users/{{ user.id }}/password">
+      {{ csrf_field() }}
+      <input type="hidden" name="name" value="{{ user.name }}" autocomplete="off" />
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-new">New password</label>
+          <input id="f-new" name="new_password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required />
+        </div>
+        <div class="field">
+          <label for="f-repeat">New password again</label>
+          <input id="f-repeat" name="repeat_password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required />
+        </div>
+      </div>
+      <span class="hint">{{ user.name }} must change it at the next sign-in. Whoever sets a password can sign in as that user.</span>
+      <div class="form-actions"><button class="primary" type="submit">Set password</button></div>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
 {% if can_update %}
 <form method="post" action="/ui/users/{{ user.id }}">
   {{ csrf_field() }}
@@ -124,7 +150,7 @@
         </div>
         <div class="field">
           <span class="label">Access</span>
-          <label class="check"><input type="checkbox" name="disabled" value="1"{% if user.disabled %} checked{% endif %} /> disabled: its tokens are refused</label>
+          <label class="check"><input type="checkbox" name="disabled" value="1"{% if user.disabled %} checked{% endif %} /> disabled: it cannot sign in, its tokens are refused</label>
         </div>
       </div>
       {% if role_choices %}{{ role_checks(role_choices, user.roles) }}{% endif %}
