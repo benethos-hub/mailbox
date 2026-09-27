@@ -93,6 +93,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   and a link could put any text into the UI. The sign-in page takes only
   its own codes, `?notice=`. After an OAuth sign-in the provider's error
   text shows only for a sign-in the user started.
+- `get_attachment` of the MCP server names the attachment's type outside
+  the foreign-content marker only when it is a plain media type such as
+  `image/png`. Any other value, which a sender may have chosen, counts as
+  `application/octet-stream`.
 
 ## [0.1.0] - 2026-09-25
 
