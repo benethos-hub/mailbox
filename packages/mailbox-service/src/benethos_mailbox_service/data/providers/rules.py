@@ -76,7 +76,17 @@ def encrypted(settings: ProviderSettings, key: str, protocol: str) -> str:
 
 
 def port_of(settings: ProviderSettings, key: str, default: int) -> int:
-    return int(settings.get(key) or default)
+    """A port from the settings: a whole number from 1 to 65535."""
+    value = settings.get(key)
+    if value is None or value == "":
+        return default
+    try:
+        port = 0 if isinstance(value, bool) else int(value)
+    except (TypeError, ValueError):
+        port = 0
+    if not 1 <= port <= 65535:
+        raise BadRequestError(f"settings.{key} must be a port from 1 to 65535")
+    return port
 
 
 def rate_of(settings: ProviderSettings, key: str, default: float) -> float:

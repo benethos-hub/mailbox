@@ -535,6 +535,19 @@ def test_a_rate_that_is_no_rate_is_refused(server: FakeMailBox, rate: object) ->
         provider(server, max_requests_per_minute=rate)
 
 
+@pytest.mark.parametrize("key", ["port", "smtp_port"])
+@pytest.mark.parametrize("port", ["imap", "99.5", 0, 70000, True])
+def test_a_port_that_is_no_port_is_refused(
+    server: FakeMailBox, key: str, port: object
+) -> None:
+    with pytest.raises(BadRequestError, match=f"settings.{key} must be a port"):
+        provider(server, smtp_host="smtp.example.com", **{key: port})
+
+
+def test_a_port_given_as_text(server: FakeMailBox) -> None:
+    provider(server, port="993", smtp_host="smtp.example.com", smtp_port="465")
+
+
 def test_a_rate_given_as_text(server: FakeMailBox) -> None:
     provider(server, max_requests_per_minute="30")
 
