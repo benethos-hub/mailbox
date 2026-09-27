@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import importlib
 import os
+import pkgutil
+import re
 import sqlite3
 import stat
 from collections.abc import Iterator
@@ -18,8 +22,9 @@ from benethos_mailbox_service.data.storage import (
     SqliteTokenRepository,
     SqliteUserRepository,
 )
-from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
-from benethos_mailbox_service.data.storage.sqlite.database import MIGRATIONS, iso
+from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION, migrations
+from benethos_mailbox_service.data.storage.sqlite.database import iso
+from benethos_mailbox_service.data.storage.sqlite.migrations import MIGRATIONS
 from benethos_mailbox_service.errors import (
     ConflictError,
     NotFoundError,
@@ -321,7 +326,47 @@ def test_times_are_stored_in_utc() -> None:
 def test_each_migration_step_is_one_statement() -> None:
     """Executed one by one: a second statement in a step would be cut off
     by sqlite3, one that ended early would be refused."""
-    for number, steps in enumerate(MIGRATIONS, 1):
-        for step in steps:
+    for number, migration in enumerate(MIGRATIONS, 1):
+        for step in migration.statements:
             assert not sqlite3.complete_statement(step), (number, step)
             assert sqlite3.complete_statement(step + ";"), (number, step)
+
+
+def test_each_migration_module_is_in_the_list_at_its_number() -> None:
+    """A module left out of MIGRATIONS, or one at the wrong place, would
+    change the schema a version stands for."""
+    found = {
+        module.name: importlib.import_module(f"{migrations.__name__}.{module.name}")
+        for module in pkgutil.iter_modules(migrations.__path__)
+        if module.name != "step"
+    }
+    numbers = []
+    for name, module in found.items():
+        named = re.fullmatch(r"v(\d{4})_\w+", name)
+        assert named, f"{name} is not named vNNNN_<subject>"
+        numbers.append(int(named[1]))
+        assert module.MIGRATION is MIGRATIONS[numbers[-1] - 1], name
+    assert sorted(numbers) == list(range(1, SCHEMA_VERSION + 1))
+
+
+# What each migration of a release runs, as a hash: a database of that
+# release has run it, so it is never changed. A release adds its own.
+RELEASED = {
+    1: "e594d44acc853b6512efb56194296ce71115cacd449810f322e534b8c96894d6",
+    2: "ff9d8f7ab7ee21a8e02a38482cd91fbbfe56ccc0978acb914a7a918ef886aa82",
+    3: "fb834a11999de1b5ba3132b5bd5fec13738e274c25eff37f16a510cbf93dac08",
+    4: "674023cf6bf2157755d570dd84051c99bd77bac24894dd37150bb3ae2bfe69d0",
+    5: "4c4d5e7aed016f92070516b411d10cc0645e66cc5bb04def7954d051c4509bbd",
+}
+
+
+def fingerprint(number: int) -> str:
+    statements = MIGRATIONS[number - 1].statements
+    return hashlib.sha256("\n;\n".join(statements).encode()).hexdigest()
+
+
+@pytest.mark.parametrize("number", sorted(RELEASED))
+def test_a_released_migration_is_never_changed(number: int) -> None:
+    assert fingerprint(number) == RELEASED[number], (
+        f"migration {number} shipped in a release: make a new one instead"
+    )
