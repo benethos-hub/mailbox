@@ -191,6 +191,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- A message that another IMAP client removes while the service changes
+  its flags is answered as not found, in `batch_messages` too. Before,
+  it was missing from the answer.
 - Moving a message whose Message-ID holds characters beyond ASCII on an
   IMAP server without COPYUID answers with the move. Before, the move
   went through and the request answered `500`.

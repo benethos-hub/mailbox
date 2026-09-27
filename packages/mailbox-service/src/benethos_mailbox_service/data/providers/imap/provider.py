@@ -605,7 +605,10 @@ class ImapProvider:
         for (to_add, to_remove), plan_uids in plans.items():
             self._session.store_flags(plan_uids, list(to_add), list(to_remove))
         if plans:
-            found = {int(m.uid): m for m in self._session.fetch_headers(list(found))}
+            stored = list(found)
+            found = {int(m.uid): m for m in self._session.fetch_headers(stored)}
+            # Expunged by another client between the two fetches.
+            results.update(_missing(stored, found))
         if target is None:
             results.update(
                 {

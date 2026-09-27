@@ -94,6 +94,22 @@ async def test_a_message_id_a_search_cannot_carry_is_not_looked_for(
     assert not [c for c in server.calls if c[0] == "search"]
 
 
+async def test_a_message_expunged_meanwhile_is_answered_as_missing(
+    server: FakeMailBox,  # noqa: F811
+) -> None:
+    stored = server.add_flags
+
+    def and_expunged_by_another_client(*args: object, **kwargs: object) -> None:
+        stored(*args, **kwargs)  # type: ignore[arg-type]
+        del server.folders["INBOX"].messages[3]
+
+    server.add_flags = and_expunged_by_another_client  # type: ignore[method-assign]
+    outcome = await provider(server).update_messages(
+        [MESSAGE], MessageUpdate(unread=False)
+    )
+    assert isinstance(outcome[MESSAGE], NotFoundError)
+
+
 async def test_flags_and_move_in_one_patch(server: FakeMailBox) -> None:  # noqa: F811
     summary = await update(
         provider(server),
