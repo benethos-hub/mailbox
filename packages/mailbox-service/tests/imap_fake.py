@@ -150,6 +150,7 @@ class FakeMailBox:
 
     def login(self, username: str, password: str) -> bytes:
         self.calls.append(("login", username))
+        password.encode("ascii")  # imaplib writes the command in ASCII
         if self.login_failure is not None:
             failure, self.login_failure = self.login_failure, None
             try:
@@ -161,7 +162,15 @@ class FakeMailBox:
         self.logins += 1
         return b"Logged in"
 
+    def plain_login(self, identity: str, password: str) -> bytes:
+        self.calls.append(("plain", identity))
+        if password != self.password:
+            raise LoginError("b'[AUTHENTICATIONFAILED] Authentication failed.'")
+        self.logins += 1
+        return b"Logged in"
+
     def oauth2_login(self, username: str, token: str) -> bytes:
+
         self.calls.append(("xoauth2", username))
         if token != self.password:
             raise LoginError("b'invalid token'")

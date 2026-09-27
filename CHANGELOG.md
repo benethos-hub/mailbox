@@ -226,7 +226,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   tenant's administrators may set to anything. The sign-in asks for
   `User.Read` instead of `openid`, `email` and `profile`. Accounts
   connected before keep working. A new sign-in shows the new permission.
+- A password beyond ASCII no longer leaks into an error. IMAP logs in
+  with it by SASL PLAIN, where the server offers `AUTH=PLAIN`. SMTP and
+  IMAP without it answer `400` that the login cannot carry it. Before,
+  IMAP answered `500`, and SMTP answered `400` with a message that
+  quoted one character of the password and its position.
 - A request body larger than 40 MB is refused with `413
+
   payload_too_large`, in the API and in the UI, before the service reads
   it whole. Before, any size was read, and only a send checked the 25 MB
   of attachments afterwards.

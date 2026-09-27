@@ -124,6 +124,12 @@ class SmtpSession:
                         initial_response_ok=True,
                     )
                 else:
+                    if not (login.username + login.secret).isascii():
+                        # smtplib writes AUTH in ASCII alone.
+                        raise BadRequestError(
+                            "the user name or password goes beyond ASCII, "
+                            "which the login to the mail server cannot carry"
+                        )
                     connection.login(login.username, login.secret)
             yield connection
         finally:
@@ -147,8 +153,13 @@ def _errors() -> Iterator[None]:
             yield
         except (BadRequestError, ProviderAuthError, ProviderError):
             raise
-        except UnicodeError as exc:
-            raise BadRequestError(f"an address cannot go on the wire: {exc}") from None
+        except UnicodeError:
+            # Never the error's text: it quotes the character, which may be
+            # part of a secret.
+            raise BadRequestError(
+                "a value beyond ASCII cannot go to the mail server"
+            ) from None
+
         except smtplib.SMTPAuthenticationError as exc:
             if 400 <= exc.smtp_code < 500:
                 # 454 4.7.0 and the like: try again later.

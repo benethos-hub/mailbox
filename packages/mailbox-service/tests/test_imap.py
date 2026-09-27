@@ -461,7 +461,26 @@ async def test_a_login_refused_for_good_blocks(
         await imap.list_folders()
 
 
+def test_a_password_beyond_ascii_goes_by_sasl_plain(server: FakeMailBox) -> None:
+    server.password = "pässwort"
+    server.announced.append("AUTH=PLAIN")
+    session = ImapSession(ImapServer("h", 993, "tls"), client_factory=server)
+    session.login("me@example.com", "pässwort")
+    assert ("plain", "me@example.com") in server.calls
+    assert ("login", "me@example.com") not in server.calls
+
+
+def test_a_password_beyond_ascii_needs_auth_plain(server: FakeMailBox) -> None:
+    server.password = "pässwort"
+    session = ImapSession(ImapServer("h", 993, "tls"), client_factory=server)
+    with pytest.raises(BadRequestError, match="no AUTH=PLAIN") as refused:
+        session.login("me@example.com", "pässwort")
+    assert "ä" not in refused.value.message
+    assert ("logout",) in server.calls
+
+
 async def test_a_rejected_login_is_not_tried_again(server: FakeMailBox) -> None:
+
     server.password = "changed"
     imap = provider(server)
     with pytest.raises(ProviderAuthError, match="rejected the login"):
