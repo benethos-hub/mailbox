@@ -196,6 +196,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- The database stores every time in UTC. A time with another offset was
+  stored as given and compared wrongly with the others. The service
+  itself always passed UTC.
 - Sending from an IMAP account goes to the SMTP server while the IMAP
   server rests after it was unreachable. Before, the send was refused
   with "the mail server was unreachable".

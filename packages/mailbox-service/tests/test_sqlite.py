@@ -19,6 +19,7 @@ from benethos_mailbox_service.data.storage import (
     SqliteUserRepository,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
+from benethos_mailbox_service.data.storage.sqlite.database import iso
 from benethos_mailbox_service.errors import (
     ConflictError,
     NotFoundError,
@@ -269,3 +270,13 @@ def test_a_readable_database_file_is_narrowed(tmp_path: Path) -> None:
     path.chmod(0o644)
     Database(path).close()
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+def test_times_are_stored_in_utc() -> None:
+    earlier = iso(datetime.fromisoformat("2026-09-27T14:00:00+02:00"))
+    later = iso(datetime(2026, 9, 27, 12, 30, tzinfo=UTC))
+    assert earlier == "2026-09-27T12:00:00+00:00"
+    # Stored in UTC, the earlier time sorts first as text too.
+    assert earlier is not None and later is not None and earlier < later
+    with pytest.raises(ValueError, match="without a zone"):
+        iso(datetime(2026, 9, 27, 12, 0))

@@ -14,7 +14,7 @@ import stat
 import threading
 from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, overload
 
@@ -380,8 +380,13 @@ def translated() -> Iterator[None]:
 
 
 def iso(value: datetime | None) -> str | None:
-    """A time as the TEXT columns hold it."""
-    return value.isoformat() if value else None
+    """A time as the TEXT columns hold it: in UTC, so that times compare
+    as text. A time without a zone is refused."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        raise ValueError("a time without a zone cannot be stored")
+    return value.astimezone(UTC).isoformat()
 
 
 @overload
