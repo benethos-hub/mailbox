@@ -8,7 +8,8 @@ from typing import Any
 from imapclient import testable_imapclient
 from pydantic import SecretStr
 
-from benethos_mailbox_service.data.mail import fields
+from benethos_mailbox_service.data.mail import convert, fields
+from benethos_mailbox_service.data.mail.parse import ParsedMessage
 from benethos_mailbox_service.data.models import FolderRole
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.protocols.imap import (
@@ -146,3 +147,16 @@ def test_unicode_address_leaves_plain_and_broken_domains_alone() -> None:
     assert fields.unicode_address("me@example.com") == "me@example.com"
     assert fields.unicode_address("no-at-sign") == "no-at-sign"
     assert fields.unicode_address("x@xn--.de") == "x@xn--.de"
+
+
+# --- thread headers, folded by the sender ---------------------------------------------
+
+
+def test_a_folded_in_reply_to_comes_unfolded() -> None:
+    raw = (
+        b"Subject: Re: Plan\r\nMessage-ID:\r\n <b@example.com>\r\n"
+        b"In-Reply-To: <a@example.com>\r\n <older@example.com>\r\n\r\nYes\r\n"
+    )
+    fields_of = convert.thread_fields(ParsedMessage(raw))
+    assert fields_of["message_id_header"] == "<b@example.com>"
+    assert fields_of["in_reply_to"] == "<a@example.com>"

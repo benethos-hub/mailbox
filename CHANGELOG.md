@@ -194,6 +194,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- `in_reply_to` of a message is one Message-ID, the first the header
+  names. Before, a header the sender had folded came with its line break
+  and every id in it.
 - A top-level folder of a Microsoft account has `parent_id` null, as on
   IMAP. Before, it named the mailbox's root folder, which no list shows.
 - `max_requests_per_minute` in the settings of an IMAP account must be a

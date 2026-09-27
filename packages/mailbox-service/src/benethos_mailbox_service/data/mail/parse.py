@@ -18,7 +18,7 @@ from typing import Any
 from imap_tools import MailMessage
 
 from ..models import Address
-from .fields import OCTET_STREAM, message_id, unicode_address
+from .fields import OCTET_STREAM, message_id, message_ids, unicode_address
 
 
 @dataclass(frozen=True)
@@ -88,6 +88,11 @@ class ParsedMessage:
     @property
     def message_id(self) -> str | None:
         return message_id(self.header("message-id"))
+
+    @property
+    def in_reply_to(self) -> str | None:
+        """The first id In-Reply-To names: a folded header comes unfolded."""
+        return next(iter(message_ids(self.header("in-reply-to"))), None)
 
     @property
     def content_type(self) -> str:

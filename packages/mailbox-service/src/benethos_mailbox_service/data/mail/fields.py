@@ -14,6 +14,12 @@ def message_id(value: object) -> str | None:
     return text or None
 
 
+def message_ids(value: object) -> list[str]:
+    """The ``Message-ID`` tokens of a header that lists them, such as
+    References, whether folded or not."""
+    return str(value or "").split()
+
+
 def ascii_domain(email: str) -> str:
     """An address with its domain in punycode, as the wire wants it. The
     local part stays as written: only SMTPUTF8 carries one in Unicode."""

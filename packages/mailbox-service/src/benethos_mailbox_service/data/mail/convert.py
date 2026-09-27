@@ -30,7 +30,7 @@ def thread_fields(msg: ParsedMessage) -> dict[str, Any]:
     answers, and the reference a draft of this service keeps."""
     return {
         "message_id_header": msg.message_id,
-        "in_reply_to": msg.header("in-reply-to"),
+        "in_reply_to": msg.in_reply_to,
         "reference": read_reference(msg.header(REFERENCE_HEADER)),
     }
 
