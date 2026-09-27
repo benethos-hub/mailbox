@@ -614,3 +614,19 @@ def test_a_refused_role_keeps_its_rows(ui: TestClient, services: Services) -> No
     assert changed.status_code == 400
     assert 'value="no_such_right"' in changed.text
     assert services.users.get_role(ADMIN, "readers").grants == []
+
+
+def test_a_page_looks_its_session_up_once(
+    ui: TestClient, services: Services, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = services.users.create_user(ADMIN, "bot", [], [])
+    looked_up = []
+    lookup = services.auth.session_access
+
+    def counted(*args: object) -> Access:
+        looked_up.append(args)
+        return lookup(*args)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(services.auth, "session_access", counted)
+    ui.get(f"/ui/users/{user.id}")
+    assert len(looked_up) == 1
