@@ -101,6 +101,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   `http` to another host needs `MAILBOX_SERVICE_ALLOW_HTTP=1`, else the
   server does not start. The compose file sets it for the network between
   the two containers.
+- A Microsoft account takes its address from Graph `/me`, the mailbox's
+  own address, no longer from the `email` claim of the ID token, which a
+  tenant's administrators may set to anything. The sign-in asks for
+  `User.Read` instead of `openid`, `email` and `profile`. Accounts
+  connected before keep working. A new sign-in shows the new permission.
 
 ## [0.1.0] - 2026-09-25
 

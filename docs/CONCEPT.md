@@ -299,8 +299,14 @@ an app password is the credential to ask for.
   search results up that way, in their own folder, twenty to a JSON
   batch. Outlook.com took several minutes to deliver a sent mail.
 - Each deployment registers its own app in Entra ID (delegated
-  `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `openid`, `email`,
-  `profile` for the address that signed in).
+  `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `User.Read` for
+  the address that signed in).
+- **Decided 2026-09-27:** the address of an account comes from Graph
+  `/me` (`mail`, else `userPrincipalName`), not from the ID token. Its
+  `email` claim is not verified: anyone who manages a work or school
+  tenant may set it. `User.Read` is asked for at the sign-in only. A
+  refresh asks for the adapter's scopes alone, so refresh tokens granted
+  before keep working.
 - **Decided 2026-09-25:** the tenant is `common` by default, so personal
   and work or school accounts can sign in. `consumers`, `organizations` or
   one tenant narrow it. The app must then be registered for all Microsoft

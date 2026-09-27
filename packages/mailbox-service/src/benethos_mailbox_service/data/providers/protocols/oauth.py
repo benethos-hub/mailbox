@@ -16,7 +16,7 @@ import hashlib
 import json
 import secrets
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
@@ -33,14 +33,34 @@ MARGIN = timedelta(minutes=1)
 
 
 @dataclass(frozen=True)
+class Profile:
+    """Where a provider says whose mailbox an access token opens: a JSON
+    document at ``url``, the address in the first of ``email`` that is
+    set, the name in ``name``. ``scopes`` are asked for at the sign-in
+    only: a refresh token granted before them would not cover them."""
+
+    url: str
+    email: tuple[str, ...]
+    name: str | None = None
+    scopes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class Endpoints:
     """Where a provider signs users in and hands out tokens, and what a
-    mail adapter asks for."""
+    mail adapter asks for. With ``profile``, the address of an account
+    comes from there, else from the ID token."""
 
     provider: str
     authorize_url: str
     token_url: str
     scopes: tuple[str, ...]
+    profile: Profile | None = None
+
+    @property
+    def sign_in_scopes(self) -> tuple[str, ...]:
+        """What a sign-in asks for: the adapter's scopes and the profile's."""
+        return self.scopes + (self.profile.scopes if self.profile else ())
 
 
 @dataclass(frozen=True)
@@ -54,8 +74,9 @@ class App:
 
 @dataclass(frozen=True)
 class Identity:
-    """Who signed in, as the ID token says. Received straight from the token
-    endpoint over verified TLS, so its signature is not checked again."""
+    """Who signed in: as the provider's profile says, or else the ID token.
+    Both come straight from the provider over verified TLS, so the token's
+    signature is not checked again."""
 
     email: str | None
     name: str | None
@@ -95,7 +116,7 @@ def authorize_url(
         "response_type": "code",
         "redirect_uri": redirect_uri,
         "response_mode": "query",
-        "scope": " ".join(app.endpoints.scopes),
+        "scope": " ".join(app.endpoints.sign_in_scopes),
         "state": state,
         "code_challenge": pkce.challenge,
         "code_challenge_method": "S256",
@@ -123,14 +144,49 @@ class OAuthClient:
         await self._http.close()
 
     async def exchange(self, code: str, redirect_uri: str, verifier: str) -> Tokens:
-        """The tokens for the code the browser came back with."""
-        return await self._token(
+        """The tokens for the code the browser came back with, and who
+        signed in."""
+        tokens = await self._token(
             {
                 "grant_type": "authorization_code",
                 "code": code,
                 "redirect_uri": redirect_uri,
                 "code_verifier": verifier,
-            }
+            },
+            self.app.endpoints.sign_in_scopes,
+        )
+        profile = self.app.endpoints.profile
+        if profile is None:
+            return tokens
+        return replace(tokens, identity=await self._profile(profile, tokens))
+
+    async def _profile(self, profile: Profile, tokens: Tokens) -> Identity:
+        """The mailbox the access token opens, as the provider's API says.
+        An ID token may carry an address its owner typed in."""
+        provider = self.app.endpoints.provider
+        answer = await self._http.request(
+            "GET",
+            profile.url,
+            headers={
+                "Authorization": f"Bearer {tokens.access_token.get_secret_value()}"
+            },
+        )
+        try:
+            body = answer.json() if answer.ok else None
+        except ProviderError:
+            body = None
+        if not isinstance(body, dict):
+            raise ProviderError(
+                f"{provider} did not say whose mailbox this is ({answer.status})"
+            )
+        email = next(
+            (v for f in profile.email if isinstance(v := body.get(f), str) and v),
+            None,
+        )
+        name = body.get(profile.name) if profile.name else None
+        return Identity(
+            email=email.strip().lower() if email else None,
+            name=name if isinstance(name, str) and name else None,
         )
 
     async def refresh(self, refresh_token: SecretStr) -> Tokens:
@@ -140,15 +196,12 @@ class OAuthClient:
             {
                 "grant_type": "refresh_token",
                 "refresh_token": refresh_token.get_secret_value(),
-            }
+            },
+            self.app.endpoints.scopes,
         )
 
-    async def _token(self, grant: dict[str, str]) -> Tokens:
-        form = {
-            **grant,
-            "client_id": self.app.client_id,
-            "scope": " ".join(self.app.endpoints.scopes),
-        }
+    async def _token(self, grant: dict[str, str], scopes: tuple[str, ...]) -> Tokens:
+        form = {**grant, "client_id": self.app.client_id, "scope": " ".join(scopes)}
         if self.app.client_secret is not None:
             form["client_secret"] = self.app.client_secret.get_secret_value()
         answer = await self._http.request(

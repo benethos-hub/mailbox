@@ -32,6 +32,7 @@ from benethos_mailbox_service.data.providers.microsoft import (
 )
 from benethos_mailbox_service.data.providers.protocols.oauth import (
     App,
+    Identity,
     OAuthClient,
     RefreshingTokens,
     Tokens,
@@ -71,17 +72,43 @@ def id_token(**claims: Any) -> str:
 
 
 class TokenEndpoint:
-    """A token endpoint: answers with ``replies`` in turn, records the forms."""
+    """A token endpoint: answers with ``replies`` in turn, records the forms.
+    Graph's ``/me`` answers with ``profile``, else with the address and name
+    the last reply's ID token carries, so a test names the account there."""
 
     def __init__(self, *replies: tuple[int, dict[str, Any]]) -> None:
         self.replies = list(replies)
         self.forms: list[dict[str, str]] = []
+        self.profile: tuple[int, dict[str, Any]] | None = None
+        self.profile_bearers: list[str] = []
+        self._claims: dict[str, Any] = {}
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
+        if request.url.host == "graph.microsoft.com":
+            self.profile_bearers.append(request.headers["authorization"])
+            status, body = self.profile or (
+                200,
+                {
+                    "mail": self._claims.get("email"),
+                    "userPrincipalName": self._claims.get("preferred_username"),
+                    "displayName": self._claims.get("name"),
+                },
+            )
+            return httpx.Response(status, json=body)
         form = {k: v[0] for k, v in parse_qs(request.content.decode()).items()}
         self.forms.append(form)
         status, body = self.replies.pop(0)
+        token = body.get("id_token")
+        self._claims = _claims(token) if isinstance(token, str) else {}
         return httpx.Response(status, json=body)
+
+
+def _claims(token: str) -> dict[str, Any]:
+    payload = token.split(".")[1]
+    claims: dict[str, Any] = json.loads(
+        base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4))
+    )
+    return claims
 
 
 def granted(
@@ -124,6 +151,20 @@ def test_the_sign_in_address() -> None:
     scopes = query["scope"].split()
     assert "offline_access" in scopes
     assert "https://graph.microsoft.com/Mail.Send" in scopes
+    assert "https://graph.microsoft.com/User.Read" in scopes
+
+
+async def test_a_refresh_asks_only_for_what_the_adapter_needs() -> None:
+    # A refresh token granted before User.Read was asked for does not
+    # cover it: asking for it again would end the account's access.
+    endpoint = TokenEndpoint(granted(), granted("at-2"))
+    oauth = client(endpoint)
+    await oauth.exchange("c", REDIRECT, "v")
+    await oauth.refresh(SecretStr("rt-1"))
+    exchanged, refreshed = (set(form["scope"].split()) for form in endpoint.forms)
+    assert "https://graph.microsoft.com/User.Read" in exchanged
+    assert "https://graph.microsoft.com/User.Read" not in refreshed
+    assert refreshed == set(microsoft_endpoints().scopes)
 
 
 @pytest.mark.parametrize(
@@ -156,6 +197,33 @@ async def test_the_code_is_exchanged() -> None:
     assert tokens.refresh_token is not None
     assert tokens.expires_at == NOW + timedelta(hours=1)
     assert tokens.identity is not None and tokens.identity.email == "me@example.org"
+    assert endpoint.profile_bearers == ["Bearer at-1"]
+
+
+async def test_the_mailbox_says_who_signed_in_not_the_id_token() -> None:
+    # Anyone who manages a work or school tenant may set the email claim.
+    endpoint = TokenEndpoint(granted(id_token=id_token(email="boss@example.org")))
+    endpoint.profile = (
+        200,
+        {"mail": "Me@Example.org", "userPrincipalName": "x", "displayName": "Me"},
+    )
+    tokens = await client(endpoint).exchange("c", REDIRECT, "v")
+    assert tokens.identity == Identity(email="me@example.org", name="Me")
+
+
+async def test_without_a_mail_address_the_sign_in_name() -> None:
+    endpoint = TokenEndpoint(granted())
+    endpoint.profile = (200, {"mail": None, "userPrincipalName": "me@outlook.example"})
+    tokens = await client(endpoint).exchange("c", REDIRECT, "v")
+    assert tokens.identity == Identity(email="me@outlook.example", name=None)
+
+
+@pytest.mark.parametrize("answer", [(403, {"error": "denied"}), (200, ["x"])])
+async def test_a_profile_that_does_not_answer(answer: tuple[int, Any]) -> None:
+    endpoint = TokenEndpoint(granted(id_token=id_token(email="me@example.org")))
+    endpoint.profile = answer
+    with pytest.raises(ProviderError, match="whose mailbox"):
+        await client(endpoint).exchange("c", REDIRECT, "v")
 
 
 @pytest.mark.parametrize(
