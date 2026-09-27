@@ -383,6 +383,15 @@ def test_security_headers_on_the_ui_only(ui: TestClient, client: TestClient) -> 
     assert "content-security-policy" not in client.get("/v1/me").headers
 
 
+def test_static_files_are_kept_and_asked_again(ui: TestClient) -> None:
+    first = ui.get("/ui/static/css/app.css")
+    assert first.headers["cache-control"] == "no-cache"
+    again = ui.get(
+        "/ui/static/css/app.css", headers={"if-none-match": first.headers["etag"]}
+    )
+    assert again.status_code == 304
+
+
 def test_no_inline_script(ui: TestClient) -> None:
     page = ui.get("/ui").text
     assert (
