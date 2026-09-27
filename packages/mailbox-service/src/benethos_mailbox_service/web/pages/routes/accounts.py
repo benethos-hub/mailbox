@@ -50,22 +50,15 @@ def _settings(form: Any) -> dict[str, str | int | bool]:
     return found
 
 
-def _changed(
-    current: dict[str, str | int | bool],
-    submitted: dict[str, str | int | bool],
-    sent: set[str],
-) -> dict[str, str | int | bool | None]:
-    """What the form changes: new or different values, and ``None`` for a
-    field that was sent empty. A field the form did not send changes
-    nothing. The domain logs in only for settings that differ from the
-    stored ones; leaving the unchanged out keeps the request small."""
-    changed: dict[str, str | int | bool | None] = {
-        key: value for key, value in submitted.items() if current.get(key) != value
-    }
+def _submitted(form: Any) -> dict[str, str | int | bool | None]:
+    """The settings the form sent, ``None`` for a field sent empty. A field
+    the form did not send is left out and changes nothing. The domain
+    compares them with the stored ones."""
+    submitted: dict[str, str | int | bool | None] = dict(_settings(form))
     for key in SETTING_FIELDS:
-        if key in current and key in sent and key not in submitted:
-            changed[key] = None
-    return changed
+        if key in form and key not in submitted:
+            submitted[key] = None
+    return submitted
 
 
 def _password(form: Any) -> dict[str, SecretStr]:
@@ -272,12 +265,10 @@ async def update_account(
             request, caller, account_id, accounts, status, form, err
         ),
     ):
-        existing = accounts.get(caller, account_id)
-        settings = _changed(existing.settings, _settings(form), set(form.keys()))
         await accounts.update(
             caller,
             account_id,
-            settings=settings,
+            settings=_submitted(form),
             credentials=_password(form),
             **changes,
         )

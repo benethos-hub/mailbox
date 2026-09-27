@@ -6,6 +6,7 @@ from dataclasses import replace
 from typing import Any
 
 from fastapi.testclient import TestClient
+from starlette.datastructures import FormData
 
 from benethos_mailbox_service.data.models import (
     Candidate,
@@ -178,22 +179,13 @@ def test_a_failed_connect_never_echoes_the_password(ui: TestClient) -> None:
     assert "s3cret-pw" not in answer.text
 
 
-def test_only_changed_settings_are_sent() -> None:
-    from benethos_mailbox_service.web.pages.routes.accounts import (
-        SETTING_FIELDS,
-        _changed,
-    )
+def test_the_settings_as_the_form_sent_them() -> None:
+    from benethos_mailbox_service.web.pages.routes.accounts import _submitted
 
-    current = {"host": "imap.a.org", "port": 993, "username": "me"}
-    every = set(SETTING_FIELDS)
-    same = {"host": "imap.a.org", "port": 993, "username": "me"}
-    assert _changed(current, same, every) == {}
-    moved = {**same, "host": "imap.b.org"}
-    assert _changed(current, moved, every) == {"host": "imap.b.org"}
-    emptied = {"host": "imap.a.org", "username": "me"}
-    assert _changed(current, emptied, every) == {"port": None}
+    form = FormData([("host", "imap.a.org"), ("port", ""), ("username", "me")])
+    assert _submitted(form) == {"host": "imap.a.org", "port": None, "username": "me"}
     # A form that sends only the name removes nothing.
-    assert _changed(current, {}, {"display_name", "csrf_token"}) == {}
+    assert _submitted(FormData([("display_name", "x")])) == {}
 
 
 def test_the_form_shows_the_settings(ui: TestClient, client: TestClient) -> None:
