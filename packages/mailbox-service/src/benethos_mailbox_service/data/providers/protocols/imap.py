@@ -39,8 +39,12 @@ ClientFactory = Callable[..., Any]
 # How often a waiting IDLE looks whether it should stop. Costs no traffic.
 IDLE_STEP = 5.0
 
-_HEADER = "BODY.PEEK[HEADER]"
-_WHOLE = "BODY.PEEK[]"
+# A whole message larger than this is refused, as Graph answers are.
+MAX_MESSAGE_BYTES = 40 * 1024 * 1024
+# Headers beyond this are cut off: a list reads many at once.
+MAX_HEADER_BYTES = 256 * 1024
+
+_HEADER = f"BODY.PEEK[HEADER]<0.{MAX_HEADER_BYTES}>"
 _MESSAGE_ID = "BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]"
 # What an untagged response during IDLE says changed.
 _CHANGES = {b"EXISTS", b"EXPUNGE", b"FETCH", b"VANISHED"}
@@ -116,9 +120,11 @@ class ImapSession:
         timeout: float = 30.0,
         client_factory: ClientFactory = _default_client,
         client_id: tuple[str, str] | None = None,
+        max_bytes: int = MAX_MESSAGE_BYTES,
     ) -> None:
         self._server = server
         self._timeout = timeout
+        self._max_bytes = max_bytes
         self._factory = client_factory
         self._client_id = client_id
         self._client: Any = None
@@ -395,14 +401,24 @@ class ImapSession:
         ]
 
     def fetch_message(self, uid: int) -> FetchedMessage | None:
-        found = self._fetch([uid], ["FLAGS", _WHOLE]).get(uid)
+        found = self._fetch([uid], ["FLAGS", self._whole()]).get(uid)
         if found is None:
             return None
-        return FetchedMessage(uid, _flags(found), _part(found, b"BODY[]"))
+        return FetchedMessage(uid, _flags(found), self._body(uid, found))
 
     def fetch_raw(self, uid: int) -> bytes | None:
-        found = self._fetch([uid], [_WHOLE]).get(uid)
-        return _part(found, b"BODY[]") if found is not None else None
+        found = self._fetch([uid], [self._whole()]).get(uid)
+        return self._body(uid, found) if found is not None else None
+
+    def _whole(self) -> str:
+        """One byte more than allowed, so a message too large shows."""
+        return f"BODY.PEEK[]<0.{self._max_bytes + 1}>"
+
+    def _body(self, uid: int, data: dict[bytes, Any]) -> bytes:
+        body = _part(data, b"BODY[]")
+        if len(body) > self._max_bytes:
+            raise ProviderError(f"message {uid} is larger than {self._max_bytes} bytes")
+        return body
 
     def fetch_message_ids(self, uids: list[int]) -> dict[int, str | None]:
         """The ``Message-ID`` header of each UID in the selected folder. Reads

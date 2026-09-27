@@ -57,12 +57,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   file ended discovery with an unhandled error. With an older fastapi,
   the served OpenAPI document differed from `docs/openapi.json`.
   pydantic 2.11 could not be installed beside the other minimums.
-
-### Fixed
-
 - The IMAP sync could miss a change in the folder its connection had
   selected last, e.g. a new mail in the inbox: the server answered STATUS
   for that folder from an older view. The sync now sends a NOOP first.
+
+### Security
+
+- IMAP reads have a limit. A message larger than 40 MB is refused with
+  `502 provider_error`, as Microsoft accounts already did. In a list,
+  headers beyond 256 KB are cut off.
 
 ## [0.1.0] - 2026-09-25
 
