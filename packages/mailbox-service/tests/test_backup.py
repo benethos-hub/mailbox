@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_service.__main__ import main
@@ -12,6 +13,7 @@ from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.secrets import (
     FileKeyProvider,
+    backup,
     cipher,
     decode_recovery,
 )
@@ -25,7 +27,7 @@ from benethos_mailbox_service.data.secrets.backup import (
     write_backup,
 )
 from benethos_mailbox_service.data.storage import Database, inspect_snapshot
-from benethos_mailbox_service.main import Services, build_services
+from benethos_mailbox_service.main import Services, build_services, create_app
 
 from .conftest import create_account
 
@@ -107,6 +109,74 @@ def test_restore_moves_a_leftover_journal_with_the_old_file(machine: Path) -> No
     restored = _services()
     assert len(restored.adapters.ids()) == 1
     restored.close()
+
+
+def _backed_up(machine: Path) -> tuple[bytes, Path]:
+    """The master key and a database with one account, backed up."""
+    _populate()
+    services = _services()
+    assert services.database is not None
+    master = services.vault.master_key()
+    create_backup(services.database, master, machine / "b.bak", "9.9.9")
+    services.close()
+    return master, Settings().database_path
+
+
+def test_restore_refuses_while_the_service_runs(machine: Path) -> None:
+    master, path = _backed_up(machine)
+    before = path.read_bytes()
+    running = _services()
+    assert running.database is not None
+    with running.database.serving() as held:
+        assert held
+        with pytest.raises(BackupError, match="the service is running"):
+            restore_backup(machine / "b.bak", master, path)
+    running.close()
+    assert path.read_bytes() == before
+    assert list(path.parent.glob("mailbox.db.before-restore-*")) == []
+    # Stopped, the restore goes through.
+    restore_backup(machine / "b.bak", master, path)
+
+
+def test_the_app_marks_its_database_while_it_serves(machine: Path) -> None:
+    master, path = _backed_up(machine)
+    with TestClient(create_app(Settings())) as client:
+        assert client.get("/health").status_code == 200
+        with pytest.raises(BackupError, match="the service is running"):
+            restore_backup(machine / "b.bak", master, path)
+    restore_backup(machine / "b.bak", master, path)
+
+
+def test_a_second_service_on_the_database_is_noted(
+    machine: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    _backed_up(machine)
+    first = _services()
+    assert first.database is not None
+    with first.database.serving(), TestClient(create_app(Settings())):
+        pass
+    first.close()
+    assert "another service uses this database" in caplog.text
+
+
+def test_a_restore_that_fails_leaves_the_database_in_place(
+    machine: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    master, path = _backed_up(machine)
+    before = path.read_bytes()
+    staged = path.with_name(path.name + ".restoring")
+    staged.write_bytes(b"left by a restore that crashed")
+
+    class Broken:
+        def __init__(self, path: Path) -> None:
+            raise sqlite3.OperationalError("disk I/O error")
+
+    monkeypatch.setattr(backup, "Database", Broken)
+    with pytest.raises(sqlite3.OperationalError):
+        restore_backup(machine / "b.bak", master, path)
+    assert path.read_bytes() == before
+    assert not staged.exists()
+    assert list(path.parent.glob("mailbox.db.before-restore-*")) == []
 
 
 def test_backup_never_overwrites(machine: Path) -> None:

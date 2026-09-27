@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import AsyncIterator, Iterator, Mapping
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import ExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from functools import partial
 
@@ -259,17 +259,16 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        async with anyio.create_task_group() as background:
-            if services.worker is not None:
-                background.start_soon(services.worker.run)
-            background.start_soon(services.deliveries.run)
-            try:
+        with ExitStack() as serving:
+            if services.database is not None and not serving.enter_context(
+                services.database.serving()
+            ):
+                logging.getLogger(__name__).warning(
+                    "another service uses this database: a restore cannot "
+                    "tell that this one runs"
+                )
+            async with _running(services):
                 yield
-            finally:
-                # The worker first, so it opens nothing new while the
-                # adapters close.
-                background.cancel_scope.cancel()
-        await services.aclose()
 
     app = FastAPI(
         title="Mailbox Service",
@@ -283,6 +282,23 @@ def create_app(
 
     web.install(app)
     return app
+
+
+@asynccontextmanager
+async def _running(services: Services) -> AsyncIterator[None]:
+    """The background work while the app serves, then every connection
+    closed."""
+    async with anyio.create_task_group() as background:
+        if services.worker is not None:
+            background.start_soon(services.worker.run)
+        background.start_soon(services.deliveries.run)
+        try:
+            yield
+        finally:
+            # The worker first, so it opens nothing new while the
+            # adapters close.
+            background.cancel_scope.cancel()
+    await services.aclose()
 
 
 def openapi_json() -> str:

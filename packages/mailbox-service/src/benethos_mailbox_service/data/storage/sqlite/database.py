@@ -13,13 +13,13 @@ import sqlite3
 import stat
 import threading
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, overload
 
 from ....errors import ConflictError, StorageError
-from ...files import create_private
+from ...files import LockedError, create_private, exclusive_lock
 from ..table import missing
 
 MIGRATIONS: list[str] = [
@@ -217,6 +217,7 @@ class Database:
     path it lives in memory, for tests."""
 
     def __init__(self, path: Path | None = None) -> None:
+        self._path = path
         if path is not None:
             path.parent.mkdir(parents=True, exist_ok=True)
             _owner_only(path)
@@ -306,6 +307,20 @@ class Database:
         if not self.execute(sql, params):
             raise missing(what, row_id)
 
+    @contextmanager
+    def serving(self) -> Iterator[bool]:
+        """Mark the database as used by a running service, for as long as
+        the block runs, so that a restore refuses to replace it. Yields
+        False when another service marked it already."""
+        with ExitStack() as held:
+            if self._path is not None:
+                try:
+                    held.enter_context(exclusive_lock(service_lock(self._path)))
+                except LockedError:
+                    yield False
+                    return
+            yield True
+
     def schema_version(self) -> int:
         row = self.one("SELECT value FROM meta WHERE key = 'schema_version'")
         return int(row[0]) if row else 0
@@ -372,6 +387,11 @@ def parse_iso(value: str | None) -> datetime | None: ...
 def parse_iso(value: str | None) -> datetime | None:
     """The time a TEXT column holds, None for NULL."""
     return datetime.fromisoformat(value) if value else None
+
+
+def service_lock(path: Path) -> Path:
+    """The lock file a running service holds beside its database."""
+    return path.with_name(path.name + ".lock")
 
 
 def _owner_only(path: Path) -> None:

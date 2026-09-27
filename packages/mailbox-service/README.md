@@ -129,8 +129,10 @@ A template for the settings file with every option:
 A backup holds accounts, users, rights, token hashes and the encrypted
 credentials, never mail. It is encrypted as a whole and opens only with
 the master key or the recovery key, which are not in it. `restore` keeps
-the previous database beside the restored one. With `--recovery-key` it
-reads the recovery key from stdin, for a new machine.
+the previous database beside the restored one. It refuses while a
+service runs on the database: a running service holds the lock file
+`mailbox.db.lock` beside it. With `--recovery-key` it reads the recovery
+key from stdin, for a new machine.
 
 ## Users, rights and tokens
 

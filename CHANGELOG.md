@@ -147,6 +147,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   answers with a 4xx code, now count as `502 provider_unavailable` and
   are tried again later. Before, they counted as a rejected credential
   and the account stayed blocked until it was verified.
+- `restore` refuses while the service runs on the database, as CONCEPT
+  7.8 promised. A running service holds the lock file `mailbox.db.lock`
+  beside its database. Before, on Linux the running service went on
+  writing into the old file and the restore was lost at its next start,
+  and on Windows the restore ended with a traceback.
+- `restore` writes and migrates the backup beside the database first,
+  then puts it in place in one step. Before, a crash in between left no
+  database, and the next start created an empty one.
 
 ### Security
 
