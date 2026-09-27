@@ -77,8 +77,25 @@ def test_a_newer_schema_is_refused(tmp_path: Path) -> None:
     with raw:
         raw.execute("UPDATE meta SET value = '999' WHERE key = 'schema_version'")
     raw.close()
-    with pytest.raises(RuntimeError, match="newer"):
+    with pytest.raises(StorageError, match="newer"):
         Database(path)
+
+
+def test_the_cli_names_a_newer_schema(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "sqlite")
+    path = Settings().database_path
+    Database(path).close()
+    raw = sqlite3.connect(path)
+    with raw:
+        raw.execute("UPDATE meta SET value = '999' WHERE key = 'schema_version'")
+    raw.close()
+    assert main(["users", "set-password", "admin"]) == 1
+    assert "database schema 999 is newer" in capsys.readouterr().err
 
 
 def test_deleting_a_user_cascades_to_its_tokens(db: Database) -> None:

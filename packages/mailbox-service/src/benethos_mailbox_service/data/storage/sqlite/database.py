@@ -352,9 +352,9 @@ class Database:
             )
         current = self.schema_version()
         if current > SCHEMA_VERSION:
-            raise RuntimeError(
+            raise StorageError(
                 f"database schema {current} is newer than this version supports "
-                f"({SCHEMA_VERSION})"
+                f"({SCHEMA_VERSION}): run a newer version of the service"
             )
         for version in range(current, SCHEMA_VERSION):
             with self.transaction() as db:

@@ -196,6 +196,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- A database of a newer schema, e.g. after a downgrade, is named in one
+  line by every command. Before, each ended with a traceback.
 - The database stores every time in UTC. A time with another offset was
   stored as given and compared wrongly with the others. The service
   itself always passed UTC.
