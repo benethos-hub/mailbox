@@ -634,8 +634,8 @@ Rules of the implementation (phase 2):
 | GET | `{acc}/messages/{id}/raw` | RFC 822 source (`message/rfc822`) |
 | GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, streamed |
 | POST | `{acc}/messages/batch` | bulk `update` / `move` / `delete` for up to 100 ids, per-id result |
-| GET | `{acc}/threads` | thread list (capability `threads`) |
-| GET | `{acc}/threads/{thread_id}` | thread with its message summaries |
+| GET | `{acc}/threads` | thread list, **planned** (6.3, ROADMAP) |
+| GET | `{acc}/threads/{thread_id}` | thread with its message summaries, **planned** |
 
 **Decided 2026-09-24, changing messages:**
 
@@ -1101,7 +1101,7 @@ with the role
   | Group | Operations |
   |---|---|
   | `accounts.read` | `list_accounts`, `get_account` |
-  | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes`, `list_all_changes` |
+  | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_changes`, `list_all_changes`, and the planned `list_threads`, `get_thread` |
   | `mail.write` | `update_message`, `delete_message` to trash, `batch_messages`, `create_folder`, `update_folder` |
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
@@ -1399,7 +1399,7 @@ one or two `operationId`s.
 | `list_folders` | read | `list_folders` |
 | `search_messages` | read | `list_all_messages` across accounts, or `list_messages` for one |
 | `get_message` | read | `get_message`, body shortened, `max_chars` param |
-| `get_thread` | read | `get_thread` |
+| `get_thread` | read | `get_thread`, **planned** with threads (6.3) |
 | `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
 | `whats_new` | read | `list_all_changes` across accounts, or `list_changes` for one, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash |
