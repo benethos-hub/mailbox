@@ -129,7 +129,7 @@ async def create_account(
     try:
         provider = ProviderType(str(form.get("provider") or ProviderType.IMAP))
     except ValueError:
-        return back("/ui/accounts/new", error="Unknown provider.")
+        return back(request, "/ui/accounts/new", error="Unknown provider.")
     with failing("/ui/accounts/new", f"{email}: "):
         account = await accounts.create(
             caller,
@@ -139,7 +139,7 @@ async def create_account(
             settings,
             _password(form),
         )
-    return back(f"/ui/accounts/{account.id}", f"{account.email} connected.")
+    return back(request, f"/ui/accounts/{account.id}", f"{account.email} connected.")
 
 
 @router.get("/accounts/{account_id}")
@@ -184,23 +184,25 @@ async def update_account(
             credentials=_password(form),
             **changes,
         )
-    return back(here, "Saved.")
+    return back(request, here, "Saved.")
 
 
 @router.post("/accounts/{account_id}/verify")
 async def verify_account(
-    caller: Actor, account_id: str, accounts: Accounts
+    request: Request, caller: Actor, account_id: str, accounts: Accounts
 ) -> Response:
     here = f"/ui/accounts/{account_id}"
     with failing(here, "Not reachable: "):
         checked = await accounts.verify(caller, account_id)
-    return back(here, f"Signed in to the provider. Status: {checked.status.value}.")
+    return back(
+        request, here, f"Signed in to the provider. Status: {checked.status.value}."
+    )
 
 
 @router.post("/accounts/{account_id}/delete")
 async def delete_account(
-    caller: Actor, account_id: str, accounts: Accounts
+    request: Request, caller: Actor, account_id: str, accounts: Accounts
 ) -> Response:
     with failing(f"/ui/accounts/{account_id}"):
         await accounts.delete(caller, account_id)
-    return back("/ui/accounts", "Account removed from the service.")
+    return back(request, "/ui/accounts", "Account removed from the service.")

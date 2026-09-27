@@ -1,5 +1,3 @@
-{# A message from the form before, carried in the query by the redirect. #}
-{% set msg = request.query_params.get("msg") %}
-{% set err = request.query_params.get("err") %}
+{# The message the form before left in the session, shown once. #}
 {% if err %}<div class="notice err" role="alert">{{ err }}</div>{% endif %}
 {% if msg %}<div class="notice" role="status">{{ msg }}</div>{% endif %}

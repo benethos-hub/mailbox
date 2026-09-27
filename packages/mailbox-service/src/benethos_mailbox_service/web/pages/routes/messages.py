@@ -37,7 +37,7 @@ async def set_flags(
     )
     with failing(here):
         await mailbox.update_message(caller, account_id, message_id, changes)
-    return back(here)
+    return back(request, here)
 
 
 @router.post("/accounts/{account_id}/mail/{message_id}/move")
@@ -48,13 +48,13 @@ async def move(
     here = f"/ui/accounts/{account_id}/mail/{message_id}"
     folder = str(form.get("folder") or "")
     if not folder:
-        return back(here, error="Choose a folder.")
+        return back(request, here, error="Choose a folder.")
     with failing(here):
         await mailbox.update_message(
             caller, account_id, message_id, MessageUpdate(folder_ids=[folder])
         )
     # The id stays when a message moves.
-    return back(here, "Moved.")
+    return back(request, here, "Moved.")
 
 
 @router.post("/accounts/{account_id}/mail/{message_id}/delete")
@@ -66,7 +66,9 @@ async def delete(
     listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
     with failing(f"/ui/accounts/{account_id}/mail/{message_id}"):
         await mailbox.delete_message(caller, account_id, message_id, permanent)
-    return back(listing, "Deleted for good." if permanent else "Moved to the trash.")
+    return back(
+        request, listing, "Deleted for good." if permanent else "Moved to the trash."
+    )
 
 
 @router.post("/accounts/{account_id}/mail/batch")
@@ -79,12 +81,12 @@ async def batch(
     ids = [str(i) for i in form.getlist("ids")]
     action = "delete" if form.get("purge") == "1" else str(form.get("action") or "")
     if not ids:
-        return back(listing, error="Tick at least one message.")
+        return back(request, listing, error="Tick at least one message.")
     try:
         if action == "move":
             folder = str(form.get("folder") or "")
             if not folder:
-                return back(listing, error="Choose a folder to move to.")
+                return back(request, listing, error="Choose a folder to move to.")
             request_batch = MessageBatch(
                 ids=ids,
                 action="update",
@@ -99,9 +101,9 @@ async def batch(
                 permanent=permanent,
             )
         else:
-            return back(listing, error="Choose an action.")
+            return back(request, listing, error="Choose an action.")
     except ValidationError:
-        return back(listing, error="At most 100 messages at a time.")
+        return back(request, listing, error="At most 100 messages at a time.")
     with failing(listing):
         result = await mailbox.batch_messages(caller, account_id, request_batch)
     failed = [r for r in result.results if not r.ok]
@@ -110,5 +112,7 @@ async def batch(
         reasons = ". ".join(
             sorted({r.error.message for r in failed if r.error is not None})
         )
-        return back(listing, f"{done} done.", error=f"{len(failed)} failed: {reasons}")
-    return back(listing, f"{done} done.")
+        return back(
+            request, listing, f"{done} done.", error=f"{len(failed)} failed: {reasons}"
+        )
+    return back(request, listing, f"{done} done.")

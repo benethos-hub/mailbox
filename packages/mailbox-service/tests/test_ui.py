@@ -74,8 +74,28 @@ def test_the_sign_in_form_needs_its_nonce(app_client: TestClient) -> None:
     answer = app_client.post(
         "/ui/login", data={"token": API_KEY, "nonce": "forged"}, follow_redirects=False
     )
-    assert "err=" in answer.headers["location"]
+    assert answer.headers["location"] == "/ui/login?notice=expired"
+    assert "The sign-in form expired" in app_client.get("/ui/login?notice=expired").text
     assert app_client.get("/ui", follow_redirects=False).status_code == 303
+
+
+@pytest.mark.parametrize(
+    ("query", "shown"),
+    [
+        ("notice=throttled&minutes=5", "Try again in 5 minutes."),
+        ("notice=signed_out", "Signed out."),
+        ("notice=anything+you+like", None),
+        ("err=Call+this+number", None),
+        ("msg=Call+this+number", None),
+    ],
+)
+def test_the_sign_in_page_says_only_its_own_words(
+    app_client: TestClient, query: str, shown: str | None
+) -> None:
+    page = app_client.get(f"/ui/login?{query}").text
+    assert "Call this number" not in page
+    assert "anything you like" not in page
+    assert (shown in page) if shown else ('class="notice' not in page)
 
 
 @pytest.mark.parametrize(
@@ -232,7 +252,7 @@ def test_the_ui_is_not_in_the_contract(client: TestClient) -> None:
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
-        ("/ui/accounts?msg=Saved.&x=1", "/ui/accounts?x=1"),
+        ("/ui/accounts?x=1", "/ui/accounts?x=1"),
         ("/ui", "/ui"),
         ("https://evil.example/ui/x", "/ui/fallback"),
         ("//evil.example/ui", "/ui/fallback"),

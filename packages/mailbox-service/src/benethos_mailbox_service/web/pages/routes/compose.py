@@ -57,10 +57,10 @@ async def compose_submit(
                 build(OutgoingMessage, fields),
                 str(form.get("idempotency_key") or "") or None,
             )
-            return back(f"/ui/accounts/{account_id}/mail", sent_text(result))
+            return back(request, f"/ui/accounts/{account_id}/mail", sent_text(result))
         saved = await mailbox.create_draft(
             caller, account_id, build(DraftMessage, fields)
         )
     except (ComposeError, MailboxServiceError) as exc:
         return await show_again(request, caller, account, form, exc)
-    return back(f"/ui/accounts/{account_id}/drafts/{saved.id}", "Draft saved.")
+    return back(request, f"/ui/accounts/{account_id}/drafts/{saved.id}", "Draft saved.")

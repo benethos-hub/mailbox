@@ -82,7 +82,10 @@ REST client can do too.
   every request authenticates the token anew, so revoking it ends the
   session. Sessions end after 8 hours without a request and with a
   restart. A content security policy allows no inline script or style and
-  no framing. A form answers with a redirect (Post/Redirect/Get).
+  no framing. A form answers with a redirect (Post/Redirect/Get). Its
+  message waits in the session and is shown once, never in the URL, so a
+  link cannot put words into the UI. The sign-in page, which has no
+  session, names one of its own messages by a code.
   Guessing is slowed down: a client address that fails to sign in ten
   times within fifteen minutes is locked out for fifteen minutes, on the
   UI and on the API alike, whatever the credential kind. Behind a proxy,

@@ -37,10 +37,10 @@ async def create_folder(
     try:
         new = FolderCreate(name=str(form.get("name") or "").strip(), parent_id=parent)
     except ValidationError:
-        return back(_folder_page(account_id, parent), error=_bad_name())
+        return back(request, _folder_page(account_id, parent), error=_bad_name())
     with failing(_folder_page(account_id, parent)):
         folder = await mailbox.create_folder(caller, account_id, new)
-    return back(_folder_page(account_id, folder.id), f"{folder.name} created.")
+    return back(request, _folder_page(account_id, folder.id), f"{folder.name} created.")
 
 
 @router.post("/accounts/{account_id}/folders/rename")
@@ -52,8 +52,10 @@ async def rename_folder(
     try:
         changes = FolderUpdate(name=str(form.get("name") or "").strip())
     except ValidationError:
-        return back(_folder_page(account_id, folder_id), error=_bad_name())
-    return await _update(mailbox, caller, account_id, folder_id, changes, "Renamed.")
+        return back(request, _folder_page(account_id, folder_id), error=_bad_name())
+    return await _update(
+        request, mailbox, caller, account_id, folder_id, changes, "Renamed."
+    )
 
 
 @router.post("/accounts/{account_id}/folders/move")
@@ -63,10 +65,13 @@ async def move_folder(
     form = await request.form()
     folder_id = str(form.get("folder") or "")
     changes = FolderUpdate(parent_id=str(form.get("parent") or "") or None)
-    return await _update(mailbox, caller, account_id, folder_id, changes, "Moved.")
+    return await _update(
+        request, mailbox, caller, account_id, folder_id, changes, "Moved."
+    )
 
 
 async def _update(
+    request: Request,
     mailbox: MailboxService,
     caller: Access,
     account_id: str,
@@ -77,7 +82,7 @@ async def _update(
     with failing(_folder_page(account_id, folder_id)):
         folder = await mailbox.update_folder(caller, account_id, folder_id, changes)
     # On IMAP the id follows the name.
-    return back(_folder_page(account_id, folder.id), done)
+    return back(request, _folder_page(account_id, folder.id), done)
 
 
 @router.post("/accounts/{account_id}/folders/delete")
@@ -88,7 +93,7 @@ async def delete_folder(
     folder_id = str(form.get("folder") or "")
     with failing(_folder_page(account_id, folder_id)):
         await mailbox.delete_folder(caller, account_id, folder_id)
-    return back(_folder_page(account_id), "Folder deleted.")
+    return back(request, _folder_page(account_id), "Folder deleted.")
 
 
 def _bad_name() -> str:

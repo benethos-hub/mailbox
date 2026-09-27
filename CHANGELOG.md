@@ -88,6 +88,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   idempotency_conflict`, e.g. a second MCP client sending the same mail.
   The database moves to schema 8, and the stored results of the last 24
   hours are dropped.
+- The configuration UI keeps the message of a form in the session and
+  shows it once. Before, it travelled in the URL as `?msg=` or `?err=`,
+  and a link could put any text into the UI. The sign-in page takes only
+  its own codes, `?notice=`. After an OAuth sign-in the provider's error
+  text shows only for a sign-in the user started.
 
 ## [0.1.0] - 2026-09-25
 

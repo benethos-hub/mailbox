@@ -154,6 +154,22 @@ def test_the_provider_refused(browser: tuple[TestClient, Services]) -> None:
     assert services.adapters.ids() == []
 
 
+def test_a_made_up_refusal_shows_no_words_of_its_own(
+    browser: tuple[TestClient, Services],
+) -> None:
+    client, _ = browser
+    answer = client.get(
+        "/ui/oauth/microsoft/finish",
+        params={
+            "state": "made-up",
+            "error": "access_denied",
+            "error_description": "Your account is locked. Call this number",
+        },
+    )
+    assert "microsoft did not sign in." in answer.text
+    assert "Call this number" not in answer.text
+
+
 def test_sign_in_again(browser: tuple[TestClient, Services]) -> None:
     client, services = browser
     _round_trip(client)
@@ -164,8 +180,8 @@ def test_sign_in_again(browser: tuple[TestClient, Services]) -> None:
 
 def test_an_unknown_provider(browser: tuple[TestClient, Services]) -> None:
     client, _ = browser
-    answer = post(client, "/ui/oauth/carrier-pigeon/start", follow_redirects=False)
-    assert "Unknown+provider" in answer.headers["location"]
+    answer = post(client, "/ui/oauth/carrier-pigeon/start")
+    assert "Unknown provider" in answer.text
 
 
 def test_discovery_offers_the_sign_in(browser: tuple[TestClient, Services]) -> None:

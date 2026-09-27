@@ -113,7 +113,7 @@ async def draft_submit(
     try:
         if doing == "delete":
             await mailbox.delete_draft(caller, account_id, draft_id)
-            return back(f"/ui/accounts/{account_id}/drafts", "Draft deleted.")
+            return back(request, f"/ui/accounts/{account_id}/drafts", "Draft deleted.")
         stored = await mailbox.get_message(caller, account_id, draft_id)
         if not _unchanged(form, stored):
             fields = await read_fields(form)
@@ -129,7 +129,7 @@ async def draft_submit(
                 keep_attachments=_kept(stored, form),
             )
         if doing != "send":
-            return back(here, "Draft saved.")
+            return back(request, here, "Draft saved.")
         result = await mailbox.send_draft(
             caller,
             account_id,
@@ -140,4 +140,4 @@ async def draft_submit(
         return await show_again(
             request, caller, account, form, exc, draft_id=draft_id, stored=stored
         )
-    return back(f"/ui/accounts/{account_id}/mail", sent_text(result))
+    return back(request, f"/ui/accounts/{account_id}/mail", sent_text(result))

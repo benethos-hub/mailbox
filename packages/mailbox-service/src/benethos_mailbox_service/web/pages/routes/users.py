@@ -98,7 +98,7 @@ async def create_user(request: Request, caller: Actor, users: Users) -> Response
             [str(role) for role in form.getlist("roles")],
             read_grants(form),
         )
-    return back(f"/ui/users/{user.id}", f"{user.name} created.")
+    return back(request, f"/ui/users/{user.id}", f"{user.name} created.")
 
 
 @router.get("/users/{user_id}")
@@ -144,14 +144,16 @@ async def update_user(
             grants=read_grants(form),
             disabled="disabled" in form,
         )
-    return back(here, "Saved.")
+    return back(request, here, "Saved.")
 
 
 @router.post("/users/{user_id}/delete")
-async def delete_user(caller: Actor, user_id: str, users: Users) -> Response:
+async def delete_user(
+    request: Request, caller: Actor, user_id: str, users: Users
+) -> Response:
     with failing(f"/ui/users/{user_id}"):
         users.delete_user(caller, user_id)
-    return back("/ui/users", "User deleted, and its tokens with it.")
+    return back(request, "/ui/users", "User deleted, and its tokens with it.")
 
 
 # --- tokens ---------------------------------------------------------------------
@@ -167,24 +169,26 @@ async def create_token(
     days = str(form.get("days") or "").strip()
     if days and not (days.isdigit() and int(days) <= MAX_TOKEN_DAYS):
         return back(
-            here, error=f"Days valid must be a whole number up to {MAX_TOKEN_DAYS}."
+            request,
+            here,
+            error=f"Days valid must be a whole number up to {MAX_TOKEN_DAYS}.",
         )
     expires_at = utc_now() + timedelta(days=int(days)) if days else None
     with failing(here):
         _, plain = users.create_token(caller, user_id, name, expires_at)
     # Shown on the next page, once, and never in the URL.
     show_once(request, f"token:{user_id}", plain)
-    return back(here)
+    return back(request, here)
 
 
 @router.post("/users/{user_id}/tokens/{token_id}/revoke")
 async def revoke_token(
-    caller: Actor, user_id: str, token_id: str, users: Users
+    request: Request, caller: Actor, user_id: str, token_id: str, users: Users
 ) -> Response:
     here = f"/ui/users/{user_id}"
     with failing(here):
         token = users.revoke_token(caller, user_id, token_id)
-    return back(here, f"Token {token.name} revoked.")
+    return back(request, here, f"Token {token.name} revoked.")
 
 
 # --- roles ----------------------------------------------------------------------
@@ -219,7 +223,7 @@ async def create_role(request: Request, caller: Actor, users: Users) -> Response
     role_id = str(form.get("id") or "").strip()
     with failing("/ui/roles"):
         role = users.create_role(caller, role_id, read_grants(form))
-    return back(_role_path(role.id), f"Role {role.id} created.")
+    return back(request, _role_path(role.id), f"Role {role.id} created.")
 
 
 @router.get("/roles/{role_id}")
@@ -249,14 +253,16 @@ async def replace_role(
     here = _role_path(role_id)
     with failing(here):
         users.replace_role(caller, role_id, read_grants(form))
-    return back(here, "Saved.")
+    return back(request, here, "Saved.")
 
 
 @router.post("/roles/{role_id}/delete")
-async def delete_role(caller: Actor, role_id: str, users: Users) -> Response:
+async def delete_role(
+    request: Request, caller: Actor, role_id: str, users: Users
+) -> Response:
     with failing(_role_path(role_id)):
         users.delete_role(caller, role_id)
-    return back("/ui/roles", f"Role {role_id} deleted.")
+    return back(request, "/ui/roles", f"Role {role_id} deleted.")
 
 
 def _role_path(role_id: str) -> str:
