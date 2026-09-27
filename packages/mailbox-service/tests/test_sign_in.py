@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -224,3 +225,22 @@ async def test_an_older_hash_is_made_anew_at_the_sign_in(services: Services) -> 
     )
     # Nothing else changes: the session it came from stays valid.
     assert (after.must_change, after.updated_at) == (False, before.updated_at)
+
+
+async def test_the_log_names_who_but_never_a_password(
+    services: Services, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO):
+        user = await anna(services)
+        signed = await services.auth.sign_in("Anna", SECRET, source="10.0.0.1")
+        caller = services.auth.session_access(user.id, signed.stamp)
+        await services.users.change_password(caller, SECRET, OTHER)
+        with pytest.raises(UnauthorizedError):
+            await services.auth.sign_in(SECRET, SECRET, source="10.0.0.2")
+    text = caplog.text
+    assert "set the password of Anna" in text
+    assert "sign-in to the UI as Anna" in text and "from 10.0.0.1" in text
+    assert "Anna" in text and "changed its password" in text
+    # A password typed into the name field is not logged.
+    assert "failed sign-in to the UI as an unknown name from 10.0.0.2" in text
+    assert SECRET not in text and OTHER not in text

@@ -6,6 +6,7 @@ only manage a user whose rights it holds itself.
 
 from __future__ import annotations
 
+import logging
 import secrets
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -19,6 +20,8 @@ from . import permissions
 from .access import Access, SendLimit
 from .adapters import Adapters
 from .auth import AuthService, TokenState
+
+log = logging.getLogger(__name__)
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18
@@ -127,6 +130,7 @@ class UserService:
     async def _one_time(self, user: User) -> str:
         password = secrets.token_urlsafe(ONE_TIME_BYTES)
         await self._auth.passwords.set(user.id, user.name, password, must_change=True)
+        log.info("a one-time password for %s (%s) on the host", user.name, user.id)
         return password
 
     # --- users ----------------------------------------------------------------
@@ -221,6 +225,7 @@ class UserService:
         stored = await self._auth.passwords.set(
             user.id, user.name, new, must_change=False
         )
+        log.info("%s (%s) changed its password", user.name, user.id)
         return stored.updated_at
 
     async def set_password(self, access: Access, user_id: str, new: str) -> None:
@@ -233,6 +238,13 @@ class UserService:
         if user_id == access.user_id:
             raise ConflictError("change your own password with the current one")
         await self._auth.passwords.set(user.id, user.name, new, must_change=True)
+        log.info(
+            "%s (%s) set the password of %s (%s)",
+            access.name,
+            access.user_id,
+            user.name,
+            user.id,
+        )
 
     # --- tokens ---------------------------------------------------------------
 
