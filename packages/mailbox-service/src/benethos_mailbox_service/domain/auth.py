@@ -96,10 +96,7 @@ class AuthService:
         """The user behind a name and a password. A wrong name, a wrong
         password and a disabled user answer alike, in the same time. The
         source and the name are slowed down after failures."""
-        if self._users.count() == 0:
-            raise SetupRequiredError(
-                "no user exists: run `benethos-mailbox-service users create-admin`"
-            )
+        self._require_users()
         key = name.strip().casefold()[:MAX_NAME]
         self._throttle.check(source)
         self._names.check(key)
@@ -163,8 +160,7 @@ class AuthService:
         stored = self.passwords.stored(user_id)
         if stored is None or stored.updated_at != stamp:
             raise UnauthorizedError("the password changed: sign in again")
-        roles = {role.id: role for role in self._roles.list()}
-        return Access.for_user(user, roles)
+        return self._access(user)
 
     def user_named(self, name: str) -> User | None:
         """The user with this name, regardless of case."""
@@ -182,10 +178,7 @@ class AuthService:
         too often is locked out for a while (``RateLimitedError``), before
         the credential is looked at. A request that carries a session the
         service made itself passes no source."""
-        if self._users.count() == 0:
-            raise SetupRequiredError(
-                "no user exists: run `benethos-mailbox-service users create-admin`"
-            )
+        self._require_users()
         if not presented:
             raise UnauthorizedError("missing bearer token")
         if source is not None:
@@ -210,8 +203,7 @@ class AuthService:
             return None
         if user.disabled:
             return None
-        roles = {role.id: role for role in self._roles.list()}
-        return Access.for_user(user, roles)
+        return self._access(user)
 
     def issue_token(
         self, user_id: str, name: str, expires_at: datetime | None = None
@@ -262,5 +254,15 @@ class AuthService:
         if user.disabled:
             raise UnauthorizedError("user is disabled")
         self._tokens.touch(token.id, now)
+        return self._access(user, token.id)
+
+    def _access(self, user: User, credential_id: str | None = None) -> Access:
+        """What the user may do now, through its grants and its roles."""
         roles = {role.id: role for role in self._roles.list()}
-        return Access.for_user(user, roles, token.id)
+        return Access.for_user(user, roles, credential_id)
+
+    def _require_users(self) -> None:
+        if self._users.count() == 0:
+            raise SetupRequiredError(
+                "no user exists: run `benethos-mailbox-service users create-admin`"
+            )
