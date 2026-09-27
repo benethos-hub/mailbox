@@ -8,26 +8,27 @@
 :root {
   color-scheme: light dark;
 
-  /* Light and bluish (docs/UI.md, section 7). */
-  --bg: #f3f6fb;
+  /* Light and bluish (docs/UI.md, section 7). Every text colour keeps
+   * 4.5:1 against every background it is used on: a test checks it. */
+  --bg: #f9fbfe;
   --surface: #ffffff;
-  --surface-2: #e9eef7;
-  --border: #d6deea;
-  --border-strong: #c3cede;
+  --surface-2: #eef3fa;
+  --border: #dde5f0;
+  --border-strong: #c9d3e1;
 
   --text: #14213d;
-  --text-muted: #5b6b85;
-  --text-faint: #8a97ad;
+  --text-muted: #56657e;
+  --text-faint: #5f6e86;
 
-  --accent: #2b6cdb;
-  --accent-soft: #e4edfb;
+  --accent: #2560c8;
+  --accent-soft: #e8f0fc;
   --on-accent: #ffffff;
-  --ok: #167a4b;
-  --ok-soft: #e3f4ea;
-  --bad: #c1341f;
-  --err-soft: #fdeeec;
-  --warn: #a35a06;
-  --warn-soft: #fdf4e6;
+  --ok: #13703f;
+  --ok-soft: #e5f5ec;
+  --bad: #b5301c;
+  --err-soft: #fdefed;
+  --warn: #955204;
+  --warn-soft: #fdf5e8;
 
   --radius: 10px;
   --radius-sm: 6px;
@@ -50,7 +51,7 @@
 
     --text: #e6ebf5;
     --text-muted: #9aa8bf;
-    --text-faint: #6c7a92;
+    --text-faint: #8391a8;
 
     --accent: #6ea0ff;
     --accent-soft: #1d2c4a;

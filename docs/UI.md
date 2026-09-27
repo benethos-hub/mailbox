@@ -300,18 +300,21 @@ receiver reports nothing. Built last, if at all.
   each with a soft background for tags and notices. Dark mode keeps the
   same tokens with dark values, chosen by the system.
 
-  Proposal for the tokens of `app.css`, to be tried on the screen:
+  The tokens of `app.css`. Every text colour keeps 4.5:1 (WCAG AA for
+  small text) against every background it is used on, in both modes.
+  `test_ui.py` computes it from the stylesheet.
 
   | Token | Light | Dark |
   |---|---|---|
-  | `--bg` | `#f3f6fb` | `#0f1420` |
+  | `--bg` | `#f9fbfe` | `#0f1420` |
   | `--surface` | `#ffffff` | `#171d2b` |
-  | `--surface-2` | `#e9eef7` | `#1f2736` |
-  | `--border` | `#d6deea` | `#2c3648` |
+  | `--surface-2` | `#eef3fa` | `#1f2736` |
+  | `--border` | `#dde5f0` | `#2c3648` |
   | `--text` | `#14213d` | `#e6ebf5` |
-  | `--text-muted` | `#5b6b85` | `#9aa8bf` |
-  | `--accent` | `#2b6cdb` | `#6ea0ff` |
-  | `--accent-soft` | `#e4edfb` | `#1d2c4a` |
+  | `--text-muted` | `#56657e` | `#9aa8bf` |
+  | `--text-faint` | `#5f6e86` | `#8391a8` |
+  | `--accent` | `#2560c8` | `#6ea0ff` |
+  | `--accent-soft` | `#e8f0fc` | `#1d2c4a` |
 
 - **Density**: a little more air than today. Row height 40 px, card
   padding 20 px, one type size for text and one for the small line under
@@ -382,8 +385,9 @@ These rules bind every page, the reworked ones and the ones to come.
   stored (5, 6.5).
 - 2026-09-27: a delivery log for webhooks (6.4).
 - 2026-09-27: the Changes page not in phase 4b (6.6).
+- 2026-09-27: a lighter background. The other colours follow from the
+  contrast rule of section 7.
 
-Still open: the exact palette values after seeing them on the screen.
 The Service card of the overview shows to everyone with `accounts.read`,
 and Accounts, Users and Roles list everything with the pager hidden,
 until a need shows otherwise.
