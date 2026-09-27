@@ -462,7 +462,11 @@ registered that domain.
    link-local addresses are refused, unless an operator allows a list of
    internal mail servers in the settings. The same check runs on the
    hosts in an account's settings (`host`, `smtp_host`) when the account
-   is created or changed, before the first connection: `400`.
+   is created or changed, before the first connection: `400`. Every
+   connection runs the check again, the probes of discovery and each
+   connection of an adapter to IMAP or SMTP. It goes to the address just
+   checked, with TLS verified against the host name, so a DNS answer that
+   changes later cannot point the service inward.
 7. **Safe XML.** Autoconfig files are parsed with `defusedxml`, never the
    plain standard-library parser, so a hostile file cannot expand entities
    or read local files.

@@ -74,6 +74,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   inside `2000::/3`. Before, IPv4-compatible addresses such as `::a00:1`
   and site-local addresses passed. Webhook receivers are judged by the
   IPv4 address inside a NAT64 address.
+- Every connection to an IMAP or SMTP server passes the host check again,
+  and goes to the address it checked, with TLS verified against the host
+  name. Before, the hosts of an account were checked only when it was
+  created or changed, and each connection resolved the name anew. A host
+  that now resolves to a non-public address answers `502 provider_error`.
+  The IMAP probe of discovery connects to the address it just checked.
 
 ## [0.1.0] - 2026-09-25
 

@@ -112,6 +112,7 @@ class Network:
         self.down: set[str] = set()
         self.capabilities: dict[str, frozenset[str]] = {}
         self.probed: list[str] = []
+        self.connected_to: list[str] = []
 
     async def check(self, host: str, port: int) -> str | None:
         if host in self.private:
@@ -119,9 +120,15 @@ class Network:
         return None if host in self.missing else "93.184.215.14"
 
     async def probe(
-        self, protocol: ServerProtocol, host: str, port: int, security: Security
+        self,
+        protocol: ServerProtocol,
+        host: str,
+        port: int,
+        security: Security,
+        address: str,
     ) -> frozenset[str]:
         self.probed.append(host)
+        self.connected_to.append(address)
         if host in self.down:
             raise ProviderUnavailableError("not reachable")
         return self.capabilities.get(host, frozenset({"IMAP4REV1", "IDLE"}))
@@ -275,6 +282,14 @@ async def test_a_server_on_a_private_address_is_dropped() -> None:
     result = await s.discover(ADMIN, "me@firma.example")
     assert [c.servers[0].host for c in result.candidates] == ["imap.hoster.example"]
     assert "imap.evil.example" not in network.probed
+
+
+async def test_the_probe_connects_to_the_address_just_checked() -> None:
+    network = Network()
+    await service(
+        FakeSource(ISPDB, found(imap("imap.firma.example", ISPDB))), network=network
+    ).discover(ADMIN, "me@firma.example")
+    assert network.connected_to == ["93.184.215.14"]
 
 
 async def test_a_host_that_does_not_resolve_is_unreachable() -> None:

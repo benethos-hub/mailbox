@@ -9,10 +9,9 @@ kept open between sends. Every library error leaves this module as a
 from __future__ import annotations
 
 import smtplib
-import ssl
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from ....errors import (
@@ -22,7 +21,7 @@ from ....errors import (
     ProviderUnavailableError,
 )
 from ...mail.fields import ascii_domain
-from .transport import transport_errors
+from .transport import Pick, connect_to, tls_context, transport_errors
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}
 
@@ -34,6 +33,8 @@ class SmtpServer:
     host: str
     port: int
     security: str  # "tls" or "starttls"
+    # Checks the host at each connection. Without: connect by name.
+    pick: Pick | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -44,12 +45,11 @@ class SmtpLogin:
 
 
 def _default_connection(server: SmtpServer, timeout: float) -> Any:
-    context = ssl.create_default_context()
+    address = connect_to(server.host, server.port, server.pick)
+    context = tls_context(server.host)
     if server.security == "tls":
-        return smtplib.SMTP_SSL(
-            server.host, server.port, context=context, timeout=timeout
-        )
-    connection = smtplib.SMTP(server.host, server.port, timeout=timeout)
+        return smtplib.SMTP_SSL(address, server.port, context=context, timeout=timeout)
+    connection = smtplib.SMTP(address, server.port, timeout=timeout)
     try:
         connection.starttls(context=context)
     except BaseException:

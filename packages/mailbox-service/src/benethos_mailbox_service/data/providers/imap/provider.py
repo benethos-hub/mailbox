@@ -55,6 +55,7 @@ from ..protocols.imap import (
     SearchCriteria,
 )
 from ..protocols.smtp import SmtpSession
+from ..protocols.transport import Pick
 from ..ratelimit import Clock, Sleep
 from ..sender import SmtpFactory, SmtpSender
 from . import mappers
@@ -113,12 +114,17 @@ async def probe(
     host: str,
     port: int,
     security: str,
+    address: str | None = None,
     session_factory: SessionFactory = probe_session,
 ) -> frozenset[str]:
-    """The capabilities of an IMAP server, read without logging in."""
+    """The capabilities of an IMAP server, read without logging in. With
+    ``address``, the connection goes there, the address just checked."""
     if security not in DEFAULT_PORTS:
         raise BadRequestError("IMAP without encryption is not supported")
-    session = session_factory(ImapServer(host=host, port=port, security=security))
+    pick = (lambda _host, _port: address) if address is not None else None
+    session = session_factory(
+        ImapServer(host=host, port=port, security=security, pick=pick)
+    )
     return await anyio.to_thread.run_sync(session.read_capabilities)
 
 
@@ -137,7 +143,9 @@ class ImapProvider:
         sleep: Sleep = time.sleep,
         jitter: Callable[[float, float], float] | None = None,
         smtp_factory: SmtpFactory = SmtpSession,
+        pick: Pick | None = None,
     ) -> None:
+        """``pick`` checks the host of each connection, IMAP and SMTP."""
         host = settings.get("host")
         if not host:
             raise BadRequestError("an IMAP account needs settings.host")
@@ -152,6 +160,7 @@ class ImapProvider:
             host=str(host),
             port=rules.port_of(settings, "port", DEFAULT_PORTS[security]),
             security=security,
+            pick=pick,
         )
         self._username = str(username)
         self._auth = str(auth)
@@ -167,6 +176,7 @@ class ImapProvider:
             self._secret,
             self._guard,
             smtp_factory,
+            pick,
         )
         if self._smtp is not None:
             self.capabilities = self.capabilities | {Capability.SEND}

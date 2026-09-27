@@ -264,7 +264,7 @@ class DiscoveryService:
         try:
             with anyio.fail_after(PROBE_TIMEOUT):
                 capabilities = await self._probe(
-                    ServerProtocol.IMAP, host, port, template.security
+                    ServerProtocol.IMAP, host, port, template.security, address
                 )
         except (MailboxServiceError, TimeoutError):
             return template.model_copy(update={"reachable": False})

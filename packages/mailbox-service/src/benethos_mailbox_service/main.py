@@ -11,6 +11,7 @@ import logging
 from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
+from functools import partial
 
 import anyio
 from fastapi import FastAPI
@@ -19,7 +20,14 @@ from fastapi.routing import APIRoute
 from . import __version__, web
 from .config import Settings
 from .data.discovery import SafeFetcher, default_sources, preset_hosts
-from .data.http import ApiClient, Resolve, WebhookPoster, host_addresses
+from .data.http import (
+    ApiClient,
+    Lookup,
+    Resolve,
+    WebhookPoster,
+    host_addresses,
+    host_addresses_now,
+)
 from .data.models import ProviderType
 from .data.providers import (
     App,
@@ -89,13 +97,16 @@ class Services:
 
 def build_services(
     settings: Settings,
-    provider_factory: ProviderFactory = build_provider,
+    provider_factory: ProviderFactory | None = None,
     discovery: DiscoveryService | None = None,
     oauth_clients: Mapping[ProviderType, OAuthClient] | None = None,
     resolve: Resolve | None = None,
+    lookup: Lookup | None = None,
 ) -> Services:
     """``resolve`` answers DNS for the host check that autodiscovery and the
-    hosts of an account pass (CONCEPT 5.8, rule 6). Tests hand in a table."""
+    hosts of an account pass (CONCEPT 5.8, rule 6), ``lookup`` the same
+    for the check at every connection to a mail server, which adapters
+    make without ``provider_factory``. Tests hand in tables."""
     repos = open_repositories(settings.storage, settings.database_path)
     vault = CredentialVault(repos.keys, repos.credentials, key_provider(settings))
     admin_key = settings.api_key.get_secret_value() if settings.api_key else None
@@ -105,8 +116,11 @@ def build_services(
     fetcher = SafeFetcher(
         resolve=resolve or host_addresses,
         internal_hosts=settings.discovery_internal_hosts,
+        lookup=lookup or host_addresses_now,
     )
     changes = ChangeFeed(repos.changes, days=settings.changes_days)
+    if provider_factory is None:
+        provider_factory = partial(build_provider, pick=fetcher.connect_address)
     adapters = Adapters(
         repos.accounts, vault, provider_factory, oauth=clients, changes=changes
     )

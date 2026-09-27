@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import imaplib
 import re
-import ssl
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from email.parser import BytesHeaderParser
 from typing import Any
@@ -32,7 +31,7 @@ from ....errors import (
 )
 from ...mail import fields
 from ...mail.parse import ParsedMessage
-from .transport import transport_errors
+from .transport import Pick, connect_to, tls_context, transport_errors
 
 ClientFactory = Callable[..., Any]
 
@@ -57,6 +56,8 @@ class ImapServer:
     host: str
     port: int
     security: str  # "tls" or "starttls"
+    # Checks the host at each connection. Without: connect by name.
+    pick: Pick | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -98,13 +99,14 @@ DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
 
 def _default_client(server: ImapServer, timeout: float) -> Any:
-    context = ssl.create_default_context()
+    address = connect_to(server.host, server.port, server.pick)
+    context = tls_context(server.host)
     if server.security == "starttls":
-        client = IMAPClient(server.host, server.port, ssl=False, timeout=timeout)
+        client = IMAPClient(address, server.port, ssl=False, timeout=timeout)
         client.starttls(context)
         return client
     return IMAPClient(
-        server.host, server.port, ssl=True, ssl_context=context, timeout=timeout
+        address, server.port, ssl=True, ssl_context=context, timeout=timeout
     )
 
 
