@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Relative to the working directory. Template: .env.example beside it.
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     )
 
     host: str = "127.0.0.1"
-    port: int = 8080
+    port: int = Field(default=8080, ge=1, le=65535)
     # The address people reach the service at, e.g. https://mail.example.org
     # behind a proxy. Builds the OAuth redirect address, which the provider
     # must know. Empty: taken from each request.
@@ -35,7 +35,10 @@ class Settings(BaseSettings):
     # host the OAuth redirect is built from without a public URL. Empty:
     # only a proxy on 127.0.0.1 is believed.
     forwarded_allow_ips: str | None = None
-    log_level: str = "INFO"
+    # As uvicorn names them, in any case.
+    log_level: Literal["critical", "error", "warning", "info", "debug", "trace"] = (
+        "info"
+    )
     # Where the database lives. A relative path counts from the working
     # directory.
     data_dir: Path = Path("data/benethos-mailbox-service")
@@ -80,6 +83,19 @@ class Settings(BaseSettings):
     # Who may sign in: common (personal and work or school accounts),
     # consumers, organizations, or one tenant's id or domain.
     oauth_microsoft_tenant: str = "common"
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def _lower(cls, value: object) -> object:
+        return value.lower() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def _retries(self) -> Self:
+        if self.webhook_longest_retry < self.webhook_first_retry:
+            raise ValueError(
+                "webhook_longest_retry must not be shorter than webhook_first_retry"
+            )
+        return self
 
     def oauth_microsoft_secret(self) -> SecretStr | None:
         """The client secret, from its file if one is named."""

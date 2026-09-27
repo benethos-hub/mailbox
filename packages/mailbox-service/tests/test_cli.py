@@ -74,3 +74,41 @@ def test_env_example_holds_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None
     from_file = Settings(_env_file=example)  # type: ignore[call-arg]
     defaults = Settings(_env_file=None)  # type: ignore[call-arg]
     assert from_file == defaults
+
+
+@pytest.mark.parametrize(
+    ("settings", "named"),
+    [
+        ({"MAILBOX_SERVICE_LOG_LEVEL": "verbose"}, "log_level"),
+        ({"MAILBOX_SERVICE_PORT": "70000"}, "port"),
+        ({"MAILBOX_SERVICE_PORT": "0"}, "port"),
+        (
+            {
+                "MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY": "60",
+                "MAILBOX_SERVICE_WEBHOOK_LONGEST_RETRY": "30",
+            },
+            "webhook_longest_retry",
+        ),
+    ],
+)
+def test_settings_that_cannot_work_are_named(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    settings: dict[str, str],
+    named: str,
+) -> None:
+    import uvicorn
+
+    def never(*args: object, **kwargs: object) -> None:
+        raise AssertionError("the service must not start")
+
+    monkeypatch.setattr(uvicorn, "run", never)
+    for name, value in settings.items():
+        monkeypatch.setenv(name, value)
+    assert main(["serve"]) == 1
+    assert named in capsys.readouterr().err
+
+
+def test_the_log_level_in_any_case(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_LOG_LEVEL", "WARNING")
+    assert Settings().log_level == "warning"

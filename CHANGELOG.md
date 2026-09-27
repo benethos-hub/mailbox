@@ -196,6 +196,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   login, `502 provider_auth_failed`. Before, the service answered the
   server's challenge with the token again until smtplib gave up, and it
   counted as a failure of the server.
+- The service refuses to start with a log level uvicorn does not know, a
+  port outside 1 to 65535, or a longest webhook retry shorter than the
+  first, and names the setting. Before, the log level ended in a
+  traceback and the retry was capped quietly.
 - `users` and `keys init` and `keys import` refuse to run with
   `MAILBOX_SERVICE_STORAGE=memory`, as `backup` did. Before, they
   reported success for a user or a data key that vanished with the
