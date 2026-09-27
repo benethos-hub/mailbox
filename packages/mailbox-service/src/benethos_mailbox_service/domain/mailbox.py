@@ -152,10 +152,7 @@ class MailboxService:
         """A folder id, or the id of the folder with that role."""
         if folder is None or not is_role(folder):
             return folder
-        match = find_folder(await self._folders(account_id), folder)
-        if match is None:
-            raise NotFoundError(f"the account has no {folder} folder")
-        return match.id
+        return _resolved(await self._folders(account_id), folder)
 
     async def _folders_by_role(
         self, account_id: str, changes: MessageUpdate
@@ -164,12 +161,7 @@ class MailboxService:
         if not changes.folder_ids or not any(is_role(f) for f in changes.folder_ids):
             return changes
         folders = await self._folders(account_id)
-        resolved = []
-        for wanted in changes.folder_ids:
-            match = find_folder(folders, wanted) if is_role(wanted) else None
-            if is_role(wanted) and match is None:
-                raise NotFoundError(f"the account has no {wanted} folder")
-            resolved.append(match.id if match is not None else wanted)
+        resolved = [_resolved(folders, wanted) for wanted in changes.folder_ids]
         return changes.model_copy(update={"folder_ids": resolved})
 
     # --- messages of one account ------------------------------------------------------
@@ -435,3 +427,13 @@ def _item(message_id: str, outcome: Any) -> BatchItemResult:
         )
     summary = outcome if isinstance(outcome, MessageSummary) else None
     return BatchItemResult(id=message_id, ok=True, message=summary)
+
+
+def _resolved(folders: list[Folder], folder: str) -> str:
+    """A folder id as it is, or the id of the folder with that role."""
+    if not is_role(folder):
+        return folder
+    match = find_folder(folders, folder)
+    if match is None:
+        raise NotFoundError(f"the account has no {folder} folder")
+    return match.id
