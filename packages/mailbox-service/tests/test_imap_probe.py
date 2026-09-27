@@ -31,7 +31,9 @@ def factory(mailbox_factory: Any) -> Any:
 async def test_probe_reads_capabilities_and_sends_no_credential() -> None:
     box = FakeMailBox()
     box.announced = ["IMAP4rev1", "IDLE", "AUTH=PLAIN"]
-    caps = await probe("imap.example.com", 143, "starttls", factory(box))
+    caps = await probe(
+        "imap.example.com", 143, "starttls", session_factory=factory(box)
+    )
     assert caps == frozenset({"IMAP4REV1", "IDLE", "AUTH=PLAIN"})
     assert box.calls == [
         ("connect", "imap.example.com", 143, "starttls"),
@@ -55,14 +57,31 @@ async def test_probe_errors_are_translated(
         raise error
 
     with pytest.raises(expected):
-        await probe("imap.example.com", 993, "tls", factory(failing))
+        await probe("imap.example.com", 993, "tls", session_factory=factory(failing))
 
 
 async def test_probe_refuses_plain_text() -> None:
     with pytest.raises(BadRequestError):
-        await probe("imap.example.com", 143, "none", factory(FakeMailBox()))
+        await probe(
+            "imap.example.com", 143, "none", session_factory=factory(FakeMailBox())
+        )
 
 
 async def test_registry_probes_only_imap() -> None:
     with pytest.raises(NotSupportedError):
-        await probe_server(ServerProtocol.SMTP, "smtp.example.com", 465, Security.TLS)
+        await probe_server(
+            ServerProtocol.SMTP, "smtp.example.com", 465, Security.TLS, "192.0.2.7"
+        )
+
+
+async def test_the_probe_connects_to_the_address_it_is_given() -> None:
+    servers: list[ImapServer] = []
+
+    def remember(server: ImapServer) -> ImapSession:
+        servers.append(server)
+        return ImapSession(server, client_factory=FakeMailBox())
+
+    await probe("imap.example.com", 993, "tls", "192.0.2.7", session_factory=remember)
+    [server] = servers
+    assert server.pick is not None
+    assert server.pick(server.host, server.port) == "192.0.2.7"

@@ -98,6 +98,11 @@ async def test_host_addresses_of_localhost_and_nowhere() -> None:
         ("64:ff9b::808:808", True),
         ("64:ff9b:1::808:808", False),
         ("2002:a00:1::1", False),
+        ("::7f00:1", False),
+        ("::a00:1", False),
+        ("fec0::1", False),
+        ("fc00::1", False),
+        ("100::1", False),
     ],
 )
 def test_public_addresses(address: str, public: bool) -> None:

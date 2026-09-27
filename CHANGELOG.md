@@ -57,12 +57,55 @@ adheres to [Semantic Versioning](https://semver.org/).
   file ended discovery with an unhandled error. With an older fastapi,
   the served OpenAPI document differed from `docs/openapi.json`.
   pydantic 2.11 could not be installed beside the other minimums.
-
-### Fixed
-
 - The IMAP sync could miss a change in the folder its connection had
   selected last, e.g. a new mail in the inbox: the server answered STATUS
   for that folder from an older view. The sync now sends a NOOP first.
+
+### Security
+
+- IMAP reads have a limit. A message larger than 40 MB is refused with
+  `502 provider_error`, as Microsoft accounts already did. In a list,
+  headers beyond 256 KB are cut off.
+- Discovery accepts only a host name as the domain. An address with a
+  port, a path, invalid Punycode or whitespace answers `400 bad_request`.
+  Before, a port or path went into the autoconfig URL, and invalid
+  Punycode answered `500`.
+- The check for public addresses takes an IPv6 address as public only
+  inside `2000::/3`. Before, IPv4-compatible addresses such as `::a00:1`
+  and site-local addresses passed. Webhook receivers are judged by the
+  IPv4 address inside a NAT64 address.
+- Every connection to an IMAP or SMTP server passes the host check again,
+  and goes to the address it checked, with TLS verified against the host
+  name. Before, the hosts of an account were checked only when it was
+  created or changed, and each connection resolved the name anew. A host
+  that now resolves to a non-public address answers `502 provider_error`.
+  The IMAP probe of discovery connects to the address it just checked.
+- A recipient pattern `*@domain` in a grant no longer accepts a local
+  part with `%` or `!`, such as `bob%evil.org@domain`, which some servers
+  route on to another host. Such an address needs its exact entry.
+- An `Idempotency-Key` counts per account and user. Before, another user
+  who sent the same key on the same account got `409
+  idempotency_conflict`, e.g. a second MCP client sending the same mail.
+  The database moves to schema 8, and the stored results of the last 24
+  hours are dropped.
+- The configuration UI keeps the message of a form in the session and
+  shows it once. Before, it travelled in the URL as `?msg=` or `?err=`,
+  and a link could put any text into the UI. The sign-in page takes only
+  its own codes, `?notice=`. After an OAuth sign-in the provider's error
+  text shows only for a sign-in the user started.
+- `get_attachment` of the MCP server names the attachment's type outside
+  the foreign-content marker only when it is a plain media type such as
+  `image/png`. Any other value, which a sender may have chosen, counts as
+  `application/octet-stream`.
+- The MCP server sends its token over `http` only to this machine.
+  `http` to another host needs `MAILBOX_SERVICE_ALLOW_HTTP=1`, else the
+  server does not start. The compose file sets it for the network between
+  the two containers.
+- A Microsoft account takes its address from Graph `/me`, the mailbox's
+  own address, no longer from the `email` claim of the ID token, which a
+  tenant's administrators may set to anything. The sign-in asks for
+  `User.Read` instead of `openid`, `email` and `profile`. Accounts
+  connected before keep working. A new sign-in shows the new permission.
 
 ## [0.1.0] - 2026-09-25
 

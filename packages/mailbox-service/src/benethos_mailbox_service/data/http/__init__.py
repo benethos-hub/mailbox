@@ -12,9 +12,11 @@ from .post import WebhookPoster, is_receiver_address
 from .safe import (
     Fetched,
     HostCheck,
+    Lookup,
     Resolve,
     SafeFetcher,
     host_addresses,
+    host_addresses_now,
     is_public_address,
 )
 
@@ -23,10 +25,12 @@ __all__ = [
     "ApiClient",
     "Fetched",
     "HostCheck",
+    "Lookup",
     "Resolve",
     "SafeFetcher",
     "WebhookPoster",
     "host_addresses",
+    "host_addresses_now",
     "is_receiver_address",
     "is_public_address",
 ]

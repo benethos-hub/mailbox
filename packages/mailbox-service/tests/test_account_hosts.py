@@ -28,14 +28,25 @@ TABLE: dict[str, list[str]] = {
 class World:
     """A client whose DNS is the table above, and a count of the lookups."""
 
-    def __init__(self, internal_hosts: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        internal_hosts: list[str] | None = None,
+        at_connection: dict[str, list[str]] | None = None,
+    ) -> None:
         self.lookups: list[str] = []
+        # DNS as a connection to a mail server finds it, later.
+        self.at_connection = at_connection or TABLE
         settings = Settings(
             api_key=SecretStr(API_KEY),
             storage="memory",
             discovery_internal_hosts=internal_hosts or [],
         )
-        services = build_services(settings, resolve=self._resolve)
+        services = build_services(
+            settings,
+            resolve=self._resolve,
+            lookup=lambda host, port: self.at_connection.get(host, []),
+        )
+        self.services = services
         self.client = TestClient(
             create_app(settings, services),
             headers={"Authorization": f"Bearer {API_KEY}"},
@@ -121,3 +132,22 @@ def test_other_changes_look_nothing_up(world: World) -> None:
     )
     assert renamed.status_code == 200, renamed.text
     assert world.lookups == []
+
+
+@pytest.mark.usefixtures("master_key")
+def test_a_host_that_turns_private_later_is_not_connected_to() -> None:
+    # Public when the account is checked, private when the adapter connects.
+    world = World(at_connection={**TABLE, "imap.example.org": ["10.0.0.5"]})
+    world.services.vault.initialize()
+    response = world.client.post(
+        "/v1/accounts",
+        json={
+            "provider": "imap",
+            "email": "me@example.org",
+            "settings": {"host": "imap.example.org"},
+            "credentials": {"password": "secret"},
+        },
+    )
+    assert response.status_code == 502, response.text
+    assert "non-public" in response.json()["error"]["message"]
+    assert world.client.get("/v1/accounts").json() == []

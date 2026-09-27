@@ -49,6 +49,8 @@ services:
       - "127.0.0.1:${MAILBOX_MCP_PORT:-8000}:8000"
     environment:
       MAILBOX_SERVICE_URL: http://mailbox-service:8080
+      # Plain http inside the compose network, which only the two join.
+      MAILBOX_SERVICE_ALLOW_HTTP: "1"
       MAILBOX_SERVICE_TOKEN: ${MAILBOX_MCP_API_TOKEN:-}
       MAILBOX_MCP_BEARER_TOKEN: ${MAILBOX_MCP_BEARER_TOKEN:-}
       # The Host values clients use: the port as published on the host.

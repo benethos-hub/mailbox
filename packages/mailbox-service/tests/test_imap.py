@@ -263,6 +263,28 @@ async def test_get_attachment_and_raw(server: FakeMailBox) -> None:
         await imap.get_attachment(message_id, "nonsense")
 
 
+async def test_a_message_too_large_is_refused(server: FakeMailBox) -> None:
+    imap = ImapProvider(
+        SETTINGS,
+        lambda field: SecretStr("secret"),
+        session_factory=lambda s: ImapSession(s, client_factory=server, max_bytes=500),
+    )
+    small = mappers.message_id("INBOX", 7, 1)
+    assert len(await imap.get_raw(small)) <= 500
+    large = mappers.message_id("INBOX", 7, 9)
+    with pytest.raises(ProviderError, match="larger than 500 bytes"):
+        await imap.get_message(large)
+    with pytest.raises(ProviderError, match="larger than 500 bytes"):
+        await imap.get_raw(large)
+
+
+async def test_a_huge_header_is_cut_off(server: FakeMailBox) -> None:
+    padding = {"X-Padding": "x" * 300_000}
+    server.add("INBOX", 10, make_message("Padded", extra_headers=padding))
+    page = await provider(server).list_messages(None, limit=1, cursor=None, search=None)
+    assert page.items[0].subject == "Padded"
+
+
 @pytest.mark.parametrize(
     "message_id",
     [

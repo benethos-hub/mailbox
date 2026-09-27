@@ -134,9 +134,9 @@ def test_create_a_user_with_a_constrained_grant(
 
 
 def test_a_user_without_a_name_is_refused(ui: TestClient) -> None:
-    answer = post(ui, "/ui/users", {"name": " "}, follow_redirects=False)
+    answer = post(ui, "/ui/users", {"name": " "})
     # The domain refuses it, and the page shows its words.
-    assert "err=a+user+needs+a+name" in answer.headers["location"]
+    assert "a user needs a name" in answer.text
 
 
 def test_change_disable_and_delete_a_user(ui: TestClient, services: Services) -> None:
@@ -228,17 +228,15 @@ def test_token_days_must_be_a_number(ui: TestClient, services: Services) -> None
         ui,
         f"/ui/users/{user.id}/tokens",
         {"name": "t", "days": "soon"},
-        follow_redirects=False,
     )
-    assert "err=Days+valid" in answer.headers["location"]
+    assert "Days valid" in answer.text
     assert services.users.list_tokens(ADMIN, user.id) == []
     answer = post(
         ui,
         f"/ui/users/{user.id}/tokens",
         {"name": "t", "days": "99999999999"},
-        follow_redirects=False,
     )
-    assert "up+to+3650" in answer.headers["location"]
+    assert "up to 3650" in answer.text
     assert services.users.list_tokens(ADMIN, user.id) == []
 
 

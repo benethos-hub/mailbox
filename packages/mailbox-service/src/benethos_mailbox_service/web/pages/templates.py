@@ -11,7 +11,7 @@ from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qsl, quote, urlencode, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 
 import jinja2
 from fastapi import Request
@@ -20,7 +20,7 @@ from fastapi.templating import Jinja2Templates
 
 from ... import __version__
 from ...data.models import Address
-from .session import PATH
+from .session import PATH, SignInRequired, show_once
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE_DIR = HERE / "templates"
@@ -91,7 +91,8 @@ def render(
     **context: Any,
 ) -> HTMLResponse:
     """A page, with what the layout needs: the active navigation entry, the
-    session's CSRF token and who is signed in."""
+    session's CSRF token, who is signed in, and the message the form before
+    left in the session."""
     session = getattr(request.state, "ui_session", None)
     access = getattr(request.state, "access", None)
     context.update(
@@ -99,6 +100,9 @@ def render(
         csrf=session.csrf if session is not None else "",
         me=access,
     )
+    for key in ("msg", "err"):
+        kept = session.once.pop(key, None) if session is not None else None
+        context.setdefault(key, kept)
     response: HTMLResponse = templates.TemplateResponse(
         request, template, context, status_code=status_code
     )
@@ -109,26 +113,31 @@ def is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
 
 
-def back(path: str, message: str | None = None, error: str | None = None) -> Response:
+def back(
+    request: Request,
+    path: str,
+    message: str | None = None,
+    error: str | None = None,
+) -> Response:
     """Post/Redirect/Get: the browser lands on a GET, a reload repeats
-    nothing. The message travels in the query and is gone on the next page."""
-    query = {k: v for k, v in (("msg", message), ("err", error)) if v}
-    separator = "&" if "?" in path else "?"
-    url = f"{path}{separator}{urlencode(query)}" if query else path
-    return RedirectResponse(url, status_code=303)
+    nothing. The message waits in the session for the next page, never in
+    the URL, so a link cannot put words into the UI."""
+    try:
+        for key, value in (("msg", message), ("err", error)):
+            if value:
+                show_once(request, key, value)
+    except SignInRequired:
+        pass  # signed out meanwhile: the sign-in page says so
+    return RedirectResponse(path, status_code=303)
 
 
 def local_path(value: str | None, fallback: str) -> str:
-    """Where to go after a form: a page of this UI, never another site.
-    A message the earlier redirect carried is dropped. The next replaces it."""
+    """Where to go after a form: a page of this UI, never another site."""
     parts = urlsplit(value or "")
     inside = parts.path == PATH or parts.path.startswith(PATH + "/")
     if parts.scheme or parts.netloc or not inside:
         return fallback
-    query = urlencode(
-        [(k, v) for k, v in parse_qsl(parts.query) if k not in ("msg", "err")]
-    )
-    return f"{parts.path}?{query}" if query else parts.path
+    return f"{parts.path}?{parts.query}" if parts.query else parts.path
 
 
 def page_links(request: Request, cursor: str | None) -> tuple[str | None, str | None]:

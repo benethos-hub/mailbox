@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import imaplib
 import re
-import ssl
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from email.parser import BytesHeaderParser
 from typing import Any
@@ -32,15 +31,19 @@ from ....errors import (
 )
 from ...mail import fields
 from ...mail.parse import ParsedMessage
-from .transport import transport_errors
+from .transport import Pick, connect_to, tls_context, transport_errors
 
 ClientFactory = Callable[..., Any]
 
 # How often a waiting IDLE looks whether it should stop. Costs no traffic.
 IDLE_STEP = 5.0
 
-_HEADER = "BODY.PEEK[HEADER]"
-_WHOLE = "BODY.PEEK[]"
+# A whole message larger than this is refused, as Graph answers are.
+MAX_MESSAGE_BYTES = 40 * 1024 * 1024
+# Headers beyond this are cut off: a list reads many at once.
+MAX_HEADER_BYTES = 256 * 1024
+
+_HEADER = f"BODY.PEEK[HEADER]<0.{MAX_HEADER_BYTES}>"
 _MESSAGE_ID = "BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]"
 # What an untagged response during IDLE says changed.
 _CHANGES = {b"EXISTS", b"EXPUNGE", b"FETCH", b"VANISHED"}
@@ -53,6 +56,8 @@ class ImapServer:
     host: str
     port: int
     security: str  # "tls" or "starttls"
+    # Checks the host at each connection. Without: connect by name.
+    pick: Pick | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -94,13 +99,14 @@ DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
 
 def _default_client(server: ImapServer, timeout: float) -> Any:
-    context = ssl.create_default_context()
+    address = connect_to(server.host, server.port, server.pick)
+    context = tls_context(server.host)
     if server.security == "starttls":
-        client = IMAPClient(server.host, server.port, ssl=False, timeout=timeout)
+        client = IMAPClient(address, server.port, ssl=False, timeout=timeout)
         client.starttls(context)
         return client
     return IMAPClient(
-        server.host, server.port, ssl=True, ssl_context=context, timeout=timeout
+        address, server.port, ssl=True, ssl_context=context, timeout=timeout
     )
 
 
@@ -116,9 +122,11 @@ class ImapSession:
         timeout: float = 30.0,
         client_factory: ClientFactory = _default_client,
         client_id: tuple[str, str] | None = None,
+        max_bytes: int = MAX_MESSAGE_BYTES,
     ) -> None:
         self._server = server
         self._timeout = timeout
+        self._max_bytes = max_bytes
         self._factory = client_factory
         self._client_id = client_id
         self._client: Any = None
@@ -395,14 +403,24 @@ class ImapSession:
         ]
 
     def fetch_message(self, uid: int) -> FetchedMessage | None:
-        found = self._fetch([uid], ["FLAGS", _WHOLE]).get(uid)
+        found = self._fetch([uid], ["FLAGS", self._whole()]).get(uid)
         if found is None:
             return None
-        return FetchedMessage(uid, _flags(found), _part(found, b"BODY[]"))
+        return FetchedMessage(uid, _flags(found), self._body(uid, found))
 
     def fetch_raw(self, uid: int) -> bytes | None:
-        found = self._fetch([uid], [_WHOLE]).get(uid)
-        return _part(found, b"BODY[]") if found is not None else None
+        found = self._fetch([uid], [self._whole()]).get(uid)
+        return self._body(uid, found) if found is not None else None
+
+    def _whole(self) -> str:
+        """One byte more than allowed, so a message too large shows."""
+        return f"BODY.PEEK[]<0.{self._max_bytes + 1}>"
+
+    def _body(self, uid: int, data: dict[bytes, Any]) -> bytes:
+        body = _part(data, b"BODY[]")
+        if len(body) > self._max_bytes:
+            raise ProviderError(f"message {uid} is larger than {self._max_bytes} bytes")
+        return body
 
     def fetch_message_ids(self, uids: list[int]) -> dict[int, str | None]:
         """The ``Message-ID`` header of each UID in the selected folder. Reads

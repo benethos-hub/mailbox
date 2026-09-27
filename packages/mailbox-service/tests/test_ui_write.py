@@ -108,12 +108,12 @@ def test_the_batch_menu(ui: TestClient, services: Services, account_id: str) -> 
 
 def test_the_batch_needs_ticks_and_an_action(ui: TestClient, account_id: str) -> None:
     url = f"/ui/accounts/{account_id}/mail/batch"
-    none = post(ui, url, {"action": "read"}, follow_redirects=False)
-    assert "Tick+at+least+one" in none.headers["location"]
-    unknown = post(ui, url, {"ids": "m1", "action": "explode"}, follow_redirects=False)
-    assert "Choose+an+action" in unknown.headers["location"]
-    nowhere = post(ui, url, {"ids": "m1", "action": "move"}, follow_redirects=False)
-    assert "Choose+a+folder" in nowhere.headers["location"]
+    none = post(ui, url, {"action": "read"})
+    assert "Tick at least one" in none.text
+    unknown = post(ui, url, {"ids": "m1", "action": "explode"})
+    assert "Choose an action" in unknown.text
+    nowhere = post(ui, url, {"ids": "m1", "action": "move"})
+    assert "Choose a folder" in nowhere.text
 
 
 # --- folders --------------------------------------------------------------------------
@@ -147,9 +147,9 @@ def test_a_bad_folder_name_is_named(ui: TestClient, account_id: str) -> None:
         ui,
         f"/ui/accounts/{account_id}/folders",
         {"name": "a*b"},
-        follow_redirects=False,
     )
-    assert "without" in answer.headers["location"]
+    assert 'class="notice err"' in answer.text
+    assert "without" in answer.text
 
 
 # --- composing and sending ------------------------------------------------------------

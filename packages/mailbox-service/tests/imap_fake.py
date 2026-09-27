@@ -352,7 +352,7 @@ class FakeMailBox:
             "message-id"
             if any("MESSAGE-ID" in i for i in items)
             else "header"
-            if "BODY.PEEK[HEADER]" in items
+            if any(i.startswith("BODY.PEEK[HEADER]") for i in items)
             else "full"
         )
         self.calls.append(("fetch", tuple(str(u) for u in uids), kind))
@@ -370,9 +370,9 @@ class FakeMailBox:
             if kind == "message-id":
                 data[b"BODY[HEADER.FIELDS (MESSAGE-ID)]"] = _message_id_block(head)
             elif kind == "header":
-                data[b"BODY[HEADER]"] = head
+                data[b"BODY[HEADER]<0>"] = head[: _partial(items, "BODY.PEEK[HEADER]")]
             else:
-                data[b"BODY[]"] = raw
+                data[b"BODY[]<0>"] = raw[: _partial(items, "BODY.PEEK[]")]
             found[uid] = data
         return found
 
@@ -474,3 +474,12 @@ def _matches(
             return False
         negate = False
     return True
+
+
+def _partial(items: list[str], section: str) -> int:
+    """The length a partial fetch ``<section><0.n>`` asks for. Every read
+    is partial, so no message is fetched without a limit."""
+    [item] = [i for i in items if i.startswith(section)]
+    start, length = item.removeprefix(section).strip("<>").split(".")
+    assert start == "0", item
+    return int(length)

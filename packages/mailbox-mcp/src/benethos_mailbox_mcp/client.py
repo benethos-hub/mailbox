@@ -9,6 +9,7 @@ nothing above it spells out a path, a query name or a field of the API.
 from __future__ import annotations
 
 import codecs
+import ipaddress
 import os
 import re
 from collections.abc import Mapping
@@ -18,11 +19,13 @@ from urllib.parse import quote, unquote
 
 import httpx
 
-from .errors import ApiError, ServiceUnavailableError
+from .errors import ApiError, ServiceUnavailableError, ToolError
 
 DEFAULT_URL = "http://127.0.0.1:8080"
 URL_ENV = "MAILBOX_SERVICE_URL"
 TOKEN_ENV = "MAILBOX_SERVICE_TOKEN"
+# Allows http to a host other than this machine, e.g. between containers.
+ALLOW_HTTP_ENV = "MAILBOX_SERVICE_ALLOW_HTTP"
 
 # An address with an optional display name.
 Recipient = tuple[str, str | None]
@@ -107,8 +110,15 @@ class MailboxApiClient:
         base_url: str | None = None,
         token: str | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
+        allow_http: bool | None = None,
     ) -> None:
+        """Raises when the URL would carry the token unencrypted to another
+        machine, unless ``allow_http`` (else ``MAILBOX_SERVICE_ALLOW_HTTP``)
+        says so."""
         self.base_url = (base_url or os.environ.get(URL_ENV) or DEFAULT_URL).rstrip("/")
+        if allow_http is None:
+            allow_http = os.environ.get(ALLOW_HTTP_ENV, "") in ("1", "true", "yes")
+        _check_url(self.base_url, allow_http)
         token = token if token is not None else os.environ.get(TOKEN_ENV, "")
         self._http = httpx.AsyncClient(
             base_url=self.base_url,
@@ -297,7 +307,7 @@ class MailboxApiClient:
         )
         return Attachment(
             data=b"".join(chunks)[:max_bytes],
-            content_type=media.strip().lower(),
+            content_type=_media_type(media),
             charset=_known_charset(charset.group(1)) if charset else None,
             filename=unquote(name.group(1)) if name else None,
             complete=complete,
@@ -498,6 +508,48 @@ def _api_error(response: httpx.Response) -> ApiError:
             reason = "; ".join(reasons)
             return ApiError(response.status_code, "validation_error", reason)
     return ApiError(response.status_code, "unexpected_response", response.reason_phrase)
+
+
+# A media type, type/subtype in the characters RFC 6838 allows. The sender
+# of a mail chose it, and it is shown outside the foreign-content marker.
+_MEDIA_TYPE = re.compile(r"[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*")
+
+
+def _media_type(value: str) -> str:
+    """``value`` when it is a media type and nothing else, else the type of
+    unknown bytes."""
+    media = value.strip().lower()
+    if len(media) <= 127 and _MEDIA_TYPE.fullmatch(media):
+        return media
+    return "application/octet-stream"
+
+
+def _check_url(url: str, allow_http: bool) -> None:
+    """https anywhere, http to this machine, or anywhere when allowed."""
+    try:
+        parts = httpx.URL(url)
+    except httpx.InvalidURL:
+        raise ToolError(f"{URL_ENV} is not a URL: {url}") from None
+    if parts.scheme == "https" and parts.host:
+        return
+    if parts.scheme != "http" or not parts.host:
+        raise ToolError(f"{URL_ENV} must be an http or https URL: {url}")
+    if allow_http or _loopback(parts.host):
+        return
+    raise ToolError(
+        f"{URL_ENV} is http to {parts.host}, so the token would travel "
+        f"unencrypted. Use https, or set {ALLOW_HTTP_ENV}=1 for a network you "
+        "trust, such as between containers."
+    )
+
+
+def _loopback(host: str) -> bool:
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 def _known_charset(name: str) -> str | None:

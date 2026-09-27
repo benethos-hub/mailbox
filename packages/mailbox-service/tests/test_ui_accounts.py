@@ -100,12 +100,9 @@ def test_connect_an_account(ui: TestClient, services: Services) -> None:
 
 def test_an_unknown_provider_is_refused(ui: TestClient) -> None:
     answer = post(
-        ui,
-        "/ui/accounts",
-        {"email": "x@example.org", "provider": "carrier-pigeon"},
-        follow_redirects=False,
+        ui, "/ui/accounts", {"email": "x@example.org", "provider": "carrier-pigeon"}
     )
-    assert "err=Unknown+provider" in answer.headers["location"]
+    assert "Unknown provider." in answer.text
 
 
 def test_change_verify_and_remove(ui: TestClient, account_id: str) -> None:
@@ -120,6 +117,18 @@ def test_change_verify_and_remove(ui: TestClient, account_id: str) -> None:
     assert "Account removed" in removed.text
     assert "me@example.com" not in removed.text
     assert ui.get(url).status_code == 404
+
+
+def test_a_message_is_shown_once_and_never_taken_from_a_link(
+    ui: TestClient, account_id: str
+) -> None:
+    url = f"/ui/accounts/{account_id}"
+    saved = post(ui, url, {"display_name": "Renamed"})
+    assert "Saved." in saved.text
+    assert "Saved." not in str(saved.url)
+    assert "Saved." not in ui.get(url).text
+    forged = ui.get(f"{url}?err=Call+this+number&msg=Call+this+number").text
+    assert "Call this number" not in forged
 
 
 def test_a_reader_sees_no_forms(
@@ -148,11 +157,10 @@ def test_a_failed_connect_never_echoes_the_password(ui: TestClient) -> None:
         ui,
         "/ui/accounts",
         {"email": "x@example.org", "provider": "memory", "password": "s3cret-pw"},
-        follow_redirects=False,
     )
-    assert "err=" in answer.headers["location"]
-    assert "s3cret-pw" not in answer.headers["location"]
-    assert "s3cret-pw" not in ui.get(answer.headers["location"]).text
+    assert 'class="notice err"' in answer.text
+    assert "s3cret-pw" not in str(answer.url)
+    assert "s3cret-pw" not in answer.text
 
 
 def test_only_changed_settings_are_sent() -> None:

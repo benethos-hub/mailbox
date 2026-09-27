@@ -70,21 +70,20 @@ def test_the_same_key_with_another_message(
 def test_a_key_is_the_callers_own(
     client: TestClient, services: Services, account_id: str
 ) -> None:
+    # Two users send the same request with the same key, e.g. two MCP
+    # clients: each sends once, and each retry gets its own result.
     url = f"/v1/accounts/{account_id}/send"
     grant = Grant(accounts=[account_id], allow=["send"])
-    first = client.post(
-        url,
-        json=BODY,
-        headers={"Idempotency-Key": "k1", **bearer_for(services, grant)},
-    )
-    assert first.status_code == 200
-    other = client.post(
-        url,
-        json=BODY,
-        headers={"Idempotency-Key": "k1", **bearer_for(services, grant)},
-    )
-    assert other.status_code == 409
-    assert len(outbox(services, account_id)) == 1
+    users = [bearer_for(services, grant), bearer_for(services, grant)]
+    answers = [
+        client.post(url, json=BODY, headers={"Idempotency-Key": "k1", **user})
+        for user in users + users
+    ]
+    assert [a.status_code for a in answers] == [200] * 4
+    first, other, first_again, other_again = (a.json() for a in answers)
+    assert first != other
+    assert (first_again, other_again) == (first, other)
+    assert len(outbox(services, account_id)) == 2
 
 
 def test_without_a_key_every_request_sends(
@@ -229,17 +228,18 @@ def store(
 def test_store_round_trip_and_purge(store: IdempotencyRepository) -> None:
     then = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
     stored = StoredResult("send_message", "hash", '{"a":1}', then)
-    store.put("acc", "k", stored)
-    assert store.get("acc", "k") == stored
-    assert store.get("acc", "other") is None
+    store.put("acc", "usr_a", "k", stored)
+    assert store.get("acc", "usr_a", "k") == stored
+    assert store.get("acc", "usr_a", "other") is None
+    assert store.get("acc", "usr_b", "k") is None
     store.purge(then)
-    assert store.get("acc", "k") == stored
+    assert store.get("acc", "usr_a", "k") == stored
     store.purge(then + timedelta(seconds=1))
-    assert store.get("acc", "k") is None
+    assert store.get("acc", "usr_a", "k") is None
 
 
 def test_store_forgets_an_account(store: IdempotencyRepository) -> None:
     then = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
-    store.put("acc", "k", StoredResult("send_message", "hash", "{}", then))
+    store.put("acc", "usr_a", "k", StoredResult("send_message", "hash", "{}", then))
     store.forget_account("acc")
-    assert store.get("acc", "k") is None
+    assert store.get("acc", "usr_a", "k") is None

@@ -101,8 +101,8 @@ def install(app: FastAPI) -> None:
         return RedirectResponse(target, status_code=303)
 
     @app.exception_handler(Failed)
-    async def _failed(_: Request, exc: Failed) -> Response:
-        return back(exc.path, error=exc.error)
+    async def _failed(request: Request, exc: Failed) -> Response:
+        return back(request, exc.path, error=exc.error)
 
     @app.exception_handler(CsrfRefused)
     async def _csrf(request: Request, _: CsrfRefused) -> HTMLResponse:

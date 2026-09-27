@@ -38,6 +38,7 @@ from .protocols.oauth import (
     authorize_url,
     new_pkce,
 )
+from .protocols.transport import Pick
 from .ratelimit import backoff
 from .rules import hosts_in
 
@@ -57,13 +58,19 @@ class ProviderFactory(Protocol):
     ) -> MailProvider: ...
 
 
-ServerProbe = Callable[[ServerProtocol, str, int, Security], Awaitable[frozenset[str]]]
+# Protocol, host, port, security and the address just checked for the host.
+ServerProbe = Callable[
+    [ServerProtocol, str, int, Security, str], Awaitable[frozenset[str]]
+]
 
 _REGISTRY: dict[
-    ProviderType, Callable[[ProviderSettings, CredentialReader], MailProvider]
+    ProviderType,
+    Callable[[ProviderSettings, CredentialReader, Pick | None], MailProvider],
 ] = {
-    ProviderType.MEMORY: lambda _settings, _credentials: MemoryProvider(),
-    ProviderType.IMAP: ImapProvider,
+    ProviderType.MEMORY: lambda _settings, _credentials, _pick: MemoryProvider(),
+    ProviderType.IMAP: lambda settings, credentials, pick: ImapProvider(
+        settings, credentials, pick=pick
+    ),
 }
 # Providers that sign in with OAuth: they get a token source instead.
 _SIGNED_IN: dict[
@@ -130,8 +137,10 @@ def build_provider(
     /,
     *,
     tokens: TokenSource | None = None,
+    pick: Pick | None = None,
 ) -> MailProvider:
-    """A new adapter for one account."""
+    """A new adapter for one account. ``pick`` checks the host of each
+    connection to a server the settings name."""
     if kind in _SIGNED_IN:
         if tokens is None:
             raise NotSupportedError(
@@ -142,17 +151,18 @@ def build_provider(
         factory = _REGISTRY[kind]
     except KeyError:
         raise NotSupportedError(f"provider {kind} is not implemented yet") from None
-    return factory(settings, credentials)
+    return factory(settings, credentials, pick)
 
 
 async def probe_server(
-    protocol: ServerProtocol, host: str, port: int, security: Security
+    protocol: ServerProtocol, host: str, port: int, security: Security, address: str
 ) -> frozenset[str]:
     """What a mail server announces before any login, e.g. ``IDLE`` or
-    ``AUTH=XOAUTH2``. Connects anonymously and sends no credential."""
+    ``AUTH=XOAUTH2``. Connects anonymously to ``address``, the one just
+    checked for ``host``, and sends no credential."""
     if protocol is not ServerProtocol.IMAP:
         raise NotSupportedError(f"cannot probe {protocol} servers yet")
-    return await probe_imap(host, port, str(security))
+    return await probe_imap(host, port, str(security), address)
 
 
 __all__ = [
@@ -164,6 +174,7 @@ __all__ = [
     "Endpoints",
     "MailProvider",
     "OAuthClient",
+    "Pick",
     "ProviderFactory",
     "ProviderSettings",
     "RefreshingTokens",

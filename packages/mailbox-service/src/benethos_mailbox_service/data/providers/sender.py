@@ -14,6 +14,7 @@ from . import rules
 from .base import ProviderSettings
 from .guard import Guard
 from .protocols.smtp import DEFAULT_PORTS, SmtpLogin, SmtpServer, SmtpSession
+from .protocols.transport import Pick
 
 SmtpFactory = Callable[[SmtpServer], SmtpSession]
 
@@ -42,6 +43,7 @@ class SmtpSender:
         secret: Callable[[], str],
         guard: Guard,
         factory: SmtpFactory = SmtpSession,
+        pick: Pick | None = None,
     ) -> SmtpSender | None:
         """From ``smtp_host``, ``smtp_port``, ``smtp_security`` and
         ``smtp_username`` (else ``username``). None when the account has no
@@ -51,7 +53,7 @@ class SmtpSender:
             return None
         security = rules.encrypted(settings, "smtp_security", "SMTP")
         port = rules.port_of(settings, "smtp_port", DEFAULT_PORTS[security])
-        server = SmtpServer(host=str(host), port=port, security=security)
+        server = SmtpServer(host=str(host), port=port, security=security, pick=pick)
         return cls(
             factory(server),
             str(settings.get("smtp_username") or username),

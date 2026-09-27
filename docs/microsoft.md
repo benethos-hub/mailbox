@@ -102,9 +102,9 @@ Delegated permissions**, and tick:
 | `Mail.ReadWrite` | read, flag, move and delete mail, drafts |
 | `Mail.Send` | send |
 | `offline_access` | a refresh token, so the service stays signed in |
-| `openid`, `email`, `profile` | the address of the account that signed in |
+| `User.Read` | the address of the mailbox that signed in, from `/me` |
 
-`User.Read`, which a new app has already, may stay. Delegated means the
+A new app has `User.Read` already. Delegated means the
 app acts for the person who signs in, only in that person's mailbox.
 Personal accounts need no administrator consent. An organisation may
 require it (see "Work and school accounts" below).

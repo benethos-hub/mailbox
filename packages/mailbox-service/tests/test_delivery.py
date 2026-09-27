@@ -347,6 +347,8 @@ async def test_addresses_no_receiver_has_are_refused(address: str) -> None:
         ("93.184.215.14", True),
         ("169.254.169.254", False),
         ("::ffff:169.254.169.254", False),
+        ("64:ff9b::a9fe:a9fe", False),
+        ("64:ff9b::a00:5", True),
     ],
 )
 def test_receiver_addresses(address: str, ok: bool) -> None:

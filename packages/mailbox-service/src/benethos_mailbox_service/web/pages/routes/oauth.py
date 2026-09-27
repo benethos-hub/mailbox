@@ -42,7 +42,7 @@ async def start(
     here = local_path(str(form.get("back") or ""), fallback)
     kind = _provider(provider)
     if kind is None:
-        return back(here, error=f"Unknown provider: {provider}")
+        return back(request, here, error=f"Unknown provider: {provider}")
     with failing(here):
         url = oauth.start(
             caller,
@@ -74,11 +74,16 @@ async def finish(
     kind = _provider(provider)
     state = query.get("state", "")
     if kind is None:
-        return back("/ui/accounts", error=f"Unknown provider: {provider}")
+        return back(request, "/ui/accounts", error=f"Unknown provider: {provider}")
     if query.get("error"):
-        oauth.cancel(caller, state)
-        reason = query.get("error_description") or query["error"]
-        return back("/ui/accounts", error=f"{kind.value} did not sign in: {reason}")
+        # The provider's words only for a sign-in this user started: a link
+        # with a made-up error must not put text into the UI.
+        if oauth.cancel(caller, state):
+            reason = query.get("error_description") or query["error"]
+            error = f"{kind.value} did not sign in: {reason}"
+        else:
+            error = f"{kind.value} did not sign in."
+        return back(request, "/ui/accounts", error=error)
     with failing("/ui/accounts"):
         account = await oauth.finish(caller, kind, state, query.get("code", ""))
-    return back(f"/ui/accounts/{account.id}", f"{account.email} signed in.")
+    return back(request, f"/ui/accounts/{account.id}", f"{account.email} signed in.")

@@ -82,7 +82,10 @@ REST client can do too.
   every request authenticates the token anew, so revoking it ends the
   session. Sessions end after 8 hours without a request and with a
   restart. A content security policy allows no inline script or style and
-  no framing. A form answers with a redirect (Post/Redirect/Get).
+  no framing. A form answers with a redirect (Post/Redirect/Get). Its
+  message waits in the session and is shown once, never in the URL, so a
+  link cannot put words into the UI. The sign-in page, which has no
+  session, names one of its own messages by a code.
   Guessing is slowed down: a client address that fails to sign in ten
   times within fifteen minutes is locked out for fifteen minutes, on the
   UI and on the API alike, whatever the credential kind. Behind a proxy,
@@ -296,8 +299,14 @@ an app password is the credential to ask for.
   search results up that way, in their own folder, twenty to a JSON
   batch. Outlook.com took several minutes to deliver a sent mail.
 - Each deployment registers its own app in Entra ID (delegated
-  `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `openid`, `email`,
-  `profile` for the address that signed in).
+  `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `User.Read` for
+  the address that signed in).
+- **Decided 2026-09-27:** the address of an account comes from Graph
+  `/me` (`mail`, else `userPrincipalName`), not from the ID token. Its
+  `email` claim is not verified: anyone who manages a work or school
+  tenant may set it. `User.Read` is asked for at the sign-in only. A
+  refresh asks for the adapter's scopes alone, so refresh tokens granted
+  before keep working.
 - **Decided 2026-09-25:** the tenant is `common` by default, so personal
   and work or school accounts can sign in. `consumers`, `organizations` or
   one tenant narrow it. The app must then be registered for all Microsoft
@@ -462,7 +471,11 @@ registered that domain.
    link-local addresses are refused, unless an operator allows a list of
    internal mail servers in the settings. The same check runs on the
    hosts in an account's settings (`host`, `smtp_host`) when the account
-   is created or changed, before the first connection: `400`.
+   is created or changed, before the first connection: `400`. Every
+   connection runs the check again, the probes of discovery and each
+   connection of an adapter to IMAP or SMTP. It goes to the address just
+   checked, with TLS verified against the host name, so a DNS answer that
+   changes later cannot point the service inward.
 7. **Safe XML.** Autoconfig files are parsed with `defusedxml`, never the
    plain standard-library parser, so a hostile file cannot expand entities
    or read local files.
@@ -704,9 +717,10 @@ is a later option (see IDEAS.md).
 
 `Idempotency-Key`: the result of the first request is stored for 24 hours.
 The same key with the same body returns the stored result, with a different
-body `409 idempotency_conflict`. A key counts per account and per caller:
-the same key from another user is a conflict, never the first caller's
-result. Requests with the same key run one after the other, so a retry
+body `409 idempotency_conflict`. A key counts per account and per user:
+the same key from another user is a request of its own, never the first
+user's result. Two MCP clients, whose keys follow from the call, do not
+meet. Requests with the same key run one after the other, so a retry
 that arrives while the first is still sending waits for its result. A
 request that fails stores nothing and may be tried again.
 
@@ -1118,6 +1132,9 @@ with the role
   - Null means no constraint. Recipients are checked once the mail is
     composed: To, Cc and Bcc, and for a reply the recipients taken from the
     original. `send_draft` checks the stored draft.
+  - `*@domain` does not accept a local part with `%` or `!`. Some servers
+    route `bob%evil.org@domain` on to another host. Such an address passes
+    only when the grant names it exactly.
   - A refused recipient answers `403 recipient_not_allowed`, a reached
     limit `429 send_limit_reached` with `Retry-After`. A retry with its
     `Idempotency-Key` returns the stored result and is not counted again.
@@ -1290,7 +1307,9 @@ small and the REST-only rule is enforced by the dependency list itself. A
 test checks that no module imports the service.
 
 It reads `MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN` and calls the REST API with
-httpx. It runs over stdio or streamable HTTP. Over HTTP a bearer guard
+httpx. The URL is `https`, or `http` to this machine only, since the token
+goes with every request. `MAILBOX_SERVICE_ALLOW_HTTP=1` allows `http` to
+another host, e.g. between containers (**decided 2026-09-27**). It runs over stdio or streamable HTTP. Over HTTP a bearer guard
 admits clients with one shared token (`MAILBOX_MCP_BEARER_TOKEN`), which
 is not passed on: the server acts as the user of its own API token, for
 every client alike. Host and Origin are checked against DNS rebinding. At

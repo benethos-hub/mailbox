@@ -35,7 +35,7 @@ def make_client() -> Callable[[Handler], MailboxApiClient]:
 
     def make(handler: Handler) -> MailboxApiClient:
         client = MailboxApiClient(
-            base_url="http://mail.test",
+            base_url="https://mail.test",
             token="secret",
             transport=httpx.MockTransport(handler),
         )
