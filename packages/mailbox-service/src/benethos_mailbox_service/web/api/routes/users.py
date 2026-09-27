@@ -41,7 +41,9 @@ async def list_users(caller: Caller, users: Users) -> list[User]:
 
 @router.post("/users", status_code=status.HTTP_201_CREATED)
 async def create_user(data: UserCreate, caller: Caller, users: Users) -> User:
-    return users.create_user(caller, data.name, data.roles, data.grants)
+    return users.create_user(
+        caller, data.name, data.roles, data.grants, ui_sign_in=data.ui_sign_in
+    )
 
 
 @router.get("/users/{user_id}")
@@ -60,6 +62,7 @@ async def update_user(
         roles=data.roles,
         grants=data.grants,
         disabled=data.disabled,
+        ui_sign_in=data.ui_sign_in,
     )
 
 

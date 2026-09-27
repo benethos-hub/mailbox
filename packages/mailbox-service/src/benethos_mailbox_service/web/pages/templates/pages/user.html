@@ -18,11 +18,11 @@
 {% endcall %}
 {% endif %}
 
-{% set state %}{% if is_me %}<span class="tag accent">you</span> {% endif %}{% if user.disabled %}<span class="tag bad">disabled</span>{% else %}<span class="tag ok">active</span>{% endif %}{% endset %}
+{% set state %}{% if is_me %}<span class="tag accent">you</span> {% endif %}{% if not user.ui_sign_in %}<span class="tag">API only</span> {% endif %}{% if user.disabled %}<span class="tag bad">disabled</span>{% else %}<span class="tag ok">active</span>{% endif %}{% endset %}
 {% call facts("User", tags=state) %}
   {% call fact("Roles") %}{{ role_tags(user.roles) }}{% endcall %}
   {% call fact("Grants") %}{{ grants_of(user.grants, names) }}{% endcall %}
-  {% call fact("Sign-in to the UI") %}{% if has_password %}with a password{% else %}not possible: no password yet{% endif %}{% endcall %}
+  {% call fact("Sign-in to the UI") %}{% if not user.ui_sign_in %}off: an API user, tokens only{% elif has_password %}with a password{% else %}not possible: no password yet{% endif %}{% endcall %}
   {{ fact("Last sign-in", last_sign_in | when) }}
   {{ fact("Id", user.id, cls="mono") }}
 {% endcall %}
@@ -107,10 +107,14 @@
         <label for="f-name">Name</label>
         <input id="f-name" name="name" value="{{ user.name }}" required />
       </div>
+      {% if not is_me %}
       <div class="field">
         <span class="label">Access</span>
+        <input type="hidden" name="ui_sign_in_shown" value="1" />
+        <label class="check"><input type="checkbox" name="ui_sign_in" value="1"{% if user.ui_sign_in %} checked{% endif %} /> may sign in to the UI. Off: its password is deleted, its tokens keep working</label>
         <label class="check"><input type="checkbox" name="disabled" value="1"{% if user.disabled %} checked{% endif %} /> disabled: it cannot sign in, its tokens are refused</label>
       </div>
+      {% endif %}
     </div>
     {% if role_choices %}{{ role_checks(role_choices, user.roles) }}{% endif %}
     <details class="fold">
@@ -126,8 +130,14 @@
 {% call card("Password") %}
   <p><a href="/ui/password">Change your password</a></p>
 {% endcall %}
-{% elif can_set_password %}
+{% elif can_set_password and user.ui_sign_in %}
 {% call card("Password", meta="Whoever sets a password can sign in as that user.") %}
+  <form class="toolbar" method="post" action="/ui/users/{{ user.id }}/one-time">
+    {{ csrf_field() }}
+    <button type="submit">Make a one-time password</button>
+    <span class="muted">The service makes one and shows it once.</span>
+  </form>
+  <div class="fold">
   <form method="post" action="/ui/users/{{ user.id }}/password">
     {{ csrf_field() }}
     <input type="hidden" name="name" value="{{ user.name }}" autocomplete="off" />
@@ -144,6 +154,7 @@
     <span class="hint">{{ user.name }} must change it at the next sign-in.</span>
     <div class="form-actions"><button class="primary" type="submit">Set password</button></div>
   </form>
+  </div>
 {% endcall %}
 {% endif %}
 

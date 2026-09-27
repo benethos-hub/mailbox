@@ -201,6 +201,12 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX webhook_attempts_webhook ON webhook_attempts (webhook_id, seq);
     """,
+    # 12: whether a user may sign in to the UI. Those with a password so
+    # far keep it, those without are API users
+    """
+    ALTER TABLE users ADD COLUMN ui_sign_in INTEGER NOT NULL DEFAULT 0;
+    UPDATE users SET ui_sign_in = 1 WHERE id IN (SELECT user_id FROM passwords);
+    """,
 ]
 
 SCHEMA_VERSION = len(MIGRATIONS)

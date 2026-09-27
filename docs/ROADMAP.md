@@ -17,6 +17,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [4](#phase-4--change-feed-and-webhooks) | Change feed and webhooks | **done** |
 | [4a](#phase-4a--password-sign-in) | Password sign-in | **done** |
 | [4b](#phase-4b--ui-rework) | UI rework | **done** |
+| [4c](#phase-4c--api-users) | API users | **done** |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
@@ -178,6 +179,16 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 - decided 2026-09-27: UI.md as written, the recovery key for `admin`
   after the password, the sync state in memory, a delivery log, no
   Changes page yet (UI 10)
+
+## Phase 4c – API users
+
+- **The UI sign-in switch `ui_sign_in` on the user: off for new users,
+  in the API and the UI, the password deleted when it goes off
+  (CONCEPT 7.5, UI 6.3)**, done: schema 12, live-checked in
+  `live/ui.py`
+- **Nobody disables itself or takes its own UI sign-in (7.5)**, done
+- decided 2026-09-27: a switch rather than a password removed by hand,
+  new users are API users by default
 
 ## Phase 5 – More providers and the configuration UI
 

@@ -144,8 +144,15 @@ def test_the_page_says_whether_a_user_can_sign_in(
 ) -> None:
     bot = services.users.create_user(ADMIN, "bot", [], [])
     page = ui.get(f"/ui/users/{bot.id}").text
-    assert "not possible: no password yet" in page
-    assert "Set password" in page
+    assert "off: an API user, tokens only" in page and "API only" in page
+    assert "Set password" not in page
+    saved = post(
+        ui,
+        f"/ui/users/{bot.id}",
+        {"name": "bot", "ui_sign_in_shown": "1", "ui_sign_in": "1"},
+    )
+    assert "not possible: no password yet" in saved.text
+    assert "Set password" in saved.text and "Make a one-time password" in saved.text
     secret = "a password for the bot user"
     post(
         ui,
@@ -157,6 +164,8 @@ def test_the_page_says_whether_a_user_can_sign_in(
     assert own is not None
     mine = ui.get(f"/ui/users/{own.id}").text
     assert "Change your password" in mine and "Set password" not in mine
+    # Nobody disables itself or takes its own sign-in: no tick boxes there.
+    assert 'name="disabled"' not in mine and 'name="ui_sign_in"' not in mine
 
 
 def test_change_disable_and_delete_a_user(ui: TestClient, services: Services) -> None:
@@ -437,7 +446,11 @@ def test_a_new_user_gets_a_one_time_password_shown_once(
     form = ui.get("/ui/users/new").text
     assert 'name="one_time" value="1" checked' in form
     assert '<a href="/ui/users">Users</a>' in form  # the breadcrumb
-    created = post(ui, "/ui/users", {"name": "Otto", "grants": "0", "one_time": "1"})
+    created = post(
+        ui,
+        "/ui/users",
+        {"name": "Otto", "grants": "0", "signs_in_to": "ui", "one_time": "1"},
+    )
     assert "Otto created." in created.text
     shown = re.search(r'<code class="secret">([^<]+)</code>', created.text)
     assert shown is not None
@@ -492,3 +505,20 @@ def test_users_filter_by_name_role_and_state(
     disabled = ui.get("/ui/users", params={"disabled": "1"}).text
     assert ">Bert</a>" in disabled and ">Anna</a>" not in disabled
     assert "No user matches." in ui.get("/ui/users", params={"name": "zzz"}).text
+
+
+def test_a_new_user_is_an_api_user_by_default(
+    ui: TestClient, services: Services
+) -> None:
+    form = ui.get("/ui/users/new").text
+    assert 'name="signs_in_to" value="api" checked' in form
+    created = post(ui, "/ui/users", {"name": "script", "grants": "0", "one_time": "1"})
+    assert "script created." in created.text
+    # No one-time password for an API user, though the box was ticked.
+    assert '<code class="secret">' not in created.text
+    assert "off: an API user, tokens only" in created.text
+    listed = ui.get("/ui/users", params={"api_only": "1"}).text
+    assert ">script</a>" in listed and ">admin</a>" not in listed
+    assert "API only" in listed
+    user = services.auth.user_named("script")
+    assert user is not None and user.ui_sign_in is False

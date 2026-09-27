@@ -236,7 +236,11 @@ def test_a_password_set_by_someone_else_is_changed_first(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
     user = services.users.create_user(
-        ADMIN, "Anna", [], [Grant(accounts=[account_id], allow=["mail.read"])]
+        ADMIN,
+        "Anna",
+        [],
+        [Grant(accounts=[account_id], allow=["mail.read"])],
+        ui_sign_in=True,
     )
     other = TestClient(app_client.app)
     sign_in(other, *browser_admin(services))

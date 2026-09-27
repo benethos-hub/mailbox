@@ -8307,6 +8307,12 @@
             "type": "boolean",
             "title": "Disabled",
             "default": false
+          },
+          "ui_sign_in": {
+            "type": "boolean",
+            "title": "Ui Sign In",
+            "description": "Whether the user may sign in to the configuration UI with a password. Without it, the user works with tokens only.",
+            "default": false
           }
         },
         "type": "object",
@@ -8336,6 +8342,12 @@
             },
             "type": "array",
             "title": "Grants"
+          },
+          "ui_sign_in": {
+            "type": "boolean",
+            "title": "Ui Sign In",
+            "description": "May sign in to the configuration UI. Without: an API user, tokens only. A password is then set in the UI.",
+            "default": false
           }
         },
         "type": "object",
@@ -8394,7 +8406,20 @@
                 "type": "null"
               }
             ],
-            "title": "Disabled"
+            "title": "Disabled",
+            "description": "Not for the caller itself."
+          },
+          "ui_sign_in": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ui Sign In",
+            "description": "Not for the caller itself. Switched off, the user's password is deleted and its UI sessions end. Its tokens keep working."
           }
         },
         "type": "object",

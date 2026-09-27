@@ -122,6 +122,7 @@ class UserService:
             id=new_id("usr"),
             name=name,
             grants=[Grant(accounts=["*"], allow=[permissions.ADMIN])],
+            ui_sign_in=True,
         )
         self._users.save(user)
         return user, await self._one_time(user)
@@ -129,10 +130,15 @@ class UserService:
     async def reset_password(self, name: str) -> tuple[User, str]:
         """A new one-time password for the user of this name, to be changed
         at the next sign-in. For the command line on the host only, when
-        nobody who could set it can sign in: it checks no caller."""
+        nobody who could set it can sign in: it checks no caller. An API
+        user may sign in to the UI from now on."""
         user = self._auth.user_named(name)
         if user is None:
             raise NotFoundError(f"no user is named {name}")
+        if not user.ui_sign_in:
+            user = user.model_copy(update={"ui_sign_in": True})
+            self._users.save(user)
+            log.info("%s (%s) may sign in to the UI again", user.name, user.id)
         return user, await self._one_time(user)
 
     async def _one_time(self, user: User) -> str:
@@ -150,9 +156,11 @@ class UserService:
         name: str | None = None,
         role: str | None = None,
         disabled: bool | None = None,
+        ui_sign_in: bool | None = None,
     ) -> list[User]:
         """Every user, or those whose name holds ``name`` regardless of
-        case, that hold ``role``, that are disabled or not."""
+        case, that hold ``role``, that are disabled or not, that may sign
+        in to the UI or not."""
         access.require("list_users")
         wanted = (name or "").casefold()
         return [
@@ -161,6 +169,7 @@ class UserService:
             if wanted in user.name.casefold()
             and (role is None or role in user.roles)
             and (disabled is None or user.disabled == disabled)
+            and (ui_sign_in is None or user.ui_sign_in == ui_sign_in)
         ]
 
     def get_user(self, access: Access, user_id: str) -> User:
@@ -173,11 +182,20 @@ class UserService:
         name: str,
         roles: list[str],
         grants: list[Grant],
+        *,
+        ui_sign_in: bool = False,
     ) -> User:
+        """A new user. Without ``ui_sign_in`` an API user: tokens only."""
         access.require("create_user")
         _named("a user", name)
         self._require_free(name)
-        user = User(id=new_id("usr"), name=name, roles=roles, grants=grants)
+        user = User(
+            id=new_id("usr"),
+            name=name,
+            roles=roles,
+            grants=grants,
+            ui_sign_in=ui_sign_in,
+        )
         self._check_grantable(access, user.roles, user.grants)
         self._users.save(user)
         return user
@@ -191,13 +209,22 @@ class UserService:
         roles: list[str] | None = None,
         grants: list[Grant] | None = None,
         disabled: bool | None = None,
+        ui_sign_in: bool | None = None,
     ) -> User:
+        """Switching ``ui_sign_in`` off deletes the password, which ends the
+        user's UI sessions. Nobody disables itself or takes its own UI
+        sign-in."""
         access.require("update_user")
         if name is not None:
             _named("a user", name)
             self._require_free(name, user_id)
         user = self._users.get(user_id)
         self._require_covers_user(access, user)
+        if user_id == access.user_id:
+            if disabled:
+                raise ConflictError("a user cannot disable itself")
+            if ui_sign_in is False:
+                raise ConflictError("a user cannot take its own UI sign-in")
         changes = {
             key: value
             for key, value in {
@@ -205,12 +232,22 @@ class UserService:
                 "roles": roles,
                 "grants": grants,
                 "disabled": disabled,
+                "ui_sign_in": ui_sign_in,
             }.items()
             if value is not None
         }
         updated = user.model_copy(update=changes)
         self._check_grantable(access, updated.roles, updated.grants)
         self._users.save(updated)
+        if user.ui_sign_in and not updated.ui_sign_in:
+            self._auth.passwords.delete(user_id)
+            log.info(
+                "%s (%s) made %s (%s) an API user: its password is deleted",
+                access.name,
+                access.user_id,
+                user.name,
+                user.id,
+            )
         return updated
 
     def delete_user(self, access: Access, user_id: str) -> None:
@@ -295,6 +332,10 @@ class UserService:
         self._require_covers_user(access, user)
         if user_id == access.user_id:
             raise ConflictError("change your own password with the current one")
+        if not user.ui_sign_in:
+            raise ConflictError(
+                f"{user.name} is an API user: switch on its UI sign-in first"
+            )
         return user
 
     # --- tokens ---------------------------------------------------------------

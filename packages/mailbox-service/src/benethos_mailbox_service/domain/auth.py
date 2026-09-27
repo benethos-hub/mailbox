@@ -116,13 +116,20 @@ class AuthService:
         user = self.user_named(name)
         matched = await self.passwords.matches(user.id if user else None, password)
         stored = self.passwords.stored(user.id) if user is not None else None
-        if not matched or user is None or user.disabled or stored is None:
+        if (
+            not matched
+            or user is None
+            or user.disabled
+            or not user.ui_sign_in
+            or stored is None
+        ):
             self._throttle.failed(source)
             self._names.failed(key)
             # The name only when it is a user's: a password typed into the
             # name field must not end up in the log.
             who = f"{user.name} ({user.id})" if user is not None else "an unknown name"
-            log.warning("failed sign-in to the UI as %s from %s", who, source)
+            why = " (an API user)" if user is not None and not user.ui_sign_in else ""
+            log.warning("failed sign-in to the UI as %s%s from %s", who, why, source)
             raise UnauthorizedError(WRONG)
         self._throttle.succeeded(source)
         self._names.succeeded(key)
@@ -156,6 +163,8 @@ class AuthService:
             raise UnauthorizedError("the user no longer exists") from None
         if user.disabled:
             raise UnauthorizedError("user is disabled")
+        if not user.ui_sign_in:
+            raise UnauthorizedError("the user signs in to the API only")
         stored = self.passwords.stored(user_id)
         if stored is None or stored.updated_at != stamp:
             raise UnauthorizedError("the password changed: sign in again")

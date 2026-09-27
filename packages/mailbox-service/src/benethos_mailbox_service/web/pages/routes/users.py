@@ -73,6 +73,7 @@ async def list_users(request: Request, caller: Viewer, users: Users) -> HTMLResp
         (
             Field("role", "Role", "select", [(r, r) for r in roles]),
             Field("disabled", "disabled", "flag"),
+            Field("api_only", "API only", "flag"),
         ),
         search=Field("name", "Name"),
     )
@@ -86,6 +87,7 @@ async def list_users(request: Request, caller: Viewer, users: Users) -> HTMLResp
             name=bar.value("name") or None,
             role=bar.value("role") or None,
             disabled=True if bar.value("disabled") else None,
+            ui_sign_in=False if bar.value("api_only") else None,
         ),
         names=_account_names(request, caller),
         can_create=caller.allows("create_user"),
@@ -108,15 +110,17 @@ async def new_user(request: Request, caller: Viewer) -> HTMLResponse:
 @router.post("/users")
 async def create_user(request: Request, caller: Actor, users: Users) -> Response:
     form = await request.form()
+    ui_sign_in = form.get("signs_in_to") == "ui"
     with failing("/ui/users/new"):
         user = users.create_user(
             caller,
             str(form.get("name") or "").strip(),
             [str(role) for role in form.getlist("roles")],
             read_grants(form),
+            ui_sign_in=ui_sign_in,
         )
     here = f"/ui/users/{user.id}"
-    if "one_time" in form:
+    if ui_sign_in and "one_time" in form:
         with failing(here, f"{user.name} created, but no password: "):
             password = await users.one_time_password(caller, user.id)
         # Shown on the next page, once, and never in the URL.
@@ -162,6 +166,9 @@ async def update_user(
 ) -> Response:
     form = await request.form()
     here = f"/ui/users/{user_id}"
+    # The tick box of the UI sign-in changes something only where the page
+    # showed it: not on the own page, since nobody takes its own sign-in.
+    ui_sign_in = "ui_sign_in" in form if "ui_sign_in_shown" in form else None
     with failing(here):
         users.update_user(
             caller,
@@ -170,6 +177,7 @@ async def update_user(
             roles=[str(role) for role in form.getlist("roles")],
             grants=read_grants(form),
             disabled="disabled" in form,
+            ui_sign_in=ui_sign_in,
         )
     return back(request, here, "Saved.")
 
@@ -201,6 +209,18 @@ async def set_password(
     with failing(here):
         await users.set_password(caller, user_id, new_password)
     return back(request, here, "Password set. It must be changed at the next sign-in.")
+
+
+@router.post("/users/{user_id}/one-time")
+async def one_time_password(
+    request: Request, caller: Actor, user_id: str, users: Users
+) -> Response:
+    """A password the service makes, shown once on the next page."""
+    here = f"/ui/users/{user_id}"
+    with failing(here):
+        password = await users.one_time_password(caller, user_id)
+    show_once(request, f"password:{user_id}", password)
+    return back(request, here, "One-time password made.")
 
 
 # --- tokens ---------------------------------------------------------------------

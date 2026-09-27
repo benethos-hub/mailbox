@@ -20,6 +20,7 @@
         <td class="name">
           <a href="/ui/users/{{ user.id }}">{{ user.name }}</a>
           {% if user.id == me.user_id %}<span class="tag accent">you</span>{% endif %}
+          {% if not user.ui_sign_in %}<span class="tag">API only</span>{% endif %}
           {% if user.disabled %}<span class="tag bad">disabled</span>{% endif %}
           <span class="sub mono">{{ user.id[:16] }}…</span>
         </td>

@@ -119,9 +119,13 @@ def test_user_lifecycle(client: TestClient) -> None:
     assert client.get(f"/v1/users/{user['id']}").json() == user
     assert user["id"] in [u["id"] for u in client.get("/v1/users").json()]
 
+    # An API user unless said otherwise.
+    assert user["ui_sign_in"] is False
     patched = client.patch(f"/v1/users/{user['id']}", json={"disabled": True}).json()
     assert patched["disabled"] is True
     assert patched["grants"] == [READ_A_OUT]
+    switched = client.patch(f"/v1/users/{user['id']}", json={"ui_sign_in": True})
+    assert switched.json()["ui_sign_in"] is True
 
     assert client.delete(f"/v1/users/{user['id']}").status_code == 204
     assert client.get(f"/v1/users/{user['id']}").status_code == 404
@@ -303,3 +307,13 @@ def test_without_users_manage_nothing_is_listed(
     assert app_client.get("/v1/users", headers=headers).status_code == 403
     assert app_client.get("/v1/roles", headers=headers).status_code == 403
     assert app_client.get("/v1/me", headers=headers).status_code == 200
+
+
+def test_nobody_disables_itself_or_takes_its_own_ui_sign_in(
+    client: TestClient,
+) -> None:
+    me = client.get("/v1/me").json()
+    for change in ({"disabled": True}, {"ui_sign_in": False}):
+        refused = client.patch(f"/v1/users/{me['user_id']}", json=change)
+        assert refused.status_code == 409, change
+    assert client.get("/v1/me").status_code == 200

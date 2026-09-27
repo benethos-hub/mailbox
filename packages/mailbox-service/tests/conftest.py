@@ -173,7 +173,9 @@ def browser_user(
     """A user with these grants and a password it need not change: the
     name and the password to sign in to the UI with."""
     name = name or f"browser-{next(_BROWSER)}"
-    user = services.users.create_user(ADMIN, name, roles or [], list(grants))
+    user = services.users.create_user(
+        ADMIN, name, roles or [], list(grants), ui_sign_in=True
+    )
     asyncio.run(
         services.auth.passwords.set(user.id, name, UI_PASSWORD, must_change=False)
     )

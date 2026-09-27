@@ -45,7 +45,7 @@ def services() -> Services:
 
 async def anna(services: Services, password: str = SECRET) -> User:
     """A user whose password an administrator set."""
-    user = services.users.create_user(ADMIN, "Anna", [], [READER])
+    user = services.users.create_user(ADMIN, "Anna", [], [READER], ui_sign_in=True)
     await services.users.set_password(ADMIN, user.id, password)
     return user
 
@@ -86,7 +86,7 @@ async def test_a_disabled_user_answers_alike(services: Services) -> None:
 
 
 async def test_a_user_without_a_password_cannot_sign_in(services: Services) -> None:
-    services.users.create_user(ADMIN, "Bot", [], [READER])
+    services.users.create_user(ADMIN, "Bot", [], [READER], ui_sign_in=True)
     with pytest.raises(UnauthorizedError, match=WRONG):
         await services.auth.sign_in("Bot", "", source="10.0.0.1")
 
@@ -144,7 +144,9 @@ async def test_the_rules_of_a_new_password(
 
 
 async def test_a_password_is_not_the_name(services: Services) -> None:
-    user = services.users.create_user(ADMIN, "a long user name here", [], [])
+    user = services.users.create_user(
+        ADMIN, "a long user name here", [], [], ui_sign_in=True
+    )
     with pytest.raises(BadRequestError, match="not be the user name"):
         await services.users.set_password(ADMIN, user.id, "A Long User Name Here")
 
@@ -154,7 +156,11 @@ async def test_setting_a_password_needs_the_right_and_the_rights(
 ) -> None:
     user = await anna(services)
     helper = services.users.create_user(
-        ADMIN, "Helper", [], [Grant(accounts=["acc_1"], allow=["users.manage"])]
+        ADMIN,
+        "Helper",
+        [],
+        [Grant(accounts=["acc_1"], allow=["users.manage"])],
+        ui_sign_in=True,
     )
     await services.users.set_password(ADMIN, helper.id, OTHER)
     signed = await services.auth.sign_in("Helper", OTHER, source="10.0.0.1")
@@ -170,7 +176,7 @@ async def test_setting_a_password_needs_the_right_and_the_rights(
 async def test_a_one_time_password_signs_in_once_and_is_noted(
     services: Services,
 ) -> None:
-    user = services.users.create_user(ADMIN, "Anna", [], [READER])
+    user = services.users.create_user(ADMIN, "Anna", [], [READER], ui_sign_in=True)
     assert services.users.last_sign_in(ADMIN, user.id) is None
     password = await services.users.one_time_password(ADMIN, user.id)
     assert len(password) >= 24
@@ -211,7 +217,7 @@ class Clock:
 async def test_a_name_guessed_at_from_many_addresses_waits_a_minute() -> None:
     clock = Clock()
     users = InMemoryUserRepository()
-    users.save(User(id="usr_a", name="anna"))
+    users.save(User(id="usr_a", name="anna", ui_sign_in=True))
     passwords = Passwords(InMemoryPasswordRepository(), CHEAP, clock)
     await passwords.set("usr_a", "anna", SECRET, must_change=False)
     auth = AuthService(
@@ -231,7 +237,7 @@ async def test_a_name_guessed_at_from_many_addresses_waits_a_minute() -> None:
 
 
 async def test_an_older_hash_is_made_anew_at_the_sign_in(services: Services) -> None:
-    user = services.users.create_user(ADMIN, "Anna", [], [READER])
+    user = services.users.create_user(ADMIN, "Anna", [], [READER], ui_sign_in=True)
     older = Passwords(
         services.auth.passwords._repository, PasswordHasher(Scrypt(3, 1, 1))
     )
@@ -263,3 +269,60 @@ async def test_the_log_names_who_but_never_a_password(
     # A password typed into the name field is not logged.
     assert "failed sign-in to the UI as an unknown name from 10.0.0.2" in text
     assert SECRET not in text and OTHER not in text
+
+
+async def test_an_api_user_takes_no_password(services: Services) -> None:
+    bot = services.users.create_user(ADMIN, "Bot", [], [READER])
+    assert bot.ui_sign_in is False
+    with pytest.raises(ConflictError, match="API user"):
+        await services.users.set_password(ADMIN, bot.id, SECRET)
+    with pytest.raises(ConflictError, match="API user"):
+        await services.users.one_time_password(ADMIN, bot.id)
+
+
+async def test_switching_the_ui_sign_in_off_ends_it(services: Services) -> None:
+    user = await anna(services)
+    signed = await services.auth.sign_in("Anna", SECRET, source="10.0.0.1")
+    services.users.update_user(ADMIN, user.id, ui_sign_in=False)
+    # The password is gone, the session ends, a sign-in answers as wrong.
+    assert services.auth.passwords.stored(user.id) is None
+    with pytest.raises(UnauthorizedError):
+        services.auth.session_access(signed.user_id, signed.stamp)
+    with pytest.raises(UnauthorizedError, match="wrong user name or password"):
+        await services.auth.sign_in("Anna", SECRET, source="10.0.0.2")
+    # Switched on again: a one-time password, to be changed first.
+    services.users.update_user(ADMIN, user.id, ui_sign_in=True)
+    password = await services.users.one_time_password(ADMIN, user.id)
+    again = await services.auth.sign_in("Anna", password, source="10.0.0.3")
+    assert again.must_change is True
+
+
+async def test_nobody_takes_its_own_sign_in_or_disables_itself(
+    services: Services,
+) -> None:
+    helper = services.users.create_user(
+        ADMIN,
+        "Helper",
+        [],
+        [Grant(accounts=["*"], allow=["users.manage"])],
+        ui_sign_in=True,
+    )
+    await services.users.set_password(ADMIN, helper.id, OTHER)
+    signed = await services.auth.sign_in("Helper", OTHER, source="10.0.0.1")
+    caller = services.auth.session_access(helper.id, signed.stamp)
+    with pytest.raises(ConflictError, match="disable itself"):
+        services.users.update_user(caller, helper.id, disabled=True)
+    with pytest.raises(ConflictError, match="its own UI sign-in"):
+        services.users.update_user(caller, helper.id, ui_sign_in=False)
+    renamed = services.users.update_user(caller, helper.id, name="Helper2")
+    assert renamed.ui_sign_in is True and not renamed.disabled
+
+
+async def test_set_password_on_the_host_switches_the_ui_sign_in_on(
+    services: Services,
+) -> None:
+    services.users.create_user(ADMIN, "Bot", [], [READER])
+    user, password = await services.users.reset_password("bot")
+    assert user.ui_sign_in is True
+    signed = await services.auth.sign_in("Bot", password, source="10.0.0.1")
+    assert signed.must_change is True

@@ -129,13 +129,29 @@ class UserCreate(BaseModel):
     name: str
     roles: list[str] = Field(default_factory=list)
     grants: list[Grant] = Field(default_factory=list)
+    ui_sign_in: bool = Field(
+        default=False,
+        description=(
+            "May sign in to the configuration UI. Without: an API user, "
+            "tokens only. A password is then set in the UI."
+        ),
+    )
 
 
 class UserUpdate(BaseModel):
     name: str | None = None
     roles: list[str] | None = None
     grants: list[Grant] | None = None
-    disabled: bool | None = None
+    disabled: bool | None = Field(
+        default=None, description="Not for the caller itself."
+    )
+    ui_sign_in: bool | None = Field(
+        default=None,
+        description=(
+            "Not for the caller itself. Switched off, the user's password is "
+            "deleted and its UI sessions end. Its tokens keep working."
+        ),
+    )
 
 
 class RoleCreate(BaseModel):

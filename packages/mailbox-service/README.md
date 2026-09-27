@@ -52,8 +52,10 @@ benethos-mailbox-service serve
   password once. Sign in to the UI with it. The UI then asks for a
   password of your own, 15 characters at least. Tokens for the API are
   made in the UI, on a user's page.
+- Further users are API users unless their UI sign-in is switched on:
+  they work with tokens only, e.g. a script or an MCP server.
 - A forgotten password: `users set-password <name>` on the host gives
-  that user a new one-time password.
+  that user a new one-time password, and switches its UI sign-in on.
 - Both write the secret alone to standard output and everything else to
   standard error, so it can be piped straight into a password manager.
   Printed to a terminal, it stays in its scrollback, and in a container
@@ -118,7 +120,7 @@ A template for the settings file with every option:
 | `keys import` | stores the master key from a recovery key read from stdin, e.g. on a new machine |
 | `keys generate` | prints a new master key for a key file or a container secret, stores nothing |
 | `users create-admin [--name N]` | creates a user with every right and prints a one-time password |
-| `users set-password NAME` | gives the user a new one-time password and prints it |
+| `users set-password NAME` | gives the user a new one-time password and prints it, and switches its UI sign-in on |
 | `backup FILE` | writes an encrypted backup, while the service runs |
 | `backup verify FILE [--recovery-key]` | checks a backup |
 | `restore FILE [--recovery-key]` | replaces the database with a backup. Stop the service first. |

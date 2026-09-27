@@ -125,6 +125,7 @@ def check_service(
             "csrf_token": csrf,
             "name": "ui-live-once",
             "grants": "0",
+            "signs_in_to": "ui",
             "one_time": "1",
         },
     )
@@ -140,6 +141,16 @@ def check_service(
         )
     gone = browser.post(f"{once.url.path}/delete", data={"csrf_token": csrf})
     run.check("delete that user", "User deleted" in gone.text)
+
+    api = browser.post(
+        "/ui/users", data={"csrf_token": csrf, "name": "ui-live-api", "grants": "0"}
+    )
+    run.check(
+        "a new user is an API user by default",
+        "off: an API user, tokens only" in api.text and "Set password" not in api.text,
+    )
+    gone = browser.post(f"{api.url.path}/delete", data={"csrf_token": csrf})
+    run.check("delete the API user", "User deleted" in gone.text)
 
 
 def check_accounts(
@@ -233,6 +244,7 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
         data={
             "csrf_token": csrf,
             "name": "ui-live-reader",
+            "signs_in_to": "ui",
             "roles": "ui-live-reader",
             "grants": "1",
             "g0_accounts": account_id,

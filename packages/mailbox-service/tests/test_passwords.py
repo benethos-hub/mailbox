@@ -152,6 +152,7 @@ def test_the_migration_renames_a_name_taken_twice(tmp_path: Path) -> None:
         raw.execute("DROP INDEX users_name")
         raw.execute("DROP TABLE passwords")
         raw.execute("DROP TABLE webhook_attempts")
+        raw.execute("ALTER TABLE users DROP COLUMN ui_sign_in")
         raw.execute("UPDATE meta SET value = '8' WHERE key = 'schema_version'")
         raw.execute("INSERT INTO users (id, name) VALUES ('usr_11111111aa', 'Anna')")
         raw.execute("INSERT INTO users (id, name) VALUES ('usr_22222222bb', 'anna')")
@@ -159,4 +160,27 @@ def test_the_migration_renames_a_name_taken_twice(tmp_path: Path) -> None:
     db = Database(path)
     names = sorted(u.name for u in SqliteUserRepository(db).list())
     assert names == ["Anna", "anna-22222222"]
+    db.close()
+
+
+def test_the_migration_keeps_the_ui_sign_in_of_who_has_a_password(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "old.db"
+    Database(path).close()
+    raw = sqlite3.connect(path)
+    with raw:
+        # Back to schema 11: users without the switch, one with a password.
+        raw.execute("ALTER TABLE users DROP COLUMN ui_sign_in")
+        raw.execute("UPDATE meta SET value = '11' WHERE key = 'schema_version'")
+        raw.execute("INSERT INTO users (id, name) VALUES ('usr_a', 'anna')")
+        raw.execute("INSERT INTO users (id, name) VALUES ('usr_b', 'bot')")
+        raw.execute(
+            "INSERT INTO passwords (user_id, hash, updated_at)"
+            " VALUES ('usr_a', 'scrypt$x', '2026-09-27T12:00:00+00:00')"
+        )
+    raw.close()
+    db = Database(path)
+    users = {u.name: u.ui_sign_in for u in SqliteUserRepository(db).list()}
+    assert users == {"anna": True, "bot": False}
     db.close()
