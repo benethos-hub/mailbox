@@ -23,7 +23,11 @@ from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.protocols.imap import ImapSession
 from benethos_mailbox_service.data.providers.protocols.smtp import SmtpSession
 from benethos_mailbox_service.domain import outgoing
-from benethos_mailbox_service.errors import ConflictError, ProviderAuthError
+from benethos_mailbox_service.errors import (
+    BadRequestError,
+    ConflictError,
+    ProviderAuthError,
+)
 from benethos_mailbox_service.main import Services
 
 from .conftest import bearer_for, memory_of
@@ -74,6 +78,42 @@ def test_compose() -> None:
 
 def test_a_message_id_in_the_sender_domain() -> None:
     assert compose.new_message_id("me@example.com").endswith("@example.com>")
+    assert compose.new_message_id("me@bücher.example").endswith(
+        "@xn--bcher-kva.example>"
+    )
+
+
+def test_an_international_domain_goes_in_punycode() -> None:
+    message = OutgoingMessage(
+        to=[Recipient(email="du@bücher.example", name="Dü")], text="Hallo"
+    )
+    sender = Recipient(email="me@münchen.example")
+    raw = compose.message(message, sender, datetime(2026, 9, 24, tzinfo=UTC), "<i@x>")
+    assert raw.isascii()
+    mail = message_from_bytes(raw, policy=default)
+    assert mail["From"] == "me@xn--mnchen-3ya.example"
+    assert mail["To"] == "Dü <du@xn--bcher-kva.example>"
+
+
+def test_a_local_part_beyond_ascii_makes_a_message_for_smtputf8() -> None:
+    message = OutgoingMessage(to=[Recipient(email="dü@bücher.example")], text="Hallo")
+    raw = compose.message(
+        message, SENDER, datetime(2026, 9, 24, tzinfo=UTC), "<i@example.com>"
+    )
+    # UTF-8 in the header: an encoded word is not allowed in an address.
+    assert "To: dü@xn--bcher-kva.example\r\n".encode() in raw
+    assert b"=?utf-8?" not in raw.partition(b"\r\n\r\n")[0]
+
+
+def test_an_address_whose_domain_cannot_be_encoded() -> None:
+    message = OutgoingMessage(to=[Recipient(email="du@bü.example")], text="x")
+    with pytest.raises(BadRequestError, match="cannot be encoded"):
+        compose.message(
+            message,
+            Recipient(email="me@" + "ü" * 70 + ".example"),
+            datetime(2026, 9, 24, tzinfo=UTC),
+            "<i@x>",
+        )
 
 
 def test_recipients_each_once() -> None:

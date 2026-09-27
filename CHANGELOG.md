@@ -155,7 +155,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   itself and hand out what it holds. Before, those groups name
   `create_account` and the like, which only a grant on `*` gives, so the
   user could not even rename itself.
+- A mail from or to an address with an international domain is sent,
+  with the domain in punycode in its headers and its Message-ID. Before,
+  composing it answered `500`. An address whose local part goes beyond
+  ASCII makes a message with UTF-8 headers, for servers with SMTPUTF8.
 - Deleting a user removes its webhooks. Before, they stayed, posted
+
   nothing, and nobody could list or remove them. The database moves to
   schema 13, which drops those of users deleted before.
 
