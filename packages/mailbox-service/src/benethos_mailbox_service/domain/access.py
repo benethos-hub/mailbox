@@ -8,7 +8,7 @@ configuration UI share one check.
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 
 from ..data.models import Grant, Role, User
@@ -112,11 +112,7 @@ class Access:
         """Whether the account exists for this caller at all: some right on
         it that is about existing accounts."""
         about_accounts = permissions.ACCOUNT_FREE | permissions.ALL_ACCOUNTS
-        return any(
-            (rule.accounts is None or account_id in rule.accounts)
-            and rule.operations - about_accounts
-            for rule in self._rules
-        )
+        return any(rule.operations - about_accounts for rule in self._on(account_id))
 
     def anywhere(self, operation: str) -> bool:
         """Whether the operation is allowed on at least one account, or
@@ -142,10 +138,7 @@ class Access:
         """The limits of every grant that allows ``operation`` on the
         account. A send is allowed when one of them allows it."""
         return [
-            rule.limit
-            for rule in self._rules
-            if operation in rule.operations
-            and (rule.accounts is None or account_id in rule.accounts)
+            rule.limit for rule in self._on(account_id) if operation in rule.operations
         ]
 
     def sending_limits(self, account_id: str) -> list[SendLimit]:
@@ -153,9 +146,8 @@ class Access:
         account, each grant once."""
         return [
             rule.limit
-            for rule in self._rules
+            for rule in self._on(account_id)
             if rule.operations & SEND_OPERATIONS
-            and (rule.accounts is None or account_id in rule.accounts)
         ]
 
     def sends_anywhere(self, account_id: str) -> bool:
@@ -216,10 +208,18 @@ class Access:
 
     def _allows_everywhere(self, operation: str, limit: SendLimit) -> bool:
         return any(
-            rule.accounts is None
-            and operation in rule.operations
+            operation in rule.operations
             and (operation not in SEND_OPERATIONS or limit.within(rule.limit))
+            for rule in self._on(None)
+        )
+
+    def _on(self, account_id: str | None) -> Iterator[_Rule]:
+        """The rules that reach the account. None: those on every account."""
+        return (
+            rule
             for rule in self._rules
+            if rule.accounts is None
+            or (account_id is not None and account_id in rule.accounts)
         )
 
 
