@@ -66,6 +66,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - IMAP reads have a limit. A message larger than 40 MB is refused with
   `502 provider_error`, as Microsoft accounts already did. In a list,
   headers beyond 256 KB are cut off.
+- Discovery accepts only a host name as the domain. An address with a
+  port, a path, invalid Punycode or whitespace answers `400 bad_request`.
+  Before, a port or path went into the autoconfig URL, and invalid
+  Punycode answered `500`.
 
 ## [0.1.0] - 2026-09-25
 

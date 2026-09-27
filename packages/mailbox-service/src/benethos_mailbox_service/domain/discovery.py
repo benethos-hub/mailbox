@@ -19,6 +19,7 @@ The sources in ``data/discovery`` only look up. Decided here:
 
 from __future__ import annotations
 
+import re
 import time
 from collections import deque
 from collections.abc import Callable, Iterable, Sequence
@@ -62,6 +63,11 @@ PER_SECONDS = 60.0
 # most, so that whoever may discover cannot grow the memory without bound.
 MAX_CACHED = 1000
 MAX_CALLERS = 10_000
+
+# One label of a host name in ASCII: letters, digits, inner hyphens.
+_LABEL = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)")
+# Whitespace and control characters, in no address.
+_BLANK = re.compile(r"[\s\x00-\x1f\x7f]")
 
 
 @dataclass(frozen=True)
@@ -270,12 +276,18 @@ class DiscoveryService:
 def _query(email: str) -> Query:
     email = email.strip()
     local, at, domain = email.rpartition("@")
-    if not at or not local or not domain or len(email) > 254 or " " in email:
+    if not at or not local or not domain or len(email) > 254 or _BLANK.search(email):
         raise BadRequestError("not a valid email address")
+    # The domain goes into URLs and DNS names: a host name, nothing else,
+    # so neither a port nor a path can ride along.
     try:
         ascii_domain = domain.lower().rstrip(".").encode("idna").decode("ascii")
+        ascii_domain.encode("ascii").decode("idna")
     except UnicodeError:
         raise BadRequestError("not a valid email domain") from None
+    labels = ascii_domain.split(".")
+    if len(ascii_domain) > 253 or not all(_LABEL.fullmatch(x) for x in labels):
+        raise BadRequestError("not a valid email domain")
     if registrable_domain(ascii_domain) is None:
         raise BadRequestError(f"{domain} is a public suffix, not a mail domain")
     return Query(email=email, domain=ascii_domain)
