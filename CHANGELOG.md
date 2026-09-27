@@ -82,6 +82,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `update_draft` with the draft as it is stored, every attachment kept,
+  stores nothing and answers the stored draft. Before, the provider
+  stored it again. The UI did this check on its own so far.
 - The OpenAPI document names `400` and `409` on every route under `/v1`,
   as the service answers them.
 - A refused editor in the configuration UI is shown again with what was

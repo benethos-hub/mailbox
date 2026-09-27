@@ -224,8 +224,9 @@ async def update_draft(
     mailbox: Mailbox,
 ) -> MessageSummary:
     """Replace a draft as a whole. Its id stays. Stored attachments are
-    gone unless `keep_attachments` names them. An id that names no draft
-    answers `404`."""
+    gone unless `keep_attachments` names them. A draft sent as it is
+    stored, every attachment kept, is not stored again. An id that names
+    no draft answers `404`."""
     return await mailbox.outgoing.update_draft(
         caller,
         account_id,

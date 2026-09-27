@@ -17,8 +17,9 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from ..common.clock import utc_now
-from ..data.mail import compose
+from ..data.mail import compose, convert
 from ..data.models import (
+    Address,
     DraftMessage,
     Message,
     MessageReference,
@@ -288,12 +289,16 @@ class Outgoing:
         attachments of the stored draft that go into the new one, before
         those the draft brings."""
         _require(access, "update_draft", account_id, draft)
+        # The draft, before anything of it is read: whoever may write
+        # drafts may not read other mail this way.
+        raw = await self._calls.on_message(
+            account_id, draft_id, lambda p, native: p.get_draft(native)
+        )
+        if _same(convert.stored_draft(raw), draft, keep_attachments):
+            # Stored as it is: the provider is left alone.
+            stored = await self._calls.message(account_id, draft_id)
+            return await self._calls.published_one(account_id, stored)
         if keep_attachments:
-            # A draft, before any attachment is read: whoever may write
-            # drafts may not read other mail this way.
-            await self._calls.on_message(
-                account_id, draft_id, lambda p, native: p.get_draft(native)
-            )
             kept = [
                 await self._kept_attachment(account_id, draft_id, attachment_id)
                 for attachment_id in keep_attachments
@@ -432,3 +437,37 @@ def _addressed(recipients: list[str]) -> list[str]:
     if not recipients:
         raise BadRequestError("a message needs at least one recipient")
     return _limited(recipients)
+
+
+def _same(
+    stored: convert.StoredDraft, draft: DraftMessage, keep: list[str] | None
+) -> bool:
+    """Whether ``draft`` is the draft as it is stored: the same addresses,
+    subject, bodies and original, every attachment kept and none added.
+    Whitespace counts as one space, as a form sends a text back."""
+    if draft.attachments or sorted(keep or []) != sorted(stored.attachment_ids):
+        return False
+    if draft.reference is not None and draft.reference.quote:
+        return False  # composing adds the quote again
+
+    def people(values: list[Recipient] | list[Address]) -> list[tuple[str, str]]:
+        return [(v.email.lower(), (v.name or "").strip()) for v in values]
+
+    def words(value: str | None) -> str:
+        return " ".join((value or "").split())
+
+    def original(reference: MessageReference | None) -> tuple[str, ...] | None:
+        if reference is None:
+            return None
+        return (reference.message_id, reference.action, reference.forward_as)
+
+    return (
+        people(draft.to) == people(stored.to)
+        and people(draft.cc) == people(stored.cc)
+        and people(draft.bcc) == people(stored.bcc)
+        and people(draft.reply_to) == people(stored.reply_to)
+        and words(draft.subject) == words(stored.subject)
+        and (draft.text is None or words(draft.text) == words(stored.text))
+        and words(draft.html) == words(stored.html)
+        and original(draft.reference) == original(stored.reference)
+    )

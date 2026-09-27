@@ -16,6 +16,7 @@ from benethos_mailbox_service.data.models import (
     Folder,
     FolderRole,
     Grant,
+    OutgoingAttachment,
     ProviderType,
     Recipient,
 )
@@ -383,6 +384,43 @@ async def test_a_replaced_draft_keeps_its_id(
     assert not box.folders["Drafts"].messages
     with pytest.raises(NotFoundError):
         await mailbox.get_message(ADMIN, account_id, first.id)
+
+
+async def test_a_draft_sent_as_stored_is_not_stored_again(
+    box: FakeMailBox, on_imap: tuple[Services, str]
+) -> None:
+    services, account_id = on_imap
+    outgoing = services.mailbox.outgoing
+    draft = DraftMessage(
+        to=[Recipient(email="bob@example.com", name="Bob")],
+        subject="Plan",
+        text="First line\nsecond line",
+        attachments=[
+            OutgoingAttachment(
+                filename="a.txt", content_type="text/plain", data=b"YQ=="
+            )
+        ],
+    )
+    first = await outgoing.create_draft(ADMIN, account_id, draft)
+    appends = [c for c in box.calls if c[0] == "append"]
+    # The same, as a form sends it back: the stored attachment kept.
+    again = draft.model_copy(
+        update={"text": "First line  second line", "attachments": []}
+    )
+    same = await outgoing.update_draft(
+        ADMIN, account_id, first.id, again, keep_attachments=["att_0"]
+    )
+    assert same.id == first.id
+    assert [c for c in box.calls if c[0] == "append"] == appends
+    # A changed subject, or an attachment dropped, is stored.
+    for changed, keep in (
+        (again.model_copy(update={"subject": "Plan B"}), ["att_0"]),
+        (again, []),
+    ):
+        await outgoing.update_draft(
+            ADMIN, account_id, first.id, changed, keep_attachments=keep
+        )
+    assert len([c for c in box.calls if c[0] == "append"]) == len(appends) + 2
 
 
 async def test_a_draft_id_that_left_the_drafts_folder(

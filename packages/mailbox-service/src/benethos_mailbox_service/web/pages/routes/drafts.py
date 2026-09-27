@@ -27,7 +27,6 @@ from ..mailform import (
     sent_text,
     show,
     show_again,
-    uploads,
 )
 from ..navigation import mail_trail
 from ..rights import mail_rights
@@ -86,16 +85,6 @@ async def draft(
     )
 
 
-def _unchanged(form: Any, stored: Message) -> bool:
-    """Whether the form holds the draft as it is stored."""
-    values = _stored_values(stored)
-    same = all(
-        " ".join(str(form.get(key) or "").split()) == " ".join(values[key].split())
-        for key in values
-    )
-    return same and not uploads(form) and not form.getlist("drop")
-
-
 def _kept(stored: Message, form: Any) -> list[str]:
     """The ids of the draft's attachments that stay."""
     dropped = set(form.getlist("drop"))
@@ -117,19 +106,17 @@ async def draft_submit(
             await mailbox.outgoing.delete_draft(caller, account_id, draft_id)
             return back(request, f"/ui/accounts/{account_id}/drafts", "Draft deleted.")
         stored = await mailbox.get_message(caller, account_id, draft_id)
-        if not _unchanged(form, stored):
-            fields = await read_fields(form)
-            if stored.reference is not None:
-                fields["reference"] = stored.reference.model_copy(
-                    update={"quote": False}
-                )
-            await mailbox.outgoing.update_draft(
-                caller,
-                account_id,
-                draft_id,
-                build(DraftMessage, fields),
-                keep_attachments=_kept(stored, form),
-            )
+        fields = await read_fields(form)
+        if stored.reference is not None:
+            fields["reference"] = stored.reference.model_copy(update={"quote": False})
+        # A draft sent as it is stored is not stored again (the domain).
+        await mailbox.outgoing.update_draft(
+            caller,
+            account_id,
+            draft_id,
+            build(DraftMessage, fields),
+            keep_attachments=_kept(stored, form),
+        )
         if doing != "send":
             return back(request, here, "Draft saved.")
         result = await mailbox.outgoing.send_draft(
