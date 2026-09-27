@@ -147,6 +147,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   answers with a 4xx code, now count as `502 provider_unavailable` and
   are tried again later. Before, they counted as a rejected credential
   and the account stayed blocked until it was verified.
+- A user or role whose stored grant names a right that a release renamed
+  stays manageable. Before, every change to it, its tokens and its
+  password answered `400 unknown right`. New grants still refuse such a
+  name.
+
 - `restore` refuses while the service runs on the database, as CONCEPT
   7.8 promised. A running service holds the lock file `mailbox.db.lock`
   beside its database. Before, on Linux the running service went on

@@ -167,18 +167,21 @@ class Access:
 
     def covers(self, grants: Iterable[Grant]) -> bool:
         """Whether every right in ``grants`` is one this caller holds itself,
-        sending no wider than its own grants allow."""
+        sending no wider than its own grants allow. A name that is no right
+        (any more) grants nothing and asks for nothing: new grants are
+        checked for such names before."""
         for grant in grants:
-            limit = _rule(grant).limit
-            for operation in permissions.expand(grant.allow):
+            rule = _rule(grant)
+            for operation in rule.operations:
                 if operation in permissions.ACCOUNT_FREE:
                     if not self.allows(operation):
                         return False
                 elif ALL_ACCOUNTS in grant.accounts:
-                    if not self._allows_everywhere(operation, limit):
+                    if not self._allows_everywhere(operation, rule.limit):
                         return False
                 elif not all(
-                    self._allows_within(operation, a, limit) for a in grant.accounts
+                    self._allows_within(operation, a, rule.limit)
+                    for a in grant.accounts
                 ):
                     return False
         return True

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import Grant, ProviderType
@@ -129,6 +130,22 @@ def test_user_lifecycle(client: TestClient) -> None:
 
     assert client.delete(f"/v1/users/{user['id']}").status_code == 204
     assert client.get(f"/v1/users/{user['id']}").status_code == 404
+
+
+def test_a_user_with_a_renamed_right_stays_manageable(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    grant = {"accounts": ["*"], "allow": ["mail.read", "drafts"]}
+    user = client.post("/v1/users", json={"name": "old", "grants": [grant]}).json()
+    # A release renames the group: the stored grant names a right that is gone.
+    monkeypatch.delitem(permissions.GROUPS, "drafts")
+    renamed = client.patch(f"/v1/users/{user['id']}", json={"name": "renewed"})
+    assert renamed.status_code == 200
+    assert (
+        client.post(f"/v1/users/{user['id']}/tokens", json={"name": "t"}).status_code
+        == 201
+    )
+    assert client.delete(f"/v1/users/{user['id']}").status_code == 204
 
 
 def test_token_lifecycle(client: TestClient, app_client: TestClient) -> None:

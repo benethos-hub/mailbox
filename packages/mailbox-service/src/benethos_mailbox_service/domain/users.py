@@ -237,7 +237,9 @@ class UserService:
             if value is not None
         }
         updated = user.model_copy(update=changes)
-        self._check_grantable(access, updated.roles, updated.grants)
+        # Only grants given now must name known rights. A stored one may
+        # name a right a release renamed, and grants nothing by it.
+        self._check_grantable(access, updated.roles, updated.grants, grants or [])
         self._users.save(updated)
         if user.ui_sign_in and not updated.ui_sign_in:
             self._auth.passwords.delete(user_id)
@@ -417,9 +419,15 @@ class UserService:
         return role
 
     def _check_grantable(
-        self, access: Access, role_ids: list[str], grants: list[Grant]
+        self,
+        access: Access,
+        role_ids: list[str],
+        grants: list[Grant],
+        new: list[Grant] | None = None,
     ) -> None:
-        _validate(grants)
+        """The caller covers ``grants`` and the roles. ``new``, the grants
+        given now, all of them unless said, name known rights."""
+        _validate(grants if new is None else new)
         self._require_covers(access, [*grants, *self._role_grants(role_ids)])
 
     def _role_grants(self, role_ids: Iterable[str]) -> list[Grant]:

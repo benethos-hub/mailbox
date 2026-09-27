@@ -112,7 +112,14 @@ def test_covers_blocks_escalation() -> None:
     assert not a.covers([Grant(accounts=["acc_a"], allow=["accounts.manage"])])
 
 
+def test_a_right_that_no_longer_exists_does_not_block_covers() -> None:
+    renamed = Grant(accounts=["acc_a"], allow=["mail.read", "mail.renamed"])
+    a = access(Grant(accounts=["acc_a"], allow=["mail.read"]))
+    assert a.covers([renamed])
+
+
 def test_covers_star_needs_star() -> None:
+
     a = access(Grant(accounts=["*"], allow=["mail.read"]))
     assert a.covers([Grant(accounts=["*"], allow=["list_messages"])])
     assert Access.admin("x", "x").covers([Grant(accounts=["*"], allow=["admin"])])
