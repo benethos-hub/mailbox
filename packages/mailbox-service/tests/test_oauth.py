@@ -439,11 +439,15 @@ async def test_only_the_starter_cancels_a_sign_in() -> None:
 
 
 async def test_a_sign_in_belongs_to_who_started_it() -> None:
-    services = services_with(TokenEndpoint())
+    services = services_with(TokenEndpoint(granted(id_token=id_token(email="a@b.c"))))
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
     other = Access.admin("usr_other", "other admin")
-    with pytest.raises(ForbiddenError, match="someone else"):
+    # Answered as an unknown one, so nobody learns it exists.
+    with pytest.raises(BadRequestError, match="unknown or expired"):
         await services.oauth.finish(other, ProviderType.MICROSOFT, state, "c")
+    # And it stays open for whoever started it.
+    await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
+    assert len(services.adapters.ids()) == 1
 
 
 def test_connecting_needs_the_right() -> None:
