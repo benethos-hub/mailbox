@@ -50,6 +50,10 @@ benethos-mailbox-service serve
   database cannot be opened on another machine.
 - `users create-admin` prints an API token once. Use it to sign in to the
   UI, and send it as `Authorization: Bearer <token>` to the API.
+- Both write the secret alone to standard output and everything else to
+  standard error, so it can be piped straight into a password manager.
+  Printed to a terminal, it stays in its scrollback, and in a container
+  or CI job, in the log of that run. Clear these afterwards.
 - `serve` listens on `http://127.0.0.1:8080`:
   - `/ui`: the configuration UI (sign in with the token)
   - `/docs`: the interactive API documentation
