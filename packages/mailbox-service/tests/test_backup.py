@@ -317,6 +317,41 @@ def test_backup_verify_restore_commands(
     assert main(["backup", "verify", str(target), "--recovery-key"]) == 0
 
 
+def test_a_restore_keeps_another_master_key_unless_told(
+    machine: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    account_id, recovery = _populate()
+    target = machine / "mailbox.bak"
+    assert main(["backup", str(target)]) == 0
+
+    # Another machine with a database and a master key of its own.
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(machine / "other-data"))
+    other_key_file = machine / "other-secret" / "master.key"
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_FILE", str(other_key_file))
+    assert main(["keys", "init"]) == 0
+    own = FileKeyProvider(other_key_file).load()
+    before = Settings().database_path.read_bytes()
+    capsys.readouterr()
+
+    monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
+    assert main(["restore", str(target), "--recovery-key"]) == 1
+    assert "holds another master key" in capsys.readouterr().err
+    assert FileKeyProvider(other_key_file).load() == own
+    assert Settings().database_path.read_bytes() == before
+
+    assert main(["restore", str(target), "--replace-master-key"]) == 1
+    assert "goes with --recovery-key" in capsys.readouterr().err
+
+    monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
+    assert main(["restore", str(target), "--recovery-key", "--replace-master-key"]) == 0
+    assert FileKeyProvider(other_key_file).load() == decode_recovery(recovery)
+    services = _services()
+    assert services.vault.read(account_id, "password").get_secret_value() == "hunter2"
+    services.close()
+
+
 def test_backup_command_errors(
     machine: Path,
     monkeypatch: pytest.MonkeyPatch,

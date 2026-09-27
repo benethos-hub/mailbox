@@ -79,6 +79,12 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="read the recovery key from stdin and store it in the key provider",
     )
+    restore.add_argument(
+        "--replace-master-key",
+        action="store_true",
+        help="with --recovery-key: overwrite another master key the key "
+        "provider holds. The database it opens is lost without its recovery key.",
+    )
     return parser
 
 
@@ -94,7 +100,7 @@ def _run(args: argparse.Namespace) -> int:
     elif args.command == "backup":
         _backup(args.target, args.recovery_key)
     elif args.command == "restore":
-        _restore(args.source, args.recovery_key)
+        _restore(args.source, args.recovery_key, args.replace_master_key)
     elif args.command == "serve":  # pragma: no branch
         import uvicorn
 
@@ -199,16 +205,28 @@ def _backup(target: list[str], recovery_key: bool) -> None:
     )
 
 
-def _restore(source: Path, recovery_key: bool) -> None:
+def _restore(source: Path, recovery_key: bool, replace_master_key: bool) -> None:
     from .data.secrets.backup import restore_backup
     from .main import key_provider, opened
 
+    if replace_master_key and not recovery_key:
+        raise _UsageError("--replace-master-key goes with --recovery-key")
     settings = Settings()
     master = _read_recovery_key() if recovery_key else _master_key(settings)
+    provider = key_provider(settings)
+    held = provider.load() if recovery_key else master
+    if held is not None and held != master and not replace_master_key:
+        # Checked before the restore: afterwards the kept database would
+        # open with the key held now alone.
+        raise _UsageError(
+            f"{provider.describe()} holds another master key. The database it "
+            "opens now would be lost with it: note its recovery key, then pass "
+            "--replace-master-key"
+        )
     manifest = restore_backup(source, master, settings.database_path)
-    if recovery_key and key_provider(settings).load() != master:
+    if held != master:
         with opened(settings) as services:
-            services.vault.import_master_key(master)
+            services.vault.import_master_key(master, replace=replace_master_key)
     print(
         f"Restored the backup of {manifest.created_at}. The previous database "
         "was kept beside it. Accounts whose OAuth tokens changed since then "

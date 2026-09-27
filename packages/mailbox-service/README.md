@@ -123,7 +123,7 @@ A template for the settings file with every option:
 | `users set-password NAME` | gives the user a new one-time password and prints it, and switches its UI sign-in on |
 | `backup FILE` | writes an encrypted backup, while the service runs |
 | `backup verify FILE [--recovery-key]` | checks a backup |
-| `restore FILE [--recovery-key]` | replaces the database with a backup. Stop the service first. |
+| `restore FILE [--recovery-key [--replace-master-key]]` | replaces the database with a backup. Stop the service first. |
 | `openapi` | prints the OpenAPI document |
 
 A backup holds accounts, users, rights, token hashes and the encrypted
@@ -132,7 +132,11 @@ the master key or the recovery key, which are not in it. `restore` keeps
 the previous database beside the restored one. It refuses while a
 service runs on the database: a running service holds the lock file
 `mailbox.db.lock` beside it. With `--recovery-key` it reads the recovery
-key from stdin, for a new machine.
+key from stdin, for a new machine. When the key provider holds another
+master key there, `restore` refuses: the database kept beside the
+restored one opens with that key alone. Note its recovery key, then pass
+`--replace-master-key`.
+
 
 ## Users, rights and tokens
 

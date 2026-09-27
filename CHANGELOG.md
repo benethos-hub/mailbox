@@ -155,6 +155,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `restore` writes and migrates the backup beside the database first,
   then puts it in place in one step. Before, a crash in between left no
   database, and the next start created an empty one.
+- `restore --recovery-key` no longer overwrites another master key the
+  key provider holds, which the previous database needs. It refuses
+  before restoring, and `--replace-master-key` overwrites it. The
+  keyring provider now refuses to store over another key, as the file
+  provider did.
+
 
 ### Security
 

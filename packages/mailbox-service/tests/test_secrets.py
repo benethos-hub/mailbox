@@ -44,7 +44,7 @@ class MemoryKeyProvider:
     def load(self) -> bytes | None:
         return self.key
 
-    def store(self, key: bytes) -> None:
+    def store(self, key: bytes, *, replace: bool = False) -> None:
         self.key = key
 
     def describe(self) -> str:
@@ -120,6 +120,9 @@ def test_file_provider(tmp_path: Path) -> None:
     assert provider.load() == key
     with pytest.raises(KeyProviderError, match="refusing"):
         provider.store(key)
+    other = cipher.new_key()
+    provider.store(other, replace=True)
+    assert provider.load() == other
     assert "master.key" in provider.describe()
     # A path that cannot be read or written is the provider's failure.
     folder = FileKeyProvider(tmp_path / "secrets")
@@ -143,6 +146,13 @@ def test_keyring_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     provider.store(key)
     assert stored[(keys.KEYRING_SERVICE, keys.KEYRING_USERNAME)] == encode_recovery(key)
     assert provider.load() == key
+    provider.store(key)  # the same key again
+    other = cipher.new_key()
+    with pytest.raises(KeyProviderError, match="holds another master key"):
+        provider.store(other)
+    assert provider.load() == key
+    provider.store(other, replace=True)
+    assert provider.load() == other
     assert "credential store" in provider.describe()
 
 
@@ -158,8 +168,11 @@ def test_keyring_failures_are_the_providers(monkeypatch: pytest.MonkeyPatch) -> 
     provider = KeyringKeyProvider()
     with pytest.raises(KeyProviderError, match="cannot read .* No recommended"):
         provider.load()
-    with pytest.raises(KeyProviderError, match="cannot write"):
+    # A store looks for a key it would overwrite first.
+    with pytest.raises(KeyProviderError, match="cannot read"):
         provider.store(cipher.new_key())
+    with pytest.raises(KeyProviderError, match="cannot write"):
+        provider.store(cipher.new_key(), replace=True)
 
 
 def test_key_provider_from_settings(tmp_path: Path) -> None:
