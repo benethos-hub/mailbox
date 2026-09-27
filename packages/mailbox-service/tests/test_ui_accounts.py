@@ -109,6 +109,10 @@ def test_change_verify_and_remove(ui: TestClient, account_id: str) -> None:
     url = f"/ui/accounts/{account_id}"
     page = ui.get(url).text
     assert account_id in page and "Remove account" in page
+    assert '<a href="/ui/accounts">Accounts</a>' in page  # the breadcrumb
+    # Facts first, then Change, then the danger card last.
+    assert page.index("<h2>Account</h2>") < page.index("<h2>Change</h2>")
+    assert page.index("<h2>Change</h2>") < page.index("Remove account")
     saved = post(ui, url, {"display_name": "Renamed"})
     assert "Saved." in saved.text and "Renamed" in saved.text
     verified = post(ui, f"{url}/verify")
@@ -158,9 +162,18 @@ def test_a_failed_connect_never_echoes_the_password(ui: TestClient) -> None:
     answer = post(
         ui,
         "/ui/accounts",
-        {"email": "x@example.org", "provider": "memory", "password": "s3cret-pw"},
+        {
+            "email": "x@example.org",
+            "provider": "memory",
+            "password": "s3cret-pw",
+            "display_name": "Kept",
+            "host": "imap.example.org",
+        },
     )
-    assert 'class="notice err"' in answer.text
+    # The page again, the reason under the password, the fields kept.
+    assert 'class="field-error"' in answer.text
+    assert 'name="email" value="x@example.org"' in answer.text
+    assert 'value="Kept"' in answer.text and 'value="imap.example.org"' in answer.text
     assert "s3cret-pw" not in str(answer.url)
     assert "s3cret-pw" not in answer.text
 

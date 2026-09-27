@@ -189,6 +189,19 @@ footer {
 }
 .new-row[open] > summary { border-bottom: 1px solid var(--border); }
 
+/* A card that folds: its header is the summary. */
+details.card > summary.card-summary {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 14px var(--pad);
+  cursor: pointer;
+}
+details.card[open] > summary.card-summary { border-bottom: 1px solid var(--border); }
+details.card > summary.card-summary h2 { display: inline; margin: 0; font-size: 15px; font-weight: 600; }
+
+/* A workflow in steps, one under the other (docs/UI.md, 6.1). */
+.step-title { margin: 8px 0 0; font-size: 15px; font-weight: 600; }
+.card.way > header h2 { color: var(--accent); }
+
 .grid-2 {
   display: grid; gap: var(--gap);
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -358,6 +371,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 .form-grid .wide { grid-column: 1 / -1; }
+.field .field-error { font-size: 13px; color: var(--bad); }
+.field.invalid input, .field.invalid select, .field.invalid textarea { border-color: var(--bad); }
 .form-actions { display: flex; gap: 8px; margin-top: var(--gap); }
 
 .check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); }

@@ -71,6 +71,14 @@ class StatusService:
         """The status is for callers who may list some account."""
         return access.anywhere("list_accounts")
 
+    def sync_of(self, access: Access, account_id: str) -> SyncState | None:
+        """How the account's sync went, None when no pass does anything
+        for it."""
+        access.require("get_account", account_id)
+        if not self._sync.watched(account_id):
+            return None
+        return self._sync.state(account_id)
+
     def status(self, access: Access) -> ServiceStatus:
         """The accounts the caller may list, the worker and the caller's
         webhooks."""

@@ -1,4 +1,5 @@
-"""Accounts: list, connect through autodiscovery, change, verify, delete."""
+"""Accounts: list, connect from the address (docs/UI.md, 6.1), change,
+verify, remove."""
 
 from __future__ import annotations
 
@@ -10,7 +11,9 @@ from pydantic import SecretStr
 
 from ....data.models import ProviderType
 from ....domain.discovery import connectable, sign_ins
-from ...services import Accounts, Discoverer, get_oauth
+from ....errors import MailboxServiceError
+from ...errors import status_of
+from ...services import Accounts, Discoverer, Status, get_oauth
 from ..deps import Actor, Viewer
 from ..forms import failing
 from ..templates import back, render
@@ -82,14 +85,24 @@ async def list_accounts(
 @router.get("/accounts/new")
 async def new_account(request: Request, caller: Viewer) -> HTMLResponse:
     caller.require("create_account")
+    return _connect_page(request, "")
+
+
+def _connect_page(
+    request: Request, email: str, status_code: int = 200, **context: Any
+) -> HTMLResponse:
+    """The connect page: the address, and what follows from it."""
+    context.setdefault("discovery", None)
+    context.setdefault("retry", None)
     return render(
         request,
         "pages/account_new.html",
         page="accounts",
-        email="",
-        discovery=None,
+        status_code=status_code,
+        email=email,
         security=SECURITY,
         oauth_providers=_oauth_providers(request),
+        **context,
     )
 
 
@@ -106,16 +119,12 @@ async def discover(request: Request, caller: Actor, discovery: Discoverer) -> Re
     email = str(form.get("email") or "").strip()
     with failing("/ui/accounts/new"):
         found = await discovery.discover(caller, email)
-    return render(
+    return _connect_page(
         request,
-        "pages/account_new.html",
-        page="accounts",
-        email=email,
+        email,
         discovery=found,
         usable=connectable(found.candidates),
         sign_ins=sign_ins(found.candidates, _oauth_providers(request)),
-        security=SECURITY,
-        oauth_providers=_oauth_providers(request),
     )
 
 
@@ -123,28 +132,43 @@ async def discover(request: Request, caller: Actor, discovery: Discoverer) -> Re
 async def create_account(
     request: Request, caller: Actor, accounts: Accounts
 ) -> Response:
+    """The servers are tried before anything is stored. A refusal shows
+    the page again with what was typed, the password left out."""
     form = await request.form()
     email = str(form.get("email") or "").strip()
     settings = _settings(form)
+    display_name = str(form.get("display_name") or "").strip()
     try:
         provider = ProviderType(str(form.get("provider") or ProviderType.IMAP))
     except ValueError:
         return back(request, "/ui/accounts/new", error="Unknown provider.")
-    with failing("/ui/accounts/new", f"{email}: "):
+    try:
         account = await accounts.create(
             caller,
             provider,
             email,
-            str(form.get("display_name") or "").strip() or None,
+            display_name or None,
             settings,
             _password(form),
         )
+    except MailboxServiceError as exc:
+        retry = {
+            "provider": provider.value,
+            "settings": settings,
+            "display_name": display_name,
+            "error": exc.message,
+        }
+        return _connect_page(request, email, status_of(exc), retry=retry)
     return back(request, f"/ui/accounts/{account.id}", f"{account.email} connected.")
 
 
 @router.get("/accounts/{account_id}")
 async def account(
-    request: Request, caller: Viewer, account_id: str, accounts: Accounts
+    request: Request,
+    caller: Viewer,
+    account_id: str,
+    accounts: Accounts,
+    status: Status,
 ) -> HTMLResponse:
     found = accounts.get(caller, account_id)
     return render(
@@ -159,6 +183,7 @@ async def account(
         can_delete=caller.allows("delete_account", account_id),
         signs_in_with_oauth=accounts.signs_in_with_oauth(found.provider),
         security=SECURITY,
+        sync=status.sync_of(caller, account_id),
     )
 
 

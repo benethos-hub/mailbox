@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import credentials, empty with context %}
+{% from "components/ui.html" import card, credentials, empty with context %}
 {% block title %}Accounts · {{ APP_NAME }}{% endblock %}
 {% block heading %}Accounts{% endblock %}
 {% block subheading %}<div class="sub">The mailboxes this service connects</div>{% endblock %}
@@ -8,29 +8,26 @@
 {% endblock %}
 {% block content %}
 {% if accounts %}
-<section class="card">
-  <div class="body tight">
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>Address</th><th>Provider</th><th>Status</th><th>Credentials</th><th></th></tr></thead>
-        <tbody>
-          {% for account in accounts %}
-          <tr>
-            <td class="name">
-              <a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a>
-              <span class="sub">{{ account.display_name | or_missing }}</span>
-            </td>
-            <td>{{ account.provider.value }}</td>
-            <td>{% include "partials/account_status.html" %}</td>
-            <td><span class="sub">{{ credentials(account.credentials) }}</span></td>
-            <td class="actions"><a class="btn small" href="/ui/accounts/{{ account.id }}">Open</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
+{% call card("Accounts", meta=accounts | length, tight=True) %}
+<div class="table-scroll">
+  <table>
+    <thead><tr><th>Address</th><th>Provider</th><th>Status</th><th>Credentials</th></tr></thead>
+    <tbody>
+      {% for account in accounts %}
+      <tr>
+        <td class="name">
+          <a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a>
+          <span class="sub">{{ account.display_name | or_missing }}</span>
+        </td>
+        <td>{{ account.provider.value }}</td>
+        <td>{% include "partials/account_status.html" %}</td>
+        <td><span class="sub">{{ credentials(account.credentials) }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endcall %}
 {% else %}
 {{ empty("No account yet, or none you may see.") }}
 {% endif %}

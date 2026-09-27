@@ -60,6 +60,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   and the sign-in before this one. For a user who may list accounts it
   names the accounts that need attention, failing webhooks and the sync
   worker's last pass.
+- Connecting an account in the UI starts with the address alone. The
+  ways found follow, the recommended one first, setting up by hand
+  folded below them. A refused connect shows the page again with what
+  was typed, the reason under the password. An account's page shows its
+  last sync, and an OAuth account can change its display name.
 - The configuration UI no longer takes an API token to sign in. Tokens
   are for the API and the MCP server.
 - `users create-admin` prints a one-time password instead of a token. The

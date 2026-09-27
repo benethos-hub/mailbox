@@ -1,13 +1,14 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import csrf_field with context %}
+{% from "components/ui.html" import breadcrumb, csrf_field with context %}
 {% from "components/connection.html" import connection_fields %}
 {% block title %}Connect an account · {{ APP_NAME }}{% endblock %}
 {% block heading %}Connect an account{% endblock %}
-{% block subheading %}<div class="sub">Look up how to reach an address, then sign in with its password</div>{% endblock %}
+{% block subheading %}{{ breadcrumb([("Accounts", "/ui/accounts"), ("Connect an account", None)]) }}{% endblock %}
 {% block content %}
 {# Connect with a password: ``settings`` fill the server fields, a
-   ``provider`` names the candidate's, ``suffix`` keeps ids apart. #}
-{% macro connect_form(email, settings, suffix="", provider=None, password_label="Password", hint=None, folded=True, primary=True) %}
+   ``provider`` names the candidate's, ``suffix`` keeps ids apart,
+   ``error`` shows under the password why the last try was refused. #}
+{% macro connect_form(email, settings, suffix="", provider=None, password_label="Password", hint=None, folded=True, primary=True, display_name="", error=None) %}
 {% set ids = "-" ~ suffix if suffix else "" %}
 <form method="post" action="/ui/accounts">
   {{ csrf_field() }}
@@ -16,21 +17,22 @@
   <div class="form-grid">
     <div class="field">
       <label for="f-display_name{{ ids }}">Display name</label>
-      <input id="f-display_name{{ ids }}" name="display_name" placeholder="optional" />
+      <input id="f-display_name{{ ids }}" name="display_name" value="{{ display_name }}" placeholder="optional" />
     </div>
-    <div class="field">
+    <div class="field{{ ' invalid' if error }}">
       <label for="f-password{{ ids }}">{{ password_label }}</label>
-      <input id="f-password{{ ids }}" name="password" type="password" autocomplete="new-password" required />
+      <input id="f-password{{ ids }}" name="password" type="password" autocomplete="new-password" required{% if error %} autofocus aria-describedby="e-password{{ ids }}"{% endif %} />
+      {% if error %}<span class="field-error" id="e-password{{ ids }}" role="alert">{{ error }}</span>{% endif %}
       {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
     </div>
   </div>
   {% if folded %}
   <details class="fold">
     <summary>Servers</summary>
-    {{ connection_fields(settings, security) }}
+    {{ connection_fields(settings, security, suffix=suffix) }}
   </details>
   {% else %}
-  <div class="fold">{{ connection_fields(settings, security) }}</div>
+  <div class="fold">{{ connection_fields(settings, security, suffix=suffix) }}</div>
   {% endif %}
   <div class="form-actions"><button{% if primary %} class="primary"{% endif %} type="submit">Connect</button></div>
 </form>
@@ -42,37 +44,41 @@
   <button class="primary" type="submit">Sign in with {{ provider | capitalize }}</button>
 </form>
 {% endmacro %}
-{% if oauth_providers and not discovery %}
-<section class="card">
-  <header><h2>Sign in with your provider</h2></header>
-  <div class="body toolbar">
-    {% for provider in oauth_providers %}{{ sign_in_form(provider) }}{% endfor %}
-    <span class="muted">No password is needed. The provider asks you, and this service keeps only a token it can renew.</span>
-  </div>
-</section>
-{% endif %}
-<section class="card">
+
+<section class="card step">
   <header><h2>1. The address</h2></header>
   <div class="body">
     <form class="toolbar" method="post" action="/ui/accounts/discover">
       {{ csrf_field() }}
-      <input class="grow" name="email" type="email" value="{{ email }}" placeholder="name@example.org" required />
-      <button class="primary" type="submit">Look up</button>
+      <input class="grow" name="email" type="email" value="{{ email }}" placeholder="name@example.org" aria-label="Address" required{% if not discovery and not retry %} autofocus{% endif %} />
+      <button class="{{ 'primary' if not discovery and not retry }}" type="submit">Look up</button>
     </form>
     <p class="hint faint">Asks public sources how the address's provider is reached. No password leaves this service.</p>
   </div>
 </section>
+
+{% if retry %}
+<section class="card step">
+  <header><h2>2. Your servers</h2><span class="meta">The provider refused. Nothing was stored.</span></header>
+  <div class="body">
+    {{ connect_form(email, retry.settings, provider=retry.provider, folded=False, display_name=retry.display_name, error=retry.error, hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
+  </div>
+</section>
+{% endif %}
 
 {% if discovery %}
 {% for hint in discovery.hints %}
 <div class="notice warn">{{ hint.text }}{% if hint.url %} <a href="{{ hint.url }}" rel="noreferrer">More</a>{% endif %}</div>
 {% endfor %}
 
+<h2 class="step-title">2. How to connect {{ discovery.email }}</h2>
+
 {% for candidate in sign_ins %}
-<section class="card">
+<section class="card way">
   <header>
-    <h2>2. {{ candidate.name or discovery.domain }}</h2>
+    <h2>{{ candidate.name or discovery.domain }}</h2>
     <span class="meta">found by {{ candidate.source.value }}</span>
+    {% if loop.first %}<span class="right"><span class="tag accent">recommended</span></span>{% endif %}
   </header>
   <div class="body toolbar">
     {{ sign_in_form(candidate.oauth_provider, discovery.email) }}
@@ -82,11 +88,12 @@
 {% endfor %}
 
 {% for candidate in usable %}
-<section class="card">
+<section class="card way">
   <header>
-    <h2>2. {{ candidate.name or discovery.domain }}</h2>
+    <h2>{{ candidate.name or discovery.domain }}</h2>
     <span class="meta">found by {{ candidate.source.value }}</span>
     <span class="right">
+      {% if loop.first and not sign_ins %}<span class="tag accent">recommended</span>{% endif %}
       {% if candidate.confirmed %}<span class="tag ok">trusted source</span>{% else %}<span class="tag warn">check these servers</span>{% endif %}
     </span>
   </header>
@@ -102,16 +109,25 @@
 </section>
 {% endfor %}
 
-<section class="card">
-  <header><h2>{{ "Or set it up by hand" if usable or sign_ins else "2. Set it up by hand" }}</h2></header>
-  <div class="body">
-    {% if not usable and not sign_ins %}<p class="muted">No way to connect {{ discovery.email }} over IMAP was found. Enter your provider's servers.</p>{% endif %}
-    {{ connect_form(discovery.email, {}, folded=False, primary=False) }}
+{% if oauth_providers and not sign_ins %}
+<section class="card way">
+  <header><h2>Sign in with your provider</h2><span class="meta">if the address is at one of these</span></header>
+  <div class="body toolbar">
+    {% for provider in oauth_providers %}{{ sign_in_form(provider, discovery.email) }}{% endfor %}
   </div>
 </section>
+{% endif %}
 
-<details class="card fold">
-  <summary class="body">What the sources answered</summary>
+<details class="card way"{% if not usable and not sign_ins %} open{% endif %}>
+  <summary class="card-summary"><h2>Set up by hand</h2></summary>
+  <div class="body">
+    {% if not usable and not sign_ins %}<p class="muted">No way to connect {{ discovery.email }} over IMAP was found. Enter your provider's servers.</p>{% endif %}
+    {{ connect_form(discovery.email, {}, suffix="hand", folded=False, primary=not usable and not sign_ins) }}
+  </div>
+</details>
+
+<details class="card">
+  <summary class="card-summary"><h2>What the sources answered</h2></summary>
   <div class="body tight">
     <table>
       <tbody>
