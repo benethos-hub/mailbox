@@ -199,7 +199,8 @@ packages/
                           #   api.py (JSON to a provider's known hosts),
                           #   post.py (posts to webhook receivers)
         storage/          # own records, one module per subject, table.py
-                          #   for the in-memory ones, sqlite/ the database
+                          #   for the in-memory ones, sqlite/ the database,
+                          #   sqlite/migrations/ one module per schema version
         secrets/          # envelope encryption, key providers, backup,
                           #   password hashes
         files.py          # files for the owner alone (0600): database, backup, key
@@ -339,6 +340,12 @@ rule 1.
 - Lists are paged with an opaque `next_cursor`, never with page numbers.
 - `CHANGELOG.md` gets an entry under `[Unreleased]` in the same commit as the
   change, written for someone using the API.
+- A change to the database schema is a new migration: a module
+  `vNN_<subject>.py` in `data/storage/sqlite/migrations/` with the next
+  number, added to `MIGRATIONS` there. Its docstring says what it does and
+  why. Each statement stands alone, and a step in Python goes into
+  `before`. A migration that shipped in a release is never changed:
+  `RELEASED` in `tests/test_sqlite.py` holds a hash of each.
 
 ## Git and commits
 
@@ -365,9 +372,11 @@ packages carry the same version.
    `uv sync`. `test_packaging.py` names every version example in the
    documentation that still shows the old one.
 3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`.
-4. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
+4. Freeze the migrations new in this release: add `fingerprint(N)` of
+   each to `RELEASED` in `tests/test_sqlite.py`.
+5. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
    then `gh release create vX.Y.Z --verify-tag` with the changelog section
    as the notes. The published release starts `publish.yml`, which
    uploads both packages to PyPI and both images to GHCR.
-5. Check what shipped: both packages on PyPI, and each image's tags
+6. Check what shipped: both packages on PyPI, and each image's tags
    `X.Y.Z`, `X.Y` and `latest` on the same revision.
