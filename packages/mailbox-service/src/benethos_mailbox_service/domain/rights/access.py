@@ -137,8 +137,10 @@ class Access:
     def sees(self, account_id: str) -> bool:
         """Whether the account exists for this caller at all: some right on
         it that is about existing accounts."""
-        about_accounts = permissions.ACCOUNT_FREE | permissions.ALL_ACCOUNTS
-        return any(rule.operations - about_accounts for rule in self._on(account_id))
+        return any(
+            rule.operations - permissions.NOT_ON_AN_ACCOUNT
+            for rule in self._on(account_id)
+        )
 
     def anywhere(self, operation: str) -> bool:
         """Whether the operation is allowed on at least one account, or
@@ -148,6 +150,18 @@ class Access:
             and operation not in permissions.ALL_ACCOUNTS
             and (rule.accounts is None or bool(rule.accounts))
             for rule in self._rules
+        )
+
+    def sees_status(self) -> bool:
+        """The status of the service is for callers who may list some
+        account."""
+        return self.anywhere("list_accounts")
+
+    def batches(self, operation: str, account_id: str) -> bool:
+        """Whether a batch of ``operation`` is allowed on the account: the
+        right to batch and the operation itself, as a batch checks them."""
+        return self.allows("batch_messages", account_id) and self.allows(
+            operation, account_id
         )
 
     def require(self, operation: str, account_id: str | None = None) -> None:
@@ -216,21 +230,12 @@ class Access:
     def operations_on(self, account_id: str) -> frozenset[str]:
         """Every account-bound operation allowed on one account."""
         return frozenset(
-            op
-            for op in permissions.GROUP_OF
-            if op not in permissions.ACCOUNT_FREE
-            and op not in permissions.ALL_ACCOUNTS
-            and self.allows(op, account_id)
+            op for op in permissions.ON_AN_ACCOUNT if self.allows(op, account_id)
         )
 
     def general_operations(self) -> frozenset[str]:
         """Operations not bound to one existing account."""
-        return frozenset(
-            op
-            for op in permissions.GROUP_OF
-            if op in permissions.ACCOUNT_FREE or op in permissions.ALL_ACCOUNTS
-            if self.allows(op)
-        )
+        return frozenset(op for op in permissions.NOT_ON_AN_ACCOUNT if self.allows(op))
 
     def _allows_everywhere(self, operation: str, limit: SendLimit) -> bool:
         return any(

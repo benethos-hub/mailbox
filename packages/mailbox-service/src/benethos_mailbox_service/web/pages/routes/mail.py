@@ -183,9 +183,9 @@ async def account_mail_page(
     search, fields, problem = _search(request)
     can = mail_rights(caller, account_id)
     can.update(
-        change=can["change"] and can["batch"],
-        trash=can["trash"] and can["batch"],
-        purge=can["purge"] and can["batch"],
+        change=caller.batches("update_message", account_id),
+        trash=caller.batches("delete_message", account_id),
+        purge=caller.batches("delete_message_permanent", account_id),
     )
     page = await mailbox.list_messages(
         caller,

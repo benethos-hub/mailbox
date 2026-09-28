@@ -240,7 +240,7 @@ async def test_the_status_names_what_needs_attention(
     assert health.sync.last_error is not None and health.synced
 
     nobody = Access("usr_n", "nobody", [])
-    assert not status.may_see(nobody)
+    assert not nobody.sees_status()
     with pytest.raises(ForbiddenError):
         status.status(nobody)
 

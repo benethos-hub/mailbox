@@ -66,10 +66,6 @@ class StatusService:
         self._worker = worker
         self._webhooks = webhooks
 
-    def may_see(self, access: Access) -> bool:
-        """The status is for callers who may list some account."""
-        return access.anywhere("list_accounts")
-
     def sync_of(self, access: Access, account_id: str) -> SyncState | None:
         """How the account's sync went, None when no pass does anything
         for it."""
@@ -81,7 +77,7 @@ class StatusService:
     def status(self, access: Access) -> ServiceStatus:
         """The accounts the caller may list, the worker and the caller's
         webhooks."""
-        if not self.may_see(access):
+        if not access.sees_status():
             raise ForbiddenError("missing right: list_accounts")
         worker = self._worker.state() if self._worker is not None else None
         watching = worker.watching if worker is not None else frozenset()

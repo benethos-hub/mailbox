@@ -173,3 +173,16 @@ def test_filter_keeps_the_accounts_the_operation_is_allowed_on() -> None:
     ids = ["acc_3", "acc_2", "acc_1", "acc_3"]
     assert access.filter("list_messages", ids) == ["acc_3", "acc_1"]
     assert access.filter("send_message", ids) == []
+
+
+def test_a_batch_needs_its_right_and_the_operation() -> None:
+    both = access(Grant(accounts=["acc_a"], allow=["batch_messages", "update_message"]))
+    assert both.batches("update_message", "acc_a")
+    assert not both.batches("delete_message", "acc_a")
+    only = access(Grant(accounts=["acc_a"], allow=["update_message"]))
+    assert not only.batches("update_message", "acc_a")
+
+
+def test_the_status_is_for_who_may_list_some_account() -> None:
+    assert access(Grant(accounts=["acc_a"], allow=["list_accounts"])).sees_status()
+    assert not access(Grant(accounts=["acc_a"], allow=["list_messages"])).sees_status()

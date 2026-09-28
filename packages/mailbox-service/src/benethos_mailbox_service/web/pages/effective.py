@@ -13,12 +13,6 @@ from dataclasses import dataclass
 from ...domain.rights import SendLimit, permissions
 from ...domain.users import EffectiveRights
 
-# Operations bound to one existing account, and those that are not.
-ON_AN_ACCOUNT = frozenset(permissions.GROUP_OF) - (
-    permissions.ACCOUNT_FREE | permissions.ALL_ACCOUNTS
-)
-NOT_ON_AN_ACCOUNT = permissions.ACCOUNT_FREE | permissions.ALL_ACCOUNTS
-
 
 @dataclass(frozen=True)
 class AccountRow:
@@ -39,7 +33,9 @@ class EffectiveView:
 def view_of(rights: EffectiveRights) -> EffectiveView:
     rows = []
     for account in rights.accounts:
-        groups, operations = permissions.summarize(account.operations, ON_AN_ACCOUNT)
+        groups, operations = permissions.summarize(
+            account.operations, permissions.ON_AN_ACCOUNT
+        )
         rows.append(
             AccountRow(
                 email=account.email,
@@ -49,5 +45,7 @@ def view_of(rights: EffectiveRights) -> EffectiveView:
                 warnings=account.warnings,
             )
         )
-    groups, operations = permissions.summarize(rights.operations, NOT_ON_AN_ACCOUNT)
+    groups, operations = permissions.summarize(
+        rights.operations, permissions.NOT_ON_AN_ACCOUNT
+    )
     return EffectiveView(accounts=rows, groups=groups, operations=operations)

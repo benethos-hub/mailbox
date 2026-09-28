@@ -103,6 +103,10 @@ ALL_ACCOUNTS: frozenset[str] = (
 
 GROUP_OF: dict[str, str] = {op: group for group, ops in GROUPS.items() for op in ops}
 
+# Operations not bound to one existing account, and those that are.
+NOT_ON_AN_ACCOUNT: frozenset[str] = ACCOUNT_FREE | ALL_ACCOUNTS
+ON_AN_ACCOUNT: frozenset[str] = frozenset(GROUP_OF) - NOT_ON_AN_ACCOUNT
+
 
 def permission_of(operation: str) -> str | None:
     """The group an operation belongs to, ``authenticated`` for operations

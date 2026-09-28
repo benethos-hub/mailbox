@@ -14,7 +14,6 @@ from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import MailboxServiceError
 from benethos_mailbox_service.main import Services
-from benethos_mailbox_service.web.pages.effective import ON_AN_ACCOUNT
 from benethos_mailbox_service.web.pages.grants import (
     GROUP_NAMES,
     GROUP_SECTIONS,
@@ -349,7 +348,7 @@ def test_the_sidebar_links_the_access_pages(ui: TestClient) -> None:
 
 def test_summarize_names_whole_groups_and_the_rest() -> None:
     groups, rest = permissions.summarize(
-        [*permissions.GROUPS["mail.read"], "create_draft"], ON_AN_ACCOUNT
+        [*permissions.GROUPS["mail.read"], "create_draft"], permissions.ON_AN_ACCOUNT
     )
     assert groups == ["mail.read"]
     assert rest == ["create_draft"]
