@@ -998,6 +998,8 @@ the data, rather than a readable file.
   an error text before it goes into an API answer, a page or an
   account's last sync error. Values shorter than 6 characters are not
   masked, and the newest 256 are kept (`data/secrets/redact.py`).
+  Which events are logged, at which level and with which fields, and
+  what never goes into a line: [LOGGING.md](LOGGING.md).
 - **Deletion:** removing an account deletes its credential rows.
   `PRAGMA secure_delete = ON` makes SQLite overwrite freed pages, so the
   ciphertext does not linger in the file.

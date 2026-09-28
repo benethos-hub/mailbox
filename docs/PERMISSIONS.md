@@ -258,7 +258,9 @@ roles, tokens, passwords, accounts and webhooks have only the service
 log, which a container may drop. The proposal: one table `events` with
 time, user, credential, operation, the record touched, the client
 address and the outcome. Never a secret, never content. Written by the
-domain services where the log lines are written today.
+domain services where the log lines are written today. Which events
+those are, with their fields, is the table of [LOGGING.md](LOGGING.md)
+section 5, and its section 6 draws the line between log and audit.
 
 - `GET /v1/audit`, right `audit` on the service (a service right, so
   `audit` appears in both lists), paged newest first, filters by user,
