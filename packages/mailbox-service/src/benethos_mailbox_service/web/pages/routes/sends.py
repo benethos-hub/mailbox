@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from ....data.models import SendFilter
 from ....domain.rights import Access
 from ...services import Accounts, Mailbox, get_users
-from ..deps import Viewer, emails_of
+from ..deps import Viewer, emails_of, if_allowed
 from ..filters import Field, FilterBar, filter_bar
 from ..forms import model_of
 from ..templates import PAGE_SIZE, page_links, render
@@ -24,11 +24,13 @@ OUTCOMES = [("sent", "sent"), ("denied", "denied"), ("failed", "failed")]
 
 def _user_names(request: Request, caller: Access) -> dict[str, str]:
     """Names of the users who sent, where the caller may see users."""
-    names = {caller.user_id: caller.name}
-    if caller.allows("list_users"):
-        users = get_users(request)
-        names.update({user.id: user.name for user in users.list_users(caller)})
-    return names
+    listed: dict[str, str] = if_allowed(
+        caller,
+        "list_users",
+        lambda: {u.id: u.name for u in get_users(request).list_users(caller)},
+        {},
+    )
+    return {caller.user_id: caller.name, **listed}
 
 
 def _day(value: str) -> datetime | None:

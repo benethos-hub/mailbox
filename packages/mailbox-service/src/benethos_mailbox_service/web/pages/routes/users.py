@@ -14,7 +14,7 @@ from ....data.models import Grant, Role
 from ....domain.rights import Access
 from ....domain.users import UserService
 from ...services import Users, get_accounts, get_users
-from ..deps import Actor, Viewer, account_names
+from ..deps import Actor, Viewer, account_names, if_allowed
 from ..effective import view_of
 from ..filters import Field, filter_bar
 from ..forms import FormError, failing
@@ -62,10 +62,11 @@ def _editor(
 def _role_choices(request: Request, caller: Access, held: list[str]) -> list[str]:
     """The roles a user may be given: every role the caller sees, and those
     the user holds already, so a save keeps them."""
-    known = (
-        {role.id for role in get_users(request).list_roles(caller)}
-        if caller.allows("list_roles")
-        else set()
+    known: set[str] = if_allowed(
+        caller,
+        "list_roles",
+        lambda: {role.id for role in get_users(request).list_roles(caller)},
+        set(),
     )
     return sorted(known | set(held))
 
@@ -187,8 +188,8 @@ def _user_page(
     ``token_form`` the fields of a new token do."""
     found = users.get_user(caller, user_id)
     typed = _typed_user(form) if form is not None else None
-    tokens = (
-        users.list_tokens(caller, user_id) if caller.allows("list_tokens") else None
+    tokens = if_allowed(
+        caller, "list_tokens", lambda: users.list_tokens(caller, user_id), None
     )
     return render(
         request,
@@ -375,10 +376,13 @@ def _new_role_page(
 
 def _used_by(request: Request, caller: Access, roles: list[Role]) -> dict[str, int]:
     """How many users hold each role, if the caller may list users."""
-    if not caller.allows("list_users"):
-        return {}
     users = get_users(request)
-    return {role.id: len(users.holders_of(caller, role.id)) for role in roles}
+    return if_allowed(
+        caller,
+        "list_users",
+        lambda: {role.id: len(users.holders_of(caller, role.id)) for role in roles},
+        {},
+    )
 
 
 @router.post("/roles")
@@ -409,7 +413,9 @@ def _role_page(
 ) -> HTMLResponse:
     """A role's page. With ``form`` its editor shows what was typed."""
     found = users.get_role(caller, role_id)
-    holders = users.holders_of(caller, role_id) if caller.allows("list_users") else None
+    holders = if_allowed(
+        caller, "list_users", lambda: users.holders_of(caller, role_id), None
+    )
     return render(
         request,
         "pages/role.html",
