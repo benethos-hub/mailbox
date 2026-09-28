@@ -124,7 +124,7 @@ model in `data/models`, and `domain/changes.py` imports it today.
 | `changes/` | `changes.py` | the change feed (section 3) |
 | `webhooks/` | `webhooks.py`, `delivery.py` | webhooks and their posts |
 | `activity/` | built, LOGGING.md steps 2 to 5 | the activities of LOGGING.md section 7. The areas of its catalogue are the packages of this table, and a move keeps every activity's name (LOGGING.md 7.2) |
-| `service/` | `status.py`, `recovery.py`, `servicelog.py` | the service at a glance: status, recovery key, log page |
+| `system/` | `status.py`, `recovery.py`, `servicelog.py` | the service at a glance: status, recovery key, log page |
 | (top level) | `locks.py`, `paging.py` | helpers several packages share |
 
 ```
@@ -142,7 +142,7 @@ domain/
   changes/      feed.py, catalogue.py
   webhooks/     service.py, delivery.py
   activity/     base.py, recorder.py, catalogue/
-  service/      status.py, recovery.py, servicelog.py
+  system/       status.py, recovery.py, servicelog.py
 ```
 
 **Decided 2026-09-28:** the package is `mailbox`, after its facade
@@ -173,7 +173,7 @@ What each package imports, from the modules' imports today:
 | `sync` | `accounts` (the adapters), `changes` |
 | `mailbox` | `rights`, `accounts`, `sync`, and `changes` after section 3 (the classes at the call sites) |
 | `webhooks` | `rights`, `changes`, and `sync` today for `Sleep` (below) |
-| `service` | `rights`, `auth`, `accounts`, `sync`, `webhooks` |
+| `system` | `rights`, `auth`, `accounts`, `sync`, `webhooks` |
 
 `activity` will be imported by every package that records. `rights`
 records none, since `activity` imports it: its one warning, a stored
@@ -204,10 +204,9 @@ it does today.
   stays the one place that names the services. Routes and pages import
   `Access` and the types they use the same way, in a dozen places
   today.
-- **The tests** stay where they are and may import a module inside a
-  package, since they test that module. Their folder is flat as well,
-  70 modules. Mirroring the packages there is a step of its own, if
-  wanted.
+- **The tests** may import a module inside a package, since they test
+  that module. Their folder is flat as well, 70 modules. They get
+  folders like the packages after the move (section 7).
 
 ## 6. Order of work
 
@@ -217,21 +216,29 @@ it does today.
    Small, and it shows the shape before the move.
 3. The packages of section 4, one commit per package, the leaves first:
    `rights`, `changes`, `auth`, `discovery`, then `accounts` with the
-   cycle removed, `users`, `sync`, `mailbox`, `webhooks`, `service`.
+   cycle removed, `users`, `sync`, `mailbox`, `webhooks`, `system`.
 4. The architecture tests of section 5 and CLAUDE.md.
-5. `activity/` is built already, in its place. A move of the other
+5. The tests in folders like the packages (section 7), moved, not
+   changed.
+6. `activity/` is built already, in its place. A move of the other
    packages leaves the areas and names of the activities as they are.
 
-Steps 2 to 4 are one branch, one commit per step. Each commit passes all
-checks. The live checks run once at the end, since nothing they see
-changes.
+Steps 2 to 5 are one branch, one commit per step, and in step 3 one
+commit per package. Each commit passes all checks. The live checks run
+once at the end, since nothing they see changes.
 
-## 7. Open questions
+## 7. Questions answered
 
-- `service/` is a package while `service.py` is the module of most
-  packages. Does the package of status, recovery key and log page need
-  another name?
-- Should the tests mirror the packages, now or later?
-- Should `data/` get the same look? It is already in folders by kind
-  (`models`, `mail`, `providers`, `storage`, `secrets`, `http`), which
-  is why this file leaves it alone.
+**Decided 2026-09-28:**
+
+- **The package of status, recovery key and log page is `system/`.**
+  `service/` would stand beside the `service.py` of most packages. The
+  activities it records follow it, from `activity.service.*` to
+  `activity.system.*` (LOGGING.md 7.2). No release has the old names.
+  An area has at most seven letters, so that the longest name,
+  `activity.system.backup_restored`, fits the source column of 32.
+- **The tests mirror the packages,** in the same branch, after the
+  domain has moved (step 5 of section 6). They move and change their
+  imports, nothing else.
+- **`data/` gets a similar look,** from a concept of its own and in a
+  branch of its own, not in this one.
