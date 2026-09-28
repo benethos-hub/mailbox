@@ -20,17 +20,19 @@ from typing import Any, TypeVar
 import anyio
 
 from .... import __version__
+from ....common.chunks import batched
+from ....common.ratelimit import Clock, Sleep
 from ....errors import (
     BadRequestError,
     ConflictError,
     MailboxServiceError,
-    MessageNotFoundError,
     NotFoundError,
     NotSupportedError,
     ProviderError,
+    missing,
+    missing_message,
 )
-from ...mail import convert
-from ...mail.parse import ParsedMessage
+from ...mail import convert, parse
 from ...models import (
     AttachmentContent,
     CredentialKind,
@@ -45,24 +47,23 @@ from ...models import (
     SentMessage,
     ServerProtocol,
 )
+from ...protocols import (
+    IMAP_PORTS,
+    ImapSession,
+    Pick,
+    SearchCriteria,
+    Server,
+    SmtpSession,
+)
 from .. import rules
 from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
 from ..guard import Guard
-from ..protocols.imap import (
-    DEFAULT_PORTS,
-    ImapServer,
-    ImapSession,
-    SearchCriteria,
-)
-from ..protocols.smtp import SmtpSession
-from ..protocols.transport import Pick
-from ..ratelimit import Clock, Sleep
 from ..sender import SmtpFactory, SmtpSender
 from . import mappers
 
 T = TypeVar("T")
 
-SessionFactory = Callable[[ImapServer], ImapSession]
+SessionFactory = Callable[[Server], ImapSession]
 
 CLIENT_ID = ("benethos-mailbox-service", __version__)
 
@@ -75,7 +76,7 @@ PROBE_TIMEOUT = 10.0
 HEADER_BATCH = 200
 
 
-def default_session(server: ImapServer) -> ImapSession:
+def default_session(server: Server) -> ImapSession:
     return ImapSession(server, client_id=CLIENT_ID)
 
 
@@ -104,7 +105,7 @@ def settings_from(
     return settings
 
 
-def probe_session(server: ImapServer) -> ImapSession:
+def probe_session(server: Server) -> ImapSession:
     return ImapSession(server, timeout=PROBE_TIMEOUT)
 
 
@@ -117,11 +118,11 @@ async def probe(
 ) -> frozenset[str]:
     """The capabilities of an IMAP server, read without logging in. With
     ``address``, the connection goes there, the address just checked."""
-    if security not in DEFAULT_PORTS:
+    if security not in IMAP_PORTS:
         raise BadRequestError("IMAP without encryption is not supported")
     pick = (lambda _host, _port: address) if address is not None else None
     session = session_factory(
-        ImapServer(host=host, port=port, security=security, pick=pick)
+        Server(host=host, port=port, security=security, pick=pick)
     )
     return await anyio.to_thread.run_sync(session.read_capabilities)
 
@@ -162,9 +163,9 @@ class ImapProvider:
             )
         if auth != "password":
             raise BadRequestError("settings.auth must be 'password'")
-        self._server = ImapServer(
+        self._server = Server(
             host=str(host),
-            port=rules.port_of(settings, "port", DEFAULT_PORTS[security]),
+            port=rules.port_of(settings, "port", IMAP_PORTS[security]),
             security=security,
             pick=pick,
         )
@@ -334,8 +335,7 @@ class ImapProvider:
             uids = list(by_uid)
             # One request per batch, so a long first sync never holds the
             # connection for long.
-            for start in range(0, len(uids), HEADER_BATCH):
-                batch = uids[start : start + HEADER_BATCH]
+            for batch in batched(uids, HEADER_BATCH):
                 found.update(
                     await self._run(
                         partial(self._message_headers, folder, validity, batch)
@@ -398,14 +398,14 @@ class ImapProvider:
         """Select the message's folder: its folder, UIDVALIDITY and UID."""
         folder, validity, uid = mappers.parse_message_id(message_id)
         if self._session.select(folder) != validity:
-            raise MessageNotFoundError(f"message {message_id} not found")
+            raise missing_message(message_id)
         return folder, validity, uid
 
     def _fetch(self, message_id: str) -> tuple[Any, str, int]:
         folder, validity, uid = self._select_message(message_id)
         message = self._session.fetch_message(uid)
         if message is None:
-            raise MessageNotFoundError(f"message {message_id} not found")
+            raise missing_message(message_id)
         return message, folder, validity
 
     def _get_message(self, message_id: str) -> Message:
@@ -435,7 +435,7 @@ class ImapProvider:
         A message with this Message-ID that the folder holds already is
         that stored message: the guard retries a step whose connection
         dropped, and the APPEND may have gone through before the drop."""
-        header = ParsedMessage(raw).message_id
+        header = parse.ParsedMessage(raw).message_id
         validity = self._session.select(folder)
         stored = self._session.search_message_id(header) if header else []
         uid = stored[-1] if stored else self._session.append(folder, raw, flags)
@@ -464,7 +464,7 @@ class ImapProvider:
             validity, uid = old
             found, _ = self._open_writable(drafts, validity, [uid])
             if uid not in found:
-                raise NotFoundError(f"draft {replaces} not found")
+                raise missing("draft", replaces)
         saved = self._append(drafts, raw, ["\\Draft", "\\Seen"])
         if saved is None:
             raise ProviderError("the draft was stored but cannot be found again")
@@ -486,25 +486,22 @@ class ImapProvider:
     def _delete_draft_at(self, drafts: str, validity: int, uid: int) -> None:
         found, _ = self._open_writable(drafts, validity, [uid])
         if uid not in found:
-            raise NotFoundError("draft not found")
+            raise missing("draft")
         self._session.expunge([uid])
 
     def _drafts_folder(self) -> str:
-        drafts = self._role_folder(FolderRole.DRAFTS)
-        if drafts is None:
-            raise rules.no_folder(FolderRole.DRAFTS)
-        return drafts
+        return self._required_folder(FolderRole.DRAFTS)
 
     def _draft_place(self, draft_id: str, drafts: str) -> tuple[int, int]:
         """UIDVALIDITY and UID of a draft id. Not found unless it names a
         message in the drafts folder."""
-        missing = NotFoundError(f"draft {draft_id} not found")
+        absent = missing("draft", draft_id)
         try:
             folder, validity, uid = mappers.parse_message_id(draft_id)
         except NotFoundError:
-            raise missing from None
+            raise absent from None
         if folder != drafts:
-            raise missing
+            raise absent
         return validity, uid
 
     # --- folders --------------------------------------------------------------------
@@ -530,7 +527,7 @@ class ImapProvider:
             new = self._full_name(raws, name, parent_id)
             if retried and new in _names(raws):
                 return self._folder(new)  # the first try renamed it
-            raise NotFoundError(f"folder {folder_id} not found")
+            raise missing("folder", folder_id)
         new = self._full_name(raws, name, parent_id)
         if new == old:
             return self._folder(old)
@@ -546,7 +543,7 @@ class ImapProvider:
         if name not in _names(self._session.list_folders()):
             if retried:
                 return  # the first try deleted it
-            raise NotFoundError(f"folder {folder_id} not found")
+            raise missing("folder", folder_id)
         self._session.delete_folder(name)
 
     def _full_name(self, raws: list[Any], name: str, parent_id: str | None) -> str:
@@ -562,7 +559,7 @@ class ImapProvider:
             return prefix + name
         parent = mappers.folder_name(parent_id)
         if parent not in _names(raws):
-            raise NotFoundError(f"folder {parent_id} not found")
+            raise missing("folder", parent_id)
         if not delimiter:
             raise NotSupportedError("the mail server has no folder hierarchy")
         return parent + delimiter + name
@@ -571,23 +568,29 @@ class ImapProvider:
         found = next((raw.delimiter for raw in raws if raw.delimiter), None)
         return found or self._session.personal_namespace()[1]
 
-    def _role_folder(self, role: FolderRole) -> str | None:
-        """The server's name of the folder with ``role``, if there is one.
-        The folders are listed once per step: a draft save asks for the
+    def _listed(self) -> list[Folder]:
+        """The folders, listed once per step: a draft save asks for the
         drafts folder several times."""
         if self._folders is None:
             self._folders = self._list_folders()
-        return next(
-            (mappers.folder_name(f.id) for f in self._folders if f.role is role),
-            None,
-        )
+        return self._folders
+
+    def _role_folder(self, role: FolderRole) -> str | None:
+        """The server's name of the folder with ``role``, if there is one."""
+        folder = rules.role_folder(self._listed(), role)
+        return mappers.folder_name(folder.id) if folder is not None else None
+
+    def _required_folder(self, role: FolderRole) -> str:
+        """The server's name of the folder with ``role``. ``no_folder``
+        when the account has none."""
+        return mappers.folder_name(rules.require_role_folder(self._listed(), role).id)
 
     def _folder(self, name: str) -> Folder:
         """A folder as listed, with its role and subscription."""
         for folder in self._list_folders(subscriptions=True):
             if folder.id == mappers.folder_id(name):
                 return folder
-        raise NotFoundError(f"folder {name} not found")
+        raise missing("folder", name)
 
     # --- changing messages, one folder at a time ------------------------------------
 
@@ -651,9 +654,7 @@ class ImapProvider:
             self._session.expunge(list(found))
             results.update({uid: None for uid in found})
             return results
-        trash = self._role_folder(FolderRole.TRASH)
-        if trash is None:
-            raise rules.no_folder(FolderRole.TRASH)
+        trash = self._required_folder(FolderRole.TRASH)
         if trash == folder:
             raise rules.in_trash_already()
         moved = self._move(found, trash)
@@ -701,14 +702,14 @@ class ImapProvider:
         if target == current:
             return None
         if target not in _names(self._session.list_folders()):
-            raise NotFoundError(f"folder {wanted} not found")
+            raise missing("folder", wanted)
         return target
 
     def _get_raw(self, message_id: str) -> bytes:
         _, _, uid = self._select_message(message_id)
         raw = self._session.fetch_raw(uid)
         if raw is None:
-            raise MessageNotFoundError(f"message {message_id} not found")
+            raise missing_message(message_id)
         return raw
 
     def _folder_states(self) -> dict[str, str]:
@@ -853,11 +854,7 @@ def _missing(
     uids: list[int], found: dict[int, Any]
 ) -> dict[int, MessageSummary | MailboxServiceError]:
     """``NotFoundError`` for every UID the folder no longer holds."""
-    return {
-        uid: MessageNotFoundError("message not found")
-        for uid in uids
-        if uid not in found
-    }
+    return {uid: missing_message() for uid in uids if uid not in found}
 
 
 def _criteria(search: MessageFilter, before_uid: int | None) -> SearchCriteria:

@@ -9,14 +9,11 @@ from typing import Any
 
 import pytest
 
-from benethos_mailbox_service.data.http import SafeFetcher
-from benethos_mailbox_service.data.providers.protocols import imap, smtp
-from benethos_mailbox_service.data.providers.protocols.imap import (
-    ImapServer,
-    ImapSession,
-)
-from benethos_mailbox_service.data.providers.protocols.smtp import SmtpServer
-from benethos_mailbox_service.data.providers.protocols.transport import tls_context
+from benethos_mailbox_service.common.hosts import ascii_host
+from benethos_mailbox_service.data.protocols import imap, smtp
+from benethos_mailbox_service.data.protocols.http import SafeFetcher
+from benethos_mailbox_service.data.protocols.imap import ImapSession, Server
+from benethos_mailbox_service.data.protocols.transport import tls_context
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 
 ADDRESS = "192.0.2.7"
@@ -64,7 +61,7 @@ def test_the_context_verifies_the_host_name_on_any_address() -> None:
 
 @pytest.mark.parametrize("security", ["tls", "starttls"])
 def test_imap_connects_to_the_picked_address(security: str) -> None:
-    server = ImapServer("imap.example.org", 993, security, pick=pick)
+    server = Server("imap.example.org", 993, security, pick=pick)
     imap._default_client(server, 5.0)
     host, port, _ = Library.made[0]
     assert (host, port) == (ADDRESS, 993)
@@ -75,7 +72,7 @@ def test_imap_connects_to_the_picked_address(security: str) -> None:
 
 @pytest.mark.parametrize("security", ["tls", "starttls"])
 def test_smtp_connects_to_the_picked_address(security: str) -> None:
-    smtp._default_connection(SmtpServer("smtp.example.org", 465, security, pick), 5.0)
+    smtp._default_connection(Server("smtp.example.org", 465, security, pick), 5.0)
     host, port, _ = Library.made[0]
     assert (host, port) == (ADDRESS, 465)
     context = Library.made[-1][2]
@@ -83,12 +80,12 @@ def test_smtp_connects_to_the_picked_address(security: str) -> None:
 
 
 def test_without_a_pick_the_name_is_used() -> None:
-    imap._default_client(ImapServer("imap.example.org", 993, "tls"), 5.0)
+    imap._default_client(Server("imap.example.org", 993, "tls"), 5.0)
     assert Library.made[0][0] == "imap.example.org"
 
 
 def test_a_refused_host_is_not_connected_to() -> None:
-    session = ImapSession(ImapServer("imap.example.org", 993, "tls", pick=refuse))
+    session = ImapSession(Server("imap.example.org", 993, "tls", pick=refuse))
     with pytest.raises(ProviderError, match="refused"):
         session.read_capabilities()
     assert Library.made == []
@@ -97,6 +94,7 @@ def test_a_refused_host_is_not_connected_to() -> None:
 TABLE = {
     "imap.example.org": ["93.184.215.14"],
     "mail.internal": ["10.0.0.5"],
+    "xn--bcher-kva.internal": ["10.0.0.6"],
     "rebound.example.org": ["93.184.215.14", "10.0.0.5"],
 }
 
@@ -104,7 +102,7 @@ TABLE = {
 def fetcher(internal: list[str] | None = None) -> SafeFetcher:
     return SafeFetcher(
         internal_hosts=internal or [],
-        lookup=lambda host, port: TABLE.get(host.lower().rstrip("."), []),
+        lookup=lambda host, port: TABLE.get(ascii_host(host) or host, []),
     )
 
 
@@ -118,3 +116,12 @@ def test_connect_address_follows_the_rule_of_the_host_check() -> None:
     )
     with pytest.raises(ProviderUnavailableError, match="does not resolve"):
         fetcher().connect_address("nowhere.example", 993)
+
+
+def test_an_internal_host_matches_in_unicode_and_in_punycode() -> None:
+    assert fetcher(["bücher.internal"]).connect_address(
+        "xn--bcher-kva.internal", 993
+    ) == ("10.0.0.6")
+    assert fetcher(["xn--bcher-kva.internal"]).connect_address(
+        "bücher.internal", 993
+    ) == ("10.0.0.6")

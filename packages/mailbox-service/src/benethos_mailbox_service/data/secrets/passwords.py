@@ -7,12 +7,13 @@ to NFKC first, so the same password typed on another keyboard matches.
 
 from __future__ import annotations
 
-import base64
 import hashlib
 import hmac
 import secrets
 import unicodedata
 from dataclasses import dataclass
+
+from ...common.opaque import from_base64, to_base64
 
 SCHEME = "scrypt"
 SALT_BYTES = 16
@@ -40,9 +41,9 @@ class PasswordHasher:
         cost = self._cost
         salt = secrets.token_bytes(SALT_BYTES)
         key = _derive(password, salt, cost)
-        return (
-            f"{SCHEME}$ln={cost.log_n},r={cost.r},p={cost.p}${_b64(salt)}${_b64(key)}"
-        )
+        params = f"ln={cost.log_n},r={cost.r},p={cost.p}"
+        encoded = f"{to_base64(salt, url=False)}${to_base64(key, url=False)}"
+        return f"{SCHEME}${params}${encoded}"
 
     def verify(self, password: str, stored: str) -> bool:
         """Whether ``password`` is the one behind ``stored``. False for a
@@ -86,16 +87,12 @@ def _parse(stored: str) -> tuple[Scrypt, bytes, bytes] | None:
         scheme, params, salt, key = stored.split("$")
         values = dict(item.split("=", 1) for item in params.split(","))
         cost = Scrypt(log_n=int(values["ln"]), r=int(values["r"]), p=int(values["p"]))
-        parsed = cost, _unb64(salt), _unb64(key)
+        parsed = (
+            cost,
+            from_base64(salt, url=False),
+            from_base64(key, url=False),
+        )
     except (ValueError, KeyError):
         return None
     in_bounds = 1 <= cost.log_n <= 20 and 1 <= cost.r <= 32 and 1 <= cost.p <= 16
     return parsed if scheme == SCHEME and in_bounds else None
-
-
-def _b64(data: bytes) -> str:
-    return base64.b64encode(data).decode("ascii").rstrip("=")
-
-
-def _unb64(text: str) -> bytes:
-    return base64.b64decode(text + "=" * (-len(text) % 4), validate=True)

@@ -18,6 +18,7 @@ from ....data.models import DraftMessage, Message
 from ....errors import MailboxServiceError
 from ...services import Mailbox
 from ..deps import Actor, Viewer, account_of
+from ..forms import text_of
 from ..mailform import (
     ComposeError,
     addresses_text,
@@ -28,7 +29,7 @@ from ..mailform import (
     show,
     show_again,
 )
-from ..navigation import mail_trail
+from ..navigation import mail_trail, mail_url
 from ..rights import mail_rights
 from ..templates import PAGE_SIZE, back, page_links, render
 
@@ -125,10 +126,10 @@ async def draft_submit(
             caller,
             account_id,
             draft_id,
-            str(form.get("idempotency_key") or "") or None,
+            text_of(form, "idempotency_key", strip=False) or None,
         )
     except (ComposeError, MailboxServiceError) as exc:
         return await show_again(
             request, caller, account, form, exc, draft_id=draft_id, stored=stored
         )
-    return back(request, f"/ui/accounts/{account_id}/mail", sent_text(result))
+    return back(request, mail_url(account_id), sent_text(result))

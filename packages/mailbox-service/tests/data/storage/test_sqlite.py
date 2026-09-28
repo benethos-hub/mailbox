@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from benethos_mailbox_service.__main__ import main
+from benethos_mailbox_service.common.clock import iso
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ApiToken, ProviderType, User
 from benethos_mailbox_service.data.storage import (
@@ -23,7 +24,6 @@ from benethos_mailbox_service.data.storage import (
     SqliteUserRepository,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION, migrations
-from benethos_mailbox_service.data.storage.sqlite.database import iso
 from benethos_mailbox_service.data.storage.sqlite.migrations import MIGRATIONS
 from benethos_mailbox_service.errors import (
     ConflictError,

@@ -12,17 +12,20 @@ import os
 import sqlite3
 import stat
 import threading
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, overload
+from typing import Any
 
-from ....errors import ConflictError, StorageError
+from ....common.chunks import batched
+from ....errors import ConflictError, StorageError, missing
 from ...files import LockedError, create_private, exclusive_lock
-from ..table import missing
 from .migrations import MIGRATIONS, SCHEMA_VERSION
+
+# Stays below SQLite's limit of host parameters in one statement.
+IN_CHUNK = 500
+_SCHEMA_VERSION = "SELECT value FROM meta WHERE key = 'schema_version'"
 
 
 @dataclass(frozen=True)
@@ -118,6 +121,26 @@ class Database:
         with self._lock, translated():
             return self._connection.execute(sql, params).fetchall()
 
+    def query_in(
+        self,
+        sql: str,
+        values: Iterable[Any],
+        before: tuple[Any, ...] = (),
+        after: tuple[Any, ...] = (),
+    ) -> list[sqlite3.Row]:
+        """The rows of ``sql`` for every value, each once. ``{in}`` in
+        ``sql`` stands for ``IN (...)`` of the values, ``before`` and
+        ``after`` are the parameters around them. In chunks of
+        ``IN_CHUNK``, since SQLite caps the parameters of one statement:
+        the rows come chunk by chunk, not in the order of one query."""
+        rows: list[sqlite3.Row] = []
+        for chunk in batched(list(dict.fromkeys(values)), IN_CHUNK):
+            marks = ", ".join("?" * len(chunk))
+            rows += self.query(
+                sql.replace("{in}", f"IN ({marks})"), (*before, *chunk, *after)
+            )
+        return rows
+
     def one(self, sql: str, params: tuple[Any, ...] = ()) -> sqlite3.Row | None:
         """The first row, or None."""
         with self._lock, translated():
@@ -161,7 +184,7 @@ class Database:
             yield True
 
     def schema_version(self) -> int:
-        row = self.one("SELECT value FROM meta WHERE key = 'schema_version'")
+        row = self.one(_SCHEMA_VERSION)
         return int(row[0]) if row else 0
 
     def close(self) -> None:
@@ -217,27 +240,6 @@ def translated() -> Iterator[None]:
         raise StorageError(f"the database failed: {exc}") from None
 
 
-def iso(value: datetime | None) -> str | None:
-    """A time as the TEXT columns hold it: in UTC, so that times compare
-    as text. A time without a zone is refused."""
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        raise ValueError("a time without a zone cannot be stored")
-    return value.astimezone(UTC).isoformat()
-
-
-@overload
-def parse_iso(value: str) -> datetime: ...
-@overload
-def parse_iso(value: None) -> None: ...
-@overload
-def parse_iso(value: str | None) -> datetime | None: ...
-def parse_iso(value: str | None) -> datetime | None:
-    """The time a TEXT column holds, None for NULL."""
-    return datetime.fromisoformat(value) if value else None
-
-
 def _casefold(value: str | None) -> str | None:
     return value.casefold() if isinstance(value, str) else value
 
@@ -271,9 +273,7 @@ def inspect_snapshot(data: bytes) -> int:
         result = copy.execute("PRAGMA integrity_check").fetchone()[0]
         if result != "ok":
             raise ValueError(f"database integrity check failed: {result}")
-        row = copy.execute(
-            "SELECT value FROM meta WHERE key = 'schema_version'"
-        ).fetchone()
+        row = copy.execute(_SCHEMA_VERSION).fetchone()
     except sqlite3.DatabaseError as exc:
         raise ValueError(f"not a database: {exc}") from None
     finally:

@@ -19,12 +19,18 @@ from ...data.storage import (
     UserRepository,
     WebhookRepository,
 )
-from ...errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
+from ...errors import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    missing,
+)
 from ..accounts import Adapters
 from ..activity import HOST, ActivityLog, Actor
 from ..activity import users as said
 from ..auth import MAX_NAME, AuthService, TokenState
-from ..rights import Access, SendLimit, permissions
+from ..rights import ADMIN_GRANT, Access, SendLimit, permissions
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18
@@ -128,7 +134,7 @@ class UserService:
         user = User(
             id=new_id("usr"),
             name=name,
-            grants=[Grant(accounts=["*"], allow=[permissions.ADMIN])],
+            grants=[ADMIN_GRANT],
             ui_sign_in=True,
         )
         self._users.save(user)
@@ -230,12 +236,10 @@ class UserService:
         """Switching ``ui_sign_in`` off deletes the password, which ends the
         user's UI sessions. Nobody disables itself or takes its own UI
         sign-in."""
-        access.require("update_user")
+        user = self._managed(access, "update_user", user_id)
         if name is not None:
             name = _named("a user", name)
             self._require_free(name, user_id)
-        user = self._users.get(user_id)
-        self._require_covers_user(access, user)
         if user_id == access.user_id:
             if disabled:
                 raise ConflictError("a user cannot disable itself")
@@ -270,9 +274,7 @@ class UserService:
         return updated
 
     def delete_user(self, access: Access, user_id: str) -> None:
-        access.require("delete_user")
-        user = self._users.get(user_id)
-        self._require_covers_user(access, user)
+        user = self._managed(access, "delete_user", user_id)
         if user_id == access.user_id:
             raise ConflictError("a user cannot delete itself")
         self._tokens.delete_for_user(user_id)
@@ -296,14 +298,12 @@ class UserService:
 
     def has_password(self, access: Access, user_id: str) -> bool:
         """Whether the user can sign in to the UI."""
-        if user_id != access.user_id:
-            access.require("get_user")
+        _self_or_get_user(access, user_id)
         return self._auth.passwords.stored(user_id) is not None
 
     def last_sign_in(self, access: Access, user_id: str) -> datetime | None:
         """When the user last signed in to the UI."""
-        if user_id != access.user_id:
-            access.require("get_user")
+        _self_or_get_user(access, user_id)
         stored = self._auth.passwords.stored(user_id)
         return stored.last_sign_in_at if stored is not None else None
 
@@ -339,9 +339,7 @@ class UserService:
 
     def _settable(self, access: Access, user_id: str) -> User:
         """The user whose password the caller may set."""
-        access.require("set_password")
-        user = self._users.get(user_id)
-        self._require_covers_user(access, user)
+        user = self._managed(access, "set_password", user_id)
         if user_id == access.user_id:
             raise ConflictError("change your own password with the current one")
         if not user.ui_sign_in:
@@ -353,8 +351,7 @@ class UserService:
     # --- tokens ---------------------------------------------------------------
 
     def list_tokens(self, access: Access, user_id: str) -> list[ApiToken]:
-        access.require("list_tokens")
-        self._require_covers_user(access, self._users.get(user_id))
+        self._managed(access, "list_tokens", user_id)
         return self._tokens.list_for_user(user_id)
 
     def token_state(self, token: ApiToken) -> TokenState:
@@ -368,10 +365,8 @@ class UserService:
         name: str,
         expires_at: datetime | None = None,
     ) -> tuple[ApiToken, str]:
-        access.require("create_token")
+        owner = self._managed(access, "create_token", user_id)
         name = _named("a token", name)
-        owner = self._users.get(user_id)
-        self._require_covers_user(access, owner)
         token, plain = self._auth.issue_token(user_id, name, expires_at)
         self._activity.record(
             said.TokenIssued(
@@ -385,12 +380,10 @@ class UserService:
         return token, plain
 
     def revoke_token(self, access: Access, user_id: str, token_id: str) -> ApiToken:
-        access.require("revoke_token")
-        owner = self._users.get(user_id)
-        self._require_covers_user(access, owner)
+        owner = self._managed(access, "revoke_token", user_id)
         before = self._tokens.get(token_id)
         if before.user_id != user_id:
-            raise NotFoundError(f"token {token_id} not found")
+            raise missing("token", token_id)
         token = self._auth.revoke_token(token_id)
         if before.revoked_at is None:
             self._activity.record(
@@ -485,6 +478,14 @@ class UserService:
                 raise BadRequestError(f"unknown role: {role_id}") from None
         return grants
 
+    def _managed(self, access: Access, operation: str, user_id: str) -> User:
+        """The user the caller does ``operation`` on: with the right to it,
+        and holding every right the user has."""
+        access.require(operation)
+        user = self._users.get(user_id)
+        self._require_covers_user(access, user)
+        return user
+
     def _require_covers_user(self, access: Access, user: User) -> None:
         roles = [role for role in user.roles if _exists(self._roles, role)]
         self._require_covers(access, [*user.grants, *self._role_grants(roles)])
@@ -493,6 +494,13 @@ class UserService:
     def _require_covers(access: Access, grants: list[Grant]) -> None:
         if not access.covers(grants):
             raise ForbiddenError("cannot grant or manage rights the caller lacks")
+
+
+def _self_or_get_user(access: Access, user_id: str) -> None:
+    """A caller reads about itself freely, about another user with
+    ``get_user``."""
+    if user_id != access.user_id:
+        access.require("get_user")
 
 
 def _named(what: str, name: str) -> str:

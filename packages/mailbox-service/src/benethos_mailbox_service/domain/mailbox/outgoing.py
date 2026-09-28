@@ -8,14 +8,15 @@ it.
 from __future__ import annotations
 
 import base64
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from datetime import datetime
 from typing import TypeVar
 
 from pydantic import BaseModel
 
 from ...common.clock import utc_now
+from ...common.sizes import MIB, megabytes
 from ...data.mail import compose, convert
 from ...data.models import (
     Account,
@@ -48,7 +49,7 @@ M = TypeVar("M", bound=DraftMessage)
 
 # What one message may carry.
 MAX_RECIPIENTS = 100
-MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+MAX_ATTACHMENT_BYTES = 25 * MIB
 
 
 class Outgoing:
@@ -393,19 +394,17 @@ class Outgoing:
         original = await self._calls.message(account_id, reference.message_id)
         await self._mark_answered(account_id, reference, original)
 
-    @contextmanager
     def _after_sending(
         self, access: Access, account: Account, what: str
-    ) -> Iterator[None]:
+    ) -> AbstractContextManager[None]:
         """A step after the message went out. It may fail, but only into
         the log: the send succeeded, and a client told otherwise sends
         again."""
-        try:
-            yield
-        except Exception as exc:
-            self._activity.record(
-                said.SentBut(by=Actor.of(access), account=account, what=what, error=exc)
+        return self._activity.fail_quietly(
+            lambda exc: said.SentBut(
+                by=Actor.of(access), account=account, what=what, error=exc
             )
+        )
 
     async def delete_draft(
         self, access: Access, account_id: str, draft_id: str
@@ -437,7 +436,9 @@ def _require(
     if message.reference is not None:
         access.require("get_message", account_id)
     if sum(len(a.data) for a in message.attachments) > MAX_ATTACHMENT_BYTES:
-        raise BadRequestError("the attachments exceed 25 MB")
+        raise BadRequestError(
+            f"the attachments exceed {megabytes(MAX_ATTACHMENT_BYTES)}"
+        )
 
 
 def _limited(recipients: list[str]) -> list[str]:

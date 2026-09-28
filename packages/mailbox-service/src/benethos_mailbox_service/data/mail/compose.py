@@ -18,12 +18,11 @@ from typing import NamedTuple
 
 from pydantic import ValidationError
 
-from ...errors import BadRequestError
+from ...common.plaintext import from_html
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
-from .fields import ascii_domain
+from .fields import ascii_domain, wire_address
 from .fields import message_id as one_message_id
 from .parse import ParsedMessage
-from .text import from_html
 
 # Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
 REFERENCE_HEADER = "X-Mailbox-Service-Reference"
@@ -49,7 +48,7 @@ def read_reference(value: str | None) -> MessageReference | None:
 
 def new_message_id(sender_email: str) -> str:
     """A fresh ``Message-ID`` in the sender's domain, in punycode."""
-    return make_msgid(domain=_wire(sender_email).rpartition("@")[2] or None)
+    return make_msgid(domain=wire_address(sender_email).rpartition("@")[2] or None)
 
 
 @dataclass(frozen=True)
@@ -84,7 +83,7 @@ def message(
     # part beyond ASCII makes it a message for SMTPUTF8 (RFC 6532), whose
     # headers are UTF-8: an encoded word is not allowed in an address.
     everyone = [sender, *message.to, *message.cc, *message.bcc, *message.reply_to]
-    utf8 = any(not _wire(r.email).isascii() for r in everyone)
+    utf8 = any(not wire_address(r.email).isascii() for r in everyone)
     mail = EmailMessage(policy=SMTP.clone(cte_type="7bit", utf8=utf8))
     mail["From"] = _address(sender)
     # Values that came out of another message, the original of a reply or a
@@ -260,14 +259,7 @@ def _address(recipient: Recipient) -> str:
 def _formatted(name: str | None, email: str) -> str:
     """``Name <address>`` for a header, the name on one line whatever message
     it came from, the domain in punycode."""
-    local, _, domain = _wire(email).rpartition("@")
+    local, _, domain = wire_address(email).rpartition("@")
     return str(
         HeaderAddress(display_name=one_line(name or ""), username=local, domain=domain)
     )
-
-
-def _wire(email: str) -> str:
-    try:
-        return ascii_domain(email)
-    except UnicodeError:
-        raise BadRequestError(f"the domain of {email} cannot be encoded") from None

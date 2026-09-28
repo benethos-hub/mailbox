@@ -9,8 +9,8 @@ from __future__ import annotations
 from urllib.parse import quote
 
 from ...errors import MailboxServiceError
-from ..http import SafeFetcher
 from ..models import DiscoverySourceName
+from ..protocols import SafeFetcher
 from . import autoconfig
 from .base import Finding, Query
 

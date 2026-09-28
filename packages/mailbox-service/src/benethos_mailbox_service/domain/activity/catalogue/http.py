@@ -7,6 +7,7 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
+from ....common.sizes import megabytes
 from ..base import Activity
 
 
@@ -21,8 +22,7 @@ class BodyTooLarge(Activity):
     limit: int
 
     def says(self) -> str:
-        megabytes = self.limit // (1024 * 1024)
-        return f"sent a request to {self.path} larger than {megabytes} MB"
+        return f"sent a request to {self.path} larger than {megabytes(self.limit)}"
 
     def why(self) -> str:
         return "refused"

@@ -13,8 +13,7 @@ from typing import Annotated
 from fastapi import Depends, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from ...data.models import MessageFilter
-from ...data.models.messages import SEARCH_TEXT_PATTERN
+from ...data.models import SEARCH_TEXT_PATTERN, MessageFilter
 from ...domain.rights import Access
 from ..services import Accounts, Auth, Discoverer, Mailbox, Users, Webhooks
 from ..urls import client_address

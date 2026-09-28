@@ -34,6 +34,7 @@ from benethos_mailbox_service.data.storage import (
     TokenRepository,
     UserRepository,
 )
+from benethos_mailbox_service.data.storage.table import drop_where
 from benethos_mailbox_service.errors import ConflictError, NotFoundError
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
@@ -202,3 +203,10 @@ def test_a_token_hash_is_held_once_and_a_save_replaces_the_whole(
     assert repo.get("tok_1") == moved
     assert repo.find_by_hash("h") is None
     assert repo.list_for_user("usr_2") == [moved]
+
+
+def test_drop_where_removes_what_it_picks() -> None:
+    rows = {("acc_1", "a"): 1, ("acc_2", "b"): 2, ("acc_1", "c"): 3}
+    assert drop_where(rows, lambda key, _: key[0] == "acc_1") == 2
+    assert rows == {("acc_2", "b"): 2}
+    assert drop_where(rows, lambda _, value: value > 5) == 0

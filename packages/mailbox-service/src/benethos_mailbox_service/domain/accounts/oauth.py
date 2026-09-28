@@ -28,7 +28,7 @@ from urllib.parse import urlsplit
 from ...common.clock import utc_now
 from ...data.models import Account, ProviderType
 from ...data.providers import OAuthClient, authorize_url, new_pkce
-from ...errors import BadRequestError, MailboxServiceError, NotSupportedError
+from ...errors import BadRequestError, NotSupportedError
 from ..activity import ActivityLog, Actor
 from ..activity import accounts as said
 from ..rights import Access
@@ -118,15 +118,13 @@ class OAuthService:
         """The account the sign-in connected, or signed in again. Another
         user's sign-in answers as an unknown one and stays open for its
         owner."""
-        try:
-            account, again = await self._finish(access, provider, state, code)
-        except MailboxServiceError as exc:
-            self._activity.record(
-                said.OAuthFailed(
-                    by=Actor.of(access), provider=provider.value, error=exc
-                )
+        failed = self._activity.on_failure(
+            lambda exc: said.OAuthFailed(
+                by=Actor.of(access), provider=provider.value, error=exc
             )
-            raise
+        )
+        with failed:
+            account, again = await self._finish(access, provider, state, code)
         self._activity.record(
             said.OAuthFinished(
                 by=Actor.of(access),

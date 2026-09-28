@@ -215,7 +215,7 @@ def _keys(command: str, env_file: Path | None) -> None:
 
 
 def _backup(target: list[str], recovery_key: bool, env_file: Path | None) -> None:
-    from .data.secrets.backup import create_backup, read_backup
+    from .data.backup import create_backup, read_backup
     from .domain.activity import HOST, system
     from .main import opened
 
@@ -260,7 +260,7 @@ def _backup(target: list[str], recovery_key: bool, env_file: Path | None) -> Non
 def _restore(
     source: Path, recovery_key: bool, replace_master_key: bool, env_file: Path | None
 ) -> None:
-    from .data.secrets.backup import restore_backup
+    from .data.backup import restore_backup
     from .domain.activity import HOST, ActivityLog, system
     from .main import key_provider, opened
 
@@ -339,8 +339,8 @@ def _expected() -> tuple[type[BaseException], ...]:
     errors, and settings that do not validate."""
     from pydantic import ValidationError
 
+    from .data.backup import BackupError
     from .data.secrets import KeyProviderError
-    from .data.secrets.backup import BackupError
     from .errors import MailboxServiceError
 
     return (

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Annotated
+from collections.abc import Callable, Iterable
+from typing import Annotated, TypeVar
 
 from fastapi import Depends, Request
 
@@ -11,6 +11,20 @@ from ...data.models import Account
 from ...domain.rights import Access
 from ..services import get_accounts
 from .session import CSRF_FIELD, CSRF_HEADER, csrf_ok, current
+
+T = TypeVar("T")
+
+
+def if_allowed(
+    caller: Access,
+    operation: str,
+    call: Callable[[], T],
+    default: T,
+    account_id: str | None = None,
+) -> T:
+    """``call()`` where the caller may do ``operation``, else
+    ``default``: for a part of a page the caller may not see."""
+    return call() if caller.allows(operation, account_id) else default
 
 
 class CsrfRefused(Exception):

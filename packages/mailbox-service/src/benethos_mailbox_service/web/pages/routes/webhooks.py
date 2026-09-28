@@ -8,15 +8,13 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
-from pydantic import ValidationError
 
-from ....data.models import WebhookCreate
-from ....data.models.webhooks import CHANGE_KINDS
+from ....data.models import CHANGE_KINDS, WebhookCreate
 from ....domain.rights import Access
 from ...services import Webhooks, get_accounts
 from ..deps import Actor, Viewer, account_names
 from ..filters import Field, filter_bar
-from ..forms import FormError, failing, first_problem
+from ..forms import FormError, failing, model_of, text_of
 from ..session import show_once, take_once
 from ..templates import back, render
 
@@ -73,34 +71,34 @@ def _new_webhook_page(
         page="webhooks",
         status_code=400 if err else 200,
         err=err,
-        typed=(
-            {
-                "url": str(form.get("url") or "").strip(),
-                "events": [str(e) for e in form.getlist("events")],
-                "every": form.get("every") == "1",
-                "accounts": [str(a) for a in form.getlist("accounts")],
-            }
-            if form is not None
-            else None
-        ),
+        typed=_typed(form) if form is not None else None,
         events=CHANGE_KINDS,
         accounts=_readable(request, caller),
     )
 
 
+def _typed(form: Any) -> dict[str, Any]:
+    """The fields of a new webhook as they were submitted."""
+    return {
+        "url": text_of(form, "url"),
+        "events": [str(e) for e in form.getlist("events")],
+        "every": form.get("every") == "1",
+        "accounts": [str(a) for a in form.getlist("accounts")],
+    }
+
+
 def _request_of(form: Any) -> WebhookCreate:
-    every = form.get("every") == "1"
-    accounts = [str(a) for a in form.getlist("accounts")]
-    if not every and not accounts:
+    typed = _typed(form)
+    if not typed["every"] and not typed["accounts"]:
         raise FormError("Choose the accounts, or every account.")
-    try:
-        return WebhookCreate(
-            url=str(form.get("url") or "").strip(),
-            events=[str(e) for e in form.getlist("events")],
-            accounts=None if every else accounts,
-        )
-    except ValidationError as exc:
-        raise FormError(first_problem(exc)) from None
+    return model_of(
+        WebhookCreate,
+        {
+            "url": typed["url"],
+            "events": typed["events"],
+            "accounts": None if typed["every"] else typed["accounts"],
+        },
+    )
 
 
 @router.post("/webhooks")

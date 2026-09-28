@@ -32,13 +32,14 @@ from ...data.models import (
     MessageUpdate,
     Page,
 )
-from ...errors import ConflictError, MailboxServiceError, NotFoundError
+from ...errors import ConflictError, MailboxServiceError, NotFoundError, missing
 from ..accounts import Adapters
 from ..activity import ActivityLog
 from ..rights import Access
 from ..sync import SyncService
 from . import merge
 from .calls import Calls, public
+from .fingerprint import fingerprint
 from .idempotency import Idempotency
 from .outgoing import Outgoing
 from .sending import SendControl
@@ -134,7 +135,7 @@ class MailboxService:
         folders = await self._folders(account_id)
         folder = next((f for f in folders if f.id == folder_id), None)
         if folder is None:
-            raise NotFoundError(f"folder {folder_id} not found")
+            raise missing("folder", folder_id)
         if folder.role is not None:
             raise ConflictError(
                 f"the folder {folder.name} is the account's {folder.role}: "
@@ -262,11 +263,9 @@ class MailboxService:
         """What changed in several accounts since a point in the change feed.
         Accounts the caller may not read are left out without a word."""
         existing = self._calls.ids()
-        visible = [
-            a
-            for a in dict.fromkeys(account_ids or existing)
-            if a in existing and access.allows("list_all_changes", a)
-        ]
+        visible = access.filter(
+            "list_all_changes", (a for a in account_ids or existing if a in existing)
+        )
         return self._changes.page(visible, since, limit=limit)
 
     async def list_all_messages(
@@ -286,14 +285,11 @@ class MailboxService:
         it does not fail the request.
         """
         existing = self._calls.ids()
-        wanted = account_ids or existing
-        visible = [
-            a
-            for a in dict.fromkeys(wanted)
-            if a in existing and access.allows("list_all_messages", a)
-        ]
+        visible = access.filter(
+            "list_all_messages", (a for a in account_ids or existing if a in existing)
+        )
         failures: list[AccountFailure] = []
-        query = merge.fingerprint(folder_role, search)
+        query = fingerprint(folder_role, search)
         if cursor:
             positions = {
                 a: p

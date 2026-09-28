@@ -113,7 +113,7 @@ Allowed on purpose: user names, account addresses (an operator needs
 them), client addresses, our ids, folder names, counts, error messages
 of the service and of providers after masking.
 
-The masking of `data/secrets/redact.py` stays the second line of
+The masking of `common/redact.py` stays the second line of
 defence, not the first: a line is written as if there were no masking.
 
 ## 5. The activities

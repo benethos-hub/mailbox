@@ -9,10 +9,13 @@ import logging
 from ...data.logbook import LogBook, LogEntry
 from ...data.models import Page
 from ...errors import BadRequestError
+from .. import paging
 from ..activity import ActivityLog, Actor
 from ..activity import system as said
 from ..rights import Access
 
+# The prefix of a cursor of the log page.
+CURSOR = "log_"
 # The levels a reader may ask for, from the least.
 LEVELS = {
     "debug": logging.DEBUG,
@@ -59,15 +62,14 @@ class ServiceLog:
                 or wanted in entry.source.casefold()
             )
         ]
-        more = len(found) > limit
-        shown = found[:limit]
-        return Page(items=shown, next_cursor=str(shown[-1].seq) if more else None)
+        shown, more = paging.split_page(found, limit)
+        return Page(
+            items=shown,
+            next_cursor=paging.encode_cursor(CURSOR, shown[-1].seq) if more else None,
+        )
 
 
 def _before(cursor: str | None) -> int:
     if cursor is None:
         return 2**63
-    try:
-        return int(cursor)
-    except ValueError:
-        raise BadRequestError("invalid cursor") from None
+    return paging.decode_cursor(CURSOR, cursor, int)

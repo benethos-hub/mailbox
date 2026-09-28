@@ -8,7 +8,7 @@ from collections.abc import Mapping
 
 import httpx
 
-from ...errors import ProviderError, ProviderUnavailableError
+from ....errors import ProviderError, ProviderUnavailableError
 
 
 def new_client(
@@ -66,6 +66,11 @@ def parse_url(url: str) -> httpx.URL:
         return httpx.URL(url)
     except httpx.InvalidURL as exc:
         raise ProviderError(f"not a URL: {exc}") from None
+
+
+def host_of(target: httpx.URL) -> str:
+    """The host of ``target`` as it goes on the wire: ASCII, lower case."""
+    return target.raw_host.decode("ascii").lower()
 
 
 def unreachable(exc: httpx.HTTPError, host: str) -> ProviderUnavailableError:

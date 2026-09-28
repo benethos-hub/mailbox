@@ -9,7 +9,8 @@ from pydantic import ValidationError
 from ....data.models import MessageBatch, MessageUpdate
 from ...services import Mailbox
 from ..deps import Actor
-from ..forms import failing
+from ..forms import failing, text_of
+from ..navigation import mail_url
 from ..templates import back, local_path
 
 router = APIRouter()
@@ -46,7 +47,7 @@ async def move(
 ) -> Response:
     form = await request.form()
     here = f"/ui/accounts/{account_id}/mail/{message_id}"
-    folder = str(form.get("folder") or "")
+    folder = text_of(form, "folder", strip=False)
     if not folder:
         return back(request, here, error="Choose a folder.")
     with failing(here):
@@ -63,7 +64,7 @@ async def delete(
 ) -> Response:
     form = await request.form()
     permanent = form.get("permanent") == "1"
-    listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
+    listing = local_path(text_of(form, "back", strip=False), mail_url(account_id))
     with failing(f"/ui/accounts/{account_id}/mail/{message_id}"):
         await mailbox.delete_message(caller, account_id, message_id, permanent)
     return back(
@@ -77,14 +78,16 @@ async def batch(
 ) -> Response:
     """The action menu above a list, for the messages ticked in it."""
     form = await request.form()
-    listing = local_path(str(form.get("back") or ""), f"/ui/accounts/{account_id}/mail")
+    listing = local_path(text_of(form, "back", strip=False), mail_url(account_id))
     ids = [str(i) for i in form.getlist("ids")]
-    action = "delete" if form.get("purge") == "1" else str(form.get("action") or "")
+    action = (
+        "delete" if form.get("purge") == "1" else text_of(form, "action", strip=False)
+    )
     if not ids:
         return back(request, listing, error="Tick at least one message.")
     try:
         if action == "move":
-            folder = str(form.get("folder") or "")
+            folder = text_of(form, "folder", strip=False)
             if not folder:
                 return back(request, listing, error="Choose a folder to move to.")
             request_batch = MessageBatch(

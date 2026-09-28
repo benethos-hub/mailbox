@@ -13,25 +13,28 @@ import re
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from dataclasses import dataclass
+from datetime import date
 from email.parser import BytesHeaderParser
 from typing import Any
 
 from imapclient import IMAPClient
 from imapclient.exceptions import LoginError
 
-from ....errors import (
+from ...common.chunks import batched
+from ...common.clock import utc_now
+from ...common.sizes import MIB
+from ...errors import (
     BadRequestError,
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
+    missing,
 )
-from ...mail import fields
-from ...mail.parse import ParsedMessage
-from .transport import Pick, connect_to, tls_context, transport_errors
+from ..mail import fields, parse
+from .transport import Server, transport_errors
 
 ClientFactory = Callable[..., Any]
 
@@ -39,7 +42,7 @@ ClientFactory = Callable[..., Any]
 IDLE_STEP = 5.0
 
 # A whole message larger than this is refused, as Graph answers are.
-MAX_MESSAGE_BYTES = 40 * 1024 * 1024
+MAX_MESSAGE_BYTES = 40 * MIB
 # Headers beyond this are cut off: a list reads many at once.
 MAX_HEADER_BYTES = 256 * 1024
 
@@ -52,15 +55,6 @@ _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 
 @dataclass(frozen=True)
-class ImapServer:
-    host: str
-    port: int
-    security: str  # "tls" or "starttls"
-    # Checks the host at each connection. Without: connect by name.
-    pick: Pick | None = field(default=None, compare=False)
-
-
-@dataclass(frozen=True)
 class RawFolder:
     name: str
     delimiter: str | None
@@ -68,7 +62,7 @@ class RawFolder:
     subscribed: bool | None = None  # None: not asked
 
 
-class FetchedMessage(ParsedMessage):
+class FetchedMessage(parse.ParsedMessage):
     """A fetched message: UID and flags as the server reported them, the
     rest parsed from the fetched bytes."""
 
@@ -98,9 +92,8 @@ class SearchCriteria:
 DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
 
-def _default_client(server: ImapServer, timeout: float) -> Any:
-    address = connect_to(server.host, server.port, server.pick)
-    context = tls_context(server.host)
+def _default_client(server: Server, timeout: float) -> Any:
+    address, context = server.endpoint()
     if server.security == "starttls":
         client = IMAPClient(address, server.port, ssl=False, timeout=timeout)
         client.starttls(context)
@@ -118,7 +111,7 @@ _CHANGED_BATCH = 500
 class ImapSession:
     def __init__(
         self,
-        server: ImapServer,
+        server: Server,
         timeout: float = 30.0,
         client_factory: ClientFactory = _default_client,
         client_id: tuple[str, str] | None = None,
@@ -300,9 +293,7 @@ class ImapSession:
             reported = _with_code(
                 client,
                 "APPENDUID",
-                lambda: client.append(
-                    folder, raw, flags=flags, msg_time=datetime.now(UTC)
-                ),
+                lambda: client.append(folder, raw, flags=flags, msg_time=utc_now()),
             )
         for item in reported:
             match = re.search(r"(?:APPENDUID )?\d+ (\d+)", _text(item) if item else "")
@@ -351,8 +342,7 @@ class ImapSession:
         changed: list[int] = []
         with _errors():
             client = self._require()
-            for start in range(0, len(uids), _CHANGED_BATCH):
-                batch = uids[start : start + _CHANGED_BATCH]
+            for batch in batched(uids, _CHANGED_BATCH):
                 found = client.fetch(
                     batch, ["FLAGS"], modifiers=[f"CHANGEDSINCE {modseq}"]
                 )
@@ -488,7 +478,7 @@ class ImapSession:
             answer: dict[bytes, Any] = client.select_folder(folder, readonly=readonly)
         except imaplib.IMAP4.error:
             if not client.folder_exists(folder):
-                raise NotFoundError(f"folder {folder} not found") from None
+                raise missing("folder", folder) from None
             raise
         return answer
 
@@ -668,10 +658,4 @@ def _errors() -> Iterator[None]:
         except imaplib.IMAP4.error as exc:
             raise ProviderError(
                 f"the mail server answered with an error: {exc}"
-            ) from None
-        except UnicodeError:
-            # imaplib writes commands in ASCII. Never the error's text: it
-            # quotes the character, which may be part of a secret.
-            raise BadRequestError(
-                "a value beyond ASCII cannot go to the mail server"
             ) from None

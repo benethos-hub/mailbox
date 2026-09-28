@@ -8,14 +8,13 @@ from datetime import UTC, date, datetime, time
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from pydantic import ValidationError
 
 from ....data.models import SendFilter
 from ....domain.rights import Access
 from ...services import Accounts, Mailbox, get_users
-from ..deps import Viewer, emails_of
+from ..deps import Viewer, emails_of, if_allowed
 from ..filters import Field, FilterBar, filter_bar
-from ..forms import first_problem
+from ..forms import model_of
 from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
@@ -25,11 +24,13 @@ OUTCOMES = [("sent", "sent"), ("denied", "denied"), ("failed", "failed")]
 
 def _user_names(request: Request, caller: Access) -> dict[str, str]:
     """Names of the users who sent, where the caller may see users."""
-    names = {caller.user_id: caller.name}
-    if caller.allows("list_users"):
-        users = get_users(request)
-        names.update({user.id: user.name for user in users.list_users(caller)})
-    return names
+    listed: dict[str, str] = if_allowed(
+        caller,
+        "list_users",
+        lambda: {u.id: u.name for u in get_users(request).list_users(caller)},
+        {},
+    )
+    return {caller.user_id: caller.name, **listed}
 
 
 def _day(value: str) -> datetime | None:
@@ -38,8 +39,8 @@ def _day(value: str) -> datetime | None:
 
 
 def _filter(bar: FilterBar) -> SendFilter | None:
-    """What the bar asks for. Raises ``ValueError`` for a value that is no
-    filter."""
+    """What the bar asks for. Raises ``FormError``, a ``ValueError``, for
+    a value that is no filter."""
     wanted = {
         "user_id": bar.value("who") or None,
         "outcome": bar.value("outcome") or None,
@@ -49,10 +50,7 @@ def _filter(bar: FilterBar) -> SendFilter | None:
     }
     if not any(value is not None for value in wanted.values()):
         return None
-    try:
-        return SendFilter.model_validate(wanted)
-    except ValidationError as exc:
-        raise ValueError(first_problem(exc)) from None
+    return model_of(SendFilter, wanted)
 
 
 @router.get("/sends")

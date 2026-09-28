@@ -7,8 +7,8 @@ import builtins
 from datetime import datetime
 from typing import Protocol
 
-from ...errors import ConflictError
 from ..models import SendFilter, SendOutcome, SendRecord
+from .table import Table
 
 
 class SendLogRepository(Protocol):
@@ -40,19 +40,17 @@ class SendLogRepository(Protocol):
 
 class InMemorySendLogRepository:
     def __init__(self) -> None:
-        self._records: list[SendRecord] = []
+        self._records: Table[SendRecord] = Table("send")
 
     def add(self, record: SendRecord) -> None:
-        if any(r.id == record.id for r in self._records):
-            raise ConflictError(f"send {record.id} exists already")
-        self._records.append(record)
+        self._records.add(record.id, record)
 
     def sent_since(
         self, user_id: str, account_id: str, since: datetime, *, outcome: SendOutcome
     ) -> list[datetime]:
         return sorted(
             r.created_at
-            for r in self._records
+            for r in self._records.list()
             if r.user_id == user_id
             and r.account_id == account_id
             and r.outcome == outcome
@@ -70,7 +68,7 @@ class InMemorySendLogRepository:
         found = sorted(
             (
                 r
-                for r in self._records
+                for r in self._records.list()
                 if r.account_id == account_id
                 and (matching is None or matching.matches(r))
             ),
@@ -82,4 +80,4 @@ class InMemorySendLogRepository:
         return found[:limit]
 
     def account_ids(self) -> builtins.list[str]:
-        return sorted({r.account_id for r in self._records})
+        return sorted({r.account_id for r in self._records.list()})

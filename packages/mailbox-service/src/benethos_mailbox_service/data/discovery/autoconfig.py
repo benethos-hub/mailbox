@@ -15,8 +15,8 @@ from xml.etree.ElementTree import Element, ParseError
 from defusedxml import DefusedXmlException
 from defusedxml.ElementTree import fromstring
 
+from ...common.hosts import ascii_host, is_host_name
 from ...errors import ProviderError
-from ..http import SafeFetcher
 from ..models import (
     Candidate,
     CredentialKind,
@@ -27,18 +27,14 @@ from ..models import (
     Security,
     ServerProtocol,
 )
+from ..protocols import SafeFetcher
 from . import placeholders
 from .base import Finding
 
 _SECURITY = {"SSL": Security.TLS, "TLS": Security.TLS, "STARTTLS": Security.STARTTLS}
 _PASSWORD = {"password-cleartext", "password-encrypted", "plain", "secure"}
 _OAUTH = "oauth2"
-# A host name in ASCII: labels, and a top-level label that is letters or
-# an internationalised one in punycode (xn--).
-_HOST = re.compile(
-    r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+"
-    r"([a-z]{2,63}|xn--[a-z0-9-]{1,59})$"
-)
+
 _USERNAME_TEMPLATE = re.compile(r"^[^\s<>]{1,256}$")
 
 
@@ -119,12 +115,8 @@ def _server(
 def _host(value: str | None, domain: str) -> str | None:
     if not value:
         return None
-    value = placeholders.fill_domain(value, domain).lower().rstrip(".")
-    try:
-        value = value.encode("idna").decode("ascii")
-    except UnicodeError:
-        return None
-    return value if _HOST.match(value) else None
+    host = ascii_host(placeholders.fill_domain(value, domain))
+    return host if host is not None and is_host_name(host) else None
 
 
 def _port(value: str | None) -> int | None:

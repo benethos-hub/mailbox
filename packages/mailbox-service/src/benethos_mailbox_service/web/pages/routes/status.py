@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
+from ....domain.system import LEVELS
 from ...services import Log, Recovery, Status
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
@@ -18,7 +19,7 @@ from ..templates import PAGE_SIZE, back, page_links, render
 router = APIRouter()
 
 RECOVERY_PAGE = "/ui/recovery-key"
-LOG_LEVELS = [(name, name) for name in ("debug", "info", "warning", "error")]
+LOG_LEVELS = [(name, name) for name in LEVELS]
 
 
 @router.get("/status")

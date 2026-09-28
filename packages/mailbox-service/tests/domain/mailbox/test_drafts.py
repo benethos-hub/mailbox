@@ -20,14 +20,14 @@ from benethos_mailbox_service.data.models import (
     ProviderType,
     Recipient,
 )
+from benethos_mailbox_service.data.protocols.imap import ImapSession
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
     MailProvider,
-    MemoryProvider,
     ProviderSettings,
 )
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_service.data.providers.protocols.imap import ImapSession
+from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import ConflictError, NotFoundError
 from benethos_mailbox_service.main import Services, build_services

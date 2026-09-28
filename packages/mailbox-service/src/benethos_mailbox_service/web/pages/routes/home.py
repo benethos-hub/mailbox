@@ -12,6 +12,7 @@ from ....domain.users import AccountRights
 from ...services import Status, Users
 from ..deps import Viewer
 from ..effective import AccountRow, view_of
+from ..navigation import mail_url
 from ..templates import render
 
 router = APIRouter()
@@ -45,7 +46,7 @@ async def home(
                 else None
             ),
             mail=(
-                f"/ui/accounts/{account.id}/mail"
+                mail_url(account.id)
                 if caller.allows("list_messages", account.id)
                 else None
             ),
@@ -62,5 +63,5 @@ async def home(
         anywhere=any(row.view.warnings for row in rows),
         previous_sign_in=request.state.ui_session.previous_sign_in,
         can_recover=caller.allows("show_recovery_key"),
-        service=status.status(caller) if status.may_see(caller) else None,
+        service=status.status(caller) if caller.sees_status() else None,
     )

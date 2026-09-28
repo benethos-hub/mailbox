@@ -11,17 +11,20 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 
 import anyio
 from anyio.abc import TaskGroup
 
 from ...common.clock import utc_now
+from ...common.ratelimit import backoff
 from ...data.models import Account, AccountStatus
-from ...data.providers import Capability, backoff
+from ...data.providers import Capability
 from ...errors import NotFoundError, NotSupportedError, ProviderAuthError
 from ..accounts import Adapters
-from ..activity import WORKER, ActivityLog, system
+from ..activity import WORKER, Activity, ActivityLog
 from ..activity import sync as said
+from ..rounds import rounds
 from .service import SyncService
 
 # RFC 2177: IDLE is to be renewed before 29 minutes.
@@ -84,12 +87,13 @@ class SyncWorker:
             said.WorkerStarted(by=WORKER, interval=self._interval, push=self._push)
         )
         async with anyio.create_task_group() as watchers:
-            while True:
-                try:
-                    await self.poll(watchers)
-                except Exception as exc:
-                    self._activity.record(system.RoundFailed(by=WORKER, error=exc))
-                await self._sleep(self._interval)
+            await rounds(
+                lambda: self.poll(watchers),
+                pause=self._interval,
+                sleep=self._sleep,
+                activity=self._activity,
+                by=WORKER,
+            )
 
     async def poll(self, watchers: TaskGroup | None = None) -> None:
         """One round over every account, one after the other."""
@@ -109,21 +113,26 @@ class SyncWorker:
         self._last_pass_at = self._clock()
 
     def _failed(self, account_id: str, exc: Exception) -> None:
-        record = self._record(account_id)
-        if record is not None:
-            self._activity.record(said.SyncFailed(by=WORKER, account=record, error=exc))
+        self._record(account_id, partial(said.SyncFailed, by=WORKER, error=exc))
 
-    def _record(self, account_id: str) -> Account | None:
+    def _account(self, account_id: str) -> Account | None:
         """The account a line names, None once it is deleted."""
         try:
             return self._adapters.record(account_id)
         except NotFoundError:
             return None
 
+    def _record(self, account_id: str, make: Callable[..., Activity]) -> None:
+        """Record the activity ``make`` builds with ``account=``, unless
+        the account is deleted."""
+        record = self._account(account_id)
+        if record is not None:
+            self._activity.record(make(account=record))
+
     async def watch(self, account_id: str) -> None:
         """Wait for changes the server reports, and sync on each."""
         failures = 0
-        record = self._record(account_id)
+        record = self._account(account_id)
         if record is not None:
             self._activity.record(said.Watching(by=WORKER, account=record))
         try:
@@ -141,11 +150,7 @@ class SyncWorker:
                         )
                 except NotSupportedError:
                     self._no_push.add(account_id)
-                    record = self._record(account_id)
-                    if record is not None:
-                        self._activity.record(
-                            said.PushUnavailable(by=WORKER, account=record)
-                        )
+                    self._record(account_id, partial(said.PushUnavailable, by=WORKER))
                     return
                 except ProviderAuthError:
                     return  # _wanted is false now, until the account is verified
@@ -154,13 +159,10 @@ class SyncWorker:
                 except Exception as exc:
                     failures += 1
                     pause = backoff(failures - 1, FIRST_RETRY, LONGEST_RETRY)
-                    record = self._record(account_id)
-                    if record is not None:
-                        self._activity.record(
-                            said.WatchFailed(
-                                by=WORKER, account=record, pause=pause, error=exc
-                            )
-                        )
+                    self._record(
+                        account_id,
+                        partial(said.WatchFailed, by=WORKER, pause=pause, error=exc),
+                    )
                     await self._sleep(pause)
         except NotFoundError:
             return  # deleted

@@ -10,14 +10,8 @@ from pydantic import SecretStr
 
 from benethos_mailbox_service.__main__ import main
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.models import ProviderType
-from benethos_mailbox_service.data.secrets import (
-    FileKeyProvider,
-    backup,
-    cipher,
-    decode_recovery,
-)
-from benethos_mailbox_service.data.secrets.backup import (
+from benethos_mailbox_service.data import backup
+from benethos_mailbox_service.data.backup import (
     MAGIC,
     BackupError,
     Manifest,
@@ -25,6 +19,12 @@ from benethos_mailbox_service.data.secrets.backup import (
     read_backup,
     restore_backup,
     write_backup,
+)
+from benethos_mailbox_service.data.models import ProviderType
+from benethos_mailbox_service.data.secrets import (
+    FileKeyProvider,
+    cipher,
+    decode_recovery,
 )
 from benethos_mailbox_service.data.storage import (
     Database,

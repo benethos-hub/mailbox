@@ -17,5 +17,4 @@ def mail_rights(caller: Access, account_id: str) -> dict[str, bool]:
         "create_folder": "create_folder" in allowed,
         "update_folder": "update_folder" in allowed,
         "delete_folder": "delete_folder" in allowed,
-        "batch": "batch_messages" in allowed,
     }

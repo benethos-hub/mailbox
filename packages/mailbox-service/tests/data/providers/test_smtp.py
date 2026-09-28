@@ -11,14 +11,14 @@ from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
-from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
-from benethos_mailbox_service.data.providers.imap import ImapProvider
-from benethos_mailbox_service.data.providers.protocols.imap import ImapSession
-from benethos_mailbox_service.data.providers.protocols.smtp import (
+from benethos_mailbox_service.data.protocols.imap import ImapSession
+from benethos_mailbox_service.data.protocols.smtp import (
+    Server,
     SmtpLogin,
-    SmtpServer,
     SmtpSession,
 )
+from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
+from benethos_mailbox_service.data.providers.imap import ImapProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import (
     BadRequestError,
@@ -32,7 +32,7 @@ from ...conftest import admin_bearer
 from ...imap_fake import FakeMailBox
 from ...smtp_fake import FakeSmtpServer
 
-SERVER = SmtpServer("smtp.example.com", 465, "tls")
+SERVER = Server("smtp.example.com", 465, "tls")
 LOGIN = SmtpLogin("me@example.com", "secret")
 
 

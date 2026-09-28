@@ -27,6 +27,7 @@ from dataclasses import dataclass
 
 import anyio
 
+from ...common.hosts import ascii_host, is_host_name, unicode_host
 from ...data.discovery import (
     DiscoverySource,
     Finding,
@@ -34,7 +35,6 @@ from ...data.discovery import (
     placeholders,
     registrable_domain,
 )
-from ...data.http import HostCheck
 from ...data.models import (
     Candidate,
     CredentialKind,
@@ -47,10 +47,12 @@ from ...data.models import (
     SourceOutcome,
     SourceReport,
 )
+from ...data.protocols import HostCheck
 from ...data.providers import ServerProbe, settings_from_servers
 from ...errors import BadRequestError, MailboxServiceError, RateLimitedError
 from ..activity import ActivityLog, Actor
 from ..activity import discovery as said
+from ..bounded import trim
 from ..rights import Access
 
 Clock = Callable[[], float]
@@ -66,8 +68,7 @@ PER_SECONDS = 60.0
 MAX_CACHED = 1000
 MAX_CALLERS = 10_000
 
-# One label of a host name in ASCII: letters, digits, inner hyphens.
-_LABEL = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)")
+
 # Whitespace and control characters, in no address.
 _BLANK = re.compile(r"[\s\x00-\x1f\x7f]")
 
@@ -130,7 +131,7 @@ class DiscoveryService:
                 self._order.get(c.source, len(self._order)),
             )
         )
-        domain = query.domain.encode("ascii").decode("idna")
+        domain = unicode_host(query.domain)
         self._activity.record(
             said.Discovered(
                 by=Actor.of(access),
@@ -178,12 +179,12 @@ class DiscoveryService:
 
     def _trim_cache(self, now: float) -> None:
         """Expired findings go first, then the ones expiring soonest."""
-        if len(self._cache) <= MAX_CACHED:
-            return
-        for domain in [d for d, (until, _) in self._cache.items() if until <= now]:
-            del self._cache[domain]
-        while len(self._cache) > MAX_CACHED:
-            del self._cache[min(self._cache, key=lambda d: self._cache[d][0])]
+        trim(
+            self._cache,
+            MAX_CACHED,
+            gone=lambda cached: cached[0] <= now,
+            age=lambda cached: cached[0],
+        )
 
     def _count(self, access: Access) -> None:
         user_id = access.user_id
@@ -205,19 +206,15 @@ class DiscoveryService:
                 f"too many discoveries, try again in {wait} seconds", wait
             )
         calls.append(now)
-        if len(self._calls) > MAX_CALLERS:
-            self._trim_callers(now)
-
-    def _trim_callers(self, now: float) -> None:
-        """Callers whose calls all left the window are forgotten, then the
-        ones whose last call is longest ago."""
-        for user in [u for u, c in self._calls.items() if c[-1] <= now - PER_SECONDS]:
-            del self._calls[user]
-            self._told.pop(user, None)
-        while len(self._calls) > MAX_CALLERS:
-            oldest = min(self._calls, key=lambda u: self._calls[u][-1])
-            del self._calls[oldest]
-            self._told.pop(oldest, None)
+        # Callers whose calls all left the window are forgotten, then the
+        # ones whose last call is longest ago.
+        trim(
+            self._calls,
+            MAX_CALLERS,
+            gone=lambda made: made[-1] <= now - PER_SECONDS,
+            age=lambda made: made[-1],
+            dropped=lambda user: self._told.pop(user, None),
+        )
 
     # --- trust --------------------------------------------------------------
 
@@ -307,13 +304,8 @@ def _query(email: str) -> Query:
         raise BadRequestError("not a valid email address")
     # The domain goes into URLs and DNS names: a host name, nothing else,
     # so neither a port nor a path can ride along.
-    try:
-        ascii_domain = domain.lower().rstrip(".").encode("idna").decode("ascii")
-        ascii_domain.encode("ascii").decode("idna")
-    except UnicodeError:
-        raise BadRequestError("not a valid email domain") from None
-    labels = ascii_domain.split(".")
-    if len(ascii_domain) > 253 or not all(_LABEL.fullmatch(x) for x in labels):
+    ascii_domain = ascii_host(domain)
+    if ascii_domain is None or not is_host_name(ascii_domain, dotted=False):
         raise BadRequestError("not a valid email domain")
     if registrable_domain(ascii_domain) is None:
         raise BadRequestError(f"{domain} is a public suffix, not a mail domain")

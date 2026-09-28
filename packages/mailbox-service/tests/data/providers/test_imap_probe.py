@@ -8,12 +8,9 @@ from typing import Any
 import pytest
 
 from benethos_mailbox_service.data.models import Security, ServerProtocol
+from benethos_mailbox_service.data.protocols.imap import ImapSession, Server
 from benethos_mailbox_service.data.providers import probe_server
 from benethos_mailbox_service.data.providers.imap import probe
-from benethos_mailbox_service.data.providers.protocols.imap import (
-    ImapServer,
-    ImapSession,
-)
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotSupportedError,
@@ -53,7 +50,7 @@ async def test_probe_reads_capabilities_and_sends_no_credential() -> None:
 async def test_probe_errors_are_translated(
     error: Exception, expected: type[Exception]
 ) -> None:
-    def failing(server: ImapServer, timeout: float) -> Any:
+    def failing(server: Server, timeout: float) -> Any:
         raise error
 
     with pytest.raises(expected):
@@ -75,9 +72,9 @@ async def test_registry_probes_only_imap() -> None:
 
 
 async def test_the_probe_connects_to_the_address_it_is_given() -> None:
-    servers: list[ImapServer] = []
+    servers: list[Server] = []
 
-    def remember(server: ImapServer) -> ImapSession:
+    def remember(server: Server) -> ImapSession:
         servers.append(server)
         return ImapSession(server, client_factory=FakeMailBox())
 

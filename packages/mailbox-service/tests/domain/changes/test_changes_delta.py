@@ -10,8 +10,8 @@ from typing import Any, TypeVar
 import httpx
 import pytest
 
-from benethos_mailbox_service.data.http import ApiClient
 from benethos_mailbox_service.data.models import Account, ProviderType
+from benethos_mailbox_service.data.protocols.http import ApiClient
 from benethos_mailbox_service.data.providers import Capability, MailProvider
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
 from benethos_mailbox_service.data.storage import (

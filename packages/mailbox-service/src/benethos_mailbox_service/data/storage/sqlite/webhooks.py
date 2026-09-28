@@ -7,14 +7,19 @@ import json
 import sqlite3
 from datetime import datetime
 
-from ...models.webhooks import Webhook
+from ....common.clock import iso, parse_iso
+from ...models import Webhook
 from ..webhooks import Attempt, Delivery, Sealed, WebhookRecord
-from .database import Database, iso, parse_iso
+from .database import Database
+from .rows import SqliteRows
 
 
 class SqliteWebhookRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
+        self._rows = SqliteRows(
+            db, "webhooks", "webhook", _record, order="created_at, id"
+        )
 
     def add(self, record: WebhookRecord) -> None:
         hook, secret, delivery = record.webhook, record.secret, record.delivery
@@ -42,23 +47,13 @@ class SqliteWebhookRepository:
         )
 
     def get(self, webhook_id: str) -> WebhookRecord:
-        return _record(
-            self._db.must_find(
-                "SELECT * FROM webhooks WHERE id = ?",
-                (webhook_id,),
-                "webhook",
-                webhook_id,
-            )
-        )
+        return self._rows.get(webhook_id)
 
     def list(self) -> list[WebhookRecord]:
-        rows = self._db.query("SELECT * FROM webhooks ORDER BY created_at, id")
-        return [_record(row) for row in rows]
+        return self._rows.list()
 
     def delete(self, webhook_id: str) -> None:
-        self._db.must_change(
-            "DELETE FROM webhooks WHERE id = ?", (webhook_id,), "webhook", webhook_id
-        )
+        self._rows.delete(webhook_id)
 
     def delete_for_user(self, user_id: str) -> int:
         return self._db.execute("DELETE FROM webhooks WHERE user_id = ?", (user_id,))
@@ -86,12 +81,7 @@ class SqliteWebhookRepository:
 
     def add_attempt(self, attempt: Attempt, *, keep: int) -> None:
         with self._db.transaction():
-            if (
-                self._db.one(
-                    "SELECT 1 FROM webhooks WHERE id = ?", (attempt.webhook_id,)
-                )
-                is None
-            ):
+            if not self._rows.exists(attempt.webhook_id):
                 return
             self._db.execute(
                 "INSERT INTO webhook_attempts"

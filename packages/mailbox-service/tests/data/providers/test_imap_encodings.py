@@ -12,12 +12,12 @@ from pydantic import SecretStr
 from benethos_mailbox_service.data.mail import convert, fields
 from benethos_mailbox_service.data.mail.parse import ParsedMessage
 from benethos_mailbox_service.data.models import FolderRole
-from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_service.data.providers.protocols.imap import (
-    ImapServer,
+from benethos_mailbox_service.data.protocols.imap import (
     ImapSession,
     RawFolder,
+    Server,
 )
+from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 
 from ...imap_fake import FakeMailBox
 
@@ -49,7 +49,7 @@ LIST_REPLY = [
 def _session(lines: list[bytes]) -> tuple[ImapSession, Any]:
     client = _raw_client(lines)
     session = ImapSession(
-        ImapServer("imap.example.com", 993, "tls"),
+        Server("imap.example.com", 993, "tls"),
         client_factory=lambda s, t: client,
     )
     session.login("me", "secret")

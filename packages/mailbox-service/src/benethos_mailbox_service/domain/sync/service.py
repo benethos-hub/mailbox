@@ -25,12 +25,17 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
 
-from ...common.clock import utc_now
+from ...common.clock import iso, parse_iso, utc_now
 from ...common.ids import new_id
+from ...common.redact import redact
 from ...data.providers import Capability, FolderChanges, MailProvider
-from ...data.secrets.redact import redact
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
-from ...errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
+from ...errors import (
+    ChangesExpiredError,
+    MailboxServiceError,
+    MessageNotFoundError,
+    missing_message,
+)
 from ..accounts import Adapters
 from ..activity import SERVICE, ActivityLog
 from ..activity import sync as said
@@ -147,7 +152,7 @@ class SyncService:
             await self.sync_account(account_id)
             entry = self._index.get(account_id, message_id)
             if entry is None or entry.native_id == native:
-                raise MessageNotFoundError(f"message {message_id} not found") from None
+                raise missing_message(message_id) from None
             return await operation(entry.native_id)
 
     def relocate(
@@ -214,7 +219,7 @@ class SyncService:
     def _native(self, account_id: str, message_id: str) -> str:
         entry = self._index.get(account_id, message_id)
         if entry is None:
-            raise MessageNotFoundError(f"message {message_id} not found")
+            raise missing_message(message_id)
         return entry.native_id
 
     # --- sync -------------------------------------------------------------------------
@@ -274,9 +279,7 @@ class SyncService:
             except ChangesExpiredError:
                 last = None
                 found = await self._folder_changes(account_id, folder_id, None)
-            states[folder_id] = json.dumps(
-                {"token": found.token, "at": now.isoformat()}
-            )
+            states[folder_id] = json.dumps({"token": found.token, "at": iso(now)})
             if last is None:
                 arrived_new |= {m.id for m in found.changed}
                 continue
@@ -398,9 +401,10 @@ def _delta_state(stored: str | None) -> tuple[str, datetime] | None:
         return None
     try:
         value = json.loads(stored)
-        return str(value["token"]), datetime.fromisoformat(value["at"])
+        at = parse_iso(str(value["at"]))
     except (ValueError, TypeError, KeyError):
         return None
+    return None if at is None else (str(value["token"]), at)
 
 
 def _moves(

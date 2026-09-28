@@ -13,13 +13,13 @@ from benethos_mailbox_service.data.discovery.presets import PresetSource, bundle
 from benethos_mailbox_service.data.discovery.suffix import (
     registrable_domain,
 )
-from benethos_mailbox_service.data.http import SafeFetcher
 from benethos_mailbox_service.data.models import (
     CredentialKind,
     DiscoverySourceName,
     ProviderType,
     ServerProtocol,
 )
+from benethos_mailbox_service.data.protocols.http import SafeFetcher
 from benethos_mailbox_service.errors import ProviderError
 
 from ...conftest import PUBLIC

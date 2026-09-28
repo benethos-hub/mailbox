@@ -12,7 +12,8 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from typing import Any
 
-from ...mail.fields import OCTET_STREAM, unicode_address
+from ....common.clock import parse_iso
+from ...mail import fields
 from ...models import (
     Address,
     Attachment,
@@ -67,7 +68,9 @@ def _address(value: Any) -> Address | None:
     address = email.get("address")
     if not address:
         return None
-    return Address(email=unicode_address(str(address)), name=email.get("name") or None)
+    return Address(
+        email=fields.unicode_address(str(address)), name=email.get("name") or None
+    )
 
 
 def _addresses(values: Any) -> list[Address]:
@@ -76,9 +79,7 @@ def _addresses(values: Any) -> list[Address]:
 
 
 def when(value: Any) -> datetime | None:
-    if not value:
-        return None
-    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return parse_iso(str(value).replace("Z", "+00:00")) if value else None
 
 
 def keywords(item: dict[str, Any]) -> list[str]:
@@ -126,7 +127,7 @@ def attachment(item: dict[str, Any]) -> Attachment:
     return Attachment(
         id=str(item["id"]),
         filename=item.get("name") or None,
-        content_type=item.get("contentType") or OCTET_STREAM,
+        content_type=item.get("contentType") or fields.OCTET_STREAM,
         size=int(item.get("size") or 0),
         inline=bool(item.get("isInline")),
     )
@@ -135,7 +136,7 @@ def attachment(item: dict[str, Any]) -> Attachment:
 def attachment_content(item: dict[str, Any], data: bytes) -> AttachmentContent:
     return AttachmentContent(
         filename=item.get("name") or None,
-        content_type=item.get("contentType") or OCTET_STREAM,
+        content_type=item.get("contentType") or fields.OCTET_STREAM,
         data=data,
     )
 
@@ -217,12 +218,4 @@ def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter |
 
 def keeps(item: MessageSummary, rest: MessageFilter | None) -> bool:
     """Whether a search result passes what Graph could not check."""
-    if rest is None:
-        return True
-    if rest.unread is not None and item.unread != rest.unread:
-        return False
-    if rest.has_attachments is not None and item.has_attachments != (
-        rest.has_attachments
-    ):
-        return False
-    return rest.starred is None or item.starred == rest.starred
+    return rest is None or rest.flags_match(item)

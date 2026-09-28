@@ -10,8 +10,9 @@ whatever the provider.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Awaitable, Callable, Mapping
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from ...errors import (
     BadRequestError,
@@ -24,6 +25,7 @@ from ..models import Folder, FolderRole, MessageUpdate
 from .base import Capability, ProviderSettings
 
 R = TypeVar("R")
+N = TypeVar("N", int, float)
 
 
 def no_folder(role: FolderRole) -> ConflictError:
@@ -34,6 +36,11 @@ def no_folder(role: FolderRole) -> ConflictError:
             "the account has no trash folder: a message can only be deleted for good"
         )
     return ConflictError(f"the account has no {role} folder")
+
+
+def resting(reason: str, wait: float) -> ProviderUnavailableError:
+    """The server is left alone for ``wait`` seconds more, for ``reason``."""
+    return ProviderUnavailableError(f"{reason}: next attempt in {math.ceil(wait)}s")
 
 
 def in_trash_already() -> ConflictError:
@@ -49,6 +56,14 @@ def invalid_cursor() -> BadRequestError:
 
 def role_folder(folders: list[Folder], role: FolderRole) -> Folder | None:
     return next((f for f in folders if f.role is role), None)
+
+
+def require_role_folder(folders: list[Folder], role: FolderRole) -> Folder:
+    """The folder with ``role``, ``no_folder`` when the account has none."""
+    folder = role_folder(folders, role)
+    if folder is None:
+        raise no_folder(role)
+    return folder
 
 
 def move_target(
@@ -77,30 +92,38 @@ def encrypted(settings: ProviderSettings, key: str, protocol: str) -> str:
 
 def port_of(settings: ProviderSettings, key: str, default: int) -> int:
     """A port from the settings: a whole number from 1 to 65535."""
-    value = settings.get(key)
-    if value is None or value == "":
-        return default
-    try:
-        port = 0 if isinstance(value, bool) else int(value)
-    except (TypeError, ValueError):
-        port = 0
-    if not 1 <= port <= 65535:
-        raise BadRequestError(f"settings.{key} must be a port from 1 to 65535")
-    return port
+    return _number(
+        settings, key, default, int, lambda p: 1 <= p <= 65535, "a port from 1 to 65535"
+    )
 
 
 def rate_of(settings: ProviderSettings, key: str, default: float) -> float:
     """A rate per minute from the settings: a number above 0."""
+    return _number(
+        settings, key, default, float, lambda r: 0 < r < math.inf, "a number above 0"
+    )
+
+
+def _number(
+    settings: ProviderSettings,
+    key: str,
+    default: N,
+    read: Callable[[Any], N],
+    valid: Callable[[N], bool],
+    must_be: str,
+) -> N:
+    """The number under ``key``, ``default`` when it is not set. A value
+    ``read`` cannot take, a truth value or one not ``valid`` is refused."""
     value = settings.get(key)
     if value is None or value == "":
         return default
     try:
-        rate = 0.0 if isinstance(value, bool) else float(value)
+        number = None if isinstance(value, bool) else read(value)
     except (TypeError, ValueError):
-        rate = 0.0
-    if not rate > 0 or rate == float("inf"):
-        raise BadRequestError(f"settings.{key} must be a number above 0")
-    return rate
+        number = None
+    if number is None or not valid(number):
+        raise BadRequestError(f"settings.{key} must be {must_be}")
+    return number
 
 
 def hosts_in(settings: Mapping[str, object]) -> list[tuple[str, str, int]]:

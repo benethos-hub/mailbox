@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, status
 
-from ....data.models import Role, User
+from ....data.models import ApiToken, Role, User
 from ....domain.rights import permissions
+from ....domain.users import UserService
 from ..deps import Caller, Users
 from ..schemas import (
     Me,
@@ -88,10 +89,7 @@ async def set_password(
 
 @router.get("/users/{user_id}/tokens")
 async def list_tokens(user_id: str, caller: Caller, users: Users) -> list[TokenInfo]:
-    return [
-        TokenInfo.of(t, users.token_state(t))
-        for t in users.list_tokens(caller, user_id)
-    ]
+    return [_info(users, t) for t in users.list_tokens(caller, user_id)]
 
 
 @router.post("/users/{user_id}/tokens", status_code=status.HTTP_201_CREATED)
@@ -99,7 +97,7 @@ async def create_token(
     user_id: str, data: TokenCreate, caller: Caller, users: Users
 ) -> TokenCreated:
     token, plain = users.create_token(caller, user_id, data.name, data.expires_at)
-    info = TokenInfo.of(token, users.token_state(token))
+    info = _info(users, token)
     return TokenCreated(**info.model_dump(), token=plain)
 
 
@@ -108,7 +106,7 @@ async def revoke_token(
     user_id: str, token_id: str, caller: Caller, users: Users
 ) -> TokenInfo:
     token = users.revoke_token(caller, user_id, token_id)
-    return TokenInfo.of(token, users.token_state(token))
+    return _info(users, token)
 
 
 @router.get("/roles")
@@ -136,3 +134,8 @@ async def replace_role(
 @router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_role(role_id: str, caller: Caller, users: Users) -> None:
     users.delete_role(caller, role_id)
+
+
+def _info(users: UserService, token: ApiToken) -> TokenInfo:
+    """A token as the API shows it: never its hash, with its state."""
+    return TokenInfo.of(token, users.token_state(token))

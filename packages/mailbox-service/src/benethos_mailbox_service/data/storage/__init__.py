@@ -1,15 +1,11 @@
 """Persistence, split by subject. Callers import from here, not the modules.
 
-``open_repositories`` is the one place that picks the implementation:
-in memory for tests and ``storage = memory``, else SQLite.
+``repositories`` holds them together and picks the implementation, a
+protocol and an in-memory implementation per subject sit in a module of
+their own, SQLite in ``sqlite/``, the in-memory base in ``table``.
 """
 
 from __future__ import annotations
-
-from contextlib import AbstractContextManager
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Literal, Protocol
 
 from .accounts import AccountRepository, InMemoryAccountRepository
 from .changes import ChangeLogRepository, InMemoryChangeLogRepository, LoggedChange
@@ -33,6 +29,7 @@ from .index import (
     MessageIndexRepository,
 )
 from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
+from .repositories import Repositories, Store, open_repositories
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
     SCHEMA_VERSION,
@@ -71,147 +68,61 @@ from .webhooks import (
     WebhookRepository,
 )
 
-
-class Store(Protocol):
-    """What holds the records of all repositories: an image of it for a
-    backup, the mark of a running service, and closing."""
-
-    def snapshot(self) -> bytes:
-        """A consistent image of every record, taken while it is in use."""
-        ...
-
-    def serving(self) -> AbstractContextManager[bool]:
-        """Mark the store as used by a running service while the block
-        runs. False when another service marked it already."""
-        ...
-
-    def close(self) -> None: ...
-
-    def schema_version(self) -> int:
-        """The version of the schema the records are in."""
-        ...
-
-    @property
-    def migrated(self) -> Migrated | None:
-        """What opening the store did to its schema, None when nothing."""
-        ...
-
-
-@dataclass(frozen=True)
-class Repositories:
-    """One of each, on the same store."""
-
-    accounts: AccountRepository
-    users: UserRepository
-    roles: RoleRepository
-    tokens: TokenRepository
-    passwords: PasswordRepository
-    keys: KeyRepository
-    credentials: CredentialRepository
-    index: MessageIndexRepository
-    idempotency: IdempotencyRepository
-    sends: SendLogRepository
-    changes: ChangeLogRepository
-    webhooks: WebhookRepository
-    # The store behind them, for backups and for closing. None in memory.
-    store: Store | None = None
-
-    def close(self) -> None:
-        if self.store is not None:
-            self.store.close()
-
-
-def open_repositories(
-    storage: Literal["memory", "sqlite"], database_path: Path
-) -> Repositories:
-    if storage == "memory":
-        return Repositories(
-            accounts=InMemoryAccountRepository(),
-            users=InMemoryUserRepository(),
-            roles=InMemoryRoleRepository(),
-            tokens=InMemoryTokenRepository(),
-            passwords=InMemoryPasswordRepository(),
-            keys=InMemoryKeyRepository(),
-            credentials=InMemoryCredentialRepository(),
-            index=InMemoryMessageIndexRepository(),
-            idempotency=InMemoryIdempotencyRepository(),
-            sends=InMemorySendLogRepository(),
-            changes=InMemoryChangeLogRepository(),
-            webhooks=InMemoryWebhookRepository(),
-        )
-    db = Database(database_path)
-    return Repositories(
-        accounts=SqliteAccountRepository(db),
-        users=SqliteUserRepository(db),
-        roles=SqliteRoleRepository(db),
-        tokens=SqliteTokenRepository(db),
-        passwords=SqlitePasswordRepository(db),
-        keys=SqliteKeyRepository(db),
-        credentials=SqliteCredentialRepository(db),
-        index=SqliteMessageIndexRepository(db),
-        idempotency=SqliteIdempotencyRepository(db),
-        sends=SqliteSendLogRepository(db),
-        changes=SqliteChangeLogRepository(db),
-        webhooks=SqliteWebhookRepository(db),
-        store=db,
-    )
-
-
 __all__ = [
-    "SCHEMA_VERSION",
+    "AccountRepository",
+    "Attempt",
+    "ChangeLogRepository",
+    "CredentialRepository",
+    "Database",
+    "Delivery",
+    "EncryptedCredential",
+    "IdempotencyRepository",
+    "InMemoryAccountRepository",
+    "InMemoryChangeLogRepository",
+    "InMemoryCredentialRepository",
+    "InMemoryIdempotencyRepository",
+    "InMemoryKeyRepository",
+    "InMemoryMessageIndexRepository",
+    "InMemoryPasswordRepository",
+    "InMemoryRoleRepository",
+    "InMemorySendLogRepository",
+    "InMemoryTokenRepository",
+    "InMemoryUserRepository",
+    "InMemoryWebhookRepository",
+    "IndexChanges",
+    "IndexEntry",
+    "KeyRepository",
+    "LoggedChange",
+    "MessageIndexRepository",
+    "Migrated",
+    "PasswordRepository",
     "Repositories",
+    "RoleRepository",
+    "SCHEMA_VERSION",
+    "Sealed",
+    "SendLogRepository",
+    "SqliteAccountRepository",
+    "SqliteChangeLogRepository",
+    "SqliteCredentialRepository",
+    "SqliteIdempotencyRepository",
+    "SqliteKeyRepository",
+    "SqliteMessageIndexRepository",
+    "SqlitePasswordRepository",
+    "SqliteRoleRepository",
+    "SqliteSendLogRepository",
+    "SqliteTokenRepository",
+    "SqliteUserRepository",
+    "SqliteWebhookRepository",
     "Store",
+    "StoredPassword",
+    "StoredResult",
+    "TokenRepository",
+    "UserRepository",
+    "WebhookRecord",
+    "WebhookRepository",
+    "WrappedKey",
+    "inspect_snapshot",
     "migrate_file",
     "open_repositories",
     "service_lock",
-    "ChangeLogRepository",
-    "InMemoryChangeLogRepository",
-    "LoggedChange",
-    "SqliteChangeLogRepository",
-    "Attempt",
-    "Delivery",
-    "InMemoryWebhookRepository",
-    "Sealed",
-    "SqliteWebhookRepository",
-    "WebhookRecord",
-    "WebhookRepository",
-    "IdempotencyRepository",
-    "InMemoryIdempotencyRepository",
-    "InMemoryPasswordRepository",
-    "PasswordRepository",
-    "SqlitePasswordRepository",
-    "StoredPassword",
-    "SqliteIdempotencyRepository",
-    "StoredResult",
-    "IndexChanges",
-    "IndexEntry",
-    "InMemoryMessageIndexRepository",
-    "MessageIndexRepository",
-    "SqliteMessageIndexRepository",
-    "CredentialRepository",
-    "EncryptedCredential",
-    "InMemoryCredentialRepository",
-    "InMemoryKeyRepository",
-    "KeyRepository",
-    "SqliteCredentialRepository",
-    "SqliteKeyRepository",
-    "WrappedKey",
-    "inspect_snapshot",
-    "AccountRepository",
-    "Database",
-    "Migrated",
-    "SqliteAccountRepository",
-    "SqliteRoleRepository",
-    "SqliteSendLogRepository",
-    "InMemorySendLogRepository",
-    "SendLogRepository",
-    "SqliteTokenRepository",
-    "SqliteUserRepository",
-    "InMemoryAccountRepository",
-    "InMemoryRoleRepository",
-    "InMemoryTokenRepository",
-    "InMemoryUserRepository",
-    "RoleRepository",
-    "TokenRepository",
-    "UserRepository",
 ]

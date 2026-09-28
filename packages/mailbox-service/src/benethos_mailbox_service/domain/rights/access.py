@@ -12,7 +12,7 @@ from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 
 from ...data.models import Grant, Role, User
-from ...errors import ForbiddenError, NotFoundError
+from ...errors import ForbiddenError, missing
 from . import permissions
 
 log = logging.getLogger(__name__)
@@ -20,6 +20,8 @@ log = logging.getLogger(__name__)
 ALL_ACCOUNTS = "*"
 ANY_RECIPIENT = "*"
 SEND_OPERATIONS = frozenset(permissions.GROUPS["send"])
+# Every right on every account: what the first user gets.
+ADMIN_GRANT = Grant(accounts=[ALL_ACCOUNTS], allow=[permissions.ADMIN])
 
 
 @dataclass(frozen=True)
@@ -107,9 +109,7 @@ class Access:
 
     @classmethod
     def admin(cls, user_id: str, name: str) -> Access:
-        return cls(
-            user_id, name, [Grant(accounts=[ALL_ACCOUNTS], allow=[permissions.ADMIN])]
-        )
+        return cls(user_id, name, [ADMIN_GRANT])
 
     def allows(self, operation: str, account_id: str | None = None) -> bool:
         if operation in permissions.AUTHENTICATED_OPERATIONS:
@@ -129,11 +129,18 @@ class Access:
                 return True
         return False
 
+    def filter(self, operation: str, account_ids: Iterable[str]) -> list[str]:
+        """The accounts of ``account_ids`` the operation is allowed on, each
+        once, in their order."""
+        return [a for a in dict.fromkeys(account_ids) if self.allows(operation, a)]
+
     def sees(self, account_id: str) -> bool:
         """Whether the account exists for this caller at all: some right on
         it that is about existing accounts."""
-        about_accounts = permissions.ACCOUNT_FREE | permissions.ALL_ACCOUNTS
-        return any(rule.operations - about_accounts for rule in self._on(account_id))
+        return any(
+            rule.operations - permissions.NOT_ON_AN_ACCOUNT
+            for rule in self._on(account_id)
+        )
 
     def anywhere(self, operation: str) -> bool:
         """Whether the operation is allowed on at least one account, or
@@ -145,13 +152,25 @@ class Access:
             for rule in self._rules
         )
 
+    def sees_status(self) -> bool:
+        """The status of the service is for callers who may list some
+        account."""
+        return self.anywhere("list_accounts")
+
+    def batches(self, operation: str, account_id: str) -> bool:
+        """Whether a batch of ``operation`` is allowed on the account: the
+        right to batch and the operation itself, as a batch checks them."""
+        return self.allows("batch_messages", account_id) and self.allows(
+            operation, account_id
+        )
+
     def require(self, operation: str, account_id: str | None = None) -> None:
         """Raise unless allowed: ``NotFoundError`` for an account this caller
         cannot see, ``ForbiddenError`` for a missing right."""
         if self.allows(operation, account_id):
             return
         if account_id is not None and not self.sees(account_id):
-            raise NotFoundError(f"account {account_id} not found")
+            raise missing("account", account_id)
         where = f" on account {account_id}" if account_id else ""
         raise ForbiddenError(f"missing right: {operation}{where}")
 
@@ -211,21 +230,12 @@ class Access:
     def operations_on(self, account_id: str) -> frozenset[str]:
         """Every account-bound operation allowed on one account."""
         return frozenset(
-            op
-            for op in permissions.GROUP_OF
-            if op not in permissions.ACCOUNT_FREE
-            and op not in permissions.ALL_ACCOUNTS
-            and self.allows(op, account_id)
+            op for op in permissions.ON_AN_ACCOUNT if self.allows(op, account_id)
         )
 
     def general_operations(self) -> frozenset[str]:
         """Operations not bound to one existing account."""
-        return frozenset(
-            op
-            for op in permissions.GROUP_OF
-            if op in permissions.ACCOUNT_FREE or op in permissions.ALL_ACCOUNTS
-            if self.allows(op)
-        )
+        return frozenset(op for op in permissions.NOT_ON_AN_ACCOUNT if self.allows(op))
 
     def _allows_everywhere(self, operation: str, limit: SendLimit) -> bool:
         return any(

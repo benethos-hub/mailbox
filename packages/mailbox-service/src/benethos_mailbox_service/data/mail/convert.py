@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ...errors import NotFoundError
+from ...errors import missing
 from ..models import Address, Attachment, AttachmentContent, MessageReference
 from .compose import REFERENCE_HEADER, read_reference
 from .parse import ParsedMessage
@@ -101,10 +101,10 @@ def attachment_id(index: int) -> str:
 def attachment(msg: ParsedMessage, attachment_id: str) -> AttachmentContent:
     """One attachment with its bytes, by the id ``message_fields`` gave it."""
     if not attachment_id.startswith("att_") or not attachment_id[4:].isdigit():
-        raise NotFoundError(f"attachment {attachment_id} not found")
+        raise missing("attachment", attachment_id)
     index = int(attachment_id[4:])
     if index >= len(msg.attachments):
-        raise NotFoundError(f"attachment {attachment_id} not found")
+        raise missing("attachment", attachment_id)
     part = msg.attachments[index]
     return AttachmentContent(
         filename=part.filename, content_type=part.content_type, data=part.payload

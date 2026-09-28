@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from benethos_mailbox_service.data.providers.ratelimit import TokenBucket, backoff
+from benethos_mailbox_service.common.ratelimit import TokenBucket, backoff
 
 
 class Time:

@@ -9,9 +9,9 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
+from benethos_mailbox_service.data.protocols.imap import ImapSession
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
 from benethos_mailbox_service.data.providers.imap import ImapProvider
-from benethos_mailbox_service.data.providers.protocols.imap import ImapSession
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.main import Services, build_services, create_app
 

@@ -8,9 +8,10 @@ from collections.abc import Callable, Mapping
 
 from pydantic import SecretStr
 
+from ...common import redact
 from ...common.ids import new_id
-from ...data.http import HostCheck
 from ...data.models import Account, AccountStatus, ProviderType
+from ...data.protocols import HostCheck
 from ...data.providers import (
     CredentialReader,
     ProviderSettings,
@@ -18,7 +19,7 @@ from ...data.providers import (
     hosts_in,
     settings_defaults,
 )
-from ...data.secrets import CredentialVault, redact
+from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository, IdempotencyRepository
 from ...errors import BadRequestError, MailboxServiceError
 from ..activity import ActivityLog, Actor
@@ -107,7 +108,15 @@ class AccountService:
         _no_secrets_in(settings)
         settings = {**settings_defaults(provider, email), **(settings or {})}
         secrets = dict(credentials or {})
-        try:
+        failed = self._activity.on_failure(
+            lambda exc: said.ConnectFailed(
+                by=Actor.of(access),
+                address=email,
+                provider=provider.value,
+                error=exc,
+            )
+        )
+        with failed:
             await self._check_hosts(settings)
             if secrets:
                 self._vault.require_ready()
@@ -121,16 +130,6 @@ class AccountService:
                 secrets,
                 signed_in,
             )
-        except MailboxServiceError as exc:
-            self._activity.record(
-                said.ConnectFailed(
-                    by=Actor.of(access),
-                    address=email,
-                    provider=provider.value,
-                    error=exc,
-                )
-            )
-            raise
         account = Account(
             id=new_id("acc"),
             provider=provider,

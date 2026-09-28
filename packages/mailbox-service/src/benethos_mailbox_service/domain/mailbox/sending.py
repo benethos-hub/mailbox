@@ -12,15 +12,13 @@ from __future__ import annotations
 import math
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Any, Literal
 
-from ...common import opaque
-from ...common.clock import utc_now
+from ...common.clock import iso, parse_iso, utc_now
 from ...common.ids import new_id
 from ...data.models import Page, SendFilter, SendOutcome, SendRecord, SentMessage
 from ...data.storage import SendLogRepository
 from ...errors import (
-    BadRequestError,
     MailboxServiceError,
     RecipientNotAllowedError,
     SendLimitError,
@@ -84,7 +82,7 @@ class SendControl:
             by = Actor.of(access)
             try:
                 self._allow(access, operation, account_id, recipients)
-            except SendLimitError as exc:
+            except MailboxServiceError as exc:
                 record("denied", error=exc.code)
                 self._activity.record(
                     said.SendLimitReached(
@@ -93,12 +91,8 @@ class SendControl:
                         reason=exc.message,
                         retry_after=exc.retry_after,
                     )
-                )
-                raise
-            except MailboxServiceError as exc:
-                record("denied", error=exc.code)
-                self._activity.record(
-                    said.SendRefused(by=by, account_id=account_id, code=exc.code)
+                    if isinstance(exc, SendLimitError)
+                    else said.SendRefused(by=by, account_id=account_id, code=exc.code)
                 )
                 raise
             try:
@@ -113,15 +107,11 @@ class SendControl:
                 record("failed", error="internal_error")
                 raise
             # Sent: from here on nothing may fail, or a client would send again.
-            try:
+            with self._activity.fail_quietly(
+                lambda exc: said.NotInAudit(by=by, account_id=account_id, error=exc)
+            ):
                 record(
                     "sent", refused=sent.refused, message_id_header=message_id_header
-                )
-            except Exception as exc:
-                self._activity.record(
-                    said.NotInAudit(
-                        by=Actor.of(access), account_id=account_id, error=exc
-                    )
                 )
             return sent
 
@@ -172,9 +162,7 @@ class SendControl:
         """The audit of every account the caller may audit, merged newest
         first. The audit outlives an account: a deleted one is still in it,
         for a caller whose grant names every account."""
-        audited = [
-            a for a in self._store.account_ids() if access.allows("list_sends", a)
-        ]
+        audited = access.filter("list_sends", self._store.account_ids())
         return self._page(audited, limit, cursor, matching)
 
     def list_sends(
@@ -199,20 +187,22 @@ class SendControl:
     ) -> Page[SendRecord]:
         before = None
         if cursor is not None:
-            try:
-                at, record_id = paging.decode_cursor(CURSOR, cursor)
-                before = (datetime.fromisoformat(at), str(record_id))
-            except (ValueError, TypeError):
-                raise BadRequestError("invalid cursor") from None
+            before = paging.decode_cursor(CURSOR, cursor, _before)
         records: list[SendRecord] = []
         for account_id in account_ids:
             records += self._store.list(
                 account_id, limit=limit + 1, before=before, matching=matching
             )
         records.sort(key=lambda record: (record.created_at, record.id), reverse=True)
+        records, more = paging.split_page(records, limit)
         next_cursor = None
-        if len(records) > limit:
-            records = records[:limit]
+        if more:
             last = records[-1]
-            next_cursor = opaque.encode(CURSOR, [last.created_at.isoformat(), last.id])
+            next_cursor = paging.encode_cursor(CURSOR, [iso(last.created_at), last.id])
         return Page[SendRecord](items=records, next_cursor=next_cursor)
+
+
+def _before(carried: Any) -> tuple[datetime, str]:
+    """The time and the id a cursor of the send log continues before."""
+    at, record_id = carried
+    return parse_iso(str(at)), str(record_id)

@@ -28,13 +28,15 @@ import anyio
 from ... import __version__
 from ...common.clock import utc_now
 from ...common.ids import new_id
+from ...common.ratelimit import backoff
 from ...data.secrets import CredentialVault
 from ...data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
 from ...errors import MailboxServiceError
-from ..activity import DISPATCHER, ActivityLog, system
+from ..activity import DISPATCHER, ActivityLog
 from ..activity import webhooks as said
 from ..changes import ChangeFeed
 from ..rights import Access
+from ..rounds import rounds
 from .service import sealed_label
 
 # How the dispatcher waits: anyio.sleep, or a fake in tests.
@@ -61,9 +63,16 @@ class Retries:
     longest_retry: float = 3600.0
 
     def pause(self, failed: int) -> timedelta:
-        """How long to wait after the ``failed``-th failed attempt."""
-        seconds = min(self.longest_retry, self.first_retry * 2 ** (failed - 1))
+        """How long to wait after the ``failed``-th failed attempt: the
+        backoff, without jitter."""
+        seconds = backoff(
+            failed - 1, self.first_retry, self.longest_retry, jitter=_longest
+        )
         return timedelta(seconds=seconds)
+
+
+def _longest(_shortest: float, longest: float) -> float:
+    return longest
 
 
 DEFAULT_RETRIES = Retries()
@@ -104,12 +113,13 @@ class WebhookDispatcher:
 
     async def run(self) -> None:
         """Until cancelled. A failure ends a round, never the dispatcher."""
-        while True:
-            try:
-                await self.deliver_due()
-            except Exception as exc:
-                self._activity.record(system.RoundFailed(by=DISPATCHER, error=exc))
-            await self._sleep(POLL)
+        await rounds(
+            self.deliver_due,
+            pause=POLL,
+            sleep=self._sleep,
+            activity=self._activity,
+            by=DISPATCHER,
+        )
 
     async def deliver_due(self) -> None:
         """One round over every webhook that is due."""
@@ -229,7 +239,7 @@ class WebhookDispatcher:
             return []
         wanted = record.webhook.accounts
         candidates = wanted if wanted is not None else self._account_ids()
-        return [a for a in candidates if access.allows("list_changes", a)]
+        return access.filter("list_changes", candidates)
 
     async def _post(
         self, record: WebhookRecord, body: bytes, now: datetime

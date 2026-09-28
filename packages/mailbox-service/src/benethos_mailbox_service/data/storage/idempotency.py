@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
+from .table import drop_where
+
 
 @dataclass(frozen=True)
 class StoredResult:
@@ -47,9 +49,7 @@ class InMemoryIdempotencyRepository:
         self._items[(account_id, user_id, key)] = stored
 
     def purge(self, before: datetime) -> None:
-        for item in [k for k, v in self._items.items() if v.created_at < before]:
-            del self._items[item]
+        drop_where(self._items, lambda _, stored: stored.created_at < before)
 
     def forget_account(self, account_id: str) -> None:
-        for item in [k for k in self._items if k[0] == account_id]:
-            del self._items[item]
+        drop_where(self._items, lambda key, _: key[0] == account_id)

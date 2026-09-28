@@ -16,16 +16,16 @@ from benethos_mailbox_service.data.discovery.dns import mx_hosts
 from benethos_mailbox_service.data.discovery.suffix import (
     registrable_domain,
 )
-from benethos_mailbox_service.data.http import (
-    SafeFetcher,
-    host_addresses,
-    is_public_address,
-)
 from benethos_mailbox_service.data.models import (
     CredentialKind,
     DiscoverySourceName,
     Security,
     ServerProtocol,
+)
+from benethos_mailbox_service.data.protocols.http import (
+    SafeFetcher,
+    host_addresses,
+    is_public_address,
 )
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 

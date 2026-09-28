@@ -32,6 +32,7 @@ from .discovery import (
 )
 from .folders import Folder, FolderCreate, FolderRole, FolderUpdate
 from .messages import (
+    SEARCH_TEXT_PATTERN,
     Address,
     Attachment,
     AttachmentContent,
@@ -104,6 +105,7 @@ __all__ = [
     "ProviderType",
     "Recipient",
     "Role",
+    "SEARCH_TEXT_PATTERN",
     "Security",
     "SendFilter",
     "SendOutcome",

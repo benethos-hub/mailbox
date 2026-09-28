@@ -26,6 +26,7 @@ from datetime import datetime, timedelta
 
 from ...common.clock import utc_now
 from ...errors import RateLimitedError
+from ..bounded import trim
 
 LIMIT = 10
 WINDOW = timedelta(minutes=15)
@@ -100,12 +101,12 @@ class SignInThrottle:
 
     def _trim_locks(self, now: datetime) -> None:
         """Lockouts that ran out go first, then those ending soonest."""
-        if len(self._locked) <= self._max_sources:
-            return
-        for source in [s for s, until in self._locked.items() if until <= now]:
-            del self._locked[source]
-        while len(self._locked) > self._max_sources:
-            del self._locked[min(self._locked, key=lambda s: self._locked[s])]
+        trim(
+            self._locked,
+            self._max_sources,
+            gone=lambda until: until <= now,
+            age=lambda until: until,
+        )
 
     def succeeded(self, source: str) -> None:
         """A successful sign-in clears the source."""

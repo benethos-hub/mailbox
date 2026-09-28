@@ -18,8 +18,18 @@ from pydantic import SecretStr
 
 from benethos_mailbox_service.common.clock import utc_now
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.http import ApiClient
 from benethos_mailbox_service.data.models import Grant, ProviderType
+from benethos_mailbox_service.data.protocols.http import ApiClient
+from benethos_mailbox_service.data.protocols.oauth import (
+    App,
+    Identity,
+    OAuthClient,
+    RefreshingTokens,
+    Tokens,
+    authorize_url,
+    identity_of,
+    new_pkce,
+)
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
     MailProvider,
@@ -30,16 +40,6 @@ from benethos_mailbox_service.data.providers import (
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.providers.microsoft import (
     endpoints as microsoft_endpoints,
-)
-from benethos_mailbox_service.data.providers.protocols.oauth import (
-    App,
-    Identity,
-    OAuthClient,
-    RefreshingTokens,
-    Tokens,
-    authorize_url,
-    identity_of,
-    new_pkce,
 )
 from benethos_mailbox_service.domain.accounts.adapters import REFRESH_TOKEN
 from benethos_mailbox_service.domain.rights.access import Access

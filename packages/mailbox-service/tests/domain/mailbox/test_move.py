@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from benethos_mailbox_service.data.models import MessageUpdate
+from benethos_mailbox_service.data.protocols.imap import _new_uids, _uid_set
 from benethos_mailbox_service.data.providers.imap import mappers
-from benethos_mailbox_service.data.providers.protocols.imap import _new_uids, _uid_set
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,

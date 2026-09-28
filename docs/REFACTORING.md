@@ -1,19 +1,21 @@
 # Refactoring the service
 
-Proposal of 2026-09-28, in three parts. Sections 1 to 7 are the
-domain: it had grown to 27 modules side by side in one folder, and got
+Concept of 2026-09-28, in three parts, built the same day. Sections 1
+to 7 are the domain: it had grown to 27 modules side by side in one folder, and got
 packages by area, and a shape for the change feed like the one
 [LOGGING.md](LOGGING.md) section 7 gives the activities. Section 8 is
 the data layer and `common`, the same rules applied there. Section 9 is
 the code written twice, merged into helpers once the modules are in
 place. Behaviour, the API and the OpenAPI document stay as they are
 throughout. The rules that came out of it, in short, are
-[ARCHITECTURE.md](ARCHITECTURE.md). What the user decides is marked as
-decided, everything else is the proposal.
+[ARCHITECTURE.md](ARCHITECTURE.md). What the user decided is marked as
+decided.
 
 **Built 2026-09-28**, steps 2 to 5 of section 6. Sections 1 and 3.1
-describe the domain before. Section 8 is not built. Section 9 lists the
-code written twice, found 2026-09-28, to be merged after section 8.
+describe the domain before. Sections 8 and 9 are built as well, in the
+order of 9.4, on one branch: sections 8.1 and 9.1 to 9.3 describe the
+code before. Where a finding of section 9 was built otherwise, 9.5 says
+so, and the commit that built it says why.
 
 ## 1. Why
 
@@ -275,7 +277,7 @@ once at the end, since nothing they see changes.
 
 ## 8. The data layer and `common`
 
-Proposal of 2026-09-28, the second part. `data/` is in packages by kind
+Concept of 2026-09-28, the second part. `data/` is in packages by kind
 already, so it does not move as a whole. This part applies the rules of
 section 2 to it, takes two modules of a global nature out of it into
 `common/`, and names what else is out of place. Nothing changes in
@@ -349,8 +351,9 @@ helpers, `discovery/__init__.py` `default_sources` and `preset_hosts`.
 Considered and left where they are: `data/logbook.py` is a store of log
 lines the domain reads like a repository, and needs nothing but
 `redact`. `data/files.py` is I/O for `data` alone. `data/mail/text.py`
-is the text of a mail, and the web layer reads it through `data.mail`.
-`data/http/safe.py` is the network.
+is the text of a mail, and the web layer reads it through `data.mail`
+(moved after all, as `common/plaintext.py`, by 9.1 A1: the web reads
+it for a page too). `data/http/safe.py` is the network.
 
 The rule of `common` says "stateless helpers". `redact` keeps the noted
 secrets in the module, process-wide by design, and a `TokenBucket` has
@@ -378,7 +381,8 @@ an async `Sleep` of its own. That waits for a third user (8.6).
   `default_sources` and `preset_hosts` to `discovery/sources.py`. Each
   `__init__.py` then imports, and lists `__all__`, as the domain's do.
 - **`mail/__init__.py` offers its modules**, `compose`, `parse`,
-  `convert`, `text` and `fields`, as `activity` offers its areas, since
+  `convert`, `text` (until A1) and `fields`, as `activity` offers its
+  areas, since
   `compose.build(...)` reads better than a flat list of functions. So
   `from ...mail import compose` goes through the `__init__.py`, and
   `ParsedMessage`, `from_html` and the field helpers are reached that
@@ -444,7 +448,10 @@ and `integration/test_redact.py` too, if it tests the module alone.
 `tests/data/mail/` and `tests/data/secrets/` are empty today, while
 `test_html_mail.py`, `test_secrets.py`, `test_passwords.py` and
 `test_backup.py` sit in `integration/`: each is checked for whether it
-tests one layer, and moves if so.
+tests one layer, and moves if so. Built: `test_ratelimit.py` and
+`test_redact.py` are in `tests/common/`. The four in `integration/`
+reach the command line, the domain or a provider beside the module
+they are named for, and stay.
 
 ### 8.5 Order of work
 
@@ -461,7 +468,7 @@ tests one layer, and moves if so.
 6. The architecture checks for `data`, CLAUDE.md's layout and
    CONCEPT.md 1.1 with the lines of 8.3.
 
-Steps 2 to 6 are one branch, one commit per step, each passing all
+Steps 2 to 6 are one commit each, in the branch of 9.4, each passing all
 checks. The live checks run once at the end. A backup and its restore
 are covered by `test_backup.py` and `test_cli.py`, not by a live check,
 so step 3 is checked by hand once: `backup` to a file, `restore` into a
@@ -480,8 +487,7 @@ fresh folder.
   architecture, and ARCHITECTURE.md takes over the whole content of
   CLAUDE.md's sections "Layers of the service" and "Encapsulation and
   replaceable parts", together with what section 8 adds. That is the
-  last step, in a branch of its own, after the refactoring, not part of
-  it.
+  last step of the refactoring.
 
 ## 9. Code written twice
 
@@ -566,25 +572,56 @@ C3.
 The moves of section 8 and the merges of this section touch the same
 files: the SQLite repositories (A5, C1), the providers (8.3, C4, C5,
 C8), the vault (8.2, C7), `delivery.py` and `worker.py` (8.2, B10).
-So they run one after the other, each branch from `main` after the
-previous merge, never side by side:
+So they run one after the other, never side by side. **Decided
+2026-09-28:** one branch for all of it, in this order:
 
-1. **Section 8**, moves only, one branch (8.5). Every later step finds
-   the files where they will stay.
+1. **Section 8**, moves only (8.5). Every later step finds the files
+   where they will stay.
 2. **`common` and the helpers other layers build on** (9.1, and C3 on
-   A6, C10): one branch. It touches `data`, the domain and the web at
-   the call sites, so it goes before the layer branches, which then
-   start from the helpers.
-3. **`data`** (9.3): one branch, bottom up as the lines of 8.3: storage
-   (C1, C2), then `mail` and `protocols` (C4, C9), then the providers
-   (C5, C6, C8, C11), then the vault (C7).
-4. **Domain and web** (9.2): one branch, `rights` first (B6, B8), then
-   the services (B1, B2, B9, B13), `paging` (B4), the loops (B3, B10),
-   then the pages (B5, B7, B12, B14). B11 is a commit of its own with
-   its CHANGELOG entry.
+   A6, C10). It touches `data`, the domain and the web at the call
+   sites, so it goes before the layers, which then start from the
+   helpers. The side finding of A3 is fixed in a commit of its own,
+   with its CHANGELOG entry.
+3. **`data`** (9.3), bottom up as the lines of 8.3: storage (C1, C2),
+   then `mail` and `protocols` (C4, C9), then the providers (C5, C6,
+   C8, C11), then the vault (C7).
+4. **Domain and web** (9.2): `rights` first (B6, B8), then the services
+   (B1, B2, B9, B13), `paging` (B4), the loops (B3, B10), then the
+   pages (B5, B7, B12, B14). B11 is a commit of its own with its
+   CHANGELOG entry. A stored idempotency key or cursor that no longer
+   matches is accepted: at worst a test database starts afresh.
+5. **ARCHITECTURE.md takes over** everything on the architecture from
+   CLAUDE.md (8.6), and CLAUDE.md points to it.
 
-Within a branch, one commit per finding or per row of the tables above.
-Each commit passes all checks. A helper new to `common` or the domain
-gets its test in the same commit. The live checks run once per branch,
-at the end. After step 4, ARCHITECTURE.md takes over CLAUDE.md's
-sections (8.6), the last branch.
+One commit per finding or per row of the tables above. Each commit
+passes all checks. A helper new to `common` or the domain gets its test
+in the same commit. The live checks run once, at the end. A problem
+found on the way is noted, and its step waits until the end.
+
+### 9.5 Built otherwise
+
+Where the code differed from the tables, and what was accepted. **Decided
+2026-09-28:** all of it stays as built.
+
+- **B6**: the account list keeps a loop of its own, since it filters by
+  two rights and three fields more. `Access.filter` serves the rest.
+- **B7**: `if_allowed` is synchronous. The folder list of the mail
+  page is awaited and keeps its own check, and `system/status.py` is
+  the domain, where the helper does not belong.
+- **B10**: `main._loop` stays as the guard around a background loop
+  that ends for good.
+- **B14**: the six `why()` of the activity catalogue stay, since their
+  reasons are of different types.
+- **C8**: the Microsoft adapter keeps its folder roles, which come from
+  Graph's well-known names, not from `rules`.
+- **C11**: the method is `MessageFilter.flags_match`, not `matches`,
+  since it checks unread, starred and attachments alone.
+
+Three small changes in behaviour came with the merges:
+
+- **B2**: a user's new name is checked after the right and the cover.
+  A caller who may not manage the user learns nothing about taken
+  names: `403` where it was `409`. In the CHANGELOG.
+- **B4**: the log page hands out an opaque cursor, as every other list.
+- **A3**: `is_host_name(..., dotted=False)` for the domain of an
+  address, so its error messages stay as they were.

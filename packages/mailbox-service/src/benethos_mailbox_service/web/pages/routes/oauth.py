@@ -19,7 +19,7 @@ from ....data.models import ProviderType
 from ...services import OAuth
 from ...urls import oauth_callback
 from ..deps import Actor, Viewer
-from ..forms import failing
+from ..forms import failing, text_of
 from ..templates import back, render
 
 router = APIRouter()
@@ -37,7 +37,7 @@ async def start(
     request: Request, caller: Actor, provider: str, oauth: OAuth
 ) -> Response:
     form = await request.form()
-    account_id = str(form.get("account_id") or "") or None
+    account_id = text_of(form, "account_id", strip=False) or None
     fallback = f"/ui/accounts/{account_id}" if account_id else "/ui/accounts/new"
     here = fallback
     kind = _provider(provider)
@@ -49,7 +49,7 @@ async def start(
             kind,
             oauth_callback(request, kind),
             account_id=account_id,
-            login_hint=str(form.get("login_hint") or "").strip() or None,
+            login_hint=text_of(form, "login_hint") or None,
         )
     return RedirectResponse(url, status_code=303)
 

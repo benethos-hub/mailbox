@@ -11,8 +11,6 @@ request that fails stores nothing: it may be tried again.
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import TypeVar
@@ -25,6 +23,7 @@ from ...errors import IdempotencyConflictError
 from ..activity import SERVICE, ActivityLog
 from ..activity import mailbox as said
 from ..locks import KeyedLocks
+from .fingerprint import fingerprint
 
 R = TypeVar("R", bound=BaseModel)
 
@@ -58,13 +57,13 @@ class Idempotency:
         sent before. Another user's result is never handed out."""
         if key is None:
             return await action()
-        fingerprint = _fingerprint(operation, request)
+        asked = fingerprint(operation, request)
         async with self._locks.get((account_id, user_id, key)):
             now = self._clock()
             self._store.purge(now - KEEP)
             stored = self._store.get(account_id, user_id, key)
             if stored is not None:
-                if (stored.operation, stored.request_hash) != (operation, fingerprint):
+                if (stored.operation, stored.request_hash) != (operation, asked):
                     raise IdempotencyConflictError(
                         "this Idempotency-Key was used with a different request"
                     )
@@ -77,29 +76,15 @@ class Idempotency:
             result = await action()
             # Done, e.g. sent: the result goes to the caller even when it
             # cannot be stored, or the caller would take it for a failure.
-            try:
+            with self._activity.fail_quietly(
+                lambda exc: said.ResultNotKept(
+                    by=SERVICE, account_id=account_id, operation=operation, error=exc
+                )
+            ):
                 self._store.put(
                     account_id,
                     user_id,
                     key,
-                    StoredResult(operation, fingerprint, result.model_dump_json(), now),
-                )
-            except Exception as exc:
-                self._activity.record(
-                    said.ResultNotKept(
-                        by=SERVICE,
-                        account_id=account_id,
-                        operation=operation,
-                        error=exc,
-                    )
+                    StoredResult(operation, asked, result.model_dump_json(), now),
                 )
             return result
-
-
-def _fingerprint(operation: str, request: BaseModel) -> str:
-    canonical = json.dumps(
-        {"operation": operation, "request": request.model_dump(mode="json")},
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    return hashlib.sha256(canonical.encode()).hexdigest()

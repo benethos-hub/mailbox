@@ -3,16 +3,12 @@ cursor that carries it, and running one step on every account at once."""
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import anyio
-from pydantic import BaseModel
 
-from ...common import opaque
 from ...data.models import AccountFailure, MessageSummary
 from ...errors import BadRequestError, MailboxServiceError
 from .. import paging
@@ -56,26 +52,16 @@ def advance(position: Position, window: list[Chunk], consumed: int) -> Position:
     return Position(position.folder_id, last, 0)
 
 
-def fingerprint(*query: BaseModel | str | None) -> str:
-    """What a list was asked for, short. A cursor carries it, so that it
-    continues the list it came from and no other."""
-    canonical = json.dumps(
-        [q.model_dump(mode="json") if isinstance(q, BaseModel) else q for q in query],
-        sort_keys=True,
-    )
-    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
-
-
 def encode_cursor(positions: dict[str, Position], query: str) -> str:
     state = {a: [p.folder_id, p.cursor, p.offset, p.done] for a, p in positions.items()}
-    return opaque.encode(_CURSOR_PREFIX, {"q": query, "at": state})
+    return paging.encode_cursor(_CURSOR_PREFIX, {"q": query, "at": state})
 
 
 def decode_cursor(value: str, query: str) -> dict[str, Position]:
     """Where each account stands. A cursor of another search, folder or
     filter is refused: its positions mean nothing for this one."""
-    state = paging.decode_cursor(_CURSOR_PREFIX, value)
-    try:
+
+    def positions(state: Any) -> dict[str, Position]:
         if state["q"] != query:
             raise BadRequestError(
                 "the cursor belongs to another search: start without it"
@@ -84,8 +70,8 @@ def decode_cursor(value: str, query: str) -> dict[str, Position]:
             account_id: Position(folder_id, cursor, int(offset), bool(done))
             for account_id, (folder_id, cursor, offset, done) in state["at"].items()
         }
-    except (ValueError, TypeError, AttributeError, KeyError):
-        raise BadRequestError("invalid cursor") from None
+
+    return paging.decode_cursor(_CURSOR_PREFIX, value, positions)
 
 
 async def per_account(

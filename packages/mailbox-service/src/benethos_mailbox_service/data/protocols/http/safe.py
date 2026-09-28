@@ -23,8 +23,16 @@ from typing import Any
 import anyio
 import httpx
 
-from ...errors import ProviderError, ProviderUnavailableError
-from .base import new_client, parse_url, pinned_request, read_capped, unreachable
+from ....common.hosts import ascii_host
+from ....errors import ProviderError, ProviderUnavailableError
+from .base import (
+    host_of,
+    new_client,
+    parse_url,
+    pinned_request,
+    read_capped,
+    unreachable,
+)
 
 TIMEOUT = 5.0
 MAX_BYTES = 256 * 1024
@@ -115,8 +123,9 @@ class SafeFetcher:
     ) -> None:
         self._resolve = resolve
         self._lookup = lookup
-        # Hosts an operator allows although they resolve to private addresses.
-        self._internal = frozenset(h.lower().rstrip(".") for h in internal_hosts)
+        # Hosts an operator allows although they resolve to private
+        # addresses, in ASCII: a host may be written in Unicode or punycode.
+        self._internal = frozenset(filter(None, map(ascii_host, internal_hosts)))
         self._transport = transport
         self._timeout = timeout
         self._max_bytes = max_bytes
@@ -129,7 +138,7 @@ class SafeFetcher:
             for _ in range(MAX_REDIRECTS + 1):
                 if target.scheme != "https":
                     raise ProviderError(f"refused to fetch {target}: HTTPS only")
-                host = target.raw_host.decode("ascii").lower()
+                host = host_of(target)
                 address = await self.checked_address(host, target.port or 443)
                 if address is None:
                     return None
@@ -163,7 +172,7 @@ class SafeFetcher:
     def _judged(self, host: str, addresses: list[str]) -> str | None:
         if not addresses:
             return None
-        if host.lower().rstrip(".") not in self._internal:
+        if ascii_host(host) not in self._internal:
             private = [a for a in addresses if not is_public_address(a)]
             if private:
                 raise ProviderError(

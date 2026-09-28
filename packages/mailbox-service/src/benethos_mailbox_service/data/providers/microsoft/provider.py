@@ -20,12 +20,12 @@ from __future__ import annotations
 
 import base64
 import logging
-import math
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping
 from typing import Any
 from urllib.parse import quote, unquote, urlencode, urlsplit
 
+from ....common.chunks import batched
 from ....errors import (
     BadRequestError,
     ChangesExpiredError,
@@ -36,10 +36,9 @@ from ....errors import (
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
+    missing,
 )
-from ...http import Answer, ApiClient
-from ...mail import compose, convert
-from ...mail.parse import ParsedMessage
+from ...mail import compose, convert, parse
 from ...models import (
     AttachmentContent,
     Folder,
@@ -51,6 +50,7 @@ from ...models import (
     Page,
     SentMessage,
 )
+from ...protocols import Answer, ApiClient
 from .. import rules
 from ..base import Capability, ChangedMessage, FolderChanges, TokenSource
 from . import mappers
@@ -110,9 +110,7 @@ class MicrosoftProvider:
         While Graph asked to be left alone, nothing is sent."""
         wait = self._rest_until - self._clock()
         if wait > 0:
-            raise ProviderUnavailableError(
-                f"microsoft asked to wait: next attempt in {math.ceil(wait)}s"
-            )
+            raise rules.resting("microsoft asked to wait", wait)
         for attempt in (1, 2):
             token = await self._tokens.access_token()
             headers = {
@@ -135,7 +133,7 @@ class MicrosoftProvider:
                 self._tokens.reject()
                 continue
             if not answer.ok:
-                rest = _retry_after(answer)
+                rest = _retry_after(answer) if answer.status in (429, 503) else 0.0
                 self._rest_until = self._clock() + rest
                 if rest > 0:
                     log.debug("microsoft asked to wait %.0fs", rest)
@@ -146,16 +144,33 @@ class MicrosoftProvider:
     async def _json(self, method: str, path: str, **kwargs: Any) -> Any:
         return (await self._call(method, path, **kwargs)).json()
 
+    async def _pages(self, body: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
+        """``body`` and every page after it, as Graph links them."""
+        while True:
+            yield body
+            link = body.get("@odata.nextLink")
+            if not link:
+                return
+            body = await self._json("GET", _own_path(link))
+
     async def _all(self, path: str, params: Mapping[str, str]) -> list[dict[str, Any]]:
         """Every item of a list, following Graph's pages."""
         items: list[dict[str, Any]] = []
-        body = await self._json("GET", path, params=params)
-        while True:
-            items.extend(body.get("value") or [])
-            link = body.get("@odata.nextLink")
-            if not link:
-                return items
-            body = await self._json("GET", _own_path(link))
+        async for page in self._pages(await self._json("GET", path, params=params)):
+            items.extend(page.get("value") or [])
+        return items
+
+    async def _move(self, path: str, destination: str) -> Any:
+        """Moves the folder or message at ``path``. Graph answers with it
+        in its new place."""
+        return await self._json(
+            "POST", f"{path}/move", json_body={"destinationId": destination}
+        )
+
+    async def _parent(self, path: str) -> Any:
+        """The id of the folder the message at ``path`` is in."""
+        where = await self._json("GET", path, params={"$select": "parentFolderId"})
+        return where.get("parentFolderId")
 
     # --- folders --------------------------------------------------------------------
 
@@ -215,9 +230,7 @@ class MicrosoftProvider:
         # Graph names as the parent of a top-level folder.
         root = await self._root_id()
         if (item.get("parentFolderId") or root) != (parent_id or root):
-            item = await self._json(
-                "POST", f"{path}/move", json_body={"destinationId": parent_id or root}
-            )
+            item = await self._move(path, parent_id or root)
         return mappers.folder(item, await self._folder_roles(), root)
 
     async def _root_id(self) -> str:
@@ -299,15 +312,15 @@ class MicrosoftProvider:
         """GET each of ``urls`` under immutable ids, twenty to a JSON
         batch. The body of each answered with 200, by its index."""
         bodies: dict[int, dict[str, Any]] = {}
-        for start in range(0, len(urls), BATCH_SIZE):
+        for batch in batched(list(enumerate(urls)), BATCH_SIZE):
             requests = [
                 {
-                    "id": str(start + n),
+                    "id": str(n),
                     "method": "GET",
                     "url": url,
                     "headers": {"Prefer": IMMUTABLE_IDS},
                 }
-                for n, url in enumerate(urls[start : start + BATCH_SIZE])
+                for n, url in batch
             ]
             answer = await self._json(
                 "POST", "/$batch", json_body={"requests": requests}
@@ -330,7 +343,7 @@ class MicrosoftProvider:
         if item.get("isDraft"):
             # What a draft answers lives in its MIME only.
             thread = convert.thread_fields(
-                ParsedMessage(await self.get_raw(message_id))
+                parse.ParsedMessage(await self.get_raw(message_id))
             )
             found = found.model_copy(
                 update={k: thread[k] for k in ("reference", "in_reply_to")}
@@ -405,7 +418,7 @@ class MicrosoftProvider:
         except BadRequestError:
             item = {}
         if not item.get("isDraft"):
-            raise NotFoundError(f"draft {draft_id} not found")
+            raise missing("draft", draft_id)
 
     # --- changing -------------------------------------------------------------------
 
@@ -422,9 +435,7 @@ class MicrosoftProvider:
             if body:
                 item = await self._json("PATCH", path, json_body=body)
             if target is not None:
-                item = await self._json(
-                    "POST", f"{path}/move", json_body={"destinationId": target}
-                )
+                item = await self._move(path, target)
             if item is None:
                 item = await self._json(
                     "GET", path, params={"$select": mappers.SUMMARY_FIELDS}
@@ -446,13 +457,9 @@ class MicrosoftProvider:
                 await self._delete_for_good(message_id, trash)
                 return None
             path = f"/me/messages/{_id(message_id)}"
-            where = await self._json("GET", path, params={"$select": "parentFolderId"})
-            if where.get("parentFolderId") == trash:
+            if await self._parent(path) == trash:
                 raise rules.in_trash_already()
-            item = await self._json(
-                "POST", f"{path}/move", json_body={"destinationId": trash}
-            )
-            return mappers.summary(item)
+            return mappers.summary(await self._move(path, trash))
 
         return await rules.per_id(message_ids, one)
 
@@ -462,11 +469,8 @@ class MicrosoftProvider:
         if trash is None:
             trash = await self._role_id(FolderRole.TRASH)
         path = f"/me/messages/{_id(message_id)}"
-        where = await self._json("GET", path, params={"$select": "parentFolderId"})
-        if where.get("parentFolderId") != trash:
-            item = await self._json(
-                "POST", f"{path}/move", json_body={"destinationId": trash}
-            )
+        if await self._parent(path) != trash:
+            item = await self._move(path, trash)
             path = f"/me/messages/{_id(str(item['id']))}"
         await self._call("DELETE", path)
 
@@ -518,21 +522,18 @@ class MicrosoftProvider:
             body = await self._json("GET", _own_path(token))
         changed: list[ChangedMessage] = []
         removed: list[str] = []
-        while True:
-            for item in body.get("value") or []:
+        delta = None
+        async for page in self._pages(body):
+            for item in page.get("value") or []:
                 if "@removed" in item:
                     removed.append(str(item["id"]))
                 else:
                     created = mappers.when(item.get("createdDateTime"))
                     changed.append(ChangedMessage(str(item["id"]), created))
-            link = body.get("@odata.nextLink")
-            if link:
-                body = await self._json("GET", _own_path(link))
-                continue
-            delta = body.get("@odata.deltaLink")
-            if not delta:
-                raise ProviderError("microsoft answered a delta query without a link")
-            return FolderChanges(_own_path(delta), changed, removed)
+            delta = page.get("@odata.deltaLink")
+        if not delta:
+            raise ProviderError("microsoft answered a delta query without a link")
+        return FolderChanges(_own_path(delta), changed, removed)
 
     async def wait_for_change(self, timeout: float) -> bool:
         """No push yet: Graph's change notifications need a public endpoint
@@ -569,8 +570,6 @@ def _own_path(link: str) -> str:
 
 def _retry_after(answer: Answer) -> float:
     """The seconds Graph asks to wait, 0 when it asks nothing."""
-    if answer.status not in (429, 503):
-        return 0.0
     value = answer.headers.get("retry-after", "")
     return float(value) if value.isdigit() else 0.0
 
@@ -595,7 +594,7 @@ def _failure(answer: Answer) -> MailboxServiceError:
     if answer.status == 400:
         return BadRequestError(text)
     if answer.status in (429, 502, 503, 504):
-        wait = answer.headers.get("retry-after")
-        later = f", retry after {wait}s" if wait else ""
+        wait = _retry_after(answer)
+        later = f", retry after {wait:.0f}s" if wait else ""
         return ProviderUnavailableError(f"microsoft is busy{later} ({code})")
     return ProviderError(text)

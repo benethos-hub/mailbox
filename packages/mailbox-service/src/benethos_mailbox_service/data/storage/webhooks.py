@@ -8,9 +8,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
-from ...errors import ConflictError
-from ..models.webhooks import Webhook
-from .table import missing
+from ..models import Webhook
+from .table import Table
 
 
 @dataclass(frozen=True)
@@ -94,27 +93,20 @@ class WebhookRepository(Protocol):
 
 class InMemoryWebhookRepository:
     def __init__(self) -> None:
-        self._records: dict[str, WebhookRecord] = {}
+        self._records: Table[WebhookRecord] = Table("webhook")
         self._attempts: dict[str, list[Attempt]] = {}
 
     def add(self, record: WebhookRecord) -> None:
-        """A new webhook. An id that exists is a conflict, as it is in SQL."""
-        if record.webhook.id in self._records:
-            raise ConflictError(f"webhook {record.webhook.id} exists already")
-        self._records[record.webhook.id] = record
+        self._records.add(record.webhook.id, record)
 
     def get(self, webhook_id: str) -> WebhookRecord:
-        record = self._records.get(webhook_id)
-        if record is None:
-            raise missing("webhook", webhook_id)
-        return record
+        return self._records.get(webhook_id)
 
     def list(self) -> list[WebhookRecord]:
-        return sorted(self._records.values(), key=lambda r: r.webhook.created_at)
+        return sorted(self._records.list(), key=lambda r: r.webhook.created_at)
 
     def delete(self, webhook_id: str) -> None:
-        self.get(webhook_id)
-        del self._records[webhook_id]
+        self._records.delete(webhook_id)
         self._attempts.pop(webhook_id, None)
 
     def delete_for_user(self, user_id: str) -> int:
@@ -131,13 +123,15 @@ class InMemoryWebhookRepository:
         last_delivery_at: datetime | None,
         last_error: str | None,
     ) -> None:
-        record = self._records.get(webhook_id)
-        if record is None:
+        if webhook_id not in self._records:
             return
+        record = self._records.get(webhook_id)
         webhook = record.webhook.model_copy(
             update={"last_delivery_at": last_delivery_at, "last_error": last_error}
         )
-        self._records[webhook_id] = replace(record, webhook=webhook, delivery=delivery)
+        self._records.put(
+            webhook_id, replace(record, webhook=webhook, delivery=delivery)
+        )
 
     def add_attempt(self, attempt: Attempt, *, keep: int) -> None:
         if attempt.webhook_id not in self._records:

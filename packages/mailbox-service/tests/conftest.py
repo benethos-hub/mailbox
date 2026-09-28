@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service import main
+from benethos_mailbox_service.common import redact
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
     Account,
@@ -34,7 +35,6 @@ from benethos_mailbox_service.data.secrets import (
     Scrypt,
     cipher,
     encode_recovery,
-    redact,
 )
 from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.service import AuthService

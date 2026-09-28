@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import timedelta
 from typing import Annotated, Any
-from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
@@ -14,10 +13,10 @@ from ....data.models import Grant, Role
 from ....domain.rights import Access
 from ....domain.users import UserService
 from ...services import Users, get_accounts, get_users
-from ..deps import Actor, Viewer, account_names
+from ..deps import Actor, Viewer, account_names, if_allowed
 from ..effective import view_of
 from ..filters import Field, filter_bar
-from ..forms import FormError, failing
+from ..forms import FormError, failing, text_of
 from ..grants import (
     GROUP_NAMES,
     GROUP_SECTIONS,
@@ -29,7 +28,7 @@ from ..grants import (
     typed_rows,
 )
 from ..session import show_once, take_once
-from ..templates import back, render
+from ..templates import back, render, segment
 
 router = APIRouter()
 
@@ -62,10 +61,11 @@ def _editor(
 def _role_choices(request: Request, caller: Access, held: list[str]) -> list[str]:
     """The roles a user may be given: every role the caller sees, and those
     the user holds already, so a save keeps them."""
-    known = (
-        {role.id for role in get_users(request).list_roles(caller)}
-        if caller.allows("list_roles")
-        else set()
+    known: set[str] = if_allowed(
+        caller,
+        "list_roles",
+        lambda: {role.id for role in get_users(request).list_roles(caller)},
+        set(),
     )
     return sorted(known | set(held))
 
@@ -129,12 +129,20 @@ def _new_user_page(
 def _typed_user(form: Any) -> dict[str, Any]:
     """The fields of a user's editor as they were submitted."""
     return {
-        "name": str(form.get("name") or "").strip(),
+        "name": text_of(form, "name"),
         "roles": [str(role) for role in form.getlist("roles")],
         "signs_in_to": str(form.get("signs_in_to") or "api"),
         "one_time": "one_time" in form,
         "ui_sign_in": "ui_sign_in" in form,
         "disabled": "disabled" in form,
+    }
+
+
+def _typed_token(form: Any) -> dict[str, str]:
+    """The fields of a new token as they were submitted."""
+    return {
+        "name": text_of(form, "name"),
+        "days": text_of(form, "days"),
     }
 
 
@@ -146,19 +154,20 @@ def _typed_rows(form: Any) -> list[GrantRow] | None:
 @router.post("/users")
 async def create_user(request: Request, caller: Actor, users: Users) -> Response:
     form = await request.form()
-    ui_sign_in = form.get("signs_in_to") == "ui"
+    typed = _typed_user(form)
+    ui_sign_in = typed["signs_in_to"] == "ui"
     with failing(
         "/ui/users/new", again=lambda err: _new_user_page(request, caller, form, err)
     ):
         user = users.create_user(
             caller,
-            str(form.get("name") or "").strip(),
-            [str(role) for role in form.getlist("roles")],
+            typed["name"],
+            typed["roles"],
             read_grants(form),
             ui_sign_in=ui_sign_in,
         )
     here = f"/ui/users/{user.id}"
-    if ui_sign_in and "one_time" in form:
+    if ui_sign_in and typed["one_time"]:
         with failing(here, f"{user.name} created, but no password: "):
             password = await users.one_time_password(caller, user.id)
         # Shown on the next page, once, and never in the URL.
@@ -187,8 +196,8 @@ def _user_page(
     ``token_form`` the fields of a new token do."""
     found = users.get_user(caller, user_id)
     typed = _typed_user(form) if form is not None else None
-    tokens = (
-        users.list_tokens(caller, user_id) if caller.allows("list_tokens") else None
+    tokens = if_allowed(
+        caller, "list_tokens", lambda: users.list_tokens(caller, user_id), None
     )
     return render(
         request,
@@ -197,14 +206,7 @@ def _user_page(
         status_code=REFUSED if err else 200,
         err=err,
         typed=typed,
-        typed_token=(
-            {
-                "name": str(token_form.get("name") or "").strip(),
-                "days": str(token_form.get("days") or "").strip(),
-            }
-            if token_form is not None
-            else None
-        ),
+        typed_token=_typed_token(token_form) if token_form is not None else None,
         user=found,
         effective=view_of(users.rights_of(caller, user_id)),
         tokens=[(token, users.token_state(token)) for token in tokens or []],
@@ -233,9 +235,10 @@ async def update_user(
 ) -> Response:
     form = await request.form()
     here = f"/ui/users/{user_id}"
+    typed = _typed_user(form)
     # The tick box of the UI sign-in changes something only where the page
     # showed it: not on the own page, since nobody takes its own sign-in.
-    ui_sign_in = "ui_sign_in" in form if "ui_sign_in_shown" in form else None
+    ui_sign_in = typed["ui_sign_in"] if "ui_sign_in_shown" in form else None
     with failing(
         here,
         again=lambda err: _user_page(
@@ -245,10 +248,10 @@ async def update_user(
         users.update_user(
             caller,
             user_id,
-            name=str(form.get("name") or "").strip() or None,
-            roles=[str(role) for role in form.getlist("roles")],
+            name=typed["name"] or None,
+            roles=typed["roles"],
             grants=read_grants(form),
-            disabled="disabled" in form,
+            disabled=typed["disabled"],
             ui_sign_in=ui_sign_in,
         )
     return back(request, here, "Saved.")
@@ -304,8 +307,8 @@ async def create_token(
 ) -> Response:
     form = await request.form()
     here = f"/ui/users/{user_id}"
-    name = str(form.get("name") or "").strip()
-    days = str(form.get("days") or "").strip()
+    typed = _typed_token(form)
+    name, days = typed["name"], typed["days"]
     with failing(
         here,
         again=lambda err: _user_page(
@@ -368,23 +371,26 @@ def _new_role_page(
         page="roles",
         status_code=REFUSED if err else 200,
         err=err,
-        typed_id=str(form.get("id") or "").strip() if form is not None else "",
+        typed_id=text_of(form, "id") if form is not None else "",
         **_editor(request, caller, [], _typed_rows(form)),
     )
 
 
 def _used_by(request: Request, caller: Access, roles: list[Role]) -> dict[str, int]:
     """How many users hold each role, if the caller may list users."""
-    if not caller.allows("list_users"):
-        return {}
     users = get_users(request)
-    return {role.id: len(users.holders_of(caller, role.id)) for role in roles}
+    return if_allowed(
+        caller,
+        "list_users",
+        lambda: {role.id: len(users.holders_of(caller, role.id)) for role in roles},
+        {},
+    )
 
 
 @router.post("/roles")
 async def create_role(request: Request, caller: Actor, users: Users) -> Response:
     form = await request.form()
-    role_id = str(form.get("id") or "").strip()
+    role_id = text_of(form, "id")
     with failing(
         "/ui/roles/new", again=lambda err: _new_role_page(request, caller, form, err)
     ):
@@ -409,7 +415,9 @@ def _role_page(
 ) -> HTMLResponse:
     """A role's page. With ``form`` its editor shows what was typed."""
     found = users.get_role(caller, role_id)
-    holders = users.holders_of(caller, role_id) if caller.allows("list_users") else None
+    holders = if_allowed(
+        caller, "list_users", lambda: users.holders_of(caller, role_id), None
+    )
     return render(
         request,
         "pages/role.html",
@@ -450,4 +458,4 @@ async def delete_role(
 
 def _role_path(role_id: str) -> str:
     """A role's page. Its name is free text."""
-    return f"/ui/roles/{quote(role_id, safe='')}"
+    return f"/ui/roles/{segment(role_id)}"

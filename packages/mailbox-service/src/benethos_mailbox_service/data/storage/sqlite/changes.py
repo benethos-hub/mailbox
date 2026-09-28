@@ -7,13 +7,12 @@ import sqlite3
 from collections.abc import Collection, Iterable
 from datetime import datetime
 
-from ...models.changes import ChangeRecord
+from ....common.clock import iso, parse_iso
+from ...models import ChangeRecord
 from ..changes import LoggedChange
-from .database import Database, iso, parse_iso
+from .database import Database
 
 _HORIZON = "changes_horizon"
-# Stays below SQLite's limit of host parameters in one statement.
-_MAX_ACCOUNTS = 500
 
 
 class SqliteChangeLogRepository:
@@ -36,24 +35,20 @@ class SqliteChangeLogRepository:
         limit: int,
         types: Collection[str] | None = None,
     ) -> list[LoggedChange]:
-        accounts = list(dict.fromkeys(account_ids))
         kinds = sorted(types) if types is not None else []
         if types is not None and not kinds:
             return []
         of_type = ""
         if kinds:
             of_type = " AND type IN (" + ", ".join("?" * len(kinds)) + ")"
-        found: list[LoggedChange] = []
-        for start in range(0, len(accounts), _MAX_ACCOUNTS):
-            chunk = accounts[start : start + _MAX_ACCOUNTS]
-            marks = ", ".join("?" * len(chunk))
-            rows = self._db.query(
-                f"SELECT * FROM changes WHERE seq > ? AND account_id IN ({marks})"
-                f"{of_type} ORDER BY seq LIMIT ?",
-                (seq, *chunk, *kinds, limit),
-            )
-            found += [_logged(row) for row in rows]
-        return sorted(found, key=lambda e: e.seq)[:limit]
+        rows = self._db.query_in(
+            f"SELECT * FROM changes WHERE seq > ? AND account_id {{in}}"
+            f"{of_type} ORDER BY seq LIMIT ?",
+            account_ids,
+            before=(seq,),
+            after=(*kinds, limit),
+        )
+        return sorted(map(_logged, rows), key=lambda e: e.seq)[:limit]
 
     def last(self) -> int:
         row = self._db.one("SELECT seq FROM sqlite_sequence WHERE name = 'changes'")

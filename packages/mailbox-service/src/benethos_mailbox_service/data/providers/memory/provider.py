@@ -5,12 +5,11 @@ from __future__ import annotations
 from ....errors import (
     ConflictError,
     MailboxServiceError,
-    MessageNotFoundError,
-    NotFoundError,
     NotSupportedError,
+    missing,
+    missing_message,
 )
-from ...mail import convert
-from ...mail.parse import ParsedMessage
+from ...mail import convert, parse
 from ...models import (
     AttachmentContent,
     Folder,
@@ -81,7 +80,7 @@ class MemoryProvider:
         for message in self.messages:
             if message.id == message_id:
                 return message
-        raise MessageNotFoundError(f"message {message_id} not found")
+        raise missing_message(message_id)
 
     async def get_attachment(
         self, message_id: str, attachment_id: str
@@ -95,7 +94,7 @@ class MemoryProvider:
                     content_type=attachment.content_type,
                     data=data,
                 )
-        raise NotFoundError(f"attachment {attachment_id} not found")
+        raise missing("attachment", attachment_id)
 
     async def get_raw(self, message_id: str) -> bytes:
         message = await self.get_message(message_id)
@@ -113,7 +112,7 @@ class MemoryProvider:
         known = {folder.id for folder in self.folders}
         for folder_id in fields.get("folder_ids", []):
             if folder_id not in known:
-                raise NotFoundError(f"folder {folder_id} not found")
+                raise missing("folder", folder_id)
         if "keywords" in fields:
             fields["keywords"] = sorted({k.lower() for k in fields["keywords"]})
         updated = message.model_copy(update=fields)
@@ -141,7 +140,7 @@ class MemoryProvider:
         sent = next((f.id for f in self.folders if f.role is FolderRole.SENT), None)
         if sent is None:
             return SentMessage()
-        parsed = ParsedMessage(raw)
+        parsed = parse.ParsedMessage(raw)
         copy = Message(
             id=f"sent_{len(self.outbox)}",
             folder_ids=[sent],
@@ -161,7 +160,7 @@ class MemoryProvider:
     async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
         drafts = self._drafts_folder()
         old = self._draft(replaces) if replaces else None
-        parsed = ParsedMessage(raw)
+        parsed = parse.ParsedMessage(raw)
         self._drafts_saved += 1
         draft = Message.model_validate(
             {
@@ -191,17 +190,14 @@ class MemoryProvider:
         return self._role_folder(FolderRole.DRAFTS)
 
     def _role_folder(self, role: FolderRole) -> str:
-        folder = rules.role_folder(self.folders, role)
-        if folder is None:
-            raise rules.no_folder(role)
-        return folder.id
+        return rules.require_role_folder(self.folders, role).id
 
     def _draft(self, draft_id: str) -> Message:
         drafts = self._drafts_folder()
         for message in self.messages:
             if message.id == draft_id and drafts in message.folder_ids:
                 return message
-        raise NotFoundError(f"draft {draft_id} not found")
+        raise missing("draft", draft_id)
 
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
         if parent_id is not None:
@@ -231,7 +227,7 @@ class MemoryProvider:
         for folder in self.folders:
             if folder.id == folder_id:
                 return folder
-        raise NotFoundError(f"folder {folder_id} not found")
+        raise missing("folder", folder_id)
 
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
@@ -297,10 +293,5 @@ def _matches(message: Message, search: MessageFilter) -> bool:
         and has(search.subject, message.subject)
         and (search.after is None or (day is not None and day >= search.after))
         and (search.before is None or (day is not None and day < search.before))
-        and (search.unread is None or message.unread == search.unread)
-        and (search.starred is None or message.starred == search.starred)
-        and (
-            search.has_attachments is None
-            or message.has_attachments == search.has_attachments
-        )
+        and search.flags_match(message)
     )

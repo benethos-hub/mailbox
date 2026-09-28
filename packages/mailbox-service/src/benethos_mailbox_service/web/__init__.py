@@ -18,7 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 from starlette.exceptions import HTTPException
 
-from ..data.secrets.redact import redact
+from ..common.redact import redact
 from ..errors import MailboxServiceError
 from . import api, pages
 from .api.errors import api_error, http_error, validation_error

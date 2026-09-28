@@ -17,7 +17,7 @@ from benethos_mailbox_service.data.storage import (
     SqliteAccountRepository,
     SqliteMessageIndexRepository,
 )
-from benethos_mailbox_service.data.storage.sqlite import index as sqlite_index
+from benethos_mailbox_service.data.storage.sqlite import database
 
 ACC = "acc_1"
 
@@ -120,7 +120,7 @@ def test_an_update_takes_its_native_id_from_another_entry(
 def test_in_folders_keeps_the_order_across_chunks(
     index: MessageIndexRepository, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(sqlite_index, "_CHUNK", 2)
+    monkeypatch.setattr(database, "IN_CHUNK", 2)
     folders = ["f_a", "f_b", "f_c", "f_d", "f_e"]
     index.add(ACC, [entry(n, folders[n % 5]) for n in range(10)])
     found = index.in_folders(ACC, folders)

@@ -1,12 +1,13 @@
 # Architecture and design rules
 
-Started 2026-09-28, a proposal. The rules of this service in short:
-where a piece of code goes, how it is imported, how it is named, and
-how it is moved. [CONCEPT.md](CONCEPT.md) says what the service is,
-[CLAUDE.md](../CLAUDE.md) how to work in the repository and what each
-module holds, [REFACTORING.md](REFACTORING.md) how the layout came to
-be. This file is the part to know by heart. What the user decides is
-marked as decided, everything else is the proposal.
+Decided 2026-09-28 as a whole. The rules of this service: the layers,
+the modules and the seams, where a piece of code goes, how it is
+imported, how it is named, and how it is moved.
+[CONCEPT.md](CONCEPT.md) says what the service is,
+[CLAUDE.md](../CLAUDE.md) how to work in the repository,
+[REFACTORING.md](REFACTORING.md) how the layout came to be. This file is
+the reference: a change that adds a module, a package, a library or a
+seam is measured against it.
 
 ## 1. The shape
 
@@ -24,13 +25,237 @@ they assemble the service: `main.py`, `__main__.py`, `logs.py`.
 
 Inside a layer, packages by area (`domain/accounts/`) or by kind
 (`data/storage/`). Packages stand in lines, and a package imports only
-lines below it. The lines are drawn in CONCEPT.md 1.1 and
-REFACTORING.md.
+lines below it. The lines are drawn in section 2.
 
 A test, `tests/test_architecture.py`, checks all of this on every run.
 A rule that no test checks is a wish.
 
-## 2. Where does it go?
+## 2. The layers
+
+The three layers and what each may import:
+
+| Layer | Directory | Job | May import |
+|---|---|---|---|
+| Presentation | `web/` | HTTP: check input, call the domain, answer | domain, data |
+| Business logic | `domain/` | decide: accounts, rights, id mapping, sync | data |
+| Data | `data/` | own records and foreign mail sources | neither |
+
+- `config.py`, `errors.py` and `common/` are cross-cutting: read by every
+  layer, they import none. `main.py`, `__main__.py` and `logs.py` only
+  assemble.
+- **`common/` is not a drawer.** Only what more than one layer needs, on
+  the standard library, with no I/O and no state beyond what a caller
+  holds. `redact` is the one module with state of its own, and its
+  docstring says why. What one layer needs stays in that layer.
+- **No HTTP in the domain.** Nothing below `web/` raises an HTTP exception or
+  knows a status code. The domain raises `errors`, and `web/api/errors.py` maps
+  each class to a status.
+- **No decisions in the data layer.** It reads and writes, it does not judge.
+- **Providers only through the registry.** Outside `data/providers/`,
+  nothing imports a provider module, only `data.providers` itself.
+- **Two front ends, one domain.** `web/api/` serves the JSON API,
+  `web/pages/` the configuration UI. Both call the same domain
+  services. Therefore **rights are checked in the domain**, not in a web
+  dependency: a check that lives in `routes/` would have to be built a
+  second time for `pages/`, and one of the two would drift. The web layer
+  only establishes *who* is calling (bearer token for the API, a session
+  for the UI) and hands that user to the domain.
+- UI pages stay out of the OpenAPI document (`include_in_schema=False`), so
+  the contract covers the API only.
+- **The domain is in packages by area** (docs/REFACTORING.md 4). Another
+  package, the web layer and the assembly import a package through its
+  `__init__.py`, from the names in its `__all__`, never a module inside
+  it. The activities too: `activity` offers the module of each area,
+  `from ..activity import mailbox as said`, then `said.MessageSent(...)`.
+  No cycle between packages: what two packages both need goes to the one
+  below, or is handed in where the services are wired, as
+  `AccountService` gets `on_delete`. The packages and the helper
+  modules stand in lines, each importing only lines below:
+
+  ```
+   system
+   mailbox · users · webhooks
+   sync
+   accounts
+   auth · discovery · changes · rounds
+   activity
+   rights
+   locks · paging · bounded
+  ```
+
+- **The data layer is in packages by kind**, in the same way: imported
+  through the `__init__.py`, no cycle, and lines of its own
+  (docs/REFACTORING.md 8.3). `mail` offers its modules:
+  `from ..mail import compose`.
+
+  ```
+   backup
+   secrets
+   storage · providers · discovery
+   protocols
+   mail · files
+   models · logbook
+  ```
+- **The domain logs activities.** A line at `INFO` or above is an
+  activity of `domain/activity/catalogue/`, handed to
+  `ActivityLog.record`, a sentence as docs/LOGGING.md section 3 shapes
+  it. The data layer logs at `DEBUG` at most: what it notices goes up as
+  a result or an error.
+
+`tests/test_architecture.py` checks the direction, the cross-cutting
+modules, that `common/` stays on the standard library, that FastAPI stays in
+`web/` (and `main.py`), that providers are reached through the registry,
+that the domain picks no storage implementation, and that SQLite is
+reached through `data/storage/` alone. It also checks that the data
+layer logs nothing above `DEBUG` and the domain nothing but activities,
+and that the packages of the domain and of data are imported through
+their `__init__.py`, export what others import, have no cycle, and keep
+their lines.
+An import or a line that breaks a rule fails the suite.
+
+## 3. The code, module by module
+
+What each package and module of the service holds. A new module gets
+its line here in the same commit.
+
+```
+packages/mailbox-service/
+  src/benethos_mailbox_service/
+    __main__.py         # CLI: serve, openapi, users, keys, backup, restore
+    main.py             # assembly only: create_app, picks implementations
+    logs.py             # assembly: the log of serve, format, level, masking
+    config.py           # cross-cutting: Settings (MAILBOX_SERVICE_* env and
+                        #   config/benethos-mailbox-service/.env)
+    errors.py           # cross-cutting: MailboxServiceError hierarchy, no HTTP
+    common/             # cross-cutting: helpers several layers share,
+                        #   standard library only
+      ids.py            # ids of own records: acc_, usr_, msg_, ... + 64 hex
+      opaque.py         # opaque ids and cursors: prefix + base64 JSON,
+                        #   and base64 without padding, for passwords and
+                        #   OAuth too
+      clock.py          # utc_now, the default clock of the services,
+                        #   local_moment: the local time of a log line,
+                        #   iso and parse_iso: a time as text, in UTC
+      redact.py         # secrets noted once, masked in every text
+      ratelimit.py      # pacing: a token bucket and a backoff
+      plaintext.py      # the text of an HTML body, for a mail and a page
+      hosts.py          # host names in one form: ASCII, Unicode, syntax
+      sizes.py          # MIB, and a size in megabytes for a message
+      chunks.py         # batched: a sequence in slices
+    web/                # PRESENTATION: HTTP only, FastAPI lives here
+      __init__.py       # install: both front ends, errors to the right one
+      services.py       # the domain services as dependencies, for both
+      urls.py           # this service's public address, OAuth callback
+      limits.py         # the size of a request body, for both
+      api/              # the JSON API: /health open, the rest under /v1
+        deps.py         # bearer authentication, services per request
+        schemas.py      # shapes that exist only at the HTTP boundary
+        errors.py       # error class -> status code, the error envelope
+        routes/         # one router per resource
+      pages/            # the configuration UI under /ui, not in OpenAPI
+        deps.py         # who is signed in, the CSRF check, if_allowed
+        navigation.py   # the sidebar entries a caller may open, breadcrumbs
+        filters.py      # the filter bar of a list: its fields and chips
+        session.py      # sign-in with a password, server-side sessions
+        templates.py    # Jinja2: filters, render, Post/Redirect/Get
+        grants.py       # the grant editor's rows, read back into grants
+        mailform.py     # the mail form: fields to a message, shown again
+        forms.py        # form errors, failing: back with the message,
+                        #   model_of and text_of: what a form holds
+        rights.py       # what the mail pages offer, by the rights on an account
+        errors.py       # errors as a page
+        routes/         # one module per area
+        templates/      # base, partials, components (macros), pages
+        static/         # app.css, app.js, vendored htmx
+    domain/             # BUSINESS LOGIC: decides, knows no HTTP
+                        # one package per area (docs/REFACTORING.md),
+                        #   the service of a package in service.py
+      rights/           # who may do what: permissions (the catalogue of
+                        #   rights and groups), Access (one caller)
+      auth/             # proving who calls: AuthService, Passwords,
+                        #   SignInThrottle
+      users/            # UserService: users, roles, tokens
+      accounts/         # AccountService, Adapters (the live adapter per
+                        #   account), OAuthService
+      discovery/        # DiscoveryService: trust, ranking, cache, limits
+      mailbox/          # MailboxService, the facade for mail: calls under
+                        #   our ids, lists across accounts, replies,
+                        #   sending and drafts (outgoing), grant limits
+                        #   and the send audit, Idempotency-Key
+      sync/             # SyncService (stable message ids, the sync pass),
+                        #   SyncWorker (polling and IDLE)
+      changes/          # what changed in a mailbox, for clients:
+                        #   MailboxChange, one class per kind, ChangeFeed
+      webhooks/         # WebhookService, WebhookDispatcher (signed posts,
+                        #   retries)
+      system/           # the service at a glance: StatusService, and to
+                        #   admin RecoveryKey and ServiceLog
+      activity/         # what was done, and by whom: the service log.
+                        #   Activity, ActivityLog, catalogue/ one module
+                        #   per area: activity.<area>.<name>
+                        #   (docs/LOGGING.md 7.2)
+      locks.py          # KeyedLocks: one lock per key, for the services
+      paging.py         # the cursors this service hands out itself, the
+                        #   page they continue
+      bounded.py        # trim: tables in memory with a cap
+      rounds.py         # rounds: the background loops of the services
+    data/               # DATA: reads and writes, decides nothing. A
+                        #   package is imported through its __init__.py
+      models/           # provider-neutral types, one module per subject:
+                        #   accounts, users, folders, messages, batch,
+                        #   sending, paging, discovery, audit,
+                        #   changes, webhooks
+      mail/             # messages in RFC 5322, whatever protocol carries
+                        #   them. __init__.py offers the modules
+        compose.py      # outgoing messages as bytes (email)
+        parse.py        # incoming bytes parsed (imap-tools' mail parser)
+        convert.py      # a parsed message to Message / MessageSummary
+        fields.py       # one header field: a Message-ID as one token,
+                        #   an address in Unicode
+      protocols/        # the wire, one library each, in our types:
+                        #   imap.py (IMAPClient), smtp.py (smtplib),
+                        #   oauth.py (OAuth 2.0 with PKCE, refresh, token
+                        #   source), transport.py: the Server, TLS,
+                        #   timeouts, the failures below every library
+        http/           # httpx: base.py (the client, the capped read),
+                        #   safe.py (hosts users typed, SSRF guard),
+                        #   api.py (JSON to a provider's known hosts),
+                        #   post.py (posts to webhook receivers)
+      providers/        # the adapters: base.py, rules.py, registry.py
+                        #   (build_provider, sign_in, probe_server)
+        guard.py        # pacing, retries, blocked logins, for any adapter
+        sender.py       # SmtpSender: sending for IMAP, POP3, ...
+        imap/, memory/, # one directory per provider (adapter)
+        microsoft/      #   microsoft: Graph over data/protocols/http,
+                        #   signin.py its endpoints and the scopes it needs
+      storage/          # own records, one module per subject, table.py
+                        #   for the in-memory ones, sqlite/ the database,
+                        #   sqlite/migrations/ one module per schema
+                        #   version, repositories.py opens one of them
+      secrets/          # envelope encryption, key providers, password
+                        #   hashes, the vault of the credentials
+      backup.py         # encrypted backups of the database, restore
+      files.py          # files for the owner alone (0600): database, backup, key
+      logbook.py        # the newest log lines in memory, for the log page
+      discovery/        # autodiscovery sources and their helpers,
+                        #   sources.py puts them in order
+```
+
+The MCP server is a package of its own, a client of the REST API. It
+cannot import the service, and `tests/test_boundary.py` checks that.
+
+```
+packages/mailbox-mcp/
+  src/benethos_mailbox_mcp/
+    server.py           # MCPServer, tools by the token's rights, CLI
+    transport.py        # streamable HTTP: bearer guard, host check (uvicorn)
+    render.py           # what the model sees of mail, marked as foreign
+    pdf.py              # PDF pages as PNG (pypdfium2)
+    client.py           # ALL access to the REST API
+    errors.py           # ToolError subclasses
+```
+
+## 4. Where does it go?
 
 | I am adding | It goes to |
 |---|---|
@@ -44,17 +269,20 @@ A rule that no test checks is a wish.
 | a type several layers pass around | `data/models/`, one module per subject, pydantic |
 | a record the service keeps | its model, a repository protocol in `data/storage/`, the in-memory one beside it, the SQLite one in `data/storage/sqlite/`, and a migration |
 | a mail provider | a directory in `data/providers/`, behind `MailProvider`, reached through the registry |
+| a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
+| an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
+| a command of the CLI | `__main__.py`, which builds the service through `main.py` |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/api/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |
-| a helper two layers need | `common/`, if it is on the standard library, does no I/O and holds no state of its own. Else it is not a helper: it belongs to one layer |
+| a helper two layers need | `common/`, if it is on the standard library, does no I/O and holds no state beyond what a caller holds. Else it is not a helper: it belongs to one layer |
 | a helper one layer needs | that layer, beside its caller |
 
 When none of these fits, the seam is missing. Add the seam first, then
 the code. A change that has to touch several layers to swap one
 technology says the seam is in the wrong place.
 
-## 3. Packages
+## 5. Packages
 
 1. **One package per area or kind**, named for what it is about, not
    for a pattern: `accounts`, not `services`. `mailbox`, not `core`.
@@ -77,7 +305,7 @@ technology says the seam is in the wrong place.
    is in `mailbox`, because it builds on the calls there, not in a
    package of everything that sends.
 
-## 4. Imports
+## 6. Imports
 
 - Relative inside the service (`from ..data.models import Account`),
   absolute in tests.
@@ -90,14 +318,18 @@ technology says the seam is in the wrong place.
 - No `import *`. No re-export without `__all__`.
 - A module imports what it uses, not what its callers might want.
 
-## 5. Libraries
+## 7. Libraries
 
 1. **One library, one home.** Each third-party library is imported in
-   exactly one module, or one package for a framework. The
-   architecture test lists the homes.
+   exactly one module, or one package for a framework: IMAPClient only
+   in `data/protocols/imap.py`, `cryptography` only in
+   `data/secrets/cipher.py`, FastAPI only under `web/`. When it is
+   needed somewhere else, its wrapper is extended, it is not imported a
+   second time. The architecture test lists the homes.
 2. **Our interface, not theirs.** Code depends on a protocol this
-   project defines. A library's objects, exceptions and quirks do not
-   cross its wrapper.
+   project defines (`MailProvider`, a repository, a key provider), never
+   on a third-party type. A library's objects, exceptions and quirks do
+   not cross its wrapper.
 3. **Translate at the edge.** On the way in, into `data/models/`. On
    failure, into a `MailboxServiceError`. Nothing upstream sees a raw
    exception or response.
@@ -107,12 +339,57 @@ technology says the seam is in the wrong place.
 5. **The standard library is a library too.** `sqlite3`, `smtplib` and
    `ssl` have homes as httpx does.
 
-## 6. Types and values
+## 8. Encapsulation and replaceable parts
+
+This project is built from parts that can be exchanged one at a time. A
+mail library, the database, the web framework or a whole provider should be
+replaceable by rewriting **one module**, without the rest of the code
+noticing. Every change is measured against that.
+
+**The rules that make it work**, with those of section 7:
+
+1. **Dependencies point inward.** Routes know the domain services and
+   the models. The models know nothing of FastAPI, SQLite or IMAP. The
+   domain never imports the layer above it.
+2. **Wire it in one place.** Which implementation is used is decided where
+   the app is assembled (`create_app`, `build_services`, settings), never
+   inside the code that uses it. That is also how tests swap in fakes.
+3. **The contract is the boundary.** Between the two packages there is only
+   the REST API. The MCP package never depends on or imports the service
+   package, and `tests/test_boundary.py` checks both.
+
+**The seams, and what sits behind each:**
+
+| Seam | Defined in | Implementations | Exchangeable for |
+|---|---|---|---|
+| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/registry.py` | memory, imap, microsoft (planned: gmail, pop3) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
+| Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
+| Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX (planned: JMAP well-known, Microsoft realm, SRV, guessing) | any further lookup, or one switched off |
+| HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
+| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
+| Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
+| Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
+| Authentication | credential kinds of a user (CONCEPT 7.5) | API token, password for the UI | TOTP, OAuth client credentials |
+| MCP ↔ service | the REST API, `docs/openapi.json` | httpx client in `client.py` | a generated client |
+
+**When you add something new**, ask first where its seam is. A new
+provider is a new module behind `MailProvider`, not a branch in a route. A
+new library gets a wrapper before it gets a caller. If a change needs edits
+in several layers to swap one technology, the seam is in the wrong place:
+fix that first, and say so.
+
+**Tests use the seams too.** Fakes are plugged in at an interface (the
+memory provider, `httpx.MockTransport`, a fake `IMAPClient` at the
+imapclient boundary), never by patching deep inside a library.
+
+## 9. Types and values
 
 - **pydantic** for what crosses a boundary: the models in
   `data/models/`, settings, the shapes of the API.
 - **Frozen dataclasses** for values inside a layer: an activity, a
-  change, a finding. A value is made once and not changed.
+  change, a finding of discovery. A value is made once and not changed.
 - **Protocols** for seams: a repository, a provider, a key provider, a
   clock. A fake in a test fulfils the protocol, it patches nothing.
 - **Ids are opaque** to callers: a prefix and hex for records
@@ -122,7 +399,7 @@ technology says the seam is in the wrong place.
   be printed by accident. A secret in plain text is noted with
   `redact`, so it is masked if it ever reaches a line.
 
-## 7. Errors
+## 10. Errors
 
 - The domain raises `errors`. It knows no status code. `web/api/errors.py`
   maps each class to one, `web/pages/errors.py` to a page.
@@ -135,7 +412,7 @@ technology says the seam is in the wrong place.
   is a subclass with a code of its own. A failure it did cause is a
   bug, reaches the log with its traceback, and answers 500.
 
-## 8. State and time
+## 11. State and time
 
 - A service holds its state in the instance. Module-level state is
   avoided: `redact` is the one exception, process-wide by design.
@@ -146,18 +423,19 @@ technology says the seam is in the wrong place.
 - What grows is bounded: a cache has a size, a log a length, a store a
   retention or a purge.
 
-## 9. Logging
+## 12. Logging
 
 - The domain records activities: a class from the catalogue, handed to
   `ActivityLog.record`, a sentence as LOGGING.md shapes it. No plain
   `log.info` in the domain.
 - The data layer logs at `DEBUG` at most. What it notices goes up as a
   result or an error.
-- The web layer logs nothing but a refused request body.
+- The web layer records one activity of its own, a refused request
+  body, since the domain never sees that request. It logs nothing else.
 - Never in a line: a secret, the words of a mail, a recipient, a search
   term, a body.
 
-## 10. Tests
+## 13. Tests
 
 - A test sits in the folder of the code it tests, `tests/domain/sync/`
   for `domain/sync/`. A test of several layers at once is in
@@ -167,10 +445,12 @@ technology says the seam is in the wrong place.
   deep inside a library.
 - No test reaches a mail server, and none skips itself without
   credentials. What needs a server is a script in `live/`.
-- A rule of this file has a check in `test_architecture.py`, or it is
-  not a rule yet.
+- A rule on the layout has a check in `test_architecture.py`, or it is
+  not a rule yet: the layers, the lines, the imports through
+  `__init__.py`, the homes of the libraries, who logs what. Naming,
+  size and style (sections 14 and 15) are for the review.
 
-## 11. Naming
+## 14. Naming
 
 - English, plain words, what a thing is: `AccountService`, `ChangeFeed`,
   `SignInThrottle`. No `Manager`, `Helper`, `Utils`, `Base` unless it
@@ -184,7 +464,7 @@ technology says the seam is in the wrong place.
 - A docstring says what the module is for and what stays out of it, in
   the first lines.
 
-## 12. Size
+## 15. Size
 
 - A module holds one subject, up to a few hundred lines. Past that, the
   subject has parts, and each part is a module.
@@ -193,7 +473,7 @@ technology says the seam is in the wrong place.
 - A function decides or does, and says which in its name. One that does
   both is two functions.
 
-## 13. Refactoring
+## 16. Refactoring
 
 1. **Move, do not change.** A move commit moves modules and fixes
    imports, nothing else. Behaviour, the API and the OpenAPI document
@@ -208,8 +488,8 @@ technology says the seam is in the wrong place.
    expose it.
 4. **Every rule gets its check** in `test_architecture.py` in the same
    branch, so the layout cannot drift back.
-5. **The documents move with the code:** CLAUDE.md's layout, CONCEPT.md
-   1.1, the concept's "built" note, the roadmap, in the same commit.
+5. **The documents move with the code:** section 3 of this file,
+   CONCEPT.md 1.1, the concept's "built" note, the roadmap, in the same commit.
 6. **Tests move, they do not change.** Their imports change, their
    assertions do not. A test that has to change to pass says the move
    changed behaviour.
@@ -219,15 +499,7 @@ technology says the seam is in the wrong place.
 8. **Live checks once at the end** of a branch that moves code, since
    nothing they see changes.
 
-## 14. Questions
+## 17. Questions answered
 
-**Decided 2026-09-28:** this file takes over the sections "Layers of
-the service" and "Encapsulation and replaceable parts" of CLAUDE.md in
-full, with what REFACTORING.md section 8 adds, and CLAUDE.md points
-here. That happens after the refactoring of sections 8 and 9, in a
-branch of its own.
-
-Open:
-
-- Section 12's sizes are a feeling, not a measure. Should the
-  architecture test count lines?
+**Decided 2026-09-28:** the architecture test counts no lines. Section
+15 is a rule for the review.

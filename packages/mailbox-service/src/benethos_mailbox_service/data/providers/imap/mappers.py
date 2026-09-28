@@ -10,7 +10,11 @@ from __future__ import annotations
 from typing import Any
 
 from ....common import opaque
-from ....errors import MessageNotFoundError, NotFoundError, NotSupportedError
+from ....errors import (
+    NotSupportedError,
+    missing,
+    missing_message,
+)
 from ...mail import convert
 from ...models import (
     Folder,
@@ -19,8 +23,8 @@ from ...models import (
     MessageSummary,
     MessageUpdate,
 )
+from ...protocols import FetchedMessage, RawFolder
 from .. import rules
-from ..protocols.imap import FetchedMessage, RawFolder
 
 INBOX = "INBOX"
 
@@ -83,9 +87,9 @@ def _decode(prefix: str, value: str, what: str) -> list[Any]:
     try:
         parts = opaque.decode(prefix, value)
     except ValueError:
-        raise NotFoundError(f"{what} {value} not found") from None
+        raise missing(what, value) from None
     if not isinstance(parts, list):
-        raise NotFoundError(f"{what} {value} not found")
+        raise missing(what, value)
     return parts
 
 
@@ -96,7 +100,7 @@ def folder_id(name: str) -> str:
 def folder_name(value: str) -> str:
     parts = _decode("f_", value, "folder")
     if len(parts) != 1 or not isinstance(parts[0], str):
-        raise NotFoundError(f"folder {value} not found")
+        raise missing("folder", value)
     return parts[0]
 
 
@@ -107,7 +111,7 @@ def message_id(folder: str, uidvalidity: int, uid: int) -> str:
 def parse_message_id(value: str) -> tuple[str, int, int]:
     place = _triple("m_", value)
     if place is None:
-        raise MessageNotFoundError(f"message {value} not found")
+        raise missing_message(value)
     return place
 
 

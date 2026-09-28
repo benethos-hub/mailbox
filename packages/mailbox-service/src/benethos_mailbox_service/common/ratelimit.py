@@ -1,4 +1,4 @@
-"""Pacing towards one provider account: a token bucket and a backoff.
+"""Pacing: a token bucket and a backoff, for the providers and the domain.
 
 Clock, sleep and randomness are injectable, so tests run without waiting.
 """

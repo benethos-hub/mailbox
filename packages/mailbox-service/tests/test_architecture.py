@@ -4,9 +4,9 @@ web -> domain -> data, never the other way. A single reverse import is enough
 to undo the split, and it happens by accident: a data module needs one domain
 rule, imports it, and the data layer can no longer be used without the domain.
 This test reads every import of the package and fails on the first one that
-breaks a rule. Inside the domain it checks the packages the same way: each
-is imported through its ``__init__.py``, and none imports another in a
-circle.
+breaks a rule. Inside the domain and the data layer it checks the packages
+the same way: each is imported through its ``__init__.py``, and none
+imports another in a circle. The packages of both keep their lines.
 """
 
 from __future__ import annotations
@@ -14,6 +14,8 @@ from __future__ import annotations
 import ast
 import sys
 from pathlib import Path
+
+import pytest
 
 PACKAGE = "benethos_mailbox_service"
 ROOT = Path(__file__).resolve().parents[1] / "src" / PACKAGE
@@ -35,16 +37,16 @@ ASSEMBLY = {"main", "__main__", "logs"}
 # Web frameworks live in the web layer. main.py builds the app, so it may too.
 WEB_LIBRARIES = {"fastapi", "starlette"}
 
-# One library, one home (CLAUDE.md): the only module, or package, allowed to
-# import each.
+# One library, one home (docs/ARCHITECTURE.md): the only module, or
+# package, allowed to import each.
 LIBRARY_HOMES = {
     "cryptography": f"{PACKAGE}.data.secrets.cipher",
     "keyring": f"{PACKAGE}.data.secrets.keys",
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
-    "imapclient": f"{PACKAGE}.data.providers.protocols.imap",
+    "imapclient": f"{PACKAGE}.data.protocols.imap",
     "imap_tools": f"{PACKAGE}.data.mail.parse",
-    "smtplib": f"{PACKAGE}.data.providers.protocols.smtp",
-    "httpx": f"{PACKAGE}.data.http",
+    "smtplib": f"{PACKAGE}.data.protocols.smtp",
+    "httpx": f"{PACKAGE}.data.protocols.http",
     "dns": f"{PACKAGE}.data.discovery.dns",
     "defusedxml": f"{PACKAGE}.data.discovery.autoconfig",
     "publicsuffixlist": f"{PACKAGE}.data.discovery.suffix",
@@ -204,7 +206,7 @@ def test_providers_are_reached_through_the_registry() -> None:
 
 
 def test_concurrency_is_written_with_anyio() -> None:
-    """The one concurrency library (CLAUDE.md, encapsulation rule 2): no
+    """The one concurrency library (docs/ARCHITECTURE.md 8, rule 2): no
     module imports asyncio, so every part runs on either event loop."""
     offenders = [
         f"{name}:{line}"
@@ -288,40 +290,46 @@ def test_the_domain_logs_through_activities() -> None:
     assert loud == []
 
 
-# --- the packages of the domain (docs/REFACTORING.md section 2) -------------------
+# --- the packages of the domain and of data (docs/REFACTORING.md 2, 8.4) -------------
 
-DOMAIN = f"{PACKAGE}.domain"
+# The layers in packages: each package is imported through its __init__.py.
+PACKAGED = ("domain", "data")
 
 
-def _domain_part(module: str) -> str | None:
-    """'...domain.sync.worker' -> 'sync', '...domain.locks' -> 'locks'."""
+def _package_part(module: str) -> tuple[str, str] | None:
+    """'...domain.sync.worker' -> ('domain', 'sync'), '...data.files' ->
+    ('data', 'files')."""
     parts = module.split(".")
-    if parts[:2] != [PACKAGE, "domain"] or len(parts) < 3:
+    if parts[0] != PACKAGE or len(parts) < 3 or parts[1] not in PACKAGED:
         return None
-    return parts[2]
+    return parts[1], parts[2]
 
 
-def _is_package(part: str) -> bool:
-    return (ROOT / "domain" / part / "__init__.py").exists()
+def _is_package(part: tuple[str, str]) -> bool:
+    return (ROOT / part[0] / part[1] / "__init__.py").exists()
 
 
-def test_a_package_of_the_domain_is_imported_through_its_init() -> None:
+def _dotted(part: tuple[str, str]) -> str:
+    return f"{PACKAGE}.{part[0]}.{part[1]}"
+
+
+def test_a_package_is_imported_through_its_init() -> None:
     """So a package can split or merge its modules without its callers
-    noticing: the other packages, the web layer and the assembly."""
+    noticing: the other packages, the layers above and the assembly."""
     violations = [
         f"{name}:{line} imports {imported}"
         for name, path in _modules()
         for imported, line in _imports(path)
-        if (other := _domain_part(imported)) is not None
-        and other != _domain_part(name)
+        if (other := _package_part(imported)) is not None
+        and other != _package_part(name)
         and _is_package(other)
-        and imported != f"{DOMAIN}.{other}"
+        and imported != _dotted(other)
     ]
     assert not violations, "a module inside a package:\n  " + "\n  ".join(violations)
 
 
-def _exported(part: str) -> set[str]:
-    init = ast.parse((ROOT / "domain" / part / "__init__.py").read_text("utf-8"))
+def _exported(part: tuple[str, str]) -> set[str]:
+    init = ast.parse((ROOT / part[0] / part[1] / "__init__.py").read_text("utf-8"))
     for node in init.body:
         if isinstance(node, ast.Assign) and any(
             isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets
@@ -330,15 +338,15 @@ def _exported(part: str) -> set[str]:
     return set()
 
 
-def test_a_package_of_the_domain_exports_what_others_import() -> None:
+def test_a_package_exports_what_others_import() -> None:
     """What another part imports from a package is in its ``__all__``."""
     violations = [
         f"{name}:{node.lineno} imports {alias.name} from {imported}"
         for name, path in _modules()
         for imported, node in _from_imports(path)
-        if (other := _domain_part(imported)) is not None
-        and imported == f"{DOMAIN}.{other}"
-        and other != _domain_part(name)
+        if (other := _package_part(imported)) is not None
+        and imported == _dotted(other)
+        and other != _package_part(name)
         and _is_package(other)
         for alias in node.names
         if alias.name not in _exported(other)
@@ -346,21 +354,22 @@ def test_a_package_of_the_domain_exports_what_others_import() -> None:
     assert not violations, "not exported:\n  " + "\n  ".join(violations)
 
 
-def _package_graph() -> dict[str, set[str]]:
+def _package_graph(layer: str) -> dict[str, set[str]]:
     graph: dict[str, set[str]] = {}
     for name, path in _modules():
-        own = _domain_part(name)
-        if own is None:
+        own = _package_part(name)
+        if own is None or own[0] != layer:
             continue
         for imported, _ in _imports(path):
-            other = _domain_part(imported)
-            if other is not None and other != own:
-                graph.setdefault(own, set()).add(other)
+            other = _package_part(imported)
+            if other is not None and other[0] == layer and other != own:
+                graph.setdefault(own[1], set()).add(other[1])
     return graph
 
 
-def test_no_cycle_between_the_packages_of_the_domain() -> None:
-    graph = _package_graph()
+@pytest.mark.parametrize("layer", PACKAGED)
+def test_no_cycle_between_the_packages(layer: str) -> None:
+    graph = _package_graph(layer)
     done: set[str] = set()
 
     def walk(part: str, path: list[str]) -> list[str] | None:
@@ -377,3 +386,44 @@ def test_no_cycle_between_the_packages_of_the_domain() -> None:
     for part in sorted(graph):
         cycle = walk(part, [])
         assert cycle is None, "a cycle: " + " -> ".join(cycle)
+
+
+# The packages of each layer in lines (docs/ARCHITECTURE.md 2): each
+# imports only the lines below its own.
+LINES = {
+    "domain": (
+        {"system"},
+        {"mailbox", "users", "webhooks"},
+        {"sync"},
+        {"accounts"},
+        {"auth", "discovery", "changes", "rounds"},
+        {"activity"},
+        {"rights"},
+        {"locks", "paging", "bounded"},
+    ),
+    "data": (
+        {"backup"},
+        {"secrets"},
+        {"storage", "providers", "discovery"},
+        {"protocols"},
+        {"mail", "files"},
+        {"models", "logbook"},
+    ),
+}
+
+
+@pytest.mark.parametrize("layer", PACKAGED)
+def test_the_packages_import_only_lines_below(layer: str) -> None:
+    line_of = {part: n for n, line in enumerate(LINES[layer]) for part in line}
+    assert set(line_of) == {
+        p.stem
+        for p in (ROOT / layer).iterdir()
+        if p.stem != "__init__" and (p.suffix == ".py" or (p / "__init__.py").exists())
+    }, f"a package of {layer} outside the lines"
+    violations = [
+        f"{own} imports {other}"
+        for own, others in sorted(_package_graph(layer).items())
+        for other in sorted(others)
+        if line_of[other] <= line_of[own]
+    ]
+    assert not violations, "against the lines:\n  " + "\n  ".join(violations)

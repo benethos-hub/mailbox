@@ -10,13 +10,12 @@ on this origin.
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 
-from ....data.mail.text import from_html
+from ....common.plaintext import from_html
 from ....data.models import Folder, FolderRole, Message, MessageFilter
 from ....domain.mailbox import MailboxService, find_folder
 from ....domain.rights import Access
@@ -27,7 +26,7 @@ from ..deps import Viewer, account_of, emails_of
 from ..errors import error_page
 from ..filters import Field, FilterBar, Kind, filter_bar
 from ..forms import first_problem
-from ..navigation import mail_trail
+from ..navigation import mail_trail, mail_url
 from ..rights import mail_rights
 from ..templates import PAGE_SIZE, page_links, render
 
@@ -183,9 +182,9 @@ async def account_mail_page(
     search, fields, problem = _search(request)
     can = mail_rights(caller, account_id)
     can.update(
-        change=can["change"] and can["batch"],
-        trash=can["trash"] and can["batch"],
-        purge=can["purge"] and can["batch"],
+        change=caller.batches("update_message", account_id),
+        trash=caller.batches("delete_message", account_id),
+        purge=caller.batches("delete_message_permanent", account_id),
     )
     page = await mailbox.list_messages(
         caller,
@@ -219,7 +218,7 @@ async def account_mail_page(
             str(request.url.path)
             + (f"?{request.url.query}" if request.url.query else "")
             if request.method == "GET"
-            else f"/ui/accounts/{account_id}/mail?{urlencode({'folder': current.id})}"
+            else mail_url(account_id, current.id)
         ),
     )
 

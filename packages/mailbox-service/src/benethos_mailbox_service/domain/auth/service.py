@@ -98,7 +98,7 @@ class AuthService:
         password and a disabled user answer alike, in the same time. The
         source and the name are slowed down after failures."""
         self._require_users()
-        key = name.strip().casefold()[:MAX_NAME]
+        key = _name_key(name)
         self._check_source(source)
         self._names.check(key)
         if len(password) > MAX_LENGTH or len(name) > MAX_NAME:
@@ -134,7 +134,7 @@ class AuthService:
         hands out much. A wrong one counts against the user's name as a
         failed sign-in does."""
         user = self._users.get(access.user_id)
-        key = user.name.strip().casefold()[:MAX_NAME]
+        key = _name_key(user.name)
         self._names.check(key)
         matched = len(password) <= MAX_LENGTH and await self.passwords.matches(
             user.id, password
@@ -150,12 +150,7 @@ class AuthService:
         """What the user of a UI session may do now. Raises when the user
         is gone or disabled, or its password changed since the sign-in.
         ``source`` is the client address of the request."""
-        try:
-            user = self._users.get(user_id)
-        except NotFoundError:
-            raise UnauthorizedError("the user no longer exists") from None
-        if user.disabled:
-            raise UnauthorizedError("user is disabled")
+        user = self._live_user(user_id)
         if not user.ui_sign_in:
             raise UnauthorizedError("the user signs in to the API only")
         stored = self.passwords.stored(user_id)
@@ -199,12 +194,9 @@ class AuthService:
         request, such as a webhook. None for a user that is gone or
         disabled."""
         try:
-            user = self._users.get(user_id)
-        except NotFoundError:
+            return self._access(self._live_user(user_id))
+        except UnauthorizedError:
             return None
-        if user.disabled:
-            return None
-        return self._access(user)
 
     def issue_token(
         self, user_id: str, name: str, expires_at: datetime | None = None
@@ -240,6 +232,16 @@ class AuthService:
         if token.expires_at is not None and token.expires_at <= self._clock():
             return "expired"
         return "active"
+
+    def _live_user(self, user_id: str) -> User:
+        """The user, ``UnauthorizedError`` when it is gone or disabled."""
+        try:
+            user = self._users.get(user_id)
+        except NotFoundError:
+            raise UnauthorizedError("the user no longer exists") from None
+        if user.disabled:
+            raise UnauthorizedError("user is disabled")
+        return user
 
     def _access_for_token(self, presented: str, source: str | None) -> Access:
         token = self._tokens.find_by_hash(hash_token(presented))
@@ -314,6 +316,12 @@ class AuthService:
             raise SetupRequiredError(
                 "no user exists: run `benethos-mailbox-service users create-admin`"
             )
+
+
+def _name_key(name: str) -> str:
+    """A name as the throttle counts it: regardless of case and of the
+    spaces around it, and not longer than a name can be."""
+    return name.strip().casefold()[:MAX_NAME]
 
 
 def _refused(user: User | None, matched: bool, has_password: bool) -> str | None:

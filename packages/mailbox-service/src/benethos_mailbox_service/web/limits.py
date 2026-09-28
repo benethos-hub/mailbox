@@ -10,12 +10,13 @@ from __future__ import annotations
 from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from ..common.sizes import MIB, megabytes
 from ..domain.activity import ActivityLog, someone
 from ..domain.activity import http as said
 
 # The largest mail the service sends carries 25 MB of attachments, which
 # base64 in a JSON body makes about 34 MB.
-MAX_BODY = 40 * 1024 * 1024
+MAX_BODY = 40 * MIB
 
 
 class BodyLimit:
@@ -58,7 +59,7 @@ class BodyLimit:
             )
         )
         return HTTPException(
-            413, f"the request is larger than {self._limit // (1024 * 1024)} MB"
+            413, f"the request is larger than {megabytes(self._limit)}"
         )
 
     @staticmethod
