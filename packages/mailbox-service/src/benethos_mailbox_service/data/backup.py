@@ -15,15 +15,9 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ..files import LockedError, create_private, exclusive_lock
-from ..storage import (
-    SCHEMA_VERSION,
-    Store,
-    inspect_snapshot,
-    migrate_file,
-    service_lock,
-)
-from . import cipher
+from .files import LockedError, create_private, exclusive_lock
+from .secrets import cipher
+from .storage import SCHEMA_VERSION, Store, inspect_snapshot, migrate_file, service_lock
 
 MAGIC = b"MAILBOX-SERVICE-BACKUP 1\n"
 _KEY_INFO = b"mailbox-service backup v1"

@@ -210,8 +210,9 @@ packages/
         storage/          # own records, one module per subject, table.py
                           #   for the in-memory ones, sqlite/ the database,
                           #   sqlite/migrations/ one module per schema version
-        secrets/          # envelope encryption, key providers, backup,
-                          #   password hashes
+        secrets/          # envelope encryption, key providers, password
+                          #   hashes
+        backup.py         # encrypted backups of the database, restore
         files.py          # files for the owner alone (0600): database, backup, key
         logbook.py        # the newest log lines in memory, for the log page
         discovery/        # autodiscovery sources and their helpers
