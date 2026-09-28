@@ -209,6 +209,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A command that cannot build the service, such as `serve` with a
+  client secret file that is missing, closes the database again before
+  it stops. Before, the connection stayed open until the process ended.
 - The service log holds what the service writes. `serve` left the
   service's own records without a handler: sign-ins to the UI and
   changes to users were dropped, and warnings came without time or

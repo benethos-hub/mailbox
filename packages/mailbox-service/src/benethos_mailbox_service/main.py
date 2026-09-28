@@ -133,129 +133,137 @@ def build_services(
     ``serve`` hands in the one its log writes to."""
     activity = ActivityLog(clock)
     repos = open_repositories(settings.storage, settings.database_path)
-    migrated = repos.store.migrated if repos.store is not None else None
-    if migrated is not None:
-        activity.record(
-            said.SchemaMigrated(
-                by=SERVICE,
-                before=migrated.before,
-                after=migrated.after,
-                notes=migrated.notes,
+    try:
+        migrated = repos.store.migrated if repos.store is not None else None
+        if migrated is not None:
+            activity.record(
+                said.SchemaMigrated(
+                    by=SERVICE,
+                    before=migrated.before,
+                    after=migrated.after,
+                    notes=migrated.notes,
+                )
             )
+        vault = CredentialVault(
+            repos.keys, repos.credentials, keys or key_provider(settings, activity)
         )
-    vault = CredentialVault(
-        repos.keys, repos.credentials, keys or key_provider(settings, activity)
-    )
-    clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
-    # One guard for every connection the service makes to a host a user
-    # typed: the lookups of autodiscovery and the servers of an account.
-    fetcher = SafeFetcher(
-        resolve=resolve or host_addresses,
-        internal_hosts=settings.discovery_internal_hosts,
-        lookup=lookup or host_addresses_now,
-    )
-    changes = ChangeFeed(
-        repos.changes, days=settings.changes_days, clock=clock, activity=activity
-    )
-    if provider_factory is None:
-        provider_factory = partial(build_provider, pick=fetcher.connect_address)
-    adapters = Adapters(
-        repos.accounts,
-        vault,
-        provider_factory,
-        oauth=clients,
-        changes=changes,
-        activity=activity,
-    )
-    sync = SyncService(
-        adapters, repos.index, feed=changes, clock=clock, activity=activity
-    )
-    accounts = AccountService(
-        repos.accounts,
-        vault,
-        adapters,
-        on_delete=sync.forget_account,
-        check_host=fetcher.checked_address,
-        idempotency=repos.idempotency,
-        changes=changes,
-        activity=activity,
-    )
-    auth = AuthService(
-        repos.users,
-        repos.roles,
-        repos.tokens,
-        Passwords(repos.passwords, password_hasher, clock=clock),
-        clock=clock,
-        activity=activity,
-    )
-    worker = (
-        SyncWorker(
-            adapters,
-            sync,
-            interval=settings.sync_interval,
-            push=settings.sync_idle,
-            clock=clock,
+        clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
+        # One guard for every connection the service makes to a host a user
+        # typed: the lookups of autodiscovery and the servers of an account.
+        fetcher = SafeFetcher(
+            resolve=resolve or host_addresses,
+            internal_hosts=settings.discovery_internal_hosts,
+            lookup=lookup or host_addresses_now,
+        )
+        changes = ChangeFeed(
+            repos.changes, days=settings.changes_days, clock=clock, activity=activity
+        )
+        if provider_factory is None:
+            provider_factory = partial(build_provider, pick=fetcher.connect_address)
+        adapters = Adapters(
+            repos.accounts,
+            vault,
+            provider_factory,
+            oauth=clients,
+            changes=changes,
             activity=activity,
         )
-        if settings.sync_interval
-        else None
-    )
-    webhooks = WebhookService(
-        repos.webhooks, vault, changes, clock=clock, activity=activity
-    )
-    return Services(
-        accounts=accounts,
-        adapters=adapters,
-        auth=auth,
-        users=UserService(
+        sync = SyncService(
+            adapters, repos.index, feed=changes, clock=clock, activity=activity
+        )
+        accounts = AccountService(
+            repos.accounts,
+            vault,
+            adapters,
+            on_delete=sync.forget_account,
+            check_host=fetcher.checked_address,
+            idempotency=repos.idempotency,
+            changes=changes,
+            activity=activity,
+        )
+        auth = AuthService(
             repos.users,
             repos.roles,
             repos.tokens,
-            adapters,
-            auth,
-            repos.webhooks,
-            activity=activity,
-        ),
-        mailbox=MailboxService(
-            adapters,
-            sync,
-            Idempotency(repos.idempotency, clock=clock, activity=activity),
-            SendControl(repos.sends, clock=clock, activity=activity),
+            Passwords(repos.passwords, password_hasher, clock=clock),
             clock=clock,
             activity=activity,
-        ),
-        discovery=discovery or build_discovery(settings, fetcher, activity),
-        sync=sync,
-        index=repos.index,
-        changes=changes,
-        worker=worker,
-        vault=vault,
-        oauth=OAuthService(accounts, adapters, clients, clock=clock, activity=activity),
-        webhooks=webhooks,
-        deliveries=WebhookDispatcher(
-            repos.webhooks,
-            vault,
-            changes,
-            WebhookPoster(
-                resolve=resolve or host_addresses, timeout=settings.webhook_timeout
+        )
+        worker = (
+            SyncWorker(
+                adapters,
+                sync,
+                interval=settings.sync_interval,
+                push=settings.sync_idle,
+                clock=clock,
+                activity=activity,
+            )
+            if settings.sync_interval
+            else None
+        )
+        webhooks = WebhookService(
+            repos.webhooks, vault, changes, clock=clock, activity=activity
+        )
+        return Services(
+            accounts=accounts,
+            adapters=adapters,
+            auth=auth,
+            users=UserService(
+                repos.users,
+                repos.roles,
+                repos.tokens,
+                adapters,
+                auth,
+                repos.webhooks,
+                activity=activity,
             ),
-            access_of=auth.access_of,
-            account_ids=adapters.ids,
-            retries=Retries(
-                attempts=settings.webhook_attempts,
-                first_retry=settings.webhook_first_retry,
-                longest_retry=settings.webhook_longest_retry,
+            mailbox=MailboxService(
+                adapters,
+                sync,
+                Idempotency(repos.idempotency, clock=clock, activity=activity),
+                SendControl(repos.sends, clock=clock, activity=activity),
+                clock=clock,
+                activity=activity,
             ),
-            clock=clock,
+            discovery=discovery or build_discovery(settings, fetcher, activity),
+            sync=sync,
+            index=repos.index,
+            changes=changes,
+            worker=worker,
+            vault=vault,
+            oauth=OAuthService(
+                accounts, adapters, clients, clock=clock, activity=activity
+            ),
+            webhooks=webhooks,
+            deliveries=WebhookDispatcher(
+                repos.webhooks,
+                vault,
+                changes,
+                WebhookPoster(
+                    resolve=resolve or host_addresses, timeout=settings.webhook_timeout
+                ),
+                access_of=auth.access_of,
+                account_ids=adapters.ids,
+                retries=Retries(
+                    attempts=settings.webhook_attempts,
+                    first_retry=settings.webhook_first_retry,
+                    longest_retry=settings.webhook_longest_retry,
+                ),
+                clock=clock,
+                activity=activity,
+            ),
+            status=StatusService(accounts, sync, worker, webhooks),
+            recovery=RecoveryKey(auth, vault),
+            log=ServiceLog(logbook or LogBook(), activity),
+            repositories=repos,
             activity=activity,
-        ),
-        status=StatusService(accounts, sync, worker, webhooks),
-        recovery=RecoveryKey(auth, vault),
-        log=ServiceLog(logbook or LogBook(), activity),
-        repositories=repos,
-        activity=activity,
-        oauth_clients=clients,
-    )
+            oauth_clients=clients,
+        )
+    except BaseException:
+        # A part that cannot be built, such as a client secret file that
+        # is missing, leaves no database open behind it.
+        repos.close()
+        raise
 
 
 @contextmanager
