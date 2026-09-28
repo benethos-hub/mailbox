@@ -49,10 +49,10 @@ from ...models import (
 )
 from ...protocols import (
     IMAP_PORTS,
-    ImapServer,
     ImapSession,
     Pick,
     SearchCriteria,
+    Server,
     SmtpSession,
 )
 from .. import rules
@@ -63,7 +63,7 @@ from . import mappers
 
 T = TypeVar("T")
 
-SessionFactory = Callable[[ImapServer], ImapSession]
+SessionFactory = Callable[[Server], ImapSession]
 
 CLIENT_ID = ("benethos-mailbox-service", __version__)
 
@@ -76,7 +76,7 @@ PROBE_TIMEOUT = 10.0
 HEADER_BATCH = 200
 
 
-def default_session(server: ImapServer) -> ImapSession:
+def default_session(server: Server) -> ImapSession:
     return ImapSession(server, client_id=CLIENT_ID)
 
 
@@ -105,7 +105,7 @@ def settings_from(
     return settings
 
 
-def probe_session(server: ImapServer) -> ImapSession:
+def probe_session(server: Server) -> ImapSession:
     return ImapSession(server, timeout=PROBE_TIMEOUT)
 
 
@@ -122,7 +122,7 @@ async def probe(
         raise BadRequestError("IMAP without encryption is not supported")
     pick = (lambda _host, _port: address) if address is not None else None
     session = session_factory(
-        ImapServer(host=host, port=port, security=security, pick=pick)
+        Server(host=host, port=port, security=security, pick=pick)
     )
     return await anyio.to_thread.run_sync(session.read_capabilities)
 
@@ -163,7 +163,7 @@ class ImapProvider:
             )
         if auth != "password":
             raise BadRequestError("settings.auth must be 'password'")
-        self._server = ImapServer(
+        self._server = Server(
             host=str(host),
             port=rules.port_of(settings, "port", IMAP_PORTS[security]),
             security=security,

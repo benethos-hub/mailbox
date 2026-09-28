@@ -30,7 +30,6 @@ from .imap import (
 )
 from .imap import (
     FetchedMessage,
-    ImapServer,
     ImapSession,
     RawFolder,
     SearchCriteria,
@@ -50,11 +49,11 @@ from .smtp import (
 )
 from .smtp import (
     SmtpLogin,
-    SmtpServer,
     SmtpSession,
 )
 from .transport import (
     Pick,
+    Server,
 )
 
 __all__ = [
@@ -66,7 +65,6 @@ __all__ = [
     "FetchedMessage",
     "HostCheck",
     "IMAP_PORTS",
-    "ImapServer",
     "ImapSession",
     "Lookup",
     "OAuthClient",
@@ -78,8 +76,8 @@ __all__ = [
     "SMTP_PORTS",
     "SafeFetcher",
     "SearchCriteria",
+    "Server",
     "SmtpLogin",
-    "SmtpServer",
     "SmtpSession",
     "Tokens",
     "WebhookPoster",

@@ -9,9 +9,9 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import MessageFilter
 from benethos_mailbox_service.data.protocols.imap import (
-    ImapServer,
     ImapSession,
     SearchCriteria,
+    Server,
 )
 from benethos_mailbox_service.errors import BadRequestError
 
@@ -88,9 +88,7 @@ async def test_non_ascii_filters_search_in_utf8(box: FakeMailBox) -> None:
 def test_the_session_refuses_a_line_break_in_a_search(box: FakeMailBox) -> None:
     """IMAPClient quotes search text but keeps CR and LF, which would end the
     command and start one of the caller's choosing."""
-    session = ImapSession(
-        ImapServer("imap.example.com", 993, "tls"), client_factory=box
-    )
+    session = ImapSession(Server("imap.example.com", 993, "tls"), client_factory=box)
     session.login("me@example.com", "secret")
     session.select("INBOX")
     for field in ("text", "sender", "to", "subject"):

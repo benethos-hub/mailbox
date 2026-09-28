@@ -12,8 +12,7 @@ import pytest
 from benethos_mailbox_service.common.hosts import ascii_host
 from benethos_mailbox_service.data.protocols import imap, smtp
 from benethos_mailbox_service.data.protocols.http import SafeFetcher
-from benethos_mailbox_service.data.protocols.imap import ImapServer, ImapSession
-from benethos_mailbox_service.data.protocols.smtp import SmtpServer
+from benethos_mailbox_service.data.protocols.imap import ImapSession, Server
 from benethos_mailbox_service.data.protocols.transport import tls_context
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 
@@ -62,7 +61,7 @@ def test_the_context_verifies_the_host_name_on_any_address() -> None:
 
 @pytest.mark.parametrize("security", ["tls", "starttls"])
 def test_imap_connects_to_the_picked_address(security: str) -> None:
-    server = ImapServer("imap.example.org", 993, security, pick=pick)
+    server = Server("imap.example.org", 993, security, pick=pick)
     imap._default_client(server, 5.0)
     host, port, _ = Library.made[0]
     assert (host, port) == (ADDRESS, 993)
@@ -73,7 +72,7 @@ def test_imap_connects_to_the_picked_address(security: str) -> None:
 
 @pytest.mark.parametrize("security", ["tls", "starttls"])
 def test_smtp_connects_to_the_picked_address(security: str) -> None:
-    smtp._default_connection(SmtpServer("smtp.example.org", 465, security, pick), 5.0)
+    smtp._default_connection(Server("smtp.example.org", 465, security, pick), 5.0)
     host, port, _ = Library.made[0]
     assert (host, port) == (ADDRESS, 465)
     context = Library.made[-1][2]
@@ -81,12 +80,12 @@ def test_smtp_connects_to_the_picked_address(security: str) -> None:
 
 
 def test_without_a_pick_the_name_is_used() -> None:
-    imap._default_client(ImapServer("imap.example.org", 993, "tls"), 5.0)
+    imap._default_client(Server("imap.example.org", 993, "tls"), 5.0)
     assert Library.made[0][0] == "imap.example.org"
 
 
 def test_a_refused_host_is_not_connected_to() -> None:
-    session = ImapSession(ImapServer("imap.example.org", 993, "tls", pick=refuse))
+    session = ImapSession(Server("imap.example.org", 993, "tls", pick=refuse))
     with pytest.raises(ProviderError, match="refused"):
         session.read_capabilities()
     assert Library.made == []

@@ -6,7 +6,7 @@ from __future__ import annotations
 import pytest
 from imapclient.imapclient import _parse_untagged_response
 
-from benethos_mailbox_service.data.protocols.imap import ImapServer, ImapSession
+from benethos_mailbox_service.data.protocols.imap import ImapSession, Server
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import (
     NotSupportedError,
@@ -91,9 +91,7 @@ async def test_message_headers_after_a_uidvalidity_change(
 
 
 def session(box: FakeMailBox) -> ImapSession:
-    session = ImapSession(
-        ImapServer("imap.example.com", 993, "tls"), client_factory=box
-    )
+    session = ImapSession(Server("imap.example.com", 993, "tls"), client_factory=box)
     session.login("me@example.com", "secret")
     return session
 

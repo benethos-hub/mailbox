@@ -11,7 +11,7 @@ from __future__ import annotations
 import smtplib
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from ...errors import (
@@ -21,20 +21,11 @@ from ...errors import (
     ProviderUnavailableError,
 )
 from ..mail import fields
-from .transport import Pick, connect_to, tls_context, transport_errors
+from .transport import Server, transport_errors
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}
 
-ConnectionFactory = Callable[["SmtpServer", float], Any]
-
-
-@dataclass(frozen=True)
-class SmtpServer:
-    host: str
-    port: int
-    security: str  # "tls" or "starttls"
-    # Checks the host at each connection. Without: connect by name.
-    pick: Pick | None = field(default=None, compare=False)
+ConnectionFactory = Callable[[Server, float], Any]
 
 
 @dataclass(frozen=True)
@@ -44,9 +35,8 @@ class SmtpLogin:
     auth: str = "password"  # or "xoauth2"
 
 
-def _default_connection(server: SmtpServer, timeout: float) -> Any:
-    address = connect_to(server.host, server.port, server.pick)
-    context = tls_context(server.host)
+def _default_connection(server: Server, timeout: float) -> Any:
+    address, context = server.endpoint()
     if server.security == "tls":
         return smtplib.SMTP_SSL(address, server.port, context=context, timeout=timeout)
     connection = smtplib.SMTP(address, server.port, timeout=timeout)
@@ -61,7 +51,7 @@ def _default_connection(server: SmtpServer, timeout: float) -> Any:
 class SmtpSession:
     def __init__(
         self,
-        server: SmtpServer,
+        server: Server,
         timeout: float = 30.0,
         connection_factory: ConnectionFactory = _default_connection,
     ) -> None:
@@ -156,12 +146,6 @@ def _errors() -> Iterator[None]:
             yield
         except (BadRequestError, ProviderAuthError, ProviderError):
             raise
-        except UnicodeError:
-            # Never the error's text: it quotes the character, which may be
-            # part of a secret.
-            raise BadRequestError(
-                "a value beyond ASCII cannot go to the mail server"
-            ) from None
         except smtplib.SMTPAuthenticationError as exc:
             if 400 <= exc.smtp_code < 500:
                 # 454 4.7.0 and the like: try again later.

@@ -1,14 +1,16 @@
-"""What every wire protocol's wrapper meets below its library: a timeout,
-TLS that fails, a socket that is not there. Translated once, here."""
+"""What every wire protocol's wrapper meets below its library: the server
+it connects to, a timeout, TLS that fails, a socket that is not there, a
+value beyond ASCII. Translated once, here."""
 
 from __future__ import annotations
 
 import ssl
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from typing import Any
 
-from ...errors import ProviderError, ProviderUnavailableError
+from ...errors import BadRequestError, ProviderError, ProviderUnavailableError
 
 # The address a connection to a host goes to, checked when it is made.
 # Raises when the host may not be connected to.
@@ -41,6 +43,22 @@ def connect_to(host: str, port: int, pick: Pick | None) -> str:
     return pick(host, port) if pick is not None else host
 
 
+@dataclass(frozen=True)
+class Server:
+    """A mail server, as IMAP and SMTP connect to it."""
+
+    host: str
+    port: int
+    security: str  # "tls" or "starttls"
+    # Checks the host at each connection. Without: connect by name.
+    pick: Pick | None = field(default=None, compare=False)
+
+    def endpoint(self) -> tuple[str, ssl.SSLContext]:
+        """The address to connect to, checked now, and the TLS context
+        that verifies the certificate of the host."""
+        return connect_to(self.host, self.port, self.pick), tls_context(self.host)
+
+
 @contextmanager
 def transport_errors() -> Iterator[None]:
     """The failures of the transport as this project's errors. A wrapper
@@ -56,4 +74,10 @@ def transport_errors() -> Iterator[None]:
     except OSError as exc:
         raise ProviderUnavailableError(
             f"the mail server is not reachable: {exc}"
+        ) from None
+    except UnicodeError:
+        # The libraries write commands in ASCII. Never the error's text: it
+        # quotes the character, which may be part of a secret.
+        raise BadRequestError(
+            "a value beyond ASCII cannot go to the mail server"
         ) from None

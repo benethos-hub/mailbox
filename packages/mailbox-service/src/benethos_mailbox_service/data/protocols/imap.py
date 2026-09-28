@@ -13,7 +13,7 @@ import re
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 from email.parser import BytesHeaderParser
 from typing import Any
@@ -34,7 +34,7 @@ from ...errors import (
     missing,
 )
 from ..mail import fields, parse
-from .transport import Pick, connect_to, tls_context, transport_errors
+from .transport import Server, transport_errors
 
 ClientFactory = Callable[..., Any]
 
@@ -52,15 +52,6 @@ _MESSAGE_ID = "BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]"
 _CHANGES = {b"EXISTS", b"EXPUNGE", b"FETCH", b"VANISHED"}
 # Control characters, not allowed in a search text.
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
-
-
-@dataclass(frozen=True)
-class ImapServer:
-    host: str
-    port: int
-    security: str  # "tls" or "starttls"
-    # Checks the host at each connection. Without: connect by name.
-    pick: Pick | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -101,9 +92,8 @@ class SearchCriteria:
 DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
 
-def _default_client(server: ImapServer, timeout: float) -> Any:
-    address = connect_to(server.host, server.port, server.pick)
-    context = tls_context(server.host)
+def _default_client(server: Server, timeout: float) -> Any:
+    address, context = server.endpoint()
     if server.security == "starttls":
         client = IMAPClient(address, server.port, ssl=False, timeout=timeout)
         client.starttls(context)
@@ -121,7 +111,7 @@ _CHANGED_BATCH = 500
 class ImapSession:
     def __init__(
         self,
-        server: ImapServer,
+        server: Server,
         timeout: float = 30.0,
         client_factory: ClientFactory = _default_client,
         client_id: tuple[str, str] | None = None,
@@ -668,10 +658,4 @@ def _errors() -> Iterator[None]:
         except imaplib.IMAP4.error as exc:
             raise ProviderError(
                 f"the mail server answered with an error: {exc}"
-            ) from None
-        except UnicodeError:
-            # imaplib writes commands in ASCII. Never the error's text: it
-            # quotes the character, which may be part of a secret.
-            raise BadRequestError(
-                "a value beyond ASCII cannot go to the mail server"
             ) from None

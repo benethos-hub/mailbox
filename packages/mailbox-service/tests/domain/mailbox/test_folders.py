@@ -13,7 +13,7 @@ from benethos_mailbox_service.data.models import (
     Message,
     ProviderType,
 )
-from benethos_mailbox_service.data.protocols.imap import ImapServer, ImapSession
+from benethos_mailbox_service.data.protocols.imap import ImapSession, Server
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.errors import (
@@ -125,9 +125,7 @@ async def test_without_namespace_at_the_top(server: FakeMailBox) -> None:  # noq
 
 def test_a_folder_that_is_gone_is_not_found() -> None:
     box = FakeMailBox()
-    session = ImapSession(
-        ImapServer("imap.example.com", 993, "tls"), client_factory=box
-    )
+    session = ImapSession(Server("imap.example.com", 993, "tls"), client_factory=box)
     session.login("me@example.com", "secret")
     with pytest.raises(NotFoundError):
         session.select("Renamed by someone else")

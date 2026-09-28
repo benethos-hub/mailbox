@@ -10,9 +10,9 @@ from pydantic import SecretStr
 
 from benethos_mailbox_service.data.models import FolderRole, MessageFilter
 from benethos_mailbox_service.data.protocols.imap import (
-    ImapServer,
     ImapSession,
     RawFolder,
+    Server,
 )
 from benethos_mailbox_service.data.providers.guard import Guard
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
@@ -333,7 +333,7 @@ def test_imap_with_oauth_waits_for_a_token_refresher(server: FakeMailBox) -> Non
 def test_the_session_logs_in_with_xoauth2(server: FakeMailBox) -> None:
     # Kept for the refresher to come: the wire part works.
     server.password = "token"
-    ImapSession(ImapServer("h", 993, "tls"), client_factory=server).login_oauth(
+    ImapSession(Server("h", 993, "tls"), client_factory=server).login_oauth(
         "me@example.com", "token"
     )
     assert ("xoauth2", "me@example.com") in server.calls
@@ -491,7 +491,7 @@ async def test_a_login_refused_for_good_blocks(
 def test_a_password_beyond_ascii_goes_by_sasl_plain(server: FakeMailBox) -> None:
     server.password = "pässwort"
     server.announced.append("AUTH=PLAIN")
-    session = ImapSession(ImapServer("h", 993, "tls"), client_factory=server)
+    session = ImapSession(Server("h", 993, "tls"), client_factory=server)
     session.login("me@example.com", "pässwort")
     assert ("plain", "me@example.com") in server.calls
     assert ("login", "me@example.com") not in server.calls
@@ -499,7 +499,7 @@ def test_a_password_beyond_ascii_goes_by_sasl_plain(server: FakeMailBox) -> None
 
 def test_a_password_beyond_ascii_needs_auth_plain(server: FakeMailBox) -> None:
     server.password = "pässwort"
-    session = ImapSession(ImapServer("h", 993, "tls"), client_factory=server)
+    session = ImapSession(Server("h", 993, "tls"), client_factory=server)
     with pytest.raises(BadRequestError, match="no AUTH=PLAIN") as refused:
         session.login("me@example.com", "pässwort")
     assert "ä" not in refused.value.message
@@ -596,7 +596,7 @@ def test_flat_folder_without_delimiter() -> None:
 
 
 def test_logout_without_connection_is_harmless() -> None:
-    session = ImapSession(ImapServer("h", 993, "tls"))
+    session = ImapSession(Server("h", 993, "tls"))
     session.logout()
     with pytest.raises(ProviderError, match="not connected"):
         session.list_folders()
