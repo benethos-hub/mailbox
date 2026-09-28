@@ -180,7 +180,9 @@ packages/
         activity/         # what was done, and by whom: the service log
           base.py         #   Activity, Actor (who, from where), Failure
           recorder.py     #   ActivityLog.record: the line under activity.<area>
-          catalogue/      #   one module per area of docs/LOGGING.md 5
+          catalogue/      #   one module per area, docs/LOGGING.md 7.2:
+                          #     activity.<area>.<name>, the areas the
+                          #     packages of docs/REFACTORING.md
       data/               # DATA: reads and writes, decides nothing
         models/           # provider-neutral types, one module per subject:
                           #   accounts, users, folders, messages, batch,

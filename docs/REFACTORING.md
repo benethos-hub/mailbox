@@ -123,7 +123,7 @@ model in `data/models`, and `domain/changes.py` imports it today.
 | `sync/` | `sync.py`, `worker.py` | the id mapping, the sync pass, polling and IDLE |
 | `changes/` | `changes.py` | the change feed (section 3) |
 | `webhooks/` | `webhooks.py`, `delivery.py` | webhooks and their posts |
-| `activity/` | new | the activities of LOGGING.md section 7 |
+| `activity/` | built, LOGGING.md steps 2 to 5 | the activities of LOGGING.md section 7. The areas of its catalogue are the packages of this table, and a move keeps every activity's name (LOGGING.md 7.2) |
 | `service/` | `status.py`, `recovery.py`, `servicelog.py` | the service at a glance: status, recovery key, log page |
 | (top level) | `locks.py`, `paging.py` | helpers several packages share |
 
@@ -219,7 +219,8 @@ it does today.
    `rights`, `changes`, `auth`, `discovery`, then `accounts` with the
    cycle removed, `users`, `sync`, `mailbox`, `webhooks`, `service`.
 4. The architecture tests of section 5 and CLAUDE.md.
-5. `activity/` is built in its place when LOGGING.md step 2 comes.
+5. `activity/` is built already, in its place. A move of the other
+   packages leaves the areas and names of the activities as they are.
 
 Steps 2 to 4 are one branch, one commit per step. Each commit passes all
 checks. The live checks run once at the end, since nothing they see
