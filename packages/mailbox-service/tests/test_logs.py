@@ -2,21 +2,24 @@
 
 from __future__ import annotations
 
+import io
 import logging
 import logging.config
 import re
+import sys
 
 import pytest
 
 from benethos_mailbox_service import logs
 from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.data.secrets import redact
 from benethos_mailbox_service.main import Services
 
 from .conftest import ADMIN
 
 
 def configure(level: str) -> None:
-    logging.config.dictConfig(logs.log_config(level))
+    logging.config.dictConfig(logs.log_config(level, colours=False))
 
 
 async def test_a_sign_in_reaches_the_log(
@@ -83,3 +86,81 @@ def test_uvicorn_writes_to_the_same_stream(capsys: pytest.CaptureFixture[str]) -
 def test_every_level_of_the_settings_is_known(level: str) -> None:
     configure(level)
     assert logging.getLogger(logs.PACKAGE).level == logs.LEVELS[level]
+
+
+# --- at a terminal --------------------------------------------------------------------
+
+
+def test_a_terminal_gets_short_lines_in_colour(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    logging.config.dictConfig(logs.log_config("info", colours=True))
+    logging.getLogger(f"{logs.PACKAGE}.domain.auth").info("sign-in to the UI as anna")
+    logging.getLogger(f"{logs.PACKAGE}.main").warning("a warning")
+    err = capsys.readouterr().err
+    assert "\033[32mINFO    \033[0m\033[36mdomain.auth   \033[0m sign-in" in err
+    assert "\033[33mWARNING \033[0m\033[36mmain          \033[0m a warning" in err
+    assert re.search(r"\033\[2m\d\d:\d\d:\d\d\033\[0m ", err)
+
+
+@pytest.mark.parametrize(
+    ("status", "shown"),
+    [
+        (200, "\033[32m200 OK"),
+        (303, "\033[33m303 See Other"),
+        (404, "\033[31m404 Not Found"),
+    ],
+)
+def test_an_access_line_names_the_status_in_colour(
+    capsys: pytest.CaptureFixture[str], status: int, shown: str
+) -> None:
+    logging.config.dictConfig(logs.log_config("info", colours=True))
+    logging.getLogger("uvicorn.access").info(
+        '%s - "%s %s HTTP/%s" %d', "127.0.0.1:5000", "GET", "/ui", "1.1", status
+    )
+    err = capsys.readouterr().err
+    assert f"\033[36mhttp          \033[0m GET /ui {shown}\033[0m" in err
+    assert "\033[2m127.0.0.1:5000\033[0m" in err
+
+
+def test_a_coloured_line_masks_secrets_and_keeps_a_traceback(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    logging.config.dictConfig(logs.log_config("info", colours=True))
+    redact.note("a-password-in-a-line")
+    try:
+        raise RuntimeError("echoed a-password-in-a-line")
+    except RuntimeError:
+        logging.getLogger(f"{logs.PACKAGE}.domain.sync").exception("a bug")
+    err = capsys.readouterr().err
+    assert "a-password-in-a-line" not in err
+    assert "a bug\nTraceback" in err and "RuntimeError: echoed ***" in err
+
+
+@pytest.mark.parametrize(
+    ("name", "short"),
+    [
+        (f"{logs.PACKAGE}.domain.auth", "domain.auth"),
+        ("uvicorn.error", "uvicorn"),
+        ("uvicorn.access", "http"),
+        ("httpx", "httpx"),
+    ],
+)
+def test_the_source_is_short(name: str, short: str) -> None:
+    assert logs.short_source(name) == short
+
+
+class Terminal(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
+def test_colours_on_a_terminal_unless_no_color(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setattr(sys, "stderr", Terminal())
+    assert logs.colours_wanted()
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert not logs.colours_wanted()
+    monkeypatch.delenv("NO_COLOR")
+    monkeypatch.setattr(sys, "stderr", io.StringIO())
+    assert not logs.colours_wanted()

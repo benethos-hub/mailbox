@@ -52,7 +52,7 @@ def test_only_the_newest_are_kept(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_the_log_masks_message_arguments_and_traceback(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    logging.config.dictConfig(logs.log_config("info"))
+    logging.config.dictConfig(logs.log_config("info", colours=False))
     redact.note(PASSWORD)
     log = logging.getLogger(f"{logs.PACKAGE}.data.providers")
     log.warning("login with %s refused", PASSWORD)

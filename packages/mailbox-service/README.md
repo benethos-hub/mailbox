@@ -137,6 +137,17 @@ the level, where it comes from and the message:
 2026-09-28 10:14:03 INFO     uvicorn.access: 127.0.0.1:52344 - "POST /ui/sign-in HTTP/1.1" 303
 ```
 
+At a terminal the lines are shorter and in colour: the time of day, the
+level in colour, the source without the package name (`http` for the
+access log), and a request as method, path and status with its name:
+
+```
+10:14:03 INFO    domain.auth    sign-in to the UI as admin (usr_...) from 127.0.0.1
+10:14:03 INFO    http           POST /ui/sign-in 303 See Other 127.0.0.1:52344
+```
+
+`NO_COLOR` set to any value keeps the plain lines at a terminal too.
+
 `MAILBOX_SERVICE_LOG_LEVEL` sets the level of the service and of uvicorn.
 Libraries write from `warning` on at any level, so `debug` shows the
 service without the commands a library sends to a mail server. The
