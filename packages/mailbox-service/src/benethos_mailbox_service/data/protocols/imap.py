@@ -21,6 +21,7 @@ from typing import Any
 from imapclient import IMAPClient
 from imapclient.exceptions import LoginError
 
+from ...common.chunks import batched
 from ...common.clock import utc_now
 from ...common.sizes import MIB
 from ...errors import (
@@ -350,8 +351,7 @@ class ImapSession:
         changed: list[int] = []
         with _errors():
             client = self._require()
-            for start in range(0, len(uids), _CHANGED_BATCH):
-                batch = uids[start : start + _CHANGED_BATCH]
+            for batch in batched(uids, _CHANGED_BATCH):
                 found = client.fetch(
                     batch, ["FLAGS"], modifiers=[f"CHANGEDSINCE {modseq}"]
                 )

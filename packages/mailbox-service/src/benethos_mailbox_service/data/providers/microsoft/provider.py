@@ -26,6 +26,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 from urllib.parse import quote, unquote, urlencode, urlsplit
 
+from ....common.chunks import batched
 from ....errors import (
     BadRequestError,
     ChangesExpiredError,
@@ -298,15 +299,15 @@ class MicrosoftProvider:
         """GET each of ``urls`` under immutable ids, twenty to a JSON
         batch. The body of each answered with 200, by its index."""
         bodies: dict[int, dict[str, Any]] = {}
-        for start in range(0, len(urls), BATCH_SIZE):
+        for batch in batched(list(enumerate(urls)), BATCH_SIZE):
             requests = [
                 {
-                    "id": str(start + n),
+                    "id": str(n),
                     "method": "GET",
                     "url": url,
                     "headers": {"Prefer": IMMUTABLE_IDS},
                 }
-                for n, url in enumerate(urls[start : start + BATCH_SIZE])
+                for n, url in batch
             ]
             answer = await self._json(
                 "POST", "/$batch", json_body={"requests": requests}

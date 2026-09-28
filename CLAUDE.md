@@ -133,6 +133,7 @@ packages/
         plaintext.py      # the text of an HTML body, for a mail and a page
         hosts.py          # host names in one form: ASCII, Unicode, syntax
         sizes.py          # MIB, and a size in megabytes for a message
+        chunks.py         # batched: a sequence in slices
       web/                # PRESENTATION: HTTP only, FastAPI lives here
         __init__.py       # install: both front ends, errors to the right one
         services.py       # the domain services as dependencies, for both

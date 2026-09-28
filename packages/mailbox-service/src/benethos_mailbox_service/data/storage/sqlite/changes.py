@@ -7,6 +7,7 @@ import sqlite3
 from collections.abc import Collection, Iterable
 from datetime import datetime
 
+from ....common.chunks import batched
 from ....common.clock import iso, parse_iso
 from ...models import ChangeRecord
 from ..changes import LoggedChange
@@ -45,8 +46,7 @@ class SqliteChangeLogRepository:
         if kinds:
             of_type = " AND type IN (" + ", ".join("?" * len(kinds)) + ")"
         found: list[LoggedChange] = []
-        for start in range(0, len(accounts), _MAX_ACCOUNTS):
-            chunk = accounts[start : start + _MAX_ACCOUNTS]
+        for chunk in batched(accounts, _MAX_ACCOUNTS):
             marks = ", ".join("?" * len(chunk))
             rows = self._db.query(
                 f"SELECT * FROM changes WHERE seq > ? AND account_id IN ({marks})"

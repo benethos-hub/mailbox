@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol
 
+from ...common.chunks import batched
 from ..files import create_private
 from .cipher import KEY_BYTES
 
@@ -42,7 +43,7 @@ class KeyProvider(Protocol):
 
 def encode_recovery(key: bytes) -> str:
     text = base64.b32encode(key).decode().rstrip("=")
-    return "-".join(text[i : i + 4] for i in range(0, len(text), 4))
+    return "-".join(batched(text, 4))
 
 
 def decode_recovery(text: str) -> bytes:

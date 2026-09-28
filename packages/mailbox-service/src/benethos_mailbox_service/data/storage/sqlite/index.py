@@ -3,18 +3,14 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 
+from ....common.chunks import batched
 from ..index import IndexChanges, IndexEntry
 from .database import Database
 
 # Stays below SQLite's limit of host parameters in one statement.
 _CHUNK = 500
-
-
-def _chunks(values: list[str]) -> Iterator[list[str]]:
-    for start in range(0, len(values), _CHUNK):
-        yield values[start : start + _CHUNK]
 
 
 class SqliteMessageIndexRepository:
@@ -55,7 +51,7 @@ class SqliteMessageIndexRepository:
         """The rows of ``sql``, which ends in ``IN``, for every value: in
         chunks, since SQLite caps the parameters of one statement."""
         rows: list[sqlite3.Row] = []
-        for chunk in _chunks(list(dict.fromkeys(values))):
+        for chunk in batched(list(dict.fromkeys(values)), _CHUNK):
             marks = ", ".join("?" * len(chunk))
             rows += self._db.query(f"{sql} ({marks})", (account_id, *chunk))
         return rows

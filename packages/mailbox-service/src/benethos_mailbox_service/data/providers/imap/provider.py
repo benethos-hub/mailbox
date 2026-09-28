@@ -20,6 +20,7 @@ from typing import Any, TypeVar
 import anyio
 
 from .... import __version__
+from ....common.chunks import batched
 from ....common.ratelimit import Clock, Sleep
 from ....errors import (
     BadRequestError,
@@ -333,8 +334,7 @@ class ImapProvider:
             uids = list(by_uid)
             # One request per batch, so a long first sync never holds the
             # connection for long.
-            for start in range(0, len(uids), HEADER_BATCH):
-                batch = uids[start : start + HEADER_BATCH]
+            for batch in batched(uids, HEADER_BATCH):
                 found.update(
                     await self._run(
                         partial(self._message_headers, folder, validity, batch)
