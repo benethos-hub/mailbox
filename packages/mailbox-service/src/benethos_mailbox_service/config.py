@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Literal, Self
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Relative to the working directory. Template: .env.example beside it.
+# Relative to the working directory, read when it exists. Template:
+# .env.example beside it.
 ENV_FILE = "config/benethos-mailbox-service/.env"
+# Names another settings file, as --env-file does on the command line.
+ENV_FILE_VARIABLE = "MAILBOX_SERVICE_ENV_FILE"
 
 
 class Settings(BaseSettings):
@@ -107,3 +111,46 @@ class Settings(BaseSettings):
     @property
     def database_path(self) -> Path:
         return (self.data_dir / "mailbox.db").resolve()
+
+
+def named_settings_file(env_file: Path | None = None) -> Path | None:
+    """A settings file named on purpose: ``env_file``, else the one
+    ``MAILBOX_SERVICE_ENV_FILE`` names. None without either."""
+    if env_file is not None:
+        return env_file
+    named = os.environ.get(ENV_FILE_VARIABLE)
+    return Path(named) if named else None
+
+
+def settings_file(env_file: Path | None = None) -> Path | None:
+    """The file the settings are read from, None when there is none."""
+    named = named_settings_file(env_file)
+    if named is not None:
+        return named.resolve()
+    default = Settings.model_config.get("env_file")
+    if isinstance(default, str | Path) and Path(default).is_file():
+        return Path(default).resolve()
+    return None
+
+
+def load_settings(env_file: Path | None = None) -> Settings:
+    """The settings of a command. A file named on purpose must exist, and
+    a relative path in the settings then counts from its folder, so the
+    service finds its data wherever it is started. Without one it reads
+    ``ENV_FILE`` if it exists, and relative paths count from the working
+    directory."""
+    named = named_settings_file(env_file)
+    if named is None:
+        return Settings()
+    if not named.is_file():
+        raise FileNotFoundError(f"settings file {named} not found")
+    settings = Settings(_env_file=named)
+    base = named.resolve().parent
+    return settings.model_copy(
+        update={
+            key: base / value
+            for key in ("data_dir", "key_file", "oauth_microsoft_client_secret_file")
+            if isinstance(value := getattr(settings, key), Path)
+            and not value.is_absolute()
+        }
+    )

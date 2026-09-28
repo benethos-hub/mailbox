@@ -141,6 +141,8 @@ MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID=<application (client) id>
 MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE=config/benethos-mailbox-service/microsoft_client_secret
 ```
 
+- With a settings file named by `--env-file`, a relative secret file
+  counts from that file's folder.
 - `MAILBOX_SERVICE_PUBLIC_URL` is the redirect URI of step 2 without
   `/ui/oauth/microsoft/callback`.
 - The secret may also be given directly as

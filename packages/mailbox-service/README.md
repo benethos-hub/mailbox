@@ -84,6 +84,21 @@ The service works from the folder it is started in:
 A template for the settings file with every option:
 [config/benethos-mailbox-service/.env.example](https://github.com/benethos-hub/mailbox/blob/main/config/benethos-mailbox-service/.env.example).
 
+To keep the settings somewhere else, name the file. Every command takes
+`--env-file PATH`, before or after the command, or reads
+`MAILBOX_SERVICE_ENV_FILE`:
+
+```
+benethos-mailbox-service --env-file /etc/mailbox/service.env users create-admin
+benethos-mailbox-service serve --env-file /etc/mailbox/service.env
+```
+
+A file named this way must exist. A relative path in the settings then
+counts from its folder, not from the folder the service is started in:
+`MAILBOX_SERVICE_DATA_DIR=data` puts the database in `/etc/mailbox/data/`.
+So every command finds the same data wherever it is started. `serve`
+names the settings file it read and the database at start.
+
 ## Settings
 
 | Setting | Default | Meaning |

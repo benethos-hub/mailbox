@@ -40,7 +40,10 @@ done. Update the roadmap in the same commit that finishes an item.
   `config/benethos-mailbox-service/.env` (not versioned) beside its
   `.env.example`. Paths count from the repository root, where `uv run` is
   started. Data likewise, one folder per package under `data/` (not
-  versioned): the database in `data/benethos-mailbox-service/`.
+  versioned): the database in `data/benethos-mailbox-service/`. Every
+  command of the service takes `--env-file PATH` (or
+  `MAILBOX_SERVICE_ENV_FILE`) for a settings file elsewhere. Relative
+  paths in it then count from its folder.
 - Run the service: once `uv run benethos-mailbox-service keys init` and
   `uv run benethos-mailbox-service users create-admin` (prints a one-time
   password), then `uv run benethos-mailbox-service serve`. Sign in at
