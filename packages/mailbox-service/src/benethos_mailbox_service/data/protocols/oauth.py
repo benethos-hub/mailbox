@@ -11,7 +11,6 @@ Tokens are ``SecretStr`` throughout and appear in no error text.
 
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import secrets
@@ -26,6 +25,7 @@ from pydantic import SecretStr
 
 from ...common import redact
 from ...common.clock import utc_now
+from ...common.opaque import from_base64, to_base64
 from ...errors import ProviderAuthError, ProviderError
 from .http import ApiClient
 
@@ -101,7 +101,7 @@ def new_pkce() -> Pkce:
     """A code verifier and its S256 challenge (RFC 7636)."""
     verifier = secrets.token_urlsafe(64)
     digest = hashlib.sha256(verifier.encode("ascii")).digest()
-    return Pkce(verifier, base64.urlsafe_b64encode(digest).rstrip(b"=").decode())
+    return Pkce(verifier, to_base64(digest))
 
 
 def authorize_url(
@@ -238,9 +238,7 @@ class OAuthClient:
 def identity_of(id_token: str) -> Identity | None:
     """The address and name an ID token carries, or None if it is unreadable."""
     try:
-        payload = id_token.split(".")[1]
-        padded = payload + "=" * (-len(payload) % 4)
-        claims = json.loads(base64.urlsafe_b64decode(padded))
+        claims = json.loads(from_base64(id_token.split(".")[1]))
     except (IndexError, ValueError):
         return None
     if not isinstance(claims, dict):

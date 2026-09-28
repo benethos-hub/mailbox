@@ -124,7 +124,8 @@ packages/
       common/             # cross-cutting: helpers several layers share,
                           #   standard library only
         ids.py            # ids of own records: acc_, usr_, msg_, ... + 64 hex
-        opaque.py         # opaque ids and cursors: prefix + base64 JSON
+        opaque.py         # opaque ids and cursors: prefix + base64 JSON,
+                          #   base64 without padding for the others
         clock.py          # utc_now, the default clock of the services,
                           #   local_moment: the local time of a log line,
                           #   iso and parse_iso: a time as text, in UTC
