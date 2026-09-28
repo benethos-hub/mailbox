@@ -58,9 +58,10 @@ of an ordinary deployment fits on one screen.
 
 ## 3. The shape of a line
 
-`logs.py` writes time, level, source and message. The source is the
-module: `domain.auth`, `domain.worker`. The message is one sentence in
-the past tense, in this order:
+`logs.py` writes time, level, source and message. The source of an
+event is its area: `events.auth`, `events.users` (section 7). The source
+of a technical line is its module: `domain.worker`. The message is one
+sentence in the past tense, in this order:
 
 ```
 <who> <did what> <to which> [from <where>][: <why>]
@@ -97,7 +98,9 @@ searches text and a person reads it.
    audit of sends alone.
 4. **Search terms** and filter values a person typed: the API's `q`,
    `from`, `subject`, the UI's search, the discovery address's local
-   part. A discovery lookup names the domain only.
+   part. A discovery lookup names the domain only. The access log of
+   uvicorn writes a request's query today, and with it these terms: it
+   writes the path alone from step 2 of section 8 on.
 5. **Webhook URLs beyond the host**: a URL may carry a key in its query.
    A webhook is its id and the host it posts to.
 6. **Request bodies and library traffic**: never at any level of the
@@ -276,8 +279,11 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 
 ## 6. Rules for writing a line
 
-1. **One logger per module**, `log = logging.getLogger(__name__)`, so
-   the source names the module.
+1. **Events go through `Events.record`**, every line of section 5. A
+   domain service builds the event and hands it over, it writes no
+   line of its own. The recorder logs under the logger of the event's
+   area. A technical line outside section 5 keeps one logger per
+   module, `log = logging.getLogger(__name__)`.
 2. **The domain logs events, the layers around it do not.** A route
    knows the request, the domain knows what happened and who did it.
    The client address reaches the domain on `Access`: `Access.source`,
@@ -307,24 +313,72 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 6. **Once per change of state**, not per round: the worker and the
    dispatcher remember the last outcome per account and webhook and log
    when it flips.
-7. **Every new line has a test** with `caplog`: the level, the text, and
-   that no secret of the test is in it. `test_logs.py` keeps a test that
-   a noted secret is masked in message, argument and traceback.
+7. **Every new event has a test** with `caplog`: the level, the text,
+   and that no secret of the test is in it. A test walks the catalogue:
+   each class has a level and a line, and no field of a type that holds
+   a secret or mail content. `test_logs.py` keeps a test that a noted
+   secret is masked in message, argument and traceback.
 8. **The CLI prints, the service logs.** A command talks to the person
    at the terminal on stderr, and a command that changes the database
    (`users`, `keys`, `restore`) writes the same as a log line, so the log
    page of the next start knows it. Whether that line survives is the
    host's business.
 
-## 7. Order of work
+## 7. Where the events live
+
+**Decided 2026-09-28:** a package of its own in the domain, the events
+as small classes, one module per area of section 5. Not one file per
+event: sixty files would cost more than they say.
+
+```
+domain/
+  events/
+    __init__.py      Events and Event: what the domain services use
+    base.py          Event: who, from where, when, level, audited, line()
+    recorder.py      Events.record(event): the log line, and the audit
+                       record of AUDIT.md for an event marked audited
+    catalogue/       one module per area of section 5
+      lifecycle.py     5.1  the service started, schema migrated, ...
+      auth.py          5.2  signed in, failed sign-in, token refused, ...
+      users.py         5.3  user created, token issued, role replaced, ...
+      accounts.py      5.4  account connected, needs a new sign-in, OAuth
+      sync.py          5.5  a pass, a failed sync, IDLE
+      sending.py       5.6  sent, refused, replayed
+      webhooks.py      5.7  created, removed, a post failed, given up
+      service.py       5.8  discovery, recovery key shown, log read, backup
+      limits.py        5.9  lockouts, send limit, provider pauses
+```
+
+- **`Event`** is a frozen dataclass. Every event carries who acted and
+  from where, taken from `Access` (the user, its token, `Access.source`),
+  or the worker, the dispatcher or the host, and when. The class says
+  its `level` and whether the audit keeps it (`audited`, AUDIT.md
+  section 2). `line()` writes the sentence of section 3.
+- **An event is one class** in the module of its area, named for what
+  happened: `SignedIn`, `TokenRevoked`, `AccountNeedsSignIn`. Its fields
+  are typed: a `User`, an `Account`, a count. There is no field for a
+  password, a token's value or the words of a mail, so none can reach a
+  line. An event of a failure carries the error, and the recorder logs
+  a traceback for what is not a `MailboxServiceError` (rule 6.5).
+- **`Events`** is a service like the others: `build_services` makes it
+  with the clock and, from AUDIT.md on, the repository. The domain
+  services that record get it in their constructor. `record()` logs the
+  line under `events.<area>`, at the event's level, and returns the
+  event, for tests.
+- **A change in a mailbox is no event of this package.** It stays with
+  `domain/changes.py` and its `EventType`, for clients. The docstring of
+  `domain/events/` says the difference.
+
+## 8. Order of work
 
 1. This file and AUDIT.md, one pull request of documentation.
    CONCEPT 7.4 and PERMISSIONS.md 8.6 point here.
-2. `Access.source`, the lifecycle lines of 5.1, the two lines under
-   `data/` moved up, and the architecture test of rule 6.2. Plain
-   `log.info` calls in the domain services: the helper that also
-   stores a record comes with AUDIT.md, and replaces them in place.
-3. The missing lines of 5.3 and 5.4: users, tokens, roles, accounts,
+2. `domain/events/` with `Event`, `Events` and the catalogue test.
+   `Access.source`, the lifecycle events of 5.1, the two lines under
+   `data/` moved up, and the architecture test of rule 6.2. The lines
+   of today move onto event classes, each where it is written now. The
+   access log without the query of a request (section 4).
+3. The missing events of 5.3 and 5.4: users, tokens, roles, accounts,
    OAuth. Each with its test.
 4. The missing lines of 5.5 to 5.9: sync at `DEBUG` with counts, the
    status flips, sending, webhooks, discovery, the log page read, the
@@ -336,7 +390,7 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 Steps 2 to 5 are one branch, one commit per step. AUDIT.md follows
 when the user asks for it.
 
-## 8. Open questions
+## 9. Open questions
 
 - Account addresses in the log: they help an operator, but a log that
   leaves the machine then carries personal data. Ids alone, or both?

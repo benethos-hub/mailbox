@@ -75,23 +75,24 @@ as the send audit does. `user_name` is written for that reason.
 
 ## 5. One place in the code
 
-A helper in the domain, `events.record(access, operation, record,
-outcome, detail)`, writes the log line of LOGGING.md and the audit
-record. It replaces the plain `log.info` calls that LOGGING.md step 2
-to 4 put into the domain services, call by call, in the same places.
-Nothing else writes an audit record, and no route does.
+`Events.record` of `domain/events/` (LOGGING.md section 7) writes the
+log line of every event and, for an event class marked `audited`, the
+audit record from the same object. The fields of the record come from
+the event's typed fields, not from its text. Nothing else writes an
+audit record, and no route does.
 
-The helper needs `Access.source` and the credential id, which LOGGING.md
-puts onto `Access` in its step 2. The CLI commands that change the
-database (`users`, `keys`, `restore`) call the helper with `host` as
-the credential.
+The recorder needs `Access.source` and the credential id, which
+LOGGING.md puts onto `Access` in its step 2. The CLI commands that
+change the database (`users`, `keys`, `restore`) record their events
+with `host` as the credential.
 
 ## 6. Order of work
 
 1. LOGGING.md steps 2 to 5 first: the lines exist, the actor and the
    source reach the domain.
 2. The `events` table, the repository protocol with an in-memory and a
-   SQLite implementation, the helper, the existing lines moved onto it.
+   SQLite implementation, and the recorder writing the audit record of
+   each event marked `audited`.
 3. `GET /v1/audit` and the OpenAPI document.
 4. The Audit page and the Recent activity card, walked in `live/ui.py`.
 5. Retention and the purge.
