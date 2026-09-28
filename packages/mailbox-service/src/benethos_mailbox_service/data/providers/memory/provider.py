@@ -293,10 +293,5 @@ def _matches(message: Message, search: MessageFilter) -> bool:
         and has(search.subject, message.subject)
         and (search.after is None or (day is not None and day >= search.after))
         and (search.before is None or (day is not None and day < search.before))
-        and (search.unread is None or message.unread == search.unread)
-        and (search.starred is None or message.starred == search.starred)
-        and (
-            search.has_attachments is None
-            or message.has_attachments == search.has_attachments
-        )
+        and search.flags_match(message)
     )

@@ -124,6 +124,18 @@ class MessageFilter(BaseModel):
     starred: bool | None = None
     has_attachments: bool | None = None
 
+    def flags_match(self, message: MessageSummary) -> bool:
+        """Whether ``message`` is unread, starred and has attachments as
+        asked. The rest of the filter is not looked at."""
+        return (
+            (self.unread is None or message.unread == self.unread)
+            and (self.starred is None or message.starred == self.starred)
+            and (
+                self.has_attachments is None
+                or message.has_attachments == self.has_attachments
+            )
+        )
+
 
 # A keyword as IMAP allows it: an atom, no spaces, brackets, quotes or
 # wildcards, and no system flag (those start with a backslash).

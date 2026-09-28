@@ -218,12 +218,4 @@ def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter |
 
 def keeps(item: MessageSummary, rest: MessageFilter | None) -> bool:
     """Whether a search result passes what Graph could not check."""
-    if rest is None:
-        return True
-    if rest.unread is not None and item.unread != rest.unread:
-        return False
-    if rest.has_attachments is not None and item.has_attachments != (
-        rest.has_attachments
-    ):
-        return False
-    return rest.starred is None or item.starred == rest.starred
+    return rest is None or rest.flags_match(item)
