@@ -367,6 +367,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Renaming a user, or naming a new token of a user, is checked against
+  the caller's rights on that user first. A caller who may not manage
+  the user gets `403` and no longer learns from a `409` whether a name
+  is taken.
 - The access log writes the path of a request without its query, which
   held what a person typed, such as search terms.
 - The service masks every secret it holds as `***` in its log and in
