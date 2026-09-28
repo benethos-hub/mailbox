@@ -141,7 +141,9 @@ the level, where it comes from and the message:
 Libraries write from `warning` on at any level, so `debug` shows the
 service without the commands a library sends to a mail server. The
 service logs sign-ins to the UI and changes to users, roles, tokens and
-passwords, and to whom the recovery key was shown.
+passwords, and to whom the recovery key was shown. A password, token or
+secret the service holds is written as `***`, should a message or a
+traceback carry one.
 
 ## Commands
 

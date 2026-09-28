@@ -11,6 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
+from ...data.secrets.redact import redact
 from ...errors import MailboxServiceError, RateLimitedError
 from ..errors import status_of
 from .schemas import ErrorResponse
@@ -51,7 +52,7 @@ def api_error(exc: MailboxServiceError) -> JSONResponse:
         headers = {"WWW-Authenticate": "Bearer"}
     elif isinstance(exc, RateLimitedError):
         headers = {"Retry-After": str(exc.retry_after)}
-    return error_response(status, exc.code, exc.message, headers)
+    return error_response(status, exc.code, redact(exc.message), headers)
 
 
 def http_error(exc: HTTPException) -> JSONResponse:

@@ -18,7 +18,7 @@ from ..data.providers import (
     hosts_in,
     settings_defaults,
 )
-from ..data.secrets import CredentialVault
+from ..data.secrets import CredentialVault, redact
 from ..data.storage import (
     AccountRepository,
     IdempotencyRepository,
@@ -227,6 +227,9 @@ class AccountService:
     ) -> None:
         """Log in once with a throwaway adapter. A refresh token it is
         handed lands in ``secrets``, to be stored with the rest."""
+        for value in secrets.values():
+            # Typed in just now: a failed login must not show it.
+            redact.note(value.get_secret_value())
         probe = self._adapters.build(
             provider,
             settings,

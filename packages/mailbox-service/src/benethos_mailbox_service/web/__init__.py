@@ -18,6 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 from starlette.exceptions import HTTPException
 
+from ..data.secrets.redact import redact
 from ..errors import MailboxServiceError
 from . import api, pages
 from .api.errors import api_error, http_error, validation_error
@@ -34,7 +35,7 @@ def install(app: FastAPI) -> None:
     @app.exception_handler(MailboxServiceError)
     async def _domain_error(request: Request, exc: MailboxServiceError) -> Response:
         if pages.owns(request):
-            return error_page(request, status_of(exc), exc.message)
+            return error_page(request, status_of(exc), redact(exc.message))
         return api_error(exc)
 
     @app.exception_handler(HTTPException)

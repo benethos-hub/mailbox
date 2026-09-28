@@ -319,6 +319,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- The service masks every secret it holds as `***` in its log and in
+  error texts of the API, the UI and an account's last sync error:
+  account passwords, OAuth tokens and client secret, webhook secrets.
+  CONCEPT 7.4 promised this filter, but it was missing.
 - IMAP reads have a limit. A message larger than 40 MB is refused with
   `502 provider_error`, as Microsoft accounts already did. In a list,
   headers beyond 256 KB are cut off.

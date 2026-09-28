@@ -29,6 +29,7 @@ from ..common.clock import utc_now
 from ..common.ids import new_id
 from ..data.models import EventType
 from ..data.providers import Capability, FolderChanges, MailProvider
+from ..data.secrets.redact import redact
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ..errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
 from .adapters import Adapters
@@ -226,7 +227,7 @@ class SyncService:
                     await self._sync_delta(account_id)
             except MailboxServiceError as exc:
                 self._states[account_id] = replace(
-                    state, last_error=exc.message, last_error_at=self._clock()
+                    state, last_error=redact(exc.message), last_error_at=self._clock()
                 )
                 raise
             self._states[account_id] = SyncState(last_sync_at=self._clock())

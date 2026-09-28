@@ -48,6 +48,7 @@ from .data.secrets import (
     KeyProviderError,
     KeyringKeyProvider,
     PasswordHasher,
+    redact,
 )
 from .data.storage import (
     MessageIndexRepository,
@@ -237,10 +238,13 @@ def build_oauth(settings: Settings) -> dict[ProviderType, OAuthClient]:
     """The OAuth apps the settings name, one per provider."""
     clients: dict[ProviderType, OAuthClient] = {}
     if settings.oauth_microsoft_client_id:
+        secret = settings.oauth_microsoft_secret()
+        if secret is not None:
+            redact.note(secret.get_secret_value())
         app = App(
             endpoints=sign_in(ProviderType.MICROSOFT, settings.oauth_microsoft_tenant),
             client_id=settings.oauth_microsoft_client_id,
-            client_secret=settings.oauth_microsoft_secret(),
+            client_secret=secret,
         )
         clients[ProviderType.MICROSOFT] = OAuthClient(app, ApiClient())
     return clients

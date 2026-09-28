@@ -34,6 +34,7 @@ from benethos_mailbox_service.data.secrets import (
     Scrypt,
     cipher,
     encode_recovery,
+    redact,
 )
 from benethos_mailbox_service.domain import permissions
 from benethos_mailbox_service.domain.access import Access
@@ -50,6 +51,12 @@ async def resolve_to_public(host: str, port: int) -> list[str]:
 
 
 ADMIN = Access.admin("usr_test_admin", "test admin")
+
+
+@pytest.fixture(autouse=True)
+def no_secret_of_another_test() -> None:
+    """Each test starts with no secret noted to be masked."""
+    redact.forget_all()
 
 
 @pytest.fixture(autouse=True)

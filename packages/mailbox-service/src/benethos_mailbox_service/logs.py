@@ -5,13 +5,16 @@ Without its own configuration uvicorn sets up only its loggers. The
 service's records then had no handler: below WARNING they were dropped,
 above they came without time or source. Libraries log from WARNING on,
 so a debug level shows the service without the IMAP commands of a
-library.
+library. A secret the service holds is masked in every line
+(``data/secrets/redact.py``).
 """
 
 from __future__ import annotations
 
 import logging
 from typing import Any
+
+from .data.secrets import redact
 
 PACKAGE = __name__.rpartition(".")[0]
 FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
@@ -27,11 +30,19 @@ LEVELS = {
 }
 
 
+class Redacting(logging.Formatter):
+    """Each line as written, a noted secret masked: in the message, its
+    arguments and a traceback alike."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        return redact.redact(super().format(record))
+
+
 def log_config(level: str) -> dict[str, Any]:
     """The configuration for ``uvicorn.run(log_config=...)``, as
     ``logging.config.dictConfig`` takes it."""
     number = LEVELS[level.lower()]
-    plain = {"format": FORMAT, "datefmt": DATE_FORMAT}
+    plain = {"()": Redacting, "fmt": FORMAT, "datefmt": DATE_FORMAT}
     return {
         "version": 1,
         "disable_existing_loggers": False,

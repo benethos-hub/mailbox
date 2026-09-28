@@ -28,8 +28,15 @@ from ..storage import (
     Sealed,
     WrappedKey,
 )
-from . import cipher
+from . import cipher, redact
 from .keys import KeyProvider, encode_recovery
+
+
+def _noted(plain: bytes) -> SecretStr:
+    """A decrypted secret, noted to be masked wherever it shows up."""
+    text = plain.decode()
+    redact.note(text)
+    return SecretStr(text)
 
 
 def _credential_aad(account_id: str, field: str) -> bytes:
@@ -112,6 +119,7 @@ class CredentialVault:
     def store(self, account_id: str, field: str, value: SecretStr) -> None:
         key_id, dek = self._data_key()
         aad = _credential_aad(account_id, field)
+        redact.note(value.get_secret_value())
         nonce, ciphertext = cipher.encrypt(dek, value.get_secret_value().encode(), aad)
         self._credentials.put(
             EncryptedCredential(
@@ -139,7 +147,7 @@ class CredentialVault:
             raise CredentialError(
                 f"the {field} of account {account_id} cannot be decrypted"
             ) from None
-        return SecretStr(plain.decode())
+        return _noted(plain)
 
     def info(self, account_id: str) -> list[CredentialInfo]:
         """Which credentials an account has, never their values."""
@@ -176,7 +184,7 @@ class CredentialVault:
             raise CredentialError(
                 f"the secret of {label} cannot be decrypted"
             ) from None
-        return SecretStr(plain.decode())
+        return _noted(plain)
 
     # --- keys -----------------------------------------------------------------
 
