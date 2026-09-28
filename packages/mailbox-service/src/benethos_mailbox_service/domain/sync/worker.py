@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 
 import anyio
 from anyio.abc import TaskGroup
@@ -21,7 +22,7 @@ from ...data.models import Account, AccountStatus
 from ...data.providers import Capability
 from ...errors import NotFoundError, NotSupportedError, ProviderAuthError
 from ..accounts import Adapters
-from ..activity import WORKER, ActivityLog, system
+from ..activity import WORKER, Activity, ActivityLog, system
 from ..activity import sync as said
 from .service import SyncService
 
@@ -110,21 +111,26 @@ class SyncWorker:
         self._last_pass_at = self._clock()
 
     def _failed(self, account_id: str, exc: Exception) -> None:
-        record = self._record(account_id)
-        if record is not None:
-            self._activity.record(said.SyncFailed(by=WORKER, account=record, error=exc))
+        self._record(account_id, partial(said.SyncFailed, by=WORKER, error=exc))
 
-    def _record(self, account_id: str) -> Account | None:
+    def _account(self, account_id: str) -> Account | None:
         """The account a line names, None once it is deleted."""
         try:
             return self._adapters.record(account_id)
         except NotFoundError:
             return None
 
+    def _record(self, account_id: str, make: Callable[..., Activity]) -> None:
+        """Record the activity ``make`` builds with ``account=``, unless
+        the account is deleted."""
+        record = self._account(account_id)
+        if record is not None:
+            self._activity.record(make(account=record))
+
     async def watch(self, account_id: str) -> None:
         """Wait for changes the server reports, and sync on each."""
         failures = 0
-        record = self._record(account_id)
+        record = self._account(account_id)
         if record is not None:
             self._activity.record(said.Watching(by=WORKER, account=record))
         try:
@@ -142,11 +148,7 @@ class SyncWorker:
                         )
                 except NotSupportedError:
                     self._no_push.add(account_id)
-                    record = self._record(account_id)
-                    if record is not None:
-                        self._activity.record(
-                            said.PushUnavailable(by=WORKER, account=record)
-                        )
+                    self._record(account_id, partial(said.PushUnavailable, by=WORKER))
                     return
                 except ProviderAuthError:
                     return  # _wanted is false now, until the account is verified
@@ -155,13 +157,10 @@ class SyncWorker:
                 except Exception as exc:
                     failures += 1
                     pause = backoff(failures - 1, FIRST_RETRY, LONGEST_RETRY)
-                    record = self._record(account_id)
-                    if record is not None:
-                        self._activity.record(
-                            said.WatchFailed(
-                                by=WORKER, account=record, pause=pause, error=exc
-                            )
-                        )
+                    self._record(
+                        account_id,
+                        partial(said.WatchFailed, by=WORKER, pause=pause, error=exc),
+                    )
                     await self._sleep(pause)
         except NotFoundError:
             return  # deleted
