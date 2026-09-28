@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from fastapi.responses import Response
 from pydantic import ValidationError
 
-from ...data.secrets.redact import redact
+from ...common.redact import redact
 from ...errors import MailboxServiceError
 
 

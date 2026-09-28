@@ -18,7 +18,7 @@ from datetime import datetime
 from http import HTTPStatus
 from typing import Any
 
-from .data.secrets import redact
+from .common import redact
 
 PACKAGE = __name__.rpartition(".")[0]
 FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"

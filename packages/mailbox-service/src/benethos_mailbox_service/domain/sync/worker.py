@@ -16,8 +16,9 @@ import anyio
 from anyio.abc import TaskGroup
 
 from ...common.clock import utc_now
+from ...common.ratelimit import backoff
 from ...data.models import Account, AccountStatus
-from ...data.providers import Capability, backoff
+from ...data.providers import Capability
 from ...errors import NotFoundError, NotSupportedError, ProviderAuthError
 from ..accounts import Adapters
 from ..activity import WORKER, ActivityLog, system

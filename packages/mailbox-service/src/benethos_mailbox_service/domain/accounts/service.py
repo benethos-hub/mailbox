@@ -8,6 +8,7 @@ from collections.abc import Callable, Mapping
 
 from pydantic import SecretStr
 
+from ...common import redact
 from ...common.ids import new_id
 from ...data.http import HostCheck
 from ...data.models import Account, AccountStatus, ProviderType
@@ -18,7 +19,7 @@ from ...data.providers import (
     hosts_in,
     settings_defaults,
 )
-from ...data.secrets import CredentialVault, redact
+from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository, IdempotencyRepository
 from ...errors import BadRequestError, MailboxServiceError
 from ..activity import ActivityLog, Actor

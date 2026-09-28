@@ -6,6 +6,10 @@ library's message or a traceback, is written with ``***`` in its place.
 A secret is noted where it is decrypted or received. The newest
 ``KEPT`` are held: access tokens come anew every hour, and one in use
 is noted again on its next decryption.
+
+The one module of ``common`` with state of its own: a secret noted where
+it is decrypted must be masked wherever a text is written, in every layer
+and in the log, so the noted secrets are held process-wide.
 """
 
 from __future__ import annotations

@@ -12,6 +12,7 @@ from datetime import datetime
 
 from pydantic import SecretStr
 
+from ...common import redact
 from ...common.clock import utc_now
 from ...common.ids import new_id
 from ...errors import (
@@ -28,7 +29,7 @@ from ..storage import (
     Sealed,
     WrappedKey,
 )
-from . import cipher, redact
+from . import cipher
 from .keys import KeyProvider, encode_recovery
 
 

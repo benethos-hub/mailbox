@@ -19,6 +19,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
 from . import __version__, web
+from .common import redact
 from .common.clock import utc_now
 from .config import Settings
 from .data.discovery import default_sources, preset_hosts
@@ -49,7 +50,6 @@ from .data.secrets import (
     KeyProviderError,
     KeyringKeyProvider,
     PasswordHasher,
-    redact,
 )
 from .data.storage import (
     MessageIndexRepository,

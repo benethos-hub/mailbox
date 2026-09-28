@@ -27,8 +27,8 @@ from typing import TypeVar
 
 from ...common.clock import utc_now
 from ...common.ids import new_id
+from ...common.redact import redact
 from ...data.providers import Capability, FolderChanges, MailProvider
-from ...data.secrets.redact import redact
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
 from ..accounts import Adapters

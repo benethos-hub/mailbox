@@ -12,41 +12,17 @@ import pytest
 from pydantic import SecretStr
 
 from benethos_mailbox_service import logs
+from benethos_mailbox_service.common import redact
 from benethos_mailbox_service.data.http import ApiClient
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.providers import sign_in
 from benethos_mailbox_service.data.providers.protocols.oauth import App, OAuthClient
-from benethos_mailbox_service.data.secrets import redact
 from benethos_mailbox_service.errors import ProviderError
 from benethos_mailbox_service.main import Services
 from benethos_mailbox_service.web.api.errors import api_error
 from benethos_mailbox_service.web.pages.forms import Failed, failing
 
 PASSWORD = "hunter2-but-longer"
-
-
-def test_a_noted_secret_is_masked() -> None:
-    redact.note(PASSWORD)
-    assert redact.redact(f"LOGIN me {PASSWORD} refused") == "LOGIN me *** refused"
-
-
-def test_a_short_value_is_not_masked() -> None:
-    """A password "abc" would hide every "abc" of the log."""
-    redact.note("abc")
-    assert redact.redact("abc def") == "abc def"
-
-
-def test_the_longest_secret_goes_first() -> None:
-    redact.note("token-part")
-    redact.note("token-part-and-more")
-    assert redact.redact("got token-part-and-more") == "got ***"
-
-
-def test_only_the_newest_are_kept(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(redact, "KEPT", 2)
-    for secret in ("first-secret", "second-secret", "third-secret"):
-        redact.note(secret)
-    assert redact.redact("first-secret third-secret") == "first-secret ***"
 
 
 def test_the_log_masks_message_arguments_and_traceback(

@@ -20,6 +20,7 @@ from typing import Any, TypeVar
 import anyio
 
 from .... import __version__
+from ....common.ratelimit import Clock, Sleep
 from ....errors import (
     BadRequestError,
     ConflictError,
@@ -56,7 +57,6 @@ from ..protocols.imap import (
 )
 from ..protocols.smtp import SmtpSession
 from ..protocols.transport import Pick
-from ..ratelimit import Clock, Sleep
 from ..sender import SmtpFactory, SmtpSender
 from . import mappers
 

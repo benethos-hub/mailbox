@@ -126,6 +126,8 @@ packages/
         ids.py            # ids of own records: acc_, usr_, msg_, ... + 64 hex
         opaque.py         # opaque ids and cursors: prefix + base64 JSON
         clock.py          # utc_now, the default clock of the services
+        redact.py         # secrets noted once, masked in every text
+        ratelimit.py      # pacing: a token bucket and a backoff
       web/                # PRESENTATION: HTTP only, FastAPI lives here
         __init__.py       # install: both front ends, errors to the right one
         services.py       # the domain services as dependencies, for both
@@ -209,7 +211,7 @@ packages/
                           #   for the in-memory ones, sqlite/ the database,
                           #   sqlite/migrations/ one module per schema version
         secrets/          # envelope encryption, key providers, backup,
-                          #   password hashes, redact.py: secrets masked
+                          #   password hashes
         files.py          # files for the owner alone (0600): database, backup, key
         logbook.py        # the newest log lines in memory, for the log page
         discovery/        # autodiscovery sources and their helpers
@@ -244,9 +246,10 @@ moved: `docs/ARCHITECTURE.md`.
 
 - `config.py`, `errors.py` and `common/` are cross-cutting: read by every
   layer, they import none. `main.py` and `__main__.py` only assemble.
-- **`common/` is not a drawer.** Only stateless helpers that more than one
-  layer needs, on the standard library alone. What one layer needs stays in
-  that layer.
+- **`common/` is not a drawer.** Only what more than one layer needs, on
+  the standard library, with no I/O and no state beyond what a caller
+  holds. `redact` is the one module with state of its own, and its
+  docstring says why. What one layer needs stays in that layer.
 - **No HTTP in the domain.** Nothing below `web/` raises an HTTP exception or
   knows a status code. The domain raises `errors`, and `web/api/errors.py` maps
   each class to a status.

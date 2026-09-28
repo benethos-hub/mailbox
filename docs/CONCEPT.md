@@ -1017,7 +1017,7 @@ the data, rather than a readable file.
   as `***`, in the message and in a traceback alike. The same happens to
   an error text before it goes into an API answer, a page or an
   account's last sync error. Values shorter than 6 characters are not
-  masked, and the newest 256 are kept (`data/secrets/redact.py`).
+  masked, and the newest 256 are kept (`common/redact.py`).
   Which events are logged, at which level and with which fields, and
   what never goes into a line: [LOGGING.md](LOGGING.md).
 - **Deletion:** removing an account deletes its credential rows.

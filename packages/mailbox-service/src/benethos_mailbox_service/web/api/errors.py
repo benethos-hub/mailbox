@@ -11,7 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from ...data.secrets.redact import redact
+from ...common.redact import redact
 from ...errors import MailboxServiceError, RateLimitedError
 from ..errors import status_of
 from .schemas import ErrorResponse

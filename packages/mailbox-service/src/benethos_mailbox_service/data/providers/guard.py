@@ -15,8 +15,8 @@ from contextlib import contextmanager
 from functools import partial
 from typing import TypeVar
 
+from ...common.ratelimit import Clock, Sleep, TokenBucket, backoff
 from ...errors import ProviderAuthError, ProviderError, ProviderUnavailableError
-from .ratelimit import Clock, Sleep, TokenBucket, backoff
 
 T = TypeVar("T")
 
