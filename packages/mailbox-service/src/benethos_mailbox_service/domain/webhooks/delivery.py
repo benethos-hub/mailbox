@@ -32,7 +32,7 @@ from ...data.secrets import CredentialVault
 from ...data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
 from ...errors import MailboxServiceError
 from ..activity import DISPATCHER, ActivityLog
-from ..activity.catalogue import service
+from ..activity.catalogue import system
 from ..activity.catalogue import webhooks as said
 from ..changes import ChangeFeed
 from ..rights import Access
@@ -109,7 +109,7 @@ class WebhookDispatcher:
             try:
                 await self.deliver_due()
             except Exception as exc:
-                self._activity.record(service.RoundFailed(by=DISPATCHER, error=exc))
+                self._activity.record(system.RoundFailed(by=DISPATCHER, error=exc))
             await self._sleep(POLL)
 
     async def deliver_due(self) -> None:

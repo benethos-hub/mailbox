@@ -21,8 +21,8 @@ from ...data.providers import Capability, backoff
 from ...errors import NotFoundError, NotSupportedError, ProviderAuthError
 from ..accounts import Adapters
 from ..activity import WORKER, ActivityLog
-from ..activity.catalogue import service
 from ..activity.catalogue import sync as said
+from ..activity.catalogue import system
 from .service import SyncService
 
 # RFC 2177: IDLE is to be renewed before 29 minutes.
@@ -89,7 +89,7 @@ class SyncWorker:
                 try:
                     await self.poll(watchers)
                 except Exception as exc:
-                    self._activity.record(service.RoundFailed(by=WORKER, error=exc))
+                    self._activity.record(system.RoundFailed(by=WORKER, error=exc))
                 await self._sleep(self._interval)
 
     async def poll(self, watchers: TaskGroup | None = None) -> None:

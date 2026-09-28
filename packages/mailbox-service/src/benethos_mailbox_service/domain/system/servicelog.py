@@ -10,7 +10,7 @@ from ...data.logbook import LogBook, LogEntry
 from ...data.models import Page
 from ...errors import BadRequestError
 from ..activity import ActivityLog, Actor
-from ..activity.catalogue.service import LogRead
+from ..activity.catalogue.system import LogRead
 from ..rights import Access
 
 # The levels a reader may ask for, from the least.

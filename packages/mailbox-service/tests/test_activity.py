@@ -75,7 +75,7 @@ def _catalogue() -> list[type[Activity]]:
 # The packages of docs/REFACTORING.md section 4 that record, and the two
 # areas beyond them (docs/LOGGING.md 7.2).
 AREAS = {
-    "service",
+    "system",
     "auth",
     "users",
     "accounts",

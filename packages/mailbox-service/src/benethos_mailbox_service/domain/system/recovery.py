@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from ...data.secrets import CredentialVault, encode_recovery
 from ..activity import Actor
-from ..activity.catalogue.service import RecoveryKeyShown
+from ..activity.catalogue.system import RecoveryKeyShown
 from ..auth import AuthService
 from ..rights import Access
 

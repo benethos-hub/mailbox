@@ -350,7 +350,7 @@ domain/
     recorder.py      ActivityLog.record(activity): the log line, and the
                        audit record of AUDIT.md for one marked audited
     catalogue/       one module per area, the areas of section 7.2
-      service.py       start, schema, stop, loops, recovery key, log
+      system.py        start, schema, stop, loops, recovery key, log
                          read, keys, backups
       auth.py          signed in, failed sign-in, token refused, lockouts
       users.py         user created, token issued, role replaced, ...
@@ -400,12 +400,12 @@ are part of the API. The code's names around them are `ChangeKind` and
 **Decided 2026-09-28:** each activity has a name, and it logs under
 `activity.<area>.<name>`.
 
-- **The area is a package of the domain** as [REFACTORING.md](REFACTORING.md)
-  section 4 proposes: `auth`, `users`, `accounts`, `discovery`,
-  `mailbox`, `sync`, `changes`, `webhooks`, `service`. An activity
-  belongs to the package whose code records it, so a reader finds the
-  code of `activity.mailbox.sent` in `domain/mailbox/`, today and after
-  the move. Two areas are more than a package of the domain: `service`
+- **The area is a package of the domain** ([REFACTORING.md](REFACTORING.md)
+  section 4): `auth`, `users`, `accounts`, `discovery`, `mailbox`,
+  `sync`, `changes`, `webhooks`, `system`. An activity belongs to the
+  package whose code records it, so a reader finds the code of
+  `activity.mailbox.sent` in `domain/mailbox/`. Two areas are more than
+  a package of the domain: `system`
   also holds what the assembly records, the start, the schema and the
   stop, and `http` holds what the web layer refuses before the domain
   sees a request. The limits of section 5.9 are with the area that
@@ -429,19 +429,19 @@ and that each is listed here.
 
 | Name | What |
 |---|---|
-| `service.started` | the service started: settings, database, schema |
-| `service.migrated` | the schema was migrated or created, with its notes |
-| `service.stopped` | the service stopped |
-| `service.loop_ended` | a background loop ended |
-| `service.round_failed` | a round of a background loop failed |
-| `service.key_from_env` | the master key comes from the environment |
-| `service.shared_db` | another service uses this database |
-| `service.recovery_shown` | the recovery key was shown |
-| `service.log_read` | the service log was read |
-| `service.keys_created` | the host created the keys |
-| `service.key_imported` | the host stored the master key from a recovery key |
-| `service.backup_written` | the host wrote a backup |
-| `service.backup_restored` | the host restored a backup |
+| `system.started` | the service started: settings, database, schema |
+| `system.migrated` | the schema was migrated or created, with its notes |
+| `system.stopped` | the service stopped |
+| `system.loop_ended` | a background loop ended |
+| `system.round_failed` | a round of a background loop failed |
+| `system.key_from_env` | the master key comes from the environment |
+| `system.shared_db` | another service uses this database |
+| `system.recovery_shown` | the recovery key was shown |
+| `system.log_read` | the service log was read |
+| `system.keys_created` | the host created the keys |
+| `system.key_imported` | the host stored the master key from a recovery key |
+| `system.backup_written` | the host wrote a backup |
+| `system.backup_restored` | the host restored a backup |
 | `auth.signed_in` | a sign-in to the UI |
 | `auth.sign_in_failed` | a failed sign-in to the UI |
 | `auth.signed_out` | a sign-out of the UI |

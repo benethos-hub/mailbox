@@ -195,13 +195,13 @@ def _keys(command: str, env_file: Path | None) -> None:
         print(encode_recovery(cipher.new_key()))
         return
     from .domain.activity import HOST
-    from .domain.activity.catalogue import service
+    from .domain.activity.catalogue import system
     from .main import opened
 
     with opened(_stored(load_settings(env_file), "keys")) as services:
         if command == "init":
             recovery = services.vault.initialize()
-            services.activity.record(service.KeysCreated(by=HOST))
+            services.activity.record(system.KeysCreated(by=HOST))
             print(
                 "Keys created. The recovery key below is shown this once. Keep it "
                 "apart from any backup: without it, a backup cannot be restored "
@@ -211,14 +211,14 @@ def _keys(command: str, env_file: Path | None) -> None:
             print(recovery)
         else:
             services.vault.import_master_key(_read_recovery_key())
-            services.activity.record(service.MasterKeyStored(by=HOST))
+            services.activity.record(system.MasterKeyStored(by=HOST))
             print("Master key stored.", file=sys.stderr)
 
 
 def _backup(target: list[str], recovery_key: bool, env_file: Path | None) -> None:
     from .data.secrets.backup import create_backup, read_backup
     from .domain.activity import HOST
-    from .domain.activity.catalogue import service
+    from .domain.activity.catalogue import system
     from .main import opened
 
     if target[0] == "verify":
@@ -248,7 +248,7 @@ def _backup(target: list[str], recovery_key: bool, env_file: Path | None) -> Non
             __version__,
         )
         services.activity.record(
-            service.BackupWritten(
+            system.BackupWritten(
                 by=HOST, file=target[0], schema=manifest.schema_version
             )
         )
@@ -264,7 +264,7 @@ def _restore(
 ) -> None:
     from .data.secrets.backup import restore_backup
     from .domain.activity import HOST, ActivityLog
-    from .domain.activity.catalogue import service
+    from .domain.activity.catalogue import system
     from .main import key_provider, opened
 
     if replace_master_key and not recovery_key:
@@ -286,7 +286,7 @@ def _restore(
         with opened(settings) as services:
             services.vault.import_master_key(master, replace=replace_master_key)
     ActivityLog().record(
-        service.BackupRestored(
+        system.BackupRestored(
             by=HOST,
             file=str(source),
             schema=manifest.schema_version,
