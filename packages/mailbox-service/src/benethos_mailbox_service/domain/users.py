@@ -20,9 +20,9 @@ from ..data.storage import (
     WebhookRepository,
 )
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
+from .accounts import Adapters
 from .activity import HOST, ActivityLog, Actor
 from .activity.catalogue import users as said
-from .adapters import Adapters
 from .auth import MAX_NAME, AuthService, TokenState
 from .rights import Access, SendLimit, permissions
 

@@ -23,10 +23,10 @@ from ..errors import (
     NotSupportedError,
     ProviderAuthError,
 )
+from .accounts import Adapters
 from .activity import WORKER, ActivityLog
 from .activity.catalogue import service
 from .activity.catalogue import sync as said
-from .adapters import Adapters
 from .sync import SyncService
 
 # RFC 2177: IDLE is to be renewed before 29 minutes.

@@ -4,44 +4,42 @@ rights. The live adapter of each is ``adapters``."""
 from __future__ import annotations
 
 import builtins
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 
 from pydantic import SecretStr
 
-from ..common.ids import new_id
-from ..data.http import HostCheck
-from ..data.models import Account, AccountStatus, ProviderType
-from ..data.providers import (
+from ...common.ids import new_id
+from ...data.http import HostCheck
+from ...data.models import Account, AccountStatus, ProviderType
+from ...data.providers import (
     CredentialReader,
     ProviderSettings,
     Tokens,
     hosts_in,
     settings_defaults,
 )
-from ..data.secrets import CredentialVault, redact
-from ..data.storage import (
-    AccountRepository,
-    IdempotencyRepository,
-)
-from ..errors import BadRequestError, MailboxServiceError
-from .activity import ActivityLog, Actor
-from .activity.catalogue import accounts as said
+from ...data.secrets import CredentialVault, redact
+from ...data.storage import AccountRepository, IdempotencyRepository
+from ...errors import BadRequestError, MailboxServiceError
+from ..activity import ActivityLog, Actor
+from ..activity.catalogue import accounts as said
+from ..changes import ChangeFeed
+from ..rights import Access
 from .adapters import REFRESH_TOKEN, Adapters
-from .changes import ChangeFeed
-from .rights import Access
-from .sync import SyncService
 
 
 class AccountService:
     """Records live in the repository, credentials in the vault, the live
-    adapters in ``adapters``. Every method checks the caller's right."""
+    adapters in ``adapters``. Every method checks the caller's right.
+    ``on_delete`` hears of an account deleted, with its id: the sync
+    forgets its state there."""
 
     def __init__(
         self,
         repository: AccountRepository,
         vault: CredentialVault,
         adapters: Adapters,
-        sync: SyncService | None = None,
+        on_delete: Callable[[str], None] | None = None,
         check_host: HostCheck | None = None,
         idempotency: IdempotencyRepository | None = None,
         changes: ChangeFeed | None = None,
@@ -51,7 +49,7 @@ class AccountService:
         self._activity = activity or ActivityLog()
         self._vault = vault
         self._adapters = adapters
-        self._sync = sync
+        self._on_delete = on_delete
         self._idempotency = idempotency
         self._changes = changes
         # Every host in an account's settings passes this before the first
@@ -243,8 +241,8 @@ class AccountService:
         access.require("delete_account", account_id)
         account = self._repository.get(account_id)
         self._vault.delete(account_id)
-        if self._sync is not None:
-            self._sync.forget_account(account_id)
+        if self._on_delete is not None:
+            self._on_delete(account_id)
         if self._idempotency is not None:
             self._idempotency.forget_account(account_id)
         if self._changes is not None:

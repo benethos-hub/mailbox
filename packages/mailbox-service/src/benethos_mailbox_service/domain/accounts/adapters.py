@@ -14,8 +14,8 @@ from typing import TypeVar
 
 from pydantic import SecretStr
 
-from ..data.models import Account, AccountStatus, ProviderType
-from ..data.providers import (
+from ...data.models import Account, AccountStatus, ProviderType
+from ...data.providers import (
     Capability,
     CredentialReader,
     MailProvider,
@@ -27,12 +27,12 @@ from ..data.providers import (
     TokenSource,
     build_provider,
 )
-from ..data.secrets import CredentialVault
-from ..data.storage import AccountRepository
-from ..errors import ProviderAuthError, ProviderUnavailableError
-from .activity import SERVICE, Activity, ActivityLog
-from .activity.catalogue import accounts as said
-from .changes import AccountNeedsSignIn, ChangeFeed
+from ...data.secrets import CredentialVault
+from ...data.storage import AccountRepository
+from ...errors import ProviderAuthError, ProviderUnavailableError
+from ..activity import SERVICE, Activity, ActivityLog
+from ..activity.catalogue import accounts as said
+from ..changes import AccountNeedsSignIn, ChangeFeed
 
 T = TypeVar("T")
 

@@ -18,7 +18,7 @@ from benethos_mailbox_service.data.storage import (
     InMemoryTokenRepository,
     InMemoryUserRepository,
 )
-from benethos_mailbox_service.domain.accounts import AccountService
+from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.passwords import Passwords
 from benethos_mailbox_service.domain.auth.service import (
     TOKEN_PREFIX,

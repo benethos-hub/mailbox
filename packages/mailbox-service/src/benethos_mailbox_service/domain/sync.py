@@ -31,9 +31,9 @@ from ..data.providers import Capability, FolderChanges, MailProvider
 from ..data.secrets.redact import redact
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ..errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
+from .accounts import Adapters
 from .activity import SERVICE, ActivityLog
 from .activity.catalogue.sync import Synced
-from .adapters import Adapters
 from .changes import (
     ChangeFeed,
     MailboxChange,

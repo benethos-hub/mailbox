@@ -11,11 +11,10 @@ from typing import Annotated, Protocol
 
 from fastapi import Depends, Request
 
-from ..domain.accounts import AccountService
+from ..domain.accounts import AccountService, OAuthService
 from ..domain.auth import AuthService
 from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
-from ..domain.oauth import OAuthService
 from ..domain.recovery import RecoveryKey
 from ..domain.servicelog import ServiceLog
 from ..domain.status import StatusService

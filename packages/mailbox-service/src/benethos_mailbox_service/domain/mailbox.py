@@ -34,8 +34,8 @@ from ..data.models import (
 )
 from ..errors import ConflictError, MailboxServiceError, NotFoundError
 from . import merge
+from .accounts import Adapters
 from .activity import ActivityLog
-from .adapters import Adapters
 from .calls import Calls, public
 from .idempotency import Idempotency
 from .outgoing import Outgoing

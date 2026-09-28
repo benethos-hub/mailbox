@@ -41,7 +41,7 @@ from benethos_mailbox_service.data.providers.protocols.oauth import (
     identity_of,
     new_pkce,
 )
-from benethos_mailbox_service.domain.adapters import REFRESH_TOKEN
+from benethos_mailbox_service.domain.accounts.adapters import REFRESH_TOKEN
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import (
     BadRequestError,

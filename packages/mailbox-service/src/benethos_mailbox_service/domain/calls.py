@@ -22,7 +22,7 @@ from ..data.models import (
 )
 from ..data.providers import MailProvider
 from ..errors import MailboxServiceError, MessageNotFoundError
-from .adapters import Adapters
+from .accounts import Adapters
 from .changes import MailboxChange, MessagesDeleted, MessagesUpdated
 from .sync import SyncService
 

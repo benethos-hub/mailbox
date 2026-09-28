@@ -25,15 +25,15 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from urllib.parse import urlsplit
 
-from ..common.clock import utc_now
-from ..data.models import Account, ProviderType
-from ..data.providers import OAuthClient, authorize_url, new_pkce
-from ..errors import BadRequestError, MailboxServiceError, NotSupportedError
-from .accounts import AccountService
-from .activity import ActivityLog, Actor
-from .activity.catalogue import accounts as said
+from ...common.clock import utc_now
+from ...data.models import Account, ProviderType
+from ...data.providers import OAuthClient, authorize_url, new_pkce
+from ...errors import BadRequestError, MailboxServiceError, NotSupportedError
+from ..activity import ActivityLog, Actor
+from ..activity.catalogue import accounts as said
+from ..rights import Access
 from .adapters import REFRESH_TOKEN, Adapters
-from .rights import Access
+from .service import AccountService
 
 VALID_FOR = timedelta(minutes=10)
 # Sign-ins a user may have open at once. Older ones are dropped.

@@ -36,7 +36,7 @@ from benethos_mailbox_service.data.secrets import (
     encode_recovery,
     redact,
 )
-from benethos_mailbox_service.domain.accounts import AccountService
+from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.service import AuthService
 from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import Access
