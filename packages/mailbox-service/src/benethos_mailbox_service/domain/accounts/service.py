@@ -108,7 +108,15 @@ class AccountService:
         _no_secrets_in(settings)
         settings = {**settings_defaults(provider, email), **(settings or {})}
         secrets = dict(credentials or {})
-        try:
+        failed = self._activity.on_failure(
+            lambda exc: said.ConnectFailed(
+                by=Actor.of(access),
+                address=email,
+                provider=provider.value,
+                error=exc,
+            )
+        )
+        with failed:
             await self._check_hosts(settings)
             if secrets:
                 self._vault.require_ready()
@@ -122,16 +130,6 @@ class AccountService:
                 secrets,
                 signed_in,
             )
-        except MailboxServiceError as exc:
-            self._activity.record(
-                said.ConnectFailed(
-                    by=Actor.of(access),
-                    address=email,
-                    provider=provider.value,
-                    error=exc,
-                )
-            )
-            raise
         account = Account(
             id=new_id("acc"),
             provider=provider,

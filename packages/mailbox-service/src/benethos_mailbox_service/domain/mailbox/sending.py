@@ -84,7 +84,7 @@ class SendControl:
             by = Actor.of(access)
             try:
                 self._allow(access, operation, account_id, recipients)
-            except SendLimitError as exc:
+            except MailboxServiceError as exc:
                 record("denied", error=exc.code)
                 self._activity.record(
                     said.SendLimitReached(
@@ -93,12 +93,8 @@ class SendControl:
                         reason=exc.message,
                         retry_after=exc.retry_after,
                     )
-                )
-                raise
-            except MailboxServiceError as exc:
-                record("denied", error=exc.code)
-                self._activity.record(
-                    said.SendRefused(by=by, account_id=account_id, code=exc.code)
+                    if isinstance(exc, SendLimitError)
+                    else said.SendRefused(by=by, account_id=account_id, code=exc.code)
                 )
                 raise
             try:
@@ -113,15 +109,11 @@ class SendControl:
                 record("failed", error="internal_error")
                 raise
             # Sent: from here on nothing may fail, or a client would send again.
-            try:
+            with self._activity.fail_quietly(
+                lambda exc: said.NotInAudit(by=by, account_id=account_id, error=exc)
+            ):
                 record(
                     "sent", refused=sent.refused, message_id_header=message_id_header
-                )
-            except Exception as exc:
-                self._activity.record(
-                    said.NotInAudit(
-                        by=Actor.of(access), account_id=account_id, error=exc
-                    )
                 )
             return sent
 

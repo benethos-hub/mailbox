@@ -77,21 +77,16 @@ class Idempotency:
             result = await action()
             # Done, e.g. sent: the result goes to the caller even when it
             # cannot be stored, or the caller would take it for a failure.
-            try:
+            with self._activity.fail_quietly(
+                lambda exc: said.ResultNotKept(
+                    by=SERVICE, account_id=account_id, operation=operation, error=exc
+                )
+            ):
                 self._store.put(
                     account_id,
                     user_id,
                     key,
                     StoredResult(operation, fingerprint, result.model_dump_json(), now),
-                )
-            except Exception as exc:
-                self._activity.record(
-                    said.ResultNotKept(
-                        by=SERVICE,
-                        account_id=account_id,
-                        operation=operation,
-                        error=exc,
-                    )
                 )
             return result
 

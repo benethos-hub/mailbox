@@ -188,6 +188,33 @@ def test_any_other_failure_is_an_error_with_its_traceback(
     assert "KeyError: 'a bug'" in caplog.text
 
 
+def test_on_failure_records_a_failure_of_ours_and_raises_it(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    log = ActivityLog()
+    with (
+        pytest.raises(StorageError),
+        log.on_failure(lambda exc: _Broke(by=WORKER, error=exc)),
+    ):
+        raise StorageError("the disk is full")
+    with (
+        pytest.raises(KeyError),
+        log.on_failure(lambda exc: _Broke(by=WORKER, error=exc)),
+    ):
+        raise KeyError("a bug is not ours to record")
+    [record] = caplog.records
+    assert record.getMessage() == "the worker broke: the disk is full"
+
+
+def test_fail_quietly_records_any_failure_and_goes_on(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with ActivityLog().fail_quietly(lambda exc: _Broke(by=WORKER, error=exc)):
+        raise KeyError("a bug")
+    [record] = caplog.records
+    assert record.levelno == logging.ERROR
+
+
 @dataclass(frozen=True, kw_only=True)
 class _Costly(Activity):
     name = "costly"
