@@ -18,8 +18,10 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.data.storage import InMemoryChangeLogRepository
 from benethos_mailbox_service.domain.changes import ChangeFeed, MessagesCreated
+from benethos_mailbox_service.domain.paging import encode_cursor
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.domain.sync import worker as worker_module
+from benethos_mailbox_service.domain.system.servicelog import CURSOR
 from benethos_mailbox_service.domain.webhooks.delivery import Retries
 from benethos_mailbox_service.errors import (
     RateLimitedError,
@@ -258,7 +260,7 @@ def test_reading_the_log_is_logged_once_per_visit(
 ) -> None:
     with caplog.at_level(logging.INFO):
         services.log.lines(ADMIN)
-        services.log.lines(ADMIN, cursor="5")
+        services.log.lines(ADMIN, cursor=encode_cursor(CURSOR, 5))
     assert lines(caplog) == [f"{WHO} read the service log"]
 
 

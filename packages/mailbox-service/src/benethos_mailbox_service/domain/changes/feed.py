@@ -14,12 +14,13 @@ from __future__ import annotations
 
 from collections.abc import Callable, Collection, Iterable
 from datetime import datetime, timedelta
+from typing import Any
 
-from ...common import opaque
 from ...common.clock import utc_now
 from ...data.models import FEED_KINDS, Change, ChangePage, ChangeRecord
 from ...data.storage import ChangeLogRepository, LoggedChange
-from ...errors import BadRequestError, ChangesExpiredError
+from ...errors import ChangesExpiredError
+from .. import paging
 from ..activity import SERVICE, ActivityLog
 from ..activity import changes as said
 from .catalogue import MailboxChange
@@ -74,9 +75,9 @@ class ChangeFeed:
                 "this state is unknown or older than the changes kept: start"
                 " again without since"
             )
-        found = self._log.after(account_ids, seq, limit=limit + 1, types=FEED_KINDS)
-        more = len(found) > limit
-        found = found[:limit]
+        found, more = paging.split_page(
+            self._log.after(account_ids, seq, limit=limit + 1, types=FEED_KINDS), limit
+        )
         end = found[-1].seq if more else max([last, *(e.seq for e in found)])
         return ChangePage(
             changes=[Change.model_validate(e.record.model_dump()) for e in found],
@@ -119,14 +120,16 @@ class ChangeFeed:
 
 
 def _state(seq: int) -> str:
-    return opaque.encode(STATE, seq)
+    return paging.encode_cursor(STATE, seq)
 
 
 def _seq(state: str) -> int:
-    try:
-        seq = opaque.decode(STATE, state)
-    except ValueError:
-        raise BadRequestError("since is not a state of the change feed") from None
-    if not isinstance(seq, int) or isinstance(seq, bool) or seq < 0:
-        raise BadRequestError("since is not a state of the change feed")
-    return seq
+    return paging.decode_cursor(
+        STATE, state, _point, refusal="since is not a state of the change feed"
+    )
+
+
+def _point(carried: Any) -> int:
+    if not isinstance(carried, int) or isinstance(carried, bool) or carried < 0:
+        raise ValueError("not a point in the feed")
+    return carried
