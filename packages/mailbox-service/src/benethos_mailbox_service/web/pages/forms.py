@@ -30,6 +30,13 @@ def first_problem(exc: ValidationError) -> str:
     return f"{where}: {reason}" if where else reason
 
 
+def text_of(form: Any, key: str, *, strip: bool = True) -> str:
+    """A field of a submitted form as text, empty when it is not there,
+    without the spaces around it unless ``strip`` is false."""
+    value = str(form.get(key) or "")
+    return value.strip() if strip else value
+
+
 M = TypeVar("M", bound=BaseModel)
 
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import timedelta
 from typing import Annotated, Any
-from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
@@ -17,7 +16,7 @@ from ...services import Users, get_accounts, get_users
 from ..deps import Actor, Viewer, account_names, if_allowed
 from ..effective import view_of
 from ..filters import Field, filter_bar
-from ..forms import FormError, failing
+from ..forms import FormError, failing, text_of
 from ..grants import (
     GROUP_NAMES,
     GROUP_SECTIONS,
@@ -29,7 +28,7 @@ from ..grants import (
     typed_rows,
 )
 from ..session import show_once, take_once
-from ..templates import back, render
+from ..templates import back, render, segment
 
 router = APIRouter()
 
@@ -130,7 +129,7 @@ def _new_user_page(
 def _typed_user(form: Any) -> dict[str, Any]:
     """The fields of a user's editor as they were submitted."""
     return {
-        "name": str(form.get("name") or "").strip(),
+        "name": text_of(form, "name"),
         "roles": [str(role) for role in form.getlist("roles")],
         "signs_in_to": str(form.get("signs_in_to") or "api"),
         "one_time": "one_time" in form,
@@ -142,8 +141,8 @@ def _typed_user(form: Any) -> dict[str, Any]:
 def _typed_token(form: Any) -> dict[str, str]:
     """The fields of a new token as they were submitted."""
     return {
-        "name": str(form.get("name") or "").strip(),
-        "days": str(form.get("days") or "").strip(),
+        "name": text_of(form, "name"),
+        "days": text_of(form, "days"),
     }
 
 
@@ -372,7 +371,7 @@ def _new_role_page(
         page="roles",
         status_code=REFUSED if err else 200,
         err=err,
-        typed_id=str(form.get("id") or "").strip() if form is not None else "",
+        typed_id=text_of(form, "id") if form is not None else "",
         **_editor(request, caller, [], _typed_rows(form)),
     )
 
@@ -391,7 +390,7 @@ def _used_by(request: Request, caller: Access, roles: list[Role]) -> dict[str, i
 @router.post("/roles")
 async def create_role(request: Request, caller: Actor, users: Users) -> Response:
     form = await request.form()
-    role_id = str(form.get("id") or "").strip()
+    role_id = text_of(form, "id")
     with failing(
         "/ui/roles/new", again=lambda err: _new_role_page(request, caller, form, err)
     ):
@@ -459,4 +458,4 @@ async def delete_role(
 
 def _role_path(role_id: str) -> str:
     """A role's page. Its name is free text."""
-    return f"/ui/roles/{quote(role_id, safe='')}"
+    return f"/ui/roles/{segment(role_id)}"

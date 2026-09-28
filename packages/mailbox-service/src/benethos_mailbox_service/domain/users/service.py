@@ -30,7 +30,7 @@ from ..accounts import Adapters
 from ..activity import HOST, ActivityLog, Actor
 from ..activity import users as said
 from ..auth import MAX_NAME, AuthService, TokenState
-from ..rights import Access, SendLimit, permissions
+from ..rights import ADMIN_GRANT, Access, SendLimit, permissions
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18
@@ -134,7 +134,7 @@ class UserService:
         user = User(
             id=new_id("usr"),
             name=name,
-            grants=[Grant(accounts=["*"], allow=[permissions.ADMIN])],
+            grants=[ADMIN_GRANT],
             ui_sign_in=True,
         )
         self._users.save(user)

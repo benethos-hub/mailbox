@@ -10,10 +10,10 @@ from ....data.models import DraftMessage, OutgoingMessage
 from ....errors import MailboxServiceError
 from ...services import Mailbox
 from ..deps import Actor, Viewer, account_of
+from ..forms import text_of
 from ..mailform import (
     ACTIONS,
-    ADDRESS_FIELDS,
-    TEXT_FIELDS,
+    MESSAGE_FIELDS,
     ComposeError,
     build,
     read_fields,
@@ -22,6 +22,7 @@ from ..mailform import (
     show,
     show_again,
 )
+from ..navigation import mail_url
 from ..templates import back
 
 router = APIRouter()
@@ -32,7 +33,7 @@ async def compose(
     request: Request, caller: Viewer, account_id: str, mailbox: Mailbox
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
-    values = {key: "" for key in (*ADDRESS_FIELDS, *TEXT_FIELDS)}
+    values = dict.fromkeys(MESSAGE_FIELDS, "")
     original = None
     wanted = request.query_params.get("original")
     action = request.query_params.get("action", "")
@@ -55,9 +56,9 @@ async def compose_submit(
                 caller,
                 account_id,
                 build(OutgoingMessage, fields),
-                str(form.get("idempotency_key") or "") or None,
+                text_of(form, "idempotency_key", strip=False) or None,
             )
-            return back(request, f"/ui/accounts/{account_id}/mail", sent_text(result))
+            return back(request, mail_url(account_id), sent_text(result))
         saved = await mailbox.outgoing.create_draft(
             caller, account_id, build(DraftMessage, fields)
         )

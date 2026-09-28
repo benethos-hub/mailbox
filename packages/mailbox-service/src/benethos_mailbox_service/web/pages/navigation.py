@@ -73,12 +73,17 @@ def own_page(caller: Access) -> str | None:
     return f"/ui/users/{caller.user_id}" if caller.allows("get_user") else None
 
 
+def mail_url(account_id: str, folder_id: str | None = None) -> str:
+    """The mail page of an account, at one of its folders if given."""
+    here = f"/ui/accounts/{account_id}/mail"
+    return f"{here}?{urlencode({'folder': folder_id})}" if folder_id else here
+
+
 def mail_trail(account: Account, folder: tuple[str, str] | None = None) -> Trail:
     """Mail › the account's mail › a folder, for the pages below them.
     ``folder``: its id and name."""
-    here = f"/ui/accounts/{account.id}/mail"
-    trail: Trail = [("Mail", "/ui/mail"), (account.email, here)]
+    trail: Trail = [("Mail", "/ui/mail"), (account.email, mail_url(account.id))]
     if folder is not None:
         folder_id, name = folder
-        trail.append((name, f"{here}?{urlencode({'folder': folder_id})}"))
+        trail.append((name, mail_url(account.id, folder_id)))
     return trail

@@ -14,7 +14,7 @@ from ....domain.rights import Access
 from ...services import Webhooks, get_accounts
 from ..deps import Actor, Viewer, account_names
 from ..filters import Field, filter_bar
-from ..forms import FormError, failing, model_of
+from ..forms import FormError, failing, model_of, text_of
 from ..session import show_once, take_once
 from ..templates import back, render
 
@@ -80,7 +80,7 @@ def _new_webhook_page(
 def _typed(form: Any) -> dict[str, Any]:
     """The fields of a new webhook as they were submitted."""
     return {
-        "url": str(form.get("url") or "").strip(),
+        "url": text_of(form, "url"),
         "events": [str(e) for e in form.getlist("events")],
         "every": form.get("every") == "1",
         "accounts": [str(a) for a in form.getlist("accounts")],

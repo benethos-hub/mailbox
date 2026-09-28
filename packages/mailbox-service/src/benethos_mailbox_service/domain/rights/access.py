@@ -20,6 +20,8 @@ log = logging.getLogger(__name__)
 ALL_ACCOUNTS = "*"
 ANY_RECIPIENT = "*"
 SEND_OPERATIONS = frozenset(permissions.GROUPS["send"])
+# Every right on every account: what the first user gets.
+ADMIN_GRANT = Grant(accounts=[ALL_ACCOUNTS], allow=[permissions.ADMIN])
 
 
 @dataclass(frozen=True)
@@ -107,9 +109,7 @@ class Access:
 
     @classmethod
     def admin(cls, user_id: str, name: str) -> Access:
-        return cls(
-            user_id, name, [Grant(accounts=[ALL_ACCOUNTS], allow=[permissions.ADMIN])]
-        )
+        return cls(user_id, name, [ADMIN_GRANT])
 
     def allows(self, operation: str, account_id: str | None = None) -> bool:
         if operation in permissions.AUTHENTICATED_OPERATIONS:

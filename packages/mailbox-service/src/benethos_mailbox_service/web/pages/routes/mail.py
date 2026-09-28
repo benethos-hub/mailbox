@@ -10,7 +10,6 @@ on this origin.
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
@@ -27,7 +26,7 @@ from ..deps import Viewer, account_of, emails_of
 from ..errors import error_page
 from ..filters import Field, FilterBar, Kind, filter_bar
 from ..forms import first_problem
-from ..navigation import mail_trail
+from ..navigation import mail_trail, mail_url
 from ..rights import mail_rights
 from ..templates import PAGE_SIZE, page_links, render
 
@@ -219,7 +218,7 @@ async def account_mail_page(
             str(request.url.path)
             + (f"?{request.url.query}" if request.url.query else "")
             if request.method == "GET"
-            else f"/ui/accounts/{account_id}/mail?{urlencode({'folder': current.id})}"
+            else mail_url(account_id, current.id)
         ),
     )
 

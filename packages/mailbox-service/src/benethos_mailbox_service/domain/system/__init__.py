@@ -6,10 +6,11 @@ lines of the log (``ServiceLog``).
 from __future__ import annotations
 
 from .recovery import RecoveryKey
-from .servicelog import ServiceLog
+from .servicelog import LEVELS, ServiceLog
 from .status import StatusService
 
 __all__ = [
+    "LEVELS",
     "RecoveryKey",
     "ServiceLog",
     "StatusService",

@@ -19,7 +19,7 @@ from ...errors import status_of
 from ...services import Accounts, Discoverer, Status, get_oauth
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
-from ..forms import failing
+from ..forms import failing, text_of
 from ..templates import back, render
 
 router = APIRouter()
@@ -43,7 +43,7 @@ def _settings(form: Any) -> dict[str, str | int | bool]:
     """The filled-in connection fields. Empty ones are left out."""
     found: dict[str, str | int | bool] = {}
     for key in SETTING_FIELDS:
-        value = str(form.get(key) or "").strip()
+        value = text_of(form, key)
         if not value:
             continue
         found[key] = int(value) if key in NUMBERS and value.isdigit() else value
@@ -65,13 +65,13 @@ def _typed_account(form: Any) -> dict[str, Any]:
     """The fields of an account's editor as they were submitted, the
     password left out."""
     return {
-        "display_name": str(form.get("display_name") or "").strip(),
-        "settings": {key: str(form.get(key) or "").strip() for key in SETTING_FIELDS},
+        "display_name": text_of(form, "display_name"),
+        "settings": {key: text_of(form, key) for key in SETTING_FIELDS},
     }
 
 
 def _password(form: Any) -> dict[str, SecretStr]:
-    value = str(form.get("password") or "")
+    value = text_of(form, "password", strip=False)
     return {"password": SecretStr(value)} if value else {}
 
 
@@ -155,7 +155,7 @@ async def discover(request: Request, caller: Actor, discovery: Discoverer) -> Re
     """The ways to connect an address. A POST, so the address stays out of
     access logs, answered with the page itself: a lookup changes nothing."""
     form = await request.form()
-    email = str(form.get("email") or "").strip()
+    email = text_of(form, "email")
     with failing("/ui/accounts/new"):
         found = await discovery.discover(caller, email)
     return _connect_page(
@@ -174,9 +174,9 @@ async def create_account(
     """The servers are tried before anything is stored. A refusal shows
     the page again with what was typed, the password left out."""
     form = await request.form()
-    email = str(form.get("email") or "").strip()
+    email = text_of(form, "email")
     settings = _settings(form)
-    display_name = str(form.get("display_name") or "").strip()
+    display_name = text_of(form, "display_name")
     try:
         provider = ProviderType(str(form.get("provider") or ProviderType.IMAP))
     except ValueError:

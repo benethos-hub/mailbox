@@ -32,13 +32,14 @@ from ...domain.rights import Access
 from ...errors import MailboxServiceError
 from ..errors import status_of
 from ..services import get_mailbox
-from .forms import FormError, model_of
+from .forms import FormError, model_of, text_of
 from .navigation import mail_trail
 from .templates import render
 
 ACTIONS = ("reply", "reply_all", "forward")
 ADDRESS_FIELDS = ("to", "cc", "bcc")
 TEXT_FIELDS = ("subject", "text", "html")
+MESSAGE_FIELDS = (*ADDRESS_FIELDS, *TEXT_FIELDS)
 
 
 class ComposeError(FormError):
@@ -77,12 +78,12 @@ def uploads(form: Any) -> list[UploadFile]:
 async def read_fields(form: Any) -> dict[str, Any]:
     """The message fields of a submitted form."""
     fields: dict[str, Any] = {
-        field: recipients(field.capitalize(), str(form.get(field) or ""))
+        field: recipients(field.capitalize(), text_of(form, field, strip=False))
         for field in ADDRESS_FIELDS
     }
-    fields["subject"] = " ".join(str(form.get("subject") or "").split())
-    fields["text"] = str(form.get("text") or "") or None
-    fields["html"] = str(form.get("html") or "").strip() or None
+    fields["subject"] = " ".join(text_of(form, "subject", strip=False).split())
+    fields["text"] = text_of(form, "text", strip=False) or None
+    fields["html"] = text_of(form, "html") or None
     fields["attachments"] = [
         OutgoingAttachment(
             filename=upload.filename or "attachment",
@@ -96,8 +97,8 @@ async def read_fields(form: Any) -> dict[str, Any]:
 
 def reference_of(form: Any) -> MessageReference | None:
     """The message a new mail answers or forwards, from the form."""
-    original = str(form.get("original") or "")
-    action = str(form.get("action") or "")
+    original = text_of(form, "original", strip=False)
+    action = text_of(form, "action", strip=False)
     if not original or action not in ACTIONS:
         return None
     forward_as = "attachment" if form.get("forward_as") == "attachment" else "inline"
@@ -183,8 +184,8 @@ async def show_again(
     """The form again, as it was sent, with what went wrong. Attachments
     must be chosen again: a browser cannot be handed files."""
     values = {
-        key: str(form.get(key) or "")
-        for key in (*ADDRESS_FIELDS, *TEXT_FIELDS, "original", "action", "forward_as")
+        key: text_of(form, key, strip=False)
+        for key in (*MESSAGE_FIELDS, "original", "action", "forward_as")
     }
     original = None
     if values["original"] and values["action"] in ACTIONS:
