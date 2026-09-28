@@ -1,5 +1,9 @@
 """The records the REST client answers with: small, frozen, in the terms
-of the tools rather than the fields of the API."""
+of the tools rather than the fields of the API.
+
+A message, a summary in a page and a draft are not records: they stay
+the JSON of the API, since ``render`` shows them whole and nothing else
+reads them."""
 
 from __future__ import annotations
 

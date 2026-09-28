@@ -713,8 +713,8 @@ One branch, one commit per step, each passing all checks:
 3. `cli.py` out of `server.py`, the entry point with it.
 4. `tools/` out of `server.py`, the tests of the tools to
    `tests/tools/`.
-5. The architecture test of the MCP package, ARCHITECTURE.md section 3
-   and CLAUDE.md.
+5. The architecture test of the MCP package and ARCHITECTURE.md
+   section 3. CLAUDE.md points there already and stays as it is.
 
 The live checks `mcp_stdio.py` and `mcp_http.py` run once at the end.
 Nothing a client of the MCP server sees changes: the names of the
@@ -722,5 +722,10 @@ tools, their arguments, their descriptions and their annotations stay.
 
 **Built 2026-09-28** on one branch, in this order. The tools a client
 sees were compared before and after, as the JSON the server lists, and
-are the same. `tools/base.py` names the result of a tool `ToolResult`,
-so that the modules of the kinds need no import of the MCP library.
+are the same. `mcp_stdio.py` and `mcp_http.py` passed at the end.
+`tools/base.py` names the result of a tool `ToolResult`, so that the
+modules of the kinds need no import of the MCP library. The tests of
+every tool are in `tests/tools/`, one file per kind, `test_server.py`
+keeps what goes through the server: the choice by rights, the bounds
+of the arguments, the start and the log. ARCHITECTURE.md 3 says how a
+tool is added.

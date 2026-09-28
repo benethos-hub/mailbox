@@ -274,6 +274,19 @@ packages/mailbox-mcp/
 the lines of REFACTORING.md 10.2, the tools behind their package, and
 one home per library.
 
+**A tool of the MCP server** is a function in `tools/<kind>.py` with
+its line in that module's `TOOLS`: its title, the rights it needs, and
+whether it is read-only, destructive or idempotent. The server
+registers it only for a token that holds one of those rights. The
+function is thin: it names what it wants in its own terms, `client.py`
+makes the request, and `render.py` shapes what the model sees, with
+mail content inside the foreign-content marker. A tool never spells
+out a path, a query name or a field of the API, and never speaks HTTP
+itself. Its docstring is the description the model reads, and each
+argument carries a description and its bounds, which the server checks
+before the tool runs. Its test is in `tests/tools/`, against
+`httpx.MockTransport`, and the README's table names it.
+
 ## 4. Where does it go?
 
 | I am adding | It goes to |
@@ -291,6 +304,7 @@ one home per library.
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
 | a command of the CLI | `__main__.py`, which builds the service through `main.py` |
+| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in `client.py`, its answer through `render.py` (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/api/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |
