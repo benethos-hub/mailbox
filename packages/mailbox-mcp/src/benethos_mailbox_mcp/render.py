@@ -12,7 +12,7 @@ import re
 from html.parser import HTMLParser
 from typing import Any
 
-from .client import Changes, Folder, Me, MeAccount, Page, Sent
+from .models import Changes, Folder, Me, MeAccount, Page, Sent
 
 # Content of these elements is never shown by a mail client.
 _INVISIBLE = {"script", "style", "head", "title", "template", "noscript"}

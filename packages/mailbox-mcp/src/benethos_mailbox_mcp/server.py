@@ -26,8 +26,9 @@ from mcp.types import CallToolResult, ImageContent, TextContent, ToolAnnotations
 from pydantic import Field
 
 from . import __version__, pdf, render, transport
-from .client import MailboxApiClient, Recipient, message_body, service_url
+from .client import MailboxApiClient, message_body, service_url
 from .errors import ApiError, ServiceUnavailableError, ToolError
+from .models import Recipient
 
 logger = logging.getLogger(__name__)
 
