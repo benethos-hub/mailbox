@@ -10,6 +10,8 @@ from ..data.logbook import LogBook, LogEntry
 from ..data.models import Page
 from ..errors import BadRequestError
 from .access import Access
+from .activity import ActivityLog, Actor
+from .activity.catalogue.service import LogRead
 
 # The levels a reader may ask for, from the least.
 LEVELS = {
@@ -21,8 +23,9 @@ LEVELS = {
 
 
 class ServiceLog:
-    def __init__(self, book: LogBook) -> None:
+    def __init__(self, book: LogBook, activity: ActivityLog | None = None) -> None:
         self._book = book
+        self._activity = activity or ActivityLog()
 
     def lines(
         self,
@@ -39,6 +42,9 @@ class ServiceLog:
         access.require("read_service_log")
         if level is not None and level not in LEVELS:
             raise BadRequestError(f"no log level {level}")
+        if cursor is None:
+            # Once per visit and search, not for every further page.
+            self._activity.record(LogRead(by=Actor.of(access)))
         least = LEVELS.get(level or "", 0)
         wanted = text.casefold() if text else None
         before = _before(cursor)

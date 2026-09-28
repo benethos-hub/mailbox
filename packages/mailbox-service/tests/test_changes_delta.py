@@ -11,6 +11,7 @@ import httpx
 import pytest
 
 from benethos_mailbox_service.data.http import ApiClient
+from benethos_mailbox_service.data.models import Account, ProviderType
 from benethos_mailbox_service.data.providers import Capability, MailProvider
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
 from benethos_mailbox_service.data.storage import (
@@ -41,6 +42,10 @@ class OneAdapter:
         self, account_id: str, operation: Callable[[MailProvider], Awaitable[T]]
     ) -> T:
         return await operation(self.provider)
+
+    def record(self, account_id: str) -> Account:
+        """What the log line of a pass names."""
+        return Account(id=account_id, provider=ProviderType.MICROSOFT, email="me@x.org")
 
 
 class Clock:

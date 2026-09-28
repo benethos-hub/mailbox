@@ -27,6 +27,7 @@ from ..errors import (
 from .access import Access
 from .activity import ActivityLog, Actor, someone
 from .activity.catalogue import auth as said
+from .activity.catalogue import limits
 from .passwords import MAX_LENGTH, Passwords
 from .throttle import SignInThrottle
 
@@ -99,20 +100,20 @@ class AuthService:
         source and the name are slowed down after failures."""
         self._require_users()
         key = name.strip().casefold()[:MAX_NAME]
-        self._throttle.check(source)
+        self._check_source(source)
         self._names.check(key)
         if len(password) > MAX_LENGTH or len(name) > MAX_NAME:
             # No password is that long: not worth a hash.
-            self._throttle.failed(source)
-            self._names.failed(key)
+            self._failed_source(source)
+            self._failed_name(key, None, someone(source))
             raise UnauthorizedError(WRONG)
         user = self.user_named(name)
         matched = await self.passwords.matches(user.id if user else None, password)
         stored = self.passwords.stored(user.id) if user is not None else None
         refused = _refused(user, matched, stored is not None)
         if user is None or stored is None or refused is not None:
-            self._throttle.failed(source)
-            self._names.failed(key)
+            self._failed_source(source)
+            self._failed_name(key, user, someone(source))
             # The name only when it is a user's: a password typed into the
             # name field must not end up in the log.
             self.activity.record(
@@ -140,7 +141,7 @@ class AuthService:
             user.id, password
         )
         if not matched:
-            self._names.failed(key)
+            self._failed_name(key, user, Actor.of(access))
             self.activity.record(said.ConfirmFailed(by=Actor.of(access)))
             raise BadRequestError("the password is not right")
 
@@ -183,12 +184,12 @@ class AuthService:
         if not presented:
             raise UnauthorizedError("missing bearer token")
         if source is not None:
-            self._throttle.check(source)
+            self._check_source(source)
         try:
             access = self._access_for_token(presented, source)
         except UnauthorizedError:
             if source is not None:
-                self._throttle.failed(source)
+                self._failed_source(source)
             raise
         if source is not None:
             self._throttle.succeeded(source)
@@ -272,6 +273,25 @@ class AuthService:
                 reason=reason,
             )
         )
+
+    def _check_source(self, source: str) -> None:
+        """``RateLimitedError`` while the source is locked out. A lockout
+        that ran out is logged here, at the next attempt."""
+        if self._throttle.check(source):
+            self.activity.record(limits.LockoutEnded(by=someone(source)))
+
+    def _failed_source(self, source: str) -> None:
+        if self._throttle.failed(source):
+            minutes = int(self._throttle.lockout.total_seconds() // 60)
+            self.activity.record(
+                limits.SourceLockedOut(by=someone(source), minutes=minutes)
+            )
+
+    def _failed_name(self, key: str, user: User | None, by: Actor) -> None:
+        """The name as typed is logged only as the user it names."""
+        if self._names.failed(key):
+            seconds = int(self._names.lockout.total_seconds())
+            self.activity.record(limits.NameBraked(by=by, user=user, seconds=seconds))
 
     def sign_out(self, access: Access) -> None:
         """The session of the UI ends. The web layer drops it, this logs it."""

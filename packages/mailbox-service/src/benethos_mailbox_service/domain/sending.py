@@ -28,7 +28,8 @@ from ..errors import (
 from . import paging
 from .access import Access
 from .activity import ActivityLog, Actor
-from .activity.catalogue.sending import NotInAudit
+from .activity.catalogue.limits import SendLimitReached
+from .activity.catalogue.sending import NotInAudit, SendFailed, SendRefused
 from .locks import KeyedLocks
 
 WINDOW = timedelta(hours=24)
@@ -81,15 +82,33 @@ class SendControl:
                     )
                 )
 
+            by = Actor.of(access)
             try:
                 self._allow(access, operation, account_id, recipients)
+            except SendLimitError as exc:
+                record("denied", error=exc.code)
+                self._activity.record(
+                    SendLimitReached(
+                        by=by,
+                        account_id=account_id,
+                        reason=exc.message,
+                        retry_after=exc.retry_after,
+                    )
+                )
+                raise
             except MailboxServiceError as exc:
                 record("denied", error=exc.code)
+                self._activity.record(
+                    SendRefused(by=by, account_id=account_id, code=exc.code)
+                )
                 raise
             try:
                 sent = await action()
             except MailboxServiceError as exc:
                 record("failed", error=exc.code)
+                self._activity.record(
+                    SendFailed(by=by, account_id=account_id, code=exc.code)
+                )
                 raise
             except Exception:
                 record("failed", error="internal_error")

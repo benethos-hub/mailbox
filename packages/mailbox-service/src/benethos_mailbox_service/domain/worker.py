@@ -85,6 +85,9 @@ class SyncWorker:
 
     async def run(self) -> None:
         """Until cancelled. A failure ends a round, never the worker."""
+        self._activity.record(
+            said.WorkerStarted(by=WORKER, interval=self._interval, push=self._push)
+        )
         async with anyio.create_task_group() as watchers:
             while True:
                 try:
@@ -125,6 +128,9 @@ class SyncWorker:
     async def watch(self, account_id: str) -> None:
         """Wait for changes the server reports, and sync on each."""
         failures = 0
+        record = self._record(account_id)
+        if record is not None:
+            self._activity.record(said.Watching(by=WORKER, account=record))
         try:
             while self._wanted(account_id):
                 try:
@@ -134,6 +140,10 @@ class SyncWorker:
                     failures = 0
                     if changed:
                         await self._sync.sync_account(account_id)
+                    elif record is not None:
+                        self._activity.record(
+                            said.IdleRenewed(by=WORKER, account=record)
+                        )
                 except NotSupportedError:
                     self._no_push.add(account_id)
                     record = self._record(account_id)

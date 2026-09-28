@@ -232,7 +232,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
     module per area (LOGGING.md 7). Step 2 done: the package, `Access`
     with the client address, the lifecycle, today's lines as
     activities, the access log without the query. Step 3 done: users,
-    tokens, roles, accounts, OAuth. Steps 4 and 5 planned
+    tokens, roles, accounts, OAuth. Step 4 done: sync, sending, webhooks,
+    discovery, the log page, the limits. Step 5 planned
   - planned: the audit of administration of [AUDIT.md](AUDIT.md)
   - with the new providers: the OAuth round trip
   - recovery key, status: moved to phase 4b

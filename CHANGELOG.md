@@ -102,7 +102,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   accounts are logged when they are created, changed or removed, an
   OAuth sign-in when it starts, finishes or fails, an account's status
   when it changes, and a token that is refused because it is revoked or
-  expired.
+  expired. A sent mail names the count of its recipients, a refused or
+  failed send the error's code, never an address. Webhooks are logged
+  when created or removed and when a post fails, gives up or goes
+  through again, never with their URL. Each limit is logged once when it
+  engages: a client address locked out after failed sign-ins, a user
+  name slowed down, the discovery and the send limit, a request body too
+  large. At `DEBUG` each sync pass with its counts, IDLE renewed, a token
+  refreshed, a discovery by its domain, an Idempotency-Key replayed.
 - The MCP server refuses a `MAILBOX_MCP_LOG_LEVEL` or `MAILBOX_MCP_PORT`
   it cannot use with a message, as it does `MAILBOX_MCP_TRANSPORT`.
   Before, it stopped with a traceback.

@@ -32,6 +32,8 @@ from ..data.providers import Capability, FolderChanges, MailProvider
 from ..data.secrets.redact import redact
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ..errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
+from .activity import SERVICE, ActivityLog
+from .activity.catalogue.sync import Synced
 from .adapters import Adapters
 from .changes import ChangeFeed
 from .locks import KeyedLocks
@@ -62,12 +64,14 @@ class SyncService:
         feed: ChangeFeed,
         new_id: Callable[[], str] = new_message_id,
         clock: Callable[[], datetime] = utc_now,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._adapters = adapters
         self._index = index
         self._new_id = new_id
         self._feed = feed
         self._clock = clock
+        self._activity = activity or ActivityLog(clock)
         self._locks: KeyedLocks[str] = KeyedLocks()
         self._states: dict[str, SyncState] = {}
 
@@ -222,21 +226,31 @@ class SyncService:
             state = self.state(account_id)
             try:
                 if self.mapped(account_id):
-                    await self._sync(account_id)
+                    counts = await self._sync(account_id)
                 else:
-                    await self._sync_delta(account_id)
+                    counts = await self._sync_delta(account_id)
             except MailboxServiceError as exc:
                 self._states[account_id] = replace(
                     state, last_error=redact(exc.message), last_error_at=self._clock()
                 )
                 raise
             self._states[account_id] = SyncState(last_sync_at=self._clock())
+        self._activity.record(
+            Synced(
+                by=SERVICE,
+                account=self._adapters.record(account_id),
+                folders=counts.folders,
+                created=counts.created,
+                updated=counts.updated,
+                deleted=counts.deleted,
+            )
+        )
 
     def state(self, account_id: str) -> SyncState:
         """How the passes of the account went since the start."""
         return self._states.get(account_id, SyncState())
 
-    async def _sync_delta(self, account_id: str) -> None:
+    async def _sync_delta(self, account_id: str) -> _Counts:
         """Ask every folder what changed since its last token. A folder asked
         for the first time only hands out its token. The stored state of a
         folder is its token and when the pass that got it began."""
@@ -269,7 +283,7 @@ class SyncService:
             removed |= set(found.removed)
         self._index.apply(account_id, IndexChanges(states=states))
         if not before:
-            return
+            return _Counts(len(folders))
         # Deleted: removed and seen nowhere. Moved: removed here, seen there.
         created = [
             i
@@ -282,6 +296,7 @@ class SyncService:
         self.changed(account_id, "message.created", created)
         self.changed(account_id, "message.updated", updated)
         self.changed(account_id, "message.deleted", deleted)
+        return _Counts(len(folders), len(created), len(updated), len(deleted))
 
     async def _folder_changes(
         self, account_id: str, folder_id: str, token: str | None
@@ -290,7 +305,7 @@ class SyncService:
             account_id, lambda p: p.folder_changes(folder_id, token)
         )
 
-    async def _sync(self, account_id: str) -> None:
+    async def _sync(self, account_id: str) -> _Counts:
         async def call(operation: Callable[[MailProvider], Awaitable[T]]) -> T:
             return await self._adapters.call(account_id, operation)
 
@@ -299,7 +314,7 @@ class SyncService:
         changed = [f for f, state in states.items() if before.get(f) != state]
         vanished = [f for f in before if f not in states]
         if not changed and not vanished:
-            return
+            return _Counts(len(states))
 
         present: dict[str, str] = {}  # provider id -> folder
         for folder_id in changed:
@@ -347,13 +362,30 @@ class SyncService:
             if n not in taken
         ]
         self._index.apply(account_id, changes)
-        if before:
-            self.changed(account_id, "message.created", [e.id for e in changes.added])
-            # A message renumbered in its folder (a new UIDVALIDITY) did not
-            # change for the caller. One that went to another folder did.
-            elsewhere = [e.id for e, n in moved.items() if present[n] != e.folder_id]
-            self.changed(account_id, "message.updated", elsewhere + flagged)
-            self.changed(account_id, "message.deleted", changes.removed)
+        if not before:
+            return _Counts(len(states))
+        self.changed(account_id, "message.created", [e.id for e in changes.added])
+        # A message renumbered in its folder (a new UIDVALIDITY) did not
+        # change for the caller. One that went to another folder did.
+        elsewhere = [e.id for e, n in moved.items() if present[n] != e.folder_id]
+        self.changed(account_id, "message.updated", elsewhere + flagged)
+        self.changed(account_id, "message.deleted", changes.removed)
+        return _Counts(
+            len(states),
+            len(changes.added),
+            len(elsewhere + flagged),
+            len(changes.removed),
+        )
+
+
+@dataclass(frozen=True)
+class _Counts:
+    """What one pass found, for the log."""
+
+    folders: int
+    created: int = 0
+    updated: int = 0
+    deleted: int = 0
 
 
 def _delta_state(stored: str | None) -> tuple[str, datetime] | None:

@@ -192,14 +192,15 @@ compares.
 | INFO | watching A / A cannot push changes: polling only | account | partly |
 | WARNING | watching A failed, next try in Ns: reason | account, pause, reason | yes |
 | DEBUG | IDLE on A renewed | account | new |
-| WARNING | the change log was purged of N entries older than D | counts | new, once per purge |
+| INFO | the change log was purged of N entries older than D | counts | new, once per purge. `INFO`, not `WARNING`: a purge is the normal course, at most once an hour |
 
 ### 5.6 Sending, drafts, idempotency
 
 | Level | Line | Fields | Today |
 |---|---|---|---|
 | INFO | X sent a message from A to N recipients | actor, account, count, `msg_` id | new |
-| WARNING | X was refused to send from A: reason | actor, account, reason | new |
+| WARNING | X was refused to send from A: reason | actor, account, the error's code | new. The code, as in the audit of sends: the message of a refusal or of a mail server may name a recipient |
+| WARNING | X could not send from A: reason | actor, account, the error's code | new |
 | WARNING | sent, but …: reason | account, what failed | yes, one of them in the adapter, moves to `outgoing` |
 | ERROR | sent, but not recorded in the audit | traceback | yes |
 | DEBUG | an Idempotency-Key was replayed | account, operation | new |
@@ -224,7 +225,8 @@ Drafts are mail content and change nothing others see: not logged.
 | DEBUG | discovery for domain D: N candidates from sources | domain, counts, no address | new |
 | WARNING | X reached the discovery limit | user | new |
 | INFO | the recovery key was shown to X | user | yes |
-| INFO | X read the service log | user | new |
+| INFO | X read the service log | user | new, once per visit or search, not for every further page |
+| INFO | the host created the keys, stored the master key | | printed, add the line |
 | INFO | backup written / restored (from the host) | file, schema, time | printed, add the line |
 
 ### 5.9 Rate limits
@@ -242,9 +244,9 @@ and the log page is where a locked-out person's report is checked.
 | WARNING | X reached the send limit on A: N in 24 hours, the grants allow M | actor, account, counts, `retry_after` | new, in the send audit as `denied` |
 | WARNING | a request from S was refused: body of N bytes, the limit is M | source, path, sizes | new (`web/limits.py`, 413) |
 | WARNING | too many requests from S / with token Z: limited for N seconds | source or token, path, seconds | new, with the HTTP limit below |
-| DEBUG | paced A: waited N ms | account, wait | new (`Guard`, the token bucket) |
-| WARNING | provider of A asked to wait N seconds (Retry-After) | account, seconds | new (Microsoft `_rest_until`) |
-| WARNING | provider of A refused for rate: reason | account, reason | new (IMAP `[LIMIT]`, SMTP 4xx) |
+| DEBUG | paced a request: waited N ms | wait | new (the token bucket). Written in the data layer, which does not know the account |
+| DEBUG | microsoft asked to wait N seconds (Retry-After) | seconds | new, in the data layer |
+| WARNING | account A could not be reached: the provider's reason | account, reason | the status line of 5.4: a pause or a refusal for rate reaches the domain as an error, and the account's status changes once |
 
 A limit that keeps being hit is logged once per lockout or pause, not
 per refused request: the throttle logs when it locks, the provider

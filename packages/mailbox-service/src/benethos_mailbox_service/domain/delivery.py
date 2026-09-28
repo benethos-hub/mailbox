@@ -173,6 +173,10 @@ class WebhookDispatcher:
         )
         end = batch[-1].seq
         if error is None:
+            if delivery.attempts or record.webhook.last_error is not None:
+                self._activity.record(
+                    said.DeliversAgain(by=DISPATCHER, webhook_id=record.webhook.id)
+                )
             self._save(
                 record,
                 Delivery(cursor=end),
@@ -182,12 +186,30 @@ class WebhookDispatcher:
             return more
         failed = delivery.attempts + 1
         if failed >= self._retries.attempts:
+            self._activity.record(
+                said.GaveUp(
+                    by=DISPATCHER,
+                    webhook_id=record.webhook.id,
+                    changes=len(batch),
+                    attempts=failed,
+                    reason=error,
+                )
+            )
             self._save(
                 record,
                 Delivery(cursor=end),
                 f"{error}. {len(batch)} events were dropped after {failed} attempts",
             )
             return more
+        self._activity.record(
+            said.PostFailed(
+                by=DISPATCHER,
+                webhook_id=record.webhook.id,
+                attempt=failed,
+                attempts=self._retries.attempts,
+                reason=error,
+            )
+        )
         self._save(
             record,
             replace(

@@ -163,7 +163,9 @@ def build_services(
         internal_hosts=settings.discovery_internal_hosts,
         lookup=lookup or host_addresses_now,
     )
-    changes = ChangeFeed(repos.changes, days=settings.changes_days, clock=clock)
+    changes = ChangeFeed(
+        repos.changes, days=settings.changes_days, clock=clock, activity=activity
+    )
     if provider_factory is None:
         provider_factory = partial(build_provider, pick=fetcher.connect_address)
     adapters = Adapters(
@@ -174,7 +176,9 @@ def build_services(
         changes=changes,
         activity=activity,
     )
-    sync = SyncService(adapters, repos.index, feed=changes, clock=clock)
+    sync = SyncService(
+        adapters, repos.index, feed=changes, clock=clock, activity=activity
+    )
     accounts = AccountService(
         repos.accounts,
         vault,
@@ -205,7 +209,9 @@ def build_services(
         if settings.sync_interval
         else None
     )
-    webhooks = WebhookService(repos.webhooks, vault, changes, clock=clock)
+    webhooks = WebhookService(
+        repos.webhooks, vault, changes, clock=clock, activity=activity
+    )
     return Services(
         accounts=accounts,
         adapters=adapters,
@@ -227,7 +233,7 @@ def build_services(
             clock=clock,
             activity=activity,
         ),
-        discovery=discovery or build_discovery(settings, fetcher),
+        discovery=discovery or build_discovery(settings, fetcher, activity),
         sync=sync,
         index=repos.index,
         changes=changes,
@@ -254,7 +260,7 @@ def build_services(
         ),
         status=StatusService(accounts, sync, worker, webhooks),
         recovery=RecoveryKey(auth, vault),
-        log=ServiceLog(logbook or LogBook()),
+        log=ServiceLog(logbook or LogBook(), activity),
         repositories=repos,
         activity=activity,
         oauth_clients=clients,
@@ -287,12 +293,15 @@ def build_oauth(settings: Settings) -> dict[ProviderType, OAuthClient]:
     return clients
 
 
-def build_discovery(settings: Settings, fetcher: SafeFetcher) -> DiscoveryService:
+def build_discovery(
+    settings: Settings, fetcher: SafeFetcher, activity: ActivityLog | None = None
+) -> DiscoveryService:
     return DiscoveryService(
         default_sources(fetcher, ispdb=settings.discovery_ispdb),
         probe=probe_server,
         check_host=fetcher.checked_address,
         trusted_hosts=preset_hosts(),
+        activity=activity,
     )
 
 

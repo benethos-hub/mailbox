@@ -23,7 +23,7 @@ from ..common.clock import utc_now
 from ..data.storage import IdempotencyRepository, StoredResult
 from ..errors import IdempotencyConflictError
 from .activity import SERVICE, ActivityLog
-from .activity.catalogue.sending import ResultNotKept
+from .activity.catalogue.sending import Replayed, ResultNotKept
 from .locks import KeyedLocks
 
 R = TypeVar("R", bound=BaseModel)
@@ -68,6 +68,9 @@ class Idempotency:
                     raise IdempotencyConflictError(
                         "this Idempotency-Key was used with a different request"
                     )
+                self._activity.record(
+                    Replayed(by=SERVICE, account_id=account_id, operation=operation)
+                )
                 return result_type.model_validate_json(stored.result)
             result = await action()
             # Done, e.g. sent: the result goes to the caller even when it

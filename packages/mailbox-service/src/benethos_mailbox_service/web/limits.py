@@ -10,6 +10,9 @@ from __future__ import annotations
 from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from ..domain.activity import ActivityLog, someone
+from ..domain.activity.catalogue.limits import BodyTooLarge
+
 # The largest mail the service sends carries 25 MB of attachments, which
 # base64 in a JSON body makes about 34 MB.
 MAX_BODY = 40 * 1024 * 1024
@@ -34,20 +37,37 @@ class BodyLimit:
         async def limited() -> Message:
             nonlocal received
             if declared is not None and declared > self._limit:
-                raise self._too_large()
+                raise self._too_large(scope)
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
                 if received > self._limit:
-                    raise self._too_large()
+                    raise self._too_large(scope)
             return message
 
         await self._app(scope, limited, send)
 
-    def _too_large(self) -> HTTPException:
+    def _too_large(self, scope: Scope) -> HTTPException:
+        """The refusal, logged here: the domain never sees the request."""
+        client = scope.get("client")
+        self._activity(scope).record(
+            BodyTooLarge(
+                by=someone(client[0] if client else None),
+                path=scope.get("path", ""),
+                limit=self._limit,
+            )
+        )
         return HTTPException(
             413, f"the request is larger than {self._limit // (1024 * 1024)} MB"
         )
+
+    @staticmethod
+    def _activity(scope: Scope) -> ActivityLog:
+        """The service's activity log, where the app has one."""
+        app = scope.get("app")
+        services = getattr(getattr(app, "state", None), "services", None)
+        found = getattr(services, "activity", None)
+        return found if isinstance(found, ActivityLog) else ActivityLog()
 
 
 def _content_length(scope: Scope) -> int | None:

@@ -38,7 +38,7 @@ from ..errors import BadRequestError, MailboxServiceError
 from . import replies
 from .access import Access
 from .activity import ActivityLog, Actor
-from .activity.catalogue.sending import SentBut
+from .activity.catalogue.sending import MessageSent, SentBut
 from .calls import Calls
 from .idempotency import Idempotency
 from .sending import Operation, SendControl
@@ -127,7 +127,16 @@ class Outgoing:
             ),
             message_id,
         )
-        return await self._send_result(access, account, message_id, sent)
+        result = await self._send_result(access, account, message_id, sent)
+        self._activity.record(
+            MessageSent(
+                by=Actor.of(access),
+                account=account,
+                recipients=len(recipients),
+                message=result.sent_copy_id or message_id,
+            )
+        )
+        return result
 
     async def _send_result(
         self, access: Access, account: Account, message_id: str, sent: SentMessage
