@@ -996,7 +996,9 @@ the data, rather than a readable file.
   `PRAGMA secure_delete = ON` makes SQLite overwrite freed pages, so the
   ciphertext does not linger in the file.
 - **Files:** the database sits in `data/benethos-mailbox-service/` in the
-  working directory, moved with `MAILBOX_SERVICE_DATA_DIR`. Decided 2026-09-24:
+  working directory, moved with `MAILBOX_SERVICE_DATA_DIR`. A settings file
+  named with `--env-file` or `MAILBOX_SERVICE_ENV_FILE` is the base of
+  relative paths instead. Decided 2026-09-24:
   one folder per package under `data/` and under `config/`.
   `data/benethos-mailbox-mcp/` is meant for what the MCP server stores, e.g.
   downloaded attachments. A missing data folder is created. The database,

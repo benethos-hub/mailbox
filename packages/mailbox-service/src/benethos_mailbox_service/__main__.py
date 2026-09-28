@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .config import Settings
+from .config import ENV_FILE, Settings, load_settings, settings_file
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -24,33 +24,55 @@ def main(argv: list[str] | None = None) -> int:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="benethos-mailbox-service")
     parser.add_argument("--version", action="version", version=__version__)
+    parser.add_argument(
+        "--env-file", type=Path, default=None, metavar="PATH", help=_ENV_FILE_HELP
+    )
+    # The same option after a command. Given there, it wins.
+    option = argparse.ArgumentParser(add_help=False)
+    option.add_argument(
+        "--env-file",
+        type=Path,
+        default=argparse.SUPPRESS,
+        metavar="PATH",
+        help=_ENV_FILE_HELP,
+    )
     commands = parser.add_subparsers(dest="command", required=True)
-    serve = commands.add_parser("serve", help="run the REST API")
+    serve = commands.add_parser("serve", help="run the REST API", parents=[option])
     serve.add_argument("--host")
     serve.add_argument("--port", type=int)
     commands.add_parser("openapi", help="print the OpenAPI document as JSON")
 
-    users = commands.add_parser("users", help="manage users on this host")
+    users = commands.add_parser(
+        "users", help="manage users on this host", parents=[option]
+    )
     users_commands = users.add_subparsers(dest="users_command", required=True)
     create_admin = users_commands.add_parser(
         "create-admin",
         help="create a user with every right and print a one-time password",
+        parents=[option],
     )
     create_admin.add_argument("--name", default="admin")
     set_password = users_commands.add_parser(
         "set-password",
         help="give a user a new one-time password and print it, "
         "e.g. when the last administrator forgot theirs",
+        parents=[option],
     )
     set_password.add_argument("name")
 
-    keys = commands.add_parser("keys", help="the master key and the data key")
+    keys = commands.add_parser(
+        "keys", help="the master key and the data key", parents=[option]
+    )
     keys_commands = keys.add_subparsers(dest="keys_command", required=True)
     keys_commands.add_parser(
-        "init", help="create the keys and print the recovery key once"
+        "init",
+        help="create the keys and print the recovery key once",
+        parents=[option],
     )
     keys_commands.add_parser(
-        "import", help="store the master key from a recovery key, read from stdin"
+        "import",
+        help="store the master key from a recovery key, read from stdin",
+        parents=[option],
     )
     keys_commands.add_parser(
         "generate",
@@ -62,6 +84,7 @@ def _parser() -> argparse.ArgumentParser:
         "backup",
         help="write an encrypted backup: `backup FILE`, or check one: "
         "`backup verify FILE`",
+        parents=[option],
     )
     backup.add_argument("target", nargs="+", metavar="[verify] FILE")
     backup.add_argument(
@@ -71,7 +94,9 @@ def _parser() -> argparse.ArgumentParser:
     )
 
     restore = commands.add_parser(
-        "restore", help="replace the database with a backup. Stop the service first."
+        "restore",
+        help="replace the database with a backup. Stop the service first.",
+        parents=[option],
     )
     restore.add_argument("source", type=Path)
     restore.add_argument(
@@ -88,6 +113,12 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+_ENV_FILE_HELP = (
+    f"the settings file, else MAILBOX_SERVICE_ENV_FILE, else {ENV_FILE} if it "
+    "exists. Relative paths in a file named here count from its folder."
+)
+
+
 def _run(args: argparse.Namespace) -> int:
     if args.command == "openapi":
         from .main import openapi_json
@@ -96,17 +127,19 @@ def _run(args: argparse.Namespace) -> int:
     elif args.command == "users":
         _users(args)
     elif args.command == "keys":
-        _keys(args.keys_command)
+        _keys(args.keys_command, args.env_file)
     elif args.command == "backup":
-        _backup(args.target, args.recovery_key)
+        _backup(args.target, args.recovery_key, args.env_file)
     elif args.command == "restore":
-        _restore(args.source, args.recovery_key, args.replace_master_key)
+        _restore(args.source, args.recovery_key, args.replace_master_key, args.env_file)
     elif args.command == "serve":  # pragma: no branch
         import uvicorn
 
         from .main import create_app
 
-        settings = Settings()
+        settings = load_settings(args.env_file)
+        read = settings_file(args.env_file)
+        print(f"settings: {read or 'the environment alone'}", file=sys.stderr)
         if settings.storage == "sqlite":
             print(f"database: {settings.database_path}", file=sys.stderr)
         else:
@@ -127,7 +160,7 @@ def _users(args: argparse.Namespace) -> None:
 
     from .main import opened
 
-    settings = _stored(Settings(), "users")
+    settings = _stored(load_settings(args.env_file), "users")
     with opened(settings) as services:
         if args.users_command == "create-admin":
             user, password = anyio.run(services.users.create_admin, args.name)
@@ -147,7 +180,7 @@ def _users(args: argparse.Namespace) -> None:
     print(password)
 
 
-def _keys(command: str) -> None:
+def _keys(command: str, env_file: Path | None) -> None:
     if command == "generate":
         from .data.secrets import cipher, encode_recovery
 
@@ -155,7 +188,7 @@ def _keys(command: str) -> None:
         return
     from .main import opened
 
-    with opened(_stored(Settings(), "keys")) as services:
+    with opened(_stored(load_settings(env_file), "keys")) as services:
         if command == "init":
             recovery = services.vault.initialize()
             print(
@@ -170,14 +203,18 @@ def _keys(command: str) -> None:
             print("Master key stored.", file=sys.stderr)
 
 
-def _backup(target: list[str], recovery_key: bool) -> None:
+def _backup(target: list[str], recovery_key: bool, env_file: Path | None) -> None:
     from .data.secrets.backup import create_backup, read_backup
     from .main import opened
 
     if target[0] == "verify":
         if len(target) != 2:
             raise _UsageError("use `backup verify FILE`")
-        master = _read_recovery_key() if recovery_key else _master_key(Settings())
+        master = (
+            _read_recovery_key()
+            if recovery_key
+            else _master_key(load_settings(env_file))
+        )
         manifest, _ = read_backup(Path(target[1]), master)
         print(
             f"OK: backup of {manifest.created_at}, service "
@@ -187,7 +224,7 @@ def _backup(target: list[str], recovery_key: bool) -> None:
         return
     if len(target) != 1:
         raise _UsageError("use `backup FILE` or `backup verify FILE`")
-    settings = _stored(Settings(), "backups")
+    settings = _stored(load_settings(env_file), "backups")
     with opened(settings) as services:
         assert services.store is not None
         manifest = create_backup(
@@ -203,13 +240,15 @@ def _backup(target: list[str], recovery_key: bool) -> None:
     )
 
 
-def _restore(source: Path, recovery_key: bool, replace_master_key: bool) -> None:
+def _restore(
+    source: Path, recovery_key: bool, replace_master_key: bool, env_file: Path | None
+) -> None:
     from .data.secrets.backup import restore_backup
     from .main import key_provider, opened
 
     if replace_master_key and not recovery_key:
         raise _UsageError("--replace-master-key goes with --recovery-key")
-    settings = Settings()
+    settings = load_settings(env_file)
     master = _read_recovery_key() if recovery_key else _master_key(settings)
     provider = key_provider(settings)
     held = provider.load() if recovery_key else master

@@ -232,6 +232,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   section 8, a proposal of 2026-09-27, among them the grant constraint
   `folders` (7.5)
 - `pop3` adapter (5.2)
+- Settings and data in the folders of the operating system, for a service
+  installed without the repository: `%APPDATA%` on Windows,
+  `~/.config` and `~/.local/share` on Linux (`platformdirs`). A file
+  named with `--env-file` and the repository's `config/` stay first.
 
 ## Keeping this file current
 

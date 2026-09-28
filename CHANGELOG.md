@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `--env-file PATH` for every command of the service, before or after
+  the command, and `MAILBOX_SERVICE_ENV_FILE`: the settings file to read.
+  A file named this way must exist, and relative paths in the settings
+  count from its folder. `serve` names the settings file it read at
+  start.
 - `GET /v1/sends` (`list_all_sends`, in `audit`): the audit of sends of
   every account the caller may audit, newest first, as the UI's sends
   page shows it.
