@@ -515,7 +515,7 @@ address field, result, then either an OAuth button or a password field.
 
 Each source is a module under `data/discovery/`, behind one
 `DiscoverySource` protocol, so a source can be added, removed or switched off
-without touching the others. `domain/discovery.py` runs them, applies the
+without touching the others. `domain/discovery/` runs them, applies the
 security rules, ranks and merges. The presets are data, one file, shared
 with the provider hints of 5.3. New dependencies, each wrapped in one
 module: `dnspython` for MX and SRV (the standard library cannot query them),
