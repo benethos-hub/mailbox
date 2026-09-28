@@ -48,17 +48,19 @@ REST client can do too.
    rights · auth · users · accounts · discovery · mailbox
    sync · changes · webhooks · system · activity
       │
- data/         DATA ─ decides nothing
+ data/         DATA ─ decides nothing, one package per kind
    models/     provider-neutral types, one module per subject
    mail/       messages in RFC 5322: compose, parse, convert
+   protocols/  the wire, one library each: IMAP, SMTP, OAuth, and http/:
+               the SSRF guard, JSON to known hosts, webhook posts
    providers/  imap · gmail · microsoft · pop3 · memory, behind a registry
-   http/       httpx: the SSRF guard, JSON to known hosts, webhook posts
    storage/    own records: accounts, users, credentials
-   secrets/    envelope encryption, key providers, backup
+   secrets/    envelope encryption, key providers, password hashes
    discovery/  autodiscovery sources
-   files.py, logbook.py
+   backup.py, files.py, logbook.py
  common/       CROSS-CUTTING ─ helpers every layer reads, beside
-               config.py and errors.py
+               config.py and errors.py: ids, cursors, the clock,
+               masking of secrets, pacing
 ```
 
 **Decided 2026-09-28:** the domain is in packages by area
@@ -73,6 +75,17 @@ a lower line, through their `__init__.py`:
  auth · discovery · changes  sign-in, autodiscovery, the change feed
  activity                    what was done, for the log
  rights                      who may do what
+```
+
+The data layer the same way (REFACTORING.md section 8):
+
+```
+ backup                           encrypted backups of the database
+ secrets                          cipher, keys, password hashes, the vault
+ storage · providers · discovery  own records, the adapters, autodiscovery
+ protocols                        the wire: IMAP, SMTP, HTTP, OAuth
+ mail · files                     messages in RFC 5322, files for the owner
+ models · logbook                 the neutral types, the newest log lines
 ```
 
 - **Two front ends, one domain.** The JSON API and the configuration UI are

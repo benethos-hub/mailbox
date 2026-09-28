@@ -181,12 +181,14 @@ packages/
                           #   (docs/LOGGING.md 7.2)
         locks.py          # KeyedLocks: one lock per key, for the services
         paging.py         # the cursors this service hands out itself
-      data/               # DATA: reads and writes, decides nothing
+      data/               # DATA: reads and writes, decides nothing. A
+                          #   package is imported through its __init__.py
         models/           # provider-neutral types, one module per subject:
                           #   accounts, users, folders, messages, batch,
                           #   sending, paging, discovery, audit,
                           #   changes, webhooks
-        mail/             # messages in RFC 5322, whatever protocol carries them
+        mail/             # messages in RFC 5322, whatever protocol carries
+                          #   them. __init__.py offers the modules
           compose.py      # outgoing messages as bytes (email)
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
           convert.py      # a parsed message to Message / MessageSummary
@@ -202,8 +204,8 @@ packages/
                           #   safe.py (hosts users typed, SSRF guard),
                           #   api.py (JSON to a provider's known hosts),
                           #   post.py (posts to webhook receivers)
-        providers/        # the adapters: registry in __init__.py (also
-                          #   sign_in), base.py, rules.py
+        providers/        # the adapters: base.py, rules.py, registry.py
+                          #   (build_provider, sign_in, probe_server)
           guard.py        # pacing, retries, blocked logins, for any adapter
           sender.py       # SmtpSender: sending for IMAP, POP3, ...
           imap/, memory/, # one directory per provider (adapter)
@@ -211,13 +213,15 @@ packages/
                           #   signin.py its endpoints and the scopes it needs
         storage/          # own records, one module per subject, table.py
                           #   for the in-memory ones, sqlite/ the database,
-                          #   sqlite/migrations/ one module per schema version
+                          #   sqlite/migrations/ one module per schema
+                          #   version, repositories.py picks one of them
         secrets/          # envelope encryption, key providers, password
                           #   hashes
         backup.py         # encrypted backups of the database, restore
         files.py          # files for the owner alone (0600): database, backup, key
         logbook.py        # the newest log lines in memory, for the log page
-        discovery/        # autodiscovery sources and their helpers
+        discovery/        # autodiscovery sources and their helpers,
+                          #   sources.py puts them in order
     tests/                # in folders like the source: domain/<package>/,
                           #   data/, web/, common/. integration/ for tests
                           #   of several layers at once. At the top the
@@ -276,6 +280,11 @@ moved: `docs/ARCHITECTURE.md`.
   No cycle between packages: what two packages both need goes to the one
   below, or is handed in where the services are wired, as
   `AccountService` gets `on_delete`.
+- **The data layer is in packages by kind**, in the same way: imported
+  through the `__init__.py`, no cycle, and each package imports only the
+  lines below its own (docs/REFACTORING.md 8.3): backup; secrets;
+  storage · providers · discovery; protocols; mail · files; models ·
+  logbook. `mail` offers its modules: `from ..mail import compose`.
 - **The domain logs activities.** A line at `INFO` or above is an
   activity of `domain/activity/catalogue/`, handed to
   `ActivityLog.record`, a sentence as docs/LOGGING.md section 3 shapes
@@ -288,8 +297,9 @@ modules, that `common/` stays on the standard library, that FastAPI stays in
 that the domain picks no storage implementation, and that SQLite is
 reached through `data/storage/` alone. It also checks that the data
 layer logs nothing above `DEBUG` and the domain nothing but activities,
-and that the packages of the domain are imported through their
-`__init__.py`, export what others import, and have no cycle.
+and that the packages of the domain and of data are imported through
+their `__init__.py`, export what others import, and have no cycle, and
+that the packages of data keep their lines.
 An import or a line that breaks a rule fails the suite.
 
 ## Encapsulation and replaceable parts
@@ -331,7 +341,7 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, microsoft (planned: gmail, pop3) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/registry.py` | memory, imap, microsoft (planned: gmail, pop3) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, later templates for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
