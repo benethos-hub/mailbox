@@ -1,0 +1,199 @@
+# Refactoring the domain layer
+
+Proposal of 2026-09-28. The domain has grown to 28 modules side by side
+in one folder. This file proposes packages for it, and a shape for the
+change feed like the one [LOGGING.md](LOGGING.md) section 7 gives the
+activities. Nothing changes in behaviour: modules move, names get
+clearer, the API and the OpenAPI document stay as they are. What the
+user decides is marked as decided, everything else is the proposal.
+
+## 1. Why
+
+- **Flat.** `domain/` holds 28 modules, from 17 to 500 lines. A reader
+  who looks for sending finds `outgoing.py`, `sending.py`,
+  `idempotency.py`, `replies.py` and `calls.py` between `auth.py` and
+  `worker.py`, with nothing that says they belong together.
+- **The layout does not show the seams.** CLAUDE.md lists every module
+  with one line. What a module is part of is left to the reader.
+- **The change feed is written with strings.** `"message.updated"` and
+  its kind are typed as literals where a change is recorded, in
+  `calls.py`, `outgoing.py`, `adapters.py` and `sync.py`. The data model
+  behind it is called `Event`, a word LOGGING.md 7.1 keeps free.
+- **One cycle between areas.** `accounts.py` imports `sync.py` to forget
+  an account's sync state on delete, and `sync.py` reaches the accounts
+  through `adapters.py`. Modules have no cycle, the areas they belong to
+  would.
+
+## 2. Principles
+
+1. **Move, do not change.** Each step moves modules and fixes imports.
+   Behaviour, the API and the OpenAPI document stay the same. The tests
+   stay green at every commit and change only their imports.
+2. **One package per area**, named for what it is about, not for a
+   pattern. Its `__init__.py` exports what other packages and the web
+   layer use. The rest is the package's own.
+3. **Other packages import a package through its `__init__.py`**, never
+   a module inside it. So a package can split or merge its modules
+   without its callers noticing. A test checks it.
+4. **No cycle between packages.** A test checks it, as
+   `test_architecture.py` checks the layers today.
+5. **The same shape for what is alike.** Activities and changes are both
+   records of something that happened. Both get a catalogue of typed
+   classes and a recorder, so a reader who knows one knows the other.
+
+## 3. The change feed, shaped like the activities
+
+### 3.1 Today
+
+- `domain/changes.py` holds `ChangeFeed`: record, page, the current
+  point, purge, forget an account.
+- `data/models/changes.py` holds `EventType`, a literal of five names,
+  and `Event`, one record of the feed. `Change` and `ChangePage` are
+  what the API answers.
+- A change is recorded as `feed.record(account_id, "message.updated",
+  ids)` or through `sync.changed(...)`, the name a string at each call.
+- `domain/delivery.py` reads the feed for the webhooks.
+
+### 3.2 Proposed
+
+```
+domain/
+  changes/
+    __init__.py      ChangeFeed, Change classes: what others use
+    catalogue.py     one frozen class per kind of change
+    feed.py          ChangeFeed: record, page, the current point, purge
+```
+
+One module holds the catalogue, not a folder: there are five kinds, not
+sixty.
+
+```python
+@dataclass(frozen=True)
+class MessagesUpdated(Change):
+    kind = "message.updated"  # the name in the API, unchanged
+    account_id: str
+    message_ids: list[str]
+```
+
+| Class | `kind`, as the API names it |
+|---|---|
+| `MessagesCreated` | `message.created` |
+| `MessagesUpdated` | `message.updated` |
+| `MessagesDeleted` | `message.deleted` |
+| `MessageSent` | `message.sent` |
+| `AccountNeedsSignIn` | `account.needs_reauth` |
+
+- **Recorded as a class**: `feed.record(MessagesUpdated(account_id,
+  ids))`. mypy finds a wrong kind, and no call site writes a name.
+- **The names in the API stay**: `kind` is the string the change feed
+  and the webhooks answer today.
+- **The data model gets its own name**: `Event` in `data/models` becomes
+  `ChangeRecord`, `EventType` becomes `ChangeKind`. Neither is in the
+  OpenAPI document, so the contract does not move.
+- **Activity and change stay apart.** An activity says what was done in
+  the service and goes to the log and the audit. A change says what
+  changed in a mailbox and goes to clients. Some moments are both: a
+  sent mail is `MessageSent` for clients and a send activity for the
+  log. The code records both where it happens, each to its own place.
+
+## 4. The domain in packages
+
+| Package | Modules today | What it is about |
+|---|---|---|
+| `rights/` | `access.py`, `permissions.py` | who may do what: the catalogue of rights, `Access` |
+| `auth/` | `auth.py`, `passwords.py`, `throttle.py` | proving who calls: tokens, passwords, the sign-in brake |
+| `users/` | `users.py` | users, roles, tokens as records |
+| `accounts/` | `accounts.py`, `adapters.py`, `oauth.py`, `discovery.py` | mail accounts: connect, change, the live adapter, OAuth, autodiscovery |
+| `mail/` | `mailbox.py`, `calls.py`, `merge.py`, `replies.py`, `outgoing.py`, `sending.py`, `idempotency.py` | reading, changing and sending mail, drafts, lists across accounts, the grant limits and the audit of sends |
+| `sync/` | `sync.py`, `worker.py` | the id mapping, the sync pass, polling and IDLE |
+| `changes/` | `changes.py` | the change feed (section 3) |
+| `webhooks/` | `webhooks.py`, `delivery.py` | webhooks and their posts |
+| `activity/` | new | the activities of LOGGING.md section 7 |
+| `service/` | `status.py`, `recovery.py`, `servicelog.py` | the service at a glance: status, recovery key, log page |
+| (top level) | `locks.py`, `paging.py` | helpers several packages share |
+
+```
+domain/
+  __init__.py
+  locks.py, paging.py
+  rights/       access.py, permissions.py
+  auth/         auth.py, passwords.py, throttle.py
+  users/        users.py
+  accounts/     accounts.py, adapters.py, oauth.py, discovery.py
+  mail/         mailbox.py, calls.py, merge.py, replies.py,
+                outgoing.py, sending.py, idempotency.py
+  sync/         sync.py, worker.py
+  changes/      feed.py, catalogue.py
+  webhooks/     webhooks.py, delivery.py
+  activity/     base.py, recorder.py, catalogue/
+  service/      status.py, recovery.py, servicelog.py
+```
+
+Sending stays in `mail/`, not in a package of its own: `MailboxService`
+holds the sending as `mailbox.outgoing`, and sending builds on the calls
+of `calls.py`. Two packages would import each other. Modules keep
+their names. `users/users.py` and `webhooks/webhooks.py` stay single
+modules and may be the package's `__init__.py` alone.
+
+### 4.1 The direction between packages
+
+What each package imports, from the modules' imports today:
+
+| Package | Imports |
+|---|---|
+| `rights` | nothing |
+| `changes` | nothing |
+| `activity` | `rights` |
+| `auth` | `rights` |
+| `accounts` | `rights`, `changes`, and `sync` today (below) |
+| `users` | `rights`, `auth`, `accounts` |
+| `sync` | `accounts` (the adapters), `changes` |
+| `mail` | `rights`, `accounts`, `sync` |
+| `webhooks` | `rights`, `changes`, `sync` (the worker's rounds) |
+| `service` | `rights`, `auth`, `accounts`, `sync`, `webhooks` |
+
+`activity` will be imported by every package that records.
+
+The cycle of section 1 goes: `accounts` no longer imports `sync`. When
+an account is deleted, the sync state goes with it through a callback
+the assembly wires, as the other pieces are wired in `build_services`.
+`sync` reaches accounts through `adapters`, as it does today.
+
+## 5. What else changes
+
+- **CLAUDE.md** lists the packages with one line each, not every module.
+  The module docstrings say the rest.
+- **`test_architecture.py`** gets the rules of section 2: imports
+  between packages through `__init__.py`, no cycle between packages.
+- **The web layer** imports from the packages: `from ..domain.accounts
+  import AccountService`. `web/services.py` keeps the one place where
+  the web layer names the services.
+- **The tests** stay where they are. Their folder is flat as well, 70
+  modules. Mirroring the packages there is a step of its own, if wanted.
+
+## 6. Order of work
+
+1. This file, one pull request of documentation.
+2. The change feed of section 3: the catalogue, the classes at each call
+   site, `ChangeRecord` and `ChangeKind` in the data layer. Small, and
+   it shows the shape before the move.
+3. The packages of section 4, one commit per package, the leaves first:
+   `rights`, `changes`, `auth`, then `accounts` with the cycle removed,
+   `users`, `sync`, `mail`, `webhooks`, `service`.
+4. The architecture tests of section 5 and CLAUDE.md.
+5. `activity/` is built in its place when LOGGING.md step 2 comes.
+
+Steps 2 to 4 are one branch, one commit per step. Each commit passes all
+checks. The live checks run once at the end, since nothing they see
+changes.
+
+## 7. Open questions
+
+- `mail` or `mailbox` for the package of reading and changing mail?
+  `MailboxService` is the facade today.
+- Should `accounts/discovery.py` be a package of its own? It is the
+  largest module there and knows nothing of accounts.
+- Should the tests mirror the packages, now or later?
+- Should `data/` get the same look? It is already in folders by kind
+  (`models`, `mail`, `providers`, `storage`, `secrets`, `http`), which
+  is why this file leaves it alone.
