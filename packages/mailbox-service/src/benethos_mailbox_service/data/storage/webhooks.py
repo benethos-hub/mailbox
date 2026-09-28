@@ -8,9 +8,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
-from ...errors import ConflictError
+from ...errors import ConflictError, missing
 from ..models import Webhook
-from .table import missing
 
 
 @dataclass(frozen=True)

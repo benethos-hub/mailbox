@@ -5,9 +5,9 @@ from __future__ import annotations
 from ....errors import (
     ConflictError,
     MailboxServiceError,
-    MessageNotFoundError,
-    NotFoundError,
     NotSupportedError,
+    missing,
+    missing_message,
 )
 from ...mail import convert, parse
 from ...models import (
@@ -80,7 +80,7 @@ class MemoryProvider:
         for message in self.messages:
             if message.id == message_id:
                 return message
-        raise MessageNotFoundError(f"message {message_id} not found")
+        raise missing_message(message_id)
 
     async def get_attachment(
         self, message_id: str, attachment_id: str
@@ -94,7 +94,7 @@ class MemoryProvider:
                     content_type=attachment.content_type,
                     data=data,
                 )
-        raise NotFoundError(f"attachment {attachment_id} not found")
+        raise missing("attachment", attachment_id)
 
     async def get_raw(self, message_id: str) -> bytes:
         message = await self.get_message(message_id)
@@ -112,7 +112,7 @@ class MemoryProvider:
         known = {folder.id for folder in self.folders}
         for folder_id in fields.get("folder_ids", []):
             if folder_id not in known:
-                raise NotFoundError(f"folder {folder_id} not found")
+                raise missing("folder", folder_id)
         if "keywords" in fields:
             fields["keywords"] = sorted({k.lower() for k in fields["keywords"]})
         updated = message.model_copy(update=fields)
@@ -200,7 +200,7 @@ class MemoryProvider:
         for message in self.messages:
             if message.id == draft_id and drafts in message.folder_ids:
                 return message
-        raise NotFoundError(f"draft {draft_id} not found")
+        raise missing("draft", draft_id)
 
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
         if parent_id is not None:
@@ -230,7 +230,7 @@ class MemoryProvider:
         for folder in self.folders:
             if folder.id == folder_id:
                 return folder
-        raise NotFoundError(f"folder {folder_id} not found")
+        raise missing("folder", folder_id)
 
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate

@@ -32,7 +32,7 @@ from ...data.models import (
     MessageUpdate,
     Page,
 )
-from ...errors import ConflictError, MailboxServiceError, NotFoundError
+from ...errors import ConflictError, MailboxServiceError, NotFoundError, missing
 from ..accounts import Adapters
 from ..activity import ActivityLog
 from ..rights import Access
@@ -134,7 +134,7 @@ class MailboxService:
         folders = await self._folders(account_id)
         folder = next((f for f in folders if f.id == folder_id), None)
         if folder is None:
-            raise NotFoundError(f"folder {folder_id} not found")
+            raise missing("folder", folder_id)
         if folder.role is not None:
             raise ConflictError(
                 f"the folder {folder.name} is the account's {folder.role}: "

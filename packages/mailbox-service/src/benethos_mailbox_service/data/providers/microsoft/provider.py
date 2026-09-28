@@ -37,6 +37,7 @@ from ....errors import (
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
+    missing,
 )
 from ...mail import compose, convert, parse
 from ...models import (
@@ -405,7 +406,7 @@ class MicrosoftProvider:
         except BadRequestError:
             item = {}
         if not item.get("isDraft"):
-            raise NotFoundError(f"draft {draft_id} not found")
+            raise missing("draft", draft_id)
 
     # --- changing -------------------------------------------------------------------
 

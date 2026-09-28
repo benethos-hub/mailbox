@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Generic, Protocol, TypeVar
 
-from ...errors import ConflictError, NotFoundError
+from ...errors import ConflictError, missing
 
 T = TypeVar("T")
 
@@ -15,10 +15,6 @@ class Record(Protocol):
 
 
 R = TypeVar("R", bound=Record)
-
-
-def missing(what: str, row_id: str) -> NotFoundError:
-    return NotFoundError(f"{what} {row_id} not found")
 
 
 class Table(Generic[T]):

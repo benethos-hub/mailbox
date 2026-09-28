@@ -26,7 +26,7 @@ from ...data.models import (
 )
 from ...data.secrets import CredentialVault
 from ...data.storage import Delivery, WebhookRecord, WebhookRepository
-from ...errors import BadRequestError, NotFoundError
+from ...errors import BadRequestError, missing
 from ..activity import ActivityLog, Actor
 from ..activity import webhooks as said
 from ..changes import ChangeFeed
@@ -147,7 +147,7 @@ class WebhookService:
         """Another user's webhook answers as if it did not exist."""
         record = self._repository.get(webhook_id)
         if record.webhook.user_id != access.user_id:
-            raise NotFoundError(f"webhook {webhook_id} not found")
+            raise missing("webhook", webhook_id)
         return record
 
 

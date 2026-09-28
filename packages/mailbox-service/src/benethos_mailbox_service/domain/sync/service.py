@@ -30,7 +30,12 @@ from ...common.ids import new_id
 from ...common.redact import redact
 from ...data.providers import Capability, FolderChanges, MailProvider
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
-from ...errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
+from ...errors import (
+    ChangesExpiredError,
+    MailboxServiceError,
+    MessageNotFoundError,
+    missing_message,
+)
 from ..accounts import Adapters
 from ..activity import SERVICE, ActivityLog
 from ..activity import sync as said
@@ -147,7 +152,7 @@ class SyncService:
             await self.sync_account(account_id)
             entry = self._index.get(account_id, message_id)
             if entry is None or entry.native_id == native:
-                raise MessageNotFoundError(f"message {message_id} not found") from None
+                raise missing_message(message_id) from None
             return await operation(entry.native_id)
 
     def relocate(
@@ -214,7 +219,7 @@ class SyncService:
     def _native(self, account_id: str, message_id: str) -> str:
         entry = self._index.get(account_id, message_id)
         if entry is None:
-            raise MessageNotFoundError(f"message {message_id} not found")
+            raise missing_message(message_id)
         return entry.native_id
 
     # --- sync -------------------------------------------------------------------------

@@ -27,6 +27,18 @@ class MessageNotFoundError(NotFoundError):
     acts on this alone, not on a missing attachment, draft or folder."""
 
 
+def missing(what: str, name: str | None = None) -> NotFoundError:
+    """``<what> <name> not found``: a record or an item that is not there."""
+    return NotFoundError(f"{what} {name} not found" if name else f"{what} not found")
+
+
+def missing_message(name: str | None = None) -> MessageNotFoundError:
+    """``message <name> not found``, as ``missing`` for a message."""
+    return MessageNotFoundError(
+        f"message {name} not found" if name else "message not found"
+    )
+
+
 class BadRequestError(MailboxServiceError):
     """The request is well-formed but makes no sense, e.g. an unknown right."""
 

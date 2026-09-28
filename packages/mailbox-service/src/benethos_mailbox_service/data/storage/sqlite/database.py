@@ -19,9 +19,8 @@ from pathlib import Path
 from typing import Any
 
 from ....common.chunks import batched
-from ....errors import ConflictError, StorageError
+from ....errors import ConflictError, StorageError, missing
 from ...files import LockedError, create_private, exclusive_lock
-from ..table import missing
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 
 # Stays below SQLite's limit of host parameters in one statement.

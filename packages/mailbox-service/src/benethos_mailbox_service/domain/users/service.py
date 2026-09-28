@@ -19,7 +19,13 @@ from ...data.storage import (
     UserRepository,
     WebhookRepository,
 )
-from ...errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
+from ...errors import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    missing,
+)
 from ..accounts import Adapters
 from ..activity import HOST, ActivityLog, Actor
 from ..activity import users as said
@@ -390,7 +396,7 @@ class UserService:
         self._require_covers_user(access, owner)
         before = self._tokens.get(token_id)
         if before.user_id != user_id:
-            raise NotFoundError(f"token {token_id} not found")
+            raise missing("token", token_id)
         token = self._auth.revoke_token(token_id)
         if before.revoked_at is None:
             self._activity.record(

@@ -12,7 +12,7 @@ from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 
 from ...data.models import Grant, Role, User
-from ...errors import ForbiddenError, NotFoundError
+from ...errors import ForbiddenError, missing
 from . import permissions
 
 log = logging.getLogger(__name__)
@@ -151,7 +151,7 @@ class Access:
         if self.allows(operation, account_id):
             return
         if account_id is not None and not self.sees(account_id):
-            raise NotFoundError(f"account {account_id} not found")
+            raise missing("account", account_id)
         where = f" on account {account_id}" if account_id else ""
         raise ForbiddenError(f"missing right: {operation}{where}")
 

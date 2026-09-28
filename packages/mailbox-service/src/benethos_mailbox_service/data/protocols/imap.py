@@ -31,6 +31,7 @@ from ...errors import (
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
+    missing,
 )
 from ..mail import fields, parse
 from .transport import Pick, connect_to, tls_context, transport_errors
@@ -487,7 +488,7 @@ class ImapSession:
             answer: dict[bytes, Any] = client.select_folder(folder, readonly=readonly)
         except imaplib.IMAP4.error:
             if not client.folder_exists(folder):
-                raise NotFoundError(f"folder {folder} not found") from None
+                raise missing("folder", folder) from None
             raise
         return answer
 
