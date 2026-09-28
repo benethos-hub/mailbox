@@ -98,7 +98,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   caller with a token is named with the token's name. `serve` logs where
   its settings came from, the database and its schema when it starts,
   instead of printing them, and logs when it stops. A migration of the
-  schema is logged at start with its notes.
+  schema is logged at start with its notes. Users, tokens, roles and
+  accounts are logged when they are created, changed or removed, an
+  OAuth sign-in when it starts, finishes or fails, an account's status
+  when it changes, and a token that is refused because it is revoked or
+  expired.
 - The MCP server refuses a `MAILBOX_MCP_LOG_LEVEL` or `MAILBOX_MCP_PORT`
   it cannot use with a message, as it does `MAILBOX_MCP_TRANSPORT`.
   Before, it stopped with a traceback.

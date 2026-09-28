@@ -40,3 +40,28 @@ class ConfirmFailed(Activity):
 
     def says(self) -> str:
         return "typed a wrong password to confirm a step"
+
+
+@dataclass(frozen=True, kw_only=True)
+class SignedOut(Activity):
+    def says(self) -> str:
+        return "signed out of the UI"
+
+
+@dataclass(frozen=True, kw_only=True)
+class TokenRefused(Activity):
+    """A token the service knows, but no longer takes. One it does not
+    know at all counts against the sign-in throttle alone."""
+
+    level: ClassVar[int] = logging.WARNING
+
+    token_id: str
+    token_name: str
+    user_id: str
+    reason: str
+
+    def says(self) -> str:
+        return f"presented token {self.token_name} ({self.token_id}) of {self.user_id}"
+
+    def why(self) -> str:
+        return self.reason

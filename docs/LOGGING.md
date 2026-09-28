@@ -138,7 +138,7 @@ these activities become audit records later is AUDIT.md's list.
 | INFO | signed in to the UI | user, source | yes |
 | WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | yes |
 | INFO | signed out | user | new |
-| WARNING | a token was presented that is revoked or expired | token id, source | new, `authenticate` knows it |
+| WARNING | a token was presented that is revoked or expired, or whose user is disabled | token id, source | new, `authenticate` knows it |
 | WARNING | a wrong password to confirm a step | user | yes |
 
 Sessions ending by idleness or restart are not logged. The lockouts of
@@ -175,7 +175,7 @@ the sign-in throttle are in 5.9 with the other limits.
 | INFO | X finished the sign-in with P: A connected / signed in again | actor, provider, account | new |
 | WARNING | a sign-in with P failed: reason | provider, reason, no `state` | new |
 | DEBUG | the token of A was refreshed | account | new |
-| WARNING | the refresh for A was refused: reason | account, reason | new |
+| WARNING | the refresh for A was refused: reason | account, reason | the line "A needs a new sign-in: reason" above |
 
 A status that flips every round (unreachable, reachable) is logged on
 the change, not on every round: the worker keeps the last status and

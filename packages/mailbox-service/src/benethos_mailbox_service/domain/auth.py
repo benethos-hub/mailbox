@@ -243,9 +243,13 @@ class AuthService:
 
     def _access_for_token(self, presented: str, source: str | None) -> Access:
         token = self._tokens.find_by_hash(hash_token(presented))
-        if token is None or self.state_of(token) == "revoked":
+        if token is None:
+            raise UnauthorizedError("invalid or revoked token")
+        if self.state_of(token) == "revoked":
+            self._refused(token, source, "it is revoked")
             raise UnauthorizedError("invalid or revoked token")
         if self.state_of(token) == "expired":
+            self._refused(token, source, "it expired")
             raise UnauthorizedError("token expired")
         now = self._clock()
         try:
@@ -253,9 +257,25 @@ class AuthService:
         except NotFoundError:
             raise UnauthorizedError("invalid or revoked token") from None
         if user.disabled:
+            self._refused(token, source, "its user is disabled")
             raise UnauthorizedError("user is disabled")
         self._tokens.touch(token.id, now)
         return self._access(user, token, source)
+
+    def _refused(self, token: ApiToken, source: str | None, reason: str) -> None:
+        self.activity.record(
+            said.TokenRefused(
+                by=someone(source),
+                token_id=token.id,
+                token_name=token.name,
+                user_id=token.user_id,
+                reason=reason,
+            )
+        )
+
+    def sign_out(self, access: Access) -> None:
+        """The session of the UI ends. The web layer drops it, this logs it."""
+        self.activity.record(said.SignedOut(by=Actor.of(access)))
 
     def _access(
         self, user: User, token: ApiToken | None = None, source: str | None = None

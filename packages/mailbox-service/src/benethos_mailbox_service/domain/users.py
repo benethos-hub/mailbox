@@ -133,6 +133,7 @@ class UserService:
             ui_sign_in=True,
         )
         self._users.save(user)
+        self._activity.record(said.UserCreated(by=HOST, user=user))
         return user, await self._one_time(user)
 
     async def reset_password(self, name: str) -> tuple[User, str]:
@@ -213,6 +214,7 @@ class UserService:
         )
         self._check_grantable(access, user.roles, user.grants)
         self._users.save(user)
+        self._activity.record(said.UserCreated(by=Actor.of(access), user=user))
         return user
 
     def update_user(
@@ -256,6 +258,13 @@ class UserService:
         # name a right a release renamed, and grants nothing by it.
         self._check_grantable(access, updated.roles, updated.grants, grants or [])
         self._users.save(updated)
+        changed = tuple(
+            key for key in changes if getattr(user, key) != getattr(updated, key)
+        )
+        if changed:
+            self._activity.record(
+                said.UserChanged(by=Actor.of(access), user=updated, changed=changed)
+            )
         if user.ui_sign_in and not updated.ui_sign_in:
             self._auth.passwords.delete(user_id)
             self._activity.record(said.MadeApiUser(by=Actor.of(access), user=user))
@@ -362,15 +371,38 @@ class UserService:
     ) -> tuple[ApiToken, str]:
         access.require("create_token")
         name = _named("a token", name)
-        self._require_covers_user(access, self._users.get(user_id))
-        return self._auth.issue_token(user_id, name, expires_at)
+        owner = self._users.get(user_id)
+        self._require_covers_user(access, owner)
+        token, plain = self._auth.issue_token(user_id, name, expires_at)
+        self._activity.record(
+            said.TokenIssued(
+                by=Actor.of(access),
+                token_id=token.id,
+                token_name=token.name,
+                user=owner,
+                expires_at=token.expires_at,
+            )
+        )
+        return token, plain
 
     def revoke_token(self, access: Access, user_id: str, token_id: str) -> ApiToken:
         access.require("revoke_token")
-        self._require_covers_user(access, self._users.get(user_id))
-        if self._tokens.get(token_id).user_id != user_id:
+        owner = self._users.get(user_id)
+        self._require_covers_user(access, owner)
+        before = self._tokens.get(token_id)
+        if before.user_id != user_id:
             raise NotFoundError(f"token {token_id} not found")
-        return self._auth.revoke_token(token_id)
+        token = self._auth.revoke_token(token_id)
+        if before.revoked_at is None:
+            self._activity.record(
+                said.TokenRevoked(
+                    by=Actor.of(access),
+                    token_id=token.id,
+                    token_name=token.name,
+                    user=owner,
+                )
+            )
+        return token
 
     # --- roles ----------------------------------------------------------------
 
@@ -387,7 +419,11 @@ class UserService:
         role_id = _named("a role", role_id)
         if role_id in {role.id for role in self._roles.list()}:
             raise ConflictError(f"role {role_id} exists")
-        return self._save_role(access, Role(id=role_id, grants=grants))
+        role = self._save_role(access, Role(id=role_id, grants=grants))
+        self._activity.record(
+            said.RoleCreated(by=Actor.of(access), role_id=role.id, grants=len(grants))
+        )
+        return role
 
     def replace_role(self, access: Access, role_id: str, grants: list[Grant]) -> Role:
         """The role's holders change with it: the caller must be able to
@@ -396,7 +432,11 @@ class UserService:
         self._require_covers(access, self._roles.get(role_id).grants)
         for holder in self._holders(role_id):
             self._require_covers_user(access, holder)
-        return self._save_role(access, Role(id=role_id, grants=grants))
+        role = self._save_role(access, Role(id=role_id, grants=grants))
+        self._activity.record(
+            said.RoleReplaced(by=Actor.of(access), role_id=role.id, grants=len(grants))
+        )
+        return role
 
     def delete_role(self, access: Access, role_id: str) -> None:
         access.require("delete_role")
@@ -406,6 +446,7 @@ class UserService:
         if users:
             raise ConflictError(f"role {role_id} is used by {', '.join(users)}")
         self._roles.delete(role_id)
+        self._activity.record(said.RoleDeleted(by=Actor.of(access), role_id=role_id))
 
     def holders_of(self, access: Access, role_id: str) -> list[User]:
         """The users that hold a role."""

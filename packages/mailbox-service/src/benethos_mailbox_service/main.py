@@ -167,7 +167,12 @@ def build_services(
     if provider_factory is None:
         provider_factory = partial(build_provider, pick=fetcher.connect_address)
     adapters = Adapters(
-        repos.accounts, vault, provider_factory, oauth=clients, changes=changes
+        repos.accounts,
+        vault,
+        provider_factory,
+        oauth=clients,
+        changes=changes,
+        activity=activity,
     )
     sync = SyncService(adapters, repos.index, feed=changes, clock=clock)
     accounts = AccountService(
@@ -178,6 +183,7 @@ def build_services(
         check_host=fetcher.checked_address,
         idempotency=repos.idempotency,
         changes=changes,
+        activity=activity,
     )
     auth = AuthService(
         repos.users,
@@ -227,7 +233,7 @@ def build_services(
         changes=changes,
         worker=worker,
         vault=vault,
-        oauth=OAuthService(accounts, adapters, clients, clock=clock),
+        oauth=OAuthService(accounts, adapters, clients, clock=clock, activity=activity),
         webhooks=webhooks,
         deliveries=WebhookDispatcher(
             repos.webhooks,

@@ -125,8 +125,9 @@ def _set(response: Response, request: Request, name: str, value: str) -> None:
 
 
 @router.post("/logout")
-async def logout(request: Request, _: Actor) -> Response:
+async def logout(request: Request, caller: Actor) -> Response:
     store_of(request).drop(request.cookies.get(COOKIE))
+    get_auth(request).sign_out(caller)
     response = _to_login(SIGNED_OUT)
     response.delete_cookie(COOKIE, path=PATH)
     return response

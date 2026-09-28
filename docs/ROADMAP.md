@@ -231,7 +231,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
     proposes: the activities are classes in `domain/activity/`, one
     module per area (LOGGING.md 7). Step 2 done: the package, `Access`
     with the client address, the lifecycle, today's lines as
-    activities, the access log without the query. Steps 3 to 5 planned
+    activities, the access log without the query. Step 3 done: users,
+    tokens, roles, accounts, OAuth. Steps 4 and 5 planned
   - planned: the audit of administration of [AUDIT.md](AUDIT.md)
   - with the new providers: the OAuth round trip
   - recovery key, status: moved to phase 4b

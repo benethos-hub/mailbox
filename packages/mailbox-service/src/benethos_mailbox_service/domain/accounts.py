@@ -25,6 +25,8 @@ from ..data.storage import (
 )
 from ..errors import BadRequestError, MailboxServiceError
 from .access import Access
+from .activity import ActivityLog, Actor
+from .activity.catalogue import accounts as said
 from .adapters import REFRESH_TOKEN, Adapters
 from .changes import ChangeFeed
 from .sync import SyncService
@@ -43,8 +45,10 @@ class AccountService:
         check_host: HostCheck | None = None,
         idempotency: IdempotencyRepository | None = None,
         changes: ChangeFeed | None = None,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._repository = repository
+        self._activity = activity or ActivityLog()
         self._vault = vault
         self._adapters = adapters
         self._sync = sync
@@ -104,25 +108,36 @@ class AccountService:
         access.require("create_account")
         _no_secrets_in(settings)
         settings = {**settings_defaults(provider, email), **(settings or {})}
-        await self._check_hosts(settings)
         secrets = dict(credentials or {})
-        if secrets:
-            self._vault.require_ready()
+        try:
+            await self._check_hosts(settings)
+            if secrets:
+                self._vault.require_ready()
+            # A throwaway adapter that reads the credential from the
+            # request. An unsupported provider or bad settings fail here,
+            # before anything is stored.
+            await self._probe(
+                provider,
+                settings,
+                lambda field: _pending(secrets, field),
+                secrets,
+                signed_in,
+            )
+        except MailboxServiceError as exc:
+            self._activity.record(
+                said.ConnectFailed(
+                    by=Actor.of(access),
+                    address=email,
+                    provider=provider.value,
+                    error=exc,
+                )
+            )
+            raise
         account = Account(
             id=new_id("acc"),
             provider=provider,
             email=email,
             display_name=display_name,
-        )
-        # A throwaway adapter that reads the credential from the request. An
-        # unsupported provider or bad settings fail here, before anything is
-        # stored.
-        await self._probe(
-            provider,
-            settings,
-            lambda field: _pending(secrets, field),
-            secrets,
-            signed_in,
         )
         self._repository.add(account, dict(settings))
         try:
@@ -132,6 +147,14 @@ class AccountService:
             self._vault.delete(account.id)
             self._repository.delete(account.id)
             raise
+        host = settings.get("host")
+        self._activity.record(
+            said.AccountConnected(
+                by=Actor.of(access),
+                account=account,
+                host=host if isinstance(host, str) else None,
+            )
+        )
         return self._with_credentials(account)
 
     async def update(
@@ -178,8 +201,14 @@ class AccountService:
                 return self._vault.read(account_id, field)
 
             await self._probe(account.provider, merged, read, secrets, signed_in)
+        what = []
+        if rename and display_name != account.display_name:
+            what.append("display name")
         if rename:
             account = account.model_copy(update={"display_name": display_name})
+        if changed:
+            what.append("settings")
+        what += sorted(secrets)
         # The credentials first: a record that names settings the stored
         # credentials do not match would be a broken account, the reverse
         # only a credential the next probe confirms again.
@@ -191,6 +220,12 @@ class AccountService:
             # builds a new one.
             await self._adapters.drop(account_id)
             self._adapters.set_status(account_id, AccountStatus.CONNECTED)
+        if what:
+            self._activity.record(
+                said.AccountChanged(
+                    by=Actor.of(access), account=account, changed=tuple(what)
+                )
+            )
         return self._with_credentials(self._repository.get(account_id))
 
     async def verify(self, access: Access, account_id: str) -> Account:
@@ -198,10 +233,15 @@ class AccountService:
         provider. Clears a rejected login and updates the status."""
         access.require("verify_account", account_id)
         await self._adapters.call(account_id, lambda p: p.verify())
-        return self._with_credentials(self._repository.get(account_id))
+        account = self._repository.get(account_id)
+        self._activity.record(
+            said.AccountVerified(by=Actor.of(access), account=account)
+        )
+        return self._with_credentials(account)
 
     async def delete(self, access: Access, account_id: str) -> None:
         access.require("delete_account", account_id)
+        account = self._repository.get(account_id)
         self._vault.delete(account_id)
         if self._sync is not None:
             self._sync.forget_account(account_id)
@@ -211,6 +251,7 @@ class AccountService:
             self._changes.forget_account(account_id)
         self._repository.delete(account_id)
         await self._adapters.drop(account_id)
+        self._activity.record(said.AccountRemoved(by=Actor.of(access), account=account))
 
     def signs_in_with_oauth(self, provider: ProviderType) -> bool:
         """Whether accounts of ``provider`` connect through an OAuth app of
