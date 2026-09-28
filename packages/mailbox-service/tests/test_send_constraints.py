@@ -20,13 +20,13 @@ from benethos_mailbox_service.data.storage import (
     InMemorySendLogRepository,
     SqliteSendLogRepository,
 )
+from benethos_mailbox_service.domain.mailbox.sending import SendControl
 from benethos_mailbox_service.domain.rights.access import (
     Access,
     SendLimit,
     pattern_covers,
     recipient_matches,
 )
-from benethos_mailbox_service.domain.sending import SendControl
 from benethos_mailbox_service.errors import (
     ProviderError,
     RecipientNotAllowedError,

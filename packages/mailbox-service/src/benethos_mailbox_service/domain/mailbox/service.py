@@ -12,8 +12,8 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from ..common.clock import utc_now
-from ..data.models import (
+from ...common.clock import utc_now
+from ...data.models import (
     AccountFailure,
     AttachmentContent,
     BatchItemResult,
@@ -32,16 +32,16 @@ from ..data.models import (
     MessageUpdate,
     Page,
 )
-from ..errors import ConflictError, MailboxServiceError, NotFoundError
+from ...errors import ConflictError, MailboxServiceError, NotFoundError
+from ..accounts import Adapters
+from ..activity import ActivityLog
+from ..rights import Access
+from ..sync import SyncService
 from . import merge
-from .accounts import Adapters
-from .activity import ActivityLog
 from .calls import Calls, public
 from .idempotency import Idempotency
 from .outgoing import Outgoing
-from .rights import Access
 from .sending import SendControl
-from .sync import SyncService
 
 # The keyword of a draft, \Draft on IMAP.
 DRAFT_KEYWORD = "$draft"

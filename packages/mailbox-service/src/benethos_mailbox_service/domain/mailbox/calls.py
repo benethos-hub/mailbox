@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
-from ..data.models import (
+from ...data.models import (
     Account,
     AttachmentContent,
     Message,
@@ -20,11 +20,11 @@ from ..data.models import (
     MessageUpdate,
     Page,
 )
-from ..data.providers import MailProvider
-from ..errors import MailboxServiceError, MessageNotFoundError
-from .accounts import Adapters
-from .changes import MailboxChange, MessagesDeleted, MessagesUpdated
-from .sync import SyncService
+from ...data.providers import MailProvider
+from ...errors import MailboxServiceError, MessageNotFoundError
+from ..accounts import Adapters
+from ..changes import MailboxChange, MessagesDeleted, MessagesUpdated
+from ..sync import SyncService
 
 T = TypeVar("T")
 S = TypeVar("S", bound=MessageSummary)

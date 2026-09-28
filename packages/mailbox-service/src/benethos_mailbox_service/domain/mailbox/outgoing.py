@@ -15,9 +15,9 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from ..common.clock import utc_now
-from ..data.mail import compose, convert
-from ..data.models import (
+from ...common.clock import utc_now
+from ...data.mail import compose, convert
+from ...data.models import (
     Account,
     Address,
     DraftMessage,
@@ -34,13 +34,14 @@ from ..data.models import (
     SendResult,
     SentMessage,
 )
-from ..errors import BadRequestError, MailboxServiceError
-from . import changes, replies
-from .activity import ActivityLog, Actor
-from .activity.catalogue.mailbox import MessageSent, SentBut
+from ...errors import BadRequestError, MailboxServiceError
+from .. import changes
+from ..activity import ActivityLog, Actor
+from ..activity.catalogue.mailbox import MessageSent, SentBut
+from ..rights import Access
+from . import replies
 from .calls import Calls
 from .idempotency import Idempotency
-from .rights import Access
 from .sending import Operation, SendControl
 
 M = TypeVar("M", bound=DraftMessage)

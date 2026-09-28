@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import Any, TypeVar
 
-from ..data.mail import compose
-from ..data.models import DraftMessage, Message, MessageReference, Recipient
-from ..errors import BadRequestError
+from ...data.mail import compose
+from ...data.models import DraftMessage, Message, MessageReference, Recipient
+from ...errors import BadRequestError
 
 # (filename, content type, data) of one of the original's attachments.
 AttachedFile = tuple[str, str, bytes]

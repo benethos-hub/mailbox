@@ -19,12 +19,12 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from ..common.clock import utc_now
-from ..data.storage import IdempotencyRepository, StoredResult
-from ..errors import IdempotencyConflictError
-from .activity import SERVICE, ActivityLog
-from .activity.catalogue.mailbox import Replayed, ResultNotKept
-from .locks import KeyedLocks
+from ...common.clock import utc_now
+from ...data.storage import IdempotencyRepository, StoredResult
+from ...errors import IdempotencyConflictError
+from ..activity import SERVICE, ActivityLog
+from ..activity.catalogue.mailbox import Replayed, ResultNotKept
+from ..locks import KeyedLocks
 
 R = TypeVar("R", bound=BaseModel)
 

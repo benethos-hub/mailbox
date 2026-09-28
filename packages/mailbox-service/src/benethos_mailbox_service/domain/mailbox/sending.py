@@ -14,27 +14,27 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import Literal
 
-from ..common import opaque
-from ..common.clock import utc_now
-from ..common.ids import new_id
-from ..data.models import Page, SendFilter, SendOutcome, SendRecord, SentMessage
-from ..data.storage import SendLogRepository
-from ..errors import (
+from ...common import opaque
+from ...common.clock import utc_now
+from ...common.ids import new_id
+from ...data.models import Page, SendFilter, SendOutcome, SendRecord, SentMessage
+from ...data.storage import SendLogRepository
+from ...errors import (
     BadRequestError,
     MailboxServiceError,
     RecipientNotAllowedError,
     SendLimitError,
 )
-from . import paging
-from .activity import ActivityLog, Actor
-from .activity.catalogue.mailbox import (
+from .. import paging
+from ..activity import ActivityLog, Actor
+from ..activity.catalogue.mailbox import (
     NotInAudit,
     SendFailed,
     SendLimitReached,
     SendRefused,
 )
-from .locks import KeyedLocks
-from .rights import Access
+from ..locks import KeyedLocks
+from ..rights import Access
 
 WINDOW = timedelta(hours=24)
 CURSOR = "s_"

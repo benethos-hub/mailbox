@@ -25,7 +25,7 @@ from benethos_mailbox_service.data.storage import (
     SqliteIdempotencyRepository,
     StoredResult,
 )
-from benethos_mailbox_service.domain.idempotency import Idempotency
+from benethos_mailbox_service.domain.mailbox.idempotency import Idempotency
 from benethos_mailbox_service.errors import (
     IdempotencyConflictError,
     ProviderError,

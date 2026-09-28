@@ -12,10 +12,10 @@ from typing import TypeVar
 import anyio
 from pydantic import BaseModel
 
-from ..common import opaque
-from ..data.models import AccountFailure, MessageSummary
-from ..errors import BadRequestError, MailboxServiceError
-from . import paging
+from ...common import opaque
+from ...data.models import AccountFailure, MessageSummary
+from ...errors import BadRequestError, MailboxServiceError
+from .. import paging
 
 T = TypeVar("T")
 
