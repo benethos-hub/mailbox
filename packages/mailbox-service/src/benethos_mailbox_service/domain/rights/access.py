@@ -129,6 +129,11 @@ class Access:
                 return True
         return False
 
+    def filter(self, operation: str, account_ids: Iterable[str]) -> list[str]:
+        """The accounts of ``account_ids`` the operation is allowed on, each
+        once, in their order."""
+        return [a for a in dict.fromkeys(account_ids) if self.allows(operation, a)]
+
     def sees(self, account_id: str) -> bool:
         """Whether the account exists for this caller at all: some right on
         it that is about existing accounts."""

@@ -262,11 +262,9 @@ class MailboxService:
         """What changed in several accounts since a point in the change feed.
         Accounts the caller may not read are left out without a word."""
         existing = self._calls.ids()
-        visible = [
-            a
-            for a in dict.fromkeys(account_ids or existing)
-            if a in existing and access.allows("list_all_changes", a)
-        ]
+        visible = access.filter(
+            "list_all_changes", (a for a in account_ids or existing if a in existing)
+        )
         return self._changes.page(visible, since, limit=limit)
 
     async def list_all_messages(
@@ -286,12 +284,9 @@ class MailboxService:
         it does not fail the request.
         """
         existing = self._calls.ids()
-        wanted = account_ids or existing
-        visible = [
-            a
-            for a in dict.fromkeys(wanted)
-            if a in existing and access.allows("list_all_messages", a)
-        ]
+        visible = access.filter(
+            "list_all_messages", (a for a in account_ids or existing if a in existing)
+        )
         failures: list[AccountFailure] = []
         query = merge.fingerprint(folder_role, search)
         if cursor:

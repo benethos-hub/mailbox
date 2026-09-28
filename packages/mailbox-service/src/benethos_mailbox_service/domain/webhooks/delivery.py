@@ -229,7 +229,7 @@ class WebhookDispatcher:
             return []
         wanted = record.webhook.accounts
         candidates = wanted if wanted is not None else self._account_ids()
-        return [a for a in candidates if access.allows("list_changes", a)]
+        return access.filter("list_changes", candidates)
 
     async def _post(
         self, record: WebhookRecord, body: bytes, now: datetime
