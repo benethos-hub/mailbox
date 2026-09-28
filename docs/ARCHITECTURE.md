@@ -224,8 +224,8 @@ technology says the seam is in the wrong place.
 **Decided 2026-09-28:** this file takes over the sections "Layers of
 the service" and "Encapsulation and replaceable parts" of CLAUDE.md in
 full, with what REFACTORING.md section 8 adds, and CLAUDE.md points
-here. That happens after the refactoring of section 8, in a branch of
-its own.
+here. That happens after the refactoring of sections 8 and 9, in a
+branch of its own.
 
 Open:
 

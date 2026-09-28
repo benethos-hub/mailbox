@@ -1,17 +1,19 @@
 # Refactoring the service
 
-Proposal of 2026-09-28, in two parts. Sections 1 to 7 are the domain:
-it had grown to 27 modules side by side in one folder, and got packages
-by area, and a shape for the change feed like the one
+Proposal of 2026-09-28, in three parts. Sections 1 to 7 are the
+domain: it had grown to 27 modules side by side in one folder, and got
+packages by area, and a shape for the change feed like the one
 [LOGGING.md](LOGGING.md) section 7 gives the activities. Section 8 is
-the data layer and `common`, the same rules applied there. Nothing
-changes in behaviour: modules move, names get clearer, the API and the
-OpenAPI document stay as they are. The rules that came out of it, in
-short, are [ARCHITECTURE.md](ARCHITECTURE.md). What the user decides is
-marked as decided, everything else is the proposal.
+the data layer and `common`, the same rules applied there. Section 9 is
+the code written twice, merged into helpers once the modules are in
+place. Behaviour, the API and the OpenAPI document stay as they are
+throughout. The rules that came out of it, in short, are
+[ARCHITECTURE.md](ARCHITECTURE.md). What the user decides is marked as
+decided, everything else is the proposal.
 
 **Built 2026-09-28**, steps 2 to 5 of section 6. Sections 1 and 3.1
-describe the domain before. Section 8 is not built.
+describe the domain before. Section 8 is not built. Section 9 lists the
+code written twice, found 2026-09-28, to be merged after section 8.
 
 ## 1. Why
 
@@ -480,3 +482,109 @@ fresh folder.
   replaceable parts", together with what section 8 adds. That is the
   last step, in a branch of its own, after the refactoring, not part of
   it.
+
+## 9. Code written twice
+
+Found 2026-09-28 by reading every layer, each finding checked in both
+places. Section 8 moves modules and changes nothing. This section
+changes code: a helper replaces its copies, behaviour stays, and the
+helper gets a test. It comes after section 8, so that no file is moved
+and edited in the same step (9.4). Paths are under
+`packages/mailbox-service/src/benethos_mailbox_service/`.
+
+### 9.1 More helpers for `common`
+
+Beyond `redact` and `ratelimit` (8.2). Each is standard library only
+and read by more than one layer.
+
+| # | What | Where today | Proposed |
+|---|---|---|---|
+| A1 | HTML to text, `from_html` | `data/mail/text.py`, read by `data` (compose) and `web` (the mail page) | `common/plaintext.py`. The one plain helper `web` takes from `data` besides `redact` |
+| A2 | The local time to the millisecond | the same f-string in `logs.py` and `web/pages/templates.py` (`moment`) | `local_moment` in `common/clock.py` |
+| A3 | A host name normalised: lower case, trailing dot off, IDNA, syntax | `data/discovery/autoconfig.py` (`_host`, `_HOST`), `domain/discovery/service.py` (its own, with `_LABEL`), lower and rstrip alone in `data/http/safe.py` and `data/discovery/suffix.py` | `common/hosts.py`: `ascii_host`, `unicode_host`, `is_host_name`. Side finding: `safe.py` compares configured internal hosts without IDNA, so a Unicode host never matches |
+| A4 | Megabytes as text, the byte constants | `// (1024 * 1024)` and "MB" in `web/limits.py` and `activity/catalogue/http.py`, `40 * 1024 * 1024` three times, "25 MB" as text beside `MAX_ATTACHMENT_BYTES` in `outgoing.py` | `common/sizes.py`: `MIB`, `megabytes(n)` |
+| A5 | `iso` and `parse_iso` | `data/storage/sqlite/database.py`, rebuilt by hand in `domain/mailbox/sending.py` and `domain/sync/service.py`, `datetime.now(UTC)` instead of `utc_now` in `data/secrets/backup.py` and `protocols/imap.py`, ISO parsing again in `microsoft/mappers.py` | `common/clock.py`. Borderline: the domain's times are UTC already, so this is consistency |
+| A6 | Chunking, `range(0, len(x), N)` | six times in `data` | `batched()` in `common`, until Python 3.12 is the minimum and `itertools.batched` exists |
+| A7 | Base64 without padding | `common/opaque.py`, `data/secrets/passwords.py`, `data/providers/protocols/oauth.py` | exported from `common/opaque.py`, with a flag for the alphabet |
+
+Considered and left: the `rpartition("@")` one-liners, the
+case-insensitive substring filter (five places, an idiom), the address
+shown as "Name <email>" (three purposes), `quote(safe="")` (one call),
+`encode_recovery` (the key's own format, stays in `data.secrets`). The
+MCP package repeats `from_html`, the address format, the idempotency
+fingerprint and the path quoting: allowed, the two packages share no
+code.
+
+### 9.2 Domain and web
+
+| # | What | Where | Proposed |
+|---|---|---|---|
+| B1 | Record an activity and re-raise: five equal `except MailboxServiceError` blocks; record and swallow: `_after_sending` in `outgoing.py`, rebuilt by hand in `sending.py` and `idempotency.py` | `accounts/service.py`, `accounts/oauth.py`, `mailbox/sending.py` (three), `mailbox/idempotency.py` | two context managers on `ActivityLog` in `activity/recorder.py`, about 35 lines to 12 |
+| B2 | Load the user, check the caller covers it: six copies; own user or `get_user`: two | `users/service.py` | `_managed(access, op, user_id)` and `_self_or_get_user` |
+| B3 | Bounded tables: drop the expired, then the oldest; sliding window trimmed and capped | `auth/throttle.py`, `discovery/service.py` (twice) | one helper beside `locks.py`, domain only |
+| B4 | Cursors and pages: decode then "invalid cursor" in `sending.py` and `merge.py`, own decoding in `changes/feed.py` and `system/servicelog.py`, encoding straight with `opaque` in three, `limit + 1` and `more` in four | `domain/paging.py` gets `encode_cursor`, `decode_cursor(prefix, value, parse)`, `split_page(found, limit)` |
+| B5 | Pages: build a model, turn `ValidationError` into `FormError` | `mailform.py`, `routes/folders.py`, `routes/webhooks.py`, `routes/sends.py`, `grants.py` | `model_of(...)` in `web/pages/forms.py` |
+| B6 | The account ids the caller may do X on | `mailbox/service.py` (twice), `mailbox/sending.py`, `webhooks/delivery.py`, `accounts/service.py` | `Access.filter(operation, ids)` in `rights/access.py` |
+| B7 | Pages: call the domain if allowed, else a default: eight copies | `routes/sends.py`, `routes/users.py` (four), `routes/mail.py`, `routes/home.py`, and `system/status.py` | `if_allowed(...)` in `web/pages/deps.py` |
+| B8 | The web decides what the domain decides: `effective.py` rebuilds `ACCOUNT_FREE \| ALL_ACCOUNTS` (`access.py` builds it three times), `navigation.py` recomputes `StatusService.may_see`, `routes/mail.py` derives the batch rule that `mailbox/service.py` enforces | one constant and two predicates in `rights`, the web calls them |
+| B9 | AuthService: load a user, refuse if missing or disabled, three times; the name key twice | `auth/service.py` | `_live_user`, `_name_key` |
+| B10 | The background loop: repeat, record a failed round, sleep, in two places, wrapped once more by `main.py`; `Retries.pause` in `delivery.py` rebuilds `backoff` without jitter | `webhooks/delivery.py`, `sync/worker.py`, `main.py` | one `rounds(...)` helper in the domain, `backoff` from `common` (after 8.2) |
+| B11 | The fingerprint as sorted JSON under two names | `mailbox/merge.py`, `mailbox/idempotency.py` | one helper. Changing the idempotency hash invalidates stored keys, kept 24 h: a commit of its own, noted in the CHANGELOG |
+| B12 | Pages read the same form fields twice, once to show them again, once for the call | `routes/webhooks.py`, `routes/users.py`, `routes/accounts.py` | read once into the typed dict |
+| B13 | SyncWorker: look up the account, record only if it still exists, four times | `sync/worker.py` | `_record(account_id, make)` |
+| B14 | Small: the mail page URL built three times; `quote(safe="")` twice in `web`; `LOG_LEVELS` beside `servicelog.LEVELS`; the admin grant literal in `users/service.py` and `access.py` (`Access.admin` unused); the mail form's field keys listed three times; `str(form.get(x) or "")` 39 times; `why()` six times in the activity catalogue; `TokenInfo.of(...)` three times | | each a one-line helper or a constant |
+
+### 9.3 Data
+
+| # | What | Where | Proposed |
+|---|---|---|---|
+| C1 | Three SQLite repositories rewrite `SqliteRows`: list, get, delete with the same SQL | `sqlite/accounts.py`, `sqlite/webhooks.py`, `sqlite/users.py` (tokens) | `SqliteRows` gets `order` and a public `row(id)`, the three hold one |
+| C2 | In-memory repositories rewrite `Table`: webhooks in full, the conflict scan in `sends.py` and `credentials.py`, "drop keys where" three times | `storage/webhooks.py`, `storage/sends.py`, `storage/credentials.py`, `storage/idempotency.py` | `Table`, plus `drop_where` in `table.py` |
+| C3 | Chunked `IN` queries with the same limit of 500 and the same comment | `sqlite/changes.py`, `sqlite/index.py` | `Database.query_in(...)`, on A6 |
+| C4 | IMAP and SMTP wrappers are twins: `ImapServer` and `SmtpServer` the same dataclass, the same `UnicodeError` clause with its comment, the same connect lines | `protocols/imap.py`, `protocols/smtp.py` | a `Server` dataclass and the clause in `transport.py` |
+| C5 | Microsoft repeats itself: the move call four times, the parent-folder check twice, the `@odata.nextLink` loop twice, `retry-after` read twice | `microsoft/provider.py` | `_move`, `_parent`, one page generator, in the same file |
+| C6 | `port_of` and `rate_of` near copies | `providers/rules.py` | one private `_number(...)` |
+| C7 | The vault's `read` and `unseal` share the decrypt path | `secrets/vault.py` | one private `_open(...)` |
+| C8 | Folder with role X or `no_folder`, in each provider, though `rules.role_folder` exists | `memory/provider.py`, `imap/provider.py` (three places), `microsoft/provider.py` | `rules.require_role_folder(folders, role)` |
+| C9 | An address on the wire, punycode or fail: identical | `mail/compose.py` (`_wire`), `protocols/smtp.py` (`_on_the_wire`) | `wire_address` in `mail/fields.py` |
+| C10 | `missing(what, id)` exists in `table.py`, about twenty places build the same text by hand | `imap/mappers.py`, `memory/provider.py`, `imap/provider.py`, `microsoft/provider.py`, `mail/convert.py`, `protocols/imap.py` | `missing` to `errors.py`, used everywhere |
+| C11 | The flag filter (unread, starred, has_attachments) twice | `memory/provider.py`, `microsoft/mappers.py` | `MessageFilter.matches` in `models/messages.py`, as `SendFilter.matches` |
+| C12 | Small: host clean-up inline four times (A3), the deadline message in `guard.py` and `microsoft/provider.py`, two spellings of the schema-version query and of `SELECT 1 ... WHERE id` | | with A3, and one-liners |
+
+Checked and clean: the error translation per library, retry and backoff
+(one place), the mappers, the discovery sources, the migrations, the
+API routes (thin, no rights checks or cursor parsing of their own), the
+error mapping of the web layer (one place), `opaque` as the one cursor
+encoder, `config.py` and `errors.py`.
+
+About 150 lines fewer in `data`, about 200 in the domain and the web.
+For clarity, A1 to A5, B1, B4, B6 and B8 matter most. For lines, C1 to
+C3.
+
+### 9.4 Order, so that nothing overlaps
+
+The moves of section 8 and the merges of this section touch the same
+files: the SQLite repositories (A5, C1), the providers (8.3, C4, C5,
+C8), the vault (8.2, C7), `delivery.py` and `worker.py` (8.2, B10).
+So they run one after the other, each branch from `main` after the
+previous merge, never side by side:
+
+1. **Section 8**, moves only, one branch (8.5). Every later step finds
+   the files where they will stay.
+2. **`common` and the helpers other layers build on** (9.1, and C3 on
+   A6, C10): one branch. It touches `data`, the domain and the web at
+   the call sites, so it goes before the layer branches, which then
+   start from the helpers.
+3. **`data`** (9.3): one branch, bottom up as the lines of 8.3: storage
+   (C1, C2), then `mail` and `protocols` (C4, C9), then the providers
+   (C5, C6, C8, C11), then the vault (C7).
+4. **Domain and web** (9.2): one branch, `rights` first (B6, B8), then
+   the services (B1, B2, B9, B13), `paging` (B4), the loops (B3, B10),
+   then the pages (B5, B7, B12, B14). B11 is a commit of its own with
+   its CHANGELOG entry.
+
+Within a branch, one commit per finding or per row of the tables above.
+Each commit passes all checks. A helper new to `common` or the domain
+gets its test in the same commit. The live checks run once per branch,
+at the end. After step 4, ARCHITECTURE.md takes over CLAUDE.md's
+sections (8.6), the last branch.

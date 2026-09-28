@@ -251,8 +251,9 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   next, proposed in REFACTORING.md section 8: `redact` and `ratelimit`
   to `common`, `backup` out of `secrets`, the wire protocols and HTTP
   as `data/protocols/` beside the providers, the `__init__.py` files
-  export only, the same checks as for the domain. The rules in short:
-  [ARCHITECTURE.md](ARCHITECTURE.md)
+  export only, the same checks as for the domain. Then the code
+  written twice, section 9, merged into helpers, layer by layer. The
+  rules in short: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Settings and data in the folders of the operating system, for a service
   installed without the repository: `%APPDATA%` on Windows,
   `~/.config` and `~/.local/share` on Linux (`platformdirs`). A file
