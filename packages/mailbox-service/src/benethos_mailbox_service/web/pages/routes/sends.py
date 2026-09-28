@@ -8,14 +8,13 @@ from datetime import UTC, date, datetime, time
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from pydantic import ValidationError
 
 from ....data.models import SendFilter
 from ....domain.rights import Access
 from ...services import Accounts, Mailbox, get_users
 from ..deps import Viewer, emails_of
 from ..filters import Field, FilterBar, filter_bar
-from ..forms import first_problem
+from ..forms import model_of
 from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
@@ -38,8 +37,8 @@ def _day(value: str) -> datetime | None:
 
 
 def _filter(bar: FilterBar) -> SendFilter | None:
-    """What the bar asks for. Raises ``ValueError`` for a value that is no
-    filter."""
+    """What the bar asks for. Raises ``FormError``, a ``ValueError``, for
+    a value that is no filter."""
     wanted = {
         "user_id": bar.value("who") or None,
         "outcome": bar.value("outcome") or None,
@@ -49,10 +48,7 @@ def _filter(bar: FilterBar) -> SendFilter | None:
     }
     if not any(value is not None for value in wanted.values()):
         return None
-    try:
-        return SendFilter.model_validate(wanted)
-    except ValidationError as exc:
-        raise ValueError(first_problem(exc)) from None
+    return model_of(SendFilter, wanted)
 
 
 @router.get("/sends")

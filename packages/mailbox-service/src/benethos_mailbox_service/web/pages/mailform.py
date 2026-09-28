@@ -32,7 +32,7 @@ from ...domain.rights import Access
 from ...errors import MailboxServiceError
 from ..errors import status_of
 from ..services import get_mailbox
-from .forms import FormError, first_problem
+from .forms import FormError, model_of
 from .navigation import mail_trail
 from .templates import render
 
@@ -106,10 +106,7 @@ def reference_of(form: Any) -> MessageReference | None:
 
 def build(model: type[DraftMessage], fields: dict[str, Any]) -> Any:
     """``model`` from the fields. What is wrong raises a ``ComposeError``."""
-    try:
-        return model(**fields)
-    except ValidationError as exc:
-        raise ComposeError(first_problem(exc)) from None
+    return model_of(model, fields, error=ComposeError)
 
 
 def sent_text(result: SendResult) -> str:

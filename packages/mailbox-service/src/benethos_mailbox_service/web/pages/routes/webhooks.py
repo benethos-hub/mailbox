@@ -8,14 +8,13 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
-from pydantic import ValidationError
 
 from ....data.models import CHANGE_KINDS, WebhookCreate
 from ....domain.rights import Access
 from ...services import Webhooks, get_accounts
 from ..deps import Actor, Viewer, account_names
 from ..filters import Field, filter_bar
-from ..forms import FormError, failing, first_problem
+from ..forms import FormError, failing, model_of
 from ..session import show_once, take_once
 from ..templates import back, render
 
@@ -92,14 +91,14 @@ def _request_of(form: Any) -> WebhookCreate:
     accounts = [str(a) for a in form.getlist("accounts")]
     if not every and not accounts:
         raise FormError("Choose the accounts, or every account.")
-    try:
-        return WebhookCreate(
-            url=str(form.get("url") or "").strip(),
-            events=[str(e) for e in form.getlist("events")],
-            accounts=None if every else accounts,
-        )
-    except ValidationError as exc:
-        raise FormError(first_problem(exc)) from None
+    return model_of(
+        WebhookCreate,
+        {
+            "url": str(form.get("url") or "").strip(),
+            "events": [str(e) for e in form.getlist("events")],
+            "accounts": None if every else accounts,
+        },
+    )
 
 
 @router.post("/webhooks")

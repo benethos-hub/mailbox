@@ -11,14 +11,13 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
-from pydantic import ValidationError
 
 from ....data.models import FolderCreate, FolderRole, FolderUpdate
 from ....domain.mailbox import MailboxService
 from ....domain.rights import Access
 from ...services import Mailbox
 from ..deps import Actor
-from ..forms import Again, FormError, failing
+from ..forms import Again, failing, model_of
 from ..templates import back
 from .mail import account_mail_page
 
@@ -121,9 +120,8 @@ M = TypeVar("M", FolderCreate, FolderUpdate)
 
 def _valid(model: type[M], **fields: Any) -> M:
     """The request for the domain, or a FormError naming what a name needs."""
-    try:
-        return model(**fields)
-    except ValidationError:
-        raise FormError(
-            "A folder name needs 1 to 200 characters, without * or %."
-        ) from None
+    return model_of(
+        model,
+        fields,
+        message="A folder name needs 1 to 200 characters, without * or %.",
+    )
