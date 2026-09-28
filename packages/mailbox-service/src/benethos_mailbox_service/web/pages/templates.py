@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from ... import __version__
+from ...common.clock import local_moment
 from ...data.models import Address
 from .navigation import navigation, own_page
 from .session import PATH, SignInRequired, show_once
@@ -40,12 +41,6 @@ def when(value: datetime | None) -> str:
     if value is None:
         return MISSING
     return value.astimezone().strftime("%Y-%m-%d %H:%M")
-
-
-def moment(value: datetime) -> str:
-    """Local date and time to the millisecond, for a line of the log."""
-    local = value.astimezone()
-    return f"{local:%Y-%m-%d %H:%M:%S}.{local.microsecond // 1000:03d}"
 
 
 def size(value: int | None) -> str:
@@ -80,7 +75,7 @@ def segment(value: str) -> str:
 
 templates.env.filters.update(
     when=when,
-    moment=moment,
+    moment=local_moment,
     size=size,
     address=address,
     addresses=addresses,

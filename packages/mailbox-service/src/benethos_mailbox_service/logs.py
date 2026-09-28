@@ -19,6 +19,7 @@ from http import HTTPStatus
 from typing import Any
 
 from .common import redact
+from .common.clock import local_moment
 
 PACKAGE = __name__.rpartition(".")[0]
 FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
@@ -79,8 +80,7 @@ class Console(Redacting):
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
         """Date and time to the millisecond, local, without the offset
         a person at this machine knows."""
-        moment = _moment(record)
-        return f"{moment:%Y-%m-%d %H:%M:%S}.{moment.microsecond // 1000:03d}"
+        return local_moment(_moment(record))
 
     def format(self, record: logging.LogRecord) -> str:
         colour = _LEVEL_COLOURS.get(record.levelno, "")

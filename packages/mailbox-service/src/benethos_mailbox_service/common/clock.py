@@ -8,3 +8,10 @@ from datetime import UTC, datetime
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+def local_moment(value: datetime) -> str:
+    """Date and time to the millisecond, in the local time of this machine
+    and without the offset, as a person at it reads a line of the log."""
+    local = value.astimezone()
+    return f"{local:%Y-%m-%d %H:%M:%S}.{local.microsecond // 1000:03d}"
