@@ -1252,7 +1252,9 @@ their own.
 #### Audit log
 
 User, credential, operation, account, status, time. Never content, never a
-secret.
+secret. The audit of administration, beyond sends, is designed in
+[AUDIT.md](AUDIT.md) and comes after the service log of
+[LOGGING.md](LOGGING.md).
 
 **Decided 2026-09-24:** the audit of sends is built first, together with
 the send limits, which count from it. Every attempt through `send_message`
