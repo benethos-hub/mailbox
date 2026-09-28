@@ -63,7 +63,7 @@ Issues = "https://github.com/benethos-hub/mailbox/issues"
 Changelog = "https://github.com/benethos-hub/mailbox/blob/main/CHANGELOG.md"
 
 [project.scripts]
-benethos-mailbox-mcp = "benethos_mailbox_mcp.server:main"
+benethos-mailbox-mcp = "benethos_mailbox_mcp.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/benethos_mailbox_mcp"]

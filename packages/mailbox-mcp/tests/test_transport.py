@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from starlette.testclient import TestClient
 
-from benethos_mailbox_mcp import server, transport
+from benethos_mailbox_mcp import cli, server, transport
 
 TOKEN = "s3cret-token"
 
@@ -227,7 +227,7 @@ def test_http_from_the_command_line(
     started: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv(transport.ENV_VAR, TOKEN)
-    server.main(["--transport", "streamable-http", "--port", "9001"])
+    cli.main(["--transport", "streamable-http", "--port", "9001"])
     assert started["run"] == {"host": "127.0.0.1", "port": 9001, "log_level": "INFO"}
     assert started["app"]["path"] == "/mcp"
     assert started["app"]["token"] == TOKEN
@@ -240,7 +240,7 @@ def test_http_from_the_environment(
     monkeypatch.setenv("MAILBOX_MCP_HOST", "0.0.0.0")
     monkeypatch.setenv("MAILBOX_MCP_PATH", "/mail")
     monkeypatch.setenv("MAILBOX_MCP_ALLOWED_HOSTS", "a.example:443, b.example:443")
-    server.main([])
+    cli.main([])
     assert started["run"]["host"] == "0.0.0.0"
     assert started["app"]["path"] == "/mail"
     assert started["app"]["security"].allowed_hosts == [
@@ -253,7 +253,7 @@ def test_http_without_a_token_warns(
     started: dict[str, Any], caplog: pytest.LogCaptureFixture
 ) -> None:
     with caplog.at_level(logging.WARNING):
-        server.main(["--transport", "streamable-http"])
+        cli.main(["--transport", "streamable-http"])
     assert started["app"]["token"] is None
     assert transport.ENV_VAR in caplog.text
 
@@ -266,7 +266,7 @@ def test_stdio_ignores_a_token(
     started["want_stdio"] = True
     monkeypatch.setenv(transport.ENV_VAR, TOKEN)
     with caplog.at_level(logging.WARNING):
-        server.main([])
+        cli.main([])
     assert started["stdio"] == "stdio"
     assert "ignored" in caplog.text
     assert "app" not in started
@@ -290,6 +290,6 @@ def test_a_bad_value_from_the_environment(
 ) -> None:
     monkeypatch.setenv(f"MAILBOX_MCP_{name}", value)
     with pytest.raises(SystemExit):
-        server.main([])
+        cli.main([])
     assert said in capsys.readouterr().err
     assert not started

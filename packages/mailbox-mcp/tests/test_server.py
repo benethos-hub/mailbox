@@ -10,7 +10,7 @@ import httpx
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
-from benethos_mailbox_mcp import __version__, render, server
+from benethos_mailbox_mcp import __version__, cli, render, server
 from benethos_mailbox_mcp.client import MailboxApiClient
 from benethos_mailbox_mcp.errors import ApiError, ServiceUnavailableError, ToolError
 
@@ -320,7 +320,7 @@ def test_use_client_hands_back_the_one_before(make_client: Callable) -> None:
 
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit):
-        server.main(["--version"])
+        cli.main(["--version"])
     assert __version__ in capsys.readouterr().out
 
 
@@ -341,7 +341,7 @@ def test_main_runs_stdio_with_the_allowed_tools(
 
     monkeypatch.setattr(server, "allowed_operations", operations)
     monkeypatch.setattr(server, "build_server", lambda ops: Recorded(set(ops)))
-    server.main([])
+    cli.main([])
     assert runs == [(set(READ), "stdio")]
 
 
@@ -350,7 +350,7 @@ def test_the_log_names_no_request_url(
 ) -> None:
     for name in ("httpx", "httpcore"):
         monkeypatch.setattr(logging.getLogger(name), "level", logging.NOTSET)
-    server.configure_logging("INFO")
+    cli.configure_logging("INFO")
     with caplog.at_level(logging.INFO):
         logging.getLogger("httpx").info("HTTP Request: GET /v1/messages?q=invoice")
     assert "invoice" not in caplog.text
@@ -364,12 +364,12 @@ def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(server, "allowed_operations", unreachable)
     with pytest.raises(SystemExit, match="not reachable"):
-        server.main([])
+        cli.main([])
 
 
 def test_main_without_a_token() -> None:
     with pytest.raises(SystemExit, match="MAILBOX_SERVICE_TOKEN is not set"):
-        server.main([])
+        cli.main([])
 
 
 def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -389,7 +389,7 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
         "build_server",
         lambda ops: type("S", (), {"run": lambda self, transport: None})(),
     )
-    server.main([])
+    cli.main([])
     assert server.client() is not made[0]
 
 
@@ -456,7 +456,7 @@ def test_the_start_names_the_service_and_the_tools(
         lambda ops: type("S", (), {"run": lambda self, transport: None})(),
     )
     with caplog.at_level(logging.INFO):
-        server.main([])
+        cli.main([])
     assert (
         "serving 1 tools over stdio for the mailbox service at "
         "http://127.0.0.1:8080: list_accounts" in caplog.text
@@ -491,5 +491,5 @@ async def test_a_failed_tool_is_a_warning_without_its_arguments(
 
 def test_the_mcp_library_logs_from_warning_on(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(logging.getLogger("mcp"), "level", logging.NOTSET)
-    server.configure_logging("INFO")
+    cli.configure_logging("INFO")
     assert logging.getLogger("mcp").getEffectiveLevel() == logging.WARNING
