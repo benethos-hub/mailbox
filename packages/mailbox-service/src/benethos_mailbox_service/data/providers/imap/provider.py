@@ -11,7 +11,6 @@ the requests, blocks a rejected login and pauses an unreachable server.
 from __future__ import annotations
 
 import itertools
-import logging
 import threading
 import time
 from collections.abc import Callable
@@ -62,8 +61,6 @@ from ..sender import SmtpFactory, SmtpSender
 from . import mappers
 
 T = TypeVar("T")
-
-log = logging.getLogger(__name__)
 
 SessionFactory = Callable[[ImapServer], ImapSession]
 
@@ -235,11 +232,10 @@ class ImapProvider:
             self._smtp.send, raw, sender, recipients
         )
         # Sent: from here on nothing may fail, or a client would send again.
-        copy = None
         try:
             copy = await self._run(lambda: self._store_sent(raw))
         except MailboxServiceError as exc:
-            log.warning("sent, but no copy in the sent folder: %s", exc.message)
+            return SentMessage(refused=refused, copy_error=exc.message)
         return SentMessage(refused=refused, sent_copy=copy)
 
     async def list_drafts(

@@ -8,7 +8,6 @@ was rejected are left alone until they are verified.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -17,14 +16,16 @@ import anyio
 from anyio.abc import TaskGroup
 
 from ..common.clock import utc_now
-from ..data.models import AccountStatus
+from ..data.models import Account, AccountStatus
 from ..data.providers import Capability, backoff
 from ..errors import (
-    MailboxServiceError,
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
 )
+from .activity import WORKER, ActivityLog
+from .activity.catalogue import lifecycle
+from .activity.catalogue import sync as said
 from .adapters import Adapters
 from .sync import SyncService
 
@@ -37,8 +38,6 @@ LONGEST_RETRY = 900.0
 
 # How the background loops wait. Tests pass one that returns at once.
 Sleep = Callable[[float], Awaitable[None]]
-
-log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -63,6 +62,7 @@ class SyncWorker:
         push: bool = True,
         sleep: Sleep = anyio.sleep,
         clock: Callable[[], datetime] = utc_now,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._adapters = adapters
         self._sync = sync
@@ -70,6 +70,7 @@ class SyncWorker:
         self._push = push
         self._sleep = sleep
         self._clock = clock
+        self._activity = activity or ActivityLog(clock)
         self._watching: set[str] = set()
         self._no_push: set[str] = set()
         self._last_pass_at: datetime | None = None
@@ -88,8 +89,8 @@ class SyncWorker:
             while True:
                 try:
                     await self.poll(watchers)
-                except Exception:
-                    log.exception("a sync round failed")
+                except Exception as exc:
+                    self._activity.record(lifecycle.RoundFailed(by=WORKER, error=exc))
                 await self._sleep(self._interval)
 
     async def poll(self, watchers: TaskGroup | None = None) -> None:
@@ -104,12 +105,22 @@ class SyncWorker:
                 await self._sync.sync_account(account_id)
             except NotFoundError:
                 continue  # deleted meanwhile
-            except MailboxServiceError as exc:
-                log.warning("sync of %s failed: %s", account_id, exc.message)
-            except Exception:
+            except Exception as exc:
                 # A bug in one adapter must not stop the sync of the others.
-                log.exception("sync of %s failed", account_id)
+                self._failed(account_id, exc)
         self._last_pass_at = self._clock()
+
+    def _failed(self, account_id: str, exc: Exception) -> None:
+        record = self._record(account_id)
+        if record is not None:
+            self._activity.record(said.SyncFailed(by=WORKER, account=record, error=exc))
+
+    def _record(self, account_id: str) -> Account | None:
+        """The account a line names, None once it is deleted."""
+        try:
+            return self._adapters.record(account_id)
+        except NotFoundError:
+            return None
 
     async def watch(self, account_id: str) -> None:
         """Wait for changes the server reports, and sync on each."""
@@ -125,7 +136,11 @@ class SyncWorker:
                         await self._sync.sync_account(account_id)
                 except NotSupportedError:
                     self._no_push.add(account_id)
-                    log.info("%s cannot push changes: polling only", account_id)
+                    record = self._record(account_id)
+                    if record is not None:
+                        self._activity.record(
+                            said.PushUnavailable(by=WORKER, account=record)
+                        )
                     return
                 except ProviderAuthError:
                     return  # _wanted is false now, until the account is verified
@@ -134,13 +149,13 @@ class SyncWorker:
                 except Exception as exc:
                     failures += 1
                     pause = backoff(failures - 1, FIRST_RETRY, LONGEST_RETRY)
-                    log.warning(
-                        "watching %s failed, next try in %.0fs: %s",
-                        account_id,
-                        pause,
-                        _reason(exc),
-                        exc_info=not isinstance(exc, MailboxServiceError),
-                    )
+                    record = self._record(account_id)
+                    if record is not None:
+                        self._activity.record(
+                            said.WatchFailed(
+                                by=WORKER, account=record, pause=pause, error=exc
+                            )
+                        )
                     await self._sleep(pause)
         except NotFoundError:
             return  # deleted
@@ -159,10 +174,3 @@ class SyncWorker:
             and account_id not in self._no_push
             and Capability.PUSH in self._adapters.capabilities(account_id)
         )
-
-
-def _reason(exc: Exception) -> str:
-    """The message of one of our errors, else the kind of the failure."""
-    if isinstance(exc, MailboxServiceError):
-        return exc.message
-    return type(exc).__name__

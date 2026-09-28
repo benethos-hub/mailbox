@@ -146,14 +146,12 @@ def _run(args: argparse.Namespace) -> int:
         book = LogBook()
         config = log_config(settings.log_level, book)
         logging.config.dictConfig(config)
-        read = settings_file(args.env_file)
-        print(f"settings: {read or 'the environment alone'}", file=sys.stderr)
-        if settings.storage == "sqlite":
-            print(f"database: {settings.database_path}", file=sys.stderr)
-        else:
-            print("storage: memory, nothing is kept", file=sys.stderr)
+        # The log names the settings and the database once the app starts.
+        app = create_app(
+            settings, logbook=book, settings_file=settings_file(args.env_file)
+        )
         uvicorn.run(
-            create_app(settings, logbook=book),
+            app,
             host=args.host or settings.host,
             port=args.port or settings.port,
             log_config=config,

@@ -49,11 +49,11 @@ def test_the_admin_reads_the_log(logged: tuple[TestClient, Services]) -> None:
     page = client.get("/ui/log").text
     assert 'href="/ui/log" class="active"' in page
     # The page shows its own reader's sign-in, to the millisecond.
-    assert "sign-in to the UI as admin" in page
+    assert "signed in to the UI" in page
     assert re.search(
         r'<td class="mono">\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}</td>', page
     )
-    assert "benethos_mailbox_service.domain.auth" in page
+    assert "benethos_mailbox_service.activity.auth" in page
 
 
 def test_the_log_is_for_the_admin_alone(logged: tuple[TestClient, Services]) -> None:

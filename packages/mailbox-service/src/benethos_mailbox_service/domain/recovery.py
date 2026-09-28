@@ -8,13 +8,11 @@ log says that it was shown, and to whom.
 
 from __future__ import annotations
 
-import logging
-
 from ..data.secrets import CredentialVault, encode_recovery
 from .access import Access
+from .activity import Actor
+from .activity.catalogue.service import RecoveryKeyShown
 from .auth import AuthService
-
-log = logging.getLogger(__name__)
 
 
 class RecoveryKey:
@@ -26,9 +24,5 @@ class RecoveryKey:
         access.require("show_recovery_key")
         await self._auth.confirm(access, password)
         recovery = encode_recovery(self._vault.master_key())
-        log.warning(
-            "the recovery key was shown in the UI to %s (%s)",
-            access.name,
-            access.user_id,
-        )
+        self._auth.activity.record(RecoveryKeyShown(by=Actor.of(access)))
         return recovery

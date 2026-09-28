@@ -12,6 +12,7 @@ from datetime import datetime
 import pytest
 
 from benethos_mailbox_service import logs
+from benethos_mailbox_service.data.logbook import LogBook
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.secrets import redact
 from benethos_mailbox_service.main import Services
@@ -37,12 +38,12 @@ async def test_a_sign_in_reaches_the_log(
     line = next(
         line
         for line in capsys.readouterr().err.splitlines()
-        if "sign-in to the UI as Anna" in line
+        if "signed in to the UI" in line
     )
     when, _, rest = line.partition(" INFO     ")
     assert re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d", when)
-    assert rest.startswith("benethos_mailbox_service.domain.auth: ")
-    assert "from 10.0.0.1" in line
+    assert rest.startswith("benethos_mailbox_service.activity.auth: ")
+    assert f"Anna ({user.id}) signed in to the UI from 10.0.0.1" in line
 
 
 def test_the_level_names_what_the_service_writes(
@@ -175,3 +176,24 @@ def test_colours_on_a_terminal_unless_no_color(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.delenv("NO_COLOR")
     monkeypatch.setattr(sys, "stderr", io.StringIO())
     assert not logs.colours_wanted()
+
+
+@pytest.mark.parametrize("colours", [False, True])
+def test_an_access_line_leaves_out_the_query(
+    capsys: pytest.CaptureFixture[str], colours: bool
+) -> None:
+    """A query holds what a person typed, such as the words of a search."""
+    book = LogBook()
+    logging.config.dictConfig(logs.log_config("info", book, colours=colours))
+    logging.getLogger("uvicorn.access").info(
+        '%s - "%s %s HTTP/%s" %d',
+        "127.0.0.1:5000",
+        "GET",
+        "/v1/messages?q=holiday+plans&from=anna",
+        "1.1",
+        200,
+    )
+    err = capsys.readouterr().err
+    assert "/v1/messages" in err and "holiday" not in err and "anna" not in err
+    [entry] = book.newest_first()
+    assert "/v1/messages" in entry.message and "holiday" not in entry.message

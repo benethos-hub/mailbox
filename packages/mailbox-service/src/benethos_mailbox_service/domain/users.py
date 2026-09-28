@@ -6,7 +6,6 @@ only manage a user whose rights it holds itself.
 
 from __future__ import annotations
 
-import logging
 import secrets
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -23,10 +22,10 @@ from ..data.storage import (
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from . import permissions
 from .access import Access, SendLimit
+from .activity import HOST, ActivityLog, Actor
+from .activity.catalogue import users as said
 from .adapters import Adapters
 from .auth import MAX_NAME, AuthService, TokenState
-
-log = logging.getLogger(__name__)
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18
@@ -65,6 +64,7 @@ class UserService:
         adapters: Adapters,
         auth: AuthService,
         webhooks: WebhookRepository,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._users = users
         self._roles = roles
@@ -72,6 +72,7 @@ class UserService:
         self._adapters = adapters
         self._auth = auth
         self._webhooks = webhooks
+        self._activity = activity or auth.activity
 
     # --- the caller itself --------------------------------------------------
 
@@ -145,21 +146,20 @@ class UserService:
         if not user.ui_sign_in:
             user = user.model_copy(update={"ui_sign_in": True})
             self._users.save(user)
-            log.info("%s (%s) may sign in to the UI again", user.name, user.id)
+            self._activity.record(said.UiSignInAllowed(by=HOST, user=user))
         return user, await self._one_time(user)
 
     async def _one_time(self, user: User) -> str:
-        password = await self._force(user, None, "on the host")
+        password = await self._force(user, None, HOST)
         assert password is not None
         return password
 
-    async def _force(self, user: User, new: str | None, by: str) -> str | None:
+    async def _force(self, user: User, new: str | None, by: Actor) -> str | None:
         """A password the user must change at its next sign-in: ``new``, or
         without it a random one, which is returned to be shown once."""
         password = secrets.token_urlsafe(ONE_TIME_BYTES) if new is None else new
         await self._auth.passwords.set(user.id, user.name, password, must_change=True)
-        what = "a one-time password for" if new is None else "set the password of"
-        log.info("%s %s (%s) %s", what, user.name, user.id, by)
+        self._activity.record(said.PasswordSet(by=by, user=user, one_time=new is None))
         return password if new is None else None
 
     # --- users ----------------------------------------------------------------
@@ -258,13 +258,7 @@ class UserService:
         self._users.save(updated)
         if user.ui_sign_in and not updated.ui_sign_in:
             self._auth.passwords.delete(user_id)
-            log.info(
-                "%s (%s) made %s (%s) an API user: its password is deleted",
-                access.name,
-                access.user_id,
-                user.name,
-                user.id,
-            )
+            self._activity.record(said.MadeApiUser(by=Actor.of(access), user=user))
         return updated
 
     def delete_user(self, access: Access, user_id: str) -> None:
@@ -279,13 +273,8 @@ class UserService:
         # remove them.
         removed = self._webhooks.delete_for_user(user_id)
         self._users.delete(user_id)
-        log.info(
-            "%s (%s) deleted %s (%s) and its %d webhooks",
-            access.name,
-            access.user_id,
-            user.name,
-            user.id,
-            removed,
+        self._activity.record(
+            said.UserDeleted(by=Actor.of(access), user=user, webhooks=removed)
         )
 
     def _require_free(self, name: str, user_id: str | None = None) -> None:
@@ -321,7 +310,7 @@ class UserService:
         stored = await self._auth.passwords.set(
             user.id, user.name, new, must_change=False
         )
-        log.info("%s (%s) changed its password", user.name, user.id)
+        self._activity.record(said.PasswordChanged(by=Actor.of(access)))
         return stored.updated_at
 
     async def set_password(
@@ -332,7 +321,7 @@ class UserService:
         one-time password and returns it, to be shown once. Either must be
         changed at the next sign-in."""
         user = self._settable(access, user_id)
-        return await self._force(user, new, f"by {access.name} ({access.user_id})")
+        return await self._force(user, new, Actor.of(access))
 
     async def one_time_password(self, access: Access, user_id: str) -> str:
         """``set_password`` without a password: the one the service made."""

@@ -623,9 +623,9 @@ def test_a_page_looks_its_session_up_once(
     looked_up = []
     lookup = services.auth.session_access
 
-    def counted(*args: object) -> Access:
+    def counted(*args: object, **kwargs: object) -> Access:
         looked_up.append(args)
-        return lookup(*args)  # type: ignore[arg-type]
+        return lookup(*args, **kwargs)  # type: ignore[arg-type]
 
     monkeypatch.setattr(services.auth, "session_access", counted)
     ui.get(f"/ui/users/{user.id}")

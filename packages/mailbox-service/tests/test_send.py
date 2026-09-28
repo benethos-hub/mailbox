@@ -178,7 +178,9 @@ async def test_a_failed_copy_does_not_fail_the_send(
     sent = await adapter(box, smtp).send(RAW, "me@example.com", TO)
     assert len(smtp.sent) == 1
     assert sent.sent_copy is None
-    assert "no copy in the sent folder" in caplog.text
+    # The adapter reports it, the domain logs it.
+    assert sent.copy_error is not None and "over quota" in sent.copy_error
+    assert not caplog.records
 
 
 async def test_no_sent_folder_no_copy() -> None:

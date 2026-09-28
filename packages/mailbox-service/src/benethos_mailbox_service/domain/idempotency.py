@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import TypeVar
@@ -23,11 +22,11 @@ from pydantic import BaseModel
 from ..common.clock import utc_now
 from ..data.storage import IdempotencyRepository, StoredResult
 from ..errors import IdempotencyConflictError
+from .activity import SERVICE, ActivityLog
+from .activity.catalogue.sending import ResultNotKept
 from .locks import KeyedLocks
 
 R = TypeVar("R", bound=BaseModel)
-
-log = logging.getLogger(__name__)
 
 KEEP = timedelta(hours=24)
 
@@ -37,9 +36,11 @@ class Idempotency:
         self,
         store: IdempotencyRepository,
         clock: Callable[[], datetime] = utc_now,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._store = store
         self._clock = clock
+        self._activity = activity or ActivityLog(clock)
         self._locks: KeyedLocks[tuple[str, str, str]] = KeyedLocks()
 
     async def run(
@@ -78,8 +79,15 @@ class Idempotency:
                     key,
                     StoredResult(operation, fingerprint, result.model_dump_json(), now),
                 )
-            except Exception:
-                log.exception("the result for an Idempotency-Key was not stored")
+            except Exception as exc:
+                self._activity.record(
+                    ResultNotKept(
+                        by=SERVICE,
+                        account_id=account_id,
+                        operation=operation,
+                        error=exc,
+                    )
+                )
             return result
 
 

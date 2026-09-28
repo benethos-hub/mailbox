@@ -9,7 +9,6 @@ sent, denied or failed, with its recipients and never its content.
 
 from __future__ import annotations
 
-import logging
 import math
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
@@ -28,9 +27,9 @@ from ..errors import (
 )
 from . import paging
 from .access import Access
+from .activity import ActivityLog, Actor
+from .activity.catalogue.sending import NotInAudit
 from .locks import KeyedLocks
-
-log = logging.getLogger(__name__)
 
 WINDOW = timedelta(hours=24)
 CURSOR = "s_"
@@ -43,9 +42,11 @@ class SendControl:
         self,
         store: SendLogRepository,
         clock: Callable[[], datetime] = utc_now,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._store = store
         self._clock = clock
+        self._activity = activity or ActivityLog(clock)
         # One send at a time per user and account, so two cannot both pass
         # the limit.
         self._locks: KeyedLocks[tuple[str, str]] = KeyedLocks()
@@ -98,8 +99,10 @@ class SendControl:
                 record(
                     "sent", refused=sent.refused, message_id_header=message_id_header
                 )
-            except Exception:
-                log.exception("sent, but not recorded in the audit")
+            except Exception as exc:
+                self._activity.record(
+                    NotInAudit(by=Actor.of(access), account_id=account_id, error=exc)
+                )
             return sent
 
     def _allow(

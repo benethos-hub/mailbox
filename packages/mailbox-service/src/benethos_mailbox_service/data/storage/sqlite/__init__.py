@@ -9,6 +9,7 @@ from .credentials import SqliteCredentialRepository, SqliteKeyRepository
 from .database import (
     SCHEMA_VERSION,
     Database,
+    Migrated,
     inspect_snapshot,
     migrate_file,
     service_lock,
@@ -23,6 +24,7 @@ from .webhooks import SqliteWebhookRepository
 __all__ = [
     "SCHEMA_VERSION",
     "Database",
+    "Migrated",
     "SqliteAccountRepository",
     "SqliteChangeLogRepository",
     "SqliteCredentialRepository",

@@ -412,7 +412,7 @@ async def test_a_bug_with_one_webhook_does_not_stop_the_others(
     receiver.failure = None
     await services.deliveries.deliver_due()
     assert len(receiver.posts) == 4  # both tried, then both again
-    assert f"webhook {first['id']} failed" in caplog.text
+    assert f"could not post for webhook {first['id']}: KeyError" in caplog.text
 
 
 async def test_a_failed_round_does_not_end_the_dispatcher(
@@ -437,4 +437,4 @@ async def test_a_failed_round_does_not_end_the_dispatcher(
         monkeypatch.setattr(services.deliveries, "_sleep", sleep)
         await services.deliveries.run()
     assert len(rounds) == 2
-    assert "a round of webhook posts failed" in caplog.text
+    assert "the dispatcher could not finish a round" in caplog.text

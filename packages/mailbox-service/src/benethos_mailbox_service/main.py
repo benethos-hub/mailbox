@@ -7,12 +7,12 @@ provider factory), so tests and deployments swap them here.
 from __future__ import annotations
 
 import json
-import logging
-from collections.abc import AsyncIterator, Callable, Iterator, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
 from contextlib import ExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import partial
+from pathlib import Path
 
 import anyio
 from fastapi import FastAPI
@@ -58,6 +58,8 @@ from .data.storage import (
     open_repositories,
 )
 from .domain.accounts import AccountService
+from .domain.activity import DISPATCHER, SERVICE, WORKER, ActivityLog, Actor
+from .domain.activity.catalogue import lifecycle
 from .domain.adapters import Adapters
 from .domain.auth import AuthService
 from .domain.changes import ChangeFeed
@@ -97,6 +99,7 @@ class Services:
     log: ServiceLog
     # Every repository behind the services, closed with them.
     repositories: Repositories
+    activity: ActivityLog = field(default_factory=ActivityLog)
     worker: SyncWorker | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
 
@@ -137,9 +140,20 @@ def build_services(
     replaces the key provider the settings name, ``clock`` the time of
     every service. ``logbook`` holds the log lines the log page shows:
     ``serve`` hands in the one its log writes to."""
+    activity = ActivityLog(clock)
     repos = open_repositories(settings.storage, settings.database_path)
+    migrated = repos.store.migrated if repos.store is not None else None
+    if migrated is not None:
+        activity.record(
+            lifecycle.SchemaMigrated(
+                by=SERVICE,
+                before=migrated.before,
+                after=migrated.after,
+                notes=migrated.notes,
+            )
+        )
     vault = CredentialVault(
-        repos.keys, repos.credentials, keys or key_provider(settings)
+        repos.keys, repos.credentials, keys or key_provider(settings, activity)
     )
     clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
     # One guard for every connection the service makes to a host a user
@@ -171,6 +185,7 @@ def build_services(
         repos.tokens,
         Passwords(repos.passwords, password_hasher, clock=clock),
         clock=clock,
+        activity=activity,
     )
     worker = (
         SyncWorker(
@@ -179,6 +194,7 @@ def build_services(
             interval=settings.sync_interval,
             push=settings.sync_idle,
             clock=clock,
+            activity=activity,
         )
         if settings.sync_interval
         else None
@@ -189,14 +205,21 @@ def build_services(
         adapters=adapters,
         auth=auth,
         users=UserService(
-            repos.users, repos.roles, repos.tokens, adapters, auth, repos.webhooks
+            repos.users,
+            repos.roles,
+            repos.tokens,
+            adapters,
+            auth,
+            repos.webhooks,
+            activity=activity,
         ),
         mailbox=MailboxService(
             adapters,
             sync,
-            Idempotency(repos.idempotency, clock=clock),
-            SendControl(repos.sends, clock=clock),
+            Idempotency(repos.idempotency, clock=clock, activity=activity),
+            SendControl(repos.sends, clock=clock, activity=activity),
             clock=clock,
+            activity=activity,
         ),
         discovery=discovery or build_discovery(settings, fetcher),
         sync=sync,
@@ -221,11 +244,13 @@ def build_services(
                 longest_retry=settings.webhook_longest_retry,
             ),
             clock=clock,
+            activity=activity,
         ),
         status=StatusService(accounts, sync, worker, webhooks),
         recovery=RecoveryKey(auth, vault),
         log=ServiceLog(logbook or LogBook()),
         repositories=repos,
+        activity=activity,
         oauth_clients=clients,
     )
 
@@ -265,12 +290,13 @@ def build_discovery(settings: Settings, fetcher: SafeFetcher) -> DiscoveryServic
     )
 
 
-def key_provider(settings: Settings) -> KeyProvider:
+def key_provider(
+    settings: Settings, activity: ActivityLog | None = None
+) -> KeyProvider:
     """The key provider the settings name."""
     if settings.key_provider == "env":
-        logging.getLogger(__name__).warning(
-            "the master key comes from MAILBOX_SERVICE_MASTER_KEY. The environment "
-            "shows up in process listings and container inspection"
+        (activity or ActivityLog()).record(
+            lifecycle.MasterKeyFromEnvironment(by=SERVICE)
         )
         value = settings.master_key.get_secret_value() if settings.master_key else None
         return EnvKeyProvider(value)
@@ -296,24 +322,33 @@ def create_app(
     settings: Settings | None = None,
     services: Services | None = None,
     logbook: LogBook | None = None,
+    settings_file: Path | None = None,
 ) -> FastAPI:
     """The app on ``services``, else on services built from ``settings``
-    with ``logbook`` behind the log page."""
+    with ``logbook`` behind the log page. ``settings_file`` is where the
+    settings came from, for the log."""
     settings = settings or Settings()
     services = services or build_services(settings, logbook=logbook)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         with ExitStack() as serving:
-            if services.store is not None and not serving.enter_context(
-                services.store.serving()
-            ):
-                logging.getLogger(__name__).warning(
-                    "another service uses this database: a restore cannot "
-                    "tell that this one runs"
+            store = services.store
+            if store is not None and not serving.enter_context(store.serving()):
+                services.activity.record(lifecycle.DatabaseShared(by=SERVICE))
+            services.activity.record(
+                lifecycle.ServiceStarted(
+                    by=SERVICE,
+                    settings=str(settings_file) if settings_file else None,
+                    database=str(settings.database_path) if store else None,
+                    schema=store.schema_version() if store else None,
                 )
-            async with _running(services):
-                yield
+            )
+            try:
+                async with _running(services):
+                    yield
+            finally:
+                services.activity.record(lifecycle.ServiceStopped(by=SERVICE))
 
     app = FastAPI(
         title="Mailbox Service",
@@ -335,8 +370,10 @@ async def _running(services: Services) -> AsyncIterator[None]:
     closed."""
     async with anyio.create_task_group() as background:
         if services.worker is not None:
-            background.start_soon(services.worker.run)
-        background.start_soon(services.deliveries.run)
+            background.start_soon(_loop, services.activity, WORKER, services.worker.run)
+        background.start_soon(
+            _loop, services.activity, DISPATCHER, services.deliveries.run
+        )
         try:
             yield
         finally:
@@ -344,6 +381,18 @@ async def _running(services: Services) -> AsyncIterator[None]:
             # adapters close.
             background.cancel_scope.cancel()
     await services.aclose()
+
+
+async def _loop(
+    activity: ActivityLog, by: Actor, run: Callable[[], Awaitable[None]]
+) -> None:
+    """A background loop, which runs until the service stops. Should it
+    end otherwise, the log says so."""
+    try:
+        await run()
+    except Exception as exc:
+        activity.record(lifecycle.LoopEnded(by=by, error=exc))
+        raise
 
 
 def openapi_json() -> str:

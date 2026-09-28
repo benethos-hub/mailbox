@@ -64,25 +64,46 @@ class Access:
         grants: Iterable[Grant],
         credential_id: str | None = None,
         roles: Iterable[str] = (),
+        *,
+        credential_name: str | None = None,
+        source: str | None = None,
     ) -> None:
         self.user_id = user_id
         self.name = name
         # The token the caller presented, None for a session of the UI.
         self.credential_id = credential_id
+        self.credential_name = credential_name
+        # The client address of the request, for the log. None for work
+        # the service does itself.
+        self.source = source
         # The roles whose grants are among ``grants``, to show them.
         self.roles = tuple(roles)
         self._rules = tuple(_rule(grant) for grant in grants)
 
     @classmethod
     def for_user(
-        cls, user: User, roles: Mapping[str, Role], credential_id: str | None = None
+        cls,
+        user: User,
+        roles: Mapping[str, Role],
+        credential_id: str | None = None,
+        *,
+        credential_name: str | None = None,
+        source: str | None = None,
     ) -> Access:
         grants = list(user.grants)
         for role_id in user.roles:
             role = roles.get(role_id)
             if role is not None:
                 grants.extend(role.grants)
-        return cls(user.id, user.name, grants, credential_id, user.roles)
+        return cls(
+            user.id,
+            user.name,
+            grants,
+            credential_id,
+            user.roles,
+            credential_name=credential_name,
+            source=source,
+        )
 
     @classmethod
     def admin(cls, user_id: str, name: str) -> Access:

@@ -37,6 +37,7 @@ from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
     SCHEMA_VERSION,
     Database,
+    Migrated,
     SqliteAccountRepository,
     SqliteChangeLogRepository,
     SqliteCredentialRepository,
@@ -85,6 +86,15 @@ class Store(Protocol):
         ...
 
     def close(self) -> None: ...
+
+    def schema_version(self) -> int:
+        """The version of the schema the records are in."""
+        ...
+
+    @property
+    def migrated(self) -> Migrated | None:
+        """What opening the store did to its schema, None when nothing."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -189,6 +199,7 @@ __all__ = [
     "inspect_snapshot",
     "AccountRepository",
     "Database",
+    "Migrated",
     "SqliteAccountRepository",
     "SqliteRoleRepository",
     "SqliteSendLogRepository",

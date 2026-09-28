@@ -127,14 +127,16 @@ these activities become audit records later is AUDIT.md's list.
 | INFO | schema migrated from N to M, notes | versions, the migrations' notes | per step as warning in `database.py`, moves to `main` |
 | INFO | the service stopped | | new |
 | ERROR | a background loop ended | which, traceback | worker and dispatcher log per round |
+| ERROR | a round of a background loop failed, the next one runs | which, traceback | yes |
 | WARNING | the master key comes from the environment | | yes |
+| WARNING | another service uses this database | | yes |
 
 ### 5.2 Sign-in and sessions
 
 | Level | Line | Fields | Today |
 |---|---|---|---|
 | INFO | signed in to the UI | user, source | yes |
-| WARNING | failed sign-in to the UI as X: reason | name as typed, reason, source | yes |
+| WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | yes |
 | INFO | signed out | user | new |
 | WARNING | a token was presented that is revoked or expired | token id, source | new, `authenticate` knows it |
 | WARNING | a wrong password to confirm a step | user | yes |
@@ -404,10 +406,9 @@ are part of the API. The code's names around them, `EventType` and
 Steps 2 to 5 are one branch, one commit per step. AUDIT.md follows
 when the user asks for it.
 
-## 9. Open questions
+## 9. Questions answered
 
-- Account addresses in the log: they help an operator, but a log that
-  leaves the machine then carries personal data. Ids alone, or both?
-- `DEBUG` per sync pass is one line per account every five minutes.
-  Acceptable at `DEBUG`, or should the counts go to the status page
-  only?
+- **Decided 2026-09-28:** an account is named by its address and its id,
+  as section 3 says.
+- **Decided 2026-09-28:** each sync pass writes one line with its counts
+  at `DEBUG`.

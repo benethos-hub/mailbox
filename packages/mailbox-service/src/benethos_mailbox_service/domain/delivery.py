@@ -18,7 +18,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import logging
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
@@ -33,6 +32,9 @@ from ..data.secrets import CredentialVault
 from ..data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
 from ..errors import MailboxServiceError
 from .access import Access
+from .activity import DISPATCHER, ActivityLog
+from .activity.catalogue import lifecycle
+from .activity.catalogue import webhooks as said
 from .changes import ChangeFeed
 from .webhooks import sealed_label
 from .worker import Sleep
@@ -45,8 +47,6 @@ POLL = 5.0
 ROUND = 10
 # Posts of each webhook kept for its delivery log.
 LOGGED = 20
-
-log = logging.getLogger(__name__)
 
 
 class Poster(Protocol):
@@ -88,6 +88,7 @@ class WebhookDispatcher:
         retries: Retries = DEFAULT_RETRIES,
         clock: Callable[[], datetime] = utc_now,
         sleep: Sleep = anyio.sleep,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._repository = repository
         self._vault = vault
@@ -98,14 +99,15 @@ class WebhookDispatcher:
         self._retries = retries
         self._clock = clock
         self._sleep = sleep
+        self._activity = activity or ActivityLog(clock)
 
     async def run(self) -> None:
         """Until cancelled. A failure ends a round, never the dispatcher."""
         while True:
             try:
                 await self.deliver_due()
-            except Exception:
-                log.exception("a round of webhook posts failed")
+            except Exception as exc:
+                self._activity.record(lifecycle.RoundFailed(by=DISPATCHER, error=exc))
             await self._sleep(POLL)
 
     async def deliver_due(self) -> None:
@@ -115,11 +117,13 @@ class WebhookDispatcher:
                 for _ in range(ROUND):
                     if not await self._deliver(record.webhook.id):
                         break
-            except MailboxServiceError as exc:
-                log.warning("webhook %s: %s", record.webhook.id, exc.message)
-            except Exception:
+            except Exception as exc:
                 # A bug with one webhook must not stop the others.
-                log.exception("webhook %s failed", record.webhook.id)
+                self._activity.record(
+                    said.WebhookFailed(
+                        by=DISPATCHER, webhook_id=record.webhook.id, error=exc
+                    )
+                )
 
     async def _deliver(self, webhook_id: str) -> bool:
         """One post, if one is due. True when more events wait."""

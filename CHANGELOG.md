@@ -92,6 +92,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The service log writes what was done as one sentence per activity,
+  under `activity.<area>`, such as `activity.auth` or `activity.users`:
+  who, what, to which record, from which client address, and why. A
+  caller with a token is named with the token's name. `serve` logs where
+  its settings came from, the database and its schema when it starts,
+  instead of printing them, and logs when it stops. A migration of the
+  schema is logged at start with its notes.
 - The MCP server refuses a `MAILBOX_MCP_LOG_LEVEL` or `MAILBOX_MCP_PORT`
   it cannot use with a message, as it does `MAILBOX_MCP_TRANSPORT`.
   Before, it stopped with a traceback.
@@ -327,6 +334,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- The access log writes the path of a request without its query, which
+  held what a person typed, such as search terms.
 - The service masks every secret it holds as `***` in its log and in
   error texts of the API, the UI and an account's last sync error:
   account passwords, OAuth tokens and client secret, webhook secrets.

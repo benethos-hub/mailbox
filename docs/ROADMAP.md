@@ -227,10 +227,12 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   - **the service log: every line on stderr with time, level and source,
     each secret masked, the newest 1000 on a page for the admin (UI
     6.5, CONCEPT 7.4)**, done, live-checked in `live/ui.py`
-  - planned: the service log activity by activity, as
-    [LOGGING.md](LOGGING.md) proposes, then the audit of administration
-    of [AUDIT.md](AUDIT.md). Decided 2026-09-28: the activities are
-    classes in `domain/activity/`, one module per area (LOGGING.md 7)
+  - the service log activity by activity, as [LOGGING.md](LOGGING.md)
+    proposes: the activities are classes in `domain/activity/`, one
+    module per area (LOGGING.md 7). Step 2 done: the package, `Access`
+    with the client address, the lifecycle, today's lines as
+    activities, the access log without the query. Steps 3 to 5 planned
+  - planned: the audit of administration of [AUDIT.md](AUDIT.md)
   - with the new providers: the OAuth round trip
   - recovery key, status: moved to phase 4b
 - Threads (6.3): for IMAP built across folders from the id mapping,

@@ -253,11 +253,11 @@ async def test_the_log_names_who_but_never_a_password(
         with pytest.raises(UnauthorizedError):
             await services.auth.sign_in(SECRET, SECRET, source="10.0.0.2")
     text = caplog.text
-    assert "set the password of Anna" in text
-    assert "sign-in to the UI as Anna" in text and "from 10.0.0.1" in text
-    assert "Anna" in text and "changed its password" in text
+    assert f"set the password of Anna ({user.id})" in text
+    assert f"Anna ({user.id}) signed in to the UI from 10.0.0.1" in text
+    assert f"Anna ({user.id}) changed its password" in text
     # A password typed into the name field is not logged.
-    assert "failed sign-in to the UI as an unknown name from 10.0.0.2" in text
+    assert "failed to sign in to the UI as an unknown name from 10.0.0.2" in text
     assert SECRET not in text and OTHER not in text
 
 

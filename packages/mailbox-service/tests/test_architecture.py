@@ -221,3 +221,57 @@ def test_each_wrapped_library_has_one_home() -> None:
             if home is not None and name != home and not name.startswith(home + "."):
                 violations.append(f"{name}:{line} imports {imported}, home is {home}")
     assert not violations, "library outside its home:\n  " + "\n  ".join(violations)
+
+
+# The calls that write a line at INFO or above (docs/LOGGING.md rule 6.2).
+LOUD = {"info", "warning", "error", "exception", "critical"}
+LOGGERS = {"log", "logger", "logging"}
+
+
+def _loud_calls(path: Path) -> list[int]:
+    """The lines where the file logs at INFO or above: ``log.info(...)``,
+    ``logging.warning(...)``, ``logging.getLogger(...).error(...)``."""
+    found = []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            continue
+        if node.func.attr not in LOUD:
+            continue
+        target = node.func.value
+        if (isinstance(target, ast.Name) and target.id in LOGGERS) or (
+            isinstance(target, ast.Call)
+            and isinstance(target.func, ast.Attribute)
+            and target.func.attr == "getLogger"
+        ):
+            found.append(node.lineno)
+    return found
+
+
+def test_the_data_layer_logs_nothing_above_debug() -> None:
+    """It decides nothing and knows neither actor nor reason: what it
+    notices goes up as a result or an error, and the domain logs it."""
+    loud = [
+        f"{name}:{line}"
+        for name, path in _modules()
+        if _own_part(name) == "data"
+        for line in _loud_calls(path)
+    ]
+    assert loud == []
+
+
+# The one line of the domain outside the activities: ``domain/activity``
+# imports ``access``, so ``access`` cannot record.
+PLAIN_LINES = {f"{PACKAGE}.domain.access"}
+
+
+def test_the_domain_logs_through_activities() -> None:
+    """A domain service hands an activity to ``ActivityLog.record``. Its
+    own logger writes technical lines at DEBUG alone (rule 6.1)."""
+    recorder = f"{PACKAGE}.domain.activity.recorder"
+    loud = [
+        f"{name}:{line}"
+        for name, path in _modules()
+        if _own_part(name) == "domain" and name not in PLAIN_LINES | {recorder}
+        for line in _loud_calls(path)
+    ]
+    assert loud == []

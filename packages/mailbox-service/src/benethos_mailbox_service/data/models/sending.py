@@ -76,3 +76,5 @@ class SentMessage(BaseModel):
 
     refused: list[str] = Field(default_factory=list)
     sent_copy: MessageSummary | None = None
+    # Why the adapter kept no copy it should have kept. The domain logs it.
+    copy_error: str | None = None

@@ -162,7 +162,10 @@ def test_the_migration_renames_a_name_taken_twice(
     db = Database(path)
     names = sorted(u.name for u in SqliteUserRepository(db).list())
     assert names == ["Anna", "anna-22222222"]
-    assert "user anna renamed to anna-22222222" in caplog.text
+    # The data layer logs nothing: the service logs the notes at start.
+    assert db.migrated is not None and db.migrated.before == 8
+    assert db.migrated.notes[0].startswith("schema 9: user anna renamed to anna-2222")
+    assert not caplog.records
     db.close()
 
 

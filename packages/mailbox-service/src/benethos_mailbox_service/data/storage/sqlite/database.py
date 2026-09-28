@@ -8,13 +8,13 @@ constraint as ConflictError, anything else as StorageError.
 
 from __future__ import annotations
 
-import logging
 import os
 import sqlite3
 import stat
 import threading
 from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, overload
@@ -24,7 +24,15 @@ from ...files import LockedError, create_private, exclusive_lock
 from ..table import missing
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 
-log = logging.getLogger(__name__)
+
+@dataclass(frozen=True)
+class Migrated:
+    """What opening the database did to its schema, for the log: the
+    versions before and after, and what the migrations had to say."""
+
+    before: int
+    after: int
+    notes: tuple[str, ...] = ()
 
 
 class Database:
@@ -44,6 +52,9 @@ class Database:
         self._connection.row_factory = sqlite3.Row
         self._lock = threading.RLock()
         self._depth = 0  # of savepoints inside the open transaction
+        # Set when opening migrated the schema. The data layer logs
+        # nothing: the service logs it at start.
+        self.migrated: Migrated | None = None
         with self._lock:
             self._connection.execute("PRAGMA foreign_keys = ON")
             # Freed pages are overwritten, so deleted secrets do not linger.
@@ -178,9 +189,10 @@ class Database:
                 f"database schema {current} is newer than this version supports "
                 f"({SCHEMA_VERSION}): run a newer version of the service"
             )
+        notes: list[str] = []
         for version, migration in enumerate(MIGRATIONS[current:], current + 1):
             with self.transaction() as db:
-                notes = migration.before(db) if migration.before else []
+                said = migration.before(db) if migration.before else []
                 for statement in migration.statements:
                     db.execute(statement)
                 db.execute(
@@ -188,8 +200,9 @@ class Database:
                     " VALUES ('schema_version', ?)",
                     (str(version),),
                 )
-            for note in notes:
-                log.warning("schema %d: %s", version, note)
+            notes += [f"schema {version}: {note}" for note in said]
+        if current < SCHEMA_VERSION:
+            self.migrated = Migrated(current, SCHEMA_VERSION, tuple(notes))
 
 
 @contextmanager

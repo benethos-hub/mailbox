@@ -25,6 +25,7 @@ from ...domain.access import Access
 from ...domain.auth import SignedIn
 from ...errors import MailboxServiceError
 from ..services import get_auth
+from ..urls import client_address
 
 COOKIE = "mailbox_ui_session"
 PATH = "/ui"
@@ -118,7 +119,9 @@ def current(request: Request) -> tuple[UiSession, Access]:
         raise SignInRequired
     auth = get_auth(request)
     try:
-        access = auth.session_access(session.user_id, session.stamp)
+        access = auth.session_access(
+            session.user_id, session.stamp, source=client_address(request)
+        )
     except MailboxServiceError:
         # Gone, disabled, or its password changed since the sign-in.
         store_of(request).drop(request.cookies.get(COOKIE))

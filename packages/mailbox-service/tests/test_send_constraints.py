@@ -465,7 +465,9 @@ def test_a_send_the_audit_cannot_record_is_still_sent(
         )
     )
     assert result == asyncio.run(sent())
-    assert "sent, but not recorded in the audit" in caplog.text
+    assert (
+        "u (usr_1) sent a message from acc_1, but it is not in the audit" in caplog.text
+    )
 
 
 def test_no_grant_at_all_allows_nothing() -> None:

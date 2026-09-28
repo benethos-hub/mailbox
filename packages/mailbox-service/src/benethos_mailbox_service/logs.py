@@ -118,6 +118,19 @@ def _access(record: logging.LogRecord) -> str | None:
     return f"{method} {path} {colour}{status} {phrase}{_RESET} {_DIM}{client}{_RESET}"
 
 
+class WithoutQuery(logging.Filter):
+    """An access line with the path of the request alone. Its query holds
+    what a person typed, such as search terms (docs/LOGGING.md section 4)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if isinstance(args, tuple) and len(args) == _ACCESS_ARGS:
+            path = args[2]
+            if isinstance(path, str) and "?" in path:
+                record.args = (*args[:2], path.partition("?")[0], *args[3:])
+        return True
+
+
 def colours_wanted() -> bool:
     """Colours on a terminal, unless ``NO_COLOR`` is set (no-color.org)."""
     return sys.stderr.isatty() and "NO_COLOR" not in os.environ
@@ -144,15 +157,18 @@ def log_config(
     }
     if book is not None:
         handlers["book"] = {"()": lambda: book}
+    loggers: dict[str, Any] = {
+        name: {"level": number, "handlers": [], "propagate": True}
+        for name in (PACKAGE, "uvicorn", "uvicorn.error", "uvicorn.access")
+    }
+    loggers["uvicorn.access"]["filters"] = ["without_query"]
     return {
         "version": 1,
         "disable_existing_loggers": False,
         # uvicorn sets the colours of these two by name when asked to.
         "formatters": {"default": plain, "access": plain},
+        "filters": {"without_query": {"()": WithoutQuery}},
         "handlers": handlers,
         "root": {"level": logging.WARNING, "handlers": list(handlers)},
-        "loggers": {
-            name: {"level": number, "handlers": [], "propagate": True}
-            for name in (PACKAGE, "uvicorn", "uvicorn.error", "uvicorn.access")
-        },
+        "loggers": loggers,
     }
