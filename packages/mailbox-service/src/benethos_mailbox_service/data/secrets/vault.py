@@ -132,23 +132,11 @@ class CredentialVault:
         stored = self._credentials.get(account_id, field)
         if stored is None:
             raise CredentialMissingError(f"account {account_id} has no {field}")
-        key_id, dek = self._data_key()
-        if stored.key_id != key_id:
-            # Only one data key exists so far. A record naming another one
-            # is said so, not tried with the wrong key.
-            raise CredentialError(
-                f"the {field} of account {account_id} is encrypted with key "
-                f"{stored.key_id}, which this service does not hold"
-            )
-        try:
-            plain = cipher.decrypt(
-                dek, stored.nonce, stored.ciphertext, _credential_aad(account_id, field)
-            )
-        except cipher.DecryptionError:
-            raise CredentialError(
-                f"the {field} of account {account_id} cannot be decrypted"
-            ) from None
-        return _noted(plain)
+        return self._open(
+            f"the {field} of account {account_id}",
+            Sealed(stored.key_id, stored.nonce, stored.ciphertext),
+            _credential_aad(account_id, field),
+        )
 
     def info(self, account_id: str) -> list[CredentialInfo]:
         """Which credentials an account has, never their values."""
@@ -171,20 +159,23 @@ class CredentialVault:
         return Sealed(key_id, nonce, ciphertext)
 
     def unseal(self, label: str, sealed: Sealed) -> SecretStr:
+        return self._open(f"the secret of {label}", sealed, _sealed_aad(label))
+
+    def _open(self, what: str, sealed: Sealed, aad: bytes) -> SecretStr:
+        """Decrypted with the data key and noted for masking. ``what``
+        names the secret in an error."""
         key_id, dek = self._data_key()
         if sealed.key_id != key_id:
+            # Only one data key exists so far. A record naming another one
+            # is said so, not tried with the wrong key.
             raise CredentialError(
-                f"the secret of {label} is encrypted with key {sealed.key_id},"
+                f"{what} is encrypted with key {sealed.key_id},"
                 " which this service does not hold"
             )
         try:
-            plain = cipher.decrypt(
-                dek, sealed.nonce, sealed.ciphertext, _sealed_aad(label)
-            )
+            plain = cipher.decrypt(dek, sealed.nonce, sealed.ciphertext, aad)
         except cipher.DecryptionError:
-            raise CredentialError(
-                f"the secret of {label} cannot be decrypted"
-            ) from None
+            raise CredentialError(f"{what} cannot be decrypted") from None
         return _noted(plain)
 
     # --- keys -----------------------------------------------------------------
