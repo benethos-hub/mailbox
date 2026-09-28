@@ -379,8 +379,9 @@ domain/
 | change | what changed in a mailbox: `message.created` and the like | `domain/changes.py`, the change feed, webhooks |
 | event | not used for either. Kept free for an event-driven design | |
 
-The change feed's `EventType` and a webhook's `events` keep their
-names, since they are part of the API.
+A webhook's `events` and its five values keep their names, since they
+are part of the API. The code's names around them, `EventType` and
+`Event`, are [REFACTORING.md](REFACTORING.md) section 3's matter.
 
 ## 8. Order of work
 
