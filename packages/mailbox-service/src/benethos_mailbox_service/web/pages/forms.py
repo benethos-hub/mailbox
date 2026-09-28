@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from fastapi.responses import Response
 from pydantic import ValidationError
 
+from ...data.secrets.redact import redact
 from ...errors import MailboxServiceError
 
 
@@ -53,4 +54,4 @@ def failing(path: str, prefix: str = "", again: Again | None = None) -> Iterator
     try:
         yield
     except (MailboxServiceError, FormError) as exc:
-        raise Failed(path, f"{prefix}{exc.message}", again) from None
+        raise Failed(path, redact(f"{prefix}{exc.message}"), again) from None

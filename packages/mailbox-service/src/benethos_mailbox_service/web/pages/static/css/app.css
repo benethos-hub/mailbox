@@ -485,3 +485,12 @@ a.btn.ghost { border-color: transparent; background: transparent; color: var(--t
   .nav { flex-direction: row; }
 
 }
+
+/* A line of the service log: its own line breaks, a traceback kept. */
+.log-line {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 13px;
+}

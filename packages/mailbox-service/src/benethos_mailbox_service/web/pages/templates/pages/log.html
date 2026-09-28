@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import empty, filter_bar, pager %}
+{% block title %}Log · {{ APP_NAME }}{% endblock %}
+{% block heading %}Log{% endblock %}
+{% block subheading %}<div class="sub">The newest lines of this service since its start, secrets masked</div>{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="body">{{ filter_bar(bar) }}</div>
+  <div class="body tight">
+    {% if lines %}
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>When</th><th>Level</th><th>Source</th><th>Message</th></tr>
+        </thead>
+        <tbody>
+          {% for line in lines %}
+          <tr>
+            <td>{{ line.at | when }}</td>
+            <td>
+              {% if line.levelno >= 40 %}<span class="tag bad">{{ line.level | lower }}</span>
+              {% elif line.levelno >= 30 %}<span class="tag warn">{{ line.level | lower }}</span>
+              {% else %}<span class="tag">{{ line.level | lower }}</span>{% endif %}
+            </td>
+            <td class="mono">{{ line.source }}</td>
+            <td><pre class="log-line">{{ line.message }}</pre></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {{ empty("No line" ~ (" that matches" if bar.chips else " yet") ~ ".") }}
+    {% endif %}
+  </div>
+  {{ pager(pages) }}
+</section>
+{% endblock %}

@@ -989,9 +989,15 @@ the data, rather than a readable file.
   replaces the old one in the same transaction as the refresh. `invalid_grant`
   sets the account to `needs_reauth` and raises `account.needs_reauth`.
 - **Logging:** `imaplib` debug output stays off, since it echoes the `LOGIN`
-  command. A logging filter replaces every currently decrypted secret with
-  `***` as a second line of defence. Provider error text is passed through
-  the same filter before it goes into an API response.
+  command, and libraries log from `warning` on. As a second line of
+  defence, every secret the service holds in plain text is noted where it
+  is decrypted or received: a credential or a webhook secret from the
+  vault, a password typed in to connect an account, an OAuth token from
+  the provider, the OAuth client secret. The log writes each noted secret
+  as `***`, in the message and in a traceback alike. The same happens to
+  an error text before it goes into an API answer, a page or an
+  account's last sync error. Values shorter than 6 characters are not
+  masked, and the newest 256 are kept (`data/secrets/redact.py`).
 - **Deletion:** removing an account deletes its credential rows.
   `PRAGMA secure_delete = ON` makes SQLite overwrite freed pages, so the
   ciphertext does not linger in the file.
@@ -1112,7 +1118,7 @@ with the role
   | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
   | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook`. Not account-bound |
   | `users.manage` | users, their tokens, roles. Not account-bound |
-  | `admin` | everything, and `show_recovery_key` (the recovery key in the UI, [UI.md](UI.md) 6.5), which only `admin` on every account gives and no grant names |
+  | `admin` | everything, and `show_recovery_key` (the recovery key in the UI) and `read_service_log` (the log page), [UI.md](UI.md) 6.5, which only `admin` on every account gives and no grant names |
 
   Permanent deletion and sending are their own groups on purpose: they are
   the two things that cannot be taken back.

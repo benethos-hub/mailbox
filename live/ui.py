@@ -10,10 +10,10 @@ form. It makes a user, a role and a token, uses the token on the API,
 and sets the user's password, which the user changes at its sign-in.
 It reads mail, opens the pages and follows their forms. It opens the
 status, adds and removes a webhook, shows the recovery key of its own
-service, and makes a user with a one-time password. It writes on the
-test accounts only: a folder and a draft on the first, which it removes
-again, and one mail from the first to the second, deleted for good on
-both sides. Credentials and mail content are never printed.
+service, reads its log, and makes a user with a one-time password. It
+writes on the test accounts only: a folder and a draft on the first,
+which it removes again, and one mail from the first to the second,
+deleted for good on both sides. Credentials and mail content are never printed.
 """
 
 from __future__ import annotations
@@ -72,8 +72,8 @@ def check_frame(run: Run, browser: httpx.Client, emails: list[str]) -> None:
 def check_service(
     run: Run, browser: httpx.Client, url: str, admin: Admin, emails: list[str]
 ) -> None:
-    """The pages of phase 4b: status, a webhook, the recovery key and a
-    user with a one-time password. Nothing here touches a mailbox."""
+    """The pages of phase 4b: status, a webhook, the recovery key, the log
+    and a user with a one-time password. Nothing here touches a mailbox."""
     status = browser.get("/ui/status")
     run.check(
         "the status names both accounts and the worker",
@@ -117,6 +117,15 @@ def check_service(
     run.check(
         "and only once",
         key is not None and key.group(1) not in browser.get("/ui/recovery-key").text,
+    )
+    # Searched: the access lines of every page came since.
+    signed = browser.get("/ui/log", params={"text": "sign-in to the UI"}).text
+    told = browser.get("/ui/log", params={"level": "warning"}).text
+    run.check(
+        "the log names the sign-in and to whom the key was shown, not the key",
+        f"sign-in to the UI as {admin.name}" in signed
+        and "the recovery key was shown in the UI to" in told
+        and (key is None or key.group(1) not in signed + told),
     )
 
     once = browser.post(
@@ -600,7 +609,7 @@ def main() -> int:
             emails = [a["email"].lower() for a in test_accounts]
             print("\n== the frame")
             check_frame(run, browser, emails)
-            print("\n== status, webhooks, recovery key")
+            print("\n== status, webhooks, recovery key, log")
             check_service(run, browser, url, admin, emails)
     return run.finish()
 

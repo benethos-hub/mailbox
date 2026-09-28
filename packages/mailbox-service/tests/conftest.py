@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import itertools
+import logging
 import os
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Any
 
@@ -32,6 +34,7 @@ from benethos_mailbox_service.data.secrets import (
     Scrypt,
     cipher,
     encode_recovery,
+    redact,
 )
 from benethos_mailbox_service.domain import permissions
 from benethos_mailbox_service.domain.access import Access
@@ -48,6 +51,36 @@ async def resolve_to_public(host: str, port: int) -> list[str]:
 
 
 ADMIN = Access.admin("usr_test_admin", "test admin")
+
+
+@pytest.fixture(autouse=True)
+def no_secret_of_another_test() -> None:
+    """Each test starts with no secret noted to be masked."""
+    redact.forget_all()
+
+
+@pytest.fixture(autouse=True)
+def logging_as_it_was() -> Iterator[None]:
+    """``serve`` sets up the log. Afterwards it is as it was: a handler
+    left behind would write to the stream of a test that has ended."""
+    names = [
+        "",
+        "benethos_mailbox_service",
+        "uvicorn",
+        "uvicorn.error",
+        "uvicorn.access",
+    ]
+    before = {
+        name: (log.level, list(log.handlers), log.propagate)
+        for name in names
+        for log in [logging.getLogger(name)]
+    }
+    yield
+    for name, (level, handlers, propagate) in before.items():
+        log = logging.getLogger(name)
+        log.setLevel(level)
+        log.handlers[:] = handlers
+        log.propagate = propagate
 
 
 @pytest.fixture(autouse=True)

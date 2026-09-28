@@ -28,7 +28,7 @@ CROSS_CUTTING = {"config", "errors", "common"}
 HELPERS = "common"
 
 # Assemble the app from the layers and may therefore reach anywhere.
-ASSEMBLY = {"main", "__main__"}
+ASSEMBLY = {"main", "__main__", "logs"}
 
 # Web frameworks live in the web layer. main.py builds the app, so it may too.
 WEB_LIBRARIES = {"fastapi", "starlette"}

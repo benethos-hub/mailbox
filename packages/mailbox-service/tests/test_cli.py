@@ -27,6 +27,8 @@ def test_serve_starts_uvicorn(
     assert main(["serve", "--port", "9999"]) == 0
     assert calls["port"] == 9999
     assert calls["host"] == "127.0.0.1"
+    # stderr, and the lines the log page shows.
+    assert calls["log_config"]["root"]["handlers"] == ["stderr", "book"]
     assert "storage: memory" in capsys.readouterr().err
 
 
@@ -41,7 +43,7 @@ def test_serve_names_the_database(
 
     monkeypatch.setattr(uvicorn, "run", lambda app, **kw: None)
     # No app: without uvicorn nothing would close its database.
-    monkeypatch.setattr(assembly, "create_app", lambda settings: None)
+    monkeypatch.setattr(assembly, "create_app", lambda settings, **_: None)
     monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "sqlite")
     monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
     assert main(["serve"]) == 0
@@ -243,7 +245,7 @@ def test_serve_names_the_settings_file(
     from benethos_mailbox_service import main as assembly
 
     monkeypatch.setattr(uvicorn, "run", lambda app, **kw: None)
-    monkeypatch.setattr(assembly, "create_app", lambda settings: None)
+    monkeypatch.setattr(assembly, "create_app", lambda settings, **_: None)
     folder = settings_folder(tmp_path, monkeypatch)
     assert main(["serve", "--env-file", str(folder / "service.env")]) == 0
     err = capsys.readouterr().err

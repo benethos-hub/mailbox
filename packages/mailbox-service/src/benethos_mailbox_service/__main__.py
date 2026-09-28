@@ -133,11 +133,19 @@ def _run(args: argparse.Namespace) -> int:
     elif args.command == "restore":
         _restore(args.source, args.recovery_key, args.replace_master_key, args.env_file)
     elif args.command == "serve":  # pragma: no branch
+        import logging.config
+
         import uvicorn
 
+        from .data.logbook import LogBook
+        from .logs import log_config
         from .main import create_app
 
         settings = load_settings(args.env_file)
+        # Before the app is built: building it may warn already.
+        book = LogBook()
+        config = log_config(settings.log_level, book)
+        logging.config.dictConfig(config)
         read = settings_file(args.env_file)
         print(f"settings: {read or 'the environment alone'}", file=sys.stderr)
         if settings.storage == "sqlite":
@@ -145,9 +153,10 @@ def _run(args: argparse.Namespace) -> int:
         else:
             print("storage: memory, nothing is kept", file=sys.stderr)
         uvicorn.run(
-            create_app(settings),
+            create_app(settings, logbook=book),
             host=args.host or settings.host,
             port=args.port or settings.port,
+            log_config=config,
             log_level=settings.log_level,
             forwarded_allow_ips=settings.forwarded_allow_ips,
         )

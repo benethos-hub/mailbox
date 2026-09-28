@@ -92,8 +92,8 @@ ACCOUNT_FREE: frozenset[str] = frozenset(
 
 # Rights only ``admin`` gives, in no group and not to be granted by name.
 # Showing the recovery key hands out the master key, which opens every
-# stored secret.
-ADMIN_ONLY: frozenset[str] = frozenset({"show_recovery_key"})
+# stored secret. The service log names users, addresses and accounts.
+ADMIN_ONLY: frozenset[str] = frozenset({"show_recovery_key", "read_service_log"})
 
 # Operations that act on accounts which may not exist yet, or on all of
 # them. They need a grant on every account ("*").

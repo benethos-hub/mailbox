@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A log page in the UI under Service, for a user with `admin` on every
+  account: the newest 1000 lines of the service log since the start,
+  newest first, with a search and the least level. Secrets are masked.
+  The right `read_service_log` comes with `admin` alone and cannot be
+  granted by name.
 - `--env-file PATH` for every command of the service, before or after
   the command, and `MAILBOX_SERVICE_ENV_FILE`: the settings file to read.
   A file named this way must exist, and relative paths in the settings
@@ -176,6 +181,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The service log holds what the service writes. `serve` left the
+  service's own records without a handler: sign-ins to the UI and
+  changes to users were dropped, and warnings came without time or
+  source. Now every line of the service and of uvicorn goes to stderr
+  with time, level and source, at `MAILBOX_SERVICE_LOG_LEVEL`. The
+  access log goes there too, not to stdout. At a terminal the lines are
+  short and in colour, unless `NO_COLOR` is set.
 - A user could disable itself and so lock out its own session and
   tokens. `PATCH /v1/users/{user_id}` now refuses that with `409`, as
   deleting oneself already was.
@@ -313,6 +325,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- The service masks every secret it holds as `***` in its log and in
+  error texts of the API, the UI and an account's last sync error:
+  account passwords, OAuth tokens and client secret, webhook secrets.
+  CONCEPT 7.4 promised this filter, but it was missing.
 - IMAP reads have a limit. A message larger than 40 MB is refused with
   `502 provider_error`, as Microsoft accounts already did. In a list,
   headers beyond 256 KB are cut off.

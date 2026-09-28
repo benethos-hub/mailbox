@@ -27,6 +27,7 @@ from pydantic import SecretStr
 from ....common.clock import utc_now
 from ....errors import ProviderAuthError, ProviderError
 from ...http import ApiClient
+from ...secrets import redact
 
 # An access token counts as spent this long before it runs out.
 MARGIN = timedelta(minutes=1)
@@ -223,6 +224,9 @@ class OAuthClient:
         seconds = int(lifetime) if isinstance(lifetime, int | str) else 3600
         refresh = body.get("refresh_token")
         id_token = body.get("id_token")
+        redact.note(access)
+        if isinstance(refresh, str):
+            redact.note(refresh)
         return Tokens(
             access_token=SecretStr(access),
             expires_at=self.clock() + timedelta(seconds=seconds),

@@ -63,7 +63,7 @@ The groups as `domain/permissions.py` holds them today:
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, and `discover_account`, `create_account`, `start_oauth` | an account, the last three every account |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |
 | `users.manage` | users, tokens, passwords, roles: fourteen rights | the service |
-| `admin` | everything, and `show_recovery_key`, which no grant names | the service |
+| `admin` | everything, and `show_recovery_key` and `read_service_log`, which no grant names | the service |
 
 Three kinds of right hide in this table, and the model treats them
 differently without saying so in the grant:
@@ -119,7 +119,8 @@ from becoming a way up:
   taken. A role in use cannot be deleted.
 - **Nobody locks itself out.** A user cannot delete or disable itself
   and cannot take its own UI sign-in.
-- **The recovery key is `admin` only**, after the password again.
+- **The recovery key and the service log are `admin` only**, the key
+  after the password again.
 
 ## 6. Credentials and kinds of user
 

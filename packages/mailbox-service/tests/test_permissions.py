@@ -81,13 +81,16 @@ def test_known_names_cover_groups_operations_and_admin() -> None:
     assert "list_messages" in names
 
 
-def test_the_recovery_key_is_for_admin_on_every_account() -> None:
-    assert "show_recovery_key" not in permissions.known_names()
+@pytest.mark.parametrize("operation", ["show_recovery_key", "read_service_log"])
+def test_admin_on_every_account_alone(operation: str) -> None:
+    """The recovery key opens every secret, the log names users and
+    addresses: no grant names them, admin on every account gives them."""
+    assert operation not in permissions.known_names()
     with pytest.raises(BadRequestError):
-        permissions.expand(["show_recovery_key"])
+        permissions.expand([operation])
     everywhere = Access("u", "u", [Grant(accounts=["*"], allow=["admin"])])
-    assert everywhere.allows("show_recovery_key")
+    assert everywhere.allows(operation)
     on_one = Access("u", "u", [Grant(accounts=["acc_1"], allow=["admin"])])
-    assert not on_one.allows("show_recovery_key")
+    assert not on_one.allows(operation)
     managers = Access("u", "u", [Grant(accounts=["*"], allow=["users.manage"])])
-    assert not managers.allows("show_recovery_key")
+    assert not managers.allows(operation)

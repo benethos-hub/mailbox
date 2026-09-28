@@ -106,7 +106,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_HOST`, `MAILBOX_SERVICE_PORT` | `127.0.0.1`, `8080` | where the service listens (`serve --host/--port` win) |
 | `MAILBOX_SERVICE_PUBLIC_URL` | from each request | the address people reach the service at, e.g. behind a proxy. The OAuth redirect address is built from it. |
 | `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` | `127.0.0.1` | behind a reverse proxy: its address, whose `X-Forwarded-*` headers give the client address, scheme and host |
-| `MAILBOX_SERVICE_LOG_LEVEL` | `INFO` | |
+| `MAILBOX_SERVICE_LOG_LEVEL` | `INFO` | `critical`, `error`, `warning`, `info`, `debug` or `trace`, see [Logs](#logs) |
 | `MAILBOX_SERVICE_DATA_DIR` | `data/benethos-mailbox-service` | where the database lives |
 | `MAILBOX_SERVICE_STORAGE` | `sqlite` | or `memory`, which keeps nothing |
 | `MAILBOX_SERVICE_KEY_PROVIDER` | `keyring` | where the master key lives: `keyring`, `file` or `env` |
@@ -125,6 +125,36 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET` | | its client secret, or better: |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE` | | a file holding it |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_TENANT` | `common` | who may sign in: `common`, `consumers`, `organizations` or one tenant |
+
+## Logs
+
+`serve` writes one log to stderr: the terminal, `docker compose logs`, or
+the journal under systemd. There is no log file. Each line has the time,
+the level, where it comes from and the message:
+
+```
+2026-09-28 10:14:03 INFO     benethos_mailbox_service.domain.auth: sign-in to the UI as admin (usr_...) from 127.0.0.1
+2026-09-28 10:14:03 INFO     uvicorn.access: 127.0.0.1:52344 - "POST /ui/sign-in HTTP/1.1" 303
+```
+
+At a terminal the lines are shorter and in colour: the time of day, the
+level in colour, the source without the package name (`http` for the
+access log), and a request as method, path and status with its name:
+
+```
+10:14:03 INFO    domain.auth    sign-in to the UI as admin (usr_...) from 127.0.0.1
+10:14:03 INFO    http           POST /ui/sign-in 303 See Other 127.0.0.1:52344
+```
+
+`NO_COLOR` set to any value keeps the plain lines at a terminal too.
+
+`MAILBOX_SERVICE_LOG_LEVEL` sets the level of the service and of uvicorn.
+Libraries write from `warning` on at any level, so `debug` shows the
+service without the commands a library sends to a mail server. The
+service logs sign-ins to the UI and changes to users, roles, tokens and
+passwords, and to whom the recovery key was shown. A password, token or
+secret the service holds is written as `***`, should a message or a
+traceback carry one.
 
 ## Commands
 
