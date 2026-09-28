@@ -44,8 +44,9 @@ REST client can do too.
    routes/       JSON API under /v1  ◄── scripts, apps, the MCP server
    pages/        configuration UI    ◄── a person in the browser
       │  who is calling (token or session) → the domain
- domain/       BUSINESS LOGIC ─ no HTTP
-   accounts, mailbox, rights, id mapping, sync
+ domain/       BUSINESS LOGIC ─ no HTTP, one package per area
+   rights · auth · users · accounts · discovery · mailbox
+   sync · changes · webhooks · system · activity
       │
  data/         DATA ─ decides nothing
    models/     provider-neutral types, one module per subject
@@ -53,6 +54,20 @@ REST client can do too.
    storage/    own records: accounts, users, credentials
    secrets/    envelope encryption, key providers, backup
    discovery/  autodiscovery sources
+```
+
+**Decided 2026-09-28:** the domain is in packages by area
+([REFACTORING.md](REFACTORING.md)). A package imports only packages on
+a lower line, through their `__init__.py`:
+
+```
+ system                      status, recovery key, log page
+ mailbox · users · webhooks  mail and sending, users, posts to webhooks
+ sync                        stable message ids, the sync pass, IDLE
+ accounts                    accounts, their live adapter, OAuth
+ auth · discovery · changes  sign-in, autodiscovery, the change feed
+ activity                    what was done, for the log
+ rights                      who may do what
 ```
 
 - **Two front ends, one domain.** The JSON API and the configuration UI are

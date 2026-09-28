@@ -4,7 +4,9 @@ web -> domain -> data, never the other way. A single reverse import is enough
 to undo the split, and it happens by accident: a data module needs one domain
 rule, imports it, and the data layer can no longer be used without the domain.
 This test reads every import of the package and fails on the first one that
-breaks a rule.
+breaks a rule. Inside the domain it checks the packages the same way: each
+is imported through its ``__init__.py``, and none imports another in a
+circle.
 """
 
 from __future__ import annotations
@@ -58,25 +60,34 @@ def _module_name(path: Path) -> str:
     return ".".join(parts)
 
 
-def _imports(path: Path) -> list[tuple[str, int]]:
-    """Every imported module of this file, relative imports resolved."""
+def _from_imports(path: Path) -> list[tuple[str, ast.ImportFrom]]:
+    """Every ``from ... import`` of this file, its module resolved."""
     module = _module_name(path)
     package = module if path.name == "__init__.py" else module.rsplit(".", 1)[0]
     found = []
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-        if isinstance(node, ast.Import):
-            found += [(alias.name, node.lineno) for alias in node.names]
-        elif isinstance(node, ast.ImportFrom):
+        if isinstance(node, ast.ImportFrom):
             if node.level:
                 base = package.split(".")
                 base = base[: len(base) - node.level + 1]
                 name = ".".join(base + ([node.module] if node.module else []))
             else:
                 name = node.module or ""
-            found.append((name, node.lineno))
-            # `from . import x` imports a submodule by name, resolve it too.
-            if not node.module:
-                found += [(f"{name}.{alias.name}", node.lineno) for alias in node.names]
+            found.append((name, node))
+    return found
+
+
+def _imports(path: Path) -> list[tuple[str, int]]:
+    """Every imported module of this file, relative imports resolved."""
+    found = []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            found += [(alias.name, node.lineno) for alias in node.names]
+    for name, node in _from_imports(path):
+        found.append((name, node.lineno))
+        # `from . import x` imports a submodule by name, resolve it too.
+        if not node.module:
+            found += [(f"{name}.{alias.name}", node.lineno) for alias in node.names]
     return found
 
 
@@ -275,3 +286,102 @@ def test_the_domain_logs_through_activities() -> None:
         for line in _loud_calls(path)
     ]
     assert loud == []
+
+
+# --- the packages of the domain (docs/REFACTORING.md section 2) -------------------
+
+DOMAIN = f"{PACKAGE}.domain"
+# Offered to the others beside a package's __init__: the activities, which
+# each package imports by its area, one module each.
+PUBLIC_MODULES = {f"{DOMAIN}.activity.catalogue"}
+
+
+def _domain_part(module: str) -> str | None:
+    """'...domain.sync.worker' -> 'sync', '...domain.locks' -> 'locks'."""
+    parts = module.split(".")
+    if parts[:2] != [PACKAGE, "domain"] or len(parts) < 3:
+        return None
+    return parts[2]
+
+
+def _is_package(part: str) -> bool:
+    return (ROOT / "domain" / part / "__init__.py").exists()
+
+
+def _public(module: str) -> bool:
+    return any(module == p or module.startswith(p + ".") for p in PUBLIC_MODULES)
+
+
+def test_a_package_of_the_domain_is_imported_through_its_init() -> None:
+    """So a package can split or merge its modules without its callers
+    noticing: the other packages, the web layer and the assembly."""
+    violations = [
+        f"{name}:{line} imports {imported}"
+        for name, path in _modules()
+        for imported, line in _imports(path)
+        if (other := _domain_part(imported)) is not None
+        and other != _domain_part(name)
+        and _is_package(other)
+        and imported != f"{DOMAIN}.{other}"
+        and not _public(imported)
+    ]
+    assert not violations, "a module inside a package:\n  " + "\n  ".join(violations)
+
+
+def _exported(part: str) -> set[str]:
+    init = ast.parse((ROOT / "domain" / part / "__init__.py").read_text("utf-8"))
+    for node in init.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets
+        ):
+            return set(ast.literal_eval(node.value))
+    return set()
+
+
+def test_a_package_of_the_domain_exports_what_others_import() -> None:
+    """What another part imports from a package is in its ``__all__``."""
+    violations = [
+        f"{name}:{node.lineno} imports {alias.name} from {imported}"
+        for name, path in _modules()
+        for imported, node in _from_imports(path)
+        if (other := _domain_part(imported)) is not None
+        and imported == f"{DOMAIN}.{other}"
+        and other != _domain_part(name)
+        and _is_package(other)
+        for alias in node.names
+        if alias.name not in _exported(other)
+    ]
+    assert not violations, "not exported:\n  " + "\n  ".join(violations)
+
+
+def _package_graph() -> dict[str, set[str]]:
+    graph: dict[str, set[str]] = {}
+    for name, path in _modules():
+        own = _domain_part(name)
+        if own is None:
+            continue
+        for imported, _ in _imports(path):
+            other = _domain_part(imported)
+            if other is not None and other != own:
+                graph.setdefault(own, set()).add(other)
+    return graph
+
+
+def test_no_cycle_between_the_packages_of_the_domain() -> None:
+    graph = _package_graph()
+    done: set[str] = set()
+
+    def walk(part: str, path: list[str]) -> list[str] | None:
+        if part in path:
+            return [*path[path.index(part) :], part]
+        if part in done:
+            return None
+        for other in sorted(graph.get(part, ())):
+            if cycle := walk(other, [*path, part]):
+                return cycle
+        done.add(part)
+        return None
+
+    for part in sorted(graph):
+        cycle = walk(part, [])
+        assert cycle is None, "a cycle: " + " -> ".join(cycle)

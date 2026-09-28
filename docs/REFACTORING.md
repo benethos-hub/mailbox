@@ -7,6 +7,9 @@ activities. Nothing changes in behaviour: modules move, names get
 clearer, the API and the OpenAPI document stay as they are. What the
 user decides is marked as decided, everything else is the proposal.
 
+**Built 2026-09-28**, steps 2 to 4 of section 6. Sections 1 and 3.1
+describe the domain before.
+
 ## 1. Why
 
 - **Flat.** `domain/` holds 27 modules beside its `__init__.py`, from 17
@@ -159,23 +162,37 @@ builds on the calls of `calls.py`. Two packages would import each other.
 
 ### 4.1 The direction between packages
 
-What each package imports, from the modules' imports today:
+What each package imports, besides `activity` and the helpers
+`locks.py` and `paging.py`:
 
 | Package | Imports |
 |---|---|
 | `rights` | nothing |
-| `changes` | nothing |
 | `activity` | `rights` |
+| `changes` | nothing but `activity` |
 | `auth` | `rights` |
 | `discovery` | `rights` |
-| `accounts` | `rights`, `changes`, and `sync` today (below) |
+| `accounts` | `rights`, `changes` |
 | `users` | `rights`, `auth`, `accounts` |
 | `sync` | `accounts` (the adapters), `changes` |
-| `mailbox` | `rights`, `accounts`, `sync`, and `changes` after section 3 (the classes at the call sites) |
-| `webhooks` | `rights`, `changes`, and `sync` today for `Sleep` (below) |
+| `mailbox` | `rights`, `accounts`, `sync`, `changes` (the classes at the call sites) |
+| `webhooks` | `rights`, `changes` |
 | `system` | `rights`, `auth`, `accounts`, `sync`, `webhooks` |
 
-`activity` will be imported by every package that records. `rights`
+So the packages stand in lines, each importing only lines below
+([CONCEPT.md](CONCEPT.md) 1.1):
+
+```
+ system
+ mailbox · users · webhooks
+ sync
+ accounts
+ auth · discovery · changes
+ activity
+ rights
+```
+
+`activity` is imported by every package that records. `rights`
 records none, since `activity` imports it: its one warning, a stored
 grant that names unknown rights, stays a plain log line.
 
@@ -196,7 +213,10 @@ it does today.
 - **CLAUDE.md** lists the packages with one line each, not every module.
   The module docstrings say the rest.
 - **`test_architecture.py`** gets the rules of section 2: imports
-  between packages through `__init__.py`, no cycle between packages.
+  between packages through `__init__.py`, of names in its `__all__`, no
+  cycle between packages. The catalogue of the activities is the one
+  exception: each package imports its area,
+  `activity.catalogue.<area>`, as a module.
 - **The web layer and `main.py`** import through the packages'
   `__init__.py` as the packages do: `from ..domain.accounts import
   AccountService`. So a package exports what the assembly wires as
