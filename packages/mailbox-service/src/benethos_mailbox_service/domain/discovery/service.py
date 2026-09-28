@@ -27,6 +27,7 @@ from dataclasses import dataclass
 
 import anyio
 
+from ...common.hosts import ascii_host, is_host_name, unicode_host
 from ...data.discovery import (
     DiscoverySource,
     Finding,
@@ -66,8 +67,7 @@ PER_SECONDS = 60.0
 MAX_CACHED = 1000
 MAX_CALLERS = 10_000
 
-# One label of a host name in ASCII: letters, digits, inner hyphens.
-_LABEL = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)")
+
 # Whitespace and control characters, in no address.
 _BLANK = re.compile(r"[\s\x00-\x1f\x7f]")
 
@@ -130,7 +130,7 @@ class DiscoveryService:
                 self._order.get(c.source, len(self._order)),
             )
         )
-        domain = query.domain.encode("ascii").decode("idna")
+        domain = unicode_host(query.domain)
         self._activity.record(
             said.Discovered(
                 by=Actor.of(access),
@@ -307,13 +307,8 @@ def _query(email: str) -> Query:
         raise BadRequestError("not a valid email address")
     # The domain goes into URLs and DNS names: a host name, nothing else,
     # so neither a port nor a path can ride along.
-    try:
-        ascii_domain = domain.lower().rstrip(".").encode("idna").decode("ascii")
-        ascii_domain.encode("ascii").decode("idna")
-    except UnicodeError:
-        raise BadRequestError("not a valid email domain") from None
-    labels = ascii_domain.split(".")
-    if len(ascii_domain) > 253 or not all(_LABEL.fullmatch(x) for x in labels):
+    ascii_domain = ascii_host(domain)
+    if ascii_domain is None or not is_host_name(ascii_domain, dotted=False):
         raise BadRequestError("not a valid email domain")
     if registrable_domain(ascii_domain) is None:
         raise BadRequestError(f"{domain} is a public suffix, not a mail domain")

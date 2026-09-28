@@ -11,6 +11,8 @@ from functools import cache
 
 from publicsuffixlist import PublicSuffixList
 
+from ...common.hosts import ascii_host
+
 
 @cache
 def _list() -> PublicSuffixList:
@@ -20,5 +22,5 @@ def _list() -> PublicSuffixList:
 def registrable_domain(host: str) -> str | None:
     """The part of a host name that can be registered: ``mx.hoster.co.uk``
     gives ``hoster.co.uk``. None for a public suffix such as ``co.uk``."""
-    result = _list().privatesuffix(host.lower().rstrip("."))
+    result = _list().privatesuffix(ascii_host(host) or host)
     return str(result) if result else None
