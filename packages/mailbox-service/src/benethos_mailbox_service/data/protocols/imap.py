@@ -21,6 +21,7 @@ from typing import Any
 from imapclient import IMAPClient
 from imapclient.exceptions import LoginError
 
+from ...common.sizes import MIB
 from ...errors import (
     BadRequestError,
     NotFoundError,
@@ -38,7 +39,7 @@ ClientFactory = Callable[..., Any]
 IDLE_STEP = 5.0
 
 # A whole message larger than this is refused, as Graph answers are.
-MAX_MESSAGE_BYTES = 40 * 1024 * 1024
+MAX_MESSAGE_BYTES = 40 * MIB
 # Headers beyond this are cut off: a list reads many at once.
 MAX_HEADER_BYTES = 256 * 1024
 

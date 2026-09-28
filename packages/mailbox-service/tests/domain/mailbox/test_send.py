@@ -276,7 +276,7 @@ def test_attachments_have_a_size_limit(
     monkeypatch.setattr(outgoing, "MAX_ATTACHMENT_BYTES", 3)
     answer = client.post(f"/v1/accounts/{account_id}/send", json=body())
     assert answer.status_code == 400
-    assert "25 MB" in answer.json()["error"]["message"]
+    assert "the attachments exceed" in answer.json()["error"]["message"]
 
 
 def test_sending_is_its_own_right(

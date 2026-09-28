@@ -18,12 +18,13 @@ from typing import Any
 
 import httpx
 
+from ....common.sizes import MIB
 from ....errors import ProviderError
 from .base import new_client, parse_url, read_capped, unreachable
 
 TIMEOUT = 30.0
 # Enough for a message with its attachments (25 MB) in base64.
-MAX_BYTES = 40 * 1024 * 1024
+MAX_BYTES = 40 * MIB
 
 
 @dataclass(frozen=True)

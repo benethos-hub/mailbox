@@ -16,6 +16,7 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from ...common.clock import utc_now
+from ...common.sizes import MIB, megabytes
 from ...data.mail import compose, convert
 from ...data.models import (
     Account,
@@ -48,7 +49,7 @@ M = TypeVar("M", bound=DraftMessage)
 
 # What one message may carry.
 MAX_RECIPIENTS = 100
-MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+MAX_ATTACHMENT_BYTES = 25 * MIB
 
 
 class Outgoing:
@@ -437,7 +438,9 @@ def _require(
     if message.reference is not None:
         access.require("get_message", account_id)
     if sum(len(a.data) for a in message.attachments) > MAX_ATTACHMENT_BYTES:
-        raise BadRequestError("the attachments exceed 25 MB")
+        raise BadRequestError(
+            f"the attachments exceed {megabytes(MAX_ATTACHMENT_BYTES)}"
+        )
 
 
 def _limited(recipients: list[str]) -> list[str]:
