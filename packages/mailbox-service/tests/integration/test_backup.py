@@ -26,7 +26,11 @@ from benethos_mailbox_service.data.secrets.backup import (
     restore_backup,
     write_backup,
 )
-from benethos_mailbox_service.data.storage import Database, inspect_snapshot
+from benethos_mailbox_service.data.storage import (
+    Database,
+    Repositories,
+    inspect_snapshot,
+)
 from benethos_mailbox_service.main import Services, build_services, create_app
 
 from ..conftest import create_account
@@ -395,5 +399,15 @@ def test_a_client_secret_file_that_is_missing(
         raise AssertionError("the service must not start")
 
     monkeypatch.setattr("uvicorn.run", never)
+    closed: list[Repositories] = []
+    close = Repositories.close
+
+    def closing(self: Repositories) -> None:
+        closed.append(self)
+        close(self)
+
+    monkeypatch.setattr(Repositories, "close", closing)
     assert main(["serve"]) == 1
     assert "no-such-secret" in capsys.readouterr().err
+    # The database it opened before is closed again.
+    assert len(closed) == 1
