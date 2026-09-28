@@ -237,7 +237,6 @@ and the log page is where a locked-out person's report is checked.
 | WARNING | X reached the discovery limit (N in a minute) | user, count | new (`DiscoveryService`, 10 per user) | no |
 | WARNING | X reached the send limit on A: N in 24 hours, the grants allow M | actor, account, counts, `retry_after` | new, in the send audit as `denied` | in the send audit |
 | WARNING | a request from S was refused: body of N bytes, the limit is M | source, path, sizes | new (`web/limits.py`, 413) | no |
-| WARNING | too many requests from S / with token Z: limited for N seconds | source or token, path, seconds | proposal, see below | yes |
 | DEBUG | paced A: waited N ms | account, wait | new (`Guard`, the token bucket) | no |
 | WARNING | provider of A asked to wait N seconds (Retry-After) | account, seconds | new (Microsoft `_rest_until`) | no |
 | WARNING | provider of A refused for rate: reason | account, reason | new (IMAP `[LIMIT]`, SMTP 4xx) | no |
@@ -247,18 +246,12 @@ per refused request: the throttle logs when it locks, the provider
 pause when it starts. Each refused request still answers `429` with
 `Retry-After`, and the access log has the line.
 
-**HTTP requests as such are not limited today.** The API refuses a
-body above the limit and slows sign-ins, nothing else. A token that
-loops, or a client without one that guesses paths, can call as fast as
-the service answers. The proposal, its own pull request after this
-concept: a limit per client address for requests without a valid
-credential, and one per token for requests with one, both as tokens per
-minute with a burst, in `web/limits.py` beside the body limit, refused
-with `429` and `Retry-After`. The limit values go into `Settings`
-(`MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE`, per address and per token),
-with a default generous enough for the MCP server's start (it calls
-`/v1/me` and lists folders for every account). Its log line is the row
-above, once per client when the limit engages.
+**HTTP requests as such are not limited by the service.** The API
+refuses a body above the limit and slows sign-ins, nothing else.
+**Decided 2026-09-28:** it stays that way. The sign-in throttle in the
+domain covers guessed credentials for both front ends, and a limit on
+requests with a valid token is load protection, which a reverse proxy
+in front of the service does better than the service itself.
 
 ### 5.10 The MCP server
 
@@ -328,9 +321,7 @@ Nothing else in the code writes an `INFO` line about a user's action.
    status flips, sending, webhooks, discovery, the log page read, the
    rate limits and provider pauses.
 5. The MCP server's lines of 5.10.
-6. The HTTP rate limit of 5.9, as a pull request of its own, with its
-   settings and CHANGELOG entry.
-7. When 8.6 is built: the helper stores what it logs, nothing else
+6. When 8.6 is built: the helper stores what it logs, nothing else
    changes.
 
 ## 9. Open questions
