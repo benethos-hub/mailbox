@@ -134,7 +134,7 @@ to the millisecond with its offset from UTC, the level, where it comes
 from and the message:
 
 ```
-2026-09-28 10:14:03.412+02:00 INFO     benethos_mailbox_service.domain.auth: sign-in to the UI as admin (usr_...) from 127.0.0.1
+2026-09-28 10:14:03.412+02:00 INFO     benethos_mailbox_service.activity.auth: admin (usr_...) signed in to the UI from 127.0.0.1
 2026-09-28 10:14:03.418+02:00 INFO     uvicorn.access: 127.0.0.1:52344 - "POST /ui/sign-in HTTP/1.1" 303
 ```
 
@@ -144,7 +144,7 @@ name (`http` for the access log), and a request as method, path and
 status with its name:
 
 ```
-2026-09-28 10:14:03.412 INFO    domain.auth    sign-in to the UI as admin (usr_...) from 127.0.0.1
+2026-09-28 10:14:03.412 INFO    activity.auth  admin (usr_...) signed in to the UI from 127.0.0.1
 2026-09-28 10:14:03.418 INFO    http           POST /ui/sign-in 303 See Other 127.0.0.1:52344
 ```
 
@@ -152,11 +152,14 @@ status with its name:
 
 `MAILBOX_SERVICE_LOG_LEVEL` sets the level of the service and of uvicorn.
 Libraries write from `warning` on at any level, so `debug` shows the
-service without the commands a library sends to a mail server. The
-service logs sign-ins to the UI and changes to users, roles, tokens and
-passwords, and to whom the recovery key was shown. A password, token or
-secret the service holds is written as `***`, should a message or a
-traceback carry one.
+service without the commands a library sends to a mail server. What
+people and the service do is one sentence per activity under
+`activity.<area>`: who, what, to which record, from which address, and
+why. Sign-ins, users, roles, tokens, accounts, webhooks, sends, and each
+limit when it engages. `docs/LOGGING.md` lists them. A request is logged
+by its path, without its query. A mail's content, its recipients and
+search terms are never written. A password, token or secret the service
+holds is written as `***`, should a message or a traceback carry one.
 
 ## Commands
 
