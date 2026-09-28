@@ -32,7 +32,7 @@ from ..data.storage import AccountRepository
 from ..errors import ProviderAuthError, ProviderUnavailableError
 from .activity import SERVICE, Activity, ActivityLog
 from .activity.catalogue import accounts as said
-from .changes import ChangeFeed
+from .changes import AccountNeedsSignIn, ChangeFeed
 
 T = TypeVar("T")
 
@@ -88,7 +88,7 @@ class Adapters:
             self._repository.set_status(account_id, status)
             self._status[account_id] = status
             if status is AccountStatus.NEEDS_REAUTH and self._changes is not None:
-                self._changes.record(account_id, "account.needs_reauth", [account_id])
+                self._changes.record(AccountNeedsSignIn(account_id))
             self._activity.record(self._flipped(account_id, status, reason))
 
     def _flipped(

@@ -161,7 +161,7 @@ class WebhookDispatcher:
             {
                 "webhook_id": record.webhook.id,
                 "delivery_id": delivery_id,
-                "events": [e.event.model_dump(mode="json") for e in batch],
+                "events": [e.record.model_dump(mode="json") for e in batch],
                 "more": more,
             },
             separators=(",", ":"),

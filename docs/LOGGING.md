@@ -380,20 +380,20 @@ domain/
   line under `activity.<area>.<name>`, at the activity's level, and
   returns the activity, for tests.
 - **A change in a mailbox is no activity.** It stays with
-  `domain/changes.py` and its `EventType`, for clients. The docstring of
-  `domain/activity/` says the difference.
+  `domain/changes/` and its classes, for clients. The docstrings of
+  both packages say the difference.
 
 ### 7.1 Three words
 
 | Word | What | Where |
 |---|---|---|
 | activity | what was done in the service, and by whom | `domain/activity/`, the log, the audit |
-| change | what changed in a mailbox: `message.created` and the like | `domain/changes.py`, the change feed, webhooks |
+| change | what changed in a mailbox: `message.created` and the like | `domain/changes/`, the change feed, webhooks |
 | event | not used for either. Kept free for an event-driven design | |
 
 A webhook's `events` and its five values keep their names, since they
-are part of the API. The code's names around them, `EventType` and
-`Event`, are [REFACTORING.md](REFACTORING.md) section 3's matter.
+are part of the API. The code's names around them are `ChangeKind` and
+`ChangeRecord` ([REFACTORING.md](REFACTORING.md) section 3).
 
 ### 7.2 Names
 

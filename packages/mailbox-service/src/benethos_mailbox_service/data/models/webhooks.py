@@ -6,9 +6,9 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from .changes import EventType
+from .changes import ChangeKind
 
-EVENT_TYPES: tuple[EventType, ...] = (
+CHANGE_KINDS: tuple[ChangeKind, ...] = (
     "message.created",
     "message.updated",
     "message.deleted",
@@ -25,8 +25,8 @@ class WebhookCreate(BaseModel):
             "local network is allowed."
         ),
     )
-    events: list[EventType] = Field(
-        default_factory=lambda: list(EVENT_TYPES),
+    events: list[ChangeKind] = Field(
+        default_factory=lambda: list(CHANGE_KINDS),
         min_length=1,
         description="The events to post. Without: every event.",
     )
@@ -42,7 +42,7 @@ class WebhookCreate(BaseModel):
 class Webhook(BaseModel):
     id: str
     url: str
-    events: list[EventType]
+    events: list[ChangeKind]
     accounts: list[str] | None
     user_id: str = Field(description="The user who created it and whose rights apply.")
     created_at: datetime

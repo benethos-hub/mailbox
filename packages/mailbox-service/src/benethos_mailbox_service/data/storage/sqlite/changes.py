@@ -7,7 +7,7 @@ import sqlite3
 from collections.abc import Collection, Iterable
 from datetime import datetime
 
-from ...models.changes import Event
+from ...models.changes import ChangeRecord
 from ..changes import LoggedChange
 from .database import Database, iso, parse_iso
 
@@ -20,12 +20,12 @@ class SqliteChangeLogRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    def append(self, events: Iterable[Event]) -> None:
+    def append(self, records: Iterable[ChangeRecord]) -> None:
         with self._db.transaction() as conn:
             conn.executemany(
                 "INSERT INTO changes (account_id, message_id, type, at)"
                 " VALUES (?, ?, ?, ?)",
-                [(e.account_id, e.id, e.type, iso(e.at)) for e in events],
+                [(e.account_id, e.id, e.type, iso(e.at)) for e in records],
             )
 
     def after(
@@ -89,7 +89,7 @@ class SqliteChangeLogRepository:
 def _logged(row: sqlite3.Row) -> LoggedChange:
     return LoggedChange(
         seq=row["seq"],
-        event=Event(
+        record=ChangeRecord(
             type=row["type"],
             id=row["message_id"],
             account_id=row["account_id"],

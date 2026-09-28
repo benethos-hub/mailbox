@@ -4,13 +4,28 @@ through the real IMAP adapter against a fake server."""
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import get_args
 
 import pytest
 
-from benethos_mailbox_service.data.models import DraftMessage, MessageUpdate
+from benethos_mailbox_service.data.models import (
+    FEED_KINDS,
+    ChangeKind,
+    DraftMessage,
+    MessageUpdate,
+)
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.data.storage import InMemoryChangeLogRepository
-from benethos_mailbox_service.domain.changes import ChangeFeed
+from benethos_mailbox_service.domain.changes import (
+    AccountNeedsSignIn,
+    ChangeFeed,
+    MailboxChange,
+    MessagesChanged,
+    MessagesCreated,
+    MessagesDeleted,
+    MessageSent,
+    MessagesUpdated,
+)
 from benethos_mailbox_service.main import Services
 
 from .conftest import ADMIN
@@ -24,7 +39,7 @@ ARCHIVE = mappers.folder_id("Archive")
 
 def recorded(imap_services: Services, imap_account_id: str) -> list[tuple[str, str]]:
     return [
-        (e.event.type, e.event.id)
+        (e.record.type, e.record.id)
         for e in imap_services.changes.after([imap_account_id], 0, limit=1000)
     ]
 
@@ -285,10 +300,10 @@ def test_old_changes_are_purged_as_new_ones_come_in() -> None:
     now = datetime(2026, 9, 25, tzinfo=UTC)
     log = InMemoryChangeLogRepository()
     feed = ChangeFeed(log, days=7, clock=lambda: now)
-    feed.record("acc_1", "message.created", ["msg_1"])
+    feed.record(MessagesCreated("acc_1", ["msg_1"]))
     now += timedelta(days=8)
-    feed.record("acc_1", "message.created", ["msg_2"])
-    assert [e.event.id for e in feed.after(["acc_1"], 0, limit=10)] == ["msg_2"]
+    feed.record(MessagesCreated("acc_1", ["msg_2"]))
+    assert [e.record.id for e in feed.after(["acc_1"], 0, limit=10)] == ["msg_2"]
     assert log.horizon() == 1
 
 
@@ -296,16 +311,16 @@ def test_purging_waits_an_hour_between_two_runs() -> None:
     t0 = datetime(2026, 9, 25, tzinfo=UTC)
     now = t0
     feed = ChangeFeed(InMemoryChangeLogRepository(), days=1, clock=lambda: now)
-    feed.record("acc_1", "message.created", ["msg_1"])
+    feed.record(MessagesCreated("acc_1", ["msg_1"]))
     now = t0 + timedelta(hours=23, minutes=30)
     feed.purge()  # too early for msg_1
     now = t0 + timedelta(days=1, minutes=10)
-    feed.record("acc_1", "message.created", ["msg_2"])
+    feed.record(MessagesCreated("acc_1", ["msg_2"]))
     # Old enough, but the last purge was 40 minutes ago.
-    assert [e.event.id for e in feed.after(["acc_1"], 0, limit=10)][0] == "msg_1"
+    assert [e.record.id for e in feed.after(["acc_1"], 0, limit=10)][0] == "msg_1"
     now = t0 + timedelta(days=1, minutes=31)
-    feed.record("acc_1", "message.created", ["msg_3"])
-    assert [e.event.id for e in feed.after(["acc_1"], 0, limit=10)] == [
+    feed.record(MessagesCreated("acc_1", ["msg_3"]))
+    assert [e.record.id for e in feed.after(["acc_1"], 0, limit=10)] == [
         "msg_2",
         "msg_3",
     ]
@@ -313,8 +328,38 @@ def test_purging_waits_an_hour_between_two_runs() -> None:
 
 def test_a_change_is_recorded_once_per_message() -> None:
     feed = ChangeFeed(InMemoryChangeLogRepository())
-    feed.record("acc_1", "message.updated", ["msg_1", "msg_1", "msg_2"])
-    assert [e.event.id for e in feed.after(["acc_1"], 0, limit=10)] == [
+    feed.record(MessagesUpdated("acc_1", ["msg_1", "msg_1", "msg_2"]))
+    assert [e.record.id for e in feed.after(["acc_1"], 0, limit=10)] == [
         "msg_1",
         "msg_2",
+    ]
+
+
+# --- the catalogue ------------------------------------------------------------------
+
+CATALOGUE: list[type[MailboxChange]] = [
+    MessagesCreated,
+    MessagesUpdated,
+    MessagesDeleted,
+    MessageSent,
+    AccountNeedsSignIn,
+]
+
+
+def test_each_kind_of_the_api_has_one_class() -> None:
+    kinds = [c.kind for c in CATALOGUE]
+    assert sorted(kinds) == sorted(get_args(ChangeKind))
+    assert FEED_KINDS == {c.kind for c in CATALOGUE if issubclass(c, MessagesChanged)}
+
+
+def test_a_change_names_messages_or_its_account() -> None:
+    feed = ChangeFeed(InMemoryChangeLogRepository())
+    feed.record(MessageSent("acc_1", "msg_9"))
+    feed.record(AccountNeedsSignIn("acc_1"))
+    feed.record(MessagesDeleted("acc_1", []))
+    assert [
+        (e.record.type, e.record.id) for e in feed.after(["acc_1"], 0, limit=9)
+    ] == [
+        ("message.sent", "msg_9"),
+        ("account.needs_reauth", "acc_1"),
     ]

@@ -1,6 +1,10 @@
 """The change feed: which message was created, changed or deleted, and
 when. Ids only, never content (CONCEPT 6.5). Webhooks also hear of sent
-mail and of accounts that need a new sign-in, as events of the same log."""
+mail and of accounts that need a new sign-in, as records of the same log.
+
+``ChangeKind`` names the five kinds, ``FeedKind`` the three the change feed
+answers. Their values are part of the API. The domain records each as a
+class of ``domain/changes/``."""
 
 from __future__ import annotations
 
@@ -9,15 +13,15 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-ChangeType = Literal["message.created", "message.updated", "message.deleted"]
-EventType = Literal[
+FeedKind = Literal["message.created", "message.updated", "message.deleted"]
+ChangeKind = Literal[
     "message.created",
     "message.updated",
     "message.deleted",
     "message.sent",
     "account.needs_reauth",
 ]
-CHANGE_TYPES: frozenset[str] = frozenset(
+FEED_KINDS: frozenset[str] = frozenset(
     {"message.created", "message.updated", "message.deleted"}
 )
 
@@ -25,7 +29,7 @@ CHANGE_TYPES: frozenset[str] = frozenset(
 class Change(BaseModel):
     """One entry in the change feed."""
 
-    type: ChangeType = Field(
+    type: FeedKind = Field(
         description=(
             "`message.created`: a message arrived. `message.updated`: it "
             "moved or its flags changed. `message.deleted`: it is gone."
@@ -36,12 +40,12 @@ class Change(BaseModel):
     at: datetime = Field(description="When the service noticed the change.")
 
 
-class Event(BaseModel):
+class ChangeRecord(BaseModel):
     """One entry of the log behind the change feed and the webhooks.
     ``id`` is a message id, for ``message.sent`` the copy in the sent folder
     or else the Message-ID header, for ``account.needs_reauth`` the account."""
 
-    type: EventType
+    type: ChangeKind
     id: str
     account_id: str
     at: datetime

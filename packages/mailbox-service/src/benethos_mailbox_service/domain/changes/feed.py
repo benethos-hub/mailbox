@@ -15,13 +15,14 @@ from __future__ import annotations
 from collections.abc import Callable, Collection, Iterable
 from datetime import datetime, timedelta
 
-from ..common import opaque
-from ..common.clock import utc_now
-from ..data.models import CHANGE_TYPES, Change, ChangePage, Event, EventType
-from ..data.storage import ChangeLogRepository, LoggedChange
-from ..errors import BadRequestError, ChangesExpiredError
-from .activity import SERVICE, ActivityLog
-from .activity.catalogue.changes import ChangesPurged
+from ...common import opaque
+from ...common.clock import utc_now
+from ...data.models import FEED_KINDS, Change, ChangePage, ChangeRecord
+from ...data.storage import ChangeLogRepository, LoggedChange
+from ...errors import BadRequestError, ChangesExpiredError
+from ..activity import SERVICE, ActivityLog
+from ..activity.catalogue.changes import ChangesPurged
+from .catalogue import MailboxChange
 
 STATE = "chs_"
 DEFAULT_DAYS = 7
@@ -44,16 +45,16 @@ class ChangeFeed:
         self._activity = activity or ActivityLog(clock)
         self._purged_at: datetime | None = None
 
-    def record(self, account_id: str, type: EventType, ids: Iterable[str]) -> None:
-        """One event of ``type`` for each id, in this order."""
+    def record(self, change: MailboxChange) -> None:
+        """One record for each id the change names, in this order."""
         now = self._clock()
-        events = [
-            Event(type=type, id=i, account_id=account_id, at=now)
-            for i in dict.fromkeys(ids)
+        records = [
+            ChangeRecord(type=change.kind, id=i, account_id=change.account_id, at=now)
+            for i in dict.fromkeys(change.ids())
         ]
-        if not events:
+        if not records:
             return
-        self._log.append(events)
+        self._log.append(records)
         if self._purged_at is None or now - self._purged_at >= PURGE_EVERY:
             self.purge()
 
@@ -73,12 +74,12 @@ class ChangeFeed:
                 "this state is unknown or older than the changes kept: start"
                 " again without since"
             )
-        found = self._log.after(account_ids, seq, limit=limit + 1, types=CHANGE_TYPES)
+        found = self._log.after(account_ids, seq, limit=limit + 1, types=FEED_KINDS)
         more = len(found) > limit
         found = found[:limit]
         end = found[-1].seq if more else max([last, *(e.seq for e in found)])
         return ChangePage(
-            changes=[Change.model_validate(e.event.model_dump()) for e in found],
+            changes=[Change.model_validate(e.record.model_dump()) for e in found],
             state=_state(end),
             more=more,
         )
@@ -91,11 +92,11 @@ class ChangeFeed:
         limit: int,
         types: Collection[str] | None = None,
     ) -> list[LoggedChange]:
-        """The events of these accounts after point ``seq``, oldest first."""
+        """The records of these accounts after point ``seq``, oldest first."""
         return self._log.after(account_ids, seq, limit=limit, types=types)
 
     def horizon(self) -> int:
-        """Events up to this point were purged."""
+        """Records up to this point were purged."""
         return self._log.horizon()
 
     def last(self) -> int:

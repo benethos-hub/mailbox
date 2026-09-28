@@ -89,7 +89,7 @@ def sync(graph: FakeGraph, clock: Clock) -> SyncService:
 
 
 def recorded(sync: SyncService) -> list[tuple[str, str]]:
-    return [(e.event.type, e.event.id) for e in sync.feed.after([ACC], 0, limit=100)]
+    return [(e.record.type, e.record.id) for e in sync.feed.after([ACC], 0, limit=100)]
 
 
 def test_microsoft_is_watched_without_an_index(sync: SyncService) -> None:

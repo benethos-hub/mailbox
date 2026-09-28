@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.common import opaque
 from benethos_mailbox_service.data.models import AccountStatus, Grant, ProviderType
-from benethos_mailbox_service.domain.changes import STATE
+from benethos_mailbox_service.domain.changes.feed import STATE
 from benethos_mailbox_service.main import Services
 
 from .conftest import bearer_for, create_account
@@ -171,7 +171,7 @@ def test_a_send_is_an_event_the_feed_leaves_out(
     assert answer.status_code == 200
     copy_id = answer.json()["sent_copy_id"]
     events = [
-        (e.event.type, e.event.id)
+        (e.record.type, e.record.id)
         for e in services.changes.after([account_id], 0, limit=50)
     ]
     assert ("message.sent", copy_id) in events
@@ -185,6 +185,6 @@ def test_an_account_that_needs_a_new_sign_in_is_an_event_once(
     services.adapters.set_status(account_id, AccountStatus.NEEDS_REAUTH)
     services.adapters.set_status(account_id, AccountStatus.NEEDS_REAUTH)
     events = services.changes.after([account_id], 0, limit=50)
-    assert [(e.event.type, e.event.id) for e in events] == [
+    assert [(e.record.type, e.record.id) for e in events] == [
         ("account.needs_reauth", account_id)
     ]

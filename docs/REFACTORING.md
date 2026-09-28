@@ -213,7 +213,8 @@ it does today.
 1. This file, one pull request of documentation.
 2. The change feed of section 3: the catalogue, the classes at each call
    site, `ChangeRecord`, `ChangeKind` and `FeedKind` in the data layer.
-   Small, and it shows the shape before the move.
+   Small, and it shows the shape before the move. The package
+   `changes/` comes with it, as the catalogue needs a home.
 3. The packages of section 4, one commit per package, the leaves first:
    `rights`, `changes`, `auth`, `discovery`, then `accounts` with the
    cycle removed, `users`, `sync`, `mailbox`, `webhooks`, `system`.

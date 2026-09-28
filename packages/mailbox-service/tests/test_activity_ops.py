@@ -19,7 +19,7 @@ from benethos_mailbox_service.data.models import (
 from benethos_mailbox_service.data.storage import InMemoryChangeLogRepository
 from benethos_mailbox_service.domain import worker as worker_module
 from benethos_mailbox_service.domain.access import Access
-from benethos_mailbox_service.domain.changes import ChangeFeed
+from benethos_mailbox_service.domain.changes import ChangeFeed, MessagesCreated
 from benethos_mailbox_service.domain.delivery import Retries
 from benethos_mailbox_service.errors import (
     RateLimitedError,
@@ -108,7 +108,7 @@ def test_a_purge_of_the_change_log_names_how_many(
 ) -> None:
     now = [datetime(2026, 9, 28, 12, 0, tzinfo=UTC)]
     feed = ChangeFeed(InMemoryChangeLogRepository(), days=1, clock=lambda: now[0])
-    feed.record("acc_1", "message.created", ["m1", "m2"])
+    feed.record(MessagesCreated("acc_1", ["m1", "m2"]))
     now[0] += timedelta(days=2)
     with caplog.at_level(logging.INFO):
         feed.purge()

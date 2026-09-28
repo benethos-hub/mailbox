@@ -15,8 +15,6 @@ from typing import Any, TypeVar
 from ..data.models import (
     Account,
     AttachmentContent,
-    ChangeType,
-    EventType,
     Message,
     MessageSummary,
     MessageUpdate,
@@ -25,6 +23,7 @@ from ..data.models import (
 from ..data.providers import MailProvider
 from ..errors import MailboxServiceError, MessageNotFoundError
 from .adapters import Adapters
+from .changes import MailboxChange, MessagesDeleted, MessagesUpdated
 from .sync import SyncService
 
 T = TypeVar("T")
@@ -116,16 +115,16 @@ class Calls:
     def relocate(self, account_id: str, message_id: str, now: MessageSummary) -> None:
         """A message we stored anew: its id points to the new place."""
         self._sync.relocate(account_id, message_id, now.id, folder_of(now))
-        self._sync.changed(account_id, "message.updated", [message_id])
+        self._sync.changed(MessagesUpdated(account_id, [message_id]))
 
-    def changed(self, account_id: str, type: EventType, ids: list[str]) -> None:
-        """Record an event in the change log."""
-        self._sync.changed(account_id, type, ids)
+    def changed(self, change: MailboxChange) -> None:
+        """Record a change in the change feed."""
+        self._sync.changed(change)
 
     def forget(self, account_id: str, message_id: str) -> None:
         """A message is gone for good: its id answers 404 from now on."""
         self._sync.forget(account_id, message_id)
-        self._sync.changed(account_id, "message.deleted", [message_id])
+        self._sync.changed(MessagesDeleted(account_id, [message_id]))
 
     # --- changes, one or many ---------------------------------------------------------
 
@@ -143,7 +142,7 @@ class Calls:
                 continue
             self._follow(account_id, message_id, natives[message_id], outcome)
             results[message_id] = public(outcome, message_id, account_id)
-        self._sync.changed(account_id, "message.updated", _done(results))
+        self._sync.changed(MessagesUpdated(account_id, _done(results)))
         return results
 
     async def update_one(
@@ -172,8 +171,12 @@ class Calls:
             elif outcome is not None:
                 self._follow(account_id, message_id, natives[message_id], outcome)
             results[message_id] = None
-        type: ChangeType = "message.deleted" if permanent else "message.updated"
-        self._sync.changed(account_id, type, _done(results))
+        done = _done(results)
+        self._sync.changed(
+            MessagesDeleted(account_id, done)
+            if permanent
+            else MessagesUpdated(account_id, done)
+        )
         return results
 
     async def delete_one(

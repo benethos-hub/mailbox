@@ -27,7 +27,6 @@ from typing import TypeVar
 
 from ..common.clock import utc_now
 from ..common.ids import new_id
-from ..data.models import EventType
 from ..data.providers import Capability, FolderChanges, MailProvider
 from ..data.secrets.redact import redact
 from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
@@ -35,7 +34,13 @@ from ..errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundEr
 from .activity import SERVICE, ActivityLog
 from .activity.catalogue.sync import Synced
 from .adapters import Adapters
-from .changes import ChangeFeed
+from .changes import (
+    ChangeFeed,
+    MailboxChange,
+    MessagesCreated,
+    MessagesDeleted,
+    MessagesUpdated,
+)
 from .locks import KeyedLocks
 
 T = TypeVar("T")
@@ -118,9 +123,9 @@ class SyncService:
             if synced:
                 ours = {e.id for e in added}
                 self.changed(
-                    account_id,
-                    "message.created",
-                    [e.id for e in known.values() if e.id in ours],
+                    MessagesCreated(
+                        account_id, [e.id for e in known.values() if e.id in ours]
+                    )
                 )
         return [known[native].id for native in natives]
 
@@ -167,11 +172,9 @@ class SyncService:
         if self.mapped(account_id):
             self._index.drop(account_id, message_id)
 
-    def changed(
-        self, account_id: str, type: EventType, message_ids: Iterable[str]
-    ) -> None:
-        """Record changes to messages in the change feed."""
-        self._feed.record(account_id, type, message_ids)
+    def changed(self, change: MailboxChange) -> None:
+        """Record a change in the change feed."""
+        self._feed.record(change)
 
     async def _contents(self, account_id: str, folder_id: str) -> list[str]:
         return await self._adapters.call(
@@ -293,9 +296,9 @@ class SyncService:
         updated = [i for i in seen if i not in created]
         updated += sorted((removed & arrived_new) - set(seen))
         deleted = sorted(removed - set(seen) - arrived_new)
-        self.changed(account_id, "message.created", created)
-        self.changed(account_id, "message.updated", updated)
-        self.changed(account_id, "message.deleted", deleted)
+        self.changed(MessagesCreated(account_id, created))
+        self.changed(MessagesUpdated(account_id, updated))
+        self.changed(MessagesDeleted(account_id, deleted))
         return _Counts(len(folders), len(created), len(updated), len(deleted))
 
     async def _folder_changes(
@@ -364,12 +367,12 @@ class SyncService:
         self._index.apply(account_id, changes)
         if not before:
             return _Counts(len(states))
-        self.changed(account_id, "message.created", [e.id for e in changes.added])
+        self.changed(MessagesCreated(account_id, [e.id for e in changes.added]))
         # A message renumbered in its folder (a new UIDVALIDITY) did not
         # change for the caller. One that went to another folder did.
         elsewhere = [e.id for e, n in moved.items() if present[n] != e.folder_id]
-        self.changed(account_id, "message.updated", elsewhere + flagged)
-        self.changed(account_id, "message.deleted", changes.removed)
+        self.changed(MessagesUpdated(account_id, elsewhere + flagged))
+        self.changed(MessagesDeleted(account_id, changes.removed))
         return _Counts(
             len(states),
             len(changes.added),

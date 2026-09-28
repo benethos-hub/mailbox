@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.http import WebhookPoster, is_receiver_address
 from benethos_mailbox_service.data.models import Grant, ProviderType
+from benethos_mailbox_service.domain.changes import MessagesUpdated
 from benethos_mailbox_service.domain.delivery import BATCH, Retries, signature
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 from benethos_mailbox_service.main import Services
@@ -281,9 +282,7 @@ async def test_many_events_go_in_batches(
     client: TestClient, services: Services, account_id: str, receiver: Receiver
 ) -> None:
     hook(client)
-    services.changes.record(
-        account_id, "message.updated", [f"m{i}" for i in range(150)]
-    )
+    services.changes.record(MessagesUpdated(account_id, [f"m{i}" for i in range(150)]))
     await services.deliveries.deliver_due()
     assert [len(receiver.events(n)) for n in range(len(receiver.posts))] == [BATCH, 50]
     assert [json.loads(p[1])["more"] for p in receiver.posts] == [True, False]

@@ -35,7 +35,7 @@ from ..data.models import (
     SentMessage,
 )
 from ..errors import BadRequestError, MailboxServiceError
-from . import replies
+from . import changes, replies
 from .access import Access
 from .activity import ActivityLog, Actor
 from .activity.catalogue.mailbox import MessageSent, SentBut
@@ -161,7 +161,7 @@ class Outgoing:
             if sent.sent_copy is not None:
                 copy = await self._calls.published_one(account_id, sent.sent_copy)
                 copy_id = copy.id
-            self._calls.changed(account_id, "message.sent", [copy_id or message_id])
+            self._calls.changed(changes.MessageSent(account_id, copy_id or message_id))
         return SendResult(
             message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
         )

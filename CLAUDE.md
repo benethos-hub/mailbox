@@ -161,7 +161,9 @@ packages/
         replies.py        # replies and forwards made from the original
         discovery.py      # DiscoveryService: trust, ranking, cache, limits
         sync.py           # SyncService: stable message ids, the sync pass
-        changes.py        # ChangeFeed: records created, updated, deleted
+        changes/          # what changed in a mailbox, for clients:
+          catalogue.py    #   MailboxChange, one class per kind
+          feed.py         #   ChangeFeed: records, pages, purges
         worker.py         # SyncWorker: polling and IDLE in the background
         status.py         # StatusService: accounts, sync and webhooks at a glance
         recovery.py       # RecoveryKey: the master key shown once, to admin
