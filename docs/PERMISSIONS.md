@@ -255,19 +255,19 @@ that allows it accepts everything about the call.
 
 Sends have an audit in the database. Sign-ins and changes to users,
 roles, tokens, passwords, accounts and webhooks have only the service
-log, which a container may drop. The proposal: one table `events` with
+log, which a container may drop. The proposal: one table `activity` with
 time, user, credential, operation, the record touched, the client
 address and the outcome. Never a secret, never content. Written by the
 domain services where the log lines are written today. The design in
-full, which events, which fields, storage, API and page, is
-[AUDIT.md](AUDIT.md); the events themselves are those of
+full, which activities, which fields, storage, API and page, is
+[AUDIT.md](AUDIT.md); the activities themselves are those of
 [LOGGING.md](LOGGING.md) section 5.
 
 - `GET /v1/audit`, right `audit` on the service (a service right, so
   `audit` appears in both lists), paged newest first, filters by user,
   operation and day.
-- UI: a card **Recent activity** on the user's page with its own events,
-  and a page **Audit** under Service for `users.read`.
+- UI: a card **Recent activity** on the user's page with its own
+  activities, and a page **Audit** under Service for `users.read`.
 - Kept for `MAILBOX_SERVICE_AUDIT_DAYS` days, 90 by default.
 
 ### 8.7 Roles to start from

@@ -227,21 +227,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   - **the service log: every line on stderr with time, level and source,
     each secret masked, the newest 1000 on a page for the admin (UI
     6.5, CONCEPT 7.4)**, done, live-checked in `live/ui.py`
-  - planned: a logging concept. Which event is logged, at which level
-    and with which fields, for sign-ins, administration, accounts, sync,
-    sending, webhooks and errors. What never goes into a line. How the
-    log and the audit of PERMISSIONS.md 8.6 divide the work. Then the
-    log lines of the code brought in line with it. Not logged today:
-    - accounts created, changed, deleted, connected by OAuth, or in
-      need of a new sign-in
-    - tokens created or revoked, and a refused API token
-    - roles and grants changed
-    - webhooks created or deleted (only a failed post is logged)
-    - a sync pass that went through, not even at debug
-    - the web layer writes no line of its own: requests are uvicorn's
-      access log alone
-    - the lines name a user sometimes with its id, sometimes by id
-      alone, and the levels follow no written rule
+  - planned: the service log activity by activity, as
+    [LOGGING.md](LOGGING.md) proposes, then the audit of administration
+    of [AUDIT.md](AUDIT.md). Decided 2026-09-28: the activities are
+    classes in `domain/activity/`, one module per area (LOGGING.md 7)
   - with the new providers: the OAuth round trip
   - recovery key, status: moved to phase 4b
 - Threads (6.3): for IMAP built across folders from the id mapping,
