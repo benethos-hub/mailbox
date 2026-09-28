@@ -122,7 +122,7 @@ brackets are absent when unknown.
 | Level | Line | Fields | Today |
 |---|---|---|---|
 | INFO | the service started: settings from X, database Y, schema N | env file, database path, schema version | printed, not logged |
-| INFO | schema migrated from N to M | versions | per step as warning |
+| INFO | schema migrated from N to M, notes | versions, the migrations' notes | per step as warning in `database.py`, moves to `main` |
 | INFO | the service stopped | | new |
 | ERROR | a background loop ended | which, traceback | worker and dispatcher log per round |
 | WARNING | the master key comes from the environment | | yes |
@@ -196,7 +196,7 @@ compares.
 |---|---|---|---|---|
 | INFO | X sent a message from A to N recipients | actor, account, count, `msg_` id | new | in the send audit |
 | WARNING | X was refused to send from A: reason | actor, account, reason | new | in the send audit |
-| WARNING | sent, but …: reason | account, what failed | yes | no |
+| WARNING | sent, but …: reason | account, what failed | yes, one of them in the adapter, moves to `outgoing` | no |
 | ERROR | sent, but not recorded in the audit | traceback | yes | no |
 | DEBUG | an Idempotency-Key was replayed | account, operation | new | no |
 
@@ -284,11 +284,23 @@ Nothing else in the code writes an `INFO` line about a user's action.
 
 1. **One logger per module**, `log = logging.getLogger(__name__)`, so
    the source names the module.
-2. **The domain logs, the web layer does not.** A route knows the
-   request, the domain knows what happened. The client address reaches
-   the domain on `Access`: `Access.source`, set where the caller is
-   established (bearer for the API, session for the UI), absent for the
-   worker and the host. The audit needs it there too.
+2. **The domain logs events, the layers around it do not.** A route
+   knows the request, the domain knows what happened and who did it.
+   The client address reaches the domain on `Access`: `Access.source`,
+   set where the caller is established (bearer for the API, session for
+   the UI), absent for the worker and the host. The audit needs it
+   there too. The data layer writes no line at `INFO` or above: it
+   decides nothing, and it knows neither the actor nor the reason. What
+   it notices goes up as a result or an error, and the domain logs it.
+   The two lines under `data/` today move that way: the IMAP adapter
+   reports a missing sent copy in `SentMessage`, and `outgoing` logs it;
+   the migrations return their notes, and `main` logs them at start.
+   `DEBUG` stays allowed under `data/` for the technical steps the
+   domain cannot see: a reconnect, a retry, a token refresh, a pause a
+   provider asked for. `test_architecture.py` checks that no module
+   under `data/` calls `log.info`, `log.warning`, `log.error` or
+   `log.exception`. The web layer logs nothing but what it refuses
+   before the domain sees the request, the body limit, at `WARNING`.
 3. **After the change, not before.** A line says what happened, so it is
    written once the store took the change. A refusal is logged where it
    is refused.
@@ -315,6 +327,8 @@ Nothing else in the code writes an `INFO` line about a user's action.
    PERMISSIONS.md 8.6 point here.
 2. `Access.source` and the `events` helper in the domain, the two
    existing sign-in lines moved onto it. The lifecycle lines of 5.1.
+   The two lines under `data/` moved up, and the architecture test of
+   rule 7.2.
 3. The missing lines of 5.3 and 5.4: users, tokens, roles, accounts,
    OAuth. Each with its test.
 4. The missing lines of 5.5 to 5.9: sync at `DEBUG` with counts, the
