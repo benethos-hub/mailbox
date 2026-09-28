@@ -3,10 +3,12 @@ repository gives for an id it does not know."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Generic, Protocol, TypeVar
 
 from ...errors import ConflictError, missing
 
+K = TypeVar("K")
 T = TypeVar("T")
 
 
@@ -15,6 +17,15 @@ class Record(Protocol):
 
 
 R = TypeVar("R", bound=Record)
+
+
+def drop_where(rows: dict[K, T], drop: Callable[[K, T], bool]) -> int:
+    """Remove every row ``drop`` picks, by its key and its value. Returns
+    how many there were."""
+    gone = [key for key, row in rows.items() if drop(key, row)]
+    for key in gone:
+        del rows[key]
+    return len(gone)
 
 
 class Table(Generic[T]):

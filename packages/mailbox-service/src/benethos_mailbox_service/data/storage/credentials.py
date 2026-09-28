@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
-from ...errors import ConflictError
+from .table import Table, drop_where
 
 
 @dataclass(frozen=True)
@@ -44,15 +44,14 @@ class CredentialRepository(Protocol):
 
 class InMemoryKeyRepository:
     def __init__(self) -> None:
-        self._keys: list[WrappedKey] = []
+        self._keys: Table[WrappedKey] = Table("key")
 
     def active(self) -> WrappedKey | None:
-        return self._keys[-1] if self._keys else None
+        keys = self._keys.list()
+        return keys[-1] if keys else None
 
     def add(self, key: WrappedKey) -> None:
-        if any(k.key_id == key.key_id for k in self._keys):
-            raise ConflictError(f"key {key.key_id} exists already")
-        self._keys.append(key)
+        self._keys.add(key.key_id, key)
 
 
 class InMemoryCredentialRepository:
@@ -69,5 +68,4 @@ class InMemoryCredentialRepository:
         return [c for (a, _), c in sorted(self._items.items()) if a == account_id]
 
     def delete_for_account(self, account_id: str) -> None:
-        for key in [k for k in self._items if k[0] == account_id]:
-            del self._items[key]
+        drop_where(self._items, lambda key, _: key[0] == account_id)
