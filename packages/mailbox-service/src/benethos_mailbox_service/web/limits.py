@@ -11,7 +11,7 @@ from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ..domain.activity import ActivityLog, someone
-from ..domain.activity.catalogue.limits import BodyTooLarge
+from ..domain.activity.catalogue.http import BodyTooLarge
 
 # The largest mail the service sends carries 25 MB of attachments, which
 # base64 in a JSON body makes about 34 MB.

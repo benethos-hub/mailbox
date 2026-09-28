@@ -51,8 +51,7 @@ from ..data.providers import ServerProbe, settings_from_servers
 from ..errors import BadRequestError, MailboxServiceError, RateLimitedError
 from .access import Access
 from .activity import ActivityLog, Actor
-from .activity.catalogue.limits import DiscoveryLimitReached
-from .activity.catalogue.service import Discovered
+from .activity.catalogue.discovery import Discovered, DiscoveryLimitReached
 
 Clock = Callable[[], float]
 

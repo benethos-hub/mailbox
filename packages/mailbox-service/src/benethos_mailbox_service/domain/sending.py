@@ -28,8 +28,12 @@ from ..errors import (
 from . import paging
 from .access import Access
 from .activity import ActivityLog, Actor
-from .activity.catalogue.limits import SendLimitReached
-from .activity.catalogue.sending import NotInAudit, SendFailed, SendRefused
+from .activity.catalogue.mailbox import (
+    NotInAudit,
+    SendFailed,
+    SendLimitReached,
+    SendRefused,
+)
 from .locks import KeyedLocks
 
 WINDOW = timedelta(hours=24)

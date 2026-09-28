@@ -6,13 +6,16 @@ from __future__ import annotations
 import importlib
 import logging
 import pkgutil
+import re
 import typing
 from dataclasses import dataclass, fields
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service import logs
 from benethos_mailbox_service.data.models import (
     Grant,
     OutgoingMessage,
@@ -69,14 +72,49 @@ def _catalogue() -> list[type[Activity]]:
     return found
 
 
-def test_the_catalogue_has_every_area() -> None:
-    areas = {cls.area for cls in _catalogue()}
-    assert {"lifecycle", "auth", "users", "sync", "sending", "webhooks"} <= areas
+# The packages of docs/REFACTORING.md section 4 that record, and the two
+# areas beyond them (docs/LOGGING.md 7.2).
+AREAS = {
+    "service",
+    "auth",
+    "users",
+    "accounts",
+    "discovery",
+    "mailbox",
+    "sync",
+    "changes",
+    "webhooks",
+    "http",
+}
+NAME = re.compile(r"[a-z][a-z0-9]*(_[a-z0-9]+)*")
+LOGGING_MD = Path(__file__).resolve().parents[3] / "docs" / "LOGGING.md"
+
+
+def test_the_areas_are_the_packages_of_the_domain() -> None:
+    assert {cls.area for cls in _catalogue()} == AREAS
+
+
+def test_each_name_is_unique_within_its_area() -> None:
+    sources = [cls.source() for cls in _catalogue()]
+    assert len(sources) == len(set(sources))
+
+
+def test_every_activity_is_listed_in_the_concept_and_nothing_else() -> None:
+    """LOGGING.md 7.2 names every activity, and only those there are."""
+    text = LOGGING_MD.read_text(encoding="utf-8")
+    section = text.partition("### 7.2 Names")[2].partition("\n## ")[0]
+    listed = set(re.findall(r"^\| `(\w+\.\w+)` \|", section, re.MULTILINE))
+    assert listed == {f"{cls.area}.{cls.name}" for cls in _catalogue()}
 
 
 @pytest.mark.parametrize("cls", _catalogue(), ids=lambda cls: cls.__name__)
 def test_each_activity_has_a_level_a_line_and_no_secret(cls: type[Activity]) -> None:
     assert cls.area == cls.__module__.rpartition(".")[2]
+    # Set in the class, not taken from its name (docs/LOGGING.md 7.2).
+    assert "name" in vars(cls), "each activity sets its name"
+    assert NAME.fullmatch(cls.name), cls.name
+    assert not cls.name.startswith(cls.area.rstrip("s") + "_"), "the area twice"
+    assert len(cls.source()) <= logs.SOURCE_WIDTH, cls.source()
     assert cls.level in LEVELS
     assert cls.says is not Activity.says, "says() writes the line"
     hints = typing.get_type_hints(cls)
@@ -113,7 +151,7 @@ def test_the_recorder_writes_under_the_area_at_the_level(
         )
     assert done.at == NOW
     [record] = caplog.records
-    assert record.name == "benethos_mailbox_service.activity.users"
+    assert record.name == "benethos_mailbox_service.activity.users.deleted"
     assert record.levelno == logging.INFO
     assert record.getMessage() == (
         "test admin (usr_test_admin) deleted user Anna (usr_2) and its 1 webhook"
@@ -122,6 +160,8 @@ def test_the_recorder_writes_under_the_area_at_the_level(
 
 @dataclass(frozen=True, kw_only=True)
 class _Broke(Failure):
+    name = "broke"
+
     def says(self) -> str:
         return "broke"
 
@@ -150,6 +190,7 @@ def test_any_other_failure_is_an_error_with_its_traceback(
 
 @dataclass(frozen=True, kw_only=True)
 class _Costly(Activity):
+    name = "costly"
     level = logging.DEBUG
 
     def says(self) -> str:

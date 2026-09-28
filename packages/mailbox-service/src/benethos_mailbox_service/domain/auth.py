@@ -27,7 +27,6 @@ from ..errors import (
 from .access import Access
 from .activity import ActivityLog, Actor, someone
 from .activity.catalogue import auth as said
-from .activity.catalogue import limits
 from .passwords import MAX_LENGTH, Passwords
 from .throttle import SignInThrottle
 
@@ -278,20 +277,20 @@ class AuthService:
         """``RateLimitedError`` while the source is locked out. A lockout
         that ran out is logged here, at the next attempt."""
         if self._throttle.check(source):
-            self.activity.record(limits.LockoutEnded(by=someone(source)))
+            self.activity.record(said.LockoutEnded(by=someone(source)))
 
     def _failed_source(self, source: str) -> None:
         if self._throttle.failed(source):
             minutes = int(self._throttle.lockout.total_seconds() // 60)
             self.activity.record(
-                limits.SourceLockedOut(by=someone(source), minutes=minutes)
+                said.SourceLockedOut(by=someone(source), minutes=minutes)
             )
 
     def _failed_name(self, key: str, user: User | None, by: Actor) -> None:
         """The name as typed is logged only as the user it names."""
         if self._names.failed(key):
             seconds = int(self._names.lockout.total_seconds())
-            self.activity.record(limits.NameBraked(by=by, user=user, seconds=seconds))
+            self.activity.record(said.NameBraked(by=by, user=user, seconds=seconds))
 
     def sign_out(self, access: Access) -> None:
         """The session of the UI ends. The web layer drops it, this logs it."""

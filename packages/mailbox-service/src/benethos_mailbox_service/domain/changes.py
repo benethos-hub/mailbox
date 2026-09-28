@@ -21,7 +21,7 @@ from ..data.models import CHANGE_TYPES, Change, ChangePage, Event, EventType
 from ..data.storage import ChangeLogRepository, LoggedChange
 from ..errors import BadRequestError, ChangesExpiredError
 from .activity import SERVICE, ActivityLog
-from .activity.catalogue.sync import ChangesPurged
+from .activity.catalogue.changes import ChangesPurged
 
 STATE = "chs_"
 DEFAULT_DAYS = 7

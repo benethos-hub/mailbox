@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import ClassVar
 
 from ....data.models import Account
@@ -13,6 +12,8 @@ from ..base import Activity, Failure, account, plural
 
 @dataclass(frozen=True, kw_only=True)
 class WorkerStarted(Activity):
+    name: ClassVar[str] = "worker_started"
+
     interval: float
     push: bool
 
@@ -25,6 +26,7 @@ class WorkerStarted(Activity):
 class Synced(Activity):
     """One pass of one account, with what it found."""
 
+    name: ClassVar[str] = "synced"
     level: ClassVar[int] = logging.DEBUG
 
     account: Account
@@ -42,6 +44,8 @@ class Synced(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class SyncFailed(Failure):
+    name: ClassVar[str] = "failed"
+
     account: Account
 
     def says(self) -> str:
@@ -50,6 +54,8 @@ class SyncFailed(Failure):
 
 @dataclass(frozen=True, kw_only=True)
 class Watching(Activity):
+    name: ClassVar[str] = "watching"
+
     account: Account
 
     def says(self) -> str:
@@ -58,6 +64,8 @@ class Watching(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class PushUnavailable(Activity):
+    name: ClassVar[str] = "push_unavailable"
+
     account: Account
 
     def says(self) -> str:
@@ -66,6 +74,7 @@ class PushUnavailable(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class IdleRenewed(Activity):
+    name: ClassVar[str] = "idle_renewed"
     level: ClassVar[int] = logging.DEBUG
 
     account: Account
@@ -76,24 +85,10 @@ class IdleRenewed(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class WatchFailed(Failure):
+    name: ClassVar[str] = "watch_failed"
+
     account: Account
     pause: float
 
     def says(self) -> str:
         return f"could not watch {account(self.account)}, next try in {self.pause:.0f}s"
-
-
-@dataclass(frozen=True, kw_only=True)
-class ChangesPurged(Activity):
-    """Changes older than the feed keeps are gone: a client or webhook
-    that had not read them yet starts after them. The normal course, once
-    an hour at most, so no warning."""
-
-    count: int
-    before: datetime
-
-    def says(self) -> str:
-        return (
-            f"purged {plural(self.count, 'change')} older than "
-            f"{self.before.isoformat(timespec='seconds')} from the change log"
-        )

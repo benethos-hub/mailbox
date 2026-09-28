@@ -33,7 +33,7 @@ from ..data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
 from ..errors import MailboxServiceError
 from .access import Access
 from .activity import DISPATCHER, ActivityLog
-from .activity.catalogue import lifecycle
+from .activity.catalogue import service
 from .activity.catalogue import webhooks as said
 from .changes import ChangeFeed
 from .webhooks import sealed_label
@@ -107,7 +107,7 @@ class WebhookDispatcher:
             try:
                 await self.deliver_due()
             except Exception as exc:
-                self._activity.record(lifecycle.RoundFailed(by=DISPATCHER, error=exc))
+                self._activity.record(service.RoundFailed(by=DISPATCHER, error=exc))
             await self._sleep(POLL)
 
     async def deliver_due(self) -> None:

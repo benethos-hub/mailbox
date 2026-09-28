@@ -23,7 +23,7 @@ from ..common.clock import utc_now
 from ..data.storage import IdempotencyRepository, StoredResult
 from ..errors import IdempotencyConflictError
 from .activity import SERVICE, ActivityLog
-from .activity.catalogue.sending import Replayed, ResultNotKept
+from .activity.catalogue.mailbox import Replayed, ResultNotKept
 from .locks import KeyedLocks
 
 R = TypeVar("R", bound=BaseModel)

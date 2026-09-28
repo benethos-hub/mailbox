@@ -42,7 +42,7 @@ async def test_a_sign_in_reaches_the_log(
     )
     when, _, rest = line.partition(" INFO     ")
     assert re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d", when)
-    assert rest.startswith("benethos_mailbox_service.activity.auth: ")
+    assert rest.startswith("benethos_mailbox_service.activity.auth.signed_in: ")
     assert f"Anna ({user.id}) signed in to the UI from 10.0.0.1" in line
 
 
@@ -107,11 +107,14 @@ def test_a_terminal_gets_short_lines_in_colour(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     logging.config.dictConfig(logs.log_config("info", colours=True))
-    logging.getLogger(f"{logs.PACKAGE}.domain.auth").info("sign-in to the UI as anna")
+    logging.getLogger(f"{logs.PACKAGE}.activity.auth.signed_in").info("anna signed in")
     logging.getLogger(f"{logs.PACKAGE}.main").warning("a warning")
     err = capsys.readouterr().err
-    assert "\033[32mINFO    \033[0m\033[36mdomain.auth   \033[0m sign-in" in err
-    assert "\033[33mWARNING \033[0m\033[36mmain          \033[0m a warning" in err
+    # One column for the source, wide enough for every activity.
+    signed = "activity.auth.signed_in".ljust(logs.SOURCE_WIDTH)
+    main = "main".ljust(logs.SOURCE_WIDTH)
+    assert f"\033[32mINFO    \033[0m\033[36m{signed}\033[0m anna signed in" in err
+    assert f"\033[33mWARNING \033[0m\033[36m{main}\033[0m a warning" in err
     assert re.search(r"\033\[2m\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}\033\[0m ", err)
 
 
@@ -131,7 +134,8 @@ def test_an_access_line_names_the_status_in_colour(
         '%s - "%s %s HTTP/%s" %d', "127.0.0.1:5000", "GET", "/ui", "1.1", status
     )
     err = capsys.readouterr().err
-    assert f"\033[36mhttp          \033[0m GET /ui {shown}\033[0m" in err
+    http = "http".ljust(logs.SOURCE_WIDTH)
+    assert f"\033[36m{http}\033[0m GET /ui {shown}\033[0m" in err
     assert "\033[2m127.0.0.1:5000\033[0m" in err
 
 

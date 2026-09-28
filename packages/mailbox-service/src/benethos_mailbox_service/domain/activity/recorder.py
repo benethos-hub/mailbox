@@ -1,8 +1,9 @@
 """The recorder: each activity as one line of the log.
 
-The line goes to the logger of the activity's area, ``activity.auth`` and
-the like below the service's package, so the level of the service's log
-applies. The audit of docs/AUDIT.md will be written here as well.
+The line goes to the logger of the activity, ``activity.<area>.<name>``
+below the service's package, so the level of the service's log applies,
+and a level set on one name applies to it alone. The audit of
+docs/AUDIT.md will be written here as well.
 """
 
 from __future__ import annotations
@@ -21,8 +22,8 @@ PACKAGE = __name__.partition(".")[0]
 A = TypeVar("A", bound=Activity)
 
 
-def logger_of(area: str) -> logging.Logger:
-    return logging.getLogger(f"{PACKAGE}.activity.{area}")
+def logger_of(activity: type[Activity]) -> logging.Logger:
+    return logging.getLogger(f"{PACKAGE}.{activity.source()}")
 
 
 class ActivityLog:
@@ -41,7 +42,7 @@ class ActivityLog:
             level = max(level, logging.ERROR)
             error = activity.error
             exc_info = (type(error), error, error.__traceback__)
-        log = logger_of(activity.area)
+        log = logger_of(type(activity))
         # The line is only built when it is written.
         if log.isEnabledFor(level):
             log.log(level, "%s", activity.line(), exc_info=exc_info)

@@ -45,7 +45,7 @@ def lines(caplog: pytest.LogCaptureFixture) -> list[str]:
     return [
         r.getMessage()
         for r in caplog.records
-        if ".activity." in r.name and not r.name.endswith(".lifecycle")
+        if ".activity." in r.name and not r.name.endswith(".key_from_env")
     ]
 
 

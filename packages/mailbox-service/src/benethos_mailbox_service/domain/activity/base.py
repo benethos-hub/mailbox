@@ -52,11 +52,15 @@ def someone(source: str | None) -> Actor:
 
 @dataclass(frozen=True, kw_only=True)
 class Activity:
-    """One activity. ``level`` is its level in the log, ``audited`` whether
-    the audit of docs/AUDIT.md keeps it. ``at`` is set by the recorder."""
+    """One activity. ``name`` is set by each class and stays when the class
+    is renamed: the log, an operator's filters and the audit know it
+    (docs/LOGGING.md 7.2). ``level`` is its level in the log, ``audited``
+    whether the audit of docs/AUDIT.md keeps it. ``at`` is set by the
+    recorder."""
 
     # The module's name in the catalogue: auth, users, ...
     area: ClassVar[str] = ""
+    name: ClassVar[str] = ""
     level: ClassVar[int] = logging.INFO
     audited: ClassVar[bool] = False
 
@@ -66,6 +70,12 @@ class Activity:
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
         cls.area = cls.__module__.rpartition(".")[2]
+
+    @classmethod
+    def source(cls) -> str:
+        """``activity.<area>.<name>``, the logger it writes to below the
+        service's package."""
+        return f"activity.{cls.area}.{cls.name}"
 
     def says(self) -> str:
         """What was done to which record, e.g. ``created user Anna (usr_...)``."""

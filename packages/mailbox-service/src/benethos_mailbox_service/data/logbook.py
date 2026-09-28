@@ -11,6 +11,7 @@ import itertools
 import logging
 import threading
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -35,8 +36,13 @@ class LogEntry:
 
 
 class LogBook(logging.Handler):
-    def __init__(self, kept: int = KEPT) -> None:
+    def __init__(
+        self, kept: int = KEPT, source: Callable[[str], str] | None = None
+    ) -> None:
+        """``source`` names a line's source from its logger's name, as the
+        console does. The assembly hands it in. Without it, the name."""
         super().__init__()
+        self._source = source or (lambda name: name)
         self._entries: deque[LogEntry] = deque(maxlen=kept)
         self._seq = itertools.count(1)
         self._guard = threading.Lock()
@@ -54,7 +60,7 @@ class LogBook(logging.Handler):
                         at,
                         record.levelname,
                         record.levelno,
-                        record.name,
+                        self._source(record.name),
                         redact(message),
                     )
                 )

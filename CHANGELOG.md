@@ -93,8 +93,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - The service log writes what was done as one sentence per activity,
-  under `activity.<area>`, such as `activity.auth` or `activity.users`:
-  who, what, to which record, from which client address, and why. A
+  each under a name of its own, `activity.<area>.<name>`, such as
+  `activity.auth.signed_in` or `activity.users.token_revoked`. The areas
+  are the parts of the service, and docs/LOGGING.md lists every name.
+  The console and the log page show the source without the package's
+  name. A line says who, what, to which record, from which client
+  address, and why. A
   caller with a token is named with the token's name. `serve` logs where
   its settings came from, the database and its schema when it starts,
   instead of printing them, and logs when it stops. A migration of the

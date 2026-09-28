@@ -138,12 +138,13 @@ def _run(args: argparse.Namespace) -> int:
         import uvicorn
 
         from .data.logbook import LogBook
-        from .logs import log_config
+        from .logs import log_config, short_source
         from .main import create_app
 
         settings = load_settings(args.env_file)
         # Before the app is built: building it may warn already.
-        book = LogBook()
+        # The log page names a source as the console does.
+        book = LogBook(source=short_source)
         config = log_config(settings.log_level, book)
         logging.config.dictConfig(config)
         # The log names the settings and the database once the app starts.

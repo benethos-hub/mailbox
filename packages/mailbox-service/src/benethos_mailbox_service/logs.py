@@ -66,6 +66,9 @@ _SOURCE = "\033[36m"
 _STATUS_COLOURS = {1: "", 2: "\033[32m", 3: "\033[33m", 4: "\033[31m", 5: "\033[1;31m"}
 # The access line of uvicorn: client, method, path, HTTP version, status.
 _ACCESS_ARGS = 5
+# The column of the source: the longest name of an activity,
+# ``activity.<area>.<name>``, has 32 characters (docs/LOGGING.md 7.2).
+SOURCE_WIDTH = 32
 
 
 class Console(Redacting):
@@ -84,7 +87,7 @@ class Console(Redacting):
         head = (
             f"{_DIM}{self.formatTime(record)}{_RESET} "
             f"{colour}{record.levelname:<8}{_RESET}"
-            f"{_SOURCE}{short_source(record.name):<14}{_RESET} "
+            f"{_SOURCE}{short_source(record.name):<{SOURCE_WIDTH}}{_RESET} "
         )
         text = _access(record) or record.getMessage()
         if record.exc_info:

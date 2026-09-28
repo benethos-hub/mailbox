@@ -59,7 +59,7 @@ from .data.storage import (
 )
 from .domain.accounts import AccountService
 from .domain.activity import DISPATCHER, SERVICE, WORKER, ActivityLog, Actor
-from .domain.activity.catalogue import lifecycle
+from .domain.activity.catalogue import service as said
 from .domain.adapters import Adapters
 from .domain.auth import AuthService
 from .domain.changes import ChangeFeed
@@ -145,7 +145,7 @@ def build_services(
     migrated = repos.store.migrated if repos.store is not None else None
     if migrated is not None:
         activity.record(
-            lifecycle.SchemaMigrated(
+            said.SchemaMigrated(
                 by=SERVICE,
                 before=migrated.before,
                 after=migrated.after,
@@ -310,9 +310,7 @@ def key_provider(
 ) -> KeyProvider:
     """The key provider the settings name."""
     if settings.key_provider == "env":
-        (activity or ActivityLog()).record(
-            lifecycle.MasterKeyFromEnvironment(by=SERVICE)
-        )
+        (activity or ActivityLog()).record(said.MasterKeyFromEnvironment(by=SERVICE))
         value = settings.master_key.get_secret_value() if settings.master_key else None
         return EnvKeyProvider(value)
     if settings.key_provider == "file":
@@ -350,9 +348,9 @@ def create_app(
         with ExitStack() as serving:
             store = services.store
             if store is not None and not serving.enter_context(store.serving()):
-                services.activity.record(lifecycle.DatabaseShared(by=SERVICE))
+                services.activity.record(said.DatabaseShared(by=SERVICE))
             services.activity.record(
-                lifecycle.ServiceStarted(
+                said.ServiceStarted(
                     by=SERVICE,
                     settings=str(settings_file) if settings_file else None,
                     database=str(settings.database_path) if store else None,
@@ -363,7 +361,7 @@ def create_app(
                 async with _running(services):
                     yield
             finally:
-                services.activity.record(lifecycle.ServiceStopped(by=SERVICE))
+                services.activity.record(said.ServiceStopped(by=SERVICE))
 
     app = FastAPI(
         title="Mailbox Service",
@@ -406,7 +404,7 @@ async def _loop(
     try:
         await run()
     except Exception as exc:
-        activity.record(lifecycle.LoopEnded(by=by, error=exc))
+        activity.record(said.LoopEnded(by=by, error=exc))
         raise
 
 

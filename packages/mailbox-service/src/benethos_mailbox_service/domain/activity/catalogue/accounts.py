@@ -14,6 +14,8 @@ from ..base import Activity, Failure, account
 
 @dataclass(frozen=True, kw_only=True)
 class AccountConnected(Activity):
+    name: ClassVar[str] = "connected"
+
     account: Account
     host: str | None
 
@@ -29,6 +31,8 @@ class AccountConnected(Activity):
 class ConnectFailed(Failure):
     """The address as typed: the account was not stored."""
 
+    name: ClassVar[str] = "connect_failed"
+
     address: str
     provider: str
 
@@ -38,6 +42,8 @@ class ConnectFailed(Failure):
 
 @dataclass(frozen=True, kw_only=True)
 class AccountChanged(Activity):
+    name: ClassVar[str] = "changed"
+
     account: Account
     # What changed: the display name, settings, the names of credentials.
     changed: tuple[str, ...]
@@ -48,6 +54,8 @@ class AccountChanged(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class AccountVerified(Activity):
+    name: ClassVar[str] = "verified"
+
     account: Account
 
     def says(self) -> str:
@@ -56,6 +64,8 @@ class AccountVerified(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class AccountRemoved(Activity):
+    name: ClassVar[str] = "removed"
+
     account: Account
 
     def says(self) -> str:
@@ -66,6 +76,8 @@ class AccountRemoved(Activity):
 class AccountReachable(Activity):
     """The account works again after it needed a sign-in or was
     unreachable. Logged when the status changes, not on every call."""
+
+    name: ClassVar[str] = "reachable"
 
     account: Account
 
@@ -78,6 +90,7 @@ class AccountNeedsSignIn(Activity):
     """A login or a token refresh was refused. Logged when the status
     changes."""
 
+    name: ClassVar[str] = "needs_sign_in"
     level: ClassVar[int] = logging.WARNING
 
     account: Account
@@ -94,6 +107,7 @@ class AccountNeedsSignIn(Activity):
 class AccountUnreachable(Activity):
     """Logged when the status changes, not on every failed call."""
 
+    name: ClassVar[str] = "unreachable"
     level: ClassVar[int] = logging.WARNING
 
     account: Account
@@ -108,6 +122,8 @@ class AccountUnreachable(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class OAuthStarted(Activity):
+    name: ClassVar[str] = "oauth_started"
+
     provider: str
     # None to connect a new account.
     account: Account | None
@@ -120,6 +136,8 @@ class OAuthStarted(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class OAuthFinished(Activity):
+    name: ClassVar[str] = "oauth_finished"
+
     provider: str
     account: Account
     # True when an existing account signed in again.
@@ -134,6 +152,8 @@ class OAuthFinished(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class OAuthFailed(Failure):
+    name: ClassVar[str] = "oauth_failed"
+
     provider: str
 
     def says(self) -> str:
@@ -142,6 +162,7 @@ class OAuthFailed(Failure):
 
 @dataclass(frozen=True, kw_only=True)
 class TokenRefreshed(Activity):
+    name: ClassVar[str] = "token_renewed"
     level: ClassVar[int] = logging.DEBUG
 
     account: Account

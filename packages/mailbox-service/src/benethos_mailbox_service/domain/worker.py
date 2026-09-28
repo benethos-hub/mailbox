@@ -24,7 +24,7 @@ from ..errors import (
     ProviderAuthError,
 )
 from .activity import WORKER, ActivityLog
-from .activity.catalogue import lifecycle
+from .activity.catalogue import service
 from .activity.catalogue import sync as said
 from .adapters import Adapters
 from .sync import SyncService
@@ -93,7 +93,7 @@ class SyncWorker:
                 try:
                     await self.poll(watchers)
                 except Exception as exc:
-                    self._activity.record(lifecycle.RoundFailed(by=WORKER, error=exc))
+                    self._activity.record(service.RoundFailed(by=WORKER, error=exc))
                 await self._sleep(self._interval)
 
     async def poll(self, watchers: TaskGroup | None = None) -> None:

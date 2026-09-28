@@ -179,7 +179,7 @@ packages/
         delivery.py       # WebhookDispatcher: signed posts, retries
         activity/         # what was done, and by whom: the service log
           base.py         #   Activity, Actor (who, from where), Failure
-          recorder.py     #   ActivityLog.record: the line under activity.<area>
+          recorder.py     #   ActivityLog.record: the line of an activity
           catalogue/      #   one module per area, docs/LOGGING.md 7.2:
                           #     activity.<area>.<name>, the areas the
                           #     packages of docs/REFACTORING.md

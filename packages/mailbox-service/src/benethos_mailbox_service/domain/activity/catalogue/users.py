@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import ClassVar
 
 from ....data.models import User
 from ..base import Activity, plural, user
@@ -11,6 +12,8 @@ from ..base import Activity, plural, user
 
 @dataclass(frozen=True, kw_only=True)
 class UserCreated(Activity):
+    name: ClassVar[str] = "created"
+
     user: User
 
     def says(self) -> str:
@@ -24,6 +27,8 @@ class UserCreated(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class UserChanged(Activity):
+    name: ClassVar[str] = "changed"
+
     user: User
     # The names of the fields that changed: name, roles, grants, ...
     changed: tuple[str, ...]
@@ -34,6 +39,8 @@ class UserChanged(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class UserDeleted(Activity):
+    name: ClassVar[str] = "deleted"
+
     user: User
     webhooks: int
 
@@ -45,6 +52,8 @@ class UserDeleted(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class MadeApiUser(Activity):
+    name: ClassVar[str] = "made_api_user"
+
     user: User
 
     def says(self) -> str:
@@ -55,6 +64,8 @@ class MadeApiUser(Activity):
 class UiSignInAllowed(Activity):
     """The host gave an API user its UI sign-in back."""
 
+    name: ClassVar[str] = "sign_in_allowed"
+
     user: User
 
     def says(self) -> str:
@@ -63,6 +74,8 @@ class UiSignInAllowed(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class PasswordChanged(Activity):
+    name: ClassVar[str] = "password_changed"
+
     def says(self) -> str:
         return "changed its password"
 
@@ -71,6 +84,8 @@ class PasswordChanged(Activity):
 class PasswordSet(Activity):
     """Another user's password, to be changed at the next sign-in: one the
     actor typed, or a one-time password the service made."""
+
+    name: ClassVar[str] = "password_set"
 
     user: User
     one_time: bool
@@ -83,6 +98,8 @@ class PasswordSet(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class TokenIssued(Activity):
+    name: ClassVar[str] = "token_issued"
+
     token_id: str
     token_name: str
     user: User
@@ -102,6 +119,8 @@ class TokenIssued(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class TokenRevoked(Activity):
+    name: ClassVar[str] = "token_revoked"
+
     token_id: str
     token_name: str
     user: User
@@ -112,6 +131,8 @@ class TokenRevoked(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class RoleCreated(Activity):
+    name: ClassVar[str] = "role_created"
+
     role_id: str
     grants: int
 
@@ -121,6 +142,8 @@ class RoleCreated(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class RoleReplaced(Activity):
+    name: ClassVar[str] = "role_replaced"
+
     role_id: str
     grants: int
 
@@ -132,6 +155,8 @@ class RoleReplaced(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class RoleDeleted(Activity):
+    name: ClassVar[str] = "role_deleted"
+
     role_id: str
 
     def says(self) -> str:

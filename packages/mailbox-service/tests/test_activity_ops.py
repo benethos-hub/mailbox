@@ -55,7 +55,7 @@ def lines(caplog: pytest.LogCaptureFixture, *, level: int = logging.DEBUG) -> li
         r.getMessage()
         for r in caplog.records
         if ".activity." in r.name
-        and not r.name.endswith(".lifecycle")
+        and not r.name.endswith(".key_from_env")
         and r.levelno >= level
     ]
 

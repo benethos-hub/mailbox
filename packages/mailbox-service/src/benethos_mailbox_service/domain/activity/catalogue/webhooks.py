@@ -13,6 +13,8 @@ from ..base import Activity, Failure, plural
 
 @dataclass(frozen=True, kw_only=True)
 class WebhookCreated(Activity):
+    name: ClassVar[str] = "created"
+
     webhook_id: str
     host: str
     events: tuple[str, ...]
@@ -33,6 +35,8 @@ class WebhookCreated(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class WebhookRemoved(Activity):
+    name: ClassVar[str] = "removed"
+
     webhook_id: str
     host: str
 
@@ -44,6 +48,7 @@ class WebhookRemoved(Activity):
 class PostFailed(Activity):
     """One post the receiver did not take. It is tried again."""
 
+    name: ClassVar[str] = "post_failed"
     level: ClassVar[int] = logging.WARNING
 
     webhook_id: str
@@ -63,6 +68,7 @@ class PostFailed(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class GaveUp(Activity):
+    name: ClassVar[str] = "gave_up"
     level: ClassVar[int] = logging.WARNING
 
     webhook_id: str
@@ -84,6 +90,8 @@ class GaveUp(Activity):
 class DeliversAgain(Activity):
     """A post went through after posts had failed."""
 
+    name: ClassVar[str] = "delivers_again"
+
     webhook_id: str
 
     def says(self) -> str:
@@ -92,6 +100,8 @@ class DeliversAgain(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class WebhookFailed(Failure):
+    name: ClassVar[str] = "failed"
+
     webhook_id: str
 
     def says(self) -> str:
