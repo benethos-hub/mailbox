@@ -12,16 +12,20 @@ import os
 import sqlite3
 import stat
 import threading
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ....common.chunks import batched
 from ....errors import ConflictError, StorageError
 from ...files import LockedError, create_private, exclusive_lock
 from ..table import missing
 from .migrations import MIGRATIONS, SCHEMA_VERSION
+
+# Stays below SQLite's limit of host parameters in one statement.
+IN_CHUNK = 500
 
 
 @dataclass(frozen=True)
@@ -116,6 +120,26 @@ class Database:
     def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[sqlite3.Row]:
         with self._lock, translated():
             return self._connection.execute(sql, params).fetchall()
+
+    def query_in(
+        self,
+        sql: str,
+        values: Iterable[Any],
+        before: tuple[Any, ...] = (),
+        after: tuple[Any, ...] = (),
+    ) -> list[sqlite3.Row]:
+        """The rows of ``sql`` for every value, each once. ``{in}`` in
+        ``sql`` stands for ``IN (...)`` of the values, ``before`` and
+        ``after`` are the parameters around them. In chunks of
+        ``IN_CHUNK``, since SQLite caps the parameters of one statement:
+        the rows come chunk by chunk, not in the order of one query."""
+        rows: list[sqlite3.Row] = []
+        for chunk in batched(list(dict.fromkeys(values)), IN_CHUNK):
+            marks = ", ".join("?" * len(chunk))
+            rows += self.query(
+                sql.replace("{in}", f"IN ({marks})"), (*before, *chunk, *after)
+            )
+        return rows
 
     def one(self, sql: str, params: tuple[Any, ...] = ()) -> sqlite3.Row | None:
         """The first row, or None."""

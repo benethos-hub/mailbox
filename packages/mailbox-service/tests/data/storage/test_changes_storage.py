@@ -21,6 +21,7 @@ from benethos_mailbox_service.data.storage import (
     SqliteAccountRepository,
     SqliteChangeLogRepository,
 )
+from benethos_mailbox_service.data.storage.sqlite import database
 
 T0 = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
 
@@ -163,3 +164,12 @@ def test_sqlite_deleting_the_account_drops_its_changes(tmp_path: Path) -> None:
     accounts.delete("acc_1")
     assert log.after(["acc_1"], 0, limit=10) == []
     db.close()
+
+
+def test_accounts_in_chunks_come_in_order(
+    log: ChangeLogRepository, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(database, "IN_CHUNK", 1)
+    log.append([change(1), change(2, "acc_2"), change(3), change(4, "acc_2")])
+    found = log.after(["acc_2", "acc_1", "acc_2"], 0, limit=3)
+    assert [c.record.id for c in found] == ["msg_1", "msg_2", "msg_3"]

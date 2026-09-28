@@ -5,12 +5,8 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Iterable
 
-from ....common.chunks import batched
 from ..index import IndexChanges, IndexEntry
 from .database import Database
-
-# Stays below SQLite's limit of host parameters in one statement.
-_CHUNK = 500
 
 
 class SqliteMessageIndexRepository:
@@ -27,34 +23,24 @@ class SqliteMessageIndexRepository:
     def by_native(
         self, account_id: str, native_ids: Iterable[str]
     ) -> dict[str, IndexEntry]:
-        rows = self._rows_in(
-            "SELECT * FROM message_index WHERE account_id = ? AND native_id IN",
-            account_id,
+        rows = self._db.query_in(
+            "SELECT * FROM message_index WHERE account_id = ? AND native_id {in}",
             native_ids,
+            before=(account_id,),
         )
         return {row["native_id"]: _entry(row) for row in rows}
 
     def in_folders(
         self, account_id: str, folder_ids: Iterable[str]
     ) -> list[IndexEntry]:
-        rows = self._rows_in(
-            "SELECT rowid, * FROM message_index WHERE account_id = ? AND folder_id IN",
-            account_id,
+        rows = self._db.query_in(
+            "SELECT rowid, * FROM message_index"
+            " WHERE account_id = ? AND folder_id {in}",
             folder_ids,
+            before=(account_id,),
         )
         # In the order the entries came, across the chunks of the query.
         return [_entry(row) for row in sorted(rows, key=lambda row: row["rowid"])]
-
-    def _rows_in(
-        self, sql: str, account_id: str, values: Iterable[str]
-    ) -> list[sqlite3.Row]:
-        """The rows of ``sql``, which ends in ``IN``, for every value: in
-        chunks, since SQLite caps the parameters of one statement."""
-        rows: list[sqlite3.Row] = []
-        for chunk in batched(list(dict.fromkeys(values)), _CHUNK):
-            marks = ", ".join("?" * len(chunk))
-            rows += self._db.query(f"{sql} ({marks})", (account_id, *chunk))
-        return rows
 
     def add(self, account_id: str, entries: Iterable[IndexEntry]) -> None:
         with self._db.transaction() as db:
