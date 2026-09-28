@@ -14,20 +14,20 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Literal
 
-from ..common.clock import utc_now
-from ..common.ids import new_id
-from ..data.models import ApiToken, User
-from ..data.storage import RoleRepository, TokenRepository, UserRepository
-from ..errors import (
+from ...common.clock import utc_now
+from ...common.ids import new_id
+from ...data.models import ApiToken, User
+from ...data.storage import RoleRepository, TokenRepository, UserRepository
+from ...errors import (
     BadRequestError,
     NotFoundError,
     SetupRequiredError,
     UnauthorizedError,
 )
-from .activity import ActivityLog, Actor, someone
-from .activity.catalogue import auth as said
+from ..activity import ActivityLog, Actor, someone
+from ..activity.catalogue import auth as said
+from ..rights import Access
 from .passwords import MAX_LENGTH, Passwords
-from .rights import Access
 from .throttle import SignInThrottle
 
 TOKEN_PREFIX = "mbx_"

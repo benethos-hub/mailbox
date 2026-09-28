@@ -19,7 +19,7 @@ from benethos_mailbox_service.data.storage import (
     SqliteUserRepository,
     StoredPassword,
 )
-from benethos_mailbox_service.domain.passwords import Passwords
+from benethos_mailbox_service.domain.auth.passwords import Passwords
 from benethos_mailbox_service.errors import ConflictError
 
 # Cheap, so the tests run fast. The service uses Scrypt().

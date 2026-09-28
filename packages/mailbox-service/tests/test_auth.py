@@ -19,13 +19,13 @@ from benethos_mailbox_service.data.storage import (
     InMemoryUserRepository,
 )
 from benethos_mailbox_service.domain.accounts import AccountService
-from benethos_mailbox_service.domain.auth import (
+from benethos_mailbox_service.domain.auth.passwords import Passwords
+from benethos_mailbox_service.domain.auth.service import (
     TOKEN_PREFIX,
     AuthService,
     hash_token,
     new_token,
 )
-from benethos_mailbox_service.domain.passwords import Passwords
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,

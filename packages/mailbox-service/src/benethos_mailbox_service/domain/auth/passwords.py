@@ -15,10 +15,10 @@ from typing import TypeVar
 
 import anyio
 
-from ..common.clock import utc_now
-from ..data.secrets import PasswordHasher
-from ..data.storage import PasswordRepository, StoredPassword
-from ..errors import BadRequestError
+from ...common.clock import utc_now
+from ...data.secrets import PasswordHasher
+from ...data.storage import PasswordRepository, StoredPassword
+from ...errors import BadRequestError
 
 MIN_LENGTH = 15
 MAX_LENGTH = 256

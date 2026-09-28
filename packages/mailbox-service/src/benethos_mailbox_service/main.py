@@ -61,14 +61,13 @@ from .domain.accounts import AccountService
 from .domain.activity import DISPATCHER, SERVICE, WORKER, ActivityLog, Actor
 from .domain.activity.catalogue import service as said
 from .domain.adapters import Adapters
-from .domain.auth import AuthService
+from .domain.auth import AuthService, Passwords
 from .domain.changes import ChangeFeed
 from .domain.delivery import Retries, WebhookDispatcher
 from .domain.discovery import DiscoveryService
 from .domain.idempotency import Idempotency
 from .domain.mailbox import MailboxService
 from .domain.oauth import OAuthService
-from .domain.passwords import Passwords
 from .domain.recovery import RecoveryKey
 from .domain.sending import SendControl
 from .domain.servicelog import ServiceLog

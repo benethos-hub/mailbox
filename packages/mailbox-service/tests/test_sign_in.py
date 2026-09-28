@@ -16,8 +16,8 @@ from benethos_mailbox_service.data.storage import (
     InMemoryTokenRepository,
     InMemoryUserRepository,
 )
-from benethos_mailbox_service.domain.auth import WRONG, AuthService
-from benethos_mailbox_service.domain.passwords import Passwords
+from benethos_mailbox_service.domain.auth.passwords import Passwords
+from benethos_mailbox_service.domain.auth.service import WRONG, AuthService
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ConflictError,

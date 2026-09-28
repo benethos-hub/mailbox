@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import Grant
-from benethos_mailbox_service.domain.auth import SignedIn
+from benethos_mailbox_service.domain.auth.service import SignedIn
 from benethos_mailbox_service.main import Services
 from benethos_mailbox_service.web.pages.session import IDLE, SessionStore
 from benethos_mailbox_service.web.pages.templates import STATIC_DIR, TEMPLATE_DIR

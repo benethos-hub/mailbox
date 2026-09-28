@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.domain.throttle import SignInThrottle
+from benethos_mailbox_service.domain.auth.throttle import SignInThrottle
 from benethos_mailbox_service.errors import RateLimitedError
 from benethos_mailbox_service.main import Services, create_app
 
