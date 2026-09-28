@@ -17,10 +17,10 @@ from benethos_mailbox_service.data.models import (
     Recipient,
 )
 from benethos_mailbox_service.data.storage import InMemoryChangeLogRepository
-from benethos_mailbox_service.domain import worker as worker_module
 from benethos_mailbox_service.domain.changes import ChangeFeed, MessagesCreated
 from benethos_mailbox_service.domain.delivery import Retries
 from benethos_mailbox_service.domain.rights.access import Access
+from benethos_mailbox_service.domain.sync import worker as worker_module
 from benethos_mailbox_service.errors import (
     RateLimitedError,
     RecipientNotAllowedError,

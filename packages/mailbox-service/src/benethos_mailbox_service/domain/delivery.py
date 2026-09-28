@@ -36,8 +36,8 @@ from .activity.catalogue import service
 from .activity.catalogue import webhooks as said
 from .changes import ChangeFeed
 from .rights import Access
+from .sync import Sleep
 from .webhooks import sealed_label
-from .worker import Sleep
 
 BATCH = 100
 # How often the log is looked at for new events, in seconds.

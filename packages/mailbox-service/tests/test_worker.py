@@ -11,10 +11,10 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import AccountStatus, ProviderType
-from benethos_mailbox_service.domain import worker as worker_module
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.domain.status import StatusService
-from benethos_mailbox_service.domain.worker import SyncWorker
+from benethos_mailbox_service.domain.sync import worker as worker_module
+from benethos_mailbox_service.domain.sync.worker import SyncWorker
 from benethos_mailbox_service.errors import (
     ForbiddenError,
     NotFoundError,

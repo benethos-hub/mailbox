@@ -61,7 +61,7 @@ of an ordinary deployment fits on one screen.
 `logs.py` writes time, level, source and message. The source of an
 activity is its area and its name: `activity.auth.signed_in`,
 `activity.users.token_revoked` (section 7.2). The source of a technical
-line is its module: `domain.worker`. The console and the log page show
+line is its module: `domain.sync.worker`. The console and the log page show
 the source without the package's name in front, the plain lines for a
 container or the journal with it. The message is one sentence in the
 past tense, in this order:

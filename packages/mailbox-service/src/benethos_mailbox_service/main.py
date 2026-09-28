@@ -70,10 +70,9 @@ from .domain.recovery import RecoveryKey
 from .domain.sending import SendControl
 from .domain.servicelog import ServiceLog
 from .domain.status import StatusService
-from .domain.sync import SyncService
+from .domain.sync import SyncService, SyncWorker
 from .domain.users import UserService
 from .domain.webhooks import WebhookService
-from .domain.worker import SyncWorker
 
 
 @dataclass(frozen=True)

@@ -19,7 +19,7 @@ from benethos_mailbox_service.data.storage import (
     InMemoryMessageIndexRepository,
 )
 from benethos_mailbox_service.domain.changes import ChangeFeed
-from benethos_mailbox_service.domain.sync import SyncService
+from benethos_mailbox_service.domain.sync.service import SyncService
 from benethos_mailbox_service.errors import ChangesExpiredError
 
 from .graph_fake import TOKEN, FakeGraph

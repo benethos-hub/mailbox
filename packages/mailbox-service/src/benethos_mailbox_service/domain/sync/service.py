@@ -25,23 +25,23 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
 
-from ..common.clock import utc_now
-from ..common.ids import new_id
-from ..data.providers import Capability, FolderChanges, MailProvider
-from ..data.secrets.redact import redact
-from ..data.storage import IndexChanges, IndexEntry, MessageIndexRepository
-from ..errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
-from .accounts import Adapters
-from .activity import SERVICE, ActivityLog
-from .activity.catalogue.sync import Synced
-from .changes import (
+from ...common.clock import utc_now
+from ...common.ids import new_id
+from ...data.providers import Capability, FolderChanges, MailProvider
+from ...data.secrets.redact import redact
+from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
+from ...errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
+from ..accounts import Adapters
+from ..activity import SERVICE, ActivityLog
+from ..activity.catalogue.sync import Synced
+from ..changes import (
     ChangeFeed,
     MailboxChange,
     MessagesCreated,
     MessagesDeleted,
     MessagesUpdated,
 )
-from .locks import KeyedLocks
+from ..locks import KeyedLocks
 
 T = TypeVar("T")
 
