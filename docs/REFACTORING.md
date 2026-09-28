@@ -12,8 +12,10 @@ throughout. The rules that came out of it, in short, are
 decided, everything else is the proposal.
 
 **Built 2026-09-28**, steps 2 to 5 of section 6. Sections 1 and 3.1
-describe the domain before. Section 8 is not built. Section 9 lists the
-code written twice, found 2026-09-28, to be merged after section 8.
+describe the domain before. Sections 8 and 9 are built as well, in the
+order of 9.4, on one branch: sections 8.1 and 9.1 to 9.3 describe the
+code before. Where a finding of section 9 was built otherwise, the
+commit that built it says so.
 
 ## 1. Why
 

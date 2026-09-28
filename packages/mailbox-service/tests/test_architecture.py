@@ -37,8 +37,8 @@ ASSEMBLY = {"main", "__main__", "logs"}
 # Web frameworks live in the web layer. main.py builds the app, so it may too.
 WEB_LIBRARIES = {"fastapi", "starlette"}
 
-# One library, one home (CLAUDE.md): the only module, or package, allowed to
-# import each.
+# One library, one home (docs/ARCHITECTURE.md): the only module, or
+# package, allowed to import each.
 LIBRARY_HOMES = {
     "cryptography": f"{PACKAGE}.data.secrets.cipher",
     "keyring": f"{PACKAGE}.data.secrets.keys",
@@ -206,7 +206,7 @@ def test_providers_are_reached_through_the_registry() -> None:
 
 
 def test_concurrency_is_written_with_anyio() -> None:
-    """The one concurrency library (CLAUDE.md, encapsulation rule 2): no
+    """The one concurrency library (docs/ARCHITECTURE.md 8, rule 2): no
     module imports asyncio, so every part runs on either event loop."""
     offenders = [
         f"{name}:{line}"
