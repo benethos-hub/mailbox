@@ -247,8 +247,12 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 - `pop3` adapter (5.2)
 - **The domain in packages by area, and the change feed as typed
   classes like the activities ([REFACTORING.md](REFACTORING.md))**,
-  done, the tests in folders like the source. `data/` in a similar
-  shape follows with a concept of its own
+  done, the tests in folders like the source. `data/` and `common/`
+  next, proposed in REFACTORING.md section 8: `redact` and `ratelimit`
+  to `common`, `backup` out of `secrets`, the wire protocols and HTTP
+  as `data/protocols/` beside the providers, the `__init__.py` files
+  export only, the same checks as for the domain. The rules in short:
+  [ARCHITECTURE.md](ARCHITECTURE.md)
 - Settings and data in the folders of the operating system, for a service
   installed without the repository: `%APPDATA%` on Windows,
   `~/.config` and `~/.local/share` on Linux (`platformdirs`). A file

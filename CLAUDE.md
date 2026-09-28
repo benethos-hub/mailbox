@@ -233,6 +233,8 @@ packages/
 ## Layers of the service
 
 Three layers, imports only point down: `web/` → `domain/` → `data/`.
+The rules in short, with where a new piece of code goes and how code is
+moved: `docs/ARCHITECTURE.md`.
 
 | Layer | Directory | Job | May import |
 |---|---|---|---|
