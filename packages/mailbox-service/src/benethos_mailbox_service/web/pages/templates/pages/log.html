@@ -16,7 +16,7 @@
         <tbody>
           {% for line in lines %}
           <tr>
-            <td>{{ line.at | when }}</td>
+            <td class="mono">{{ line.at | moment }}</td>
             <td>
               {% if line.levelno >= 40 %}<span class="tag bad">{{ line.level | lower }}</span>
               {% elif line.levelno >= 30 %}<span class="tag warn">{{ line.level | lower }}</span>

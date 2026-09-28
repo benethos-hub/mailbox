@@ -7,6 +7,7 @@ import logging
 import logging.config
 import re
 import sys
+from datetime import datetime
 
 import pytest
 
@@ -39,7 +40,7 @@ async def test_a_sign_in_reaches_the_log(
         if "sign-in to the UI as Anna" in line
     )
     when, _, rest = line.partition(" INFO     ")
-    assert re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d", when)
+    assert re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d", when)
     assert rest.startswith("benethos_mailbox_service.domain.auth: ")
     assert "from 10.0.0.1" in line
 
@@ -88,6 +89,16 @@ def test_every_level_of_the_settings_is_known(level: str) -> None:
     assert logging.getLogger(logs.PACKAGE).level == logs.LEVELS[level]
 
 
+def test_the_time_is_to_the_millisecond() -> None:
+    """The plain line with its offset, the terminal without."""
+    record = logging.makeLogRecord({"created": 1790590342.1239})
+    local = datetime.fromtimestamp(1790590342.1239).astimezone()
+    offset = local.isoformat()[-6:]
+    day = f"{local:%Y-%m-%d %H:%M:%S}"
+    assert logs.Redacting().formatTime(record) == f"{day}.123{offset}"
+    assert logs.Console().formatTime(record) == f"{day}.123"
+
+
 # --- at a terminal --------------------------------------------------------------------
 
 
@@ -100,7 +111,7 @@ def test_a_terminal_gets_short_lines_in_colour(
     err = capsys.readouterr().err
     assert "\033[32mINFO    \033[0m\033[36mdomain.auth   \033[0m sign-in" in err
     assert "\033[33mWARNING \033[0m\033[36mmain          \033[0m a warning" in err
-    assert re.search(r"\033\[2m\d\d:\d\d:\d\d\033\[0m ", err)
+    assert re.search(r"\033\[2m\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}\033\[0m ", err)
 
 
 @pytest.mark.parametrize(

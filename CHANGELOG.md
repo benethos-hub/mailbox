@@ -187,7 +187,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   source. Now every line of the service and of uvicorn goes to stderr
   with time, level and source, at `MAILBOX_SERVICE_LOG_LEVEL`. The
   access log goes there too, not to stdout. At a terminal the lines are
-  short and in colour, unless `NO_COLOR` is set.
+  short and in colour, unless `NO_COLOR` is set. Each line has the date
+  and the time to the millisecond, with its offset from UTC outside a
+  terminal, and so does the log page.
 - A user could disable itself and so lock out its own session and
   tokens. `PATCH /v1/users/{user_id}` now refuses that with `409`, as
   deleting oneself already was.
