@@ -50,10 +50,15 @@ REST client can do too.
       │
  data/         DATA ─ decides nothing
    models/     provider-neutral types, one module per subject
+   mail/       messages in RFC 5322: compose, parse, convert
    providers/  imap · gmail · microsoft · pop3 · memory, behind a registry
+   http/       httpx: the SSRF guard, JSON to known hosts, webhook posts
    storage/    own records: accounts, users, credentials
    secrets/    envelope encryption, key providers, backup
    discovery/  autodiscovery sources
+   files.py, logbook.py
+ common/       CROSS-CUTTING ─ helpers every layer reads, beside
+               config.py and errors.py
 ```
 
 **Decided 2026-09-28:** the domain is in packages by area
