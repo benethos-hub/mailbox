@@ -3,14 +3,11 @@ cursor that carries it, and running one step on every account at once."""
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
 import anyio
-from pydantic import BaseModel
 
 from ...data.models import AccountFailure, MessageSummary
 from ...errors import BadRequestError, MailboxServiceError
@@ -53,16 +50,6 @@ def advance(position: Position, window: list[Chunk], consumed: int) -> Position:
     if last is None:
         return Position(position.folder_id, None, 0, done=True)
     return Position(position.folder_id, last, 0)
-
-
-def fingerprint(*query: BaseModel | str | None) -> str:
-    """What a list was asked for, short. A cursor carries it, so that it
-    continues the list it came from and no other."""
-    canonical = json.dumps(
-        [q.model_dump(mode="json") if isinstance(q, BaseModel) else q for q in query],
-        sort_keys=True,
-    )
-    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
 
 def encode_cursor(positions: dict[str, Position], query: str) -> str:

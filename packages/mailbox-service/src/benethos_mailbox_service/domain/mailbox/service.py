@@ -39,6 +39,7 @@ from ..rights import Access
 from ..sync import SyncService
 from . import merge
 from .calls import Calls, public
+from .fingerprint import fingerprint
 from .idempotency import Idempotency
 from .outgoing import Outgoing
 from .sending import SendControl
@@ -288,7 +289,7 @@ class MailboxService:
             "list_all_messages", (a for a in account_ids or existing if a in existing)
         )
         failures: list[AccountFailure] = []
-        query = merge.fingerprint(folder_role, search)
+        query = fingerprint(folder_role, search)
         if cursor:
             positions = {
                 a: p

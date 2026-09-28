@@ -92,6 +92,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- An `Idempotency-Key` sent before this version and sent again within
+  its 24 hours answers `409 idempotency_conflict`, as if the request had
+  changed: a request is fingerprinted anew. A `next_cursor` of the lists
+  across accounts from before is refused once as belonging to another
+  search. Start such a list again without the cursor.
 - The service log writes what was done as one sentence per activity,
   each under a name of its own, `activity.<area>.<name>`, such as
   `activity.auth.signed_in` or `activity.users.token_revoked`. The areas
