@@ -92,6 +92,32 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The service log writes what was done as one sentence per activity,
+  each under a name of its own, `activity.<area>.<name>`, such as
+  `activity.auth.signed_in` or `activity.users.token_revoked`. The areas
+  are the parts of the service, and docs/LOGGING.md lists every name.
+  The console and the log page show the source without the package's
+  name. A line says who, what, to which record, from which client
+  address, and why. A
+  caller with a token is named with the token's name. `serve` logs where
+  its settings came from, the database and its schema when it starts,
+  instead of printing them, and logs when it stops. A migration of the
+  schema is logged at start with its notes. Users, tokens, roles and
+  accounts are logged when they are created, changed or removed, an
+  OAuth sign-in when it starts, finishes or fails, an account's status
+  when it changes, and a token that is refused because it is revoked or
+  expired. A sent mail names the count of its recipients, a refused or
+  failed send the error's code, never an address. Webhooks are logged
+  when created or removed and when a post fails, gives up or goes
+  through again, never with their URL. Each limit is logged once when it
+  engages: a client address locked out after failed sign-ins, a user
+  name slowed down, the discovery and the send limit, a request body too
+  large. At `DEBUG` each sync pass with its counts, IDLE renewed, a token
+  refreshed, a discovery by its domain, an Idempotency-Key replayed.
+- The MCP server logs at start which tools it serves, over which
+  transport, for which service, and a warning for each tool that fails,
+  with the tool's name and the service's error code, never its
+  arguments. The MCP library logs from `WARNING` on, like httpx.
 - The MCP server refuses a `MAILBOX_MCP_LOG_LEVEL` or `MAILBOX_MCP_PORT`
   it cannot use with a message, as it does `MAILBOX_MCP_TRANSPORT`.
   Before, it stopped with a traceback.
@@ -327,6 +353,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- The access log writes the path of a request without its query, which
+  held what a person typed, such as search terms.
 - The service masks every secret it holds as `***` in its log and in
   error texts of the API, the UI and an account's last sync error:
   account passwords, OAuth tokens and client secret, webhook secrets.

@@ -16,6 +16,7 @@ from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.secrets import redact
 from benethos_mailbox_service.domain.servicelog import ServiceLog
 from benethos_mailbox_service.errors import BadRequestError, ForbiddenError
+from benethos_mailbox_service.logs import short_source
 from benethos_mailbox_service.main import Services, build_services, create_app
 
 from .conftest import ADMIN, CHEAP, browser_admin, browser_user
@@ -26,8 +27,9 @@ SERVICE = logging.getLogger("benethos_mailbox_service.domain.users")
 
 @pytest.fixture
 def book() -> LogBook:
-    """The lines behind the page, fed by the service's loggers at info."""
-    book = LogBook()
+    """The lines behind the page, fed by the service's loggers at info,
+    their sources named as ``serve`` names them."""
+    book = LogBook(source=short_source)
     package = logging.getLogger("benethos_mailbox_service")
     package.addHandler(book)
     package.setLevel(logging.INFO)
@@ -49,11 +51,13 @@ def test_the_admin_reads_the_log(logged: tuple[TestClient, Services]) -> None:
     page = client.get("/ui/log").text
     assert 'href="/ui/log" class="active"' in page
     # The page shows its own reader's sign-in, to the millisecond.
-    assert "sign-in to the UI as admin" in page
+    assert "signed in to the UI" in page
     assert re.search(
         r'<td class="mono">\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}</td>', page
     )
-    assert "benethos_mailbox_service.domain.auth" in page
+    # The source as the console names it, without the package.
+    assert '<td class="mono">activity.auth.signed_in</td>' in page
+    assert "benethos_mailbox_service.activity" not in page
 
 
 def test_the_log_is_for_the_admin_alone(logged: tuple[TestClient, Services]) -> None:

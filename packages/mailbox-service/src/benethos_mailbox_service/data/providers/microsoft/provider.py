@@ -19,6 +19,7 @@ preference. The adapter looks their immutable ids up.
 from __future__ import annotations
 
 import base64
+import logging
 import math
 import time
 from collections.abc import Callable, Mapping
@@ -53,6 +54,10 @@ from ...models import (
 from .. import rules
 from ..base import Capability, ChangedMessage, FolderChanges, TokenSource
 from . import mappers
+
+# DEBUG alone: the data layer decides nothing (docs/LOGGING.md rule 6.2).
+# A pause Graph asks for reaches the domain as an error.
+log = logging.getLogger(__name__)
 
 GRAPH = "https://graph.microsoft.com"
 VERSION = "/v1.0"
@@ -130,7 +135,10 @@ class MicrosoftProvider:
                 self._tokens.reject()
                 continue
             if not answer.ok:
-                self._rest_until = self._clock() + _retry_after(answer)
+                rest = _retry_after(answer)
+                self._rest_until = self._clock() + rest
+                if rest > 0:
+                    log.debug("microsoft asked to wait %.0fs", rest)
                 raise _failure(answer)
             return answer
         raise AssertionError("unreachable")  # pragma: no cover

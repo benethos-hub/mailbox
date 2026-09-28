@@ -279,9 +279,12 @@ class RefreshingTokens:
         store_refresh: Callable[[SecretStr], None],
         clock: Callable[[], datetime] | None = None,
         current: Tokens | None = None,
+        on_refresh: Callable[[], object] | None = None,
     ) -> None:
         """``clock`` defaults to the client's: the one that stamped
-        ``expires_at`` decides when a token is spent."""
+        ``expires_at`` decides when a token is spent. ``on_refresh`` is
+        called after each refresh, for the log of the service."""
+        self._on_refresh = on_refresh
         self._client = client
         self._read = read_refresh
         self._store = store_refresh
@@ -318,4 +321,6 @@ class RefreshingTokens:
         new = tokens.refresh_token
         if new is not None and new.get_secret_value() != old.get_secret_value():
             self._store(new)
+        if self._on_refresh is not None:
+            self._on_refresh()
         return tokens

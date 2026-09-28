@@ -51,7 +51,7 @@ def test_the_recovery_key_after_the_password(
     key = re.search(r'<code class="secret">([^<]+)</code>', shown.text)
     assert key is not None
     assert key.group(1) == encode_recovery(services.vault.master_key())
-    assert "the recovery key was shown in the UI to admin" in caplog.text
+    assert "was shown the recovery key in the UI" in caplog.text
     assert key.group(1) not in caplog.text
     # Once: the next visit asks again.
     assert key.group(1) not in ui.get("/ui/recovery-key").text

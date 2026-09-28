@@ -78,8 +78,8 @@ async def finish(
     if query.get("error"):
         # The provider's words only for a sign-in this user started: a link
         # with a made-up error must not put text into the UI.
-        if oauth.cancel(caller, state):
-            reason = query.get("error_description") or query["error"]
+        reason = query.get("error_description") or query["error"]
+        if oauth.cancel(caller, state, reason):
             error = f"{kind.value} did not sign in: {reason}"
         else:
             error = f"{kind.value} did not sign in."

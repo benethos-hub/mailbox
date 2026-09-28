@@ -28,9 +28,11 @@ from urllib.parse import urlsplit
 from ..common.clock import utc_now
 from ..data.models import Account, ProviderType
 from ..data.providers import OAuthClient, authorize_url, new_pkce
-from ..errors import BadRequestError, NotSupportedError
+from ..errors import BadRequestError, MailboxServiceError, NotSupportedError
 from .access import Access
 from .accounts import AccountService
+from .activity import ActivityLog, Actor
+from .activity.catalogue import accounts as said
 from .adapters import REFRESH_TOKEN, Adapters
 
 VALID_FOR = timedelta(minutes=10)
@@ -56,11 +58,13 @@ class OAuthService:
         adapters: Adapters,
         clients: Mapping[ProviderType, OAuthClient],
         clock: Callable[[], datetime] = utc_now,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._accounts = accounts
         self._adapters = adapters
         self._clients = dict(clients)
         self._clock = clock
+        self._activity = activity or ActivityLog(clock)
         self._pending: dict[str, _Pending] = {}
 
     def providers(self) -> list[ProviderType]:
@@ -79,6 +83,7 @@ class OAuthService:
         """Where to send the browser to sign in: to connect a new account,
         or with ``account_id`` to sign that account in again."""
         client = self._client(provider)
+        account = None
         if account_id is None:
             access.require("create_account")
         else:
@@ -100,6 +105,11 @@ class OAuthService:
             started=self._clock(),
             account_id=account_id,
         )
+        self._activity.record(
+            said.OAuthStarted(
+                by=Actor.of(access), provider=provider.value, account=account
+            )
+        )
         return authorize_url(client.app, redirect_uri, state, pkce, login_hint)
 
     async def finish(
@@ -108,6 +118,29 @@ class OAuthService:
         """The account the sign-in connected, or signed in again. Another
         user's sign-in answers as an unknown one and stays open for its
         owner."""
+        try:
+            account, again = await self._finish(access, provider, state, code)
+        except MailboxServiceError as exc:
+            self._activity.record(
+                said.OAuthFailed(
+                    by=Actor.of(access), provider=provider.value, error=exc
+                )
+            )
+            raise
+        self._activity.record(
+            said.OAuthFinished(
+                by=Actor.of(access),
+                provider=provider.value,
+                account=account,
+                again=again,
+            )
+        )
+        return account
+
+    async def _finish(
+        self, access: Access, provider: ProviderType, state: str, code: str
+    ) -> tuple[Account, bool]:
+        """The account, and whether it signed in again."""
         pending = self._pending.get(state)
         if pending is None or pending.user_id != access.user_id:
             raise BadRequestError("this sign-in is unknown or expired: start again")
@@ -136,7 +169,7 @@ class OAuthService:
                     f"signed in as {email}, but the account is {existing.email}: "
                     "sign in with that address"
                 )
-            return await self._accounts.update(
+            updated = await self._accounts.update(
                 access,
                 pending.account_id,
                 display_name=None,
@@ -144,8 +177,9 @@ class OAuthService:
                 credentials=credentials,
                 signed_in=tokens,
             )
+            return updated, True
         name = tokens.identity.name if tokens.identity else None
-        return await self._accounts.create(
+        created = await self._accounts.create(
             access,
             provider,
             email,
@@ -153,13 +187,22 @@ class OAuthService:
             credentials=credentials,
             signed_in=tokens,
         )
+        return created, False
 
-    def cancel(self, access: Access, state: str) -> bool:
-        """The provider sent back an error instead of a code. Only whoever
-        started the sign-in can end it this way. True when it was one."""
+    def cancel(self, access: Access, state: str, reason: str | None = None) -> bool:
+        """The provider sent back an error instead of a code, ``reason``.
+        Only whoever started the sign-in can end it this way. True when it
+        was one."""
         pending = self._pending.get(state)
         if pending is not None and pending.user_id == access.user_id:
             del self._pending[state]
+            self._activity.record(
+                said.OAuthFailed(
+                    by=Actor.of(access),
+                    provider=pending.provider.value,
+                    error=BadRequestError(reason or "the provider sent back an error"),
+                )
+            )
             return True
         return False
 

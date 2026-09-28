@@ -8,7 +8,6 @@ it.
 from __future__ import annotations
 
 import base64
-import logging
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
@@ -19,6 +18,7 @@ from pydantic import BaseModel
 from ..common.clock import utc_now
 from ..data.mail import compose, convert
 from ..data.models import (
+    Account,
     Address,
     DraftMessage,
     Message,
@@ -37,13 +37,13 @@ from ..data.models import (
 from ..errors import BadRequestError, MailboxServiceError
 from . import replies
 from .access import Access
+from .activity import ActivityLog, Actor
+from .activity.catalogue.mailbox import MessageSent, SentBut
 from .calls import Calls
 from .idempotency import Idempotency
 from .sending import Operation, SendControl
 
 M = TypeVar("M", bound=DraftMessage)
-
-log = logging.getLogger(__name__)
 
 # What one message may carry.
 MAX_RECIPIENTS = 100
@@ -57,11 +57,13 @@ class Outgoing:
         idempotency: Idempotency,
         sends: SendControl,
         clock: Callable[[], datetime] = utc_now,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._calls = calls
         self._idempotency = idempotency
         self._sends = sends
         self._clock = clock
+        self._activity = activity or ActivityLog(clock)
 
     # --- sending --------------------------------------------------------------------
 
@@ -94,11 +96,12 @@ class Outgoing:
         )
         # Checked once composed: a reply finds its recipients in the original.
         recipients = _addressed(message.recipients())
+        account = self._calls.record(account_id)
         result = await self._deliver(
-            access, "send_message", account_id, raw, recipients, message_id
+            access, "send_message", account, raw, recipients, message_id
         )
         if message.reference is not None and original is not None:
-            with _after_sending("the original is not marked"):
+            with self._after_sending(access, account, "the original is not marked"):
                 await self._mark_answered(account_id, message.reference, original)
         return result
 
@@ -106,14 +109,14 @@ class Outgoing:
         self,
         access: Access,
         operation: Operation,
-        account_id: str,
+        account: Account,
         raw: bytes,
         recipients: list[str],
         message_id: str,
     ) -> SendResult:
         """Hand a composed message to the provider, under the grants'
         constraints and recorded in the audit."""
-        account = self._calls.record(account_id)
+        account_id = account.id
         sent = await self._sends.send(
             access,
             operation,
@@ -124,22 +127,41 @@ class Outgoing:
             ),
             message_id,
         )
-        return await self._send_result(account_id, message_id, sent)
+        result = await self._send_result(access, account, message_id, sent)
+        self._activity.record(
+            MessageSent(
+                by=Actor.of(access),
+                account=account,
+                recipients=len(recipients),
+                message=result.sent_copy_id or message_id,
+            )
+        )
+        return result
 
     async def _send_result(
-        self, account_id: str, message_id: str, sent: SentMessage
+        self, access: Access, account: Account, message_id: str, sent: SentMessage
     ) -> SendResult:
         """What the caller learns of a send. The message is sent already: the
         bookkeeping here is logged when it fails, never raised, or a client
         would send again."""
+        account_id = account.id
+        if sent.copy_error is not None:
+            self._activity.record(
+                SentBut(
+                    by=Actor.of(access),
+                    account=account,
+                    what="no copy is in the sent folder",
+                    error=MailboxServiceError(sent.copy_error),
+                )
+            )
         copy_id = None
-        try:
+        with self._after_sending(
+            access, account, "the sent copy or the change is not recorded"
+        ):
             if sent.sent_copy is not None:
                 copy = await self._calls.published_one(account_id, sent.sent_copy)
                 copy_id = copy.id
             self._calls.changed(account_id, "message.sent", [copy_id or message_id])
-        except Exception:
-            log.exception("sent, but the sent copy or the change was not recorded")
         return SendResult(
             message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
         )
@@ -243,15 +265,11 @@ class Outgoing:
         self, account_id: str, reference: MessageReference, original: Message
     ) -> None:
         """``$answered`` or ``$forwarded`` on the original, so other clients
-        show it too. The message is sent already: a failure here is logged."""
+        show it too. Called after the message went out, where a failure is
+        logged."""
         keyword = replies.answered_keyword(reference)
         changes = MessageUpdate(keywords=sorted({*original.keywords, keyword}))
-        try:
-            await self._calls.update_one(account_id, reference.message_id, changes)
-        except MailboxServiceError as exc:
-            log.warning(
-                "sent, but %s not set on the original: %s", keyword, exc.message
-            )
+        await self._calls.update_one(account_id, reference.message_id, changes)
 
     # --- drafts ---------------------------------------------------------------------
 
@@ -356,13 +374,13 @@ class Outgoing:
         )
         recipients = _addressed(out.recipients)
         result = await self._deliver(
-            access, "send_draft", account_id, out.raw, recipients, out.message_id
+            access, "send_draft", account, out.raw, recipients, out.message_id
         )
         # Sent: from here on nothing may fail, or a client would send again.
-        with _after_sending("the draft is still there"):
+        with self._after_sending(access, account, "the draft is still there"):
             await self._delete_draft(account_id, draft_id)
         if out.reference is not None:
-            with _after_sending("the original is not marked"):
+            with self._after_sending(access, account, "the original is not marked"):
                 await self._mark_from_draft(account_id, out.reference)
         return result
 
@@ -371,12 +389,22 @@ class Outgoing:
         reference = compose.read_reference(header)
         if reference is None:
             return
-        try:
-            original = await self._calls.message(account_id, reference.message_id)
-        except MailboxServiceError as exc:
-            log.warning("sent, but the original is not marked: %s", exc.message)
-            return
+        original = await self._calls.message(account_id, reference.message_id)
         await self._mark_answered(account_id, reference, original)
+
+    @contextmanager
+    def _after_sending(
+        self, access: Access, account: Account, what: str
+    ) -> Iterator[None]:
+        """A step after the message went out. It may fail, but only into
+        the log: the send succeeded, and a client told otherwise sends
+        again."""
+        try:
+            yield
+        except Exception as exc:
+            self._activity.record(
+                SentBut(by=Actor.of(access), account=account, what=what, error=exc)
+            )
 
     async def delete_draft(
         self, access: Access, account_id: str, draft_id: str
@@ -390,18 +418,6 @@ class Outgoing:
             account_id, draft_id, lambda p, native: p.delete_draft(native)
         )
         self._calls.forget(account_id, draft_id)
-
-
-@contextmanager
-def _after_sending(what: str) -> Iterator[None]:
-    """A step after the message went out. It may fail, but only into the
-    log: the send succeeded, and a client told otherwise sends again."""
-    try:
-        yield
-    except MailboxServiceError as exc:
-        log.warning("sent, but %s: %s", what, exc.message)
-    except Exception:
-        log.exception("sent, but %s", what)
 
 
 class _DraftToSend(BaseModel):

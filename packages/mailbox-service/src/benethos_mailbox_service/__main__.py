@@ -138,22 +138,21 @@ def _run(args: argparse.Namespace) -> int:
         import uvicorn
 
         from .data.logbook import LogBook
-        from .logs import log_config
+        from .logs import log_config, short_source
         from .main import create_app
 
         settings = load_settings(args.env_file)
         # Before the app is built: building it may warn already.
-        book = LogBook()
+        # The log page names a source as the console does.
+        book = LogBook(source=short_source)
         config = log_config(settings.log_level, book)
         logging.config.dictConfig(config)
-        read = settings_file(args.env_file)
-        print(f"settings: {read or 'the environment alone'}", file=sys.stderr)
-        if settings.storage == "sqlite":
-            print(f"database: {settings.database_path}", file=sys.stderr)
-        else:
-            print("storage: memory, nothing is kept", file=sys.stderr)
+        # The log names the settings and the database once the app starts.
+        app = create_app(
+            settings, logbook=book, settings_file=settings_file(args.env_file)
+        )
         uvicorn.run(
-            create_app(settings, logbook=book),
+            app,
             host=args.host or settings.host,
             port=args.port or settings.port,
             log_config=config,
@@ -195,11 +194,14 @@ def _keys(command: str, env_file: Path | None) -> None:
 
         print(encode_recovery(cipher.new_key()))
         return
+    from .domain.activity import HOST
+    from .domain.activity.catalogue import service
     from .main import opened
 
     with opened(_stored(load_settings(env_file), "keys")) as services:
         if command == "init":
             recovery = services.vault.initialize()
+            services.activity.record(service.KeysCreated(by=HOST))
             print(
                 "Keys created. The recovery key below is shown this once. Keep it "
                 "apart from any backup: without it, a backup cannot be restored "
@@ -209,11 +211,14 @@ def _keys(command: str, env_file: Path | None) -> None:
             print(recovery)
         else:
             services.vault.import_master_key(_read_recovery_key())
+            services.activity.record(service.MasterKeyStored(by=HOST))
             print("Master key stored.", file=sys.stderr)
 
 
 def _backup(target: list[str], recovery_key: bool, env_file: Path | None) -> None:
     from .data.secrets.backup import create_backup, read_backup
+    from .domain.activity import HOST
+    from .domain.activity.catalogue import service
     from .main import opened
 
     if target[0] == "verify":
@@ -242,6 +247,11 @@ def _backup(target: list[str], recovery_key: bool, env_file: Path | None) -> Non
             Path(target[0]),
             __version__,
         )
+        services.activity.record(
+            service.BackupWritten(
+                by=HOST, file=target[0], schema=manifest.schema_version
+            )
+        )
     print(
         f"Backup written: schema {manifest.schema_version}, {manifest.created_at}. "
         "It opens only with this master key or the recovery key.",
@@ -253,6 +263,8 @@ def _restore(
     source: Path, recovery_key: bool, replace_master_key: bool, env_file: Path | None
 ) -> None:
     from .data.secrets.backup import restore_backup
+    from .domain.activity import HOST, ActivityLog
+    from .domain.activity.catalogue import service
     from .main import key_provider, opened
 
     if replace_master_key and not recovery_key:
@@ -273,6 +285,14 @@ def _restore(
     if held != master:
         with opened(settings) as services:
             services.vault.import_master_key(master, replace=replace_master_key)
+    ActivityLog().record(
+        service.BackupRestored(
+            by=HOST,
+            file=str(source),
+            schema=manifest.schema_version,
+            made=str(manifest.created_at),
+        )
+    )
     print(
         f"Restored the backup of {manifest.created_at}. The previous database "
         "was kept beside it. Accounts whose OAuth tokens changed since then "

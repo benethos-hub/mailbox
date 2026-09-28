@@ -48,8 +48,8 @@ class ChangeLogRepository(Protocol):
         point in the feed below it has lost changes."""
         ...
 
-    def purge(self, before: datetime) -> None:
-        """Removes the changes older than ``before``."""
+    def purge(self, before: datetime) -> int:
+        """Removes the changes older than ``before``. Returns how many."""
         ...
 
     def forget_account(self, account_id: str) -> None: ...
@@ -90,11 +90,12 @@ class InMemoryChangeLogRepository:
     def horizon(self) -> int:
         return self._horizon
 
-    def purge(self, before: datetime) -> None:
+    def purge(self, before: datetime) -> int:
         old = [e for e in self._log if e.event.at < before]
         if old:
             self._horizon = max(self._horizon, max(e.seq for e in old))
             self._log = [e for e in self._log if e.event.at >= before]
+        return len(old)
 
     def forget_account(self, account_id: str) -> None:
         self._log = [e for e in self._log if e.event.account_id != account_id]

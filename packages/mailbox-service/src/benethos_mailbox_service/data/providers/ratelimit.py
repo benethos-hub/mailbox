@@ -5,12 +5,16 @@ Clock, sleep and randomness are injectable, so tests run without waiting.
 
 from __future__ import annotations
 
+import logging
 import random
 import time
 from collections.abc import Callable
 
 Clock = Callable[[], float]
 Sleep = Callable[[float], None]
+
+# DEBUG alone: the data layer decides nothing (docs/LOGGING.md rule 6.2).
+log = logging.getLogger(__name__)
 
 
 class TokenBucket:
@@ -36,7 +40,9 @@ class TokenBucket:
         """Take one token, waiting for it if the bucket is empty."""
         self._refill()
         if self._tokens < 1:
-            self._sleep((1 - self._tokens) / self._rate)
+            wait = (1 - self._tokens) / self._rate
+            log.debug("paced a request to a mail server: waited %.0f ms", wait * 1000)
+            self._sleep(wait)
             self._refill()
         self._tokens -= 1
 

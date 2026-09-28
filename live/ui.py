@@ -119,12 +119,12 @@ def check_service(
         key is not None and key.group(1) not in browser.get("/ui/recovery-key").text,
     )
     # Searched: the access lines of every page came since.
-    signed = browser.get("/ui/log", params={"text": "sign-in to the UI"}).text
-    told = browser.get("/ui/log", params={"level": "warning"}).text
+    signed = browser.get("/ui/log", params={"text": "signed in to the UI"}).text
+    told = browser.get("/ui/log", params={"text": "was shown the recovery key"}).text
     run.check(
         "the log names the sign-in and to whom the key was shown, not the key",
-        f"sign-in to the UI as {admin.name}" in signed
-        and "the recovery key was shown in the UI to" in told
+        f"{admin.name} (usr_" in signed
+        and f"{admin.name} (usr_" in told
         and (key is None or key.group(1) not in signed + told),
     )
 

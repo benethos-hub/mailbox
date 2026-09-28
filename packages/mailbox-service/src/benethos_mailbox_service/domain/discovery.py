@@ -50,6 +50,8 @@ from ..data.models import (
 from ..data.providers import ServerProbe, settings_from_servers
 from ..errors import BadRequestError, MailboxServiceError, RateLimitedError
 from .access import Access
+from .activity import ActivityLog, Actor
+from .activity.catalogue.discovery import Discovered, DiscoveryLimitReached
 
 Clock = Callable[[], float]
 
@@ -86,7 +88,11 @@ class DiscoveryService:
         trusted_hosts: Iterable[str] = (),
         clock: Clock = time.monotonic,
         per_user: int = PER_USER,
+        activity: ActivityLog | None = None,
     ) -> None:
+        self._activity = activity or ActivityLog()
+        # Per user, the first call of the window whose limit was logged.
+        self._told: dict[str, float] = {}
         self._sources = list(sources)
         self._order = {source.name: i for i, source in enumerate(self._sources)}
         self._probe = probe
@@ -105,7 +111,7 @@ class DiscoveryService:
     async def discover(self, access: Access, email: str) -> Discovery:
         access.require("discover_account")
         query = _query(email)
-        self._count(access.user_id)
+        self._count(access)
         results = await self._lookup(query)
 
         candidates: list[Candidate] = []
@@ -124,9 +130,18 @@ class DiscoveryService:
                 self._order.get(c.source, len(self._order)),
             )
         )
+        domain = query.domain.encode("ascii").decode("idna")
+        self._activity.record(
+            Discovered(
+                by=Actor.of(access),
+                domain=domain,
+                candidates=len(candidates),
+                sources=sum(1 for r in results if r.finding is not None),
+            )
+        )
         return Discovery(
             email=query.email,
-            domain=query.domain.encode("ascii").decode("idna"),
+            domain=domain,
             candidates=[_with_settings(c, query) for c in candidates],
             hints=hints,
             sources=[_report(r) for r in results],
@@ -170,13 +185,20 @@ class DiscoveryService:
         while len(self._cache) > MAX_CACHED:
             del self._cache[min(self._cache, key=lambda d: self._cache[d][0])]
 
-    def _count(self, user_id: str) -> None:
+    def _count(self, access: Access) -> None:
+        user_id = access.user_id
         now = self._clock()
         calls = self._calls.setdefault(user_id, deque())
         while calls and calls[0] <= now - PER_SECONDS:
             calls.popleft()
         if len(calls) >= self._per_user:
             wait = int(calls[0] + PER_SECONDS - now) + 1
+            if self._told.get(user_id) != calls[0]:
+                # Once per window, not for every refused call.
+                self._told[user_id] = calls[0]
+                self._activity.record(
+                    DiscoveryLimitReached(by=Actor.of(access), limit=self._per_user)
+                )
             raise RateLimitedError(
                 f"too many discoveries, try again in {wait} seconds", wait
             )
@@ -189,8 +211,11 @@ class DiscoveryService:
         ones whose last call is longest ago."""
         for user in [u for u, c in self._calls.items() if c[-1] <= now - PER_SECONDS]:
             del self._calls[user]
+            self._told.pop(user, None)
         while len(self._calls) > MAX_CALLERS:
-            del self._calls[min(self._calls, key=lambda u: self._calls[u][-1])]
+            oldest = min(self._calls, key=lambda u: self._calls[u][-1])
+            del self._calls[oldest]
+            self._told.pop(oldest, None)
 
     # --- trust --------------------------------------------------------------
 

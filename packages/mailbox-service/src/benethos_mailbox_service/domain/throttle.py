@@ -56,25 +56,31 @@ class SignInThrottle:
         self._failures: OrderedDict[str, deque[datetime]] = OrderedDict()
         self._locked: dict[str, datetime] = {}
 
-    def check(self, source: str) -> None:
-        """Raises ``RateLimitedError`` while ``source`` is locked out."""
+    @property
+    def lockout(self) -> timedelta:
+        """How long a source that failed too often waits."""
+        return self._lockout
+
+    def check(self, source: str) -> bool:
+        """Raises ``RateLimitedError`` while ``source`` is locked out. True
+        when a lockout of ``source`` ended since the last check."""
         until = self._locked.get(source)
         if until is None:
-            return
+            return False
         now = self._clock()
         if until <= now:
             del self._locked[source]
             self._failures.pop(source, None)
-            return
+            return True
         seconds = math.ceil((until - now).total_seconds())
         raise RateLimitedError(
             f"too many failed sign-in attempts, try again in {seconds} seconds",
             retry_after=seconds,
         )
 
-    def failed(self, source: str) -> None:
+    def failed(self, source: str) -> bool:
         """One more failed attempt. The ``limit``-th within ``window`` locks
-        the source out."""
+        the source out: then True."""
         now = self._clock()
         failures = self._failures.pop(source, None) or deque()
         while failures and now - failures[0] > self._window:
@@ -89,6 +95,8 @@ class SignInThrottle:
             self._locked[source] = now + self._lockout
             del self._failures[source]
             self._trim_locks(now)
+            return True
+        return False
 
     def _trim_locks(self, now: datetime) -> None:
         """Lockouts that ran out go first, then those ending soonest."""

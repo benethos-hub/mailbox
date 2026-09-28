@@ -20,6 +20,8 @@ from ..common.clock import utc_now
 from ..data.models import CHANGE_TYPES, Change, ChangePage, Event, EventType
 from ..data.storage import ChangeLogRepository, LoggedChange
 from ..errors import BadRequestError, ChangesExpiredError
+from .activity import SERVICE, ActivityLog
+from .activity.catalogue.changes import ChangesPurged
 
 STATE = "chs_"
 DEFAULT_DAYS = 7
@@ -34,10 +36,12 @@ class ChangeFeed:
         *,
         days: int = DEFAULT_DAYS,
         clock: Callable[[], datetime] = utc_now,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._log = log
         self._keep = timedelta(days=days)
         self._clock = clock
+        self._activity = activity or ActivityLog(clock)
         self._purged_at: datetime | None = None
 
     def record(self, account_id: str, type: EventType, ids: Iterable[str]) -> None:
@@ -101,8 +105,13 @@ class ChangeFeed:
     def purge(self) -> None:
         """Removes the changes older than the days to keep."""
         now = self._clock()
-        self._log.purge(now - self._keep)
+        before = now - self._keep
+        purged = self._log.purge(before)
         self._purged_at = now
+        if purged:
+            self._activity.record(
+                ChangesPurged(by=SERVICE, count=purged, before=before)
+            )
 
     def forget_account(self, account_id: str) -> None:
         self._log.forget_account(account_id)

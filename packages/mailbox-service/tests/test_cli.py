@@ -29,25 +29,45 @@ def test_serve_starts_uvicorn(
     assert calls["host"] == "127.0.0.1"
     # stderr, and the lines the log page shows.
     assert calls["log_config"]["root"]["handlers"] == ["stderr", "book"]
-    assert "storage: memory" in capsys.readouterr().err
+    # The log names where the settings came from, nothing is printed.
+    assert "settings: " not in capsys.readouterr().err
 
 
-def test_serve_names_the_database(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    tmp_path: Path,
+def test_the_start_names_the_settings_and_the_database(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    import uvicorn
+    from fastapi.testclient import TestClient
 
-    from benethos_mailbox_service import main as assembly
+    from benethos_mailbox_service.data.storage import SCHEMA_VERSION
+    from benethos_mailbox_service.main import create_app
 
-    monkeypatch.setattr(uvicorn, "run", lambda app, **kw: None)
-    # No app: without uvicorn nothing would close its database.
-    monkeypatch.setattr(assembly, "create_app", lambda settings, **_: None)
-    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "sqlite")
-    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
-    assert main(["serve"]) == 0
-    assert f"database: {tmp_path.resolve() / 'mailbox.db'}" in capsys.readouterr().err
+    settings = Settings(storage="sqlite", data_dir=tmp_path, sync_interval=0)
+    named = tmp_path / "service.env"
+    with caplog.at_level("INFO"), TestClient(create_app(settings, settings_file=named)):
+        pass
+    lines = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
+    assert lines == [
+        f"the service created the database with schema {SCHEMA_VERSION}",
+        f"the service started: settings from {named}, database "
+        f"{settings.database_path}, schema {SCHEMA_VERSION}",
+        "the service stopped",
+    ]
+
+
+def test_the_start_in_memory_names_no_database(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from fastapi.testclient import TestClient
+
+    from benethos_mailbox_service.main import create_app
+
+    settings = Settings(storage="memory", sync_interval=0)
+    with caplog.at_level("INFO"), TestClient(create_app(settings)):
+        pass
+    assert (
+        "the service started: settings from the environment alone, storage in "
+        "memory" in caplog.text
+    )
 
 
 def test_default_data_dir_is_under_data_in_the_working_directory(
@@ -244,12 +264,29 @@ def test_serve_names_the_settings_file(
 
     from benethos_mailbox_service import main as assembly
 
+    made: list[dict[str, object]] = []
     monkeypatch.setattr(uvicorn, "run", lambda app, **kw: None)
-    monkeypatch.setattr(assembly, "create_app", lambda settings, **_: None)
+    monkeypatch.setattr(assembly, "create_app", lambda settings, **kw: made.append(kw))
     folder = settings_folder(tmp_path, monkeypatch)
     assert main(["serve", "--env-file", str(folder / "service.env")]) == 0
-    err = capsys.readouterr().err
-    assert f"settings: {(folder / 'service.env').resolve()}" in err
-    assert f"database: {(folder / 'data' / 'mailbox.db').resolve()}" in err
+    assert made[-1]["settings_file"] == (folder / "service.env").resolve()
     assert main(["serve"]) == 0
-    assert "settings: the environment alone" in capsys.readouterr().err
+    assert made[-1]["settings_file"] is None
+
+
+def test_a_command_that_changes_the_database_logs_it_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The host prints to the person at the terminal and writes the same
+    to the log (docs/LOGGING.md rule 6.8)."""
+    folder = settings_folder(tmp_path, monkeypatch)
+    named = str(folder / "service.env")
+    with caplog.at_level("INFO"):
+        assert main(["keys", "init", "--env-file", named]) == 0
+        assert main(["backup", "copy.backup", "--env-file", named]) == 0
+    said = [r.getMessage() for r in caplog.records if ".activity." in r.name]
+    assert "the host created the master key and the data key" in said
+    assert any(
+        line.startswith("the host wrote a backup to copy.backup, schema ")
+        for line in said
+    )

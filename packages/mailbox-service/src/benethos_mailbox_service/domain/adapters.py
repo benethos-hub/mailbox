@@ -30,6 +30,8 @@ from ..data.providers import (
 from ..data.secrets import CredentialVault
 from ..data.storage import AccountRepository
 from ..errors import ProviderAuthError, ProviderUnavailableError
+from .activity import SERVICE, Activity, ActivityLog
+from .activity.catalogue import accounts as said
 from .changes import ChangeFeed
 
 T = TypeVar("T")
@@ -46,8 +48,10 @@ class Adapters:
         provider_factory: ProviderFactory = build_provider,
         oauth: Mapping[ProviderType, OAuthClient] | None = None,
         changes: ChangeFeed | None = None,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._repository = repository
+        self._activity = activity or ActivityLog()
         # Hears when an account comes to need a new sign-in.
         self._changes = changes
         self._vault = vault
@@ -75,12 +79,27 @@ class Adapters:
             status = self._status[account_id] = self.record(account_id).status
         return status
 
-    def set_status(self, account_id: str, status: AccountStatus) -> None:
+    def set_status(
+        self, account_id: str, status: AccountStatus, reason: str | None = None
+    ) -> None:
+        """A new status is stored and logged once, when it changes.
+        ``reason``: the message of the failure that changed it."""
         if self.status(account_id) is not status:
             self._repository.set_status(account_id, status)
             self._status[account_id] = status
             if status is AccountStatus.NEEDS_REAUTH and self._changes is not None:
                 self._changes.record(account_id, "account.needs_reauth", [account_id])
+            self._activity.record(self._flipped(account_id, status, reason))
+
+    def _flipped(
+        self, account_id: str, status: AccountStatus, reason: str | None
+    ) -> Activity:
+        account = self.record(account_id)
+        if status is AccountStatus.NEEDS_REAUTH:
+            return said.AccountNeedsSignIn(by=SERVICE, account=account, reason=reason)
+        if status is AccountStatus.UNREACHABLE:
+            return said.AccountUnreachable(by=SERVICE, account=account, reason=reason)
+        return said.AccountReachable(by=SERVICE, account=account)
 
     def signs_in_with_oauth(self, provider: ProviderType) -> bool:
         """Whether accounts of ``provider`` connect through an OAuth app of
@@ -99,6 +118,9 @@ class Adapters:
                 self._repository.settings(account_id),
                 lambda field: self._vault.read(account_id, field),
                 lambda value: self._vault.store(account_id, REFRESH_TOKEN, value),
+                on_refresh=lambda: self._activity.record(
+                    said.TokenRefreshed(by=SERVICE, account=account)
+                ),
             )
             self._providers[account_id] = adapter
         return adapter
@@ -114,11 +136,11 @@ class Adapters:
         unreachable server is marked as such, and success clears both."""
         try:
             result = await operation(self.get(account_id))
-        except ProviderAuthError:
-            self.set_status(account_id, AccountStatus.NEEDS_REAUTH)
+        except ProviderAuthError as exc:
+            self.set_status(account_id, AccountStatus.NEEDS_REAUTH, exc.message)
             raise
-        except ProviderUnavailableError:
-            self.set_status(account_id, AccountStatus.UNREACHABLE)
+        except ProviderUnavailableError as exc:
+            self.set_status(account_id, AccountStatus.UNREACHABLE, exc.message)
             raise
         self.set_status(account_id, AccountStatus.CONNECTED)
         return result
@@ -130,11 +152,12 @@ class Adapters:
         read: CredentialReader,
         store_refresh: Callable[[SecretStr], None],
         signed_in: Tokens | None = None,
+        on_refresh: Callable[[], object] | None = None,
     ) -> MailProvider:
         """An adapter. For an OAuth provider it comes with a token source that
         keeps its access token valid and stores a new refresh token.
         ``signed_in``: the tokens of a sign-in just made, used before the
-        first refresh."""
+        first refresh. ``on_refresh`` hears of each refresh."""
         client = self._oauth.get(provider)
         if client is None:
             return self._provider_factory(provider, settings, read)
@@ -143,6 +166,7 @@ class Adapters:
             lambda: read(REFRESH_TOKEN),
             store_refresh,
             current=signed_in,
+            on_refresh=on_refresh,
         )
         return self._provider_factory(provider, settings, read, tokens=tokens)
 

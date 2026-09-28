@@ -35,6 +35,7 @@ from ..data.models import (
 from ..errors import ConflictError, MailboxServiceError, NotFoundError
 from . import merge
 from .access import Access
+from .activity import ActivityLog
 from .adapters import Adapters
 from .calls import Calls, public
 from .idempotency import Idempotency
@@ -58,11 +59,12 @@ class MailboxService:
         idempotency: Idempotency,
         sends: SendControl,
         clock: Callable[[], datetime] = utc_now,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._calls = Calls(adapters, sync)
         self._changes = sync.feed
         # Sending, drafts and the audit of sends: mailbox.outgoing.send_message.
-        self.outgoing = Outgoing(self._calls, idempotency, sends, clock)
+        self.outgoing = Outgoing(self._calls, idempotency, sends, clock, activity)
 
     # --- folders ----------------------------------------------------------------------
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import functools
 import hashlib
 import json
 import logging
@@ -25,8 +26,8 @@ from mcp.types import CallToolResult, ImageContent, TextContent, ToolAnnotations
 from pydantic import Field
 
 from . import __version__, pdf, render, transport
-from .client import MailboxApiClient, Recipient, message_body
-from .errors import ToolError
+from .client import MailboxApiClient, Recipient, message_body, service_url
+from .errors import ApiError, ServiceUnavailableError, ToolError
 
 logger = logging.getLogger(__name__)
 
@@ -608,20 +609,60 @@ def build_server(operations: Iterable[str]) -> MCPServer:
         version=__version__,
         instructions=_INSTRUCTIONS,
     )
-    for tool in TOOLS:
-        if not tool.needs or tool.needs & allowed:
-            server.add_tool(
-                tool.fn,
+    for tool in _chosen(allowed):
+        server.add_tool(
+            _logged(tool.fn),
+            title=tool.title,
+            annotations=ToolAnnotations(
                 title=tool.title,
-                annotations=ToolAnnotations(
-                    title=tool.title,
-                    readOnlyHint=tool.read_only,
-                    destructiveHint=None if tool.read_only else tool.destructive,
-                    idempotentHint=None if tool.read_only else tool.idempotent,
-                    openWorldHint=tool.open_world,
-                ),
-            )
+                readOnlyHint=tool.read_only,
+                destructiveHint=None if tool.read_only else tool.destructive,
+                idempotentHint=None if tool.read_only else tool.idempotent,
+                openWorldHint=tool.open_world,
+            ),
+        )
     return server
+
+
+def _chosen(allowed: set[str]) -> list[_Tool]:
+    """The tools that need none of the rights or one ``allowed``."""
+    return [tool for tool in TOOLS if not tool.needs or tool.needs & allowed]
+
+
+def _logged(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """The tool, with a warning in the log when it fails. The log names
+    the tool and the error's code, never its arguments: the message of an
+    error may repeat an address or a search term the model sent."""
+
+    @functools.wraps(fn)
+    async def run(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return await fn(*args, **kwargs)
+        except ToolError as exc:
+            logger.warning("tool %s failed: %s", fn.__name__, _reason(exc))
+            raise
+
+    return run
+
+
+def _reason(exc: ToolError) -> str:
+    if isinstance(exc, ApiError):
+        return f"{exc.code} (HTTP {exc.status})"
+    if isinstance(exc, ServiceUnavailableError):
+        return "the mailbox service is not reachable"
+    return "the arguments were refused"
+
+
+def _started(operations: Iterable[str], transport_name: str) -> None:
+    """What the server serves, at start."""
+    names = sorted(tool.fn.__name__ for tool in _chosen(set(operations)))
+    logger.info(
+        "serving %d tools over %s for the mailbox service at %s: %s",
+        len(names),
+        transport_name,
+        service_url(),
+        ", ".join(names),
+    )
 
 
 async def allowed_operations() -> set[str]:
@@ -716,8 +757,9 @@ def configure_logging(level: str) -> None:
     # stderr only: on stdio, stdout carries the JSON-RPC stream.
     logging.basicConfig(level=level, stream=sys.stderr)
     # httpx names every request with its URL at INFO, and a URL carries
-    # search terms and message ids. The client keeps this log in its files.
-    for name in ("httpx", "httpcore"):
+    # search terms and message ids. The MCP library names each request.
+    # The client keeps this log in its files.
+    for name in ("httpx", "httpcore", "mcp"):
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
@@ -731,6 +773,7 @@ def main(argv: list[str] | None = None) -> None:
     except ToolError as exc:
         sys.exit(f"benethos-mailbox-mcp: {exc}")
     server = build_server(operations)
+    _started(operations, args.transport)
     if args.transport == "stdio":
         transport.serve_stdio(server)
         return

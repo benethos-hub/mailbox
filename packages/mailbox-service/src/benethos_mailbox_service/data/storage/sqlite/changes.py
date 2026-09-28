@@ -63,20 +63,23 @@ class SqliteChangeLogRepository:
         row = self._db.one("SELECT value FROM meta WHERE key = ?", (_HORIZON,))
         return int(row["value"]) if row is not None else 0
 
-    def purge(self, before: datetime) -> None:
+    def purge(self, before: datetime) -> int:
         with self._db.transaction() as conn:
             row = conn.execute(
                 "SELECT MAX(seq) AS seq FROM changes WHERE at < ?", (iso(before),)
             ).fetchone()
             if row["seq"] is None:
-                return
-            conn.execute("DELETE FROM changes WHERE at < ?", (iso(before),))
+                return 0
+            removed = conn.execute(
+                "DELETE FROM changes WHERE at < ?", (iso(before),)
+            ).rowcount
             conn.execute(
                 "INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT (key)"
                 " DO UPDATE SET value ="
                 " MAX(CAST(value AS INTEGER), CAST(excluded.value AS INTEGER))",
                 (_HORIZON, str(row["seq"])),
             )
+            return int(removed)
 
     def forget_account(self, account_id: str) -> None:
         # ON DELETE CASCADE does this as well. Said here, so both stores agree.

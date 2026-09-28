@@ -156,7 +156,7 @@ def test_a_second_service_on_the_database_is_noted(
     with first.store.serving(), TestClient(create_app(Settings())):
         pass
     first.close()
-    assert "another service uses this database" in caplog.text
+    assert "found another service using this database" in caplog.text
 
 
 def test_a_restore_that_fails_leaves_the_database_in_place(

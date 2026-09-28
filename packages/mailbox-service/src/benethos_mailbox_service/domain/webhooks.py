@@ -28,6 +28,8 @@ from ..data.secrets import CredentialVault
 from ..data.storage import Delivery, WebhookRecord, WebhookRepository
 from ..errors import BadRequestError, NotFoundError
 from .access import Access
+from .activity import ActivityLog, Actor
+from .activity.catalogue import webhooks as said
 from .changes import ChangeFeed
 
 # Every secret starts so, so a person can tell what it is.
@@ -46,11 +48,13 @@ class WebhookService:
         vault: CredentialVault,
         changes: ChangeFeed,
         clock: Callable[[], datetime] = utc_now,
+        activity: ActivityLog | None = None,
     ) -> None:
         self._repository = repository
         self._vault = vault
         self._changes = changes
         self._clock = clock
+        self._activity = activity or ActivityLog(clock)
 
     def create_webhook(self, access: Access, request: WebhookCreate) -> CreatedWebhook:
         access.require("create_webhook")
@@ -75,6 +79,17 @@ class WebhookService:
         # It hears of what happens from now on.
         delivery = Delivery(cursor=self._changes.last())
         self._repository.add(WebhookRecord(webhook, sealed, delivery))
+        self._activity.record(
+            said.WebhookCreated(
+                by=Actor.of(access),
+                webhook_id=webhook_id,
+                host=host_of(webhook.url),
+                events=tuple(webhook.events),
+                accounts=len(webhook.accounts)
+                if webhook.accounts is not None
+                else None,
+            )
+        )
         return CreatedWebhook(**webhook.model_dump(), secret=secret)
 
     def list_webhooks(
@@ -120,8 +135,13 @@ class WebhookService:
 
     def delete_webhook(self, access: Access, webhook_id: str) -> None:
         access.require("delete_webhook")
-        self._own(access, webhook_id)
+        hook = self._own(access, webhook_id).webhook
         self._repository.delete(webhook_id)
+        self._activity.record(
+            said.WebhookRemoved(
+                by=Actor.of(access), webhook_id=webhook_id, host=host_of(hook.url)
+            )
+        )
 
     def _own(self, access: Access, webhook_id: str) -> WebhookRecord:
         """Another user's webhook answers as if it did not exist."""
@@ -129,6 +149,15 @@ class WebhookService:
         if record.webhook.user_id != access.user_id:
             raise NotFoundError(f"webhook {webhook_id} not found")
         return record
+
+
+def host_of(url: str) -> str:
+    """The host a webhook posts to, for the log: never the whole URL,
+    which may carry a key."""
+    try:
+        return urlsplit(url).hostname or "an unknown host"
+    except ValueError:
+        return "an unknown host"
 
 
 def _check_url(url: str) -> None:

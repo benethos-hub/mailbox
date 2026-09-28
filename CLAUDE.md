@@ -177,6 +177,12 @@ packages/
         users.py          # UserService: users, roles, tokens
         webhooks.py       # WebhookService: register, list, remove
         delivery.py       # WebhookDispatcher: signed posts, retries
+        activity/         # what was done, and by whom: the service log
+          base.py         #   Activity, Actor (who, from where), Failure
+          recorder.py     #   ActivityLog.record: the line of an activity
+          catalogue/      #   one module per area, docs/LOGGING.md 7.2:
+                          #     activity.<area>.<name>, the areas the
+                          #     packages of docs/REFACTORING.md
       data/               # DATA: reads and writes, decides nothing
         models/           # provider-neutral types, one module per subject:
                           #   accounts, users, folders, messages, batch,
@@ -254,13 +260,19 @@ Three layers, imports only point down: `web/` → `domain/` → `data/`.
   for the UI) and hands that user to the domain.
 - UI pages stay out of the OpenAPI document (`include_in_schema=False`), so
   the contract covers the API only.
+- **The domain logs activities.** A line at `INFO` or above is an
+  activity of `domain/activity/catalogue/`, handed to
+  `ActivityLog.record`, a sentence as docs/LOGGING.md section 3 shapes
+  it. The data layer logs at `DEBUG` at most: what it notices goes up as
+  a result or an error.
 
 `tests/test_architecture.py` checks the direction, the cross-cutting
 modules, that `common/` stays on the standard library, that FastAPI stays in
 `web/` (and `main.py`), that providers are reached through the registry,
 that the domain picks no storage implementation, and that SQLite is
-reached through `data/storage/` alone. An import that breaks a rule
-fails the suite.
+reached through `data/storage/` alone. It also checks that the data
+layer logs nothing above `DEBUG` and the domain nothing but activities.
+An import or a line that breaks a rule fails the suite.
 
 ## Encapsulation and replaceable parts
 

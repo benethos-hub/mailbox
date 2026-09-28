@@ -82,7 +82,9 @@ async def test_a_failing_account_does_not_stop_the_round(
     )
     with caplog.at_level(logging.WARNING):
         await worker(imap_services).poll()
-    assert f"sync of {imap_account_id} failed" in caplog.text
+    assert (
+        f"the worker could not sync me@example.com ({imap_account_id})" in caplog.text
+    )
     assert "secret" not in caplog.text
     assert memory.id  # the round went on
 
@@ -263,7 +265,9 @@ async def test_a_bug_in_one_account_does_not_stop_the_round(
     monkeypatch.setattr(imap_services.sync, "sync_account", sync_account)
     await worker(imap_services, push=False).poll()
     assert synced == [memory.id]
-    assert f"sync of {imap_account_id} failed" in caplog.text
+    assert (
+        f"the worker could not sync me@example.com ({imap_account_id})" in caplog.text
+    )
     assert "KeyError" in caplog.text
 
 
@@ -288,7 +292,7 @@ async def test_a_bug_while_watching_pauses_and_tries_again(
         imap_services.adapters, imap_services.sync, interval=300, sleep=note
     ).watch(imap_account_id)
     assert len(slept) == 1
-    assert f"watching {imap_account_id} failed" in caplog.text
+    assert f"could not watch me@example.com ({imap_account_id})" in caplog.text
 
 
 async def test_a_failed_round_does_not_end_the_worker(
@@ -315,4 +319,4 @@ async def test_a_failed_round_does_not_end_the_worker(
         monkeypatch.setattr(background, "poll", poll)
         await background.run()
     assert len(rounds) == 2
-    assert "a sync round failed" in caplog.text
+    assert "the worker could not finish a round" in caplog.text

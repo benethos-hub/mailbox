@@ -12,7 +12,7 @@ from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
 from benethos_mailbox_mcp import __version__, render, server
 from benethos_mailbox_mcp.client import MailboxApiClient
-from benethos_mailbox_mcp.errors import ToolError
+from benethos_mailbox_mcp.errors import ApiError, ServiceUnavailableError, ToolError
 
 READ = ["get_message", "list_all_messages", "list_folders", "list_messages"]
 ME = {
@@ -440,3 +440,56 @@ async def test_every_tool_carries_its_title_and_hints() -> None:
         )
         assert found == HINTS[tool.name], tool.name
         assert len(tool.description or "") < 700, tool.name
+
+
+def test_the_start_names_the_service_and_the_tools(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    async def operations() -> set[str]:
+        return {"list_accounts"}
+
+    monkeypatch.setenv("MAILBOX_SERVICE_URL", "http://127.0.0.1:8080")
+    monkeypatch.setattr(server, "allowed_operations", operations)
+    monkeypatch.setattr(
+        server,
+        "build_server",
+        lambda ops: type("S", (), {"run": lambda self, transport: None})(),
+    )
+    with caplog.at_level(logging.INFO):
+        server.main([])
+    assert (
+        "serving 1 tools over stdio for the mailbox service at "
+        "http://127.0.0.1:8080: list_accounts" in caplog.text
+    )
+
+
+@pytest.mark.parametrize(
+    ("error", "said"),
+    [
+        (
+            ApiError(403, "recipient_not_allowed", "no grant allows a@x.org"),
+            "recipient_not_allowed (HTTP 403)",
+        ),
+        (ServiceUnavailableError("gone"), "the mailbox service is not reachable"),
+        (ToolError("not an address: a@x.org"), "the arguments were refused"),
+    ],
+)
+async def test_a_failed_tool_is_a_warning_without_its_arguments(
+    caplog: pytest.LogCaptureFixture, error: ToolError, said: str
+) -> None:
+    async def send_message(account_id: str, to: list[str]) -> str:
+        raise error
+
+    logged = server._logged(send_message)
+    with pytest.raises(ToolError):
+        await logged("acc_1", to=["a@x.org"])
+    [record] = caplog.records
+    assert record.levelno == logging.WARNING
+    assert record.getMessage() == f"tool send_message failed: {said}"
+    assert "a@x.org" not in caplog.text
+
+
+def test_the_mcp_library_logs_from_warning_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(logging.getLogger("mcp"), "level", logging.NOTSET)
+    server.configure_logging("INFO")
+    assert logging.getLogger("mcp").getEffectiveLevel() == logging.WARNING
