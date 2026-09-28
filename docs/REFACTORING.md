@@ -7,7 +7,7 @@ activities. Nothing changes in behaviour: modules move, names get
 clearer, the API and the OpenAPI document stay as they are. What the
 user decides is marked as decided, everything else is the proposal.
 
-**Built 2026-09-28**, steps 2 to 4 of section 6. Sections 1 and 3.1
+**Built 2026-09-28**, steps 2 to 5 of section 6. Sections 1 and 3.1
 describe the domain before.
 
 ## 1. Why
@@ -225,8 +225,8 @@ it does today.
   `Access` and the types they use the same way, in a dozen places
   today.
 - **The tests** may import a module inside a package, since they test
-  that module. Their folder is flat as well, 70 modules. They get
-  folders like the packages after the move (section 7).
+  that module. They are in folders like the source since the move
+  (section 7): `tests/domain/<package>/`, `tests/data/`, `tests/web/`.
 
 ## 6. Order of work
 

@@ -213,7 +213,9 @@ packages/
         files.py          # files for the owner alone (0600): database, backup, key
         logbook.py        # the newest log lines in memory, for the log page
         discovery/        # autodiscovery sources and their helpers
-    tests/
+    tests/                # in folders like the source: domain/<package>/,
+                          #   data/, web/, common/. At the top the fakes,
+                          #   conftest.py and what checks the whole service
       test_architecture.py  # checks the layering on every run
   mailbox-mcp/            # the MCP server, a REST client
     src/benethos_mailbox_mcp/
@@ -342,7 +344,9 @@ imapclient boundary), never by patching deep inside a library.
 
 ## Verifying
 
-- Tests: `uv run pytest -q` (offline, must stay green).
+- Tests: `uv run pytest -q` (offline, must stay green). A test sits in
+  the folder of the code it tests, `tests/domain/mailbox/` for
+  `domain/mailbox/`, also when it goes through the API.
 - Coverage floor 80%: `uv run pytest --cov --cov-fail-under=80`.
 - Lint and format: `uv run ruff check .` and `uv run ruff format .`.
 - Types: `uv run mypy`.
@@ -368,7 +372,7 @@ rule 1.
   number, added to `MIGRATIONS` there. Its docstring says what it does and
   why. Each statement stands alone, and a step in Python goes into
   `before`. A migration that shipped in a release is never changed:
-  `RELEASED` in `tests/test_sqlite.py` holds a hash of each.
+  `RELEASED` in `tests/data/storage/test_sqlite.py` holds a hash of each.
 
 ## Git and commits
 
@@ -396,7 +400,7 @@ packages carry the same version.
    documentation that still shows the old one.
 3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`.
 4. Freeze the migrations new in this release: add `fingerprint(N)` of
-   each to `RELEASED` in `tests/test_sqlite.py`.
+   each to `RELEASED` in `tests/data/storage/test_sqlite.py`.
 5. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
    then `gh release create vX.Y.Z --verify-tag` with the changelog section
    as the notes. The published release starts `publish.yml`, which

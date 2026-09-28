@@ -372,7 +372,7 @@ These rules bind every page, the reworked ones and the ones to come.
    destructive form asks first. Every list with a filter is a `GET`.
 6. **Words**: the button names of 6.2, tags in lower case, headings in
    sentence case, the record's name in the heading of its detail page.
-7. **Tests**: a page has at least one test in `tests/test_ui_*.py` that
+7. **Tests**: a page has at least one test in `tests/web/pages/test_ui_*.py` that
    opens it as a user with the right, one that shows it hidden without
    the right, and one per form. `live/ui.py` walks every workflow of
    section 6 against the test accounts.
