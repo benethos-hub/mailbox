@@ -8,6 +8,7 @@ import pytest
 from benethos_mailbox_service import __version__
 from benethos_mailbox_service.__main__ import _parser, main
 from benethos_mailbox_service.config import Settings, load_settings
+from benethos_mailbox_service.logs import log_config
 
 
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -27,6 +28,7 @@ def test_serve_starts_uvicorn(
     assert main(["serve", "--port", "9999"]) == 0
     assert calls["port"] == 9999
     assert calls["host"] == "127.0.0.1"
+    assert calls["log_config"] == log_config("info")
     assert "storage: memory" in capsys.readouterr().err
 
 
