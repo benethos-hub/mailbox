@@ -11,20 +11,20 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from ..common.ids import new_id
-from ..data.models import AccountStatus, ApiToken, Grant, Role, User
-from ..data.storage import (
+from ...common.ids import new_id
+from ...data.models import AccountStatus, ApiToken, Grant, Role, User
+from ...data.storage import (
     RoleRepository,
     TokenRepository,
     UserRepository,
     WebhookRepository,
 )
-from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
-from .accounts import Adapters
-from .activity import HOST, ActivityLog, Actor
-from .activity.catalogue import users as said
-from .auth import MAX_NAME, AuthService, TokenState
-from .rights import Access, SendLimit, permissions
+from ...errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
+from ..accounts import Adapters
+from ..activity import HOST, ActivityLog, Actor
+from ..activity.catalogue import users as said
+from ..auth import MAX_NAME, AuthService, TokenState
+from ..rights import Access, SendLimit, permissions
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18
