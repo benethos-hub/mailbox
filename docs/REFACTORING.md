@@ -461,7 +461,7 @@ tests one layer, and moves if so.
 6. The architecture checks for `data`, CLAUDE.md's layout and
    CONCEPT.md 1.1 with the lines of 8.3.
 
-Steps 2 to 6 are one branch, one commit per step, each passing all
+Steps 2 to 6 are one commit each, in the branch of 9.4, each passing all
 checks. The live checks run once at the end. A backup and its restore
 are covered by `test_backup.py` and `test_cli.py`, not by a live check,
 so step 3 is checked by hand once: `backup` to a file, `restore` into a
@@ -480,8 +480,7 @@ fresh folder.
   architecture, and ARCHITECTURE.md takes over the whole content of
   CLAUDE.md's sections "Layers of the service" and "Encapsulation and
   replaceable parts", together with what section 8 adds. That is the
-  last step, in a branch of its own, after the refactoring, not part of
-  it.
+  last step of the refactoring.
 
 ## 9. Code written twice
 
@@ -566,25 +565,28 @@ C3.
 The moves of section 8 and the merges of this section touch the same
 files: the SQLite repositories (A5, C1), the providers (8.3, C4, C5,
 C8), the vault (8.2, C7), `delivery.py` and `worker.py` (8.2, B10).
-So they run one after the other, each branch from `main` after the
-previous merge, never side by side:
+So they run one after the other, never side by side. **Decided
+2026-09-28:** one branch for all of it, in this order:
 
-1. **Section 8**, moves only, one branch (8.5). Every later step finds
-   the files where they will stay.
+1. **Section 8**, moves only (8.5). Every later step finds the files
+   where they will stay.
 2. **`common` and the helpers other layers build on** (9.1, and C3 on
-   A6, C10): one branch. It touches `data`, the domain and the web at
-   the call sites, so it goes before the layer branches, which then
-   start from the helpers.
-3. **`data`** (9.3): one branch, bottom up as the lines of 8.3: storage
-   (C1, C2), then `mail` and `protocols` (C4, C9), then the providers
-   (C5, C6, C8, C11), then the vault (C7).
-4. **Domain and web** (9.2): one branch, `rights` first (B6, B8), then
-   the services (B1, B2, B9, B13), `paging` (B4), the loops (B3, B10),
-   then the pages (B5, B7, B12, B14). B11 is a commit of its own with
-   its CHANGELOG entry.
+   A6, C10). It touches `data`, the domain and the web at the call
+   sites, so it goes before the layers, which then start from the
+   helpers. The side finding of A3 is fixed in a commit of its own,
+   with its CHANGELOG entry.
+3. **`data`** (9.3), bottom up as the lines of 8.3: storage (C1, C2),
+   then `mail` and `protocols` (C4, C9), then the providers (C5, C6,
+   C8, C11), then the vault (C7).
+4. **Domain and web** (9.2): `rights` first (B6, B8), then the services
+   (B1, B2, B9, B13), `paging` (B4), the loops (B3, B10), then the
+   pages (B5, B7, B12, B14). B11 is a commit of its own with its
+   CHANGELOG entry. A stored idempotency key or cursor that no longer
+   matches is accepted: at worst a test database starts afresh.
+5. **ARCHITECTURE.md takes over** everything on the architecture from
+   CLAUDE.md (8.6), and CLAUDE.md points to it.
 
-Within a branch, one commit per finding or per row of the tables above.
-Each commit passes all checks. A helper new to `common` or the domain
-gets its test in the same commit. The live checks run once per branch,
-at the end. After step 4, ARCHITECTURE.md takes over CLAUDE.md's
-sections (8.6), the last branch.
+One commit per finding or per row of the tables above. Each commit
+passes all checks. A helper new to `common` or the domain gets its test
+in the same commit. The live checks run once, at the end. A problem
+found on the way is noted, and its step waits until the end.
