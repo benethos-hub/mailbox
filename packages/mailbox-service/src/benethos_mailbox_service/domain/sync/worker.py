@@ -22,8 +22,9 @@ from ...data.models import Account, AccountStatus
 from ...data.providers import Capability
 from ...errors import NotFoundError, NotSupportedError, ProviderAuthError
 from ..accounts import Adapters
-from ..activity import WORKER, Activity, ActivityLog, system
+from ..activity import WORKER, Activity, ActivityLog
 from ..activity import sync as said
+from ..rounds import rounds
 from .service import SyncService
 
 # RFC 2177: IDLE is to be renewed before 29 minutes.
@@ -86,12 +87,13 @@ class SyncWorker:
             said.WorkerStarted(by=WORKER, interval=self._interval, push=self._push)
         )
         async with anyio.create_task_group() as watchers:
-            while True:
-                try:
-                    await self.poll(watchers)
-                except Exception as exc:
-                    self._activity.record(system.RoundFailed(by=WORKER, error=exc))
-                await self._sleep(self._interval)
+            await rounds(
+                lambda: self.poll(watchers),
+                pause=self._interval,
+                sleep=self._sleep,
+                activity=self._activity,
+                by=WORKER,
+            )
 
     async def poll(self, watchers: TaskGroup | None = None) -> None:
         """One round over every account, one after the other."""
