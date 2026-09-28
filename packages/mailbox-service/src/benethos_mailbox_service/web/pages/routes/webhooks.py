@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 from ....data.models import WebhookCreate
 from ....data.models.webhooks import CHANGE_KINDS
-from ....domain.access import Access
+from ....domain.rights import Access
 from ...services import Webhooks, get_accounts
 from ..deps import Actor, Viewer, account_names
 from ..filters import Field, filter_bar

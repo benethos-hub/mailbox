@@ -27,10 +27,10 @@ from ..data.models import (
 from ..data.secrets import CredentialVault
 from ..data.storage import Delivery, WebhookRecord, WebhookRepository
 from ..errors import BadRequestError, NotFoundError
-from .access import Access
 from .activity import ActivityLog, Actor
 from .activity.catalogue import webhooks as said
 from .changes import ChangeFeed
+from .rights import Access
 
 # Every secret starts so, so a person can tell what it is.
 SECRET_PREFIX = "whsec_"

@@ -10,9 +10,9 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
 from ....data.models import AccountStatus, ProviderType
-from ....domain.access import Access
 from ....domain.accounts import AccountService
 from ....domain.discovery import connectable, sign_ins
+from ....domain.rights import Access
 from ....domain.status import StatusService
 from ....errors import MailboxServiceError
 from ...errors import status_of

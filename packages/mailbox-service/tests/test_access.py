@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from benethos_mailbox_service.data.models import Grant, Role, User
-from benethos_mailbox_service.domain.access import Access
+from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import ForbiddenError, NotFoundError
 
 

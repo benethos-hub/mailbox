@@ -34,12 +34,12 @@ from ..data.models import (
 )
 from ..errors import ConflictError, MailboxServiceError, NotFoundError
 from . import merge
-from .access import Access
 from .activity import ActivityLog
 from .adapters import Adapters
 from .calls import Calls, public
 from .idempotency import Idempotency
 from .outgoing import Outgoing
+from .rights import Access
 from .sending import SendControl
 from .sync import SyncService
 

@@ -36,11 +36,11 @@ from ..data.models import (
 )
 from ..errors import BadRequestError, MailboxServiceError
 from . import changes, replies
-from .access import Access
 from .activity import ActivityLog, Actor
 from .activity.catalogue.mailbox import MessageSent, SentBut
 from .calls import Calls
 from .idempotency import Idempotency
+from .rights import Access
 from .sending import Operation, SendControl
 
 M = TypeVar("M", bound=DraftMessage)

@@ -14,8 +14,8 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 
 from ....data.models import FolderCreate, FolderRole, FolderUpdate
-from ....domain.access import Access
 from ....domain.mailbox import MailboxService
+from ....domain.rights import Access
 from ...services import Mailbox
 from ..deps import Actor
 from ..forms import Again, FormError, failing

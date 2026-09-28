@@ -24,10 +24,10 @@ from ..errors import (
     SetupRequiredError,
     UnauthorizedError,
 )
-from .access import Access
 from .activity import ActivityLog, Actor, someone
 from .activity.catalogue import auth as said
 from .passwords import MAX_LENGTH, Passwords
+from .rights import Access
 from .throttle import SignInThrottle
 
 TOKEN_PREFIX = "mbx_"

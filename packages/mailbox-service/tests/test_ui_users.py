@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 from starlette.datastructures import FormData
 
 from benethos_mailbox_service.data.models import Grant
-from benethos_mailbox_service.domain import permissions
-from benethos_mailbox_service.domain.access import Access
+from benethos_mailbox_service.domain.rights import permissions
+from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import MailboxServiceError
 from benethos_mailbox_service.main import Services
 from benethos_mailbox_service.web.pages.effective import ON_AN_ACCOUNT

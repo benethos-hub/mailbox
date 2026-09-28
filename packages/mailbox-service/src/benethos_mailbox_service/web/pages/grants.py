@@ -17,7 +17,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from ...data.models import Account, Grant
-from ...domain import permissions
+from ...domain.rights import permissions
 from .forms import FormError, first_problem
 
 GROUP_NAMES = (permissions.ADMIN, *permissions.GROUPS)

@@ -21,8 +21,8 @@ from datetime import datetime, timedelta
 from fastapi import Request
 
 from ...common.clock import utc_now
-from ...domain.access import Access
 from ...domain.auth import SignedIn
+from ...domain.rights import Access
 from ...errors import MailboxServiceError
 from ..services import get_auth
 from ..urls import client_address

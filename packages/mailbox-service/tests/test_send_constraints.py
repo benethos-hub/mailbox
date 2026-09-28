@@ -20,7 +20,7 @@ from benethos_mailbox_service.data.storage import (
     InMemorySendLogRepository,
     SqliteSendLogRepository,
 )
-from benethos_mailbox_service.domain.access import (
+from benethos_mailbox_service.domain.rights.access import (
     Access,
     SendLimit,
     pattern_covers,

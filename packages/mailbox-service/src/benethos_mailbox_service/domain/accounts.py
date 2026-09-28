@@ -24,11 +24,11 @@ from ..data.storage import (
     IdempotencyRepository,
 )
 from ..errors import BadRequestError, MailboxServiceError
-from .access import Access
 from .activity import ActivityLog, Actor
 from .activity.catalogue import accounts as said
 from .adapters import REFRESH_TOKEN, Adapters
 from .changes import ChangeFeed
+from .rights import Access
 from .sync import SyncService
 
 

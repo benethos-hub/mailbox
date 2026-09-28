@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from urllib.parse import urlencode
 
 from ...data.models import Account
-from ...domain.access import Access
+from ...domain.rights import Access
 
 # A breadcrumb: (label, link) pairs, the last one the page itself.
 Trail = list[tuple[str, str | None]]

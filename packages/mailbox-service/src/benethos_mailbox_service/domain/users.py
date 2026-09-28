@@ -20,12 +20,11 @@ from ..data.storage import (
     WebhookRepository,
 )
 from ..errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
-from . import permissions
-from .access import Access, SendLimit
 from .activity import HOST, ActivityLog, Actor
 from .activity.catalogue import users as said
 from .adapters import Adapters
 from .auth import MAX_NAME, AuthService, TokenState
+from .rights import Access, SendLimit, permissions
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18

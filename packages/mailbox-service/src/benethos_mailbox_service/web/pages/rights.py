@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ...domain.access import Access
+from ...domain.rights import Access
 
 
 def mail_rights(caller: Access, account_id: str) -> dict[str, bool]:

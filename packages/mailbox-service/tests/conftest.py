@@ -36,10 +36,10 @@ from benethos_mailbox_service.data.secrets import (
     encode_recovery,
     redact,
 )
-from benethos_mailbox_service.domain import permissions
-from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.domain.accounts import AccountService
 from benethos_mailbox_service.domain.auth import AuthService
+from benethos_mailbox_service.domain.rights import permissions
+from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.main import Services, build_services, create_app
 
 PUBLIC = "93.184.215.14"  # what every host resolves to, without DNS

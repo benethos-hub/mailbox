@@ -49,9 +49,9 @@ from ..data.models import (
 )
 from ..data.providers import ServerProbe, settings_from_servers
 from ..errors import BadRequestError, MailboxServiceError, RateLimitedError
-from .access import Access
 from .activity import ActivityLog, Actor
 from .activity.catalogue.discovery import Discovered, DiscoveryLimitReached
+from .rights import Access
 
 Clock = Callable[[], float]
 

@@ -23,7 +23,6 @@ from benethos_mailbox_service.data.models import (
     SentMessage,
     User,
 )
-from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.domain.activity import (
     WORKER,
     Activity,
@@ -33,6 +32,7 @@ from benethos_mailbox_service.domain.activity import (
     catalogue,
 )
 from benethos_mailbox_service.domain.activity.catalogue import users as said
+from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import StorageError
 from benethos_mailbox_service.main import Services, _loop
 

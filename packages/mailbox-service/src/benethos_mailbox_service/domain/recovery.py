@@ -9,10 +9,10 @@ log says that it was shown, and to whom.
 from __future__ import annotations
 
 from ..data.secrets import CredentialVault, encode_recovery
-from .access import Access
 from .activity import Actor
 from .activity.catalogue.service import RecoveryKeyShown
 from .auth import AuthService
+from .rights import Access
 
 
 class RecoveryKey:

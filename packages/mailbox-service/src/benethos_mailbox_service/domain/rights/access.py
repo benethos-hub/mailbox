@@ -11,8 +11,8 @@ import logging
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 
-from ..data.models import Grant, Role, User
-from ..errors import ForbiddenError, NotFoundError
+from ...data.models import Grant, Role, User
+from ...errors import ForbiddenError, NotFoundError
 from . import permissions
 
 log = logging.getLogger(__name__)

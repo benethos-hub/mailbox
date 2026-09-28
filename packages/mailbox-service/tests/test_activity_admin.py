@@ -13,7 +13,7 @@ from pydantic import SecretStr
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
-from benethos_mailbox_service.domain.access import Access
+from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ProviderAuthError,

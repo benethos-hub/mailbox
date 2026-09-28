@@ -15,7 +15,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ...data.models import MessageFilter
 from ...data.models.messages import SEARCH_TEXT_PATTERN
-from ...domain.access import Access
+from ...domain.rights import Access
 from ..services import Accounts, Auth, Discoverer, Mailbox, Users, Webhooks
 from ..urls import client_address
 

@@ -26,7 +26,6 @@ from ..errors import (
     SendLimitError,
 )
 from . import paging
-from .access import Access
 from .activity import ActivityLog, Actor
 from .activity.catalogue.mailbox import (
     NotInAudit,
@@ -35,6 +34,7 @@ from .activity.catalogue.mailbox import (
     SendRefused,
 )
 from .locks import KeyedLocks
+from .rights import Access
 
 WINDOW = timedelta(hours=24)
 CURSOR = "s_"

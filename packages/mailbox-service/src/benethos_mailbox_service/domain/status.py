@@ -12,8 +12,8 @@ from dataclasses import dataclass
 
 from ..data.models import Account, AccountStatus, Webhook
 from ..errors import ForbiddenError
-from .access import Access
 from .accounts import AccountService
+from .rights import Access
 from .sync import SyncService, SyncState
 from .webhooks import WebhookService
 from .worker import SyncWorker, WorkerState

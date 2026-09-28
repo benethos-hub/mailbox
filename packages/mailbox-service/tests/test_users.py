@@ -4,8 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import Grant, ProviderType
-from benethos_mailbox_service.domain import permissions
-from benethos_mailbox_service.domain.access import Access
+from benethos_mailbox_service.domain.rights import permissions
+from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.main import Services
 
 from .conftest import bearer_for, create_account

@@ -14,7 +14,7 @@ from typing import ClassVar
 
 from ...data.models import Account, User
 from ...errors import MailboxServiceError
-from ..access import Access
+from ..rights import Access
 
 
 @dataclass(frozen=True)

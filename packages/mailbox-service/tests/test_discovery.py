@@ -28,8 +28,8 @@ from benethos_mailbox_service.data.models import (
     ServerProtocol,
 )
 from benethos_mailbox_service.domain import discovery as discovery_module
-from benethos_mailbox_service.domain.access import Access
 from benethos_mailbox_service.domain.discovery import DiscoveryService
+from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ForbiddenError,

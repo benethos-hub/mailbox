@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 
 from ....data.models import SendFilter
-from ....domain.access import Access
+from ....domain.rights import Access
 from ...services import Accounts, Mailbox, get_users
 from ..deps import Viewer, emails_of
 from ..filters import Field, FilterBar, filter_bar

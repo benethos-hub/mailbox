@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 
 from ...data.models import Account
-from ...domain.access import Access
+from ...domain.rights import Access
 from ..services import get_accounts
 from .session import CSRF_FIELD, CSRF_HEADER, csrf_ok, current
 

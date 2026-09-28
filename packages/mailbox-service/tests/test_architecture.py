@@ -261,7 +261,7 @@ def test_the_data_layer_logs_nothing_above_debug() -> None:
 
 # The one line of the domain outside the activities: ``domain/activity``
 # imports ``access``, so ``access`` cannot record.
-PLAIN_LINES = {f"{PACKAGE}.domain.access"}
+PLAIN_LINES = {f"{PACKAGE}.domain.rights.access"}
 
 
 def test_the_domain_logs_through_activities() -> None:

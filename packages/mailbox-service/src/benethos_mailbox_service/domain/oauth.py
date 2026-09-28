@@ -29,11 +29,11 @@ from ..common.clock import utc_now
 from ..data.models import Account, ProviderType
 from ..data.providers import OAuthClient, authorize_url, new_pkce
 from ..errors import BadRequestError, MailboxServiceError, NotSupportedError
-from .access import Access
 from .accounts import AccountService
 from .activity import ActivityLog, Actor
 from .activity.catalogue import accounts as said
 from .adapters import REFRESH_TOKEN, Adapters
+from .rights import Access
 
 VALID_FOR = timedelta(minutes=10)
 # Sign-ins a user may have open at once. Older ones are dropped.
