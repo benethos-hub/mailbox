@@ -33,7 +33,7 @@ from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import ChangesExpiredError, MailboxServiceError, MessageNotFoundError
 from ..accounts import Adapters
 from ..activity import SERVICE, ActivityLog
-from ..activity.catalogue.sync import Synced
+from ..activity import sync as said
 from ..changes import (
     ChangeFeed,
     MailboxChange,
@@ -239,7 +239,7 @@ class SyncService:
                 raise
             self._states[account_id] = SyncState(last_sync_at=self._clock())
         self._activity.record(
-            Synced(
+            said.Synced(
                 by=SERVICE,
                 account=self._adapters.record(account_id),
                 folders=counts.folders,

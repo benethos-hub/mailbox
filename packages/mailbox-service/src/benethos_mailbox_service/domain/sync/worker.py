@@ -20,9 +20,8 @@ from ...data.models import Account, AccountStatus
 from ...data.providers import Capability, backoff
 from ...errors import NotFoundError, NotSupportedError, ProviderAuthError
 from ..accounts import Adapters
-from ..activity import WORKER, ActivityLog
-from ..activity.catalogue import sync as said
-from ..activity.catalogue import system
+from ..activity import WORKER, ActivityLog, system
+from ..activity import sync as said
 from .service import SyncService
 
 # RFC 2177: IDLE is to be renewed before 29 minutes.

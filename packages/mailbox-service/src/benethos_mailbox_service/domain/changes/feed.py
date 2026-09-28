@@ -21,7 +21,7 @@ from ...data.models import FEED_KINDS, Change, ChangePage, ChangeRecord
 from ...data.storage import ChangeLogRepository, LoggedChange
 from ...errors import BadRequestError, ChangesExpiredError
 from ..activity import SERVICE, ActivityLog
-from ..activity.catalogue.changes import ChangesPurged
+from ..activity import changes as said
 from .catalogue import MailboxChange
 
 STATE = "chs_"
@@ -111,7 +111,7 @@ class ChangeFeed:
         self._purged_at = now
         if purged:
             self._activity.record(
-                ChangesPurged(by=SERVICE, count=purged, before=before)
+                said.ChangesPurged(by=SERVICE, count=purged, before=before)
             )
 
     def forget_account(self, account_id: str) -> None:

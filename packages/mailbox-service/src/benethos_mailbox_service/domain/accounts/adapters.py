@@ -31,7 +31,7 @@ from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository
 from ...errors import ProviderAuthError, ProviderUnavailableError
 from ..activity import SERVICE, Activity, ActivityLog
-from ..activity.catalogue import accounts as said
+from ..activity import accounts as said
 from ..changes import AccountNeedsSignIn, ChangeFeed
 
 T = TypeVar("T")

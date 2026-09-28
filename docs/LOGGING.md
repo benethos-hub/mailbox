@@ -345,7 +345,8 @@ the word stays free for an event-driven design later (section 7.1).
 ```
 domain/
   activity/
-    __init__.py      ActivityLog and Activity: what the domain services use
+    __init__.py      ActivityLog and Activity, and the module of each
+                       area: what the domain services use
     base.py          Activity: who, from where, when, level, audited, line()
     recorder.py      ActivityLog.record(activity): the log line, and the
                        audit record of AUDIT.md for one marked audited

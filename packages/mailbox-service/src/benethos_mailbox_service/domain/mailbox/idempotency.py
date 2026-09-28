@@ -23,7 +23,7 @@ from ...common.clock import utc_now
 from ...data.storage import IdempotencyRepository, StoredResult
 from ...errors import IdempotencyConflictError
 from ..activity import SERVICE, ActivityLog
-from ..activity.catalogue.mailbox import Replayed, ResultNotKept
+from ..activity import mailbox as said
 from ..locks import KeyedLocks
 
 R = TypeVar("R", bound=BaseModel)
@@ -69,7 +69,9 @@ class Idempotency:
                         "this Idempotency-Key was used with a different request"
                     )
                 self._activity.record(
-                    Replayed(by=SERVICE, account_id=account_id, operation=operation)
+                    said.Replayed(
+                        by=SERVICE, account_id=account_id, operation=operation
+                    )
                 )
                 return result_type.model_validate_json(stored.result)
             result = await action()
@@ -84,7 +86,7 @@ class Idempotency:
                 )
             except Exception as exc:
                 self._activity.record(
-                    ResultNotKept(
+                    said.ResultNotKept(
                         by=SERVICE,
                         account_id=account_id,
                         operation=operation,

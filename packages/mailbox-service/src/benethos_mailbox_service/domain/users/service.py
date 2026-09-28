@@ -22,7 +22,7 @@ from ...data.storage import (
 from ...errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from ..accounts import Adapters
 from ..activity import HOST, ActivityLog, Actor
-from ..activity.catalogue import users as said
+from ..activity import users as said
 from ..auth import MAX_NAME, AuthService, TokenState
 from ..rights import Access, SendLimit, permissions
 

@@ -194,8 +194,7 @@ def _keys(command: str, env_file: Path | None) -> None:
 
         print(encode_recovery(cipher.new_key()))
         return
-    from .domain.activity import HOST
-    from .domain.activity.catalogue import system
+    from .domain.activity import HOST, system
     from .main import opened
 
     with opened(_stored(load_settings(env_file), "keys")) as services:
@@ -217,8 +216,7 @@ def _keys(command: str, env_file: Path | None) -> None:
 
 def _backup(target: list[str], recovery_key: bool, env_file: Path | None) -> None:
     from .data.secrets.backup import create_backup, read_backup
-    from .domain.activity import HOST
-    from .domain.activity.catalogue import system
+    from .domain.activity import HOST, system
     from .main import opened
 
     if target[0] == "verify":
@@ -263,8 +261,7 @@ def _restore(
     source: Path, recovery_key: bool, replace_master_key: bool, env_file: Path | None
 ) -> None:
     from .data.secrets.backup import restore_backup
-    from .domain.activity import HOST, ActivityLog
-    from .domain.activity.catalogue import system
+    from .domain.activity import HOST, ActivityLog, system
     from .main import key_provider, opened
 
     if replace_master_key and not recovery_key:

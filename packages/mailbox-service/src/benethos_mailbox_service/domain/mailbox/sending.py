@@ -27,12 +27,7 @@ from ...errors import (
 )
 from .. import paging
 from ..activity import ActivityLog, Actor
-from ..activity.catalogue.mailbox import (
-    NotInAudit,
-    SendFailed,
-    SendLimitReached,
-    SendRefused,
-)
+from ..activity import mailbox as said
 from ..locks import KeyedLocks
 from ..rights import Access
 
@@ -92,7 +87,7 @@ class SendControl:
             except SendLimitError as exc:
                 record("denied", error=exc.code)
                 self._activity.record(
-                    SendLimitReached(
+                    said.SendLimitReached(
                         by=by,
                         account_id=account_id,
                         reason=exc.message,
@@ -103,7 +98,7 @@ class SendControl:
             except MailboxServiceError as exc:
                 record("denied", error=exc.code)
                 self._activity.record(
-                    SendRefused(by=by, account_id=account_id, code=exc.code)
+                    said.SendRefused(by=by, account_id=account_id, code=exc.code)
                 )
                 raise
             try:
@@ -111,7 +106,7 @@ class SendControl:
             except MailboxServiceError as exc:
                 record("failed", error=exc.code)
                 self._activity.record(
-                    SendFailed(by=by, account_id=account_id, code=exc.code)
+                    said.SendFailed(by=by, account_id=account_id, code=exc.code)
                 )
                 raise
             except Exception:
@@ -124,7 +119,9 @@ class SendControl:
                 )
             except Exception as exc:
                 self._activity.record(
-                    NotInAudit(by=Actor.of(access), account_id=account_id, error=exc)
+                    said.NotInAudit(
+                        by=Actor.of(access), account_id=account_id, error=exc
+                    )
                 )
             return sent
 

@@ -37,7 +37,7 @@ from ...data.models import (
 from ...errors import BadRequestError, MailboxServiceError
 from .. import changes
 from ..activity import ActivityLog, Actor
-from ..activity.catalogue.mailbox import MessageSent, SentBut
+from ..activity import mailbox as said
 from ..rights import Access
 from . import replies
 from .calls import Calls
@@ -130,7 +130,7 @@ class Outgoing:
         )
         result = await self._send_result(access, account, message_id, sent)
         self._activity.record(
-            MessageSent(
+            said.MessageSent(
                 by=Actor.of(access),
                 account=account,
                 recipients=len(recipients),
@@ -148,7 +148,7 @@ class Outgoing:
         account_id = account.id
         if sent.copy_error is not None:
             self._activity.record(
-                SentBut(
+                said.SentBut(
                     by=Actor.of(access),
                     account=account,
                     what="no copy is in the sent folder",
@@ -404,7 +404,7 @@ class Outgoing:
             yield
         except Exception as exc:
             self._activity.record(
-                SentBut(by=Actor.of(access), account=account, what=what, error=exc)
+                said.SentBut(by=Actor.of(access), account=account, what=what, error=exc)
             )
 
     async def delete_draft(

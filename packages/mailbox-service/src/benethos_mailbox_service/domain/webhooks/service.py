@@ -28,7 +28,7 @@ from ...data.secrets import CredentialVault
 from ...data.storage import Delivery, WebhookRecord, WebhookRepository
 from ...errors import BadRequestError, NotFoundError
 from ..activity import ActivityLog, Actor
-from ..activity.catalogue import webhooks as said
+from ..activity import webhooks as said
 from ..changes import ChangeFeed
 from ..rights import Access
 

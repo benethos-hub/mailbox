@@ -30,7 +30,7 @@ from ...data.models import Account, ProviderType
 from ...data.providers import OAuthClient, authorize_url, new_pkce
 from ...errors import BadRequestError, MailboxServiceError, NotSupportedError
 from ..activity import ActivityLog, Actor
-from ..activity.catalogue import accounts as said
+from ..activity import accounts as said
 from ..rights import Access
 from .adapters import REFRESH_TOKEN, Adapters
 from .service import AccountService

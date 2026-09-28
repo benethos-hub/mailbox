@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from ...data.secrets import CredentialVault, encode_recovery
 from ..activity import Actor
-from ..activity.catalogue.system import RecoveryKeyShown
+from ..activity import system as said
 from ..auth import AuthService
 from ..rights import Access
 
@@ -24,5 +24,5 @@ class RecoveryKey:
         access.require("show_recovery_key")
         await self._auth.confirm(access, password)
         recovery = encode_recovery(self._vault.master_key())
-        self._auth.activity.record(RecoveryKeyShown(by=Actor.of(access)))
+        self._auth.activity.record(said.RecoveryKeyShown(by=Actor.of(access)))
         return recovery

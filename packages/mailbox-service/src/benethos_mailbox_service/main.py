@@ -59,7 +59,7 @@ from .data.storage import (
 )
 from .domain.accounts import AccountService, Adapters, OAuthService
 from .domain.activity import DISPATCHER, SERVICE, WORKER, ActivityLog, Actor
-from .domain.activity.catalogue import system as said
+from .domain.activity import system as said
 from .domain.auth import AuthService, Passwords
 from .domain.changes import ChangeFeed
 from .domain.discovery import DiscoveryService

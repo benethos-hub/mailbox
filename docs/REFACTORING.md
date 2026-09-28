@@ -214,9 +214,12 @@ it does today.
   The module docstrings say the rest.
 - **`test_architecture.py`** gets the rules of section 2: imports
   between packages through `__init__.py`, of names in its `__all__`, no
-  cycle between packages. The catalogue of the activities is the one
-  exception: each package imports its area,
-  `activity.catalogue.<area>`, as a module.
+  cycle between packages. Without an exception: `activity` offers the
+  module of each area of its catalogue in its `__init__.py`, and a
+  package imports its area through it, `from ..activity import mailbox
+  as said`, then records `said.MessageSent(...)`. So the activity and
+  the change of a sent mail read apart, `said.MessageSent` and
+  `changes.MessageSent`.
 - **The web layer and `main.py`** import through the packages'
   `__init__.py` as the packages do: `from ..domain.accounts import
   AccountService`. So a package exports what the assembly wires as

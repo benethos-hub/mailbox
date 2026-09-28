@@ -261,8 +261,9 @@ Three layers, imports only point down: `web/` → `domain/` → `data/`.
 - **The domain is in packages by area** (docs/REFACTORING.md). Another
   package, the web layer and the assembly import a package through its
   `__init__.py`, from the names in its `__all__`, never a module inside
-  it. The one exception is `activity.catalogue`, imported by area. No
-  cycle between packages: what two packages both need goes to the one
+  it. The activities too: `activity` offers the module of each area,
+  `from ..activity import mailbox as said`, then `said.MessageSent(...)`.
+  No cycle between packages: what two packages both need goes to the one
   below, or is handed in where the services are wired, as
   `AccountService` gets `on_delete`.
 - **The domain logs activities.** A line at `INFO` or above is an

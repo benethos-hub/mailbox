@@ -22,7 +22,7 @@ from ...data.secrets import CredentialVault, redact
 from ...data.storage import AccountRepository, IdempotencyRepository
 from ...errors import BadRequestError, MailboxServiceError
 from ..activity import ActivityLog, Actor
-from ..activity.catalogue import accounts as said
+from ..activity import accounts as said
 from ..changes import ChangeFeed
 from ..rights import Access
 from .adapters import REFRESH_TOKEN, Adapters

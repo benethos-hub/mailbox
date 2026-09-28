@@ -25,7 +25,7 @@ from ...errors import (
     UnauthorizedError,
 )
 from ..activity import ActivityLog, Actor, someone
-from ..activity.catalogue import auth as said
+from ..activity import auth as said
 from ..rights import Access
 from .passwords import MAX_LENGTH, Passwords
 from .throttle import SignInThrottle

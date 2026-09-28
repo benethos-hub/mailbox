@@ -50,7 +50,7 @@ from ...data.models import (
 from ...data.providers import ServerProbe, settings_from_servers
 from ...errors import BadRequestError, MailboxServiceError, RateLimitedError
 from ..activity import ActivityLog, Actor
-from ..activity.catalogue.discovery import Discovered, DiscoveryLimitReached
+from ..activity import discovery as said
 from ..rights import Access
 
 Clock = Callable[[], float]
@@ -132,7 +132,7 @@ class DiscoveryService:
         )
         domain = query.domain.encode("ascii").decode("idna")
         self._activity.record(
-            Discovered(
+            said.Discovered(
                 by=Actor.of(access),
                 domain=domain,
                 candidates=len(candidates),
@@ -197,7 +197,9 @@ class DiscoveryService:
                 # Once per window, not for every refused call.
                 self._told[user_id] = calls[0]
                 self._activity.record(
-                    DiscoveryLimitReached(by=Actor.of(access), limit=self._per_user)
+                    said.DiscoveryLimitReached(
+                        by=Actor.of(access), limit=self._per_user
+                    )
                 )
             raise RateLimitedError(
                 f"too many discoveries, try again in {wait} seconds", wait

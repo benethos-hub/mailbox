@@ -291,9 +291,6 @@ def test_the_domain_logs_through_activities() -> None:
 # --- the packages of the domain (docs/REFACTORING.md section 2) -------------------
 
 DOMAIN = f"{PACKAGE}.domain"
-# Offered to the others beside a package's __init__: the activities, which
-# each package imports by its area, one module each.
-PUBLIC_MODULES = {f"{DOMAIN}.activity.catalogue"}
 
 
 def _domain_part(module: str) -> str | None:
@@ -308,10 +305,6 @@ def _is_package(part: str) -> bool:
     return (ROOT / "domain" / part / "__init__.py").exists()
 
 
-def _public(module: str) -> bool:
-    return any(module == p or module.startswith(p + ".") for p in PUBLIC_MODULES)
-
-
 def test_a_package_of_the_domain_is_imported_through_its_init() -> None:
     """So a package can split or merge its modules without its callers
     noticing: the other packages, the web layer and the assembly."""
@@ -323,7 +316,6 @@ def test_a_package_of_the_domain_is_imported_through_its_init() -> None:
         and other != _domain_part(name)
         and _is_package(other)
         and imported != f"{DOMAIN}.{other}"
-        and not _public(imported)
     ]
     assert not violations, "a module inside a package:\n  " + "\n  ".join(violations)
 

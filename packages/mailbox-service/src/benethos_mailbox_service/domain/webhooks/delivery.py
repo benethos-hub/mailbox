@@ -31,9 +31,8 @@ from ...common.ids import new_id
 from ...data.secrets import CredentialVault
 from ...data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
 from ...errors import MailboxServiceError
-from ..activity import DISPATCHER, ActivityLog
-from ..activity.catalogue import system
-from ..activity.catalogue import webhooks as said
+from ..activity import DISPATCHER, ActivityLog, system
+from ..activity import webhooks as said
 from ..changes import ChangeFeed
 from ..rights import Access
 from .service import sealed_label
