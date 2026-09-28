@@ -49,7 +49,7 @@ decides is marked as decided, everything else is the proposal.
 
 ## 3. The catalogue
 
-The groups as `domain/permissions.py` holds them today:
+The groups as `domain/rights/permissions.py` holds them today:
 
 | Group | Rights | Bound to |
 |---|---|---|

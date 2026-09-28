@@ -11,8 +11,8 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 
 from ....data.models import WebhookCreate
-from ....data.models.webhooks import EVENT_TYPES
-from ....domain.access import Access
+from ....data.models.webhooks import CHANGE_KINDS
+from ....domain.rights import Access
 from ...services import Webhooks, get_accounts
 from ..deps import Actor, Viewer, account_names
 from ..filters import Field, filter_bar
@@ -83,7 +83,7 @@ def _new_webhook_page(
             if form is not None
             else None
         ),
-        events=EVENT_TYPES,
+        events=CHANGE_KINDS,
         accounts=_readable(request, caller),
     )
 

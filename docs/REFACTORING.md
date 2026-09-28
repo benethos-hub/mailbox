@@ -7,6 +7,9 @@ activities. Nothing changes in behaviour: modules move, names get
 clearer, the API and the OpenAPI document stay as they are. What the
 user decides is marked as decided, everything else is the proposal.
 
+**Built 2026-09-28**, steps 2 to 5 of section 6. Sections 1 and 3.1
+describe the domain before.
+
 ## 1. Why
 
 - **Flat.** `domain/` holds 27 modules beside its `__init__.py`, from 17
@@ -124,7 +127,7 @@ model in `data/models`, and `domain/changes.py` imports it today.
 | `changes/` | `changes.py` | the change feed (section 3) |
 | `webhooks/` | `webhooks.py`, `delivery.py` | webhooks and their posts |
 | `activity/` | built, LOGGING.md steps 2 to 5 | the activities of LOGGING.md section 7. The areas of its catalogue are the packages of this table, and a move keeps every activity's name (LOGGING.md 7.2) |
-| `service/` | `status.py`, `recovery.py`, `servicelog.py` | the service at a glance: status, recovery key, log page |
+| `system/` | `status.py`, `recovery.py`, `servicelog.py` | the service at a glance: status, recovery key, log page |
 | (top level) | `locks.py`, `paging.py` | helpers several packages share |
 
 ```
@@ -142,7 +145,7 @@ domain/
   changes/      feed.py, catalogue.py
   webhooks/     service.py, delivery.py
   activity/     base.py, recorder.py, catalogue/
-  service/      status.py, recovery.py, servicelog.py
+  system/       status.py, recovery.py, servicelog.py
 ```
 
 **Decided 2026-09-28:** the package is `mailbox`, after its facade
@@ -159,23 +162,37 @@ builds on the calls of `calls.py`. Two packages would import each other.
 
 ### 4.1 The direction between packages
 
-What each package imports, from the modules' imports today:
+What each package imports, besides `activity` and the helpers
+`locks.py` and `paging.py`:
 
 | Package | Imports |
 |---|---|
 | `rights` | nothing |
-| `changes` | nothing |
 | `activity` | `rights` |
+| `changes` | nothing but `activity` |
 | `auth` | `rights` |
 | `discovery` | `rights` |
-| `accounts` | `rights`, `changes`, and `sync` today (below) |
+| `accounts` | `rights`, `changes` |
 | `users` | `rights`, `auth`, `accounts` |
 | `sync` | `accounts` (the adapters), `changes` |
-| `mailbox` | `rights`, `accounts`, `sync`, and `changes` after section 3 (the classes at the call sites) |
-| `webhooks` | `rights`, `changes`, and `sync` today for `Sleep` (below) |
-| `service` | `rights`, `auth`, `accounts`, `sync`, `webhooks` |
+| `mailbox` | `rights`, `accounts`, `sync`, `changes` (the classes at the call sites) |
+| `webhooks` | `rights`, `changes` |
+| `system` | `rights`, `auth`, `accounts`, `sync`, `webhooks` |
 
-`activity` will be imported by every package that records. `rights`
+So the packages stand in lines, each importing only lines below
+([CONCEPT.md](CONCEPT.md) 1.1):
+
+```
+ system
+ mailbox · users · webhooks
+ sync
+ accounts
+ auth · discovery · changes
+ activity
+ rights
+```
+
+`activity` is imported by every package that records. `rights`
 records none, since `activity` imports it: its one warning, a stored
 grant that names unknown rights, stays a plain log line.
 
@@ -196,7 +213,13 @@ it does today.
 - **CLAUDE.md** lists the packages with one line each, not every module.
   The module docstrings say the rest.
 - **`test_architecture.py`** gets the rules of section 2: imports
-  between packages through `__init__.py`, no cycle between packages.
+  between packages through `__init__.py`, of names in its `__all__`, no
+  cycle between packages. Without an exception: `activity` offers the
+  module of each area of its catalogue in its `__init__.py`, and a
+  package imports its area through it, `from ..activity import mailbox
+  as said`, then records `said.MessageSent(...)`. So the activity and
+  the change of a sent mail read apart, `said.MessageSent` and
+  `changes.MessageSent`.
 - **The web layer and `main.py`** import through the packages'
   `__init__.py` as the packages do: `from ..domain.accounts import
   AccountService`. So a package exports what the assembly wires as
@@ -204,34 +227,43 @@ it does today.
   stays the one place that names the services. Routes and pages import
   `Access` and the types they use the same way, in a dozen places
   today.
-- **The tests** stay where they are and may import a module inside a
-  package, since they test that module. Their folder is flat as well,
-  70 modules. Mirroring the packages there is a step of its own, if
-  wanted.
+- **The tests** may import a module inside a package, since they test
+  that module. They are in folders like the source since the move
+  (section 7): `tests/domain/<package>/`, `tests/data/`, `tests/web/`,
+  and `tests/integration/` for a test of several layers at once.
 
 ## 6. Order of work
 
 1. This file, one pull request of documentation.
 2. The change feed of section 3: the catalogue, the classes at each call
    site, `ChangeRecord`, `ChangeKind` and `FeedKind` in the data layer.
-   Small, and it shows the shape before the move.
+   Small, and it shows the shape before the move. The package
+   `changes/` comes with it, as the catalogue needs a home.
 3. The packages of section 4, one commit per package, the leaves first:
    `rights`, `changes`, `auth`, `discovery`, then `accounts` with the
-   cycle removed, `users`, `sync`, `mailbox`, `webhooks`, `service`.
+   cycle removed, `users`, `sync`, `mailbox`, `webhooks`, `system`.
 4. The architecture tests of section 5 and CLAUDE.md.
-5. `activity/` is built already, in its place. A move of the other
+5. The tests in folders like the packages (section 7), moved, not
+   changed.
+6. `activity/` is built already, in its place. A move of the other
    packages leaves the areas and names of the activities as they are.
 
-Steps 2 to 4 are one branch, one commit per step. Each commit passes all
-checks. The live checks run once at the end, since nothing they see
-changes.
+Steps 2 to 5 are one branch, one commit per step, and in step 3 one
+commit per package. Each commit passes all checks. The live checks run
+once at the end, since nothing they see changes.
 
-## 7. Open questions
+## 7. Questions answered
 
-- `service/` is a package while `service.py` is the module of most
-  packages. Does the package of status, recovery key and log page need
-  another name?
-- Should the tests mirror the packages, now or later?
-- Should `data/` get the same look? It is already in folders by kind
-  (`models`, `mail`, `providers`, `storage`, `secrets`, `http`), which
-  is why this file leaves it alone.
+**Decided 2026-09-28:**
+
+- **The package of status, recovery key and log page is `system/`.**
+  `service/` would stand beside the `service.py` of most packages. The
+  activities it records follow it, from `activity.service.*` to
+  `activity.system.*` (LOGGING.md 7.2). No release has the old names.
+  An area has at most seven letters, so that the longest name,
+  `activity.system.backup_restored`, fits the source column of 32.
+- **The tests mirror the packages,** in the same branch, after the
+  domain has moved (step 5 of section 6). They move and change their
+  imports, nothing else.
+- **`data/` gets a similar look,** from a concept of its own and in a
+  branch of its own, not in this one.

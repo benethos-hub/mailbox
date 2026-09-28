@@ -11,7 +11,7 @@ from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ..domain.activity import ActivityLog, someone
-from ..domain.activity.catalogue.http import BodyTooLarge
+from ..domain.activity import http as said
 
 # The largest mail the service sends carries 25 MB of attachments, which
 # base64 in a JSON body makes about 34 MB.
@@ -51,7 +51,7 @@ class BodyLimit:
         """The refusal, logged here: the domain never sees the request."""
         client = scope.get("client")
         self._activity(scope).record(
-            BodyTooLarge(
+            said.BodyTooLarge(
                 by=someone(client[0] if client else None),
                 path=scope.get("path", ""),
                 limit=self._limit,

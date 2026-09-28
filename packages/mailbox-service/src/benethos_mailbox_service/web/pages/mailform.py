@@ -28,7 +28,7 @@ from ...data.models import (
     Recipient,
     SendResult,
 )
-from ...domain.access import Access
+from ...domain.rights import Access
 from ...errors import MailboxServiceError
 from ..errors import status_of
 from ..services import get_mailbox

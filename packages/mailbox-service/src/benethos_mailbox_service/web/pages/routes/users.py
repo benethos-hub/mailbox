@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, Response
 
 from ....common.clock import utc_now
 from ....data.models import Grant, Role
-from ....domain.access import Access
+from ....domain.rights import Access
 from ....domain.users import UserService
 from ...services import Users, get_accounts, get_users
 from ..deps import Actor, Viewer, account_names

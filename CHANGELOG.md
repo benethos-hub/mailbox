@@ -114,6 +114,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   name slowed down, the discovery and the send limit, a request body too
   large. At `DEBUG` each sync pass with its counts, IDLE renewed, a token
   refreshed, a discovery by its domain, an Idempotency-Key replayed.
+- A technical line of the service names its module in the package it
+  moved to, such as `domain.sync.worker` for `domain.worker`.
 - The MCP server logs at start which tools it serves, over which
   transport, for which service, and a warning for each tool that fails,
   with the tool's name and the service's error code, never its

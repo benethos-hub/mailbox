@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, status
 
 from ....data.models import Role, User
-from ....domain import permissions
+from ....domain.rights import permissions
 from ..deps import Caller, Users
 from ..schemas import (
     Me,

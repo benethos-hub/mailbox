@@ -151,38 +151,34 @@ packages/
           templates/      # base, partials, components (macros), pages
           static/         # app.css, app.js, vendored htmx
       domain/             # BUSINESS LOGIC: decides, knows no HTTP
-        accounts.py       # AccountService: accounts under the caller's rights
-        adapters.py       # Adapters: the live adapter per account, calls through it
-        oauth.py          # OAuthService: connect or sign in again by OAuth
-        mailbox.py        # MailboxService: folders and messages, the facade
-        calls.py          # provider calls under our stable ids, many at once
-        outgoing.py       # sending and drafts, as MailboxService.outgoing
-        merge.py          # lists across accounts: merge order, cursor
-        replies.py        # replies and forwards made from the original
-        discovery.py      # DiscoveryService: trust, ranking, cache, limits
-        sync.py           # SyncService: stable message ids, the sync pass
-        changes.py        # ChangeFeed: records created, updated, deleted
-        worker.py         # SyncWorker: polling and IDLE in the background
-        status.py         # StatusService: accounts, sync and webhooks at a glance
-        recovery.py       # RecoveryKey: the master key shown once, to admin
-        servicelog.py     # ServiceLog: the newest log lines, to admin
-        idempotency.py    # Idempotency-Key: a retried send returns its result
-        locks.py          # KeyedLocks: one asyncio lock per key, for the services
-        sending.py        # SendControl: grant constraints on sending, send audit
-        permissions.py    # the catalogue of rights and groups
-        access.py         # Access: what one caller may do
-        auth.py           # AuthService: tokens, sign-in with a password
-        passwords.py      # Passwords: the rules, hashing off the event loop
-        throttle.py       # SignInThrottle: a source that fails too often waits
-        users.py          # UserService: users, roles, tokens
-        webhooks.py       # WebhookService: register, list, remove
-        delivery.py       # WebhookDispatcher: signed posts, retries
-        activity/         # what was done, and by whom: the service log
-          base.py         #   Activity, Actor (who, from where), Failure
-          recorder.py     #   ActivityLog.record: the line of an activity
-          catalogue/      #   one module per area, docs/LOGGING.md 7.2:
-                          #     activity.<area>.<name>, the areas the
-                          #     packages of docs/REFACTORING.md
+                          # one package per area (docs/REFACTORING.md),
+                          #   the service of a package in service.py
+        rights/           # who may do what: permissions (the catalogue of
+                          #   rights and groups), Access (one caller)
+        auth/             # proving who calls: AuthService, Passwords,
+                          #   SignInThrottle
+        users/            # UserService: users, roles, tokens
+        accounts/         # AccountService, Adapters (the live adapter per
+                          #   account), OAuthService
+        discovery/        # DiscoveryService: trust, ranking, cache, limits
+        mailbox/          # MailboxService, the facade for mail: calls under
+                          #   our ids, lists across accounts, replies,
+                          #   sending and drafts (outgoing), grant limits
+                          #   and the send audit, Idempotency-Key
+        sync/             # SyncService (stable message ids, the sync pass),
+                          #   SyncWorker (polling and IDLE)
+        changes/          # what changed in a mailbox, for clients:
+                          #   MailboxChange, one class per kind, ChangeFeed
+        webhooks/         # WebhookService, WebhookDispatcher (signed posts,
+                          #   retries)
+        system/           # the service at a glance: StatusService, and to
+                          #   admin RecoveryKey and ServiceLog
+        activity/         # what was done, and by whom: the service log.
+                          #   Activity, ActivityLog, catalogue/ one module
+                          #   per area: activity.<area>.<name>
+                          #   (docs/LOGGING.md 7.2)
+        locks.py          # KeyedLocks: one lock per key, for the services
+        paging.py         # the cursors this service hands out itself
       data/               # DATA: reads and writes, decides nothing
         models/           # provider-neutral types, one module per subject:
                           #   accounts, users, folders, messages, batch,
@@ -217,7 +213,11 @@ packages/
         files.py          # files for the owner alone (0600): database, backup, key
         logbook.py        # the newest log lines in memory, for the log page
         discovery/        # autodiscovery sources and their helpers
-    tests/
+    tests/                # in folders like the source: domain/<package>/,
+                          #   data/, web/, common/. integration/ for tests
+                          #   of several layers at once. At the top the
+                          #   fakes, conftest.py and what checks the whole
+                          #   service
       test_architecture.py  # checks the layering on every run
   mailbox-mcp/            # the MCP server, a REST client
     src/benethos_mailbox_mcp/
@@ -260,6 +260,14 @@ Three layers, imports only point down: `web/` → `domain/` → `data/`.
   for the UI) and hands that user to the domain.
 - UI pages stay out of the OpenAPI document (`include_in_schema=False`), so
   the contract covers the API only.
+- **The domain is in packages by area** (docs/REFACTORING.md). Another
+  package, the web layer and the assembly import a package through its
+  `__init__.py`, from the names in its `__all__`, never a module inside
+  it. The activities too: `activity` offers the module of each area,
+  `from ..activity import mailbox as said`, then `said.MessageSent(...)`.
+  No cycle between packages: what two packages both need goes to the one
+  below, or is handed in where the services are wired, as
+  `AccountService` gets `on_delete`.
 - **The domain logs activities.** A line at `INFO` or above is an
   activity of `domain/activity/catalogue/`, handed to
   `ActivityLog.record`, a sentence as docs/LOGGING.md section 3 shapes
@@ -271,7 +279,9 @@ modules, that `common/` stays on the standard library, that FastAPI stays in
 `web/` (and `main.py`), that providers are reached through the registry,
 that the domain picks no storage implementation, and that SQLite is
 reached through `data/storage/` alone. It also checks that the data
-layer logs nothing above `DEBUG` and the domain nothing but activities.
+layer logs nothing above `DEBUG` and the domain nothing but activities,
+and that the packages of the domain are imported through their
+`__init__.py`, export what others import, and have no cycle.
 An import or a line that breaks a rule fails the suite.
 
 ## Encapsulation and replaceable parts
@@ -337,7 +347,11 @@ imapclient boundary), never by patching deep inside a library.
 
 ## Verifying
 
-- Tests: `uv run pytest -q` (offline, must stay green).
+- Tests: `uv run pytest -q` (offline, must stay green). A test sits in
+  the folder of the code it tests, `tests/domain/mailbox/` for
+  `domain/mailbox/`, also when it goes through the API. A test that
+  checks several layers at once, such as a backup through the command
+  line down to the database file, goes to `tests/integration/`.
 - Coverage floor 80%: `uv run pytest --cov --cov-fail-under=80`.
 - Lint and format: `uv run ruff check .` and `uv run ruff format .`.
 - Types: `uv run mypy`.
@@ -363,7 +377,7 @@ rule 1.
   number, added to `MIGRATIONS` there. Its docstring says what it does and
   why. Each statement stands alone, and a step in Python goes into
   `before`. A migration that shipped in a release is never changed:
-  `RELEASED` in `tests/test_sqlite.py` holds a hash of each.
+  `RELEASED` in `tests/data/storage/test_sqlite.py` holds a hash of each.
 
 ## Git and commits
 
@@ -391,7 +405,7 @@ packages carry the same version.
    documentation that still shows the old one.
 3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`.
 4. Freeze the migrations new in this release: add `fingerprint(N)` of
-   each to `RELEASED` in `tests/test_sqlite.py`.
+   each to `RELEASED` in `tests/data/storage/test_sqlite.py`.
 5. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
    then `gh release create vX.Y.Z --verify-tag` with the changelog section
    as the notes. The published release starts `publish.yml`, which

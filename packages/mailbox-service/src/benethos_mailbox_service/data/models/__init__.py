@@ -11,12 +11,12 @@ from .accounts import Account, AccountStatus, CredentialInfo, ProviderType
 from .audit import SendFilter, SendOutcome, SendRecord
 from .batch import BatchItemResult, BatchResult, ItemError, MessageBatch
 from .changes import (
-    CHANGE_TYPES,
+    FEED_KINDS,
     Change,
+    ChangeKind,
     ChangePage,
-    ChangeType,
-    Event,
-    EventType,
+    ChangeRecord,
+    FeedKind,
 )
 from .discovery import (
     Candidate,
@@ -52,7 +52,7 @@ from .sending import (
 )
 from .users import ApiToken, Grant, Role, User
 from .webhooks import (
-    EVENT_TYPES,
+    CHANGE_KINDS,
     CreatedWebhook,
     Webhook,
     WebhookCreate,
@@ -71,17 +71,18 @@ __all__ = [
     "BatchItemResult",
     "BatchResult",
     "Candidate",
-    "CHANGE_TYPES",
+    "CHANGE_KINDS",
     "Change",
+    "ChangeKind",
     "ChangePage",
-    "ChangeType",
+    "ChangeRecord",
     "CredentialInfo",
     "CredentialKind",
     "Discovery",
     "DiscoverySourceName",
     "DraftMessage",
-    "Event",
-    "EventType",
+    "FEED_KINDS",
+    "FeedKind",
     "Folder",
     "FolderCreate",
     "FolderRole",
@@ -113,7 +114,6 @@ __all__ = [
     "SourceOutcome",
     "SourceReport",
     "User",
-    "EVENT_TYPES",
     "CreatedWebhook",
     "Webhook",
     "WebhookCreate",

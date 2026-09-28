@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import Depends, FastAPI
 from fastapi.routing import APIRoute
 
-from ...domain.permissions import permission_of
+from ...domain.rights import permission_of
 from .deps import authenticate
 from .errors import DOCUMENTED_ERRORS
 from .routes import (

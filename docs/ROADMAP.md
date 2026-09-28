@@ -245,8 +245,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   section 8, a proposal of 2026-09-27, among them the grant constraint
   `folders` (7.5)
 - `pop3` adapter (5.2)
-- The domain in packages by area, and the change feed as typed classes
-  like the activities: proposed in [REFACTORING.md](REFACTORING.md)
+- **The domain in packages by area, and the change feed as typed
+  classes like the activities ([REFACTORING.md](REFACTORING.md))**,
+  done, the tests in folders like the source. `data/` in a similar
+  shape follows with a concept of its own
 - Settings and data in the folders of the operating system, for a service
   installed without the repository: `%APPDATA%` on Windows,
   `~/.config` and `~/.local/share` on Linux (`platformdirs`). A file

@@ -30,8 +30,8 @@ from pydantic import SecretStr
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
-from benethos_mailbox_service.domain import permissions
-from benethos_mailbox_service.domain.access import Access
+from benethos_mailbox_service.domain.rights import permissions
+from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.main import Services, build_services, create_app
 
 ENV_FILE = Path(__file__).with_name(".env")

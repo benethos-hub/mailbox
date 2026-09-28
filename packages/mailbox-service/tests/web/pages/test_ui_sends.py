@@ -1,0 +1,109 @@
+"""The send audit in the configuration UI."""
+
+from __future__ import annotations
+
+import pytest
+from fastapi.testclient import TestClient
+
+from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.main import Services
+
+from ...conftest import browser_user, create_account
+from ...ui_helpers import post, sign_in
+
+
+def _send(ui: TestClient, account_id: str, to: str) -> None:
+    post(
+        ui,
+        f"/ui/accounts/{account_id}/compose",
+        {"to": to, "text": "private body 4711", "do": "send"},
+    )
+
+
+def test_the_audit_of_one_account(ui: TestClient, account_id: str) -> None:
+    _send(ui, account_id, "bob@example.org")
+    page = ui.get(f"/ui/sends?account={account_id}").text
+    assert "bob@example.org" in page and "sent" in page
+    assert "<strong>admin</strong>" in page or ">admin<" in page
+    assert "the UI" in page  # sent from a session, not with a token
+    assert "private body 4711" not in page  # never the content
+    account = ui.get(f"/ui/accounts/{account_id}").text
+    assert f'href="/ui/sends?account={account_id}"' in account
+
+
+def test_a_denied_send_is_in_the_audit(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    sign_in(
+        app_client,
+        *browser_user(
+            services,
+            Grant(
+                accounts=[account_id],
+                allow=["mail.read", "send", "audit"],
+                recipients=["*@example.org"],
+            ),
+        ),
+    )
+    _send(app_client, account_id, "eve@elsewhere.example")
+    page = app_client.get(f"/ui/sends?account={account_id}").text
+    assert "eve@elsewhere.example" in page and "denied" in page
+    assert "recipient_not_allowed" in page
+    assert "browser-" in page  # its own name, though it may not list users
+
+
+def test_every_account_together(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    other = create_account(services.accounts, "memory", "two@example.com").id
+    _send(ui, account_id, "bob@example.org")
+    _send(ui, other, "carol@example.org")
+    page = ui.get("/ui/sends").text
+    assert page.index("carol@example.org") < page.index("bob@example.org")
+    assert "me@example.com" in page and "two@example.com" in page
+
+
+def test_paging(
+    ui: TestClient, account_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from benethos_mailbox_service.web.pages.routes import sends
+
+    monkeypatch.setattr(sends, "PAGE_SIZE", 1)
+    _send(ui, account_id, "first@example.org")
+    _send(ui, account_id, "second@example.org")
+    page = ui.get(f"/ui/sends?account={account_id}").text
+    assert "second@example.org" in page and "first@example.org" not in page
+    older = page.split('href="')[-1].split('"')[0].replace("&amp;", "&")
+    assert "cursor=" in older
+    assert "first@example.org" in ui.get(older).text
+
+
+def test_no_audit_without_the_right(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    sign_in(
+        app_client,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
+    assert app_client.get(f"/ui/sends?account={account_id}").status_code == 403
+    assert "Nothing sent yet" in app_client.get("/ui/sends").text
+
+
+def test_filters_narrow_the_audit(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    other = create_account(services.accounts, "memory", "two@example.com").id
+    _send(ui, account_id, "bob@example.org")
+    _send(ui, other, "carol@example.org")
+    by_recipient = ui.get("/ui/sends", params={"to": "CAROL"}).text
+    assert "carol@example.org" in by_recipient and "bob@example.org" not in by_recipient
+    assert "Recipient: CAROL" in by_recipient
+    by_account = ui.get("/ui/sends", params={"account": account_id}).text
+    assert "bob@example.org" in by_account and "carol@example.org" not in by_account
+    assert "Account: me@example.com" in by_account
+    denied = ui.get("/ui/sends", params={"outcome": "denied"}).text
+    assert "Nothing sent that matches." in denied
+    later = ui.get("/ui/sends", params={"after": "2999-01-01"}).text
+    assert "bob@example.org" not in later
+    bad = ui.get("/ui/sends", params={"after": "someday"}).text
+    assert "Filter:" in bad

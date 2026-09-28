@@ -12,17 +12,17 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
-from ..models.changes import Event
+from ..models.changes import ChangeRecord
 
 
 @dataclass(frozen=True)
 class LoggedChange:
     seq: int
-    event: Event
+    record: ChangeRecord
 
 
 class ChangeLogRepository(Protocol):
-    def append(self, events: Iterable[Event]) -> None:
+    def append(self, records: Iterable[ChangeRecord]) -> None:
         """Appends in order, each with the next sequence number."""
         ...
 
@@ -61,10 +61,10 @@ class InMemoryChangeLogRepository:
         self._last = 0
         self._horizon = 0
 
-    def append(self, events: Iterable[Event]) -> None:
-        for event in events:
+    def append(self, records: Iterable[ChangeRecord]) -> None:
+        for record in records:
             self._last += 1
-            self._log.append(LoggedChange(self._last, event))
+            self._log.append(LoggedChange(self._last, record))
 
     def after(
         self,
@@ -79,8 +79,8 @@ class InMemoryChangeLogRepository:
             e
             for e in self._log
             if e.seq > seq
-            and e.event.account_id in wanted
-            and (types is None or e.event.type in types)
+            and e.record.account_id in wanted
+            and (types is None or e.record.type in types)
         ]
         return found[:limit]
 
@@ -91,11 +91,11 @@ class InMemoryChangeLogRepository:
         return self._horizon
 
     def purge(self, before: datetime) -> int:
-        old = [e for e in self._log if e.event.at < before]
+        old = [e for e in self._log if e.record.at < before]
         if old:
             self._horizon = max(self._horizon, max(e.seq for e in old))
-            self._log = [e for e in self._log if e.event.at >= before]
+            self._log = [e for e in self._log if e.record.at >= before]
         return len(old)
 
     def forget_account(self, account_id: str) -> None:
-        self._log = [e for e in self._log if e.event.account_id != account_id]
+        self._log = [e for e in self._log if e.record.account_id != account_id]

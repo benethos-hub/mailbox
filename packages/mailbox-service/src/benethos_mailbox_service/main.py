@@ -57,26 +57,17 @@ from .data.storage import (
     Store,
     open_repositories,
 )
-from .domain.accounts import AccountService
+from .domain.accounts import AccountService, Adapters, OAuthService
 from .domain.activity import DISPATCHER, SERVICE, WORKER, ActivityLog, Actor
-from .domain.activity.catalogue import service as said
-from .domain.adapters import Adapters
-from .domain.auth import AuthService
+from .domain.activity import system as said
+from .domain.auth import AuthService, Passwords
 from .domain.changes import ChangeFeed
-from .domain.delivery import Retries, WebhookDispatcher
 from .domain.discovery import DiscoveryService
-from .domain.idempotency import Idempotency
-from .domain.mailbox import MailboxService
-from .domain.oauth import OAuthService
-from .domain.passwords import Passwords
-from .domain.recovery import RecoveryKey
-from .domain.sending import SendControl
-from .domain.servicelog import ServiceLog
-from .domain.status import StatusService
-from .domain.sync import SyncService
+from .domain.mailbox import Idempotency, MailboxService, SendControl
+from .domain.sync import SyncService, SyncWorker
+from .domain.system import RecoveryKey, ServiceLog, StatusService
 from .domain.users import UserService
-from .domain.webhooks import WebhookService
-from .domain.worker import SyncWorker
+from .domain.webhooks import Retries, WebhookDispatcher, WebhookService
 
 
 @dataclass(frozen=True)
@@ -183,7 +174,7 @@ def build_services(
         repos.accounts,
         vault,
         adapters,
-        sync,
+        on_delete=sync.forget_account,
         check_host=fetcher.checked_address,
         idempotency=repos.idempotency,
         changes=changes,

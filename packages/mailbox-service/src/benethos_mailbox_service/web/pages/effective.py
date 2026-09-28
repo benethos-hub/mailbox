@@ -10,8 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...domain import permissions
-from ...domain.access import SendLimit
+from ...domain.rights import SendLimit, permissions
 from ...domain.users import EffectiveRights
 
 # Operations bound to one existing account, and those that are not.

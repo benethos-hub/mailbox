@@ -18,8 +18,8 @@ from pydantic import ValidationError
 
 from ....data.mail.text import from_html
 from ....data.models import Folder, FolderRole, Message, MessageFilter
-from ....domain.access import Access
 from ....domain.mailbox import MailboxService, find_folder
+from ....domain.rights import Access
 from ...responses import download
 from ...search import FIELDS, FLAGS, filter_from
 from ...services import Mailbox, get_accounts
