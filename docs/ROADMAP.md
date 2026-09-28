@@ -252,8 +252,9 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   text of an HTML body in `common`, `backup` out of `secrets`, the wire
   protocols and HTTP as `data/protocols/`, the `__init__.py` files
   export only, the same checks as for the domain. The code written
-  twice, section 9, merged into helpers, done. The architecture, the
-  layout of the code and the seams:
+  twice, section 9, merged into helpers, done. The MCP server's tools
+  in a package, one module per kind, section 10, done. The
+  architecture, the layout of the code and the seams:
   [ARCHITECTURE.md](ARCHITECTURE.md)
 - Settings and data in the folders of the operating system, for a service
   installed without the repository: `%APPDATA%` on Windows,

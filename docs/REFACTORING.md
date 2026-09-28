@@ -719,3 +719,8 @@ One branch, one commit per step, each passing all checks:
 The live checks `mcp_stdio.py` and `mcp_http.py` run once at the end.
 Nothing a client of the MCP server sees changes: the names of the
 tools, their arguments, their descriptions and their annotations stay.
+
+**Built 2026-09-28** on one branch, in this order. The tools a client
+sees were compared before and after, as the JSON the server lists, and
+are the same. `tools/base.py` names the result of a tool `ToolResult`,
+so that the modules of the kinds need no import of the MCP library.

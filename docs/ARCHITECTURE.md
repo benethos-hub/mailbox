@@ -247,13 +247,32 @@ cannot import the service, and `tests/test_boundary.py` checks that.
 ```
 packages/mailbox-mcp/
   src/benethos_mailbox_mcp/
-    server.py           # MCPServer, tools by the token's rights, CLI
+    cli.py              # the command line: options, MAILBOX_MCP_*, the
+                        #   log, the start over stdio or HTTP
+    server.py           # MCPServer: the tools the token's rights allow,
+                        #   each logged when it fails
     transport.py        # streamable HTTP: bearer guard, host check (uvicorn)
+    tools/              # one module per kind, each with its part of TOOLS
+      base.py           # Tool, reads()/changes(), the shared client,
+                        #   result(): text and images
+      compose.py        # what drafts and sending share: addresses, the
+                        #   message a tool's arguments describe
+      accounts.py       # list_accounts, which reports the kinds
+      reading.py        # folders, search, a message, what is new,
+                        #   attachments
+      writing.py        # change messages, create a folder
+      drafts.py         # list, write, replace, delete drafts
+      sending.py        # send a mail, send a draft
     render.py           # what the model sees of mail, marked as foreign
     pdf.py              # PDF pages as PNG (pypdfium2)
     client.py           # ALL access to the REST API
+    models.py           # the records the client answers with
     errors.py           # ToolError subclasses
 ```
+
+`tests/test_architecture.py` of the MCP package keeps the modules in
+the lines of REFACTORING.md 10.2, the tools behind their package, and
+one home per library.
 
 ## 4. Where does it go?
 
