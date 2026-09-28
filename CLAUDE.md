@@ -128,6 +128,7 @@ packages/
         clock.py          # utc_now, the default clock of the services
         redact.py         # secrets noted once, masked in every text
         ratelimit.py      # pacing: a token bucket and a backoff
+        plaintext.py      # the text of an HTML body, for a mail and a page
       web/                # PRESENTATION: HTTP only, FastAPI lives here
         __init__.py       # install: both front ends, errors to the right one
         services.py       # the domain services as dependencies, for both
@@ -192,7 +193,7 @@ packages/
           compose.py      # outgoing messages as bytes (email)
           parse.py        # incoming bytes parsed (imap-tools' mail parser)
           convert.py      # a parsed message to Message / MessageSummary
-          text.py         # the text part of an HTML-only mail
+
           fields.py       # one header field: a Message-ID as one token,
                           #   an address in Unicode
         protocols/        # the wire, one library each, in our types:

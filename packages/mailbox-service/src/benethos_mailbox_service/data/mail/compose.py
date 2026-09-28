@@ -18,12 +18,12 @@ from typing import NamedTuple
 
 from pydantic import ValidationError
 
+from ...common.plaintext import from_html
 from ...errors import BadRequestError
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
 from .fields import ascii_domain
 from .fields import message_id as one_message_id
 from .parse import ParsedMessage
-from .text import from_html
 
 # Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
 REFERENCE_HEADER = "X-Mailbox-Service-Reference"

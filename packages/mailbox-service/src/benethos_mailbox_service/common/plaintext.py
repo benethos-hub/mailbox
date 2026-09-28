@@ -1,5 +1,6 @@
-"""The plain text of an HTML body, for the text part of a mail that was
-written as HTML only. Standard library only.
+"""The plain text of an HTML body: the text part of a mail that was
+written as HTML only, and the mail page's view of one. Standard library
+only.
 
 What a reader would not see is left out: scripts, styles and elements
 hidden by attribute or inline style. Blocks go on lines of their own, list
