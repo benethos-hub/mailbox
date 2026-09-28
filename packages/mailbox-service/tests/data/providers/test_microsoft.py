@@ -46,8 +46,8 @@ from benethos_mailbox_service.errors import (
 from benethos_mailbox_service.main import build_services, create_app
 
 from ...conftest import admin_bearer
-from ...domain.accounts.test_oauth import TokenEndpoint, granted, id_token
 from ...graph_fake import TOKEN, FakeGraph
+from ...integration.test_oauth import TokenEndpoint, granted, id_token
 
 
 class Tokens:

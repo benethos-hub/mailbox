@@ -34,7 +34,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import build_services, key_provider
 
-from ...conftest import create_account
+from ..conftest import create_account
 
 
 class MemoryKeyProvider:

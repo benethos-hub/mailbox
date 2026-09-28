@@ -214,8 +214,10 @@ packages/
         logbook.py        # the newest log lines in memory, for the log page
         discovery/        # autodiscovery sources and their helpers
     tests/                # in folders like the source: domain/<package>/,
-                          #   data/, web/, common/. At the top the fakes,
-                          #   conftest.py and what checks the whole service
+                          #   data/, web/, common/. integration/ for tests
+                          #   of several layers at once. At the top the
+                          #   fakes, conftest.py and what checks the whole
+                          #   service
       test_architecture.py  # checks the layering on every run
   mailbox-mcp/            # the MCP server, a REST client
     src/benethos_mailbox_mcp/
@@ -347,7 +349,9 @@ imapclient boundary), never by patching deep inside a library.
 
 - Tests: `uv run pytest -q` (offline, must stay green). A test sits in
   the folder of the code it tests, `tests/domain/mailbox/` for
-  `domain/mailbox/`, also when it goes through the API.
+  `domain/mailbox/`, also when it goes through the API. A test that
+  checks several layers at once, such as a backup through the command
+  line down to the database file, goes to `tests/integration/`.
 - Coverage floor 80%: `uv run pytest --cov --cov-fail-under=80`.
 - Lint and format: `uv run ruff check .` and `uv run ruff format .`.
 - Types: `uv run mypy`.

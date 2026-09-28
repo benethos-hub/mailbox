@@ -23,9 +23,7 @@ from benethos_mailbox_service.errors import (
 from benethos_mailbox_service.main import Services, build_services
 
 from ...conftest import ADMIN, create_account
-from ...ui_helpers import post
-from ..accounts.test_account_status import FlakyProvider
-from ..accounts.test_oauth import (
+from ...integration.test_oauth import (
     REDIRECT,
     TokenEndpoint,
     granted,
@@ -33,6 +31,8 @@ from ..accounts.test_oauth import (
     services_with,
     state_of,
 )
+from ...ui_helpers import post
+from ..accounts.test_account_status import FlakyProvider
 
 READER = Grant(accounts=["*"], allow=["mail.read"])
 WHO = "test admin (usr_test_admin)"

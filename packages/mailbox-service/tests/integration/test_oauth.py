@@ -53,7 +53,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import Services, build_services
 
-from ...conftest import ADMIN
+from ..conftest import ADMIN
 
 # The vault needs a key to store refresh tokens.
 pytestmark = pytest.mark.usefixtures("master_key")

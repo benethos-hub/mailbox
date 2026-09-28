@@ -29,7 +29,7 @@ from benethos_mailbox_service.data.secrets.backup import (
 from benethos_mailbox_service.data.storage import Database, inspect_snapshot
 from benethos_mailbox_service.main import Services, build_services, create_app
 
-from ...conftest import create_account
+from ..conftest import create_account
 
 
 class _Stdin(io.StringIO):

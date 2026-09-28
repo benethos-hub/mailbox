@@ -229,7 +229,8 @@ it does today.
   today.
 - **The tests** may import a module inside a package, since they test
   that module. They are in folders like the source since the move
-  (section 7): `tests/domain/<package>/`, `tests/data/`, `tests/web/`.
+  (section 7): `tests/domain/<package>/`, `tests/data/`, `tests/web/`,
+  and `tests/integration/` for a test of several layers at once.
 
 ## 6. Order of work
 

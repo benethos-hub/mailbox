@@ -28,7 +28,7 @@ from benethos_mailbox_service.data.providers.protocols.oauth import App, OAuthCl
 from benethos_mailbox_service.main import Services, build_services, create_app
 
 from ...conftest import CHEAP, admin_bearer, bearer_for, browser_admin
-from ...domain.accounts.test_oauth import TokenEndpoint, factory, granted, id_token
+from ...integration.test_oauth import TokenEndpoint, factory, granted, id_token
 from ...ui_helpers import post, sign_in
 
 pytestmark = pytest.mark.usefixtures("master_key")
