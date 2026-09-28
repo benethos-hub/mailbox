@@ -1,7 +1,7 @@
 # The audit of administration
 
 Proposal of 2026-09-28, the second of two steps, for later. The first
-step, [LOGGING.md](LOGGING.md), names every event the service logs. This
+step, [LOGGING.md](LOGGING.md), names every activity the service logs. This
 step stores those a person caused, so "who changed what, when" can be
 answered after the log is gone. It is the design of
 [PERMISSIONS.md 8.6](PERMISSIONS.md#86-an-audit-of-administration) in
@@ -17,16 +17,16 @@ kept for a set time, readable through the API and the UI. Sends have
 such an audit already (CONCEPT 7.5, `/v1/sends`). This one covers the
 rest of administration.
 
-A rule of the two together: an audited event is logged too, with the
+A rule of the two together: an audited activity is logged too, with the
 same fields, from the same place in the code. The log line is the
 human form of the record.
 
 ## 2. What is audited
 
-Every event of LOGGING.md section 5 in which a user is the actor and a
+Every activity of LOGGING.md section 5 in which a user is the actor and a
 record changes hands, and every sign-in. By area:
 
-| Area | Events (LOGGING.md) |
+| Area | Activities (LOGGING.md) |
 |---|---|
 | Sign-in (5.2) | signed in, failed sign-in, revoked or expired token presented, wrong password to confirm a step |
 | Users, passwords, tokens, roles (5.3) | user created, changed, deleted; password changed, set, one-time made; token issued, revoked; role created, replaced, deleted |
@@ -58,7 +58,7 @@ as the send audit does. `user_name` is written for that reason.
 
 ## 4. Storage, API, UI
 
-- **Table `events`**, a migration of its own, indexes on `at` and on
+- **Table `activity`**, a migration of its own, indexes on `at` and on
   `(user_id, at)`. Written in the same transaction as the change where
   there is one, so a change without its record cannot happen.
 - **Retention**: `MAILBOX_SERVICE_AUDIT_DAYS`, 90 by default, purged as
@@ -70,29 +70,29 @@ as the send audit does. `user_name` is written for that reason.
   document regenerated.
 - **UI**: a page **Audit** under Service for `users.read`, a list page
   of UI.md 4.1 with the filter bar, and a card **Recent activity** on
-  the user's page with that user's newest events.
+  the user's page with that user's newest activities.
 - **The log page** stays as it is: the audit does not replace it.
 
 ## 5. One place in the code
 
-`Events.record` of `domain/events/` (LOGGING.md section 7) writes the
-log line of every event and, for an event class marked `audited`, the
-audit record from the same object. The fields of the record come from
-the event's typed fields, not from its text. Nothing else writes an
+`ActivityLog.record` of `domain/activity/` (LOGGING.md section 7)
+writes the log line of every activity and, for an activity class marked
+`audited`, the audit record from the same object. The fields of the
+record come from the activity's typed fields, not from its text. Nothing else writes an
 audit record, and no route does.
 
 The recorder needs `Access.source` and the credential id, which
 LOGGING.md puts onto `Access` in its step 2. The CLI commands that
-change the database (`users`, `keys`, `restore`) record their events
+change the database (`users`, `keys`, `restore`) record their activities
 with `host` as the credential.
 
 ## 6. Order of work
 
 1. LOGGING.md steps 2 to 5 first: the lines exist, the actor and the
    source reach the domain.
-2. The `events` table, the repository protocol with an in-memory and a
+2. The `activity` table, the repository protocol with an in-memory and a
    SQLite implementation, and the recorder writing the audit record of
-   each event marked `audited`.
+   each activity marked `audited`.
 3. `GET /v1/audit` and the OpenAPI document.
 4. The Audit page and the Recent activity card, walked in `live/ui.py`.
 5. Retention and the purge.
