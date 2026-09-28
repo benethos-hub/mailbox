@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
-from ..models.changes import ChangeRecord
+from ..models import ChangeRecord
 
 
 @dataclass(frozen=True)

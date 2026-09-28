@@ -9,8 +9,7 @@ from ....errors import (
     NotFoundError,
     NotSupportedError,
 )
-from ...mail import convert
-from ...mail.parse import ParsedMessage
+from ...mail import convert, parse
 from ...models import (
     AttachmentContent,
     Folder,
@@ -141,7 +140,7 @@ class MemoryProvider:
         sent = next((f.id for f in self.folders if f.role is FolderRole.SENT), None)
         if sent is None:
             return SentMessage()
-        parsed = ParsedMessage(raw)
+        parsed = parse.ParsedMessage(raw)
         copy = Message(
             id=f"sent_{len(self.outbox)}",
             folder_ids=[sent],
@@ -161,7 +160,7 @@ class MemoryProvider:
     async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
         drafts = self._drafts_folder()
         old = self._draft(replaces) if replaces else None
-        parsed = ParsedMessage(raw)
+        parsed = parse.ParsedMessage(raw)
         self._drafts_saved += 1
         draft = Message.model_validate(
             {

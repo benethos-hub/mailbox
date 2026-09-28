@@ -46,7 +46,7 @@ from ...data.models import (
     SourceOutcome,
     SourceReport,
 )
-from ...data.protocols.http import HostCheck
+from ...data.protocols import HostCheck
 from ...data.providers import ServerProbe, settings_from_servers
 from ...errors import BadRequestError, MailboxServiceError, RateLimitedError
 from ..activity import ActivityLog, Actor

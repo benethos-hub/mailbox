@@ -19,7 +19,7 @@ from ...models import (
     MessageSummary,
     MessageUpdate,
 )
-from ...protocols.imap import FetchedMessage, RawFolder
+from ...protocols import FetchedMessage, RawFolder
 from .. import rules
 
 INBOX = "INBOX"

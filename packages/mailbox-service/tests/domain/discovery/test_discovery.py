@@ -13,7 +13,6 @@ from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.discovery import (
     Finding,
     Query,
-    SafeFetcher,
     default_sources,
 )
 from benethos_mailbox_service.data.models import (
@@ -27,6 +26,7 @@ from benethos_mailbox_service.data.models import (
     Security,
     ServerProtocol,
 )
+from benethos_mailbox_service.data.protocols import SafeFetcher
 from benethos_mailbox_service.domain.discovery import service as discovery_module
 from benethos_mailbox_service.domain.discovery.service import DiscoveryService
 from benethos_mailbox_service.domain.rights.access import Access

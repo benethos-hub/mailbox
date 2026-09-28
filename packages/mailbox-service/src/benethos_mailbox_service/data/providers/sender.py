@@ -10,8 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from ..protocols.smtp import DEFAULT_PORTS, SmtpLogin, SmtpServer, SmtpSession
-from ..protocols.transport import Pick
+from ..protocols import SMTP_PORTS, Pick, SmtpLogin, SmtpServer, SmtpSession
 from . import rules
 from .base import ProviderSettings
 from .guard import Guard
@@ -52,7 +51,7 @@ class SmtpSender:
         if not host:
             return None
         security = rules.encrypted(settings, "smtp_security", "SMTP")
-        port = rules.port_of(settings, "smtp_port", DEFAULT_PORTS[security])
+        port = rules.port_of(settings, "smtp_port", SMTP_PORTS[security])
         server = SmtpServer(host=str(host), port=port, security=security, pick=pick)
         return cls(
             factory(server),

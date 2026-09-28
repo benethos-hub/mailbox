@@ -29,8 +29,7 @@ from ...errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from ..mail import fields
-from ..mail.parse import ParsedMessage
+from ..mail import fields, parse
 from .transport import Pick, connect_to, tls_context, transport_errors
 
 ClientFactory = Callable[..., Any]
@@ -68,7 +67,7 @@ class RawFolder:
     subscribed: bool | None = None  # None: not asked
 
 
-class FetchedMessage(ParsedMessage):
+class FetchedMessage(parse.ParsedMessage):
     """A fetched message: UID and flags as the server reported them, the
     rest parsed from the fetched bytes."""
 

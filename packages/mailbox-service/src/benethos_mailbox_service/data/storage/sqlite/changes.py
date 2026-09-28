@@ -7,7 +7,7 @@ import sqlite3
 from collections.abc import Collection, Iterable
 from datetime import datetime
 
-from ...models.changes import ChangeRecord
+from ...models import ChangeRecord
 from ..changes import LoggedChange
 from .database import Database, iso, parse_iso
 

@@ -30,8 +30,7 @@ from ....errors import (
     NotSupportedError,
     ProviderError,
 )
-from ...mail import convert
-from ...mail.parse import ParsedMessage
+from ...mail import convert, parse
 from ...models import (
     AttachmentContent,
     CredentialKind,
@@ -46,9 +45,14 @@ from ...models import (
     SentMessage,
     ServerProtocol,
 )
-from ...protocols.imap import DEFAULT_PORTS, ImapServer, ImapSession, SearchCriteria
-from ...protocols.smtp import SmtpSession
-from ...protocols.transport import Pick
+from ...protocols import (
+    IMAP_PORTS,
+    ImapServer,
+    ImapSession,
+    Pick,
+    SearchCriteria,
+    SmtpSession,
+)
 from .. import rules
 from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
 from ..guard import Guard
@@ -112,7 +116,7 @@ async def probe(
 ) -> frozenset[str]:
     """The capabilities of an IMAP server, read without logging in. With
     ``address``, the connection goes there, the address just checked."""
-    if security not in DEFAULT_PORTS:
+    if security not in IMAP_PORTS:
         raise BadRequestError("IMAP without encryption is not supported")
     pick = (lambda _host, _port: address) if address is not None else None
     session = session_factory(
@@ -159,7 +163,7 @@ class ImapProvider:
             raise BadRequestError("settings.auth must be 'password'")
         self._server = ImapServer(
             host=str(host),
-            port=rules.port_of(settings, "port", DEFAULT_PORTS[security]),
+            port=rules.port_of(settings, "port", IMAP_PORTS[security]),
             security=security,
             pick=pick,
         )
@@ -430,7 +434,7 @@ class ImapProvider:
         A message with this Message-ID that the folder holds already is
         that stored message: the guard retries a step whose connection
         dropped, and the APPEND may have gone through before the drop."""
-        header = ParsedMessage(raw).message_id
+        header = parse.ParsedMessage(raw).message_id
         validity = self._session.select(folder)
         stored = self._session.search_message_id(header) if header else []
         uid = stored[-1] if stored else self._session.append(folder, raw, flags)

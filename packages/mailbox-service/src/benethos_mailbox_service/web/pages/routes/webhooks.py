@@ -10,8 +10,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 
-from ....data.models import WebhookCreate
-from ....data.models.webhooks import CHANGE_KINDS
+from ....data.models import CHANGE_KINDS, WebhookCreate
 from ....domain.rights import Access
 from ...services import Webhooks, get_accounts
 from ..deps import Actor, Viewer, account_names

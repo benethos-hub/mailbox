@@ -3,4 +3,13 @@
 ``compose`` builds an outgoing message, ``parse`` reads one, ``convert``
 turns a parsed message into the neutral model. IMAP, POP3 and any adapter
 that sees raw messages share them. The domain uses ``compose`` for replies.
+``text`` gives the text of an HTML-only mail, ``fields`` reads and writes
+one header field. Callers import the modules from here, ``from ..mail
+import compose``, and call ``compose.build(...)``.
 """
+
+from __future__ import annotations
+
+from . import compose, convert, fields, parse, text
+
+__all__ = ["compose", "convert", "fields", "parse", "text"]

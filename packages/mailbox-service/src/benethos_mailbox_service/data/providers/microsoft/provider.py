@@ -37,8 +37,7 @@ from ....errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from ...mail import compose, convert
-from ...mail.parse import ParsedMessage
+from ...mail import compose, convert, parse
 from ...models import (
     AttachmentContent,
     Folder,
@@ -50,7 +49,7 @@ from ...models import (
     Page,
     SentMessage,
 )
-from ...protocols.http import Answer, ApiClient
+from ...protocols import Answer, ApiClient
 from .. import rules
 from ..base import Capability, ChangedMessage, FolderChanges, TokenSource
 from . import mappers
@@ -330,7 +329,7 @@ class MicrosoftProvider:
         if item.get("isDraft"):
             # What a draft answers lives in its MIME only.
             thread = convert.thread_fields(
-                ParsedMessage(await self.get_raw(message_id))
+                parse.ParsedMessage(await self.get_raw(message_id))
             )
             found = found.model_copy(
                 update={k: thread[k] for k in ("reference", "in_reply_to")}

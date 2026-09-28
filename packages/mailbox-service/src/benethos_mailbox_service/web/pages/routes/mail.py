@@ -16,7 +16,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 
-from ....data.mail.text import from_html
+from ....data.mail import text
 from ....data.models import Folder, FolderRole, Message, MessageFilter
 from ....domain.mailbox import MailboxService, find_folder
 from ....domain.rights import Access
@@ -269,7 +269,7 @@ def _counted(folder: Folder) -> str:
 def _body(message: Message) -> str:
     if message.text_body:
         return message.text_body
-    return from_html(message.html_body) if message.html_body else ""
+    return text.from_html(message.html_body) if message.html_body else ""
 
 
 @router.get("/accounts/{account_id}/mail/{message_id}/raw")

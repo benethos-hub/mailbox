@@ -25,7 +25,7 @@ from .config import Settings
 from .data.discovery import default_sources, preset_hosts
 from .data.logbook import LogBook
 from .data.models import ProviderType
-from .data.protocols.http import (
+from .data.protocols import (
     ApiClient,
     Lookup,
     Resolve,

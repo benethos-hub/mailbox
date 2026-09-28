@@ -7,7 +7,7 @@ import json
 import sqlite3
 from datetime import datetime
 
-from ...models.webhooks import Webhook
+from ...models import Webhook
 from ..webhooks import Attempt, Delivery, Sealed, WebhookRecord
 from .database import Database, iso, parse_iso
 

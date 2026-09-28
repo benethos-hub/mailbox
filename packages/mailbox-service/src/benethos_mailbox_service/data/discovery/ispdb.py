@@ -7,7 +7,7 @@ switched off (CONCEPT 5.8, rule 9).
 from __future__ import annotations
 
 from ..models import DiscoverySourceName
-from ..protocols.http import SafeFetcher
+from ..protocols import SafeFetcher
 from . import autoconfig
 from .base import Finding, Query
 

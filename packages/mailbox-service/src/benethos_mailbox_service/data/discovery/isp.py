@@ -10,7 +10,7 @@ from urllib.parse import quote
 
 from ...errors import MailboxServiceError
 from ..models import DiscoverySourceName
-from ..protocols.http import SafeFetcher
+from ..protocols import SafeFetcher
 from . import autoconfig
 from .base import Finding, Query
 

@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Protocol
 
 from ...errors import ConflictError
-from ..models.webhooks import Webhook
+from ..models import Webhook
 from .table import missing
 
 

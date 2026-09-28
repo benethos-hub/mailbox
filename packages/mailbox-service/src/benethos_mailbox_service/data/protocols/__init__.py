@@ -8,3 +8,85 @@ API, no decisions. Library errors leave it as ``MailboxServiceError``. It
 imports nothing of ``providers``: the adapters there build on it, and
 ``discovery`` reads HTTP through it.
 """
+
+from __future__ import annotations
+
+from .http import (
+    Answer,
+    ApiClient,
+    Fetched,
+    HostCheck,
+    Lookup,
+    Resolve,
+    SafeFetcher,
+    WebhookPoster,
+    host_addresses,
+    host_addresses_now,
+    is_public_address,
+    is_receiver_address,
+)
+from .imap import (
+    DEFAULT_PORTS as IMAP_PORTS,
+)
+from .imap import (
+    FetchedMessage,
+    ImapServer,
+    ImapSession,
+    RawFolder,
+    SearchCriteria,
+)
+from .oauth import (
+    App,
+    Endpoints,
+    OAuthClient,
+    Profile,
+    RefreshingTokens,
+    Tokens,
+    authorize_url,
+    new_pkce,
+)
+from .smtp import (
+    DEFAULT_PORTS as SMTP_PORTS,
+)
+from .smtp import (
+    SmtpLogin,
+    SmtpServer,
+    SmtpSession,
+)
+from .transport import (
+    Pick,
+)
+
+__all__ = [
+    "Answer",
+    "ApiClient",
+    "App",
+    "Endpoints",
+    "Fetched",
+    "FetchedMessage",
+    "HostCheck",
+    "IMAP_PORTS",
+    "ImapServer",
+    "ImapSession",
+    "Lookup",
+    "OAuthClient",
+    "Pick",
+    "Profile",
+    "RawFolder",
+    "RefreshingTokens",
+    "Resolve",
+    "SMTP_PORTS",
+    "SafeFetcher",
+    "SearchCriteria",
+    "SmtpLogin",
+    "SmtpServer",
+    "SmtpSession",
+    "Tokens",
+    "WebhookPoster",
+    "authorize_url",
+    "host_addresses",
+    "host_addresses_now",
+    "is_public_address",
+    "is_receiver_address",
+    "new_pkce",
+]

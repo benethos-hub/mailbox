@@ -26,7 +26,7 @@ from ..models import (
     Security,
     ServerProtocol,
 )
-from ..protocols.http import SafeFetcher
+from ..protocols import SafeFetcher
 from . import placeholders
 from .base import Finding
 

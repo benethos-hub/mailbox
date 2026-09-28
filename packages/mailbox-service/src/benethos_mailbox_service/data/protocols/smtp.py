@@ -20,7 +20,7 @@ from ...errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from ..mail.fields import ascii_domain
+from ..mail import fields
 from .transport import Pick, connect_to, tls_context, transport_errors
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}
@@ -144,7 +144,7 @@ class SmtpSession:
 
 def _on_the_wire(address: str) -> str:
     try:
-        return ascii_domain(address)
+        return fields.ascii_domain(address)
     except UnicodeError:
         raise BadRequestError(f"the domain of {address} cannot be encoded") from None
 
