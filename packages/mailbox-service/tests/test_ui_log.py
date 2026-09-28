@@ -14,7 +14,7 @@ from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.logbook import LogBook
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.secrets import redact
-from benethos_mailbox_service.domain.servicelog import ServiceLog
+from benethos_mailbox_service.domain.system.servicelog import ServiceLog
 from benethos_mailbox_service.errors import BadRequestError, ForbiddenError
 from benethos_mailbox_service.logs import short_source
 from benethos_mailbox_service.main import Services, build_services, create_app

@@ -15,9 +15,7 @@ from ..domain.accounts import AccountService, OAuthService
 from ..domain.auth import AuthService
 from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
-from ..domain.recovery import RecoveryKey
-from ..domain.servicelog import ServiceLog
-from ..domain.status import StatusService
+from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import UserService
 from ..domain.webhooks import WebhookService
 

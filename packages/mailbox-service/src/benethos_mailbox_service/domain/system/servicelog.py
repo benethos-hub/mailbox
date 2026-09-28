@@ -6,12 +6,12 @@ from __future__ import annotations
 
 import logging
 
-from ..data.logbook import LogBook, LogEntry
-from ..data.models import Page
-from ..errors import BadRequestError
-from .activity import ActivityLog, Actor
-from .activity.catalogue.service import LogRead
-from .rights import Access
+from ...data.logbook import LogBook, LogEntry
+from ...data.models import Page
+from ...errors import BadRequestError
+from ..activity import ActivityLog, Actor
+from ..activity.catalogue.service import LogRead
+from ..rights import Access
 
 # The levels a reader may ask for, from the least.
 LEVELS = {

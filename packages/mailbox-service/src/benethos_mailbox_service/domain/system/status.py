@@ -10,12 +10,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..data.models import Account, AccountStatus, Webhook
-from ..errors import ForbiddenError
-from .accounts import AccountService
-from .rights import Access
-from .sync import SyncService, SyncState, SyncWorker, WorkerState
-from .webhooks import WebhookService
+from ...data.models import Account, AccountStatus, Webhook
+from ...errors import ForbiddenError
+from ..accounts import AccountService
+from ..rights import Access
+from ..sync import SyncService, SyncState, SyncWorker, WorkerState
+from ..webhooks import WebhookService
 
 
 @dataclass(frozen=True)

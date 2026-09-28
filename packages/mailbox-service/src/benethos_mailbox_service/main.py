@@ -64,10 +64,8 @@ from .domain.auth import AuthService, Passwords
 from .domain.changes import ChangeFeed
 from .domain.discovery import DiscoveryService
 from .domain.mailbox import Idempotency, MailboxService, SendControl
-from .domain.recovery import RecoveryKey
-from .domain.servicelog import ServiceLog
-from .domain.status import StatusService
 from .domain.sync import SyncService, SyncWorker
+from .domain.system import RecoveryKey, ServiceLog, StatusService
 from .domain.users import UserService
 from .domain.webhooks import Retries, WebhookDispatcher, WebhookService
 
