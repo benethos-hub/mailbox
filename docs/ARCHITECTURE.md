@@ -1,13 +1,12 @@
 # Architecture and design rules
 
-Started 2026-09-28, a proposal. The rules of this service in short:
+Decided 2026-09-28 as a whole. The rules of this service in short:
 where a piece of code goes, how it is imported, how it is named, and
 how it is moved, the layers, the modules and the seams.
 [CONCEPT.md](CONCEPT.md) says what the service is,
 [CLAUDE.md](../CLAUDE.md) how to work in the repository,
 [REFACTORING.md](REFACTORING.md) how the layout came to be. This file is
-the part to know by heart. What the user decides is marked as decided,
-everything else is the proposal.
+the part to know by heart.
 
 ## 1. The shape
 
@@ -483,14 +482,7 @@ imapclient boundary), never by patching deep inside a library.
 8. **Live checks once at the end** of a branch that moves code, since
    nothing they see changes.
 
-## 17. Questions
+## 17. Questions answered
 
-**Decided 2026-09-28:** this file takes over everything on the
-architecture from CLAUDE.md, the layout of the code with it, and
-CLAUDE.md points here. Done as the last step of the refactoring of
-REFACTORING.md sections 8 and 9.
-
-Open:
-
-- Section 15's sizes are a feeling, not a measure. Should the
-  architecture test count lines?
+**Decided 2026-09-28:** the architecture test counts no lines. Section
+15 is a rule for the review.
