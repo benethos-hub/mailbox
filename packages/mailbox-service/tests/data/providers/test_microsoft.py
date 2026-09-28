@@ -14,7 +14,6 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.http import ApiClient
 from benethos_mailbox_service.data.models import (
     FolderRole,
     MessageFilter,
@@ -22,6 +21,8 @@ from benethos_mailbox_service.data.models import (
     MessageUpdate,
     ProviderType,
 )
+from benethos_mailbox_service.data.protocols.http import ApiClient
+from benethos_mailbox_service.data.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
     MailProvider,
@@ -33,7 +34,6 @@ from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider,
 from benethos_mailbox_service.data.providers.microsoft import (
     endpoints as microsoft_endpoints,
 )
-from benethos_mailbox_service.data.providers.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import (
     BadRequestError,

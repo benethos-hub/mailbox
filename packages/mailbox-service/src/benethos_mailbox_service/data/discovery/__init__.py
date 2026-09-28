@@ -4,12 +4,12 @@ Each source is a module behind :class:`DiscoverySource`. The sources only
 look up: which of their answers count as confirmed, how they are ranked and
 merged is decided in ``domain/discovery.py``. Helpers each wrap one library:
 ``dns`` (dnspython), ``suffix`` (publicsuffixlist), ``autoconfig``
-(defusedxml). HTTP goes through ``data/http``.
+(defusedxml). HTTP goes through ``data/protocols/http``.
 """
 
 from __future__ import annotations
 
-from ..http import SafeFetcher
+from ..protocols.http import SafeFetcher
 from . import placeholders
 from .base import DiscoverySource, Finding, Query
 from .isp import IspAutoconfigSource

@@ -8,12 +8,9 @@ from typing import Any
 import pytest
 
 from benethos_mailbox_service.data.models import Security, ServerProtocol
+from benethos_mailbox_service.data.protocols.imap import ImapServer, ImapSession
 from benethos_mailbox_service.data.providers import probe_server
 from benethos_mailbox_service.data.providers.imap import probe
-from benethos_mailbox_service.data.providers.protocols.imap import (
-    ImapServer,
-    ImapSession,
-)
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotSupportedError,

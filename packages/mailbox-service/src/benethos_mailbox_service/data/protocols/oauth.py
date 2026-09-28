@@ -24,10 +24,10 @@ from urllib.parse import urlencode
 import anyio
 from pydantic import SecretStr
 
-from ....common import redact
-from ....common.clock import utc_now
-from ....errors import ProviderAuthError, ProviderError
-from ...http import ApiClient
+from ...common import redact
+from ...common.clock import utc_now
+from ...errors import ProviderAuthError, ProviderError
+from .http import ApiClient
 
 # An access token counts as spent this long before it runs out.
 MARGIN = timedelta(minutes=1)

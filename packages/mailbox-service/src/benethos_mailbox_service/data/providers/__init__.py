@@ -14,6 +14,16 @@ from typing import Protocol
 
 from ...errors import NotSupportedError
 from ..models import CredentialKind, MailServer, ProviderType, Security, ServerProtocol
+from ..protocols.oauth import (
+    App,
+    Endpoints,
+    OAuthClient,
+    RefreshingTokens,
+    Tokens,
+    authorize_url,
+    new_pkce,
+)
+from ..protocols.transport import Pick
 from .base import (
     Capability,
     ChangedMessage,
@@ -29,16 +39,6 @@ from .imap import settings_from as imap_settings
 from .memory import MemoryProvider
 from .microsoft import MicrosoftProvider
 from .microsoft import endpoints as microsoft_endpoints
-from .protocols.oauth import (
-    App,
-    Endpoints,
-    OAuthClient,
-    RefreshingTokens,
-    Tokens,
-    authorize_url,
-    new_pkce,
-)
-from .protocols.transport import Pick
 from .rules import hosts_in
 
 

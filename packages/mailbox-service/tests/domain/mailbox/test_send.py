@@ -19,9 +19,9 @@ from benethos_mailbox_service.data.models import (
     ProviderType,
     Recipient,
 )
+from benethos_mailbox_service.data.protocols.imap import ImapSession
+from benethos_mailbox_service.data.protocols.smtp import SmtpSession
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_service.data.providers.protocols.imap import ImapSession
-from benethos_mailbox_service.data.providers.protocols.smtp import SmtpSession
 from benethos_mailbox_service.domain.mailbox import outgoing
 from benethos_mailbox_service.errors import (
     BadRequestError,

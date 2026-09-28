@@ -9,13 +9,13 @@ import pytest
 from pydantic import SecretStr
 
 from benethos_mailbox_service.data.models import FolderRole, MessageFilter
-from benethos_mailbox_service.data.providers.guard import Guard
-from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_service.data.providers.protocols.imap import (
+from benethos_mailbox_service.data.protocols.imap import (
     ImapServer,
     ImapSession,
     RawFolder,
 )
+from benethos_mailbox_service.data.providers.guard import Guard
+from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,

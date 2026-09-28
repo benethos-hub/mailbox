@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import MessageFilter
-from benethos_mailbox_service.data.providers.protocols.imap import (
+from benethos_mailbox_service.data.protocols.imap import (
     ImapServer,
     ImapSession,
     SearchCriteria,

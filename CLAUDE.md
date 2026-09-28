@@ -193,20 +193,22 @@ packages/
           text.py         # the text part of an HTML-only mail
           fields.py       # one header field: a Message-ID as one token,
                           #   an address in Unicode
-        providers/        # registry in __init__.py (also sign_in), base.py
-          protocols/      # wire protocols, one library each: imap.py
-                          #   (IMAPClient), smtp.py (smtplib), oauth.py
-                          #   (OAuth 2.0 with PKCE, refresh, token source),
-                          #   transport.py: the failures below every library
-          guard.py        # pacing, retries, blocked logins, for any adapter
-          sender.py       # SmtpSender: sending for IMAP, POP3, ...
-          imap/, memory/, # one directory per provider (adapter)
-          microsoft/      #   microsoft: Graph over data/http, signin.py
-                          #   its endpoints and the scopes it needs
-        http/             # httpx: base.py (the client, the capped read),
+        protocols/        # the wire, one library each, in our types:
+                          #   imap.py (IMAPClient), smtp.py (smtplib),
+                          #   oauth.py (OAuth 2.0 with PKCE, refresh, token
+                          #   source), transport.py: TLS, timeouts, the
+                          #   failures below every library
+          http/           # httpx: base.py (the client, the capped read),
                           #   safe.py (hosts users typed, SSRF guard),
                           #   api.py (JSON to a provider's known hosts),
                           #   post.py (posts to webhook receivers)
+        providers/        # the adapters: registry in __init__.py (also
+                          #   sign_in), base.py, rules.py
+          guard.py        # pacing, retries, blocked logins, for any adapter
+          sender.py       # SmtpSender: sending for IMAP, POP3, ...
+          imap/, memory/, # one directory per provider (adapter)
+          microsoft/      #   microsoft: Graph over data/protocols/http,
+                          #   signin.py its endpoints and the scopes it needs
         storage/          # own records, one module per subject, table.py
                           #   for the in-memory ones, sqlite/ the database,
                           #   sqlite/migrations/ one module per schema version
@@ -330,12 +332,12 @@ noticing. Every change is measured against that.
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
 | Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/__init__.py` | memory, imap, microsoft (planned: gmail, pop3) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
-| Sending | `data/providers/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
+| Sending | `data/protocols/smtp.py` (`SmtpSession`), and `sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, later templates for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX (planned: JMAP well-known, Microsoft realm, SRV, guessing) | any further lookup, or one switched off |
-| HTTP | `data/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
-| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/providers/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
+| HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
+| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token | password + TOTP, OAuth client credentials |

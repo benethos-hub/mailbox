@@ -46,17 +46,12 @@ from ...models import (
     SentMessage,
     ServerProtocol,
 )
+from ...protocols.imap import DEFAULT_PORTS, ImapServer, ImapSession, SearchCriteria
+from ...protocols.smtp import SmtpSession
+from ...protocols.transport import Pick
 from .. import rules
 from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
 from ..guard import Guard
-from ..protocols.imap import (
-    DEFAULT_PORTS,
-    ImapServer,
-    ImapSession,
-    SearchCriteria,
-)
-from ..protocols.smtp import SmtpSession
-from ..protocols.transport import Pick
 from ..sender import SmtpFactory, SmtpSender
 from . import mappers
 

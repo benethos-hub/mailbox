@@ -13,12 +13,9 @@ from benethos_mailbox_service.data.models import (
     Message,
     ProviderType,
 )
+from benethos_mailbox_service.data.protocols.imap import ImapServer, ImapSession
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
-from benethos_mailbox_service.data.providers.protocols.imap import (
-    ImapServer,
-    ImapSession,
-)
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ConflictError,

@@ -12,12 +12,12 @@ from pydantic import SecretStr
 from benethos_mailbox_service.data.mail import convert, fields
 from benethos_mailbox_service.data.mail.parse import ParsedMessage
 from benethos_mailbox_service.data.models import FolderRole
-from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_service.data.providers.protocols.imap import (
+from benethos_mailbox_service.data.protocols.imap import (
     ImapServer,
     ImapSession,
     RawFolder,
 )
+from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 
 from ...imap_fake import FakeMailBox
 

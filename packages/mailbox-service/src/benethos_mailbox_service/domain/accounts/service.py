@@ -10,8 +10,8 @@ from pydantic import SecretStr
 
 from ...common import redact
 from ...common.ids import new_id
-from ...data.http import HostCheck
 from ...data.models import Account, AccountStatus, ProviderType
+from ...data.protocols.http import HostCheck
 from ...data.providers import (
     CredentialReader,
     ProviderSettings,

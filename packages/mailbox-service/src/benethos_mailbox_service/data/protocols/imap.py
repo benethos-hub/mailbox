@@ -21,7 +21,7 @@ from typing import Any
 from imapclient import IMAPClient
 from imapclient.exceptions import LoginError
 
-from ....errors import (
+from ...errors import (
     BadRequestError,
     NotFoundError,
     NotSupportedError,
@@ -29,8 +29,8 @@ from ....errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from ...mail import fields
-from ...mail.parse import ParsedMessage
+from ..mail import fields
+from ..mail.parse import ParsedMessage
 from .transport import Pick, connect_to, tls_context, transport_errors
 
 ClientFactory = Callable[..., Any]

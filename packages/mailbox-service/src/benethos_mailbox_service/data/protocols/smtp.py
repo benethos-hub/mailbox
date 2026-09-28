@@ -14,13 +14,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
-from ....errors import (
+from ...errors import (
     BadRequestError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
 )
-from ...mail.fields import ascii_domain
+from ..mail.fields import ascii_domain
 from .transport import Pick, connect_to, tls_context, transport_errors
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}

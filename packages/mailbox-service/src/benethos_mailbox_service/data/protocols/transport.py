@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from ....errors import ProviderError, ProviderUnavailableError
+from ...errors import ProviderError, ProviderUnavailableError
 
 # The address a connection to a host goes to, checked when it is made.
 # Raises when the host may not be connected to.

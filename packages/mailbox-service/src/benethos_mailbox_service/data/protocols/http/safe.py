@@ -23,7 +23,7 @@ from typing import Any
 import anyio
 import httpx
 
-from ...errors import ProviderError, ProviderUnavailableError
+from ....errors import ProviderError, ProviderUnavailableError
 from .base import new_client, parse_url, pinned_request, read_capped, unreachable
 
 TIMEOUT = 5.0

@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 
-from ...errors import ProviderError
+from ....errors import ProviderError
 from .base import new_client, parse_url, read_capped, unreachable
 
 TIMEOUT = 30.0

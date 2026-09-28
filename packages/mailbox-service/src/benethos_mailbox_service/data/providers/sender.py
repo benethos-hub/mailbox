@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from ..protocols.smtp import DEFAULT_PORTS, SmtpLogin, SmtpServer, SmtpSession
+from ..protocols.transport import Pick
 from . import rules
 from .base import ProviderSettings
 from .guard import Guard
-from .protocols.smtp import DEFAULT_PORTS, SmtpLogin, SmtpServer, SmtpSession
-from .protocols.transport import Pick
 
 SmtpFactory = Callable[[SmtpServer], SmtpSession]
 

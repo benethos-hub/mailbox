@@ -7,7 +7,7 @@ from __future__ import annotations
 import re
 
 from ....errors import BadRequestError
-from ..protocols.oauth import Endpoints, Profile
+from ...protocols.oauth import Endpoints, Profile
 
 # Who may sign in. A tenant id or domain names one organisation.
 AUDIENCES = ("common", "consumers", "organizations")

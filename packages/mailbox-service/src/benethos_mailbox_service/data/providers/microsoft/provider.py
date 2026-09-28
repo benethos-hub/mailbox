@@ -37,7 +37,6 @@ from ....errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from ...http import Answer, ApiClient
 from ...mail import compose, convert
 from ...mail.parse import ParsedMessage
 from ...models import (
@@ -51,6 +50,7 @@ from ...models import (
     Page,
     SentMessage,
 )
+from ...protocols.http import Answer, ApiClient
 from .. import rules
 from ..base import Capability, ChangedMessage, FolderChanges, TokenSource
 from . import mappers

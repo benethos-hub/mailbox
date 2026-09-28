@@ -34,7 +34,6 @@ from ...data.discovery import (
     placeholders,
     registrable_domain,
 )
-from ...data.http import HostCheck
 from ...data.models import (
     Candidate,
     CredentialKind,
@@ -47,6 +46,7 @@ from ...data.models import (
     SourceOutcome,
     SourceReport,
 )
+from ...data.protocols.http import HostCheck
 from ...data.providers import ServerProbe, settings_from_servers
 from ...errors import BadRequestError, MailboxServiceError, RateLimitedError
 from ..activity import ActivityLog, Actor

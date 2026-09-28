@@ -17,7 +17,7 @@ from collections.abc import Mapping
 
 import httpx
 
-from ...errors import ProviderError, ProviderUnavailableError
+from ....errors import ProviderError, ProviderUnavailableError
 from .base import new_client, parse_url, pinned_request, unreachable
 from .safe import Resolve, host_addresses, unwrapped
 

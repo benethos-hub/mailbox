@@ -16,7 +16,6 @@ from defusedxml import DefusedXmlException
 from defusedxml.ElementTree import fromstring
 
 from ...errors import ProviderError
-from ..http import SafeFetcher
 from ..models import (
     Candidate,
     CredentialKind,
@@ -27,6 +26,7 @@ from ..models import (
     Security,
     ServerProtocol,
 )
+from ..protocols.http import SafeFetcher
 from . import placeholders
 from .base import Finding
 

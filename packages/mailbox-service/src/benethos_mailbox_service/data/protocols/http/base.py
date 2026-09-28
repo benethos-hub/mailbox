@@ -8,7 +8,7 @@ from collections.abc import Mapping
 
 import httpx
 
-from ...errors import ProviderError, ProviderUnavailableError
+from ....errors import ProviderError, ProviderUnavailableError
 
 
 def new_client(

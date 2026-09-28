@@ -232,7 +232,7 @@ client can tell in advance.
 ### 5.1 IMAP: IMAPClient for the protocol, imap-tools for parsing
 
 **Decided 2026-09-24:** the protocol goes through **IMAPClient**, in
-`providers/protocols/imap.py`. It parses every server answer and returns
+`data/protocols/imap.py`. It parses every server answer and returns
 any FETCH item as a dict, which the sync (4.1) and phase 2 (`COPYUID`,
 `MOVE`, `QRESYNC`) need. Phase 1b started on imap-tools. It offered
 nothing for fetching only the `Message-ID` header, so raw `imaplib`

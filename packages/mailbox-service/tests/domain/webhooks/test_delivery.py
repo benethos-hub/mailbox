@@ -14,8 +14,11 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.data.http import WebhookPoster, is_receiver_address
 from benethos_mailbox_service.data.models import Grant, ProviderType
+from benethos_mailbox_service.data.protocols.http import (
+    WebhookPoster,
+    is_receiver_address,
+)
 from benethos_mailbox_service.domain.changes import MessagesUpdated
 from benethos_mailbox_service.domain.webhooks.delivery import BATCH, Retries, signature
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError

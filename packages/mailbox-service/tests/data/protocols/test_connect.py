@@ -9,14 +9,11 @@ from typing import Any
 
 import pytest
 
-from benethos_mailbox_service.data.http import SafeFetcher
-from benethos_mailbox_service.data.providers.protocols import imap, smtp
-from benethos_mailbox_service.data.providers.protocols.imap import (
-    ImapServer,
-    ImapSession,
-)
-from benethos_mailbox_service.data.providers.protocols.smtp import SmtpServer
-from benethos_mailbox_service.data.providers.protocols.transport import tls_context
+from benethos_mailbox_service.data.protocols import imap, smtp
+from benethos_mailbox_service.data.protocols.http import SafeFetcher
+from benethos_mailbox_service.data.protocols.imap import ImapServer, ImapSession
+from benethos_mailbox_service.data.protocols.smtp import SmtpServer
+from benethos_mailbox_service.data.protocols.transport import tls_context
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 
 ADDRESS = "192.0.2.7"
