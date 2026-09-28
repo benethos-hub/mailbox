@@ -42,6 +42,12 @@ def when(value: datetime | None) -> str:
     return value.astimezone().strftime("%Y-%m-%d %H:%M")
 
 
+def moment(value: datetime) -> str:
+    """Local date and time to the millisecond, for a line of the log."""
+    local = value.astimezone()
+    return f"{local:%Y-%m-%d %H:%M:%S}.{local.microsecond // 1000:03d}"
+
+
 def size(value: int | None) -> str:
     if value is None:
         return MISSING
@@ -74,6 +80,7 @@ def segment(value: str) -> str:
 
 templates.env.filters.update(
     when=when,
+    moment=moment,
     size=size,
     address=address,
     addresses=addresses,

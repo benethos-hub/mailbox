@@ -129,21 +129,23 @@ names the settings file it read and the database at start.
 ## Logs
 
 `serve` writes one log to stderr: the terminal, `docker compose logs`, or
-the journal under systemd. There is no log file. Each line has the time,
-the level, where it comes from and the message:
+the journal under systemd. There is no log file. Each line has the time
+to the millisecond with its offset from UTC, the level, where it comes
+from and the message:
 
 ```
-2026-09-28 10:14:03 INFO     benethos_mailbox_service.domain.auth: sign-in to the UI as admin (usr_...) from 127.0.0.1
-2026-09-28 10:14:03 INFO     uvicorn.access: 127.0.0.1:52344 - "POST /ui/sign-in HTTP/1.1" 303
+2026-09-28 10:14:03.412+02:00 INFO     benethos_mailbox_service.domain.auth: sign-in to the UI as admin (usr_...) from 127.0.0.1
+2026-09-28 10:14:03.418+02:00 INFO     uvicorn.access: 127.0.0.1:52344 - "POST /ui/sign-in HTTP/1.1" 303
 ```
 
-At a terminal the lines are shorter and in colour: the time of day, the
-level in colour, the source without the package name (`http` for the
-access log), and a request as method, path and status with its name:
+At a terminal the lines are shorter and in colour: the local time
+without the offset, the level in colour, the source without the package
+name (`http` for the access log), and a request as method, path and
+status with its name:
 
 ```
-10:14:03 INFO    domain.auth    sign-in to the UI as admin (usr_...) from 127.0.0.1
-10:14:03 INFO    http           POST /ui/sign-in 303 See Other 127.0.0.1:52344
+2026-09-28 10:14:03.412 INFO    domain.auth    sign-in to the UI as admin (usr_...) from 127.0.0.1
+2026-09-28 10:14:03.418 INFO    http           POST /ui/sign-in 303 See Other 127.0.0.1:52344
 ```
 
 `NO_COLOR` set to any value keeps the plain lines at a terminal too.

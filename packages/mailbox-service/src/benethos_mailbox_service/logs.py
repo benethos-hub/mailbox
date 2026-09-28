@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from datetime import datetime
 from http import HTTPStatus
 from typing import Any
 
@@ -21,7 +22,6 @@ from .data.secrets import redact
 
 PACKAGE = __name__.rpartition(".")[0]
 FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
-DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 # As uvicorn names them. Its trace level is below debug.
 LEVELS = {
     "critical": logging.CRITICAL,
@@ -35,10 +35,20 @@ LEVELS = {
 
 class Redacting(logging.Formatter):
     """Each line as written, a noted secret masked: in the message, its
-    arguments and a traceback alike."""
+    arguments and a traceback alike. The time to the millisecond with
+    its offset, since a line may be read far from where it was written:
+    ``2026-09-28 10:12:22.123+02:00``."""
 
     def format(self, record: logging.LogRecord) -> str:
         return redact.redact(super().format(record))
+
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
+        return _moment(record).isoformat(sep=" ", timespec="milliseconds")
+
+
+def _moment(record: logging.LogRecord) -> datetime:
+    """When the record was made, in the local time of this machine."""
+    return datetime.fromtimestamp(record.created).astimezone()
 
 
 # ANSI colours, for a terminal only.
@@ -59,17 +69,20 @@ _ACCESS_ARGS = 5
 
 
 class Console(Redacting):
-    """A line for a person at a terminal: the time short and dim, the level
+    """A line for a person at a terminal: the time dim, the level
     in colour, the source short, an access line as method, path and the
     status in colour."""
 
-    def __init__(self) -> None:
-        super().__init__(datefmt="%H:%M:%S")
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
+        """Date and time to the millisecond, local, without the offset
+        a person at this machine knows."""
+        moment = _moment(record)
+        return f"{moment:%Y-%m-%d %H:%M:%S}.{moment.microsecond // 1000:03d}"
 
     def format(self, record: logging.LogRecord) -> str:
         colour = _LEVEL_COLOURS.get(record.levelno, "")
         head = (
-            f"{_DIM}{self.formatTime(record, self.datefmt)}{_RESET} "
+            f"{_DIM}{self.formatTime(record)}{_RESET} "
             f"{colour}{record.levelname:<8}{_RESET}"
             f"{_SOURCE}{short_source(record.name):<14}{_RESET} "
         )
@@ -121,11 +134,7 @@ def log_config(
     number = LEVELS[level.lower()]
     if colours is None:
         colours = colours_wanted()
-    plain = (
-        {"()": Console}
-        if colours
-        else {"()": Redacting, "fmt": FORMAT, "datefmt": DATE_FORMAT}
-    )
+    plain = {"()": Console} if colours else {"()": Redacting, "fmt": FORMAT}
     handlers: dict[str, Any] = {
         "stderr": {
             "class": "logging.StreamHandler",
