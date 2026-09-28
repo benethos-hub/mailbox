@@ -490,10 +490,7 @@ class ImapProvider:
         self._session.expunge([uid])
 
     def _drafts_folder(self) -> str:
-        drafts = self._role_folder(FolderRole.DRAFTS)
-        if drafts is None:
-            raise rules.no_folder(FolderRole.DRAFTS)
-        return drafts
+        return self._required_folder(FolderRole.DRAFTS)
 
     def _draft_place(self, draft_id: str, drafts: str) -> tuple[int, int]:
         """UIDVALIDITY and UID of a draft id. Not found unless it names a
@@ -571,16 +568,22 @@ class ImapProvider:
         found = next((raw.delimiter for raw in raws if raw.delimiter), None)
         return found or self._session.personal_namespace()[1]
 
-    def _role_folder(self, role: FolderRole) -> str | None:
-        """The server's name of the folder with ``role``, if there is one.
-        The folders are listed once per step: a draft save asks for the
+    def _listed(self) -> list[Folder]:
+        """The folders, listed once per step: a draft save asks for the
         drafts folder several times."""
         if self._folders is None:
             self._folders = self._list_folders()
-        return next(
-            (mappers.folder_name(f.id) for f in self._folders if f.role is role),
-            None,
-        )
+        return self._folders
+
+    def _role_folder(self, role: FolderRole) -> str | None:
+        """The server's name of the folder with ``role``, if there is one."""
+        folder = rules.role_folder(self._listed(), role)
+        return mappers.folder_name(folder.id) if folder is not None else None
+
+    def _required_folder(self, role: FolderRole) -> str:
+        """The server's name of the folder with ``role``. ``no_folder``
+        when the account has none."""
+        return mappers.folder_name(rules.require_role_folder(self._listed(), role).id)
 
     def _folder(self, name: str) -> Folder:
         """A folder as listed, with its role and subscription."""
@@ -651,9 +654,7 @@ class ImapProvider:
             self._session.expunge(list(found))
             results.update({uid: None for uid in found})
             return results
-        trash = self._role_folder(FolderRole.TRASH)
-        if trash is None:
-            raise rules.no_folder(FolderRole.TRASH)
+        trash = self._required_folder(FolderRole.TRASH)
         if trash == folder:
             raise rules.in_trash_already()
         moved = self._move(found, trash)

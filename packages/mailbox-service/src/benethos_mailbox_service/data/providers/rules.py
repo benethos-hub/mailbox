@@ -53,6 +53,14 @@ def role_folder(folders: list[Folder], role: FolderRole) -> Folder | None:
     return next((f for f in folders if f.role is role), None)
 
 
+def require_role_folder(folders: list[Folder], role: FolderRole) -> Folder:
+    """The folder with ``role``, ``no_folder`` when the account has none."""
+    folder = role_folder(folders, role)
+    if folder is None:
+        raise no_folder(role)
+    return folder
+
+
 def move_target(
     changes: MessageUpdate, capabilities: frozenset[Capability]
 ) -> str | None:

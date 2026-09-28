@@ -190,10 +190,7 @@ class MemoryProvider:
         return self._role_folder(FolderRole.DRAFTS)
 
     def _role_folder(self, role: FolderRole) -> str:
-        folder = rules.role_folder(self.folders, role)
-        if folder is None:
-            raise rules.no_folder(role)
-        return folder.id
+        return rules.require_role_folder(self.folders, role).id
 
     def _draft(self, draft_id: str) -> Message:
         drafts = self._drafts_folder()
