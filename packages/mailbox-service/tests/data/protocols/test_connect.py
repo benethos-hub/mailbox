@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+from benethos_mailbox_service.common.hosts import ascii_host
 from benethos_mailbox_service.data.protocols import imap, smtp
 from benethos_mailbox_service.data.protocols.http import SafeFetcher
 from benethos_mailbox_service.data.protocols.imap import ImapServer, ImapSession
@@ -94,6 +95,7 @@ def test_a_refused_host_is_not_connected_to() -> None:
 TABLE = {
     "imap.example.org": ["93.184.215.14"],
     "mail.internal": ["10.0.0.5"],
+    "xn--bcher-kva.internal": ["10.0.0.6"],
     "rebound.example.org": ["93.184.215.14", "10.0.0.5"],
 }
 
@@ -101,7 +103,7 @@ TABLE = {
 def fetcher(internal: list[str] | None = None) -> SafeFetcher:
     return SafeFetcher(
         internal_hosts=internal or [],
-        lookup=lambda host, port: TABLE.get(host.lower().rstrip("."), []),
+        lookup=lambda host, port: TABLE.get(ascii_host(host) or host, []),
     )
 
 
@@ -115,3 +117,12 @@ def test_connect_address_follows_the_rule_of_the_host_check() -> None:
     )
     with pytest.raises(ProviderUnavailableError, match="does not resolve"):
         fetcher().connect_address("nowhere.example", 993)
+
+
+def test_an_internal_host_matches_in_unicode_and_in_punycode() -> None:
+    assert fetcher(["bücher.internal"]).connect_address(
+        "xn--bcher-kva.internal", 993
+    ) == ("10.0.0.6")
+    assert fetcher(["xn--bcher-kva.internal"]).connect_address(
+        "bücher.internal", 993
+    ) == ("10.0.0.6")

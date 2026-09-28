@@ -23,6 +23,7 @@ from typing import Any
 import anyio
 import httpx
 
+from ....common.hosts import ascii_host
 from ....errors import ProviderError, ProviderUnavailableError
 from .base import new_client, parse_url, pinned_request, read_capped, unreachable
 
@@ -115,8 +116,9 @@ class SafeFetcher:
     ) -> None:
         self._resolve = resolve
         self._lookup = lookup
-        # Hosts an operator allows although they resolve to private addresses.
-        self._internal = frozenset(h.lower().rstrip(".") for h in internal_hosts)
+        # Hosts an operator allows although they resolve to private
+        # addresses, in ASCII: a host may be written in Unicode or punycode.
+        self._internal = frozenset(filter(None, map(ascii_host, internal_hosts)))
         self._transport = transport
         self._timeout = timeout
         self._max_bytes = max_bytes
@@ -163,7 +165,7 @@ class SafeFetcher:
     def _judged(self, host: str, addresses: list[str]) -> str | None:
         if not addresses:
             return None
-        if host.lower().rstrip(".") not in self._internal:
+        if ascii_host(host) not in self._internal:
             private = [a for a in addresses if not is_public_address(a)]
             if private:
                 raise ProviderError(

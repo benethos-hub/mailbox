@@ -209,6 +209,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A host in `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` matches however
+  it is written, in Unicode or in punycode. Before, an internal host
+  written in Unicode was refused as non-public when an account or
+  autodiscovery named it in punycode, and the other way round.
 - A command that cannot build the service, such as `serve` with a
   client secret file that is missing, closes the database again before
   it stops. Before, the connection stayed open until the process ended.
