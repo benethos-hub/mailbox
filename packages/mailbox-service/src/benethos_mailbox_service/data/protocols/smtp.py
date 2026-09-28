@@ -73,7 +73,7 @@ class SmtpSession:
 
         Domains go in punycode. A local part beyond ASCII needs SMTPUTF8
         of the server, else the message is refused before it is sent."""
-        envelope = [_on_the_wire(sender), *(_on_the_wire(r) for r in recipients)]
+        envelope = [fields.wire_address(a) for a in (sender, *recipients)]
         options = ["SMTPUTF8"] if any(not a.isascii() for a in envelope) else []
         with self._connected(login) as connection, _errors():
             if options:
@@ -130,13 +130,6 @@ class SmtpSession:
                 connection.quit()
             except (smtplib.SMTPException, OSError):
                 pass
-
-
-def _on_the_wire(address: str) -> str:
-    try:
-        return fields.ascii_domain(address)
-    except UnicodeError:
-        raise BadRequestError(f"the domain of {address} cannot be encoded") from None
 
 
 @contextmanager
