@@ -7,7 +7,6 @@ retried with backoff and then left alone for a growing pause.
 
 from __future__ import annotations
 
-import math
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -17,6 +16,7 @@ from typing import TypeVar
 
 from ...common.ratelimit import Clock, Sleep, TokenBucket, backoff
 from ...errors import ProviderAuthError, ProviderError, ProviderUnavailableError
+from . import rules
 
 T = TypeVar("T")
 
@@ -53,9 +53,7 @@ class Guard:
         with self._state:
             wait = self._paused_until - self._clock()
         if wait > 0:
-            raise ProviderUnavailableError(
-                f"the mail server was unreachable: next attempt in {math.ceil(wait)}s"
-            )
+            raise rules.resting("the mail server was unreachable", wait)
 
     def acquire(self) -> None:
         """One request's share of the rate, waiting for it if need be."""

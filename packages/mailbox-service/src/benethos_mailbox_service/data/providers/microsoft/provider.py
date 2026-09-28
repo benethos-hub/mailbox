@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import base64
 import logging
-import math
 import time
 from collections.abc import AsyncIterator, Callable, Mapping
 from typing import Any
@@ -111,9 +110,7 @@ class MicrosoftProvider:
         While Graph asked to be left alone, nothing is sent."""
         wait = self._rest_until - self._clock()
         if wait > 0:
-            raise ProviderUnavailableError(
-                f"microsoft asked to wait: next attempt in {math.ceil(wait)}s"
-            )
+            raise rules.resting("microsoft asked to wait", wait)
         for attempt in (1, 2):
             token = await self._tokens.access_token()
             headers = {

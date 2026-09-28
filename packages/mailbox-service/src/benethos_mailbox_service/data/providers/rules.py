@@ -38,6 +38,11 @@ def no_folder(role: FolderRole) -> ConflictError:
     return ConflictError(f"the account has no {role} folder")
 
 
+def resting(reason: str, wait: float) -> ProviderUnavailableError:
+    """The server is left alone for ``wait`` seconds more, for ``reason``."""
+    return ProviderUnavailableError(f"{reason}: next attempt in {math.ceil(wait)}s")
+
+
 def in_trash_already() -> ConflictError:
     return ConflictError(
         "the message is in the trash already: only a delete for good removes it"

@@ -81,12 +81,7 @@ class SqliteWebhookRepository:
 
     def add_attempt(self, attempt: Attempt, *, keep: int) -> None:
         with self._db.transaction():
-            if (
-                self._db.one(
-                    "SELECT 1 FROM webhooks WHERE id = ?", (attempt.webhook_id,)
-                )
-                is None
-            ):
+            if not self._rows.exists(attempt.webhook_id):
                 return
             self._db.execute(
                 "INSERT INTO webhook_attempts"

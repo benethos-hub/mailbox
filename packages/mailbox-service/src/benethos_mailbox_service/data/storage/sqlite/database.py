@@ -25,6 +25,7 @@ from .migrations import MIGRATIONS, SCHEMA_VERSION
 
 # Stays below SQLite's limit of host parameters in one statement.
 IN_CHUNK = 500
+_SCHEMA_VERSION = "SELECT value FROM meta WHERE key = 'schema_version'"
 
 
 @dataclass(frozen=True)
@@ -183,7 +184,7 @@ class Database:
             yield True
 
     def schema_version(self) -> int:
-        row = self.one("SELECT value FROM meta WHERE key = 'schema_version'")
+        row = self.one(_SCHEMA_VERSION)
         return int(row[0]) if row else 0
 
     def close(self) -> None:
@@ -272,9 +273,7 @@ def inspect_snapshot(data: bytes) -> int:
         result = copy.execute("PRAGMA integrity_check").fetchone()[0]
         if result != "ok":
             raise ValueError(f"database integrity check failed: {result}")
-        row = copy.execute(
-            "SELECT value FROM meta WHERE key = 'schema_version'"
-        ).fetchone()
+        row = copy.execute(_SCHEMA_VERSION).fetchone()
     except sqlite3.DatabaseError as exc:
         raise ValueError(f"not a database: {exc}") from None
     finally:

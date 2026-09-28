@@ -43,6 +43,12 @@ class SqliteRows(Generic[T]):
             f"SELECT * FROM {self._table} WHERE id = ?", (row_id,), self._what, row_id
         )
 
+    def exists(self, row_id: str) -> bool:
+        return (
+            self._db.one(f"SELECT 1 FROM {self._table} WHERE id = ?", (row_id,))
+            is not None
+        )
+
     def delete(self, row_id: str) -> None:
         self._db.must_change(
             f"DELETE FROM {self._table} WHERE id = ?", (row_id,), self._what, row_id

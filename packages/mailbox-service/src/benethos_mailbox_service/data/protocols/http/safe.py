@@ -25,7 +25,14 @@ import httpx
 
 from ....common.hosts import ascii_host
 from ....errors import ProviderError, ProviderUnavailableError
-from .base import new_client, parse_url, pinned_request, read_capped, unreachable
+from .base import (
+    host_of,
+    new_client,
+    parse_url,
+    pinned_request,
+    read_capped,
+    unreachable,
+)
 
 TIMEOUT = 5.0
 MAX_BYTES = 256 * 1024
@@ -131,7 +138,7 @@ class SafeFetcher:
             for _ in range(MAX_REDIRECTS + 1):
                 if target.scheme != "https":
                     raise ProviderError(f"refused to fetch {target}: HTTPS only")
-                host = target.raw_host.decode("ascii").lower()
+                host = host_of(target)
                 address = await self.checked_address(host, target.port or 443)
                 if address is None:
                     return None
