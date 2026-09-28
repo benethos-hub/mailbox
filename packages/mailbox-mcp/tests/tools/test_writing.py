@@ -9,6 +9,7 @@ import pytest
 
 from benethos_mailbox_mcp import server
 from benethos_mailbox_mcp.errors import ToolError
+from benethos_mailbox_mcp.tools import writing
 
 BATCH = "/v1/accounts/acc_1/messages/batch"
 
@@ -29,7 +30,7 @@ async def test_marks_and_reports_each_id(api: Callable) -> None:
             ]
         }
     )
-    result = await server.update_messages(
+    result = await writing.update_messages(
         "acc_1", ["msg_1", "msg_2"], unread=False, starred=True
     )
     assert handler.posted() == [
@@ -52,14 +53,14 @@ async def test_move_by_role(api: Callable) -> None:
     """The API resolves roles: the server passes one on and asks for no
     folders."""
     handler = api({"results": [{"id": "msg_1", "ok": True}]})
-    await server.update_messages("acc_1", ["msg_1"], move_to="archive")
+    await writing.update_messages("acc_1", ["msg_1"], move_to="archive")
     assert [call.method for call in handler.calls] == ["POST"]
     assert handler.posted()[0][1]["changes"] == {"folder_ids": ["archive"]}
 
 
 async def test_move_by_id_asks_for_no_folders(api: Callable) -> None:
     handler = api({"results": [{"id": "msg_1", "ok": True}]})
-    await server.update_messages("acc_1", ["msg_1"], move_to="fld_work")
+    await writing.update_messages("acc_1", ["msg_1"], move_to="fld_work")
     assert [call.method for call in handler.calls] == ["POST"]
     assert handler.posted()[0][1]["changes"] == {"folder_ids": ["fld_work"]}
 
@@ -71,12 +72,12 @@ async def test_a_role_the_account_lacks(make_client: Callable) -> None:
 
     make_client(refuse)
     with pytest.raises(ToolError, match="has no junk folder"):
-        await server.update_messages("acc_1", ["msg_1"], move_to="junk")
+        await writing.update_messages("acc_1", ["msg_1"], move_to="junk")
 
 
 async def test_trash(api: Callable) -> None:
     handler = api({"results": [{"id": "msg_1", "ok": True}]})
-    assert await server.update_messages("acc_1", ["msg_1"], trash=True) == {
+    assert await writing.update_messages("acc_1", ["msg_1"], trash=True) == {
         "done": ["msg_1"],
         "failed": [],
     }
@@ -86,13 +87,13 @@ async def test_trash(api: Callable) -> None:
 async def test_trash_goes_alone(api: Callable) -> None:
     api(None)
     with pytest.raises(ToolError, match="alone"):
-        await server.update_messages("acc_1", ["msg_1"], trash=True, unread=False)
+        await writing.update_messages("acc_1", ["msg_1"], trash=True, unread=False)
 
 
 async def test_nothing_to_change(api: Callable) -> None:
     api(None)
     with pytest.raises(ToolError, match="nothing to change"):
-        await server.update_messages("acc_1", ["msg_1"])
+        await writing.update_messages("acc_1", ["msg_1"])
 
 
 # --- create_folder --------------------------------------------------------------------
@@ -100,7 +101,7 @@ async def test_nothing_to_change(api: Callable) -> None:
 
 async def test_create_folder(api: Callable) -> None:
     handler = api({"id": "fld_new", "name": "Invoices", "role": None, "total": 0})
-    assert await server.create_folder("acc_1", "Invoices") == {
+    assert await writing.create_folder("acc_1", "Invoices") == {
         "id": "fld_new",
         "name": "Invoices",
     }
@@ -109,7 +110,7 @@ async def test_create_folder(api: Callable) -> None:
 
 async def test_create_folder_below_a_role(api: Callable) -> None:
     handler = api({"id": "fld_new", "name": "2026"})
-    await server.create_folder("acc_1", "2026", parent="archive")
+    await writing.create_folder("acc_1", "2026", parent="archive")
     assert handler.posted()[0][1] == {"name": "2026", "parent_id": "archive"}
 
 

@@ -11,8 +11,10 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
 from benethos_mailbox_mcp import __version__, cli, render, server
+from benethos_mailbox_mcp import tools as catalogue
 from benethos_mailbox_mcp.client import MailboxApiClient
 from benethos_mailbox_mcp.errors import ApiError, ServiceUnavailableError, ToolError
+from benethos_mailbox_mcp.tools import accounts, reading, writing
 
 READ = ["get_message", "list_all_messages", "list_folders", "list_messages"]
 ME = {
@@ -72,7 +74,7 @@ async def test_the_start_warns_who_may_read_and_send_anywhere(
 
 async def test_list_accounts_says_what_is_allowed(api: Callable) -> None:
     api(routes={"/v1/me": ME})
-    assert await server.list_accounts() == [
+    assert await accounts.list_accounts() == [
         {
             "id": "acc_1",
             "email": "me@example.com",
@@ -102,7 +104,7 @@ async def test_search_passes_filters_and_answers_summaries(api: Callable) -> Non
         "incomplete": [{"account_id": "acc_2", "code": "x", "message": "down"}],
     }
     handler = api(routes={"/v1/messages": page})
-    result = await server.search_messages(sender="alice", after="2026-09-01")
+    result = await reading.search_messages(sender="alice", after="2026-09-01")
     [call] = handler.calls
     assert call.params == {
         "from": "alice",
@@ -130,7 +132,7 @@ async def test_search_passes_filters_and_answers_summaries(api: Callable) -> Non
 
 async def test_search_in_one_account(api: Callable) -> None:
     handler = api(routes={"/v1/accounts/acc_1/messages": {"items": []}})
-    await server.search_messages(account_id="acc_1", folder="inbox", unread=True)
+    await reading.search_messages(account_id="acc_1", folder="inbox", unread=True)
     [call] = handler.calls
     assert call.params == {
         "folder": "inbox",
@@ -149,7 +151,7 @@ async def test_whats_new_across_accounts(api: Callable) -> None:
     handler = api(
         routes={"/v1/changes": {"changes": [change], "state": "chs_Mg", "more": True}}
     )
-    result = await server.whats_new(since="chs_MQ")
+    result = await reading.whats_new(since="chs_MQ")
     [call] = handler.calls
     assert call.params == {"since": "chs_MQ", "limit": "50"}
     assert result == {
@@ -170,7 +172,7 @@ async def test_whats_new_first_call_and_one_account(api: Callable) -> None:
             }
         }
     )
-    result = await server.whats_new(account_id="acc_1", limit=5)
+    result = await reading.whats_new(account_id="acc_1", limit=5)
     [call] = handler.calls
     assert call.params == {"limit": "5"}
     assert result["state"] == "chs_MA"
@@ -194,7 +196,7 @@ async def test_an_expired_state_is_a_tool_error(api: Callable) -> None:
         },
     )
     with pytest.raises(ToolError, match="older than the changes kept"):
-        await server.whats_new(since="chs_MQ")
+        await reading.whats_new(since="chs_MQ")
 
 
 async def test_get_message_is_marked_foreign(api: Callable) -> None:
@@ -214,7 +216,7 @@ async def test_get_message_is_marked_foreign(api: Callable) -> None:
         ],
     }
     api(routes={"/v1/accounts/acc_1/messages/msg_1": message})
-    text = await server.get_message("acc_1", "msg_1")
+    text = await reading.get_message("acc_1", "msg_1")
     assert 'source="acc_1/msg_1"' in text
     assert "<mail-content" in text and "</mail-content>" in text
     assert "attachment: att_0 a.pdf" in text
@@ -228,7 +230,7 @@ async def test_errors_are_tool_errors(make_client: Callable) -> None:
         )
     )
     with pytest.raises(ToolError, match="wrong token"):
-        await server.list_accounts()
+        await accounts.list_accounts()
 
 
 async def test_a_tool_call_through_the_server(api: Callable) -> None:
@@ -241,15 +243,15 @@ async def test_a_tool_call_through_the_server(api: Callable) -> None:
     assert "Inbox" in json.dumps(result, default=str)
 
 
-EVERY_OPERATION = {need for tool in server.TOOLS for need in tool.needs}
+EVERY_OPERATION = {need for tool in catalogue.TOOLS for need in tool.needs}
 
 
 @pytest.mark.parametrize(
     ("tool", "arguments", "field"),
     [
         ("search_messages", {"limit": 0}, "limit"),
-        ("search_messages", {"limit": server.MAX_LIMIT + 1}, "limit"),
-        ("whats_new", {"limit": server.MAX_CHANGES + 1}, "limit"),
+        ("search_messages", {"limit": catalogue.MAX_LIMIT + 1}, "limit"),
+        ("whats_new", {"limit": reading.MAX_CHANGES + 1}, "limit"),
         (
             "get_message",
             {"account_id": "acc_1", "message_id": "m", "max_chars": 199},
@@ -261,7 +263,7 @@ EVERY_OPERATION = {need for tool in server.TOOLS for need in tool.needs}
                 "account_id": "acc_1",
                 "message_id": "m",
                 "attachment_id": "a",
-                "pages": server.MAX_PAGES + 1,
+                "pages": reading.MAX_PAGES + 1,
             },
             "pages",
         ),
@@ -274,7 +276,7 @@ EVERY_OPERATION = {need for tool in server.TOOLS for need in tool.needs}
             "update_messages",
             {
                 "account_id": "acc_1",
-                "message_ids": [f"m{n}" for n in range(server.MAX_BATCH + 1)],
+                "message_ids": [f"m{n}" for n in range(writing.MAX_BATCH + 1)],
                 "unread": True,
             },
             "message_ids",
@@ -307,15 +309,15 @@ async def test_the_server_refuses_arguments_out_of_bounds(
 
 def test_client_is_created_once(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
-    first = server.client()
+    first = catalogue.client()
     assert isinstance(first, MailboxApiClient)
-    assert server.client() is first
+    assert catalogue.client() is first
 
 
 def test_use_client_hands_back_the_one_before(make_client: Callable) -> None:
     first = make_client(lambda _: httpx.Response(200, json=[]))
-    assert server.use_client(None) is first
-    assert server.use_client(None) is None
+    assert catalogue.use_client(None) is first
+    assert catalogue.use_client(None) is None
 
 
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -380,7 +382,7 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
     made: list[MailboxApiClient] = []
 
     async def operations() -> set[str]:
-        made.append(server.client())
+        made.append(catalogue.client())
         return set(READ)
 
     monkeypatch.setattr(server, "allowed_operations", operations)
@@ -390,7 +392,7 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
         lambda ops: type("S", (), {"run": lambda self, transport: None})(),
     )
     cli.main([])
-    assert server.client() is not made[0]
+    assert catalogue.client() is not made[0]
 
 
 # title, read-only, destructive, idempotent, open world
@@ -417,14 +419,14 @@ README = Path(__file__).resolve().parents[1] / "README.md"
 
 async def test_the_readme_lists_every_tool() -> None:
     """The tool table of the README, which the service's UI repeats."""
-    every = {need for tool in server.TOOLS for need in tool.needs}
+    every = {need for tool in catalogue.TOOLS for need in tool.needs}
     tools = {tool.name for tool in await server.build_server(every).list_tools()}
     listed = re.findall(r"^\| `(\w+)` \|", README.read_text(encoding="utf-8"), re.M)
     assert set(listed) == tools and len(listed) == len(tools)
 
 
 async def test_every_tool_carries_its_title_and_hints() -> None:
-    every = {need for tool in server.TOOLS for need in tool.needs}
+    every = {need for tool in catalogue.TOOLS for need in tool.needs}
     tools = await server.build_server(every).list_tools()
     assert {tool.name for tool in tools} == set(HINTS)
     for tool in tools:

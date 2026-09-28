@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from benethos_mailbox_mcp import server
+from benethos_mailbox_mcp.tools import sending
 
 SENT = {"message_id_header": "<m1@example.com>", "sent_copy_id": "msg_s", "refused": []}
 SEND_DRAFT = "/v1/accounts/acc_1/drafts/msg_d/send"
@@ -13,7 +14,7 @@ SEND_DRAFT = "/v1/accounts/acc_1/drafts/msg_d/send"
 
 async def test_send_message(api: Callable) -> None:
     handler = api(SENT)
-    result = await server.send_message(
+    result = await sending.send_message(
         "acc_1", to=["bob@example.com"], subject="Hi", text="Hello"
     )
     assert result == {"sent": True, "message_id_header": "<m1@example.com>"}
@@ -32,8 +33,8 @@ async def test_send_message(api: Callable) -> None:
 async def test_the_same_call_gives_the_same_key(api: Callable) -> None:
     handler = api(SENT)
     for text in ("Hello", "Hello", "Hello again"):
-        await server.send_message("acc_1", to=["bob@example.com"], text=text)
-    await server.send_message("acc_2", to=["bob@example.com"], text="Hello")
+        await sending.send_message("acc_1", to=["bob@example.com"], text=text)
+    await sending.send_message("acc_2", to=["bob@example.com"], text="Hello")
     keys = handler.keys
     assert keys[0] == keys[1]
     assert len(set(keys)) == 3
@@ -41,22 +42,22 @@ async def test_the_same_call_gives_the_same_key(api: Callable) -> None:
 
 async def test_a_reply_by_reference(api: Callable) -> None:
     handler = api(SENT)
-    await server.send_message("acc_1", text="Thanks", original_id="msg_1")
+    await sending.send_message("acc_1", text="Thanks", original_id="msg_1")
     body = handler.calls[0].body
     assert body["reference"] == {"message_id": "msg_1", "action": "reply"}
 
 
 async def test_refused_recipients_are_named(api: Callable) -> None:
     api({**SENT, "refused": ["gone@example.com"]})
-    result = await server.send_message("acc_1", to=["gone@example.com", "b@x.org"])
+    result = await sending.send_message("acc_1", to=["gone@example.com", "b@x.org"])
     assert result["refused"] == ["gone@example.com"]
 
 
 async def test_send_draft(api: Callable) -> None:
     handler = api(SENT)
-    assert (await server.send_draft("acc_1", "msg_d"))["sent"] is True
-    await server.send_draft("acc_1", "msg_d")
-    await server.send_draft("acc_1", "msg_e")
+    assert (await sending.send_draft("acc_1", "msg_d"))["sent"] is True
+    await sending.send_draft("acc_1", "msg_d")
+    await sending.send_draft("acc_1", "msg_e")
     assert [c.path for c in handler.calls[:2]] == [SEND_DRAFT, SEND_DRAFT]
     assert handler.calls[0].body is None
     first, again, other = handler.keys
@@ -79,7 +80,7 @@ async def test_registered_only_with_the_send_rights() -> None:
 
 async def test_send_html(api: Callable) -> None:
     handler = api(SENT)
-    await server.send_message(
+    await sending.send_message(
         "acc_1", to=["bob@example.com"], html='<p style="color:red">Hi</p>'
     )
     body = handler.calls[0].body

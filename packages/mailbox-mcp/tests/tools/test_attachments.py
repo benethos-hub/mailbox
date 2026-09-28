@@ -14,6 +14,7 @@ from mcp.types import ContentBlock, ImageContent, TextContent
 
 from benethos_mailbox_mcp import pdf, server
 from benethos_mailbox_mcp.errors import ToolError
+from benethos_mailbox_mcp.tools import reading
 
 URL = "/v1/accounts/acc_1/messages/msg_1/attachments/att_0"
 
@@ -103,7 +104,7 @@ def serving(
 
 
 async def call(**options: int) -> list[ContentBlock]:
-    result = await server.get_attachment("acc_1", "msg_1", "att_0", **options)
+    result = await reading.get_attachment("acc_1", "msg_1", "att_0", **options)
     return list(result.content)
 
 
@@ -184,7 +185,7 @@ async def test_other_types_only_by_name(make_client: Callable) -> None:
 async def test_too_large(
     make_client: Callable, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(server, "MAX_ATTACHMENT_BYTES", 10)
+    monkeypatch.setattr(reading, "MAX_ATTACHMENT_BYTES", 10)
     make_client(serving(b"x" * 11, "text/plain"))
     with pytest.raises(ToolError, match="more than the 10"):
         await call()
@@ -212,7 +213,7 @@ def test_many_pages_share_the_budget_of_one_call() -> None:
 async def test_a_large_image_goes_by_name_only(
     make_client: Callable, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(server, "MAX_IMAGE_BYTES", 10)
+    monkeypatch.setattr(reading, "MAX_IMAGE_BYTES", 10)
     make_client(serving(b"\x89PNG" + b"x" * 20, "image/png", "photo.png"))
     [text] = texts(await call())
     assert "by name only" in text

@@ -11,7 +11,7 @@ import sys
 
 import anyio
 
-from . import __version__, server, transport
+from . import __version__, server, tools, transport
 from .errors import ToolError
 
 
@@ -22,7 +22,7 @@ async def _at_start() -> set[str]:
     try:
         return await server.allowed_operations()
     finally:
-        left = server.use_client(None)
+        left = tools.use_client(None)
         if left is not None:
             await left.aclose()
 
