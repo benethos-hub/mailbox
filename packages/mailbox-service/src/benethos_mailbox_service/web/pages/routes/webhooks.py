@@ -71,32 +71,32 @@ def _new_webhook_page(
         page="webhooks",
         status_code=400 if err else 200,
         err=err,
-        typed=(
-            {
-                "url": str(form.get("url") or "").strip(),
-                "events": [str(e) for e in form.getlist("events")],
-                "every": form.get("every") == "1",
-                "accounts": [str(a) for a in form.getlist("accounts")],
-            }
-            if form is not None
-            else None
-        ),
+        typed=_typed(form) if form is not None else None,
         events=CHANGE_KINDS,
         accounts=_readable(request, caller),
     )
 
 
+def _typed(form: Any) -> dict[str, Any]:
+    """The fields of a new webhook as they were submitted."""
+    return {
+        "url": str(form.get("url") or "").strip(),
+        "events": [str(e) for e in form.getlist("events")],
+        "every": form.get("every") == "1",
+        "accounts": [str(a) for a in form.getlist("accounts")],
+    }
+
+
 def _request_of(form: Any) -> WebhookCreate:
-    every = form.get("every") == "1"
-    accounts = [str(a) for a in form.getlist("accounts")]
-    if not every and not accounts:
+    typed = _typed(form)
+    if not typed["every"] and not typed["accounts"]:
         raise FormError("Choose the accounts, or every account.")
     return model_of(
         WebhookCreate,
         {
-            "url": str(form.get("url") or "").strip(),
-            "events": [str(e) for e in form.getlist("events")],
-            "accounts": None if every else accounts,
+            "url": typed["url"],
+            "events": typed["events"],
+            "accounts": None if typed["every"] else typed["accounts"],
         },
     )
 

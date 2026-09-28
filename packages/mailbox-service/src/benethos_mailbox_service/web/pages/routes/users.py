@@ -139,6 +139,14 @@ def _typed_user(form: Any) -> dict[str, Any]:
     }
 
 
+def _typed_token(form: Any) -> dict[str, str]:
+    """The fields of a new token as they were submitted."""
+    return {
+        "name": str(form.get("name") or "").strip(),
+        "days": str(form.get("days") or "").strip(),
+    }
+
+
 def _typed_rows(form: Any) -> list[GrantRow] | None:
     """The grant rows of ``form`` as typed, None without a form."""
     return typed_rows(form) if form is not None else None
@@ -147,19 +155,20 @@ def _typed_rows(form: Any) -> list[GrantRow] | None:
 @router.post("/users")
 async def create_user(request: Request, caller: Actor, users: Users) -> Response:
     form = await request.form()
-    ui_sign_in = form.get("signs_in_to") == "ui"
+    typed = _typed_user(form)
+    ui_sign_in = typed["signs_in_to"] == "ui"
     with failing(
         "/ui/users/new", again=lambda err: _new_user_page(request, caller, form, err)
     ):
         user = users.create_user(
             caller,
-            str(form.get("name") or "").strip(),
-            [str(role) for role in form.getlist("roles")],
+            typed["name"],
+            typed["roles"],
             read_grants(form),
             ui_sign_in=ui_sign_in,
         )
     here = f"/ui/users/{user.id}"
-    if ui_sign_in and "one_time" in form:
+    if ui_sign_in and typed["one_time"]:
         with failing(here, f"{user.name} created, but no password: "):
             password = await users.one_time_password(caller, user.id)
         # Shown on the next page, once, and never in the URL.
@@ -198,14 +207,7 @@ def _user_page(
         status_code=REFUSED if err else 200,
         err=err,
         typed=typed,
-        typed_token=(
-            {
-                "name": str(token_form.get("name") or "").strip(),
-                "days": str(token_form.get("days") or "").strip(),
-            }
-            if token_form is not None
-            else None
-        ),
+        typed_token=_typed_token(token_form) if token_form is not None else None,
         user=found,
         effective=view_of(users.rights_of(caller, user_id)),
         tokens=[(token, users.token_state(token)) for token in tokens or []],
@@ -234,9 +236,10 @@ async def update_user(
 ) -> Response:
     form = await request.form()
     here = f"/ui/users/{user_id}"
+    typed = _typed_user(form)
     # The tick box of the UI sign-in changes something only where the page
     # showed it: not on the own page, since nobody takes its own sign-in.
-    ui_sign_in = "ui_sign_in" in form if "ui_sign_in_shown" in form else None
+    ui_sign_in = typed["ui_sign_in"] if "ui_sign_in_shown" in form else None
     with failing(
         here,
         again=lambda err: _user_page(
@@ -246,10 +249,10 @@ async def update_user(
         users.update_user(
             caller,
             user_id,
-            name=str(form.get("name") or "").strip() or None,
-            roles=[str(role) for role in form.getlist("roles")],
+            name=typed["name"] or None,
+            roles=typed["roles"],
             grants=read_grants(form),
-            disabled="disabled" in form,
+            disabled=typed["disabled"],
             ui_sign_in=ui_sign_in,
         )
     return back(request, here, "Saved.")
@@ -305,8 +308,8 @@ async def create_token(
 ) -> Response:
     form = await request.form()
     here = f"/ui/users/{user_id}"
-    name = str(form.get("name") or "").strip()
-    days = str(form.get("days") or "").strip()
+    typed = _typed_token(form)
+    name, days = typed["name"], typed["days"]
     with failing(
         here,
         again=lambda err: _user_page(

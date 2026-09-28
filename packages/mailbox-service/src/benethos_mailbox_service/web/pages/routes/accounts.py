@@ -61,6 +61,15 @@ def _submitted(form: Any) -> dict[str, str | int | bool | None]:
     return submitted
 
 
+def _typed_account(form: Any) -> dict[str, Any]:
+    """The fields of an account's editor as they were submitted, the
+    password left out."""
+    return {
+        "display_name": str(form.get("display_name") or "").strip(),
+        "settings": {key: str(form.get(key) or "").strip() for key in SETTING_FIELDS},
+    }
+
+
 def _password(form: Any) -> dict[str, SecretStr]:
     value = str(form.get("password") or "")
     return {"password": SecretStr(value)} if value else {}
@@ -221,16 +230,7 @@ def _account_page(
         page="accounts",
         status_code=400 if err else 200,
         err=err,
-        typed=(
-            {
-                "display_name": str(form.get("display_name") or "").strip(),
-                "settings": {
-                    key: str(form.get(key) or "").strip() for key in SETTING_FIELDS
-                },
-            }
-            if form is not None
-            else None
-        ),
+        typed=_typed_account(form) if form is not None else None,
         account=found,
         can_read=caller.allows("list_messages", account_id),
         can_audit=caller.allows("list_sends", account_id),
@@ -256,7 +256,7 @@ async def update_account(
     changes: dict[str, Any] = {"display_name": None, "rename": False}
     if "display_name" in form:
         changes = {
-            "display_name": str(form.get("display_name") or "").strip() or None,
+            "display_name": _typed_account(form)["display_name"] or None,
             "rename": True,
         }
     with failing(
