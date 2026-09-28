@@ -109,6 +109,11 @@ class Sent:
     refused: list[str]
 
 
+def service_url() -> str:
+    """The service's address: ``MAILBOX_SERVICE_URL``, else the default."""
+    return (os.environ.get(URL_ENV) or DEFAULT_URL).rstrip("/")
+
+
 class MailboxApiClient:
     def __init__(
         self,
@@ -120,7 +125,7 @@ class MailboxApiClient:
         """Raises without a token, and when the URL would carry the token
         unencrypted to another machine, unless ``allow_http`` (else
         ``MAILBOX_SERVICE_ALLOW_HTTP``) says so."""
-        self.base_url = (base_url or os.environ.get(URL_ENV) or DEFAULT_URL).rstrip("/")
+        self.base_url = (base_url or service_url()).rstrip("/")
         if allow_http is None:
             allow_http = os.environ.get(ALLOW_HTTP_ENV, "") in ("1", "true", "yes")
         _check_url(self.base_url, allow_http)

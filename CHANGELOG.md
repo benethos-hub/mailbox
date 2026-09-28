@@ -110,6 +110,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   name slowed down, the discovery and the send limit, a request body too
   large. At `DEBUG` each sync pass with its counts, IDLE renewed, a token
   refreshed, a discovery by its domain, an Idempotency-Key replayed.
+- The MCP server logs at start which tools it serves, over which
+  transport, for which service, and a warning for each tool that fails,
+  with the tool's name and the service's error code, never its
+  arguments. The MCP library logs from `WARNING` on, like httpx.
 - The MCP server refuses a `MAILBOX_MCP_LOG_LEVEL` or `MAILBOX_MCP_PORT`
   it cannot use with a message, as it does `MAILBOX_MCP_TRANSPORT`.
   Before, it stopped with a traceback.

@@ -276,7 +276,10 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 - `INFO` at start: transport, the service's URL, which tools were
   registered, the warning per account that reads mail and sends
   anywhere.
-- `WARNING` for a tool that failed with the service's error message.
+- `WARNING` for a tool that failed, with the tool's name and the code of
+  the service's error and its HTTP status, not its message: a message
+  may repeat an address or a search term the model sent. A refusal of
+  the server's own checks says "the arguments were refused".
 - Never a tool's arguments, never a search term, never mail content,
   never the token. `httpx` and the MCP library at `WARNING`, so no
   request URL is written.
