@@ -25,7 +25,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
 
-from ...common.clock import utc_now
+from ...common.clock import iso, parse_iso, utc_now
 from ...common.ids import new_id
 from ...common.redact import redact
 from ...data.providers import Capability, FolderChanges, MailProvider
@@ -274,9 +274,7 @@ class SyncService:
             except ChangesExpiredError:
                 last = None
                 found = await self._folder_changes(account_id, folder_id, None)
-            states[folder_id] = json.dumps(
-                {"token": found.token, "at": now.isoformat()}
-            )
+            states[folder_id] = json.dumps({"token": found.token, "at": iso(now)})
             if last is None:
                 arrived_new |= {m.id for m in found.changed}
                 continue
@@ -398,9 +396,10 @@ def _delta_state(stored: str | None) -> tuple[str, datetime] | None:
         return None
     try:
         value = json.loads(stored)
-        return str(value["token"]), datetime.fromisoformat(value["at"])
+        at = parse_iso(str(value["at"]))
     except (ValueError, TypeError, KeyError):
         return None
+    return None if at is None else (str(value["token"]), at)
 
 
 def _moves(

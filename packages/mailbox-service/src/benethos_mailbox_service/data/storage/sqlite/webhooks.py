@@ -7,9 +7,10 @@ import json
 import sqlite3
 from datetime import datetime
 
+from ....common.clock import iso, parse_iso
 from ...models import Webhook
 from ..webhooks import Attempt, Delivery, Sealed, WebhookRecord
-from .database import Database, iso, parse_iso
+from .database import Database
 
 
 class SqliteWebhookRepository:

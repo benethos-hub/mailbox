@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from typing import Any
 
+from ....common.clock import parse_iso
 from ...mail import fields
 from ...models import (
     Address,
@@ -78,9 +79,7 @@ def _addresses(values: Any) -> list[Address]:
 
 
 def when(value: Any) -> datetime | None:
-    if not value:
-        return None
-    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return parse_iso(str(value).replace("Z", "+00:00")) if value else None
 
 
 def keywords(item: dict[str, Any]) -> list[str]:

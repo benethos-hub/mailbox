@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import sqlite3
 
+from ....common.clock import iso, parse_iso
 from ..credentials import EncryptedCredential, WrappedKey
-from .database import Database, iso, parse_iso
+from .database import Database
 
 
 class SqliteKeyRepository:

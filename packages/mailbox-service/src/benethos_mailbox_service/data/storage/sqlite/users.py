@@ -6,8 +6,9 @@ import json
 import sqlite3
 from datetime import datetime
 
+from ....common.clock import iso, parse_iso
 from ...models import ApiToken, Grant, Role, User
-from .database import Database, iso, parse_iso
+from .database import Database
 from .rows import SqliteRows
 
 

@@ -126,7 +126,8 @@ packages/
         ids.py            # ids of own records: acc_, usr_, msg_, ... + 64 hex
         opaque.py         # opaque ids and cursors: prefix + base64 JSON
         clock.py          # utc_now, the default clock of the services,
-                          #   local_moment: the local time of a log line
+                          #   local_moment: the local time of a log line,
+                          #   iso and parse_iso: a time as text, in UTC
         redact.py         # secrets noted once, masked in every text
         ratelimit.py      # pacing: a token bucket and a backoff
         plaintext.py      # the text of an HTML body, for a mail and a page

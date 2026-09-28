@@ -15,9 +15,8 @@ import threading
 from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, overload
+from typing import Any
 
 from ....errors import ConflictError, StorageError
 from ...files import LockedError, create_private, exclusive_lock
@@ -215,27 +214,6 @@ def translated() -> Iterator[None]:
         raise ConflictError(f"conflicts with a stored record: {exc}") from None
     except sqlite3.Error as exc:
         raise StorageError(f"the database failed: {exc}") from None
-
-
-def iso(value: datetime | None) -> str | None:
-    """A time as the TEXT columns hold it: in UTC, so that times compare
-    as text. A time without a zone is refused."""
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        raise ValueError("a time without a zone cannot be stored")
-    return value.astimezone(UTC).isoformat()
-
-
-@overload
-def parse_iso(value: str) -> datetime: ...
-@overload
-def parse_iso(value: None) -> None: ...
-@overload
-def parse_iso(value: str | None) -> datetime | None: ...
-def parse_iso(value: str | None) -> datetime | None:
-    """The time a TEXT column holds, None for NULL."""
-    return datetime.fromisoformat(value) if value else None
 
 
 def _casefold(value: str | None) -> str | None:

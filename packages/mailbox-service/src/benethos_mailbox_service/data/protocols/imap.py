@@ -14,13 +14,14 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import date
 from email.parser import BytesHeaderParser
 from typing import Any
 
 from imapclient import IMAPClient
 from imapclient.exceptions import LoginError
 
+from ...common.clock import utc_now
 from ...common.sizes import MIB
 from ...errors import (
     BadRequestError,
@@ -300,9 +301,7 @@ class ImapSession:
             reported = _with_code(
                 client,
                 "APPENDUID",
-                lambda: client.append(
-                    folder, raw, flags=flags, msg_time=datetime.now(UTC)
-                ),
+                lambda: client.append(folder, raw, flags=flags, msg_time=utc_now()),
             )
         for item in reported:
             match = re.search(r"(?:APPENDUID )?\d+ (\d+)", _text(item) if item else "")

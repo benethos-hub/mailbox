@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from typing import Literal
 
 from ...common import opaque
-from ...common.clock import utc_now
+from ...common.clock import iso, parse_iso, utc_now
 from ...common.ids import new_id
 from ...data.models import Page, SendFilter, SendOutcome, SendRecord, SentMessage
 from ...data.storage import SendLogRepository
@@ -201,7 +201,7 @@ class SendControl:
         if cursor is not None:
             try:
                 at, record_id = paging.decode_cursor(CURSOR, cursor)
-                before = (datetime.fromisoformat(at), str(record_id))
+                before = (parse_iso(str(at)), str(record_id))
             except (ValueError, TypeError):
                 raise BadRequestError("invalid cursor") from None
         records: list[SendRecord] = []
@@ -214,5 +214,5 @@ class SendControl:
         if len(records) > limit:
             records = records[:limit]
             last = records[-1]
-            next_cursor = opaque.encode(CURSOR, [last.created_at.isoformat(), last.id])
+            next_cursor = opaque.encode(CURSOR, [iso(last.created_at), last.id])
         return Page[SendRecord](items=records, next_cursor=next_cursor)

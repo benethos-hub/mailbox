@@ -12,9 +12,9 @@ import hashlib
 import json
 import os
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 
+from ..common.clock import iso, utc_now
 from .files import LockedError, create_private, exclusive_lock
 from .secrets import cipher
 from .storage import SCHEMA_VERSION, Store, inspect_snapshot, migrate_file, service_lock
@@ -48,7 +48,7 @@ def create_backup(
     manifest = Manifest(
         service_version=service_version,
         schema_version=schema_version,
-        created_at=datetime.now(UTC).isoformat(),
+        created_at=iso(utc_now()),
         sha256=hashlib.sha256(data).hexdigest(),
     )
     write_backup(data, manifest, master_key, target)
@@ -133,7 +133,7 @@ def _replace(target: Path, data: bytes) -> None:
         _remove(staged)
         raise
     if target.exists():
-        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
         kept = target.with_name(f"{target.name}.before-restore-{stamp}")
         try:
             # A second name for the old file: the database stays in place

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from ....common.clock import iso, parse_iso
 from ..idempotency import StoredResult
-from .database import Database, iso, parse_iso
+from .database import Database
 
 
 class SqliteIdempotencyRepository:
