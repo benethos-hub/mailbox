@@ -10,7 +10,7 @@ from typing import Any, NamedTuple
 import httpx
 import pytest
 
-from benethos_mailbox_mcp import server
+from benethos_mailbox_mcp import tools
 from benethos_mailbox_mcp.client import MailboxApiClient
 
 Handler = Callable[[httpx.Request], httpx.Response]
@@ -34,7 +34,7 @@ async def no_client_left_behind(made: list[MailboxApiClient]) -> AsyncIterator[N
     """After each test its clients are closed, the one the tools used
     among them, and the next test's tools make their own."""
     yield
-    left = server.use_client(None)
+    left = tools.use_client(None)
     if left is not None and left not in made:
         made.append(left)
     for client in made:
@@ -51,7 +51,7 @@ def make_client(made: list[MailboxApiClient]) -> Callable[[Handler], MailboxApiC
             token="secret",
             transport=httpx.MockTransport(handler),
         )
-        server.use_client(client)
+        tools.use_client(client)
         made.append(client)
         return client
 

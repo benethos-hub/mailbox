@@ -8,6 +8,7 @@ import pytest
 
 from benethos_mailbox_mcp import render, server
 from benethos_mailbox_mcp.errors import ToolError
+from benethos_mailbox_mcp.tools import drafts
 
 DRAFTS = "/v1/accounts/acc_1/drafts"
 SUMMARY = {
@@ -22,7 +23,7 @@ SUMMARY = {
 
 async def test_list_drafts(api: Callable) -> None:
     handler = api({"items": [SUMMARY], "next_cursor": None})
-    assert await server.list_drafts("acc_1", limit=5) == {
+    assert await drafts.list_drafts("acc_1", limit=5) == {
         "drafts": [
             {
                 "id": "msg_d",
@@ -39,7 +40,7 @@ async def test_list_drafts(api: Callable) -> None:
 
 async def test_create_draft(api: Callable) -> None:
     handler = api(SUMMARY, status=201)
-    result = await server.create_draft(
+    result = await drafts.create_draft(
         "acc_1",
         to=["Bob <bob@example.com>"],
         bcc=["carol@example.com"],
@@ -60,7 +61,7 @@ async def test_create_draft(api: Callable) -> None:
 
 async def test_a_reply_draft_names_its_original(api: Callable) -> None:
     handler = api(SUMMARY, status=201)
-    await server.create_draft(
+    await drafts.create_draft(
         "acc_1", text="Thanks", original_id="msg_1", action="reply_all"
     )
     body = handler.calls[0].body
@@ -71,24 +72,24 @@ async def test_a_reply_draft_names_its_original(api: Callable) -> None:
 async def test_not_an_address(api: Callable) -> None:
     handler = api(SUMMARY)
     with pytest.raises(ToolError, match="not an address: Bob"):
-        await server.create_draft("acc_1", to=["Bob"])
+        await drafts.create_draft("acc_1", to=["Bob"])
     assert handler.calls == []
 
 
 async def test_update_draft_replaces_it(api: Callable) -> None:
     handler = api(SUMMARY)
-    await server.update_draft("acc_1", "msg_d", to=["bob@example.com"], text="v2")
+    await drafts.update_draft("acc_1", "msg_d", to=["bob@example.com"], text="v2")
     [(method, path, _, body)] = handler.calls
     assert (method, path) == ("PUT", f"{DRAFTS}/msg_d")
     assert body["text"] == "v2" and body["subject"] == ""
     assert "keep_attachments" not in body
-    await server.update_draft("acc_1", "msg_d", text="v3", keep_attachments=["att_0"])
+    await drafts.update_draft("acc_1", "msg_d", text="v3", keep_attachments=["att_0"])
     assert handler.calls[-1].body["keep_attachments"] == ["att_0"]
 
 
 async def test_delete_draft(api: Callable) -> None:
     handler = api(None)
-    assert await server.delete_draft("acc_1", "msg_d") == "draft msg_d deleted"
+    assert await drafts.delete_draft("acc_1", "msg_d") == "draft msg_d deleted"
     assert handler.calls == [("DELETE", f"{DRAFTS}/msg_d", {}, None)]
 
 
@@ -113,6 +114,6 @@ async def test_only_create_draft_with_that_right() -> None:
 
 async def test_a_draft_in_html(api: Callable) -> None:
     handler = api(SUMMARY, status=201)
-    await server.create_draft("acc_1", html="<p>Hi</p>", text="Hi")
+    await drafts.create_draft("acc_1", html="<p>Hi</p>", text="Hi")
     body = handler.calls[0].body
     assert (body["html"], body["text"]) == ("<p>Hi</p>", "Hi")

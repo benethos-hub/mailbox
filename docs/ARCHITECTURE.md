@@ -247,13 +247,45 @@ cannot import the service, and `tests/test_boundary.py` checks that.
 ```
 packages/mailbox-mcp/
   src/benethos_mailbox_mcp/
-    server.py           # MCPServer, tools by the token's rights, CLI
+    cli.py              # the command line: options, MAILBOX_MCP_*, the
+                        #   log, the start over stdio or HTTP
+    server.py           # MCPServer: the tools the token's rights allow,
+                        #   each logged when it fails
     transport.py        # streamable HTTP: bearer guard, host check (uvicorn)
+    tools/              # one module per kind, each with its part of TOOLS
+      base.py           # Tool, reads()/changes(), the shared client,
+                        #   result(): text and images
+      compose.py        # what drafts and sending share: addresses, the
+                        #   message a tool's arguments describe
+      accounts.py       # list_accounts, which reports the kinds
+      reading.py        # folders, search, a message, what is new,
+                        #   attachments
+      writing.py        # change messages, create a folder
+      drafts.py         # list, write, replace, delete drafts
+      sending.py        # send a mail, send a draft
     render.py           # what the model sees of mail, marked as foreign
     pdf.py              # PDF pages as PNG (pypdfium2)
     client.py           # ALL access to the REST API
+    models.py           # the records the client answers with
     errors.py           # ToolError subclasses
 ```
+
+`tests/test_architecture.py` of the MCP package keeps the modules in
+the lines of REFACTORING.md 10.2, the tools behind their package, and
+one home per library.
+
+**A tool of the MCP server** is a function in `tools/<kind>.py` with
+its line in that module's `TOOLS`: its title, the rights it needs, and
+whether it is read-only, destructive or idempotent. The server
+registers it only for a token that holds one of those rights. The
+function is thin: it names what it wants in its own terms, `client.py`
+makes the request, and `render.py` shapes what the model sees, with
+mail content inside the foreign-content marker. A tool never spells
+out a path, a query name or a field of the API, and never speaks HTTP
+itself. Its docstring is the description the model reads, and each
+argument carries a description and its bounds, which the server checks
+before the tool runs. Its test is in `tests/tools/`, against
+`httpx.MockTransport`, and the README's table names it.
 
 ## 4. Where does it go?
 
@@ -272,6 +304,7 @@ packages/mailbox-mcp/
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
 | a command of the CLI | `__main__.py`, which builds the service through `main.py` |
+| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in `client.py`, its answer through `render.py` (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/api/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |

@@ -6,7 +6,9 @@ packages by area, and a shape for the change feed like the one
 [LOGGING.md](LOGGING.md) section 7 gives the activities. Section 8 is
 the data layer and `common`, the same rules applied there. Section 9 is
 the code written twice, merged into helpers once the modules are in
-place. Behaviour, the API and the OpenAPI document stay as they are
+place. Section 10 is the MCP server, added later the same day: its
+tools in a package, one module per kind. Behaviour, the API and the
+OpenAPI document stay as they are
 throughout. The rules that came out of it, in short, are
 [ARCHITECTURE.md](ARCHITECTURE.md). What the user decided is marked as
 decided.
@@ -625,3 +627,105 @@ Three small changes in behaviour came with the merges:
 - **B4**: the log page hands out an opaque cursor, as every other list.
 - **A3**: `is_host_name(..., dotted=False)` for the domain of an
   address, so its error messages stay as they were.
+
+## 10. The MCP server
+
+Concept of 2026-09-28. The MCP package has one module that does four
+things, and a client that holds its answers' types beside the requests.
+
+### 10.1 Today
+
+```
+benethos_mailbox_mcp/
+  server.py      788 lines: the shared REST client, 14 tools and their
+                 helpers, the table of tools with their annotations and
+                 the choice by rights, the command line
+  client.py      594 lines: the requests, and the records it answers
+                 with (Me, Folder, Page, Changes, Outcome, Sent,
+                 Attachment)
+  render.py, pdf.py, transport.py, errors.py
+```
+
+A tool and its line in the table stand 400 lines apart: whether a tool
+is destructive or idempotent is read far from what it does.
+
+### 10.2 Proposed
+
+**Decided 2026-09-28:** one module per kind of tool, the kinds that
+`list_accounts` reports (`read`, `write`, `drafts`, `send`), not one
+file per tool. The records of the client go to `models.py`.
+
+```
+benethos_mailbox_mcp/
+  cli.py         the command line: options, environment, the log, main
+  server.py      build_server: the tools the token's rights allow, each
+                 logged when it fails, and what the token may do
+  tools/
+    __init__.py  TOOLS, the catalogue, from the modules below
+    base.py      Tool, reads() and changes(), the shared client,
+                 result() for text and images
+    compose.py   what drafts and sending share: addresses, the message
+                 a tool's arguments describe
+    accounts.py  list_accounts, which reports the kinds
+    reading.py   list_folders, search_messages, get_message, whats_new,
+                 get_attachment
+    writing.py   update_messages, create_folder
+    drafts.py    list_drafts, create_draft, update_draft, delete_draft
+    sending.py   send_message, send_draft
+  client.py      the requests to the REST API
+  models.py      the records the client answers with
+  render.py, pdf.py, transport.py, errors.py   as they are
+```
+
+Each module of a kind holds its tools and its part of the table, as
+`TOOLS`. `tools/__init__.py` joins them. `accounts.py` reads the
+modules of the kinds for what each needs, so it imports them and not
+the package.
+
+The lines, each module importing only lines below:
+
+```
+ cli
+ server · transport
+ tools
+ client · render · pdf
+ models · errors
+```
+
+Inside `tools`: `accounts`, then `reading · writing · drafts · sending`,
+then `compose`, then `base`.
+
+### 10.3 The rules
+
+The rules of ARCHITECTURE.md apply as in the service. The MCP package
+gets a `tests/test_architecture.py` of its own: the lines above, the
+tools package imported through its `__init__.py` from outside, and one
+home per library: `httpx` in `client`, `pypdfium2` in `pdf`, `starlette`
+and `uvicorn` in `transport`, the MCP library in `server`, `transport`,
+`errors` and `tools/base`. The tests of the tools go to `tests/tools/`.
+
+### 10.4 Order of work
+
+One branch, one commit per step, each passing all checks:
+
+1. This section.
+2. `models.py` out of `client.py`.
+3. `cli.py` out of `server.py`, the entry point with it.
+4. `tools/` out of `server.py`, the tests of the tools to
+   `tests/tools/`.
+5. The architecture test of the MCP package and ARCHITECTURE.md
+   section 3. CLAUDE.md points there already and stays as it is.
+
+The live checks `mcp_stdio.py` and `mcp_http.py` run once at the end.
+Nothing a client of the MCP server sees changes: the names of the
+tools, their arguments, their descriptions and their annotations stay.
+
+**Built 2026-09-28** on one branch, in this order. The tools a client
+sees were compared before and after, as the JSON the server lists, and
+are the same. `mcp_stdio.py` and `mcp_http.py` passed at the end.
+`tools/base.py` names the result of a tool `ToolResult`, so that the
+modules of the kinds need no import of the MCP library. The tests of
+every tool are in `tests/tools/`, one file per kind, `test_server.py`
+keeps what goes through the server: the choice by rights, the bounds
+of the arguments, the start and the log. ARCHITECTURE.md 3 says how a
+tool is added.
