@@ -31,6 +31,7 @@ from .data.http import (
     host_addresses,
     host_addresses_now,
 )
+from .data.logbook import LogBook
 from .data.models import ProviderType
 from .data.providers import (
     App,
@@ -68,6 +69,7 @@ from .domain.oauth import OAuthService
 from .domain.passwords import Passwords
 from .domain.recovery import RecoveryKey
 from .domain.sending import SendControl
+from .domain.servicelog import ServiceLog
 from .domain.status import StatusService
 from .domain.sync import SyncService
 from .domain.users import UserService
@@ -92,6 +94,7 @@ class Services:
     deliveries: WebhookDispatcher
     status: StatusService
     recovery: RecoveryKey
+    log: ServiceLog
     # Every repository behind the services, closed with them.
     repositories: Repositories
     worker: SyncWorker | None = None
@@ -125,13 +128,15 @@ def build_services(
     password_hasher: PasswordHasher | None = None,
     keys: KeyProvider | None = None,
     clock: Callable[[], datetime] = utc_now,
+    logbook: LogBook | None = None,
 ) -> Services:
     """``resolve`` answers DNS for the host check that autodiscovery and the
     hosts of an account pass (CONCEPT 5.8, rule 6), ``lookup`` the same
     for the check at every connection to a mail server, which adapters
     make without ``provider_factory``. Tests hand in tables. ``keys``
     replaces the key provider the settings name, ``clock`` the time of
-    every service."""
+    every service. ``logbook`` holds the log lines the log page shows:
+    ``serve`` hands in the one its log writes to."""
     repos = open_repositories(settings.storage, settings.database_path)
     vault = CredentialVault(
         repos.keys, repos.credentials, keys or key_provider(settings)
@@ -219,6 +224,7 @@ def build_services(
         ),
         status=StatusService(accounts, sync, worker, webhooks),
         recovery=RecoveryKey(auth, vault),
+        log=ServiceLog(logbook or LogBook()),
         repositories=repos,
         oauth_clients=clients,
     )
@@ -287,10 +293,14 @@ def _operation_id(route: APIRoute) -> str:
 
 
 def create_app(
-    settings: Settings | None = None, services: Services | None = None
+    settings: Settings | None = None,
+    services: Services | None = None,
+    logbook: LogBook | None = None,
 ) -> FastAPI:
+    """The app on ``services``, else on services built from ``settings``
+    with ``logbook`` behind the log page."""
     settings = settings or Settings()
-    services = services or build_services(settings)
+    services = services or build_services(settings, logbook=logbook)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:

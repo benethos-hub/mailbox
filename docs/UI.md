@@ -66,7 +66,7 @@ The sidebar keeps its three groups, renamed by what a person looks for:
 |---|---|---|
 | (top) | Overview, Mail | everyone |
 | Mailboxes | Accounts, Sends, Webhooks | with a right on at least one account, Webhooks with `webhooks.manage` |
-| Service | Users, Roles, Status, Recovery key | with `users.manage`, Status with `accounts.read`, Recovery key for the admin |
+| Service | Users, Roles, Status, Log, Recovery key | with `users.manage`, Status with `accounts.read`, Log and Recovery key for the admin |
 
 The foot of the sidebar names the signed-in user and links to their own
 page, Password and Sign out. Changes, if built, is a tab of the account
@@ -93,6 +93,7 @@ The click budget, counted from the overview after signing in:
 | See why a webhook fails | 1 | Webhooks |
 | See which account is not syncing | 1 | Overview, or Status |
 | Show the recovery key | 2 | Recovery key, Show |
+| Read the service log | 1 | Log |
 
 A task that needs more than five clicks is a bug of the navigation, not
 of the person.
@@ -111,7 +112,7 @@ opens its detail page by its name. A row carries no delete button and no
 form. The one exception is the tick box for a batch on mail lists, whose
 actions sit in one toolbar above the table.
 
-Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Changes.
+Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Changes, Log.
 
 ### 4.2 Detail
 
@@ -167,6 +168,7 @@ The options per list, with the same names where the field is the same:
 | Accounts | address | provider, status |
 | Webhooks | url | account, failing |
 | Changes | – | account, event, from day |
+| Log | text in the message or source | the least level |
 
 Mail's filters are the API's query parameters, a test holds them
 together (`test_openapi.py`). The others need no new API: the domain's
@@ -294,6 +296,14 @@ The recovery key page shows the key once after **Show**, with the
 warning of the CLI, and only to a user with the `admin` grant on every
 account. **Show** asks for the user's password again. The key is never
 stored or logged, the log only says that it was shown and to whom.
+
+The log page lists the newest lines of the service log, newest first,
+to the same admin alone: they name users, client addresses and
+accounts. The service keeps the last 1000 lines of its process in
+memory, so the page starts empty after a restart. Each line has its
+time, level, source and message, a traceback with it, and every secret
+the service holds masked (CONCEPT 7.4). The filter bar searches the
+message and the source and sets the least level.
 
 ### 6.6 Changes, optional
 

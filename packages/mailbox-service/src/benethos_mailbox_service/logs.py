@@ -38,24 +38,28 @@ class Redacting(logging.Formatter):
         return redact.redact(super().format(record))
 
 
-def log_config(level: str) -> dict[str, Any]:
+def log_config(level: str, book: logging.Handler | None = None) -> dict[str, Any]:
     """The configuration for ``uvicorn.run(log_config=...)``, as
-    ``logging.config.dictConfig`` takes it."""
+    ``logging.config.dictConfig`` takes it. ``book`` keeps the newest
+    lines for the log page as well."""
     number = LEVELS[level.lower()]
     plain = {"()": Redacting, "fmt": FORMAT, "datefmt": DATE_FORMAT}
+    handlers: dict[str, Any] = {
+        "stderr": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+            "stream": "ext://sys.stderr",
+        }
+    }
+    if book is not None:
+        handlers["book"] = {"()": lambda: book}
     return {
         "version": 1,
         "disable_existing_loggers": False,
         # uvicorn sets the colours of these two by name when asked to.
         "formatters": {"default": plain, "access": plain},
-        "handlers": {
-            "stderr": {
-                "class": "logging.StreamHandler",
-                "formatter": "default",
-                "stream": "ext://sys.stderr",
-            }
-        },
-        "root": {"level": logging.WARNING, "handlers": ["stderr"]},
+        "handlers": handlers,
+        "root": {"level": logging.WARNING, "handlers": list(handlers)},
         "loggers": {
             name: {"level": number, "handlers": [], "propagate": True}
             for name in (PACKAGE, "uvicorn", "uvicorn.error", "uvicorn.access")

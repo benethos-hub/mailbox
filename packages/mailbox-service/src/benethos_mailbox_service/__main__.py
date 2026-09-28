@@ -137,12 +137,14 @@ def _run(args: argparse.Namespace) -> int:
 
         import uvicorn
 
+        from .data.logbook import LogBook
         from .logs import log_config
         from .main import create_app
 
         settings = load_settings(args.env_file)
         # Before the app is built: building it may warn already.
-        config = log_config(settings.log_level)
+        book = LogBook()
+        config = log_config(settings.log_level, book)
         logging.config.dictConfig(config)
         read = settings_file(args.env_file)
         print(f"settings: {read or 'the environment alone'}", file=sys.stderr)
@@ -151,7 +153,7 @@ def _run(args: argparse.Namespace) -> int:
         else:
             print("storage: memory, nothing is kept", file=sys.stderr)
         uvicorn.run(
-            create_app(settings),
+            create_app(settings, logbook=book),
             host=args.host or settings.host,
             port=args.port or settings.port,
             log_config=config,

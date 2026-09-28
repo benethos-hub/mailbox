@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A log page in the UI under Service, for a user with `admin` on every
+  account: the newest 1000 lines of the service log since the start,
+  newest first, with a search and the least level. Secrets are masked.
+  The right `read_service_log` comes with `admin` alone and cannot be
+  granted by name.
 - `--env-file PATH` for every command of the service, before or after
   the command, and `MAILBOX_SERVICE_ENV_FILE`: the settings file to read.
   A file named this way must exist, and relative paths in the settings

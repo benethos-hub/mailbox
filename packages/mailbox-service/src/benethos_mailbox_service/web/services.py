@@ -17,6 +17,7 @@ from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
 from ..domain.oauth import OAuthService
 from ..domain.recovery import RecoveryKey
+from ..domain.servicelog import ServiceLog
 from ..domain.status import StatusService
 from ..domain.users import UserService
 from ..domain.webhooks import WebhookService
@@ -34,6 +35,7 @@ class Services(Protocol):
     webhooks: WebhookService
     status: StatusService
     recovery: RecoveryKey
+    log: ServiceLog
 
 
 def services_of(request: Request) -> Services:
@@ -73,6 +75,10 @@ def get_status(request: Request) -> StatusService:
     return services_of(request).status
 
 
+def get_log(request: Request) -> ServiceLog:
+    return services_of(request).log
+
+
 def get_recovery(request: Request) -> RecoveryKey:
     return services_of(request).recovery
 
@@ -86,3 +92,4 @@ OAuth = Annotated[OAuthService, Depends(get_oauth)]
 Webhooks = Annotated[WebhookService, Depends(get_webhooks)]
 Status = Annotated[StatusService, Depends(get_status)]
 Recovery = Annotated[RecoveryKey, Depends(get_recovery)]
+Log = Annotated[ServiceLog, Depends(get_log)]

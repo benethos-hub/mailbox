@@ -1,4 +1,5 @@
-"""The status of the service and the recovery key (docs/UI.md, 6.5)."""
+"""The status of the service, the recovery key and the service log
+(docs/UI.md, 6.5)."""
 
 from __future__ import annotations
 
@@ -7,15 +8,17 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
-from ...services import Recovery, Status
+from ...services import Log, Recovery, Status
 from ..deps import Actor, Viewer
+from ..filters import Field, filter_bar
 from ..forms import failing
 from ..session import show_once, take_once
-from ..templates import back, render
+from ..templates import PAGE_SIZE, back, page_links, render
 
 router = APIRouter()
 
 RECOVERY_PAGE = "/ui/recovery-key"
+LOG_LEVELS = [(name, name) for name in ("debug", "info", "warning", "error")]
 
 
 @router.get("/status")
@@ -28,6 +31,31 @@ async def status(request: Request, caller: Viewer, status: Status) -> HTMLRespon
         page="status",
         service=status.status(caller),
         can_webhooks=caller.allows("list_webhooks"),
+    )
+
+
+@router.get("/log")
+async def service_log(request: Request, caller: Viewer, log: Log) -> HTMLResponse:
+    """The newest lines of this service's log, since its start."""
+    bar = filter_bar(
+        request,
+        (Field("level", "At least", "select", LOG_LEVELS),),
+        search=Field("text", "Search"),
+    )
+    lines = log.lines(
+        caller,
+        text=bar.value("text") or None,
+        level=bar.value("level") or None,
+        limit=PAGE_SIZE,
+        cursor=request.query_params.get("cursor"),
+    )
+    return render(
+        request,
+        "pages/log.html",
+        page="log",
+        bar=bar,
+        lines=lines.items,
+        pages=page_links(request, lines.next_cursor),
     )
 
 

@@ -224,6 +224,9 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   - **writing: flags, moving, deleting, folders, compose, reply, forward,
     drafts, sending**, done
   - **the audit of sends**, done
+  - **the service log: every line on stderr with time, level and source,
+    each secret masked, the newest 1000 on a page for the admin (UI
+    6.5, CONCEPT 7.4)**, done, live-checked in `live/ui.py`
   - with the new providers: the OAuth round trip
   - recovery key, status: moved to phase 4b
 - Threads (6.3): for IMAP built across folders from the id mapping,
