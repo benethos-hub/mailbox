@@ -6,10 +6,9 @@ polling and IDLE (``SyncWorker``).
 from __future__ import annotations
 
 from .service import SyncService, SyncState
-from .worker import Sleep, SyncWorker, WorkerState
+from .worker import SyncWorker, WorkerState
 
 __all__ = [
-    "Sleep",
     "SyncService",
     "SyncState",
     "SyncWorker",

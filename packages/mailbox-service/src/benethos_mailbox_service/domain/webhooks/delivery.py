@@ -18,26 +18,28 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from typing import Protocol
 
 import anyio
 
-from .. import __version__
-from ..common.clock import utc_now
-from ..common.ids import new_id
-from ..data.secrets import CredentialVault
-from ..data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
-from ..errors import MailboxServiceError
-from .activity import DISPATCHER, ActivityLog
-from .activity.catalogue import service
-from .activity.catalogue import webhooks as said
-from .changes import ChangeFeed
-from .rights import Access
-from .sync import Sleep
-from .webhooks import sealed_label
+from ... import __version__
+from ...common.clock import utc_now
+from ...common.ids import new_id
+from ...data.secrets import CredentialVault
+from ...data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
+from ...errors import MailboxServiceError
+from ..activity import DISPATCHER, ActivityLog
+from ..activity.catalogue import service
+from ..activity.catalogue import webhooks as said
+from ..changes import ChangeFeed
+from ..rights import Access
+from .service import sealed_label
+
+# How the dispatcher waits: anyio.sleep, or a fake in tests.
+Sleep = Callable[[float], Awaitable[None]]
 
 BATCH = 100
 # How often the log is looked at for new events, in seconds.

@@ -21,7 +21,7 @@ from benethos_mailbox_service.data.storage import (
     WebhookRecord,
     WebhookRepository,
 )
-from benethos_mailbox_service.domain.webhooks import sealed_label
+from benethos_mailbox_service.domain.webhooks.service import sealed_label
 from benethos_mailbox_service.errors import ConflictError, NotFoundError
 from benethos_mailbox_service.main import Services
 

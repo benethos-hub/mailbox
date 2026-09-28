@@ -15,22 +15,22 @@ from urllib.parse import urlsplit
 
 from pydantic import SecretStr
 
-from ..common.clock import utc_now
-from ..common.ids import new_id
-from ..data.models import (
+from ...common.clock import utc_now
+from ...common.ids import new_id
+from ...data.models import (
     CreatedWebhook,
     Webhook,
     WebhookCreate,
     WebhookDetail,
     WebhookPost,
 )
-from ..data.secrets import CredentialVault
-from ..data.storage import Delivery, WebhookRecord, WebhookRepository
-from ..errors import BadRequestError, NotFoundError
-from .activity import ActivityLog, Actor
-from .activity.catalogue import webhooks as said
-from .changes import ChangeFeed
-from .rights import Access
+from ...data.secrets import CredentialVault
+from ...data.storage import Delivery, WebhookRecord, WebhookRepository
+from ...errors import BadRequestError, NotFoundError
+from ..activity import ActivityLog, Actor
+from ..activity.catalogue import webhooks as said
+from ..changes import ChangeFeed
+from ..rights import Access
 
 # Every secret starts so, so a person can tell what it is.
 SECRET_PREFIX = "whsec_"

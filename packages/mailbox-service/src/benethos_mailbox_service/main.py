@@ -62,7 +62,6 @@ from .domain.activity import DISPATCHER, SERVICE, WORKER, ActivityLog, Actor
 from .domain.activity.catalogue import service as said
 from .domain.auth import AuthService, Passwords
 from .domain.changes import ChangeFeed
-from .domain.delivery import Retries, WebhookDispatcher
 from .domain.discovery import DiscoveryService
 from .domain.mailbox import Idempotency, MailboxService, SendControl
 from .domain.recovery import RecoveryKey
@@ -70,7 +69,7 @@ from .domain.servicelog import ServiceLog
 from .domain.status import StatusService
 from .domain.sync import SyncService, SyncWorker
 from .domain.users import UserService
-from .domain.webhooks import WebhookService
+from .domain.webhooks import Retries, WebhookDispatcher, WebhookService
 
 
 @dataclass(frozen=True)
