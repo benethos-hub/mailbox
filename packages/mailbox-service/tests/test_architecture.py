@@ -6,7 +6,7 @@ rule, imports it, and the data layer can no longer be used without the domain.
 This test reads every import of the package and fails on the first one that
 breaks a rule. Inside the domain and the data layer it checks the packages
 the same way: each is imported through its ``__init__.py``, and none
-imports another in a circle. The packages of data keep their lines.
+imports another in a circle. The packages of both keep their lines.
 """
 
 from __future__ import annotations
@@ -388,28 +388,41 @@ def test_no_cycle_between_the_packages(layer: str) -> None:
         assert cycle is None, "a cycle: " + " -> ".join(cycle)
 
 
-# The packages of data in lines (docs/REFACTORING.md 8.3): each imports
-# only the lines below its own.
-DATA_LINES = (
-    {"backup"},
-    {"secrets"},
-    {"storage", "providers", "discovery"},
-    {"protocols"},
-    {"mail", "files"},
-    {"models", "logbook"},
-)
+# The packages of each layer in lines (docs/ARCHITECTURE.md 2): each
+# imports only the lines below its own.
+LINES = {
+    "domain": (
+        {"system"},
+        {"mailbox", "users", "webhooks"},
+        {"sync"},
+        {"accounts"},
+        {"auth", "discovery", "changes", "rounds"},
+        {"activity"},
+        {"rights"},
+        {"locks", "paging", "bounded"},
+    ),
+    "data": (
+        {"backup"},
+        {"secrets"},
+        {"storage", "providers", "discovery"},
+        {"protocols"},
+        {"mail", "files"},
+        {"models", "logbook"},
+    ),
+}
 
 
-def test_the_packages_of_data_import_only_lines_below() -> None:
-    line_of = {part: n for n, line in enumerate(DATA_LINES) for part in line}
+@pytest.mark.parametrize("layer", PACKAGED)
+def test_the_packages_import_only_lines_below(layer: str) -> None:
+    line_of = {part: n for n, line in enumerate(LINES[layer]) for part in line}
     assert set(line_of) == {
         p.stem
-        for p in (ROOT / "data").iterdir()
+        for p in (ROOT / layer).iterdir()
         if p.stem != "__init__" and (p.suffix == ".py" or (p / "__init__.py").exists())
-    }, "a package of data outside the lines"
+    }, f"a package of {layer} outside the lines"
     violations = [
         f"{own} imports {other}"
-        for own, others in sorted(_package_graph("data").items())
+        for own, others in sorted(_package_graph(layer).items())
         for other in sorted(others)
         if line_of[other] <= line_of[own]
     ]
