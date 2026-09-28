@@ -67,6 +67,7 @@ def _role(row: sqlite3.Row) -> Role:
 class SqliteTokenRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
+        self._rows = SqliteRows(db, "tokens", "token", _token)
 
     def list_for_user(self, user_id: str) -> list[ApiToken]:
         rows = self._db.query(
@@ -75,11 +76,7 @@ class SqliteTokenRepository:
         return [_token(r) for r in rows]
 
     def get(self, token_id: str) -> ApiToken:
-        return _token(
-            self._db.must_find(
-                "SELECT * FROM tokens WHERE id = ?", (token_id,), "token", token_id
-            )
-        )
+        return self._rows.get(token_id)
 
     def find_by_hash(self, token_hash: str) -> ApiToken | None:
         row = self._db.one("SELECT * FROM tokens WHERE token_hash = ?", (token_hash,))

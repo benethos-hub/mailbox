@@ -8,19 +8,19 @@ import sqlite3
 from ...models import Account, AccountStatus
 from ..accounts import SettingsDict
 from .database import Database
+from .rows import SqliteRows
 
 
 class SqliteAccountRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
+        self._rows = SqliteRows(db, "accounts", "account", _account)
 
     def list(self) -> list[Account]:
-        return [
-            _account(r) for r in self._db.query("SELECT * FROM accounts ORDER BY rowid")
-        ]
+        return self._rows.list()
 
     def get(self, account_id: str) -> Account:
-        return _account(self._row(account_id))
+        return self._rows.get(account_id)
 
     def add(self, account: Account, settings: SettingsDict | None = None) -> None:
         self._db.execute(
@@ -38,7 +38,7 @@ class SqliteAccountRepository:
         )
 
     def settings(self, account_id: str) -> SettingsDict:
-        result: SettingsDict = json.loads(self._row(account_id)["settings"])
+        result: SettingsDict = json.loads(self._rows.row(account_id)["settings"])
         return result
 
     def set_status(self, account_id: str, status: AccountStatus) -> None:
@@ -58,14 +58,7 @@ class SqliteAccountRepository:
         )
 
     def delete(self, account_id: str) -> None:
-        self._db.must_change(
-            "DELETE FROM accounts WHERE id = ?", (account_id,), "account", account_id
-        )
-
-    def _row(self, account_id: str) -> sqlite3.Row:
-        return self._db.must_find(
-            "SELECT * FROM accounts WHERE id = ?", (account_id,), "account", account_id
-        )
+        self._rows.delete(account_id)
 
 
 def _account(row: sqlite3.Row) -> Account:
