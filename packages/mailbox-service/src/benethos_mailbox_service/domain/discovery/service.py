@@ -52,6 +52,7 @@ from ...data.providers import ServerProbe, settings_from_servers
 from ...errors import BadRequestError, MailboxServiceError, RateLimitedError
 from ..activity import ActivityLog, Actor
 from ..activity import discovery as said
+from ..bounded import trim
 from ..rights import Access
 
 Clock = Callable[[], float]
@@ -178,12 +179,12 @@ class DiscoveryService:
 
     def _trim_cache(self, now: float) -> None:
         """Expired findings go first, then the ones expiring soonest."""
-        if len(self._cache) <= MAX_CACHED:
-            return
-        for domain in [d for d, (until, _) in self._cache.items() if until <= now]:
-            del self._cache[domain]
-        while len(self._cache) > MAX_CACHED:
-            del self._cache[min(self._cache, key=lambda d: self._cache[d][0])]
+        trim(
+            self._cache,
+            MAX_CACHED,
+            gone=lambda cached: cached[0] <= now,
+            age=lambda cached: cached[0],
+        )
 
     def _count(self, access: Access) -> None:
         user_id = access.user_id
@@ -205,19 +206,15 @@ class DiscoveryService:
                 f"too many discoveries, try again in {wait} seconds", wait
             )
         calls.append(now)
-        if len(self._calls) > MAX_CALLERS:
-            self._trim_callers(now)
-
-    def _trim_callers(self, now: float) -> None:
-        """Callers whose calls all left the window are forgotten, then the
-        ones whose last call is longest ago."""
-        for user in [u for u, c in self._calls.items() if c[-1] <= now - PER_SECONDS]:
-            del self._calls[user]
-            self._told.pop(user, None)
-        while len(self._calls) > MAX_CALLERS:
-            oldest = min(self._calls, key=lambda u: self._calls[u][-1])
-            del self._calls[oldest]
-            self._told.pop(oldest, None)
+        # Callers whose calls all left the window are forgotten, then the
+        # ones whose last call is longest ago.
+        trim(
+            self._calls,
+            MAX_CALLERS,
+            gone=lambda made: made[-1] <= now - PER_SECONDS,
+            age=lambda made: made[-1],
+            dropped=lambda user: self._told.pop(user, None),
+        )
 
     # --- trust --------------------------------------------------------------
 
