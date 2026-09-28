@@ -246,12 +246,11 @@ per refused request: the throttle logs when it locks, the provider
 pause when it starts. Each refused request still answers `429` with
 `Retry-After`, and the access log has the line.
 
-**HTTP requests as such are not limited by the service.** The API
-refuses a body above the limit and slows sign-ins, nothing else.
-**Decided 2026-09-28:** it stays that way. The sign-in throttle in the
-domain covers guessed credentials for both front ends, and a limit on
-requests with a valid token is load protection, which a reverse proxy
-in front of the service does better than the service itself.
+**HTTP requests as such are not limited by the service today.** The
+API refuses a body above the limit and slows sign-ins, nothing else.
+The sign-in throttle covers guessed credentials for both front ends.
+Whether the service should also limit requests with a valid token, or
+leave that to a reverse proxy, is an open question (section 9).
 
 ### 5.10 The MCP server
 
@@ -347,3 +346,6 @@ Nothing else in the code writes an `INFO` line about a user's action.
   only?
 - Should the `events` helper come now, before 8.6, or is a plain
   `log.info` per service enough until the audit exists?
+- Should the service limit HTTP requests per client address and per
+  token, with a line when the limit engages, or is that a reverse
+  proxy's job?
