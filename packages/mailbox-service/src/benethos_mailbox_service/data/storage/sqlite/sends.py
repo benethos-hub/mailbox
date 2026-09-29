@@ -88,6 +88,14 @@ class SqliteSendLogRepository:
         rows = self._db.query("SELECT DISTINCT account_id FROM sends ORDER BY 1")
         return [row[0] for row in rows]
 
+    def purge(self, before: datetime) -> int:
+        removed = self._db.execute(
+            "DELETE FROM sends WHERE created_at < ?", (iso(before),)
+        )
+        if removed:
+            self._db.shrink()
+        return removed
+
 
 def _record(row: sqlite3.Row) -> SendRecord:
     return SendRecord(

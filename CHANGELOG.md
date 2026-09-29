@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `MAILBOX_SERVICE_AUDIT_DAYS` (90): how long the audit of sends keeps a
+  record. `0` keeps every record, as before. Old records are purged as a
+  send comes in, once an hour at most, and the log names the count.
+- `MAILBOX_SERVICE_SYNC_WATCHERS` (50): how many accounts the sync worker
+  watches over IMAP IDLE at once. Further accounts are polled only, and
+  the log says so once per account.
 - Requests are limited: 120 a minute per API token or UI session, and 30
   a minute per client address for requests without a credential, each
   with a burst of half as many. Past the limit the service answers `429`
@@ -238,6 +244,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A watched account no longer holds a thread of the pool that answers
+  requests while it waits in IDLE. With many IMAP accounts, requests and
+  pages of the UI had to wait for a free thread.
+- The compose file caps the log Docker keeps of each container at 5
+  files of 10 MB. Before, the log grew for as long as the container ran.
+- The database file shrinks after an account is removed or old records
+  are purged. Before, it stayed at its largest size for good. A database
+  made by an earlier version is rewritten once when the service opens it,
+  which takes a moment for a large one, and the log says so.
 - A host in `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` matches however
   it is written, in Unicode or in punycode. Before, an internal host
   written in Unicode was refused as non-public when an account or

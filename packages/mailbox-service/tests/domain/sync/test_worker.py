@@ -106,6 +106,37 @@ async def test_a_change_reported_over_idle_is_synced(
     assert ("idle", "INBOX") in server.calls
 
 
+async def test_past_the_cap_an_account_is_polled_only(
+    imap_services: Services,  # noqa: F811
+    imap_account_id: str,  # noqa: F811
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    background = worker(imap_services, watchers=0)
+    started: list[str] = []
+
+    class Recorder:
+        def start_soon(self, function: object, account: str) -> None:
+            started.append(account)
+
+    with caplog.at_level(logging.INFO):
+        await background.poll(Recorder())  # type: ignore[arg-type]
+        await background.poll(Recorder())  # type: ignore[arg-type]
+    assert started == []
+    assert background.state().watching == frozenset()
+    assert background.state().watchers == 0
+    # Said once, not every round.
+    assert caplog.text.count("only: all 0 watchers are in use") == 1
+
+
+def test_the_cap_comes_from_the_settings() -> None:
+    from benethos_mailbox_service.main import build_services
+
+    settings = Settings(storage="memory", sync_interval=300, sync_watchers=3)
+    services = build_services(settings)
+    assert services.worker is not None
+    assert services.worker.state().watchers == 3
+
+
 async def test_without_idle_only_polling(
     imap_services: Services,  # noqa: F811
     imap_account_id: str,  # noqa: F811

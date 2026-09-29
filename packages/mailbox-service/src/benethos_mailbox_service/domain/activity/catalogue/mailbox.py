@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import ClassVar
 
 from ....data.models import Account
@@ -114,6 +115,23 @@ class SendLimitReached(Activity):
 
     def why(self) -> str:
         return f"{self.reason}, the next in {self.retry_after}s"
+
+
+@dataclass(frozen=True, kw_only=True)
+class SendsPurged(Activity):
+    """Records older than the audit keeps are gone. The normal course,
+    once an hour at most, so no warning."""
+
+    name: ClassVar[str] = "sends_purged"
+
+    count: int
+    before: datetime
+
+    def says(self) -> str:
+        return (
+            f"purged {plural(self.count, 'record')} older than "
+            f"{self.before.isoformat(timespec='seconds')} from the audit of sends"
+        )
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -17,6 +17,25 @@ identity may have its own signature and reply-to.
 - Rights: may a user send as every identity of an account, or only as some?
   That could be a grant constraint like `recipients`.
 
+## One thread for every IDLE connection
+
+Today each watched account holds a thread while it waits in IDLE, at
+most `MAILBOX_SERVICE_SYNC_WATCHERS` of them. One thread could hold all
+IDLE sockets in a `selectors` object and wake the account's sync task
+when its socket becomes readable. Worth it once accounts go into the
+hundreds, or when the IMAP session is rebuilt anyway.
+
+- The one thread must never wait on a server: login, `SELECT`, the
+  renewal every 25 minutes and the logout stay in the pool, short and
+  per account, with socket timeouts. The thread only waits.
+- TLS buffers data the file handle does not show: check `pending()`
+  as imapclient's `idle_check` does, or changes go unseen until the
+  next record.
+- `wait_for_change` keeps its signature: the adapter registers with
+  the watcher and waits for an event. The worker does not change.
+- Tests need a real handle: socket pairs, or an injectable wait.
+- `selectors` on Windows falls back to `select`, 512 handles.
+
 ## Safe display of HTML mail
 
 - Never load remote content. A tracking pixel tells the sender that a mail

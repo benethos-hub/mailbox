@@ -41,6 +41,8 @@ class SchemaMigrated(Activity):
     def says(self) -> str:
         if self.before == 0:
             text = f"created the database with schema {self.after}"
+        elif self.before == self.after:
+            text = f"opened the database with schema {self.after}"
         else:
             text = f"migrated the database schema from {self.before} to {self.after}"
         return "; ".join([text, *self.notes])

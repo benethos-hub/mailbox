@@ -24,12 +24,17 @@ from ...errors import (
     SendLimitError,
 )
 from .. import paging
-from ..activity import ActivityLog, Actor
+from ..activity import SERVICE, ActivityLog, Actor
 from ..activity import mailbox as said
 from ..locks import KeyedLocks
 from ..rights import Access
 
 WINDOW = timedelta(hours=24)
+# Days the audit keeps a record, unless the settings say otherwise. 0
+# keeps every record.
+KEEP_DAYS = 90
+# How often at most old records are purged while sends come in.
+PURGE_EVERY = timedelta(hours=1)
 CURSOR = "s_"
 
 Operation = Literal["send_message", "send_draft"]
@@ -41,10 +46,15 @@ class SendControl:
         store: SendLogRepository,
         clock: Callable[[], datetime] = utc_now,
         activity: ActivityLog | None = None,
+        days: int = KEEP_DAYS,
     ) -> None:
+        """``days`` is how long a record is kept, 0 for ever. The send
+        limit counts a day back, which a whole day of retention covers."""
         self._store = store
         self._clock = clock
         self._activity = activity or ActivityLog(clock)
+        self._days = days
+        self._purged_at: datetime | None = None
         # One send at a time per user and account, so two cannot both pass
         # the limit.
         self._locks: KeyedLocks[tuple[str, str]] = KeyedLocks()
@@ -63,6 +73,7 @@ class SendControl:
         async with self._locks.get((access.user_id, account_id)):
 
             def record(outcome: SendOutcome, **fields: object) -> None:
+                self._purge_when_due()
                 self._store.add(
                     SendRecord.model_validate(
                         {
@@ -114,6 +125,28 @@ class SendControl:
                     "sent", refused=sent.refused, message_id_header=message_id_header
                 )
             return sent
+
+    @property
+    def days(self) -> int:
+        """How long a record is kept, 0 for ever."""
+        return self._days
+
+    def purge(self) -> None:
+        """Removes the records older than the days to keep."""
+        if not self._days:
+            return
+        now = self._clock()
+        before = now - timedelta(days=self._days)
+        purged = self._store.purge(before)
+        self._purged_at = now
+        if purged:
+            self._activity.record(
+                said.SendsPurged(by=SERVICE, count=purged, before=before)
+            )
+
+    def _purge_when_due(self) -> None:
+        if self._purged_at is None or self._clock() - self._purged_at >= PURGE_EVERY:
+            self.purge()
 
     def _allow(
         self,

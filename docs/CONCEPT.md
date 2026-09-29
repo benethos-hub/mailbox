@@ -597,8 +597,10 @@ The service therefore behaves conservatively towards every provider:
   sent copy stored before the connection dropped is found, not stored
   again.
 - **Push before polling.** `IDLE` where offered, renewed before the 29
-  minutes of RFC 2177 run out. Polling intervals are per preset and
-  conservative.
+  minutes of RFC 2177 run out. Each watched account waits in a thread of
+  its own, outside the pool that answers requests, at most
+  `MAILBOX_SERVICE_SYNC_WATCHERS` (50) at once. Further accounts are
+  polled only. Polling intervals are per preset and conservative.
 - **Say who we are.** The IMAP `ID` command (RFC 2971) sends name and
   version where the server supports it. Some providers require it.
 
@@ -1047,7 +1049,10 @@ the data, rather than a readable file.
   what never goes into a line: [LOGGING.md](LOGGING.md).
 - **Deletion:** removing an account deletes its credential rows.
   `PRAGMA secure_delete = ON` makes SQLite overwrite freed pages, so the
-  ciphertext does not linger in the file.
+  ciphertext does not linger in the file. The file shrinks as well:
+  `auto_vacuum` in its incremental mode, and the pages a removed account
+  or a purge freed are given back at once. A database made before that
+  is rewritten once when the service opens it, said in the log.
 - **Files:** the database sits in `data/benethos-mailbox-service/` in the
   working directory, moved with `MAILBOX_SERVICE_DATA_DIR`. A settings file
   named with `--env-file` or `MAILBOX_SERVICE_ENV_FILE` is the base of
@@ -1306,7 +1311,9 @@ the send limits, which count from it. Every attempt through `send_message`
 or `send_draft` is one record: time, user, token,
 account, operation, recipients, outcome (`sent`, `denied` by a grant,
 `failed`), error code, refused recipients and the Message-ID. It keeps no
-reference to account or user, so it outlives both.
+reference to account or user, so it outlives both. A record is kept for
+`MAILBOX_SERVICE_AUDIT_DAYS` days, 90 by default, `0` keeps every
+record. Old ones are purged as a send comes in, once an hour at most.
 `GET /v1/accounts/{account_id}/sends` reads it, newest first, with the
 right `list_sends` (group `audit`). `GET /v1/sends` (`list_all_sends`)
 reads it across the accounts the caller may audit, deleted ones

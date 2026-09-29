@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Protocol
 
+import anyio
+
 from ...errors import NotSupportedError
 from ..models import CredentialKind, MailServer, ProviderType, Security, ServerProtocol
 from ..protocols import Endpoints, Pick
@@ -46,12 +48,19 @@ ServerProbe = Callable[
 _REGISTRY: dict[
     ProviderType,
     Callable[
-        [ProviderSettings, CredentialReader, Pick | None, Pace | None], MailProvider
+        [
+            ProviderSettings,
+            CredentialReader,
+            Pick | None,
+            Pace | None,
+            anyio.CapacityLimiter | None,
+        ],
+        MailProvider,
     ],
 ] = {
-    ProviderType.MEMORY: lambda _settings, _credentials, _pick, _pace: MemoryProvider(),
-    ProviderType.IMAP: lambda settings, credentials, pick, pace: ImapProvider(
-        settings, credentials, pick=pick, pace=pace
+    ProviderType.MEMORY: lambda _s, _c, _pick, _pace, _watchers: MemoryProvider(),
+    ProviderType.IMAP: lambda settings, credentials, pick, pace, watchers: ImapProvider(
+        settings, credentials, pick=pick, pace=pace, watchers=watchers
     ),
 }
 # Providers that sign in with OAuth: they get a token source instead.
@@ -121,10 +130,12 @@ def build_provider(
     tokens: TokenSource | None = None,
     pick: Pick | None = None,
     pace: Pace | None = None,
+    watchers: anyio.CapacityLimiter | None = None,
 ) -> MailProvider:
     """A new adapter for one account. ``pick`` checks the host of each
     connection to a server the settings name. ``pace`` is how fast an
-    adapter that paces itself sends requests."""
+    adapter that paces itself sends requests, ``watchers`` bounds the
+    threads that wait for the server to push."""
     if kind in _SIGNED_IN:
         if tokens is None:
             raise NotSupportedError(
@@ -135,7 +146,7 @@ def build_provider(
         factory = _REGISTRY[kind]
     except KeyError:
         raise NotSupportedError(f"provider {kind} is not implemented yet") from None
-    return factory(settings, credentials, pick, pace)
+    return factory(settings, credentials, pick, pace, watchers)
 
 
 async def probe_server(

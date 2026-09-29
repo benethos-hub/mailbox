@@ -62,7 +62,9 @@ as the send audit does. `user_name` is written for that reason.
   `(user_id, at)`. Written in the same transaction as the change where
   there is one, so a change without its record cannot happen.
 - **Retention**: `MAILBOX_SERVICE_AUDIT_DAYS`, 90 by default, purged as
-  the change log is purged, on write and at most once an hour.
+  the change log is purged, on write and at most once an hour. The
+  audit of sends keeps its records for the same setting since
+  2026-09-29, with `0` for ever.
 - **`GET /v1/audit`**: newest first, paged with `next_cursor`, filters
   `user`, `operation`, `record`, `after`, `before`. Right `audit` on
   the service, so the group `audit` appears in both lists of
@@ -101,7 +103,8 @@ Each step a commit on one branch, a CHANGELOG entry for the API.
 
 ## 7. Open questions
 
-- 90 days by default, or unbounded like the send audit?
+- 90 days by default: the send audit keeps its records that long since
+  2026-09-29, and `0` keeps them for ever. The same for this one?
 - Should a failed sign-in with an unknown name be stored at all? It
   names what an attacker typed.
 - Does the Audit page belong under Service, or is the card on the user's

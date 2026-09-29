@@ -6,6 +6,7 @@ import ssl
 from datetime import UTC, datetime
 from typing import Any
 
+import anyio
 import pytest
 from pydantic import SecretStr
 
@@ -17,6 +18,7 @@ from benethos_mailbox_service.data.protocols.imap import (
 )
 from benethos_mailbox_service.data.providers.guard import Guard, Pace
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
+from benethos_mailbox_service.data.providers.imap import provider as imap_module
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
@@ -82,6 +84,7 @@ def provider(
     box: FakeMailBox,
     time: FakeTime | None = None,
     pace: Pace | None = None,
+    watchers: anyio.CapacityLimiter | None = None,
     **overrides: Any,
 ) -> ImapProvider:
     def credentials(field: str) -> SecretStr:
@@ -99,6 +102,7 @@ def provider(
         sleep=time.sleep,
         jitter=lambda low, high: high,
         pace=pace,
+        watchers=watchers,
     )
 
 
@@ -658,3 +662,30 @@ def test_logout_without_connection_is_harmless() -> None:
     session.logout()
     with pytest.raises(ProviderError, match="not connected"):
         session.list_folders()
+
+
+async def test_a_wait_in_idle_takes_no_thread_of_the_pool(
+    server: FakeMailBox, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The wait runs under the watchers' limiter, never the default one
+    that answers requests and runs every other command."""
+    limiters: list[object] = []
+    run_sync = anyio.to_thread.run_sync
+
+    async def noted(function: Any, *args: Any, **kwargs: Any) -> Any:
+        limiters.append(kwargs.get("limiter"))
+        return await run_sync(function, *args, **kwargs)
+
+    monkeypatch.setattr(anyio.to_thread, "run_sync", noted)
+    server.idle_script = [[(5, b"EXISTS")]]
+    watchers = anyio.CapacityLimiter(1)
+    imap = provider(server, watchers=watchers)
+    assert await imap.wait_for_change(5) is True
+    assert limiters[-1] is watchers
+    server.idle_script = [[(5, b"EXISTS")]]
+    imap = provider(server)
+    assert await imap.wait_for_change(5) is True
+    assert limiters[-1] is imap_module.WATCHERS
+    # Everything else takes the default limiter.
+    await imap.list_folders()
+    assert limiters[-1] is None

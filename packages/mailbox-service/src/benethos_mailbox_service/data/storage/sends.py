@@ -37,6 +37,10 @@ class SendLogRepository(Protocol):
         """Every account the audit has a send of, whether it exists or not."""
         ...
 
+    def purge(self, before: datetime) -> int:
+        """Remove the records older than ``before``. How many."""
+        ...
+
 
 class InMemorySendLogRepository:
     def __init__(self) -> None:
@@ -81,3 +85,9 @@ class InMemorySendLogRepository:
 
     def account_ids(self) -> builtins.list[str]:
         return sorted({r.account_id for r in self._records.list()})
+
+    def purge(self, before: datetime) -> int:
+        gone = [r.id for r in self._records.list() if r.created_at < before]
+        for record_id in gone:
+            self._records.delete(record_id)
+        return len(gone)

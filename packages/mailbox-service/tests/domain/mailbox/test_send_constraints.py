@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -565,3 +566,58 @@ def test_the_send_log_filters(kind: str) -> None:
         == 1
     )
     db.close()
+
+
+# --- retention --------------------------------------------------------------------
+
+
+def test_old_records_are_purged_once_an_hour(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    clock = Clock()
+    store = InMemorySendLogRepository()
+    control = SendControl(store, clock, days=1)
+    access = Access("usr_1", "u", [Grant(accounts=["acc_1"], allow=["send"])])
+
+    def send() -> int:
+        asyncio.run(
+            control.send(access, "send_message", "acc_1", ["a@x.org"], sent, "<m>")
+        )
+        return len(store.list("acc_1", limit=10, before=None))
+
+    assert send() == 1
+    clock.now += timedelta(minutes=50)
+    assert send() == 2
+    # A day and a bit later the first record is older than a day, and the
+    # purge is due: it goes, and the log says so.
+    clock.now += timedelta(hours=23, minutes=20)
+    with caplog.at_level(logging.INFO):
+        assert send() == 2
+    assert "purged 1 record older than" in caplog.text
+    # The second is older than a day now too, but the purge ran less than
+    # an hour ago: it stays until the next one.
+    clock.now += timedelta(minutes=45)
+    assert send() == 3
+    clock.now += timedelta(minutes=16)
+    assert send() == 3
+
+
+def test_zero_keeps_every_record() -> None:
+    clock = Clock()
+    store = InMemorySendLogRepository()
+    control = SendControl(store, clock, days=0)
+    access = Access("usr_1", "u", [Grant(accounts=["acc_1"], allow=["send"])])
+    for _ in range(3):
+        asyncio.run(
+            control.send(access, "send_message", "acc_1", ["a@x.org"], sent, "<m>")
+        )
+        clock.now += timedelta(days=400)
+    assert len(store.list("acc_1", limit=10, before=None)) == 3
+
+
+def test_the_days_come_from_the_settings() -> None:
+    from benethos_mailbox_service.config import Settings
+    from benethos_mailbox_service.main import build_services
+
+    services = build_services(Settings(storage="memory", audit_days=30))
+    assert services.mailbox.outgoing._sends.days == 30

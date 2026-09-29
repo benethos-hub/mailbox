@@ -370,3 +370,90 @@ def test_a_released_migration_is_never_changed(number: int) -> None:
     assert fingerprint(number) == RELEASED[number], (
         f"migration {number} shipped in a release: make a new one instead"
     )
+
+
+# --- the file shrinks ------------------------------------------------------------
+
+
+def _pages(db: Database) -> tuple[int, int]:
+    """Pages in the file, and pages on its free list."""
+    count = db.one("PRAGMA page_count")
+    free = db.one("PRAGMA freelist_count")
+    assert count is not None and free is not None
+    return int(count[0]), int(free[0])
+
+
+def test_a_new_database_shrinks_after_a_deletion(tmp_path: Path) -> None:
+    path = tmp_path / "grows.db"
+    db = Database(path)
+    try:
+        assert db.migrated is not None and db.migrated.before == 0
+        assert "rewritten" not in " ".join(db.migrated.notes)
+        with db.transaction() as conn:
+            conn.execute("CREATE TABLE bulk (payload BLOB)")
+            conn.executemany("INSERT INTO bulk VALUES (?)", [(b"x" * 4096,)] * 500)
+        full, _ = _pages(db)
+        with db.transaction() as conn:
+            conn.execute("DELETE FROM bulk")
+        db.shrink()
+        after, free = _pages(db)
+        assert free == 0
+        assert after < full / 4
+        assert path.stat().st_size < full * 4096
+    finally:
+        db.close()
+
+
+def test_an_older_database_is_rewritten_once_to_shrink(tmp_path: Path) -> None:
+    path = tmp_path / "old.db"
+    Database(path).close()
+    # As a database made before shrinking existed: no auto_vacuum.
+    plain = sqlite3.connect(path)
+    plain.execute("PRAGMA auto_vacuum = NONE")
+    plain.execute("VACUUM")
+    assert plain.execute("PRAGMA auto_vacuum").fetchone()[0] == 0
+    plain.close()
+    db = Database(path)
+    try:
+        assert db.one("PRAGMA auto_vacuum")[0] == 2  # type: ignore[index]
+        assert db.migrated is not None
+        assert db.migrated.before == db.migrated.after == SCHEMA_VERSION
+        assert any("rewritten once" in note for note in db.migrated.notes)
+    finally:
+        db.close()
+    # Not again.
+    db = Database(path)
+    try:
+        assert db.migrated is None
+    finally:
+        db.close()
+
+
+def test_forgetting_an_account_gives_its_pages_back(tmp_path: Path) -> None:
+    from benethos_mailbox_service.data.models import Account
+    from benethos_mailbox_service.data.storage import (
+        IndexEntry,
+        SqliteAccountRepository,
+        SqliteMessageIndexRepository,
+    )
+
+    db = Database(tmp_path / "index.db")
+    try:
+        SqliteAccountRepository(db).add(
+            Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
+        )
+        index = SqliteMessageIndexRepository(db)
+        index.add(
+            "acc_1",
+            [
+                IndexEntry(id=f"msg_{n}", native_id=f"n{n}", folder_id="f_inbox")
+                for n in range(3000)
+            ],
+        )
+        full, _ = _pages(db)
+        index.forget_account("acc_1")
+        after, free = _pages(db)
+        assert free == 0
+        assert after < full / 2
+    finally:
+        db.close()

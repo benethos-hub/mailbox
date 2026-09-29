@@ -33,6 +33,7 @@ Towards the mail servers:
 | IMAP pace | per account, commands and SMTP sends | 60 a minute, 10 at once | the request waits | `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE`, `MAILBOX_SERVICE_IMAP_BURST`, the account's `max_requests_per_minute` |
 | Unreachable server | per account | 3 attempts with backoff, then a pause of 30 seconds, doubled up to 15 minutes | `502 provider_unavailable`, the account shows `unreachable` | `MAILBOX_SERVICE_IMAP_ATTEMPTS`, `MAILBOX_SERVICE_IMAP_FIRST_PAUSE`, `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE` |
 | Rejected login | per account | no new attempt until the credential is replaced or the account is verified | `502 provider_auth_failed`, the account shows `needs_reauth` | fixed |
+| Watched accounts | for the whole service | 50 at once, each waiting in IDLE in a thread of its own | further accounts are polled only | `MAILBOX_SERVICE_SYNC_WATCHERS` |
 | Microsoft Graph | per account | a pause as long as Graph's `Retry-After` | `502 provider_unavailable` | Graph |
 | Webhook posts | per webhook | 8 attempts, 30 seconds after the first failure, doubled up to 1 hour, 10 seconds to answer | the events are dropped | `MAILBOX_SERVICE_WEBHOOK_*` |
 
