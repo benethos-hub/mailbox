@@ -286,8 +286,9 @@ recreates it.
 ### 6.5 Status and the recovery key
 
 Status is one page of three cards: accounts with status, last sync and
-last error, the worker with its interval and last pass, the webhooks
-with their last delivery. Each row links where it can be fixed. Nothing
+last error, the worker with its interval, its last pass and how many
+accounts it watches of how many it may, the webhooks with their last
+delivery. Each row links where it can be fixed. Nothing
 is polled for the page. The worker keeps its last pass and each
 account's last sync and last error in memory, so they are empty after a
 restart until the first pass.

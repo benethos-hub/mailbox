@@ -32,7 +32,7 @@
   {% call fact("Why") %}<span class="mono">MAILBOX_SERVICE_SYNC_INTERVAL</span> is 0. Ids stay current only when mail is read.{% endcall %}
   {% else %}
   {% call fact("Interval") %}every {{ worker.interval | round | int }} seconds{% endcall %}
-  {% call fact("Push") %}{% if worker.push %}IDLE where the server offers it, {{ worker.watching | length }} watched now{% else %}switched off, polling only{% endif %}{% endcall %}
+  {% call fact("Push") %}{% if worker.push %}IDLE where the server offers it, {{ worker.watching | length }} of at most {{ worker.watchers }} watched now{% else %}switched off, polling only{% endif %}{% endcall %}
   {% call fact("Last pass") %}{% if worker.last_pass_at %}{{ worker.last_pass_at | when }}{% else %}not finished yet{% endif %}{% endcall %}
   {% endif %}
 {% endcall %}

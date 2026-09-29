@@ -232,7 +232,7 @@ Drafts are mail content and change nothing others see: not logged.
 | INFO | the recovery key was shown to X | user | yes |
 | INFO | X read the service log | user | new, once per visit or search, not for every further page |
 | INFO | the host created the keys, stored the master key | | printed, add the line |
-| INFO | opened the database with schema N; the file was rewritten once: from now on it shrinks after deletions | schema, notes | `system.migrated`, once for a database made before 0.2.0 |
+| INFO | opened the database with schema N; the file was rewritten once: from now on it shrinks after deletions | schema, notes | `system.migrated`, once for a database made by an earlier version |
 | INFO | backup written / restored (from the host) | file, schema, time | printed, add the line |
 
 ### 5.9 Rate limits
