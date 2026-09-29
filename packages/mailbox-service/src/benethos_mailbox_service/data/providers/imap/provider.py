@@ -174,7 +174,15 @@ class ImapProvider:
         pace = pace or Pace()
         per_minute = rules.rate_of(settings, "max_requests_per_minute", pace.per_minute)
         self._guard = Guard(
-            per_minute, pace.burst, clock=clock, sleep=sleep, jitter=jitter
+            per_minute,
+            pace.burst,
+            clock=clock,
+            sleep=sleep,
+            jitter=jitter,
+            attempts=pace.attempts,
+            first_pause=pace.first_pause,
+            longest_pause=pace.longest_pause,
+            name=f"requests to {host}",
         )
         self._smtp = SmtpSender.from_settings(
             settings,

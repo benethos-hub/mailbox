@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from benethos_mailbox_service.common.ratelimit import TokenBucket, backoff
@@ -67,3 +69,14 @@ def test_take_does_not_wait_and_says_how_long() -> None:
     t.now += 0.75
     assert bucket.take() == 0
     assert t.sleeps == []
+
+
+def test_a_wait_names_what_was_paced(caplog: pytest.LogCaptureFixture) -> None:
+    t = Time()
+    bucket = TokenBucket(
+        60, burst=1, clock=t.clock, sleep=t.sleep, name="requests to h"
+    )
+    with caplog.at_level(logging.DEBUG, logger="benethos_mailbox_service.common"):
+        bucket.acquire()
+        bucket.acquire()
+    assert "paced requests to h: waited 1000 ms" in caplog.text

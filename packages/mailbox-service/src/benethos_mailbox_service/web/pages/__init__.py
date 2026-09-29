@@ -16,6 +16,7 @@ lives in its URL.
 from __future__ import annotations
 
 import inspect
+from datetime import timedelta
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
@@ -95,7 +96,9 @@ def owns(request: Request) -> bool:
 
 
 def install(app: FastAPI) -> None:
-    app.state.ui_sessions = SessionStore()
+    app.state.ui_sessions = SessionStore(
+        idle=timedelta(hours=app.state.settings.session_idle_hours)
+    )
     app.mount(STATIC, StaticFiles(directory=STATIC_DIR), name="ui-static")
     for area in AREAS:
         app.include_router(area.router, prefix=PATH, include_in_schema=False)

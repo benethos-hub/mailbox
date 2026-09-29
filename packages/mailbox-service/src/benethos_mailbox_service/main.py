@@ -10,7 +10,7 @@ import json
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
 from contextlib import ExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
 
@@ -61,7 +61,7 @@ from .data.storage import (
 from .domain.accounts import AccountService, Adapters, OAuthService
 from .domain.activity import DISPATCHER, SERVICE, WORKER, ActivityLog, Actor
 from .domain.activity import system as said
-from .domain.auth import AuthService, Passwords
+from .domain.auth import AuthService, Passwords, SignInThrottle
 from .domain.changes import ChangeFeed
 from .domain.discovery import DiscoveryService
 from .domain.mailbox import Idempotency, MailboxService, SendControl
@@ -163,7 +163,13 @@ def build_services(
             provider_factory = partial(
                 build_provider,
                 pick=fetcher.connect_address,
-                pace=Pace(settings.imap_requests_per_minute, settings.imap_burst),
+                pace=Pace(
+                    settings.imap_requests_per_minute,
+                    settings.imap_burst,
+                    attempts=settings.imap_attempts,
+                    first_pause=settings.imap_first_pause,
+                    longest_pause=settings.imap_longest_pause,
+                ),
             )
         adapters = Adapters(
             repos.accounts,
@@ -186,12 +192,27 @@ def build_services(
             changes=changes,
             activity=activity,
         )
+        lockout = timedelta(minutes=settings.sign_in_lockout_minutes)
         auth = AuthService(
             repos.users,
             repos.roles,
             repos.tokens,
-            Passwords(repos.passwords, password_hasher, clock=clock),
+            Passwords(
+                repos.passwords,
+                password_hasher,
+                clock=clock,
+                at_once=settings.password_hashes_at_once,
+            ),
             clock=clock,
+            throttle=SignInThrottle(
+                settings.sign_in_failures, window=lockout, lockout=lockout, clock=clock
+            ),
+            names=SignInThrottle(
+                settings.sign_in_failures,
+                window=lockout,
+                lockout=timedelta(seconds=settings.sign_in_name_wait),
+                clock=clock,
+            ),
             activity=activity,
         )
         worker = (
@@ -305,6 +326,7 @@ def build_discovery(
         probe=probe_server,
         check_host=fetcher.checked_address,
         trusted_hosts=preset_hosts(),
+        per_user=settings.discovery_per_minute,
         activity=activity,
     )
 

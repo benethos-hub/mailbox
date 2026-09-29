@@ -8,8 +8,10 @@ successful sign-in clears the source's failures.
 
 The throttle knows nothing of the credential: a bearer token, a password,
 a second factor later all count the same way. Every sign-in path hands
-its source to ``AuthService``, which asks the throttle before and tells
-it afterwards. The same class also slows down one user name.
+its source to ``AuthService``, which asks the throttle and tells it of
+each failure: before the password is hashed, and after a token turned
+out wrong, since a valid token passes a locked source. The same class
+also slows down one user name.
 
 The state is in memory and per process. A restart forgets it, which is
 acceptable for what it prevents: an online guess at a password. The

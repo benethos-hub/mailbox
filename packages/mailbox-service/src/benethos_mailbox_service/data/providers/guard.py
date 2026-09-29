@@ -28,12 +28,17 @@ LONGEST_PAUSE = 900.0
 
 @dataclass(frozen=True)
 class Pace:
-    """How fast requests go to one account's server: a rate a minute, and
-    how many pass at once. The defaults are cautious, for servers nobody
-    has told us about."""
+    """How an adapter treats one account's server: a rate a minute, how
+    many requests pass at once, how often a request is tried while the
+    server does not answer, and how long the server then rests, doubled
+    after each further failure up to the longest. The defaults are
+    cautious, for servers nobody has told us about."""
 
     per_minute: float = 60.0
     burst: int = 10
+    attempts: int = ATTEMPTS
+    first_pause: float = FIRST_PAUSE
+    longest_pause: float = LONGEST_PAUSE
 
 
 class Guard:
@@ -47,8 +52,18 @@ class Guard:
         clock: Clock = time.monotonic,
         sleep: Sleep = time.sleep,
         jitter: Callable[[float, float], float] | None = None,
+        attempts: int = ATTEMPTS,
+        first_pause: float = FIRST_PAUSE,
+        longest_pause: float = LONGEST_PAUSE,
+        name: str = "a request",
     ) -> None:
-        self._bucket = TokenBucket(per_minute, burst, clock=clock, sleep=sleep)
+        """``name`` says whose requests are paced, in the log."""
+        self._bucket = TokenBucket(
+            per_minute, burst, clock=clock, sleep=sleep, name=name
+        )
+        self._attempts = attempts
+        self._first_pause = first_pause
+        self._longest_pause = longest_pause
         self._clock = clock
         self._sleep = sleep
         self._backoff = partial(backoff, jitter=jitter) if jitter else backoff
@@ -105,7 +120,7 @@ class Guard:
         the server gets a pause."""
         self.check()
         last: ProviderUnavailableError | None = None
-        for attempt in range(ATTEMPTS):
+        for attempt in range(self._attempts):
             if attempt:
                 self._sleep(self._backoff(attempt - 1))
             try:
@@ -140,5 +155,7 @@ class Guard:
     def _pause(self) -> None:
         with self._state:
             self._failures += 1
-            pause = min(LONGEST_PAUSE, FIRST_PAUSE * 2 ** (self._failures - 1))
+            pause = min(
+                self._longest_pause, self._first_pause * 2 ** (self._failures - 1)
+            )
             self._paused_until = self._clock() + pause

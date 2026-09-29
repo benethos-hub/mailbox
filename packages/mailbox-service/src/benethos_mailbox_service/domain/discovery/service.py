@@ -105,6 +105,11 @@ class DiscoveryService:
         self._cache: dict[str, tuple[float, list[_Result]]] = {}
 
     @property
+    def per_user(self) -> int:
+        """Discoveries a user may ask for in any minute."""
+        return self._per_user
+
+    @property
     def sources(self) -> list[DiscoverySourceName]:
         """The sources asked, in the order their answers are ranked."""
         return [source.name for source in self._sources]

@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from .passwords import Passwords
 from .service import MAX_NAME, AuthService, SignedIn, TokenState
+from .throttle import SignInThrottle
 
 __all__ = [
     "AuthService",
     "MAX_NAME",
     "Passwords",
+    "SignInThrottle",
     "SignedIn",
     "TokenState",
 ]

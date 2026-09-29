@@ -123,6 +123,15 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_WEBHOOK_TIMEOUT` | `10` | seconds a webhook receiver may take to answer |
 | `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE` | `60` | requests a minute to one account's IMAP server. An account's `max_requests_per_minute` wins. |
 | `MAILBOX_SERVICE_IMAP_BURST` | `10` | how many of them pass at once |
+| `MAILBOX_SERVICE_IMAP_ATTEMPTS` | `3` | attempts at a server that does not answer, within one request |
+| `MAILBOX_SERVICE_IMAP_FIRST_PAUSE` | `30` | seconds the server then rests, doubled after each further failure |
+| `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE` | `900` | the longest rest, in seconds |
+| `MAILBOX_SERVICE_SIGN_IN_FAILURES` | `10` | failed sign-ins from one client address, wrong tokens and passwords alike, that lock it out |
+| `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` | `15` | the window the failures are counted in, and how long the lockout lasts |
+| `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` | `60` | seconds a user name waits after as many failures from anywhere |
+| `MAILBOX_SERVICE_PASSWORD_HASHES_AT_ONCE` | `2` | password hashes running at once, 32 MiB each |
+| `MAILBOX_SERVICE_SESSION_IDLE_HOURS` | `8` | hours a UI session lives without a request |
+| `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE` | `10` | autodiscovery lookups a minute per user |
 | `MAILBOX_SERVICE_DISCOVERY_ISPDB` | `true` | whether autodiscovery asks Thunderbird's ISPDB (tells Mozilla the domain) |
 | `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` | `[]` | JSON list of hosts that may resolve to private addresses, e.g. an internal mail server. Autodiscovery may look them up and accounts may use them. |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` | | the Entra app for Microsoft accounts. Without it they cannot be connected. |

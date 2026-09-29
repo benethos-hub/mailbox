@@ -80,14 +80,17 @@ class AuthService:
         passwords: Passwords,
         clock: Callable[[], datetime] = utc_now,
         throttle: SignInThrottle | None = None,
+        names: SignInThrottle | None = None,
         activity: ActivityLog | None = None,
     ) -> None:
+        """``throttle`` slows down a client address that fails to sign
+        in, ``names`` a user name, whatever the address."""
         self._users = users
         self._roles = roles
         self._tokens = tokens
         self._clock = clock
         self._throttle = throttle or SignInThrottle(clock=clock)
-        self._names = SignInThrottle(
+        self._names = names or SignInThrottle(
             limit=NAME_LIMIT, window=NAME_WINDOW, lockout=NAME_LOCKOUT, clock=clock
         )
         self.passwords = passwords
@@ -170,24 +173,24 @@ class AuthService:
         self, presented: str | None, *, source: str | None = None
     ) -> Access:
         """Whose rights ``presented`` carries. With a ``source``, the client
-        address of a sign-in, guessing is slowed down: a source that failed
-        too often is locked out for a while (``RateLimitedError``), before
-        the credential is looked at. A request that carries a session the
-        service made itself passes no source."""
+        address of the request, guessing is slowed down: a wrong token
+        counts a failure of the source, and a source that failed too often
+        is refused (``RateLimitedError``) instead of told that its token
+        is wrong. A valid token passes whatever its source did, and clears
+        nothing: a token cannot be guessed, and a lockout of an address
+        many clients share must not stop the ones with a valid token. A
+        request that carries a session the service made itself passes no
+        source."""
         self._require_users()
         if not presented:
             raise UnauthorizedError("missing bearer token")
-        if source is not None:
-            self._check_source(source)
         try:
-            access = self._access_for_token(presented, source)
+            return self._access_for_token(presented, source)
         except UnauthorizedError:
             if source is not None:
+                self._check_source(source)
                 self._failed_source(source)
             raise
-        if source is not None:
-            self._throttle.succeeded(source)
-        return access
 
     def access_of(self, user_id: str) -> Access | None:
         """What a user may do now, for work done on its behalf outside a

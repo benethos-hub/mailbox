@@ -27,9 +27,12 @@ class TokenBucket:
         burst: int,
         clock: Clock = time.monotonic,
         sleep: Sleep = time.sleep,
+        name: str = "a request",
     ) -> None:
+        """``name`` is what the bucket paces, for the log line of a wait."""
         if per_minute <= 0 or burst < 1:
             raise ValueError("the rate and the burst must be positive")
+        self._name = name
         self._rate = per_minute / 60.0
         self._burst = float(burst)
         self._tokens = float(burst)
@@ -42,7 +45,7 @@ class TokenBucket:
         self._refill()
         if self._tokens < 1:
             wait = (1 - self._tokens) / self._rate
-            log.debug("paced a request: waited %.0f ms", wait * 1000)
+            log.debug("paced %s: waited %.0f ms", self._name, wait * 1000)
             self._sleep(wait)
             self._refill()
         self._tokens -= 1

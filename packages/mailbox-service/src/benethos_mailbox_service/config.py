@@ -86,6 +86,25 @@ class Settings(BaseSettings):
     # once. An account's own max_requests_per_minute wins over the rate.
     imap_requests_per_minute: float = Field(default=60.0, gt=0)
     imap_burst: int = Field(default=10, ge=1)
+    # IMAP: attempts at a server that does not answer, within one request.
+    # After the last the server rests: the first pause in seconds, doubled
+    # after each further failure up to the longest.
+    imap_attempts: int = Field(default=3, ge=1)
+    imap_first_pause: float = Field(default=30.0, gt=0)
+    imap_longest_pause: float = Field(default=900.0, gt=0)
+    # Sign-in: failures from one client address within the lockout time
+    # that lock the address out for that long, in minutes. Wrong API
+    # tokens and wrong UI passwords count alike. A user name waits
+    # ``sign_in_name_wait`` seconds after as many failures from anywhere.
+    sign_in_failures: int = Field(default=10, ge=1)
+    sign_in_lockout_minutes: int = Field(default=15, ge=1)
+    sign_in_name_wait: int = Field(default=60, ge=1)
+    # Password hashes running at once. Each takes 32 MiB.
+    password_hashes_at_once: int = Field(default=2, ge=1)
+    # UI: hours a session lives without a request.
+    session_idle_hours: float = Field(default=8.0, gt=0)
+    # Autodiscovery: lookups a minute per user.
+    discovery_per_minute: int = Field(default=10, ge=1)
     # OAuth for Microsoft accounts: the app the operator registered in
     # Microsoft Entra ID. Without a client id, Microsoft accounts cannot be
     # connected. The secret from a file (a container secret) or from the
@@ -107,6 +126,10 @@ class Settings(BaseSettings):
         if self.webhook_longest_retry < self.webhook_first_retry:
             raise ValueError(
                 "webhook_longest_retry must not be shorter than webhook_first_retry"
+            )
+        if self.imap_longest_pause < self.imap_first_pause:
+            raise ValueError(
+                "imap_longest_pause must not be shorter than imap_first_pause"
             )
         return self
 

@@ -34,11 +34,17 @@ class Passwords:
         repository: PasswordRepository,
         hasher: PasswordHasher | None = None,
         clock: Callable[[], datetime] = utc_now,
+        at_once: int = AT_ONCE,
     ) -> None:
         self._repository = repository
         self._hasher = hasher or PasswordHasher()
         self._clock = clock
-        self._limiter = anyio.CapacityLimiter(AT_ONCE)
+        self._limiter = anyio.CapacityLimiter(at_once)
+
+    @property
+    def at_once(self) -> int:
+        """How many hashes run at once. The others wait."""
+        return int(self._limiter.total_tokens)
 
     def stored(self, user_id: str) -> StoredPassword | None:
         return self._repository.get(user_id)

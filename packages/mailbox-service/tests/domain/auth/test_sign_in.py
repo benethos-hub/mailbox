@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, User
 from benethos_mailbox_service.data.secrets import PasswordHasher, Scrypt
 from benethos_mailbox_service.data.storage import (
@@ -26,7 +27,7 @@ from benethos_mailbox_service.errors import (
     SetupRequiredError,
     UnauthorizedError,
 )
-from benethos_mailbox_service.main import Services
+from benethos_mailbox_service.main import Services, build_services
 
 from ...conftest import ADMIN, CHEAP
 
@@ -316,3 +317,9 @@ async def test_set_password_on_the_host_switches_the_ui_sign_in_on(
     assert user.ui_sign_in is True
     signed = await services.auth.sign_in("Bot", password, source="10.0.0.1")
     assert signed.must_change is True
+
+
+def test_the_hashes_at_once_come_from_the_settings() -> None:
+    settings = Settings(storage="memory", password_hashes_at_once=3)
+    services = build_services(settings, password_hasher=CHEAP)
+    assert services.auth.passwords.at_once == 3
