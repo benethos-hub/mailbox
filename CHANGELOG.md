@@ -21,6 +21,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MAILBOX_SERVICE_IMAP_BURST` (10): how fast the service sends requests
   to an account's IMAP server. An account's `max_requests_per_minute`
   still wins over the rate.
+- Every other limit is a setting too, with the value it had:
+  `MAILBOX_SERVICE_SIGN_IN_FAILURES` (10) and
+  `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` (15) for the lockout of a
+  client address, `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` (60 seconds) for a
+  user name, `MAILBOX_SERVICE_PASSWORD_HASHES_AT_ONCE` (2),
+  `MAILBOX_SERVICE_SESSION_IDLE_HOURS` (8),
+  `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE` (10 per user),
+  `MAILBOX_SERVICE_IMAP_ATTEMPTS` (3), `MAILBOX_SERVICE_IMAP_FIRST_PAUSE`
+  (30 seconds) and `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE` (900) for a
+  server that does not answer. `docs/LIMITS.md` has every limit.
 
 - A log page in the UI under Service, for a user with `admin` on every
   account: the newest 1000 lines of the service log since the start,
@@ -381,6 +391,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- A valid API token passes while its client address is locked out for
+  failed sign-ins, and clears no failures. Before, a lockout of an
+  address refused every token behind it, so one client with a stale
+  token stopped the others behind a proxy or NAT, and a working client
+  reset the count of a guessing one.
 - Renaming a user, or naming a new token of a user, is checked against
   the caller's rights on that user first. A caller who may not manage
   the user gets `403` and no longer learns from a `409` whether a name

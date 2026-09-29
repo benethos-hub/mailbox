@@ -564,6 +564,11 @@ def test_settings_switch_ispdb_off(monkeypatch: pytest.MonkeyPatch) -> None:
     assert ISPDB not in services.discovery.sources
 
 
+def test_the_limit_comes_from_the_settings() -> None:
+    settings = Settings(storage="memory", discovery_per_minute=3)
+    assert build_services(settings).discovery.per_user == 3
+
+
 @pytest.fixture
 def api() -> tuple[Any, TestClient]:
     settings = Settings(storage="memory")

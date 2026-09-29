@@ -3,6 +3,7 @@ and through the API and the UI."""
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -10,10 +11,10 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.domain.auth.throttle import SignInThrottle
-from benethos_mailbox_service.errors import RateLimitedError
-from benethos_mailbox_service.main import Services, create_app
+from benethos_mailbox_service.errors import RateLimitedError, UnauthorizedError
+from benethos_mailbox_service.main import Services, build_services, create_app
 
-from ...conftest import admin_bearer, browser_admin
+from ...conftest import CHEAP, admin_bearer, browser_admin
 from ...ui_helpers import try_sign_in
 
 NOW = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
@@ -143,8 +144,11 @@ def test_the_api_locks_a_guessing_client_out(
     assert locked.status_code == 429
     assert locked.json()["error"]["code"] == "rate_limited"
     assert int(locked.headers["Retry-After"]) > 0
-    # While locked, the right token is not even looked at.
-    assert client.get("/v1/accounts", headers=right).status_code == 429
+    # A valid token passes while its address is locked out: it cannot be
+    # guessed, and clients behind one address must not stop each other.
+    assert client.get("/v1/accounts", headers=right).status_code == 200
+    locked = client.get("/v1/accounts", headers={"Authorization": "Bearer nope"})
+    assert locked.status_code == 429
 
 
 def test_a_missing_token_is_no_guess(settings: Settings, services: Services) -> None:
@@ -154,18 +158,45 @@ def test_a_missing_token_is_no_guess(settings: Settings, services: Services) -> 
         assert client.get("/v1/accounts").status_code == 401
 
 
-def test_a_successful_sign_in_clears_the_count(
-    settings: Settings, services: Services
-) -> None:
+def test_a_valid_token_clears_no_count(settings: Settings, services: Services) -> None:
+    """A client with a stale token behind a shared address is locked out
+    at the tenth failure, however often the others pass in between."""
+    right = admin_bearer(services)
     client = TestClient(create_app(settings, services))
+    wrong = {"Authorization": "Bearer nope"}
     for _ in range(9):
-        client.get("/v1/accounts", headers={"Authorization": "Bearer nope"})
-    ok = client.get("/v1/accounts", headers=admin_bearer(services))
-    assert ok.status_code == 200
-    for _ in range(9):
-        client.get("/v1/accounts", headers={"Authorization": "Bearer nope"})
-    ok = client.get("/v1/accounts", headers=admin_bearer(services))
-    assert ok.status_code == 200
+        assert client.get("/v1/accounts", headers=wrong).status_code == 401
+    assert client.get("/v1/accounts", headers=right).status_code == 200
+    assert client.get("/v1/accounts", headers=wrong).status_code == 401
+    assert client.get("/v1/accounts", headers=wrong).status_code == 429
+    assert client.get("/v1/accounts", headers=right).status_code == 200
+
+
+def test_the_throttle_comes_from_the_settings() -> None:
+    settings = Settings(
+        storage="memory",
+        sign_in_failures=2,
+        sign_in_lockout_minutes=1,
+        sign_in_name_wait=5,
+    )
+    services = build_services(settings, password_hasher=CHEAP)
+    client = TestClient(create_app(settings, services))
+    wrong = {"Authorization": "Bearer nope"}
+    name, password = browser_admin(services)
+    assert client.get("/v1/accounts", headers=wrong).status_code == 401
+    assert client.get("/v1/accounts", headers=wrong).status_code == 401
+    locked = client.get("/v1/accounts", headers=wrong)
+    assert locked.status_code == 429
+    assert int(locked.headers["Retry-After"]) <= 60
+    # The name: two failures from anywhere, then it waits five seconds.
+    for n in (1, 2):
+        with pytest.raises(UnauthorizedError):
+            asyncio.run(
+                services.auth.sign_in(name, "not the passphrase", source=f"10.0.0.{n}")
+            )
+    with pytest.raises(RateLimitedError) as caught:
+        asyncio.run(services.auth.sign_in(name, password, source="10.0.0.3"))
+    assert caught.value.retry_after == 5
 
 
 # --- through the UI, the same throttle ------------------------------------------

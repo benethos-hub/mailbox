@@ -112,6 +112,14 @@ def test_env_example_holds_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None
             },
             "webhook_longest_retry",
         ),
+        (
+            {
+                "MAILBOX_SERVICE_IMAP_FIRST_PAUSE": "60",
+                "MAILBOX_SERVICE_IMAP_LONGEST_PAUSE": "30",
+            },
+            "imap_longest_pause",
+        ),
+        ({"MAILBOX_SERVICE_SIGN_IN_FAILURES": "0"}, "sign_in_failures"),
     ],
 )
 def test_settings_that_cannot_work_are_named(

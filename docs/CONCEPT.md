@@ -120,17 +120,18 @@ The data layer the same way (REFACTORING.md section 8):
   the session holds the id of its user. Every request loads that user
   anew, so a disabled or deleted user is signed out at once. Signing in
   starts a new session. A changed password ends every other session of
-  its user. Sessions end after 8 hours without a request and with a
-  restart. A content security policy allows no inline script or style and
+  its user. Sessions end after 8 hours (a setting) without a request
+  and with a restart. A content security policy allows no inline script or style and
   no framing. A form answers with a redirect (Post/Redirect/Get). Its
   message waits in the session and is shown once, never in the URL, so a
   link cannot put words into the UI. The sign-in page, which has no
   session, names one of its own messages by a code.
   Guessing is slowed down: a client address that fails to sign in ten
   times within fifteen minutes is locked out for fifteen minutes, on the
-  UI and on the API alike, whatever the credential kind. A user name that
+  UI and on the API alike, whatever the credential kind. A valid API
+  token passes regardless, since it cannot be guessed. A user name that
   fails ten times within fifteen minutes waits one minute, from any
-  address. That slows guessing at one account spread over many addresses,
+  address. The numbers are settings. That slows guessing at one account spread over many addresses,
   and never locks its owner out for long. Requests are limited as
   well: 120 a minute per API token or UI session, 30 a minute per client
   address for requests without a credential, each with a burst of half
@@ -587,7 +588,11 @@ The service therefore behaves conservatively towards every provider:
   `503` are retried with exponential backoff and jitter, `Retry-After` is
   honoured (Graph's as a pause during which nothing is sent), and a
   persistently unreachable account is shown as `unreachable` rather than
-  hammered. A retried step must not do its work twice: an IMAP `APPEND`
+  hammered: 3 attempts, then a rest of 30 seconds doubled up to 15
+  minutes, set by `MAILBOX_SERVICE_IMAP_ATTEMPTS`,
+  `MAILBOX_SERVICE_IMAP_FIRST_PAUSE` and
+  `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE`. A retried step must not do its
+  work twice: an IMAP `APPEND`
   is preceded by a search for the message's `Message-ID`, so a draft or a
   sent copy stored before the connection dropped is found, not stored
   again.

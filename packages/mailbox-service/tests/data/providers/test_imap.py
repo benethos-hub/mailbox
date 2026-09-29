@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import imaplib
+import logging
 import ssl
 from datetime import UTC, datetime
 from typing import Any
@@ -421,6 +422,39 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
         await imap.list_messages(None, limit=1, cursor=None, search=None)
     with pytest.raises(ProviderUnavailableError, match="next attempt in 30s"):
         await imap.list_folders()  # the success in between reset the count
+
+
+async def test_the_retries_and_the_rest_come_from_the_pace(
+    server: FakeMailBox,
+) -> None:
+    time = FakeTime()
+    imap = provider(
+        server,
+        time,
+        Pace(attempts=2, first_pause=10, longest_pause=15),
+    )
+    server.failures = [TimeoutError()] * 2
+    with pytest.raises(ProviderUnavailableError, match="did not answer"):
+        await imap.list_messages(None, limit=1, cursor=None, search=None)
+    assert time.sleeps == [0.5]
+    with pytest.raises(ProviderUnavailableError, match="next attempt in 10s"):
+        await imap.list_folders()
+    time.now += 10
+    server.failures = [TimeoutError()] * 2
+    with pytest.raises(ProviderUnavailableError):
+        await imap.list_messages(None, limit=1, cursor=None, search=None)
+    with pytest.raises(ProviderUnavailableError, match="next attempt in 15s"):
+        await imap.list_folders()
+
+
+async def test_a_wait_names_the_server(
+    server: FakeMailBox, caplog: pytest.LogCaptureFixture
+) -> None:
+    imap = provider(server, FakeTime(), Pace(per_minute=60, burst=1))
+    with caplog.at_level(logging.DEBUG, logger="benethos_mailbox_service.common"):
+        await imap.list_folders()
+        await imap.list_folders()
+    assert "paced requests to imap.example.com: waited" in caplog.text
 
 
 def test_a_pause_of_the_mail_server_holds_no_send_back() -> None:

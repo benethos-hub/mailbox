@@ -63,9 +63,17 @@ class PasswordChangeRequired(Exception):
 
 
 class SessionStore:
-    def __init__(self, clock: Callable[[], datetime] = utc_now) -> None:
+    def __init__(
+        self, clock: Callable[[], datetime] = utc_now, idle: timedelta = IDLE
+    ) -> None:
         self._sessions: dict[str, UiSession] = {}
         self._clock = clock
+        self._idle = idle
+
+    @property
+    def idle(self) -> timedelta:
+        """How long a session lives without a request."""
+        return self._idle
 
     def create(self, signed: SignedIn) -> str:
         """A new session, with an id of its own: one the browser held
@@ -73,7 +81,8 @@ class SessionStore:
         now = self._clock()
         # Sessions nobody came back to would stay for the life of the
         # process. Each sign-in sweeps them.
-        for stale in [s for s, v in self._sessions.items() if now - v.last_seen > IDLE]:
+        idle = self._idle
+        for stale in [s for s, v in self._sessions.items() if now - v.last_seen > idle]:
             del self._sessions[stale]
         session_id = secrets.token_urlsafe(32)
         self._sessions[session_id] = UiSession(
@@ -90,7 +99,7 @@ class SessionStore:
         """Whether the session exists and is not idle too long. Unlike
         ``get``, the look does not count as the session being used."""
         session = self._sessions.get(session_id) if session_id else None
-        return session is not None and self._clock() - session.last_seen <= IDLE
+        return session is not None and self._clock() - session.last_seen <= self._idle
 
     def get(self, session_id: str | None) -> UiSession | None:
         """The session, unless it is unknown or was idle too long."""
@@ -98,7 +107,7 @@ class SessionStore:
             return None
         session = self._sessions.get(session_id)
         now = self._clock()
-        if session is None or now - session.last_seen > IDLE:
+        if session is None or now - session.last_seen > self._idle:
             self._sessions.pop(session_id, None)
             return None
         session.last_seen = now

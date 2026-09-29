@@ -242,14 +242,14 @@ limits themselves, and how they work together, are in
 
 | Level | Line | Fields | Today |
 |---|---|---|---|
-| WARNING | too many failed sign-ins from S: locked out for N minutes | source, minutes | new (`SignInThrottle`, 10 in 15 min) |
+| WARNING | too many failed sign-ins from S: locked out for N minutes | source, minutes | new (`SignInThrottle`, 10 in 15 min by default) |
 | WARNING | too many failed sign-ins as X: waiting N seconds | name as typed, seconds | new (the brake per name) |
-| INFO | the lockout of S ended | source | new, when the lockout is lifted |
-| WARNING | X reached the discovery limit (N in a minute) | user, count | new (`DiscoveryService`, 10 per user) |
+| INFO | the lockout of S ended | source | at the next attempt after it ran out: any sign-in in the UI, a wrong token on the API |
+| WARNING | X reached the discovery limit (N in a minute) | user, count | new (`DiscoveryService`, 10 per user by default) |
 | WARNING | X reached the send limit on A: N in 24 hours, the grants allow M | actor, account, counts, `retry_after` | new, in the send audit as `denied` |
 | WARNING | a request from S was refused: body of N bytes, the limit is M | source, path, sizes | new (`web/limits.py`, 413) |
 | WARNING | X sent too many requests, the last to P: limited to N a minute, refused for M seconds | token, session or source, path, rate, seconds | `web/limits.py`, 429 |
-| DEBUG | paced a request: waited N ms | wait | new (the token bucket). Written in the data layer, which does not know the account |
+| DEBUG | paced requests to H: waited N ms | host, wait | the token bucket, in the data layer, which knows the server but not the account |
 | DEBUG | microsoft asked to wait N seconds (Retry-After) | seconds | new, in the data layer |
 | WARNING | account A could not be reached: the provider's reason | account, reason | the status line of 5.4: a pause or a refusal for rate reaches the domain as an error, and the account's status changes once |
 
@@ -278,9 +278,10 @@ requests without, both as tokens per minute with a burst, in
   every operation.
 
 A wrong credential is left to the sign-in throttle, which locks the
-address after ten failures. The sign-in throttle stays where it is: it
-covers guessed credentials and knows the outcome, which a limit on
-requests cannot. Its log line is the row above, once per caller when
+address after ten failures by default. A valid token passes a locked
+address, since it cannot be guessed (LIMITS.md 3). The sign-in throttle
+stays where it is: it covers guessed credentials and knows the outcome,
+which a limit on requests cannot. Its log line is the row above, once per caller when
 the limit engages, not per refused request.
 
 ### 5.10 The MCP server

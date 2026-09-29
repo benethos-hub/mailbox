@@ -8,9 +8,10 @@ from datetime import datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.domain.auth.service import SignedIn
-from benethos_mailbox_service.main import Services
+from benethos_mailbox_service.main import Services, create_app
 from benethos_mailbox_service.web.pages.session import IDLE, SessionStore
 from benethos_mailbox_service.web.pages.templates import STATIC_DIR, TEMPLATE_DIR
 
@@ -337,6 +338,17 @@ def test_an_idle_session_expires() -> None:
     assert store.get(session_id) is None
     assert store.get(session_id) is None
     assert store.get(None) is None
+
+
+def test_the_idle_time_comes_from_the_settings(services: Services) -> None:
+    now = [NOW]
+    store = SessionStore(clock=lambda: now[0], idle=timedelta(minutes=5))
+    session_id = store.create(SIGNED)
+    now[0] += timedelta(minutes=6)
+    assert store.get(session_id) is None
+    settings = Settings(storage="memory", session_idle_hours=0.5)
+    app = create_app(settings, services)
+    assert app.state.ui_sessions.idle == timedelta(minutes=30)
 
 
 def test_idle_sessions_are_swept_on_sign_in() -> None:
