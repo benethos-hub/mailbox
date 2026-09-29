@@ -131,9 +131,13 @@ The data layer the same way (REFACTORING.md section 8):
   UI and on the API alike, whatever the credential kind. A user name that
   fails ten times within fifteen minutes waits one minute, from any
   address. That slows guessing at one account spread over many addresses,
-  and never locks its owner out for long. Behind a proxy,
-  `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` names the proxy so the client
-  address comes from `X-Forwarded-For`.
+  and never locks its owner out for long. Requests are limited as
+  well: 120 a minute per API token or UI session, 30 a minute per client
+  address for requests without a credential, each with a burst of half
+  as many, answered with `429` and `Retry-After`. Every limit and how
+  they work together: [LIMITS.md](LIMITS.md).
+  Behind a proxy, `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` names the proxy
+  so the client address comes from `X-Forwarded-For`.
 - **No HTTP below the web layer**, no decisions in the data layer,
   providers reached only through their registry. A test checks the
   direction of every import.
@@ -567,7 +571,10 @@ The service therefore behaves conservatively towards every provider:
 
 - **One rate limiter per account.** Every request to a provider passes it,
   retries and paging follow-ups included. The limits come from the preset of
-  the provider (5.8), with a cautious default for unknown servers.
+  the provider (5.8), with a cautious default for unknown servers: 60
+  requests a minute with a burst of 10, set by
+  `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE` and
+  `MAILBOX_SERVICE_IMAP_BURST`.
 - **Few connections.** One IMAP connection per account for commands, a
   second one only for `IDLE`. Never one per API request.
 - **A failed login is not retried.** After one authentication failure the

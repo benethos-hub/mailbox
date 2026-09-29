@@ -35,4 +35,5 @@ its user (prompt injection) beyond what CONCEPT 7.7 already describes,
 and anything that reaches other hosts through autodiscovery.
 
 The design of these protections is in
-[docs/CONCEPT.md](docs/CONCEPT.md), section 7.
+[docs/CONCEPT.md](docs/CONCEPT.md), section 7. Every rate limit, and how
+the limits work together, is in [docs/LIMITS.md](docs/LIMITS.md).

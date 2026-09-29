@@ -105,7 +105,9 @@ names the settings file it read and the database at start.
 |---|---|---|
 | `MAILBOX_SERVICE_HOST`, `MAILBOX_SERVICE_PORT` | `127.0.0.1`, `8080` | where the service listens (`serve --host/--port` win) |
 | `MAILBOX_SERVICE_PUBLIC_URL` | from each request | the address people reach the service at, e.g. behind a proxy. The OAuth redirect address is built from it. |
-| `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` | `127.0.0.1` | behind a reverse proxy: its address, whose `X-Forwarded-*` headers give the client address, scheme and host |
+| `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` | `127.0.0.1` | behind a reverse proxy: its address, whose `X-Forwarded-*` headers give the client address, scheme and host. Without it every visitor counts as the proxy's address. |
+| `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` | `120` | requests a minute per API token or UI session, a burst of half as many at once. `0` switches the limit off. |
+| `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` | `30` | the same per client address, for requests without a credential |
 | `MAILBOX_SERVICE_LOG_LEVEL` | `INFO` | `critical`, `error`, `warning`, `info`, `debug` or `trace`, see [Logs](#logs) |
 | `MAILBOX_SERVICE_DATA_DIR` | `data/benethos-mailbox-service` | where the database lives |
 | `MAILBOX_SERVICE_STORAGE` | `sqlite` | or `memory`, which keeps nothing |
@@ -119,6 +121,8 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY` | `30` | seconds before the second try, doubled for each further one |
 | `MAILBOX_SERVICE_WEBHOOK_LONGEST_RETRY` | `3600` | the longest pause between two tries, in seconds |
 | `MAILBOX_SERVICE_WEBHOOK_TIMEOUT` | `10` | seconds a webhook receiver may take to answer |
+| `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE` | `60` | requests a minute to one account's IMAP server. An account's `max_requests_per_minute` wins. |
+| `MAILBOX_SERVICE_IMAP_BURST` | `10` | how many of them pass at once |
 | `MAILBOX_SERVICE_DISCOVERY_ISPDB` | `true` | whether autodiscovery asks Thunderbird's ISPDB (tells Mozilla the domain) |
 | `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` | `[]` | JSON list of hosts that may resolve to private addresses, e.g. an internal mail server. Autodiscovery may look them up and accounts may use them. |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` | | the Entra app for Microsoft accounts. Without it they cannot be connected. |

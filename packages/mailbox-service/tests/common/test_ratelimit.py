@@ -54,3 +54,16 @@ def test_backoff_grows_and_is_capped() -> None:
     assert [backoff(n, jitter=top) for n in range(4)] == [0.5, 1.0, 2.0, 4.0]
     assert backoff(30, jitter=top) == 900.0
     assert 0.0 <= backoff(3) <= 4.0
+
+
+def test_take_does_not_wait_and_says_how_long() -> None:
+    t = Time()
+    bucket = TokenBucket(per_minute=60, burst=2, clock=t.clock, sleep=t.sleep)
+    assert bucket.take() == 0
+    assert bucket.take() == 0
+    assert bucket.take() == pytest.approx(1.0)
+    t.now += 0.25
+    assert bucket.take() == pytest.approx(0.75)
+    t.now += 0.75
+    assert bucket.take() == 0
+    assert t.sleeps == []

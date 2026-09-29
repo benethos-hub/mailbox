@@ -236,7 +236,9 @@ Drafts are mail content and change nothing others see: not logged.
 
 Every limit the service enforces, and every pause a provider asks for,
 writes a line: the operator must see who is being slowed down and why,
-and the log page is where a locked-out person's report is checked.
+and the log page is where a locked-out person's report is checked. The
+limits themselves, and how they work together, are in
+[LIMITS.md](LIMITS.md).
 
 | Level | Line | Fields | Today |
 |---|---|---|---|
@@ -246,7 +248,7 @@ and the log page is where a locked-out person's report is checked.
 | WARNING | X reached the discovery limit (N in a minute) | user, count | new (`DiscoveryService`, 10 per user) |
 | WARNING | X reached the send limit on A: N in 24 hours, the grants allow M | actor, account, counts, `retry_after` | new, in the send audit as `denied` |
 | WARNING | a request from S was refused: body of N bytes, the limit is M | source, path, sizes | new (`web/limits.py`, 413) |
-| WARNING | too many requests from S / with token Z: limited for N seconds | source or token, path, seconds | new, with the HTTP limit below |
+| WARNING | X sent too many requests, the last to P: limited to N a minute, refused for M seconds | token, session or source, path, rate, seconds | `web/limits.py`, 429 |
 | DEBUG | paced a request: waited N ms | wait | new (the token bucket). Written in the data layer, which does not know the account |
 | DEBUG | microsoft asked to wait N seconds (Retry-After) | seconds | new, in the data layer |
 | WARNING | account A could not be reached: the provider's reason | account, reason | the status line of 5.4: a pause or a refusal for rate reaches the domain as an error, and the account's status changes once |
@@ -256,21 +258,30 @@ per refused request: the throttle logs when it locks, the provider
 pause when it starts. Each refused request still answers `429` with
 `Retry-After`, and the access log has the line.
 
-**HTTP requests as such are not limited by the service today.** The
-API refuses a body above the limit and slows sign-ins, nothing else. A
-token that loops, or a client without one that guesses paths, can call
-as fast as the service answers. **Decided 2026-09-28:** the service
-limits them, as a pull request of its own after this concept: a limit
-per client address for requests without a valid credential, and one
-per token for requests with one, both as tokens per minute with a
-burst, in `web/limits.py` beside the body limit, refused with `429` and
-`Retry-After`. The values go into `Settings`
-(`MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE`, per address and per token),
-with a default generous enough for the MCP server's start, which calls
-`/v1/me` and lists folders for every account. Its log line is the row
-above, once per client or token when the limit engages, not per refused
-request. The sign-in throttle stays where it is: it covers guessed
-credentials and knows the outcome, which a limit on requests cannot.
+**HTTP requests are limited.** **Decided 2026-09-28:** a limit per
+token for requests with a credential, and one per client address for
+requests without, both as tokens per minute with a burst, in
+`web/limits.py` beside the body limit, refused with `429` and
+`Retry-After`. **Decided 2026-09-29:** the values and the details.
+
+- A signed-in caller counts per API token or per UI session, where its
+  credential is checked: `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE`, 120
+  by default.
+- Any other request counts per client address, before the app sees it:
+  the sign-in page and its files, a wrong path, the API's documentation.
+  `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE`, 30 by default.
+- A burst of half as many passes at once. That covers the MCP server's
+  start, which calls `/v1/me` and lists folders for every account. `0`
+  switches a limit off.
+- `/health` is not limited.
+- The OpenAPI document names the `429` once, in its description, not at
+  every operation.
+
+A wrong credential is left to the sign-in throttle, which locks the
+address after ten failures. The sign-in throttle stays where it is: it
+covers guessed credentials and knows the outcome, which a limit on
+requests cannot. Its log line is the row above, once per caller when
+the limit engages, not per refused request.
 
 ### 5.10 The MCP server
 
@@ -311,7 +322,8 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    provider asked for. `test_architecture.py` checks that no module
    under `data/` calls `log.info`, `log.warning`, `log.error` or
    `log.exception`. The web layer logs nothing but what it refuses
-   before the domain sees the request, the body limit, at `WARNING`.
+   before the domain sees the request, the body limit and the limit on
+   requests, at `WARNING`.
 3. **After the change, not before.** A line says what happened, so it is
    written once the store took the change. A refusal is logged where it
    is refused.
@@ -500,6 +512,7 @@ and that each is listed here.
 | `webhooks.delivers_again` | a post went through after failures |
 | `webhooks.failed` | a post failed with a bug |
 | `http.body_too_large` | a request body over the limit refused |
+| `http.rate_limited` | a token, a UI session or an address ran out of requests |
 
 ## 8. Order of work
 

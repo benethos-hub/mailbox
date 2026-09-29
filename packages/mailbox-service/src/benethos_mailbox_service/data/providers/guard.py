@@ -11,6 +11,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from functools import partial
 from typing import TypeVar
 
@@ -25,6 +26,16 @@ FIRST_PAUSE = 30.0
 LONGEST_PAUSE = 900.0
 
 
+@dataclass(frozen=True)
+class Pace:
+    """How fast requests go to one account's server: a rate a minute, and
+    how many pass at once. The defaults are cautious, for servers nobody
+    has told us about."""
+
+    per_minute: float = 60.0
+    burst: int = 10
+
+
 class Guard:
     """The state of one account towards its server, shared by all the
     adapter's connections to it."""
@@ -32,11 +43,12 @@ class Guard:
     def __init__(
         self,
         per_minute: float,
+        burst: int = Pace.burst,
         clock: Clock = time.monotonic,
         sleep: Sleep = time.sleep,
         jitter: Callable[[float, float], float] | None = None,
     ) -> None:
-        self._bucket = TokenBucket(per_minute, burst=10, clock=clock, sleep=sleep)
+        self._bucket = TokenBucket(per_minute, burst, clock=clock, sleep=sleep)
         self._clock = clock
         self._sleep = sleep
         self._backoff = partial(backoff, jitter=jitter) if jitter else backoff

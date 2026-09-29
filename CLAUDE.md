@@ -110,6 +110,7 @@ containers/               # one folder per image, compose.yaml, README.md,
 docs/
   CONCEPT.md              # design
   ARCHITECTURE.md         # layers, modules, seams, rules for new code
+  LIMITS.md               # every rate limit and how they work together
   ROADMAP.md              # phases and their state
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test

@@ -34,10 +34,10 @@ class Settings(BaseSettings):
     public_url: str | None = None
     # Behind a reverse proxy: the proxy's address (or several, separated by
     # commas, or "*"), whose X-Forwarded-For, -Proto and -Host headers are
-    # believed. They give the client address that the sign-in throttle
-    # counts, the scheme the session cookie's Secure flag follows and the
-    # host the OAuth redirect is built from without a public URL. Empty:
-    # only a proxy on 127.0.0.1 is believed.
+    # believed. They give the client address that the sign-in throttle and
+    # the request limit count, the scheme the session cookie's Secure flag
+    # follows and the host the OAuth redirect is built from without a
+    # public URL. Empty: only a proxy on 127.0.0.1 is believed.
     forwarded_allow_ips: str | None = None
     # As uvicorn names them, in any case.
     log_level: Literal["critical", "error", "warning", "info", "debug", "trace"] = (
@@ -77,6 +77,15 @@ class Settings(BaseSettings):
     # Change feed: days a change is kept. A client that asks from an older
     # point starts again from the current state.
     changes_days: int = Field(default=7, ge=1)
+    # Requests a minute per API token or UI session, and per client address
+    # for requests without a credential. A burst of half as many passes at
+    # once. 0 switches the limit off.
+    rate_limit_per_minute: int = Field(default=120, ge=0)
+    rate_limit_anonymous_per_minute: int = Field(default=30, ge=0)
+    # IMAP: requests a minute to one account's server, and how many pass at
+    # once. An account's own max_requests_per_minute wins over the rate.
+    imap_requests_per_minute: float = Field(default=60.0, gt=0)
+    imap_burst: int = Field(default=10, ge=1)
     # OAuth for Microsoft accounts: the app the operator registered in
     # Microsoft Entra ID. Without a client id, Microsoft accounts cannot be
     # connected. The secret from a file (a container secret) or from the

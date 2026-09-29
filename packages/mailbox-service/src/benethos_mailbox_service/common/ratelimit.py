@@ -1,4 +1,5 @@
-"""Pacing: a token bucket and a backoff, for the providers and the domain.
+"""Pacing: a token bucket and a backoff, for the providers, the domain
+and the web layer's limit on requests.
 
 Clock, sleep and randomness are injectable, so tests run without waiting.
 """
@@ -41,10 +42,19 @@ class TokenBucket:
         self._refill()
         if self._tokens < 1:
             wait = (1 - self._tokens) / self._rate
-            log.debug("paced a request to a mail server: waited %.0f ms", wait * 1000)
+            log.debug("paced a request: waited %.0f ms", wait * 1000)
             self._sleep(wait)
             self._refill()
         self._tokens -= 1
+
+    def take(self) -> float:
+        """Take one token without waiting. 0 when one was taken, else the
+        seconds until the next one is there."""
+        self._refill()
+        if self._tokens < 1:
+            return (1 - self._tokens) / self._rate
+        self._tokens -= 1
+        return 0.0
 
     def _refill(self) -> None:
         now = self._clock()

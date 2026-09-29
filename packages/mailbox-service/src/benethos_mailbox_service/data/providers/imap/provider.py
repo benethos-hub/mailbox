@@ -57,7 +57,7 @@ from ...protocols import (
 )
 from .. import rules
 from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
-from ..guard import Guard
+from ..guard import Guard, Pace
 from ..sender import SmtpFactory, SmtpSender
 from . import mappers
 
@@ -66,9 +66,6 @@ T = TypeVar("T")
 SessionFactory = Callable[[Server], ImapSession]
 
 CLIENT_ID = ("benethos-mailbox-service", __version__)
-
-# A cautious default for servers nobody has told us about.
-DEFAULT_REQUESTS_PER_MINUTE = 60
 
 PROBE_TIMEOUT = 10.0
 
@@ -143,8 +140,10 @@ class ImapProvider:
         jitter: Callable[[float, float], float] | None = None,
         smtp_factory: SmtpFactory = SmtpSession,
         pick: Pick | None = None,
+        pace: Pace | None = None,
     ) -> None:
-        """``pick`` checks the host of each connection, IMAP and SMTP."""
+        """``pick`` checks the host of each connection, IMAP and SMTP.
+        ``pace`` is how fast requests go, unless the settings name a rate."""
         host = settings.get("host")
         if not host:
             raise BadRequestError("an IMAP account needs settings.host")
@@ -172,10 +171,11 @@ class ImapProvider:
         self._username = str(username)
 
         self._credentials = credentials
-        per_minute = rules.rate_of(
-            settings, "max_requests_per_minute", DEFAULT_REQUESTS_PER_MINUTE
+        pace = pace or Pace()
+        per_minute = rules.rate_of(settings, "max_requests_per_minute", pace.per_minute)
+        self._guard = Guard(
+            per_minute, pace.burst, clock=clock, sleep=sleep, jitter=jitter
         )
-        self._guard = Guard(per_minute, clock=clock, sleep=sleep, jitter=jitter)
         self._smtp = SmtpSender.from_settings(
             settings,
             self._username,
