@@ -103,9 +103,10 @@ class Database:
             if self._connection.in_transaction:
                 return
             with translated():
-                # Each row the pragma answers is a page given back: read
-                # them all, or nothing happens.
-                self._connection.execute("PRAGMA incremental_vacuum").fetchall()
+                # The pragma gives one page back per step. ``executescript``
+                # steps until it is done. ``execute`` stops after the first
+                # step on Python 3.11, and nothing to speak of happens.
+                self._connection.executescript("PRAGMA incremental_vacuum;")
 
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:
