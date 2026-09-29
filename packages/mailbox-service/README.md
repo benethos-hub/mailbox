@@ -143,7 +143,9 @@ names the settings file it read and the database at start.
 ## Logs
 
 `serve` writes one log to stderr: the terminal, `docker compose logs`, or
-the journal under systemd. There is no log file. Each line has the time
+the journal under systemd. There is no log file: whoever runs the service
+keeps the log and bounds it. The compose file keeps 5 files of 10 MB per
+container, the journal follows its own limits. Each line has the time
 to the millisecond with its offset from UTC, the level, where it comes
 from and the message:
 

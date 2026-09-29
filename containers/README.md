@@ -40,6 +40,11 @@ version as the PyPI packages:
 - Settings come from the environment only.
 - Both have a health check: the service on `GET /health`, the MCP server
   on its port.
+- The compose file caps the log Docker keeps of each container at 5
+  files of 10 MB, the oldest dropped first (`x-logging`). To keep more,
+  raise `max-size` or `max-file`. To keep the log elsewhere, replace the
+  driver, for example with `journald`, and read it with `journalctl
+  CONTAINER_NAME=<name>`.
 
 Built from the repository root:
 

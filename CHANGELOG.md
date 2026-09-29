@@ -244,6 +244,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A watched account no longer holds a thread of the pool that answers
   requests while it waits in IDLE. With many IMAP accounts, requests and
   pages of the UI had to wait for a free thread.
+- The compose file caps the log Docker keeps of each container at 5
+  files of 10 MB. Before, the log grew for as long as the container ran.
 - A host in `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` matches however
   it is written, in Unicode or in punycode. Before, an internal host
   written in Unicode was refused as non-public when an account or
