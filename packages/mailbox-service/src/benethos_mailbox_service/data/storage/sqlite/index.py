@@ -83,6 +83,8 @@ class SqliteMessageIndexRepository:
         with self._db.transaction() as db:
             db.execute("DELETE FROM message_index WHERE account_id = ?", (account_id,))
             db.execute("DELETE FROM folder_states WHERE account_id = ?", (account_id,))
+        # The index of an account is most of the file: give its pages back.
+        self._db.shrink()
 
 
 def _update(db: sqlite3.Connection, account_id: str, entry: IndexEntry) -> None:

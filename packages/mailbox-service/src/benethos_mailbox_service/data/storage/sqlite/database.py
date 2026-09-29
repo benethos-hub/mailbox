@@ -38,6 +38,10 @@ class Migrated:
     notes: tuple[str, ...] = ()
 
 
+# PRAGMA auto_vacuum: 0 none, 1 full, 2 incremental.
+_INCREMENTAL = 2
+
+
 class Database:
     """The database at ``path``, readable by its owner alone. Without a
     path it lives in memory, for tests."""
@@ -67,10 +71,41 @@ class Database:
                 "casefold", 1, _casefold, deterministic=True
             )
         try:
-            self._migrate()
+            rewritten = self._shrinkable()
+            self._migrate(rewritten)
         except BaseException:
             self._connection.close()
             raise
+
+    def _shrinkable(self) -> bool:
+        """Freed pages are handed back to the file system by ``shrink``,
+        which needs ``auto_vacuum`` in its incremental mode. A new database
+        takes the mode as it is. One made without it is rewritten once,
+        which VACUUM does outside any transaction: then True."""
+        with self._lock, translated():
+            mode = self._connection.execute("PRAGMA auto_vacuum").fetchone()[0]
+            if mode == _INCREMENTAL:
+                return False
+            self._connection.execute("PRAGMA auto_vacuum = INCREMENTAL")
+            has_tables = self._connection.execute(
+                "SELECT 1 FROM sqlite_master LIMIT 1"
+            ).fetchone()
+            if has_tables is None:
+                return False
+            self._connection.execute("VACUUM")
+            return True
+
+    def shrink(self) -> None:
+        """Give the pages a deletion freed back to the file system, so the
+        file follows what it holds. Cheap when there is nothing to give
+        back. Inside a transaction it waits for the next call."""
+        with self._lock:
+            if self._connection.in_transaction:
+                return
+            with translated():
+                # Each row the pragma answers is a page given back: read
+                # them all, or nothing happens.
+                self._connection.execute("PRAGMA incremental_vacuum").fetchall()
 
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:
@@ -201,7 +236,9 @@ class Database:
             finally:
                 copy.close()
 
-    def _migrate(self) -> None:
+    def _migrate(self, rewritten: bool = False) -> None:
+        """``rewritten``: the file was rewritten to shrink from now on,
+        said with the notes of the schema."""
         with self.transaction() as db:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)"
@@ -224,7 +261,11 @@ class Database:
                     (str(version),),
                 )
             notes += [f"schema {version}: {note}" for note in said]
-        if current < SCHEMA_VERSION:
+        if rewritten:
+            notes.append(
+                "the file was rewritten once: from now on it shrinks after deletions"
+            )
+        if current < SCHEMA_VERSION or rewritten:
             self.migrated = Migrated(current, SCHEMA_VERSION, tuple(notes))
 
 

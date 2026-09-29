@@ -249,6 +249,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   pages of the UI had to wait for a free thread.
 - The compose file caps the log Docker keeps of each container at 5
   files of 10 MB. Before, the log grew for as long as the container ran.
+- The database file shrinks after an account is removed or old records
+  are purged. Before, it stayed at its largest size for good. A database
+  made by an earlier version is rewritten once when the service opens it,
+  which takes a moment for a large one, and the log says so.
 - A host in `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` matches however
   it is written, in Unicode or in punycode. Before, an internal host
   written in Unicode was refused as non-public when an account or

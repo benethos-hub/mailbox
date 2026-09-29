@@ -89,9 +89,12 @@ class SqliteSendLogRepository:
         return [row[0] for row in rows]
 
     def purge(self, before: datetime) -> int:
-        return self._db.execute(
+        removed = self._db.execute(
             "DELETE FROM sends WHERE created_at < ?", (iso(before),)
         )
+        if removed:
+            self._db.shrink()
+        return removed
 
 
 def _record(row: sqlite3.Row) -> SendRecord:

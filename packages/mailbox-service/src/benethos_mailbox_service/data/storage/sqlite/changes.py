@@ -59,6 +59,12 @@ class SqliteChangeLogRepository:
         return int(row["value"]) if row is not None else 0
 
     def purge(self, before: datetime) -> int:
+        removed = self._purge(before)
+        if removed:
+            self._db.shrink()
+        return removed
+
+    def _purge(self, before: datetime) -> int:
         with self._db.transaction() as conn:
             row = conn.execute(
                 "SELECT MAX(seq) AS seq FROM changes WHERE at < ?", (iso(before),)

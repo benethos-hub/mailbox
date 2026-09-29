@@ -1049,7 +1049,10 @@ the data, rather than a readable file.
   what never goes into a line: [LOGGING.md](LOGGING.md).
 - **Deletion:** removing an account deletes its credential rows.
   `PRAGMA secure_delete = ON` makes SQLite overwrite freed pages, so the
-  ciphertext does not linger in the file.
+  ciphertext does not linger in the file. The file shrinks as well:
+  `auto_vacuum` in its incremental mode, and the pages a removed account
+  or a purge freed are given back at once. A database made before that
+  is rewritten once when the service opens it, said in the log.
 - **Files:** the database sits in `data/benethos-mailbox-service/` in the
   working directory, moved with `MAILBOX_SERVICE_DATA_DIR`. A settings file
   named with `--env-file` or `MAILBOX_SERVICE_ENV_FILE` is the base of
