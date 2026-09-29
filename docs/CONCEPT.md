@@ -597,8 +597,10 @@ The service therefore behaves conservatively towards every provider:
   sent copy stored before the connection dropped is found, not stored
   again.
 - **Push before polling.** `IDLE` where offered, renewed before the 29
-  minutes of RFC 2177 run out. Polling intervals are per preset and
-  conservative.
+  minutes of RFC 2177 run out. Each watched account waits in a thread of
+  its own, outside the pool that answers requests, at most
+  `MAILBOX_SERVICE_SYNC_WATCHERS` (50) at once. Further accounts are
+  polled only. Polling intervals are per preset and conservative.
 - **Say who we are.** The IMAP `ID` command (RFC 2971) sends name and
   version where the server supports it. Some providers require it.
 

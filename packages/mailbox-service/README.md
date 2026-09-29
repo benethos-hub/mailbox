@@ -116,6 +116,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_MASTER_KEY` | | the recovery key, for `env` |
 | `MAILBOX_SERVICE_SYNC_INTERVAL` | `300` | seconds between two polls of every folder. `0` switches the sync off. |
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | watch the inbox over IMAP IDLE, with a second connection per account |
+| `MAILBOX_SERVICE_SYNC_WATCHERS` | `50` | accounts watched at once, each in a thread of its own. Further accounts are polled only. |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
 | `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS` | `8` | tries of a webhook post before its events are dropped |
 | `MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY` | `30` | seconds before the second try, doubled for each further one |

@@ -2,8 +2,10 @@
 
 Every ``interval`` seconds it syncs each account whose ids are mapped. Where
 the provider can push, a watcher per account waits for the server to report
-a change in the inbox (IMAP IDLE) and syncs at once. Accounts whose login
-was rejected are left alone until they are verified.
+a change in the inbox (IMAP IDLE) and syncs at once, at most ``watchers``
+of them: each holds a thread for as long as it waits. Further accounts are
+polled only. Accounts whose login was rejected are left alone until they
+are verified.
 """
 
 from __future__ import annotations
@@ -33,6 +35,8 @@ IDLE_RENEW = 25 * 60.0
 # jitter so that many accounts do not retry in step.
 FIRST_RETRY = 60.0
 LONGEST_RETRY = 900.0
+# Accounts watched at once, unless the settings say otherwise.
+WATCHERS = 50
 
 # How the background loops wait. Tests pass one that returns at once.
 Sleep = Callable[[float], Awaitable[None]]
@@ -46,8 +50,10 @@ class WorkerState:
     push: bool
     # When the last round over every account ended. None before the first.
     last_pass_at: datetime | None
-    # Accounts a watcher waits on for the server to report a change.
+    # Accounts a watcher waits on for the server to report a change, and
+    # how many there may be at once.
     watching: frozenset[str]
+    watchers: int
 
 
 class SyncWorker:
@@ -58,6 +64,7 @@ class SyncWorker:
         *,
         interval: float,
         push: bool = True,
+        watchers: int = WATCHERS,
         sleep: Sleep = anyio.sleep,
         clock: Callable[[], datetime] = utc_now,
         activity: ActivityLog | None = None,
@@ -66,11 +73,14 @@ class SyncWorker:
         self._sync = sync
         self._interval = interval
         self._push = push
+        self._watchers = watchers
         self._sleep = sleep
         self._clock = clock
         self._activity = activity or ActivityLog(clock)
         self._watching: set[str] = set()
         self._no_push: set[str] = set()
+        # Accounts told they are polled only, once each while it lasts.
+        self._postponed: set[str] = set()
         self._last_pass_at: datetime | None = None
 
     def state(self) -> WorkerState:
@@ -79,6 +89,7 @@ class SyncWorker:
             push=self._push,
             last_pass_at=self._last_pass_at,
             watching=frozenset(self._watching),
+            watchers=self._watchers,
         )
 
     async def run(self) -> None:
@@ -102,8 +113,7 @@ class SyncWorker:
                 if not self._wanted(account_id):
                     continue
                 if watchers is not None and self._push_for(account_id):
-                    self._watching.add(account_id)
-                    watchers.start_soon(self.watch, account_id)
+                    self._start_watching(watchers, account_id)
                 await self._sync.sync_account(account_id)
             except NotFoundError:
                 continue  # deleted meanwhile
@@ -111,6 +121,22 @@ class SyncWorker:
                 # A bug in one adapter must not stop the sync of the others.
                 self._failed(account_id, exc)
         self._last_pass_at = self._clock()
+
+    def _start_watching(self, watchers: TaskGroup, account_id: str) -> None:
+        """A watcher for the account, while there is room for one. Past
+        the cap the account is polled only, said once until a watcher is
+        free again."""
+        if len(self._watching) >= self._watchers:
+            if account_id not in self._postponed:
+                self._postponed.add(account_id)
+                self._record(
+                    account_id,
+                    partial(said.WatchPostponed, by=WORKER, watchers=self._watchers),
+                )
+            return
+        self._postponed.discard(account_id)
+        self._watching.add(account_id)
+        watchers.start_soon(self.watch, account_id)
 
     def _failed(self, account_id: str, exc: Exception) -> None:
         self._record(account_id, partial(said.SyncFailed, by=WORKER, error=exc))

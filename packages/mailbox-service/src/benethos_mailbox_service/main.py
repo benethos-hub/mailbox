@@ -163,6 +163,7 @@ def build_services(
             provider_factory = partial(
                 build_provider,
                 pick=fetcher.connect_address,
+                watchers=anyio.CapacityLimiter(settings.sync_watchers),
                 pace=Pace(
                     settings.imap_requests_per_minute,
                     settings.imap_burst,
@@ -221,6 +222,7 @@ def build_services(
                 sync,
                 interval=settings.sync_interval,
                 push=settings.sync_idle,
+                watchers=settings.sync_watchers,
                 clock=clock,
                 activity=activity,
             )

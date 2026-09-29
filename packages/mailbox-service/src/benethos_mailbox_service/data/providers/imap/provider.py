@@ -68,6 +68,9 @@ SessionFactory = Callable[[Server], ImapSession]
 CLIENT_ID = ("benethos-mailbox-service", __version__)
 
 PROBE_TIMEOUT = 10.0
+# Threads waiting in IDLE, for adapters built without a limiter of the
+# service's. The service passes one sized by its settings.
+WATCHERS = anyio.CapacityLimiter(50)
 
 # Message-ID headers fetched per request during a sync.
 HEADER_BATCH = 200
@@ -141,9 +144,12 @@ class ImapProvider:
         smtp_factory: SmtpFactory = SmtpSession,
         pick: Pick | None = None,
         pace: Pace | None = None,
+        watchers: anyio.CapacityLimiter | None = None,
     ) -> None:
         """``pick`` checks the host of each connection, IMAP and SMTP.
-        ``pace`` is how fast requests go, unless the settings name a rate."""
+        ``pace`` is how fast requests go, unless the settings name a rate.
+        ``watchers`` bounds the threads that wait in IDLE, shared by every
+        adapter: without it a limiter of this module's own."""
         host = settings.get("host")
         if not host:
             raise BadRequestError("an IMAP account needs settings.host")
@@ -171,6 +177,7 @@ class ImapProvider:
         self._username = str(username)
 
         self._credentials = credentials
+        self._watchers = watchers or WATCHERS
         pace = pace or Pace()
         per_minute = rules.rate_of(settings, "max_requests_per_minute", pace.per_minute)
         self._guard = Guard(
@@ -355,8 +362,13 @@ class ImapProvider:
         raise NotSupportedError("IMAP folders are compared by their state")
 
     async def wait_for_change(self, timeout: float) -> bool:
+        # A wait holds its thread for up to ``timeout``: never one of the
+        # pool that answers requests and runs the other commands.
         return await anyio.to_thread.run_sync(
-            self._wait_for_change, timeout, abandon_on_cancel=True
+            self._wait_for_change,
+            timeout,
+            abandon_on_cancel=True,
+            limiter=self._watchers,
         )
 
     async def verify(self) -> None:

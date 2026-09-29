@@ -193,6 +193,7 @@ compares.
 | WARNING | sync of A failed: reason | account, reason | yes |
 | ERROR | sync of A failed | account, traceback | yes |
 | INFO | watching A / A cannot push changes: polling only | account | partly |
+| INFO | polls A only: all N watchers are in use | account, cap | once per account while the cap holds, `MAILBOX_SERVICE_SYNC_WATCHERS` |
 | WARNING | watching A failed, next try in Ns: reason | account, pause, reason | yes |
 | DEBUG | IDLE on A renewed | account | new |
 | INFO | the change log was purged of N entries older than D | counts | new, once per purge. `INFO`, not `WARNING`: a purge is the normal course, at most once an hour |
@@ -503,6 +504,7 @@ and that each is listed here.
 | `sync.failed` | a pass that failed |
 | `sync.watching` | the worker watches an account |
 | `sync.push_unavailable` | an account cannot push changes |
+| `sync.watch_postponed` | an account is polled only: every watcher is in use |
 | `sync.idle_renewed` | IDLE renewed |
 | `sync.watch_failed` | watching an account failed |
 | `changes.purged` | old changes purged from the change log |

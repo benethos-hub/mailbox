@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     # Sync worker: watch the inbox over IMAP IDLE, which needs a second
     # connection per account.
     sync_idle: bool = True
+    # Sync worker: accounts watched over IDLE at once. Each watcher holds a
+    # thread of its own, outside the pool that answers requests. Further
+    # accounts are polled only.
+    sync_watchers: int = Field(default=50, ge=1)
     # Webhooks: how many times a post is tried before its events are
     # dropped, the pause after the first failure in seconds, doubled after
     # each further one up to the longest, and how long a receiver may take.

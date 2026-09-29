@@ -120,6 +120,7 @@ def test_env_example_holds_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None
             "imap_longest_pause",
         ),
         ({"MAILBOX_SERVICE_SIGN_IN_FAILURES": "0"}, "sign_in_failures"),
+        ({"MAILBOX_SERVICE_SYNC_WATCHERS": "0"}, "sync_watchers"),
     ],
 )
 def test_settings_that_cannot_work_are_named(

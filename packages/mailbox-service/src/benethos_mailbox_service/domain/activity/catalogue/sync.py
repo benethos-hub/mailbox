@@ -73,6 +73,20 @@ class PushUnavailable(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class WatchPostponed(Activity):
+    name: ClassVar[str] = "watch_postponed"
+
+    account: Account
+    watchers: int
+
+    def says(self) -> str:
+        return (
+            f"polls {account(self.account)} only: all {self.watchers} "
+            "watchers are in use"
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
 class IdleRenewed(Activity):
     name: ClassVar[str] = "idle_renewed"
     level: ClassVar[int] = logging.DEBUG
