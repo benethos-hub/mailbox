@@ -134,7 +134,8 @@ The data layer the same way (REFACTORING.md section 8):
   and never locks its owner out for long. Requests are limited as
   well: 120 a minute per API token or UI session, 30 a minute per client
   address for requests without a credential, each with a burst of half
-  as many, answered with `429` and `Retry-After` (LOGGING.md 5.9).
+  as many, answered with `429` and `Retry-After`. Every limit and how
+  they work together: [LIMITS.md](LIMITS.md).
   Behind a proxy, `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` names the proxy
   so the client address comes from `X-Forwarded-For`.
 - **No HTTP below the web layer**, no decisions in the data layer,

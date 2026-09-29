@@ -236,7 +236,9 @@ Drafts are mail content and change nothing others see: not logged.
 
 Every limit the service enforces, and every pause a provider asks for,
 writes a line: the operator must see who is being slowed down and why,
-and the log page is where a locked-out person's report is checked.
+and the log page is where a locked-out person's report is checked. The
+limits themselves, and how they work together, are in
+[LIMITS.md](LIMITS.md).
 
 | Level | Line | Fields | Today |
 |---|---|---|---|
