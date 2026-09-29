@@ -244,7 +244,7 @@ limits themselves, and how they work together, are in
 |---|---|---|---|
 | WARNING | too many failed sign-ins from S: locked out for N minutes | source, minutes | new (`SignInThrottle`, 10 in 15 min by default) |
 | WARNING | too many failed sign-ins as X: waiting N seconds | name as typed, seconds | new (the brake per name) |
-| INFO | the lockout of S ended | source | new, when the lockout is lifted |
+| INFO | the lockout of S ended | source | at the next attempt after it ran out: any sign-in in the UI, a wrong token on the API |
 | WARNING | X reached the discovery limit (N in a minute) | user, count | new (`DiscoveryService`, 10 per user by default) |
 | WARNING | X reached the send limit on A: N in 24 hours, the grants allow M | actor, account, counts, `retry_after` | new, in the send audit as `denied` |
 | WARNING | a request from S was refused: body of N bytes, the limit is M | source, path, sizes | new (`web/limits.py`, 413) |
