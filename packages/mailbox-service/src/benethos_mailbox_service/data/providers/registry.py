@@ -14,6 +14,7 @@ from ...errors import NotSupportedError
 from ..models import CredentialKind, MailServer, ProviderType, Security, ServerProtocol
 from ..protocols import Endpoints, Pick
 from .base import CredentialReader, MailProvider, ProviderSettings, TokenSource
+from .guard import Pace
 from .imap import ImapProvider
 from .imap import probe as probe_imap
 from .imap import settings_from as imap_settings
@@ -44,11 +45,13 @@ ServerProbe = Callable[
 
 _REGISTRY: dict[
     ProviderType,
-    Callable[[ProviderSettings, CredentialReader, Pick | None], MailProvider],
+    Callable[
+        [ProviderSettings, CredentialReader, Pick | None, Pace | None], MailProvider
+    ],
 ] = {
-    ProviderType.MEMORY: lambda _settings, _credentials, _pick: MemoryProvider(),
-    ProviderType.IMAP: lambda settings, credentials, pick: ImapProvider(
-        settings, credentials, pick=pick
+    ProviderType.MEMORY: lambda _settings, _credentials, _pick, _pace: MemoryProvider(),
+    ProviderType.IMAP: lambda settings, credentials, pick, pace: ImapProvider(
+        settings, credentials, pick=pick, pace=pace
     ),
 }
 # Providers that sign in with OAuth: they get a token source instead.
@@ -117,9 +120,11 @@ def build_provider(
     *,
     tokens: TokenSource | None = None,
     pick: Pick | None = None,
+    pace: Pace | None = None,
 ) -> MailProvider:
     """A new adapter for one account. ``pick`` checks the host of each
-    connection to a server the settings name."""
+    connection to a server the settings name. ``pace`` is how fast an
+    adapter that paces itself sends requests."""
     if kind in _SIGNED_IN:
         if tokens is None:
             raise NotSupportedError(
@@ -130,7 +135,7 @@ def build_provider(
         factory = _REGISTRY[kind]
     except KeyError:
         raise NotSupportedError(f"provider {kind} is not implemented yet") from None
-    return factory(settings, credentials, pick)
+    return factory(settings, credentials, pick, pace)
 
 
 async def probe_server(

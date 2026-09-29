@@ -29,6 +29,7 @@ from .base import (
     ProviderSettings,
     TokenSource,
 )
+from .guard import Pace
 from .registry import (
     ProviderFactory,
     ServerProbe,
@@ -49,6 +50,7 @@ __all__ = [
     "Endpoints",
     "MailProvider",
     "OAuthClient",
+    "Pace",
     "Pick",
     "ProviderFactory",
     "ProviderSettings",

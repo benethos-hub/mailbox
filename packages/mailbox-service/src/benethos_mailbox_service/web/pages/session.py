@@ -24,6 +24,7 @@ from ...common.clock import utc_now
 from ...domain.auth import SignedIn
 from ...domain.rights import Access
 from ...errors import MailboxServiceError
+from ..limits import signed_in
 from ..services import get_auth
 from ..urls import client_address
 
@@ -85,6 +86,12 @@ class SessionStore:
         )
         return session_id
 
+    def known(self, session_id: str | None) -> bool:
+        """Whether the session exists and is not idle too long. Unlike
+        ``get``, the look does not count as the session being used."""
+        session = self._sessions.get(session_id) if session_id else None
+        return session is not None and self._clock() - session.last_seen <= IDLE
+
     def get(self, session_id: str | None) -> UiSession | None:
         """The session, unless it is unknown or was idle too long."""
         if not session_id:
@@ -111,10 +118,17 @@ def store_of(request: Request) -> SessionStore:
     return store
 
 
+def carries_session(request: Request) -> bool:
+    """Whether the request comes with a session of the UI that is known."""
+    return store_of(request).known(request.cookies.get(COOKIE))
+
+
 def current(request: Request) -> tuple[UiSession, Access]:
     """The session and who it belongs to, or ``SignInRequired``. While its
-    password must be changed, ``PasswordChangeRequired`` on any other page."""
-    session = store_of(request).get(request.cookies.get(COOKIE))
+    password must be changed, ``PasswordChangeRequired`` on any other page.
+    The first call of a request counts it against the session's limit."""
+    session_id = request.cookies.get(COOKIE)
+    session = store_of(request).get(session_id)
     if session is None:
         raise SignInRequired
     auth = get_auth(request)
@@ -126,6 +140,9 @@ def current(request: Request) -> tuple[UiSession, Access]:
         # Gone, disabled, or its password changed since the sign-in.
         store_of(request).drop(request.cookies.get(COOKIE))
         raise SignInRequired from None
+    if getattr(request.state, "ui_session", None) is None:
+        assert session_id is not None
+        signed_in(request, f"session:{session_id}", access)
     request.state.ui_session = session
     request.state.access = access
     if session.must_change and request.url.path not in _WHILE_CHANGING:

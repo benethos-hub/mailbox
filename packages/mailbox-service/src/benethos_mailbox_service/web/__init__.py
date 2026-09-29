@@ -19,24 +19,26 @@ from fastapi.responses import Response
 from starlette.exceptions import HTTPException
 
 from ..common.redact import redact
-from ..errors import MailboxServiceError
+from ..errors import MailboxServiceError, RateLimitedError
 from . import api, pages
 from .api.errors import api_error, http_error, validation_error
 from .errors import status_of
-from .limits import BodyLimit
+from .limits import BodyLimit, RequestLimit, RequestLimits
 from .pages.errors import error_page
+from .pages.session import carries_session
 
 
 def install(app: FastAPI) -> None:
     api.install(app)
     pages.install(app)
+    app.state.request_limits = RequestLimits.of(app.state.settings)
     app.add_middleware(BodyLimit)
+    # Added last, so it runs first: a refused request is not read.
+    app.add_middleware(RequestLimit, credential=_credential, refuse=_answer)
 
     @app.exception_handler(MailboxServiceError)
     async def _domain_error(request: Request, exc: MailboxServiceError) -> Response:
-        if pages.owns(request):
-            return error_page(request, status_of(exc), redact(exc.message))
-        return api_error(exc)
+        return _answer(request, exc)
 
     @app.exception_handler(HTTPException)
     async def _http_error(request: Request, exc: HTTPException) -> Response:
@@ -54,3 +56,25 @@ def install(app: FastAPI) -> None:
                 title="Incomplete form",
             )
         return validation_error(exc)
+
+
+def _answer(request: Request, exc: MailboxServiceError) -> Response:
+    """A domain error as the front end of the request answers it."""
+    if not pages.owns(request):
+        return api_error(exc)
+    page = error_page(request, status_of(exc), redact(exc.message))
+    if isinstance(exc, RateLimitedError):
+        page.headers["Retry-After"] = str(exc.retry_after)
+    return page
+
+
+def _credential(request: Request) -> bool:
+    """Whether a request carries a credential, counted where it is checked:
+    a known session for the UI, a bearer token for the API under its
+    prefix, where every route checks it."""
+    if pages.owns(request):
+        return carries_session(request)
+    return (
+        request.url.path.startswith(f"{api.PREFIX}/")
+        and "authorization" in request.headers
+    )

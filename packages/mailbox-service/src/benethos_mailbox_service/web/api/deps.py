@@ -15,6 +15,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ...data.models import SEARCH_TEXT_PATTERN, MessageFilter
 from ...domain.rights import Access
+from ..limits import signed_in
 from ..services import Accounts, Auth, Discoverer, Mailbox, Users, Webhooks
 from ..urls import client_address
 
@@ -56,7 +57,9 @@ async def authenticate(
     # On the event loop, not in a worker thread: two requests never check
     # a token and count a failed attempt at the same time.
     presented = credentials.credentials if credentials else None
-    return auth.authenticate(presented, source=client_address(request))
+    access = auth.authenticate(presented, source=client_address(request))
+    signed_in(request, f"token:{access.credential_id}", access)
+    return access
 
 
 Caller = Annotated[Access, Depends(authenticate)]

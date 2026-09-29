@@ -14,7 +14,7 @@ from benethos_mailbox_service.data.protocols.imap import (
     RawFolder,
     Server,
 )
-from benethos_mailbox_service.data.providers.guard import Guard
+from benethos_mailbox_service.data.providers.guard import Guard, Pace
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.errors import (
     BadRequestError,
@@ -78,7 +78,10 @@ class FakeTime:
 
 
 def provider(
-    box: FakeMailBox, time: FakeTime | None = None, **overrides: Any
+    box: FakeMailBox,
+    time: FakeTime | None = None,
+    pace: Pace | None = None,
+    **overrides: Any,
 ) -> ImapProvider:
     def credentials(field: str) -> SecretStr:
         assert field in ("password", "access_token")
@@ -94,6 +97,7 @@ def provider(
         clock=time.clock,
         sleep=time.sleep,
         jitter=lambda low, high: high,
+        pace=pace,
     )
 
 
@@ -558,6 +562,26 @@ async def test_requests_are_paced(server: FakeMailBox) -> None:
     for _ in range(10):
         await imap.list_folders()
     assert time.sleeps == []
+    await imap.list_folders()
+    assert time.sleeps == [pytest.approx(1.0)]
+
+
+async def test_the_pace_of_the_service_is_the_default(server: FakeMailBox) -> None:
+    time = FakeTime()
+    imap = provider(server, time, Pace(per_minute=30, burst=3))
+    for _ in range(3):
+        await imap.list_folders()
+    assert time.sleeps == []
+    await imap.list_folders()
+    assert time.sleeps == [pytest.approx(2.0)]
+
+
+async def test_an_account_rate_wins_over_the_pace(server: FakeMailBox) -> None:
+    time = FakeTime()
+    imap = provider(
+        server, time, Pace(per_minute=30, burst=1), max_requests_per_minute=60
+    )
+    await imap.list_folders()
     await imap.list_folders()
     assert time.sleeps == [pytest.approx(1.0)]
 

@@ -37,6 +37,7 @@ from .data.protocols import (
 from .data.providers import (
     App,
     OAuthClient,
+    Pace,
     ProviderFactory,
     build_provider,
     probe_server,
@@ -159,7 +160,11 @@ def build_services(
             repos.changes, days=settings.changes_days, clock=clock, activity=activity
         )
         if provider_factory is None:
-            provider_factory = partial(build_provider, pick=fetcher.connect_address)
+            provider_factory = partial(
+                build_provider,
+                pick=fetcher.connect_address,
+                pace=Pace(settings.imap_requests_per_minute, settings.imap_burst),
+            )
         adapters = Adapters(
             repos.accounts,
             vault,
@@ -365,7 +370,12 @@ def create_app(
     app = FastAPI(
         title="Mailbox Service",
         version=__version__,
-        description="Unified REST API for several mail providers and accounts.",
+        description=(
+            "Unified REST API for several mail providers and accounts. "
+            "Requests are limited per token, and without one per client "
+            "address. Past the limit the API answers "
+            "`429` with `Retry-After`."
+        ),
         generate_unique_id_function=_operation_id,
         lifespan=lifespan,
     )

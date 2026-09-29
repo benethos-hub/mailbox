@@ -234,8 +234,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
     activities, the access log without the query. Step 3 done: users,
     tokens, roles, accounts, OAuth. Step 4 done: sync, sending, webhooks,
     discovery, the log page, the limits. Step 5 done: the MCP server's
-    lines. The HTTP request limit (step 6) is planned as a pull request
-    of its own
+    lines. Step 6 done: the HTTP request limit, per token or UI session
+    and per client address, `429` with `Retry-After`
   - planned: the audit of administration of [AUDIT.md](AUDIT.md)
   - with the new providers: the OAuth round trip
   - recovery key, status: moved to phase 4b

@@ -8,6 +8,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Requests are limited: 120 a minute per API token or UI session, and 30
+  a minute per client address for requests without a credential, each
+  with a burst of half as many. Past the limit the service answers `429`
+  `rate_limited` with `Retry-After`. `/health` is not limited. Set by
+  `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` and
+  `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE`, `0` switches a
+  limit off. Behind a reverse proxy set
+  `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS`, or every visitor counts as the
+  proxy's address.
+- `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE` (60) and
+  `MAILBOX_SERVICE_IMAP_BURST` (10): how fast the service sends requests
+  to an account's IMAP server. An account's `max_requests_per_minute`
+  still wins over the rate.
+
 - A log page in the UI under Service, for a user with `admin` on every
   account: the newest 1000 lines of the service log since the start,
   newest first, with a search and the least level. Secrets are masked.

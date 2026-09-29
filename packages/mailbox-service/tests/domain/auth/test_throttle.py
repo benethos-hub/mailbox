@@ -174,6 +174,8 @@ def test_a_successful_sign_in_clears_the_count(
 def test_the_ui_says_when_a_client_is_locked_out(
     settings: Settings, services: Services
 ) -> None:
+    # The limit on requests would refuse the sign-in page first.
+    settings = settings.model_copy(update={"rate_limit_anonymous_per_minute": 0})
     client = TestClient(create_app(settings, services))
     name, password = browser_admin(services)
     for _ in range(10):
