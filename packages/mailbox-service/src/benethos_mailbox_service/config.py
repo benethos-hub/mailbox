@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     # Change feed: days a change is kept. A client that asks from an older
     # point starts again from the current state.
     changes_days: int = Field(default=7, ge=1)
+    # The audit of sends: days a record is kept. 0 keeps every record.
+    audit_days: int = Field(default=90, ge=0)
     # Requests a minute per API token or UI session, and per client address
     # for requests without a credential. A burst of half as many passes at
     # once. 0 switches the limit off.

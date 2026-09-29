@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `MAILBOX_SERVICE_AUDIT_DAYS` (90): how long the audit of sends keeps a
+  record. `0` keeps every record, as before. Old records are purged as a
+  send comes in, once an hour at most, and the log names the count.
 - `MAILBOX_SERVICE_SYNC_WATCHERS` (50): how many accounts the sync worker
   watches over IMAP IDLE at once. Further accounts are polled only, and
   the log says so once per account.

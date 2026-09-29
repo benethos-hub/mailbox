@@ -118,6 +118,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | watch the inbox over IMAP IDLE, with a second connection per account |
 | `MAILBOX_SERVICE_SYNC_WATCHERS` | `50` | accounts watched at once, each in a thread of its own. Further accounts are polled only. |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
+| `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audit of sends keeps a record. `0` keeps every record. |
 | `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS` | `8` | tries of a webhook post before its events are dropped |
 | `MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY` | `30` | seconds before the second try, doubled for each further one |
 | `MAILBOX_SERVICE_WEBHOOK_LONGEST_RETRY` | `3600` | the longest pause between two tries, in seconds |

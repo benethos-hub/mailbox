@@ -208,6 +208,7 @@ compares.
 | WARNING | sent, but …: reason | account, what failed | yes, one of them in the adapter, moves to `outgoing` |
 | ERROR | sent, but not recorded in the audit | traceback | yes |
 | DEBUG | an Idempotency-Key was replayed | account, operation | new |
+| INFO | purged N records older than D from the audit of sends | count, before | once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` |
 
 Drafts are mail content and change nothing others see: not logged.
 
@@ -498,6 +499,7 @@ and that each is listed here.
 | `mailbox.not_in_audit` | a send not recorded in the audit of sends |
 | `mailbox.send_limit` | a user reached the send limit |
 | `mailbox.replayed` | a result given again for an Idempotency-Key |
+| `mailbox.sends_purged` | old records purged from the audit of sends |
 | `mailbox.result_not_kept` | a result not kept for its Idempotency-Key |
 | `sync.worker_started` | the worker started |
 | `sync.synced` | a pass over an account, with counts |

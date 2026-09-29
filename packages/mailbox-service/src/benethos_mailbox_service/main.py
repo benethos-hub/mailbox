@@ -249,7 +249,12 @@ def build_services(
                 adapters,
                 sync,
                 Idempotency(repos.idempotency, clock=clock, activity=activity),
-                SendControl(repos.sends, clock=clock, activity=activity),
+                SendControl(
+                    repos.sends,
+                    clock=clock,
+                    activity=activity,
+                    days=settings.audit_days,
+                ),
                 clock=clock,
                 activity=activity,
             ),
