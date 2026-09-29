@@ -588,7 +588,11 @@ The service therefore behaves conservatively towards every provider:
   `503` are retried with exponential backoff and jitter, `Retry-After` is
   honoured (Graph's as a pause during which nothing is sent), and a
   persistently unreachable account is shown as `unreachable` rather than
-  hammered. A retried step must not do its work twice: an IMAP `APPEND`
+  hammered: 3 attempts, then a rest of 30 seconds doubled up to 15
+  minutes, set by `MAILBOX_SERVICE_IMAP_ATTEMPTS`,
+  `MAILBOX_SERVICE_IMAP_FIRST_PAUSE` and
+  `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE`. A retried step must not do its
+  work twice: an IMAP `APPEND`
   is preceded by a search for the message's `Message-ID`, so a draft or a
   sent copy stored before the connection dropped is found, not stored
   again.
