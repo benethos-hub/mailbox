@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from ... import __version__
-from ...common.clock import local_moment
+from ...common.clock import log_time
 from ...data.models import Address
 from .navigation import navigation, own_page
 from .session import PATH, SignInRequired, show_once
@@ -75,7 +75,7 @@ def segment(value: str) -> str:
 
 templates.env.filters.update(
     when=when,
-    moment=local_moment,
+    moment=log_time,
     size=size,
     address=address,
     addresses=addresses,

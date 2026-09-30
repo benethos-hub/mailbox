@@ -8,6 +8,7 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime
 
 import anyio
 
@@ -87,9 +88,25 @@ def _csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+# Each line: the time, the level, where it comes from and the message.
+FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
+
+
+class _Lines(logging.Formatter):
+    """The time as the service writes it in every line: ISO 8601, the
+    local time of this machine, to the millisecond, with the offset.
+    ``2026-09-28T10:12:22.123+02:00``."""
+
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
+        moment = datetime.fromtimestamp(record.created).astimezone()
+        return moment.isoformat(timespec="milliseconds")
+
+
 def configure_logging(level: str) -> None:
     # stderr only: on stdio, stdout carries the JSON-RPC stream.
-    logging.basicConfig(level=level, stream=sys.stderr)
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(_Lines(FORMAT))
+    logging.basicConfig(level=level, handlers=[handler])
     # httpx names every request with its URL at INFO, and a URL carries
     # search terms and message ids. The MCP library names each request.
     # The client keeps this log in its files.

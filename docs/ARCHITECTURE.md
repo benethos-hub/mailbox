@@ -134,7 +134,7 @@ packages/mailbox-service/
                         #   and base64 without padding, for passwords and
                         #   OAuth too
       clock.py          # utc_now, the default clock of the services,
-                        #   local_moment: the local time of a log line,
+                        #   log_time: the time of every log line,
                         #   iso and parse_iso: a time as text, in UTC
       redact.py         # secrets noted once, masked in every text
       ratelimit.py      # pacing: a token bucket and a backoff

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
 
+from ....common.clock import log_time
 from ..base import Activity, plural
 
 
@@ -24,5 +25,5 @@ class ChangesPurged(Activity):
     def says(self) -> str:
         return (
             f"purged {plural(self.count, 'change')} older than "
-            f"{self.before.isoformat(timespec='seconds')} from the change log"
+            f"{log_time(self.before)} from the change log"
         )

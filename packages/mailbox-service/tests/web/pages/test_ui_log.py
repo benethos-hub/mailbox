@@ -53,7 +53,8 @@ def test_the_admin_reads_the_log(logged: tuple[TestClient, Services]) -> None:
     # The page shows its own reader's sign-in, to the millisecond.
     assert "signed in to the UI" in page
     assert re.search(
-        r'<td class="mono">\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}</td>', page
+        r'<td class="mono">\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d</td>',
+        page,
     )
     # The source as the console names it, without the package.
     assert '<td class="mono">activity.auth.signed_in</td>' in page

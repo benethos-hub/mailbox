@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
 
+from ....common.clock import log_time
 from ....data.models import User
 from ..base import Activity, plural, user
 
@@ -107,7 +108,7 @@ class TokenIssued(Activity):
 
     def says(self) -> str:
         expires = (
-            f"it expires {self.expires_at.isoformat()}"
+            f"it expires {log_time(self.expires_at)}"
             if self.expires_at is not None
             else "it does not expire"
         )

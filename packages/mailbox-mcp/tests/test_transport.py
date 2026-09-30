@@ -293,3 +293,22 @@ def test_a_bad_value_from_the_environment(
         cli.main([])
     assert said in capsys.readouterr().err
     assert not started
+
+
+def test_uvicorn_brings_no_log_format_of_its_own(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import uvicorn
+
+    made: dict[str, object] = {}
+
+    class Server:
+        def __init__(self, config: object) -> None:
+            made["log_config"] = getattr(config, "log_config", "missing")
+
+        def run(self) -> None:
+            pass
+
+    monkeypatch.setattr(uvicorn, "Server", Server)
+    transport.run_http(lambda *a: None, host="127.0.0.1", port=1, log_level="INFO")  # type: ignore[arg-type]
+    assert made["log_config"] is None

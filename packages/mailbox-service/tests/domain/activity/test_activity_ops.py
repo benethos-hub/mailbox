@@ -10,6 +10,7 @@ import anyio
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.common.clock import log_time
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
     Grant,
@@ -116,8 +117,8 @@ def test_a_purge_of_the_change_log_names_how_many(
         feed.purge()
         feed.purge()
     assert lines(caplog) == [
-        "the service purged 2 changes older than 2026-09-29T12:00:00+00:00 from "
-        "the change log"
+        "the service purged 2 changes older than "
+        f"{log_time(datetime(2026, 9, 29, 12, 0, tzinfo=UTC))} from the change log"
     ]
 
 

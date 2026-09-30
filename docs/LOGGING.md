@@ -58,7 +58,8 @@ of an ordinary deployment fits on one screen.
 
 ## 3. The shape of a line
 
-`logs.py` writes time, level, source and message. The source of an
+`logs.py` writes time, level, source and message. The time is written
+as rule 6.9 says. The source of an
 activity is its area and its name: `activity.auth.signed_in`,
 `activity.users.token_revoked` (section 7.2). The source of a technical
 line is its module: `domain.sync.worker`. The console and the log page show
@@ -301,6 +302,8 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 - Never a tool's arguments, never a search term, never mail content,
   never the token. `httpx` and the MCP library at `WARNING`, so no
   request URL is written.
+- Each line has the time of rule 6.9, the level, the source and the
+  message. Over HTTP, uvicorn's lines go through the same format.
 
 ## 6. Rules for writing a line
 
@@ -349,6 +352,13 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    (`users`, `keys`, `restore`) writes the same as a log line, so the log
    page of the next start knows it. Whether that line survives is the
    host's business.
+9. **One time in every line.** Every line writes the time alike, at
+   every place and in every format: ISO 8601, the local time of the
+   machine, to the millisecond, with the offset:
+   `2026-09-30T10:12:22.123+02:00`. That holds for the plain lines, the
+   console, the log page, the MCP server's log and a time inside a
+   message, such as the end of a purge. `log_time` in
+   `common/clock.py` writes it. **Decided 2026-09-30.**
 
 ## 7. Where the activities live
 
