@@ -134,7 +134,11 @@ def http_app(
 def run_http(app: ASGIApp, *, host: str, port: int, log_level: str) -> None:
     import uvicorn
 
-    config: Any = uvicorn.Config(app, host=host, port=port, log_level=log_level.lower())
+    # No log configuration of its own: its lines go through the one of
+    # the command line, with the same time.
+    config: Any = uvicorn.Config(
+        app, host=host, port=port, log_level=log_level.lower(), log_config=None
+    )
     uvicorn.Server(config).run()
 
 

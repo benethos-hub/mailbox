@@ -340,3 +340,18 @@ def test_the_mcp_library_logs_from_warning_on(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(logging.getLogger("mcp"), "level", logging.NOTSET)
     cli.configure_logging("INFO")
     assert logging.getLogger("mcp").getEffectiveLevel() == logging.WARNING
+
+
+def test_every_line_has_the_time_as_the_service_writes_it() -> None:
+    """ISO 8601, local, to the millisecond, with the offset."""
+    record = logging.makeLogRecord(
+        {"created": 1790590342.1239, "name": "benethos_mailbox_mcp.server"}
+    )
+    record.levelname = "INFO"
+    record.msg = "started"
+    line = cli._Lines(cli.FORMAT).format(record)
+    assert re.fullmatch(
+        r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.123[+-]\d\d:\d\d INFO     "
+        r"benethos_mailbox_mcp\.server: started",
+        line,
+    )

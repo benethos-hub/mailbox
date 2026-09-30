@@ -41,7 +41,7 @@ async def test_a_sign_in_reaches_the_log(
         if "signed in to the UI" in line
     )
     when, _, rest = line.partition(" INFO     ")
-    assert re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d", when)
+    assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d", when)
     assert rest.startswith("benethos_mailbox_service.activity.auth.signed_in: ")
     assert f"Anna ({user.id}) signed in to the UI from 10.0.0.1" in line
 
@@ -90,14 +90,15 @@ def test_every_level_of_the_settings_is_known(level: str) -> None:
     assert logging.getLogger(logs.PACKAGE).level == logs.LEVELS[level]
 
 
-def test_the_time_is_to_the_millisecond() -> None:
-    """The plain line with its offset, the terminal without."""
+def test_every_line_writes_the_time_alike() -> None:
+    """ISO 8601, local, to the millisecond, with the offset: the plain
+    line and the terminal alike."""
     record = logging.makeLogRecord({"created": 1790590342.1239})
     local = datetime.fromtimestamp(1790590342.1239).astimezone()
     offset = local.isoformat()[-6:]
-    day = f"{local:%Y-%m-%d %H:%M:%S}"
-    assert logs.Redacting().formatTime(record) == f"{day}.123{offset}"
-    assert logs.Console().formatTime(record) == f"{day}.123"
+    expected = f"{local:%Y-%m-%dT%H:%M:%S}.123{offset}"
+    assert logs.Redacting().formatTime(record) == expected
+    assert logs.Console().formatTime(record) == expected
 
 
 # --- at a terminal --------------------------------------------------------------------
@@ -115,7 +116,9 @@ def test_a_terminal_gets_short_lines_in_colour(
     main = "main".ljust(logs.SOURCE_WIDTH)
     assert f"\033[32mINFO    \033[0m\033[36m{signed}\033[0m anna signed in" in err
     assert f"\033[33mWARNING \033[0m\033[36m{main}\033[0m a warning" in err
-    assert re.search(r"\033\[2m\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3}\033\[0m ", err)
+    assert re.search(
+        r"\033\[2m\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d\033\[0m ", err
+    )
 
 
 @pytest.mark.parametrize(

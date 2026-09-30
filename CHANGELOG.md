@@ -122,6 +122,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Every log line writes the time alike: ISO 8601, local, to the
+  millisecond, with the offset, such as `2026-09-30T10:12:22.123+02:00`.
+  The plain lines had a space instead of the `T`, the terminal and the
+  log page no offset, a time inside a line was in UTC. The MCP server's
+  log had no time at all.
 - An `Idempotency-Key` sent before this version and sent again within
   its 24 hours answers `409 idempotency_conflict`, as if the request had
   changed: a request is fingerprinted anew. A `next_cursor` of the lists

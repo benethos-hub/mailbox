@@ -19,7 +19,7 @@ from http import HTTPStatus
 from typing import Any
 
 from .common import redact
-from .common.clock import local_moment
+from .common.clock import log_time
 
 PACKAGE = __name__.rpartition(".")[0]
 FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
@@ -36,20 +36,14 @@ LEVELS = {
 
 class Redacting(logging.Formatter):
     """Each line as written, a noted secret masked: in the message, its
-    arguments and a traceback alike. The time to the millisecond with
-    its offset, since a line may be read far from where it was written:
-    ``2026-09-28 10:12:22.123+02:00``."""
+    arguments and a traceback alike. The time as every line writes it
+    (``log_time``): ``2026-09-28T10:12:22.123+02:00``."""
 
     def format(self, record: logging.LogRecord) -> str:
         return redact.redact(super().format(record))
 
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
-        return _moment(record).isoformat(sep=" ", timespec="milliseconds")
-
-
-def _moment(record: logging.LogRecord) -> datetime:
-    """When the record was made, in the local time of this machine."""
-    return datetime.fromtimestamp(record.created).astimezone()
+        return log_time(datetime.fromtimestamp(record.created).astimezone())
 
 
 # ANSI colours, for a terminal only.
@@ -75,12 +69,7 @@ SOURCE_WIDTH = 32
 class Console(Redacting):
     """A line for a person at a terminal: the time dim, the level
     in colour, the source short, an access line as method, path and the
-    status in colour."""
-
-    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
-        """Date and time to the millisecond, local, without the offset
-        a person at this machine knows."""
-        return local_moment(_moment(record))
+    status in colour. The time as in every other line."""
 
     def format(self, record: logging.LogRecord) -> str:
         colour = _LEVEL_COLOURS.get(record.levelno, "")

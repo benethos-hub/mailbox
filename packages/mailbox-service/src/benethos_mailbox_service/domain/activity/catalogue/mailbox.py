@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
 
+from ....common.clock import log_time
 from ....data.models import Account
 from ..base import Activity, Failure, account, plural
 
@@ -130,7 +131,7 @@ class SendsPurged(Activity):
     def says(self) -> str:
         return (
             f"purged {plural(self.count, 'record')} older than "
-            f"{self.before.isoformat(timespec='seconds')} from the audit of sends"
+            f"{log_time(self.before)} from the audit of sends"
         )
 
 
