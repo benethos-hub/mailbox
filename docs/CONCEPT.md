@@ -99,10 +99,10 @@ The data layer the same way (REFACTORING.md section 8):
   domain, for both front ends.
 - **The configuration UI** covers what a person has to do by hand:
   connecting accounts and entering app passwords, the OAuth round trip for
-  Gmail and Microsoft, users, roles and tokens, the recovery key, and a
-  status view of accounts and sync. Server-rendered pages, not in the
-  OpenAPI document, under `/ui`. Forms carry CSRF protection, since a
-  session cookie authenticates them.
+  Gmail and Microsoft, users, roles and tokens, webhooks, the recovery
+  key, the service log, and a status view of accounts and sync.
+  Server-rendered pages, not in the OpenAPI document, under `/ui`. Forms
+  carry CSRF protection, since a session cookie authenticates them.
 
   **Decided 2026-09-24:** the UI comes before the new providers and covers
   everything the REST API does. Its texts are English. Built with Jinja2
@@ -1635,4 +1635,5 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    governed by rights (7.7).
 5. **Local cache:** list and search go straight to the provider in the
    design above. A local index (SQLite FTS) would make search across all
-   accounts fast, at the cost of a sync engine. Decide after phase 3.
+   accounts fast, at the cost of a sync engine. Still open after phase
+   3, kept in IDEAS.md.

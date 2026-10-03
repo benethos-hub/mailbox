@@ -54,6 +54,7 @@ docker build -f containers/benethos-mailbox-service/Dockerfile -t benethos-mailb
 docker build -f containers/benethos-mailbox-mcp/Dockerfile -t benethos-mailbox-mcp:local .
 ```
 
-`ci.yml` builds both on every push, for arm64 as well. It checks that the
+`ci.yml` builds both on every pull request and every push to `main`,
+for arm64 as well. It checks that the
 compose file keeps every port on the loopback address. It also starts the
 service until its health check reports healthy.

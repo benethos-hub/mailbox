@@ -19,13 +19,13 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [4a](#phase-4a--password-sign-in) | Password sign-in | **done** |
 | [4b](#phase-4b--ui-rework) | UI rework | **done** |
 | [4c](#phase-4c--api-users) | API users | **done** |
-| [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | |
+| [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | in progress |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
 
-The MCP server comes before Gmail and Microsoft on purpose: with IMAP it
-already covers most providers through app passwords, and it proves the API
-design early.
+The MCP server came before Gmail and Microsoft on purpose: with IMAP it
+already covered most providers through app passwords, and it proved the
+API design early.
 
 ## Phase 0 – Skeleton
 
@@ -216,7 +216,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 - `jmap` adapter for Fastmail and JMAP servers (5.6)
 - Configuration UI under `/ui` (1.1), brought forward on 2026-09-24:
   - **frame: sign-in with an API token, server-side session, CSRF,
-    security headers, layout**, done
+    security headers, layout**, done. Phase 4a replaced the token with
+    a user name and a password
   - **accounts: connect through autodiscovery or by hand, change, verify,
     remove**, done
   - **users, roles and their grants, tokens**, done

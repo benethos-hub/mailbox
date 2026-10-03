@@ -548,8 +548,9 @@ and that each is listed here.
 6. The HTTP request limit of 5.9, as a pull request of its own, with
    its settings, tests, a CHANGELOG entry and its line.
 
-Steps 2 to 5 are one branch, one commit per step. AUDIT.md follows
-when the user asks for it.
+Steps 2 to 5 were one branch, one commit per step, and step 6 a pull
+request of its own: all six are done. AUDIT.md follows when the user
+asks for it.
 
 ## 9. Questions answered
 
