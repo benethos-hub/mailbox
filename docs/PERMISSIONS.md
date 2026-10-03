@@ -268,7 +268,8 @@ full, which activities, which fields, storage, API and page, is
   operation and day.
 - UI: a card **Recent activity** on the user's page with its own
   activities, and a page **Audit** under Service for `users.read`.
-- Kept for `MAILBOX_SERVICE_AUDIT_DAYS` days, 90 by default.
+- Kept for `MAILBOX_SERVICE_AUDIT_DAYS` days, 90 by default. The
+  setting exists since 0.2.0 for the audit of sends.
 
 ### 8.7 Roles to start from
 

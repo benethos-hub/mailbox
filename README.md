@@ -6,15 +6,16 @@
 [![Container](https://img.shields.io/badge/ghcr.io-mailbox--service-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-service)
 [![Container](https://img.shields.io/badge/ghcr.io-mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
-[![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
 One REST API for all your mailboxes, whichever provider they are at, and
 an MCP server on top. Scripts, tools and AI assistants work with your
 mail through one door you control.
 
-> **Status: pre-alpha, version 0.1.0.** Not ready for production use: the
-> API, the stored data and the configuration may change without notice.
+> **Status: alpha, version 0.2.0.** Usable with real accounts for
+> testing. The API and the configuration may still change. Stored data
+> is carried forward by migrations.
 
 ## What it is for
 
@@ -75,13 +76,13 @@ That makes a few things simple that are hard otherwise:
   may use. Mail content
   reaches the model marked as foreign text.
 - **Configuration UI** in the browser under `/ui`: accounts, users,
-  rights, tokens, reading and writing mail, the send audit.
+  rights, tokens, reading and writing mail, the send audit, webhooks,
+  the status of accounts and sync, the service log.
 - **Operation:** encrypted backup and restore, container images, a
   compose file.
 
-Planned next: a rework of the configuration UI, which also gains pages
-for webhooks, then Gmail and JMAP. The order is in
-[docs/ROADMAP.md](docs/ROADMAP.md).
+Planned next: Gmail and JMAP, and an audit of administration beside
+the audit of sends. The order is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Providers
 
@@ -119,8 +120,9 @@ compose file.
 
 1. Start the service and create the first user:
    [packages/mailbox-service](packages/mailbox-service/README.md#first-start).
-2. Open `http://127.0.0.1:8080/ui`, sign in with the token and connect
-   your accounts.
+2. Open `http://127.0.0.1:8080/ui`, sign in as `admin` with the
+   one-time password, choose a password of your own and connect your
+   accounts.
 3. Give your scripts or your assistant a user with the rights they need,
    and for an assistant, add the MCP server to it:
    [packages/mailbox-mcp](packages/mailbox-mcp/README.md).
@@ -130,6 +132,10 @@ compose file.
 - [docs/CONCEPT.md](docs/CONCEPT.md): the design, the API, the security
   model
 - [docs/ROADMAP.md](docs/ROADMAP.md): the phases and what is done
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the layers, the modules
+  and the rules for new code
+- [docs/LIMITS.md](docs/LIMITS.md): every rate limit and how they work
+  together
 - [docs/microsoft.md](docs/microsoft.md): connecting Microsoft accounts
 - [docs/openapi.json](docs/openapi.json): the API contract. A running
   service shows it at `/docs`

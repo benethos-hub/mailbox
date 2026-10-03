@@ -352,11 +352,21 @@ def test_each_migration_module_is_in_the_list_at_its_number() -> None:
 # What each migration of a release runs, as a hash: a database of that
 # release has run it, so it is never changed. A release adds its own.
 RELEASED = {
+    # 0.1.0
     1: "e594d44acc853b6512efb56194296ce71115cacd449810f322e534b8c96894d6",
     2: "ff9d8f7ab7ee21a8e02a38482cd91fbbfe56ccc0978acb914a7a918ef886aa82",
     3: "fb834a11999de1b5ba3132b5bd5fec13738e274c25eff37f16a510cbf93dac08",
     4: "674023cf6bf2157755d570dd84051c99bd77bac24894dd37150bb3ae2bfe69d0",
     5: "4c4d5e7aed016f92070516b411d10cc0645e66cc5bb04def7954d051c4509bbd",
+    # 0.2.0
+    6: "0c4e68c00bd82772730b5844123451cdacb101286383bbf60c1729272f885005",
+    7: "54a76e991ba8e00a1c6508c0637187ce9a810addf0d8c2d568fe2ec726fcb18a",
+    8: "8773d36545f9da81f9eb411425a0bf349a8cd75754544f3eaacce1da8b3f0367",
+    9: "d123d9b3cec3ccba6a64a0b9973c63a8c6b4fa7d3ef71cc0bca52fe36b5d244a",
+    10: "18652e9e4ef141551585ccc2c97dba5bea6f7340ca13d0599c3c61c3b7864c12",
+    11: "f005a2af75feda5475c5fc1ee5cc3237b1f09a190c8ca1989e49b735f8d77fc1",
+    12: "0fd10042b5d31d2f030e1252ca9081663e3e90a8546fcc65551bcae431f92a9c",
+    13: "978aaa816ec32bd46004ef472690ead0e09078982f888c429736014ffecd2186",
 }
 
 

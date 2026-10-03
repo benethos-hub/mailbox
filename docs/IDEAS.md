@@ -85,6 +85,8 @@ the configuration UI.
   *@example.org, at most 10 a day".
 - The read-and-send warning could reach the model the same way. Today it
   is only in the log at start.
+- [PERMISSIONS.md](PERMISSIONS.md) 8.8 proposes this as a step of its
+  order of work.
 
 ## A second factor for the UI sign-in
 

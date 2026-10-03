@@ -6,8 +6,9 @@
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
-> the stored data and the configuration may change without notice.
+> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
+> API and the configuration may still change. Stored data is carried
+> forward by migrations.
 
 The Mailbox Service: one REST API (OpenAPI 3.1) for several mail
 providers and accounts, with a configuration UI in the browser. It runs
@@ -249,13 +250,13 @@ from the environment only and sets `MAILBOX_SERVICE_HOST=0.0.0.0`,
 `MAILBOX_SERVICE_DATA_DIR=/data`, `MAILBOX_SERVICE_KEY_PROVIDER=file` and
 `MAILBOX_SERVICE_KEY_FILE=/run/secrets/master_key`. The database lives in the
 volume at `/data`. The master key is a file mounted at
-`/run/secrets/master_key`. Tags: the version (`0.1.0`), the minor version
-(`0.1`) and `latest`.
+`/run/secrets/master_key`. Tags: the version (`0.2.0`), the minor version
+(`0.2`) and `latest`.
 
 ### With docker run
 
 ```sh
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.1.0
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.2.0
 
 # once: a master key file, the keys in the database, the first user
 docker run --rm "$IMAGE" keys generate > master_key
@@ -284,7 +285,7 @@ HTTP. Both listen on `127.0.0.1` only. From the folder that holds the
 file:
 
 ```sh
-export MAILBOX_SERVICE_IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.1.0
+export MAILBOX_SERVICE_IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.2.0
 
 mkdir -p secrets
 docker run --rm "$MAILBOX_SERVICE_IMAGE" keys generate > secrets/master_key

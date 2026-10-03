@@ -19,7 +19,7 @@ done. Update the roadmap in the same commit that finishes an item.
    regenerate it with `uv run benethos-mailbox-service openapi > docs/openapi.json`
    and review the diff like code. `operationId` is the route function name and
    must stay stable, since generated clients and the MCP server depend on it.
-5. **Secrets never travel.** Provider passwords, OAuth tokens and the API key
+5. **Secrets never travel.** Provider passwords, OAuth tokens and API tokens
    are never logged, never returned in a response and redacted from error
    text. No real address, credential or message content in any versioned file.
 6. **The MCP server is a REST client.** It reaches mail only through the REST

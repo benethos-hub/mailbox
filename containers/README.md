@@ -1,7 +1,8 @@
 # Containers
 
-> **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
-> the stored data and the configuration may change without notice.
+> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
+> API and the configuration may still change. Stored data is carried
+> forward by migrations.
 
 One folder per image, and a compose file for running them.
 
@@ -53,6 +54,7 @@ docker build -f containers/benethos-mailbox-service/Dockerfile -t benethos-mailb
 docker build -f containers/benethos-mailbox-mcp/Dockerfile -t benethos-mailbox-mcp:local .
 ```
 
-`ci.yml` builds both on every push, for arm64 as well. It checks that the
+`ci.yml` builds both on every pull request and every push to `main`,
+for arm64 as well. It checks that the
 compose file keeps every port on the loopback address. It also starts the
 service until its health check reports healthy.

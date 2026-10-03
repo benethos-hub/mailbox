@@ -1,6 +1,6 @@
 # Concept — Mailbox Service
 
-> **Status: draft, 2026-09-24. The software is pre-alpha, version 0.1.0.**
+> **Status: draft, 2026-09-24. The software is alpha, version 0.2.0.**
 > Describes the target design. What is built today is marked in
 > [ROADMAP.md](ROADMAP.md). Facts about third-party products were taken
 > from their public documentation on 2026-09-24. Items marked
@@ -99,10 +99,10 @@ The data layer the same way (REFACTORING.md section 8):
   domain, for both front ends.
 - **The configuration UI** covers what a person has to do by hand:
   connecting accounts and entering app passwords, the OAuth round trip for
-  Gmail and Microsoft, users, roles and tokens, the recovery key, and a
-  status view of accounts and sync. Server-rendered pages, not in the
-  OpenAPI document, under `/ui`. Forms carry CSRF protection, since a
-  session cookie authenticates them.
+  Gmail and Microsoft, users, roles and tokens, webhooks, the recovery
+  key, the service log, and a status view of accounts and sync.
+  Server-rendered pages, not in the OpenAPI document, under `/ui`. Forms
+  carry CSRF protection, since a session cookie authenticates them.
 
   **Decided 2026-09-24:** the UI comes before the new providers and covers
   everything the REST API does. Its texts are English. Built with Jinja2
@@ -1000,7 +1000,7 @@ the data, rather than a readable file.
   | Provider | Where the KEK lives | Default for |
   |---|---|---|
   | `keyring` | OS credential store via `keyring`: Windows Credential Manager (DPAPI, bound to the Windows login), macOS Keychain, Secret Service on Linux | service on the host |
-  | `file` | a file outside the data directory, typically a compose secret at `/run/secrets/mailbox_service_master_key`, readable by the service user only | container |
+  | `file` | a file outside the data directory, typically a compose secret at `/run/secrets/master_key`, readable by the service user only | container |
   | `env` | `MAILBOX_SERVICE_MASTER_KEY` | tests, CI. Allowed but warned about at start, since the environment shows up in process listings and `docker inspect` |
 
   Only 32 bytes go into the keyring, well inside the Windows Credential
@@ -1635,4 +1635,5 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    governed by rights (7.7).
 5. **Local cache:** list and search go straight to the provider in the
    design above. A local index (SQLite FTS) would make search across all
-   accounts fast, at the cost of a sync engine. Decide after phase 3.
+   accounts fast, at the cost of a sync engine. Still open after phase
+   3, kept in IDEAS.md.

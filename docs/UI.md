@@ -31,6 +31,9 @@ what it must do and how it is secured.
 
 ## 2. Today
 
+The UI as it was on 2026-09-27, before the rework. What the rework
+changed is in the roadmap's phase 4b.
+
 Eighteen pages, one stylesheet of 400 lines, htmx for the small
 interactions and 30 lines of JavaScript. The sidebar has Overview and
 Mail, then Service with Accounts and Sends, then Access with Users and
@@ -384,6 +387,8 @@ These rules bind every page, the reworked ones and the ones to come.
    a person using the API notices.
 
 ## 9. Order of work
+
+All four steps are done, as the roadmap's phase 4b records.
 
 1. **This file**, one pull request of documentation. CONCEPT 1.1 and the
    roadmap's phase 4b point here.

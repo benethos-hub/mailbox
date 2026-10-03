@@ -8,6 +8,7 @@ places, and those examples must follow it.
 
 from __future__ import annotations
 
+import json
 import re
 import tomllib
 from importlib.metadata import version
@@ -112,3 +113,98 @@ def test_minor_line_examples_are_current(relative: str, kind: str) -> None:
     minor = ".".join(_version().split(".")[:2])
     stale = _found(relative, kind) - {minor}
     assert not stale, f"{relative} still shows {sorted(stale)}, not {minor}"
+
+
+# --- every place, not only the listed ones ---------------------------------------
+
+# Text files are searched whole for the patterns above. The changelog keeps
+# the old versions on purpose, the lockfile is checked on its own.
+SEARCHED = {".md", ".toml", ".yaml", ".yml", ".json", ".example", ".html", ".txt"}
+SKIPPED_DIRS = {
+    ".git",
+    ".venv",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+    "build",
+    "data",
+    "dist",
+    "node_modules",
+}
+SKIPPED_FILES = {"CHANGELOG.md", "uv.lock"}
+
+
+def _text_files() -> list[Path]:
+    found = []
+    for path in ROOT.rglob("*"):
+        relative = path.relative_to(ROOT)
+        if any(part in SKIPPED_DIRS for part in relative.parts[:-1]):
+            continue
+        if not path.is_file() or path.name in SKIPPED_FILES:
+            continue
+        if path.suffix in SEARCHED or path.name == "Dockerfile":
+            found.append(path)
+    return found
+
+
+def test_no_file_names_another_version() -> None:
+    """A place that names the version anywhere in the repository, also
+    one not in the lists above, names the current one."""
+    current = _version()
+    minor = ".".join(current.split(".")[:2])
+    stale = []
+    for path in _text_files():
+        text = path.read_text("utf-8", errors="replace")
+        for kind, pattern in PATTERNS.items():
+            wanted = minor if kind == "minor" else current
+            for value in set(re.findall(pattern, text)) - {wanted}:
+                stale.append(f"{path.relative_to(ROOT)}: {kind} {value}")
+    assert not stale, "not the current version:\n  " + "\n  ".join(sorted(stale))
+
+
+def test_the_openapi_document_has_the_version() -> None:
+    document = json.loads((ROOT / "docs" / "openapi.json").read_text("utf-8"))
+    assert document["info"]["version"] == _version()
+
+
+def test_the_lockfile_has_the_version_of_both_packages() -> None:
+    lock = tomllib.loads((ROOT / "uv.lock").read_text("utf-8"))
+    names = {str(_project(package)["name"]) for package in PACKAGES}
+    locked = {p["name"]: p["version"] for p in lock["package"] if p["name"] in names}
+    assert locked == dict.fromkeys(names, _version())
+
+
+def test_the_changelog_names_the_version_as_its_newest_release() -> None:
+    text = (ROOT / "CHANGELOG.md").read_text("utf-8")
+    current = _version()
+    released = re.findall(r"^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d\d-\d\d$", text, re.M)
+    assert released, "CHANGELOG.md names no release"
+    assert released[0] == current
+    base = "https://github.com/benethos-hub/mailbox"
+    assert f"[Unreleased]: {base}/compare/v{current}...HEAD" in text
+    assert re.search(rf"^\[{re.escape(current)}\]: {base}/", text, re.M)
+
+
+def test_the_status_follows_the_classifier() -> None:
+    """``Development Status :: 3 - Alpha`` in both packages, and "alpha"
+    in every status line of the documentation."""
+    statuses = set()
+    for package in PACKAGES:
+        classifiers = _project(package)["classifiers"]
+        assert isinstance(classifiers, list)
+        statuses |= {
+            c.rpartition(" - ")[2].lower()
+            for c in classifiers
+            if c.startswith("Development Status ::")
+        }
+    assert len(statuses) == 1, statuses
+    status = statuses.pop()
+    wrong = []
+    for relative, kind in VERSION_EXAMPLES:
+        if kind != "status":
+            continue
+        text = (ROOT / relative).read_text("utf-8")
+        words = re.findall(r"([\w-]+), version \d+\.\d+\.\d+\.", text)
+        wrong += [f"{relative}: {w}" for w in words if w.lower() != status]
+    assert not wrong, f"not {status!r}:\n  " + "\n  ".join(wrong)
