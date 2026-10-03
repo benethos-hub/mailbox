@@ -1000,7 +1000,7 @@ the data, rather than a readable file.
   | Provider | Where the KEK lives | Default for |
   |---|---|---|
   | `keyring` | OS credential store via `keyring`: Windows Credential Manager (DPAPI, bound to the Windows login), macOS Keychain, Secret Service on Linux | service on the host |
-  | `file` | a file outside the data directory, typically a compose secret at `/run/secrets/mailbox_service_master_key`, readable by the service user only | container |
+  | `file` | a file outside the data directory, typically a compose secret at `/run/secrets/master_key`, readable by the service user only | container |
   | `env` | `MAILBOX_SERVICE_MASTER_KEY` | tests, CI. Allowed but warned about at start, since the environment shows up in process listings and `docker inspect` |
 
   Only 32 bytes go into the keyring, well inside the Windows Credential
