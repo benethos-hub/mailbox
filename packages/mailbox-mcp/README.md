@@ -6,8 +6,9 @@
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
-> the stored data and the configuration may change without notice.
+> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
+> API and the configuration may still change. Stored data is carried
+> forward by migrations.
 
 The MCP server for the Mailbox Service. It gives Claude and other AI
 assistants your mailboxes, as far as its token allows. It searches and
@@ -172,7 +173,7 @@ claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
 The image `ghcr.io/benethos-hub/benethos-mailbox-mcp` serves over
 streamable HTTP on port 8000, as an unprivileged user on a read-only root
 file system. A client that starts the server over stdio needs no image.
-Tags: the version (`0.1.0`), the minor version (`0.1`) and `latest`.
+Tags: the version (`0.2.0`), the minor version (`0.2`) and `latest`.
 
 ### With docker run
 
@@ -190,7 +191,7 @@ docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
   -e MAILBOX_SERVICE_TOKEN=<token> \
   -e MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   -e MAILBOX_MCP_ALLOWED_HOSTS=127.0.0.1:8000,localhost:8000 \
-  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.1.0
+  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.2.0
 ```
 
 Inside the container the server binds to `0.0.0.0`. So
@@ -206,7 +207,7 @@ service's first start
 ([service README, Container](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service#with-compose)):
 
 ```sh
-export MAILBOX_MCP_IMAGE=ghcr.io/benethos-hub/benethos-mailbox-mcp:0.1.0
+export MAILBOX_MCP_IMAGE=ghcr.io/benethos-hub/benethos-mailbox-mcp:0.2.0
 export MAILBOX_MCP_API_TOKEN=<token>
 export MAILBOX_MCP_BEARER_TOKEN=$(openssl rand -base64 32)
 docker compose --profile mcp up -d

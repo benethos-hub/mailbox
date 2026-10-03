@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-03
+
+The status is alpha: usable with real accounts for testing. The API and
+the configuration may still change. Stored data is carried forward by
+migrations.
+
 ### Added
 
 - `MAILBOX_SERVICE_AUDIT_DAYS` (90): how long the audit of sends keeps a
@@ -970,5 +976,6 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/benethos-hub/mailbox/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/benethos-hub/mailbox/releases/tag/v0.1.0

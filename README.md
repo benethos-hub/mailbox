@@ -13,8 +13,9 @@ One REST API for all your mailboxes, whichever provider they are at, and
 an MCP server on top. Scripts, tools and AI assistants work with your
 mail through one door you control.
 
-> **Status: pre-alpha, version 0.1.0.** Not ready for production use: the
-> API, the stored data and the configuration may change without notice.
+> **Status: alpha, version 0.2.0.** Usable with real accounts for
+> testing. The API and the configuration may still change. Stored data
+> is carried forward by migrations.
 
 ## What it is for
 

@@ -3,7 +3,7 @@
   "info": {
     "title": "Mailbox Service",
     "description": "Unified REST API for several mail providers and accounts. Requests are limited per token, and without one per client address. Past the limit the API answers `429` with `Retry-After`.",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "paths": {
     "/health": {

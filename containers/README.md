@@ -1,7 +1,8 @@
 # Containers
 
-> **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
-> the stored data and the configuration may change without notice.
+> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
+> API and the configuration may still change. Stored data is carried
+> forward by migrations.
 
 One folder per image, and a compose file for running them.
 

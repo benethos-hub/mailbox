@@ -1,7 +1,8 @@
 # Roadmap
 
-> **Pre-alpha, version 0.1.0.** Not ready for production use: the API,
-> the stored data and the configuration may change without notice.
+> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
+> API and the configuration may still change. Stored data is carried
+> forward by migrations.
 
 The phases in which Mailbox Service is built. What each item means is designed
 in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
