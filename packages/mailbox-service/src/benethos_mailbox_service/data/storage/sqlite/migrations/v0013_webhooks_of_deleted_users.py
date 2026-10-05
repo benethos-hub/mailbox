@@ -7,6 +7,6 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class WebhooksOfDeletedUsers(Migration):
+class V0013WebhooksOfDeletedUsers(Migration):
     version = 13
     statements = ("DELETE FROM webhooks WHERE user_id NOT IN (SELECT id FROM users)",)

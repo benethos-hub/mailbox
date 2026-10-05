@@ -5,7 +5,7 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class ChangeLog(Migration):
+class V0006ChangeLog(Migration):
     version = 6
     statements = (
         """

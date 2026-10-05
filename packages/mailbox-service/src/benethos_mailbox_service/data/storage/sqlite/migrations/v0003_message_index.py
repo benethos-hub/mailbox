@@ -5,7 +5,7 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class MessageIndex(Migration):
+class V0003MessageIndex(Migration):
     version = 3
     statements = (
         """

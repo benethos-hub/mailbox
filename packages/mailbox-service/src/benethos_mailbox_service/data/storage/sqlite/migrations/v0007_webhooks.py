@@ -5,7 +5,7 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class Webhooks(Migration):
+class V0007Webhooks(Migration):
     version = 7
     statements = (
         """

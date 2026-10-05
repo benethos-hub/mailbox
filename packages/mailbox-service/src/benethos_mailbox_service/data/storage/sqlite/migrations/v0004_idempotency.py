@@ -5,7 +5,7 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class Idempotency(Migration):
+class V0004Idempotency(Migration):
     version = 4
     statements = (
         """

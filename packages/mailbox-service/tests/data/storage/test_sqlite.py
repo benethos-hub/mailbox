@@ -473,6 +473,7 @@ def test_each_migration_module_is_in_the_list_at_its_number() -> None:
         migration = MIGRATIONS[numbers[-1] - 1]
         assert type(migration).__module__ == module.__name__, name
         assert migration.version == numbers[-1], name
+        assert type(migration).__name__.startswith(f"V{numbers[-1]:04d}"), name
     assert sorted(numbers) == list(range(1, SCHEMA_VERSION + 1))
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class Credentials(Migration):
+class V0002Credentials(Migration):
     version = 2
     statements = (
         """

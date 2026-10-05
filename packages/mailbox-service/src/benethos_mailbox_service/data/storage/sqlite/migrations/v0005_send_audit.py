@@ -5,7 +5,7 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class SendAudit(Migration):
+class V0005SendAudit(Migration):
     version = 5
     statements = (
         """

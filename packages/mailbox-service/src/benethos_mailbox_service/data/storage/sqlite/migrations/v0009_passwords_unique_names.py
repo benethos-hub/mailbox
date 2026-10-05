@@ -13,7 +13,7 @@ import sqlite3
 from .migration import Migration
 
 
-class PasswordsUniqueNames(Migration):
+class V0009PasswordsUniqueNames(Migration):
     version = 9
     statements = (
         """

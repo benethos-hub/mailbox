@@ -7,7 +7,7 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class UiSignIn(Migration):
+class V0012UiSignIn(Migration):
     version = 12
     statements = (
         "ALTER TABLE users ADD COLUMN ui_sign_in INTEGER NOT NULL DEFAULT 0",

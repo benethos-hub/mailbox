@@ -91,7 +91,7 @@ def split(grants: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]
     return kept, list(dict.fromkeys(service))
 
 
-class ServiceRightsMoved(Migration):
+class V0015ServiceRightsMoved(Migration):
     version = 15
     statements = ()
 

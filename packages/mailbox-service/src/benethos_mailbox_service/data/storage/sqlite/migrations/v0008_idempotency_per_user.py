@@ -7,7 +7,7 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class IdempotencyPerUser(Migration):
+class V0008IdempotencyPerUser(Migration):
     version = 8
     statements = (
         "DROP TABLE idempotency",

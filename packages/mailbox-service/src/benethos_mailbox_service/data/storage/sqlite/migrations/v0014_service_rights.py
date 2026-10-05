@@ -7,7 +7,7 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class ServiceRights(Migration):
+class V0014ServiceRights(Migration):
     version = 14
     statements = (
         "ALTER TABLE users ADD COLUMN service TEXT NOT NULL DEFAULT '[]'",

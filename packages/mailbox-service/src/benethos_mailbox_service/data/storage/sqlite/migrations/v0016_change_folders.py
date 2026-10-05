@@ -8,6 +8,6 @@ from __future__ import annotations
 from .migration import Migration
 
 
-class ChangeFolders(Migration):
+class V0016ChangeFolders(Migration):
     version = 16
     statements = ("ALTER TABLE changes ADD COLUMN folder_id TEXT",)

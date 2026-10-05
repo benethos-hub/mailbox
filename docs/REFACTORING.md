@@ -793,10 +793,11 @@ class Migration(ABC):
 `apply` is the template: the same for every step, never overridden.
 `before` is overridden by the steps with logic. No `abstractmethod`:
 a class without `version` or `statements` fails the tests, which is
-soon enough. A module then reads:
+soon enough. The class is named as its module, `VNNNN<Subject>`, so the
+number stands in the registry too. A module then reads:
 
 ```python
-class PasswordsUniqueNames(Migration):
+class V0009PasswordsUniqueNames(Migration):
     version = 9
     statements = ...
 
@@ -807,7 +808,7 @@ The statements stay byte for byte, so each fingerprint stays, and
 `RELEASED` is left as it is. `__init__.py` keeps the registry:
 
 ```python
-MIGRATIONS: tuple[Migration, ...] = (AccountsUsers(), Credentials(), ...)
+MIGRATIONS: tuple[Migration, ...] = (V0001AccountsUsers(), V0002Credentials(), ...)
 SCHEMA_VERSION = MIGRATIONS[-1].version
 ```
 
@@ -845,8 +846,9 @@ One branch from `main`, one pull request, each step passing all checks:
 1. This section.
 2. `migration.py`: the class above, `step.py` renamed.
 3. The sixteen modules, by script: `MIGRATION = Migration([...])`
-   becomes a class with `version` and `statements` as a tuple, the
-   statement texts untouched, 9 and 15 with `before` as a method.
+   becomes a class `VNNNN<Subject>` with `version` and `statements` as
+   a tuple, the statement texts untouched, 9 and 15 with `before` as a
+   method.
    `__init__.py` lists the instances. `Database._migrate` calls
    `apply`.
 4. The tests: `fingerprint` from the class, one test more that
