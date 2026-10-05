@@ -62,6 +62,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
 | `send` | `send_message`, `send_draft` | an account |
 | `audit` | `list_sends`, `list_all_sends` | an account |
+| `audit` | `list_activity`, the audit of administration (8.6) | the service |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account` | an account |
 | `accounts.connect` | `discover_account`, `start_oauth`, `create_account` | the service |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |

@@ -50,26 +50,28 @@ nothing secret, and sends, which have their own audit.
 | `at` | time, UTC |
 | `user_id`, `user_name` | who, the name as it was then |
 | `credential` | `token:<id>`, `password`, `host` for a CLI command, null for a failed sign-in |
-| `operation` | the right of the catalogue where one applies (`create_user`, `revoke_token`), else a name of this table (`sign_in`, `sign_in_failed`, `locked_out`) |
+| `activity` | the activity's name in the log, `<area>.<name>` of LOGGING.md 7.2: `users.token_revoked`, `auth.sign_in_failed` |
 | `record` | the id of the record touched: `usr_`, `acc_`, `tok_`, `whk_`, a role id |
 | `source` | the client address, null without a request |
 | `outcome` | `done`, `refused`, `failed` |
-| `detail` | the log line's "why" or "what changed", masked, never a secret, never content |
+| `detail` | the log line without who and from where: what was done and why, masked, never a secret, never content |
 
 The record keeps no reference to user or account, so it outlives both,
 as the send audit does. `user_name` is written for that reason.
 
 ## 4. Storage, API, UI
 
-- **Table `activity`**, a migration of its own, indexes on `at` and on
-  `(user_id, at)`. Written in the same transaction as the change where
-  there is one, so a change without its record cannot happen.
+- **Table `activity`**, a migration of its own, indexes on `at`, on
+  `(user_id, at)` and on `(record, at)`. Written by the recorder right
+  after the change, as its log line is. A record that cannot be written
+  is logged as `system.not_audited`, and the change stands.
 - **Retention**: `MAILBOX_SERVICE_AUDIT_DAYS`, 90 by default, purged as
   the change log is purged, on write and at most once an hour. The
   audit of sends keeps its records for the same setting since
   2026-09-29, with `0` for ever.
 - **`GET /v1/audit`**: newest first, paged with `next_cursor`, filters
-  `user`, `operation`, `record`, `after`, `before`. Right `audit` on
+  `user`, `activity` (a name or its area), `record`, `after`,
+  `before`. Right `audit` on
   the service, so the group `audit` appears in both lists of
   PERMISSIONS.md 8.1. `x-permission` as on every route, the OpenAPI
   document regenerated.

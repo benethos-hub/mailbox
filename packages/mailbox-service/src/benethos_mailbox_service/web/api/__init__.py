@@ -16,6 +16,7 @@ from .deps import authenticate
 from .errors import DOCUMENTED_ERRORS
 from .routes import (
     accounts,
+    audit,
     discovery,
     health,
     mailbox,
@@ -45,6 +46,7 @@ def install(app: FastAPI) -> None:
         messages.router,
         mailbox.router,
         webhooks.router,
+        audit.router,
     ):
         for route in router.routes:
             if isinstance(route, APIRoute):

@@ -7168,6 +7168,246 @@
         },
         "x-permission": "webhooks.manage"
       }
+    },
+    "/v1/audit": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "List Activity",
+        "description": "The audit of administration, newest first: sign-ins, and who\nchanged users, tokens, roles, accounts and webhooks, kept for\n`MAILBOX_SERVICE_AUDIT_DAYS` days. Never a secret, never mail content.\nNeeds `audit` in `service`.",
+        "operationId": "list_activity",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A user id: what that user did",
+              "title": "User"
+            },
+            "description": "A user id: what that user did"
+          },
+          {
+            "name": "activity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A name such as `users.token_revoked`, or an area such as `users`",
+              "title": "Activity"
+            },
+            "description": "A name such as `users.token_revoked`, or an area such as `users`"
+          },
+          {
+            "name": "record",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The id of a user, token, role, account or webhook: what was done to it",
+              "title": "Record"
+            },
+            "description": "The id of a user, token, role, account or webhook: what was done to it"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "At or after this time",
+              "title": "After"
+            },
+            "description": "At or after this time"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Before this time",
+              "title": "Before"
+            },
+            "description": "Before this time"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ActivityRecord_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "audit"
+      }
     }
   },
   "components": {
@@ -7372,6 +7612,107 @@
         "type": "object",
         "title": "AccountUpdate",
         "description": "What ``PATCH`` changes. Fields left out stay as they are."
+      },
+      "ActivityRecord": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "activity": {
+            "type": "string",
+            "title": "Activity",
+            "description": "What happened, as the service log names it: `users.token_revoked`, `auth.sign_in_failed`."
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "Who acted. Null for a caller not signed in and for the host."
+          },
+          "user_name": {
+            "type": "string",
+            "title": "User Name",
+            "description": "The name as it was then. `someone` for a caller not signed in, `the host` for a command on the host."
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential",
+            "description": "How the caller came: `token:<id>`, `password` for the UI, `host` for a command on the host, null without one."
+          },
+          "record": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record",
+            "description": "The id of what was touched: a user, token, role, account or webhook."
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "The client address, null without one."
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "done",
+              "refused",
+              "failed"
+            ],
+            "title": "Outcome",
+            "description": "`done`. `refused`: a sign-in, a token or a request the service turned away. `failed`: an error."
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "What was done and why, as the log line says it. Never a secret, never mail content."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "activity",
+          "user_id",
+          "user_name",
+          "credential",
+          "record",
+          "source",
+          "outcome",
+          "detail"
+        ],
+        "title": "ActivityRecord",
+        "description": "One activity of administration someone caused (docs/AUDIT.md). It\nkeeps no reference to a user or an account, so it outlives both."
       },
       "Address": {
         "properties": {
@@ -9174,6 +9515,33 @@
         "type": "object",
         "title": "OutgoingMessage",
         "description": "A message to send. The service sets From, Date and Message-ID. It\nneeds a recipient, unless it is a reply: that finds one in the original."
+      },
+      "Page_ActivityRecord_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityRecord"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[ActivityRecord]"
       },
       "Page_MessageSummary_": {
         "properties": {

@@ -5,13 +5,20 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import ActivityFilter, ActivityRecord, Grant
-from benethos_mailbox_service.data.storage import InMemoryAuditRepository
+from benethos_mailbox_service.data.storage import (
+    AuditRepository,
+    Database,
+    InMemoryAuditRepository,
+    SqliteAuditRepository,
+)
 from benethos_mailbox_service.domain.activity import (
     SERVICE,
     ActivityLog,
@@ -28,7 +35,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import Services
 
-from ...conftest import ADMIN
+from ...conftest import ADMIN, bearer_for
 from .test_activity import _catalogue
 
 AUDIT_MD = Path(__file__).parents[5] / "docs" / "AUDIT.md"
@@ -246,3 +253,129 @@ def test_a_secret_noted_is_masked_in_the_record() -> None:
     )
     (record,) = store.list(limit=10, before=None)
     assert "s3cret" not in record.detail
+
+
+# --- the API ------------------------------------------------------------------
+
+
+def test_the_api_reads_it_with_audit_in_service(
+    client: TestClient, services: Services
+) -> None:
+    made = client.post("/v1/users", json={"name": "Anna"})
+    assert made.status_code == 201
+    anna = made.json()["id"]
+    page = client.get("/v1/audit", params={"record": anna}).json()
+    (record,) = page["items"]
+    assert record["activity"] == "users.created"
+    assert record["credential"].startswith("token:")
+    assert record["outcome"] == "done"
+    assert page["next_cursor"] is None
+    assert client.get("/v1/audit", params={"activity": "accounts"}).json() == {
+        "items": [],
+        "next_cursor": None,
+    }
+    later = client.get("/v1/audit", params={"after": "2999-01-01T00:00:00Z"})
+    assert later.json()["items"] == []
+    # A time without a zone is not one.
+    naive = client.get("/v1/audit", params={"after": "2026-10-05T10:00:00"})
+    assert naive.status_code == 422
+
+    users_read = bearer_for(services, service=["users.read"])
+    refused = client.get("/v1/audit", headers=users_read)
+    assert refused.status_code == 403
+    sends = bearer_for(services, Grant(accounts=["*"], allow=["audit"]))
+    assert client.get("/v1/audit", headers=sends).status_code == 403
+    auditor = bearer_for(services, service=["audit"])
+    assert client.get("/v1/audit", headers=auditor).status_code == 200
+
+
+def test_audit_is_named_in_both_lists_of_the_catalogue(client: TestClient) -> None:
+    catalogue = client.get("/v1/permissions").json()
+    assert "audit" in catalogue["service"]
+    assert catalogue["groups"]["audit"] == [
+        "list_sends",
+        "list_all_sends",
+        "list_activity",
+    ]
+    made = client.post(
+        "/v1/users",
+        json={
+            "name": "Auditor",
+            "service": ["audit"],
+            "grants": [{"accounts": ["*"], "allow": ["audit"]}],
+        },
+    )
+    assert made.status_code == 201
+    # The operation itself is of the service alone.
+    wrong = client.post(
+        "/v1/users",
+        json={
+            "name": "Wrong",
+            "grants": [{"accounts": ["*"], "allow": ["list_activity"]}],
+        },
+    )
+    assert wrong.status_code == 400
+    assert "right of the service" in wrong.json()["error"]["message"]
+    sends = client.post("/v1/users", json={"name": "Sends", "service": ["list_sends"]})
+    assert sends.status_code == 400
+
+
+# --- the stores ---------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "sqlite"])
+def store(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[AuditRepository]:
+    if request.param == "memory":
+        yield InMemoryAuditRepository()
+        return
+    db = Database(tmp_path / "audit.db")
+    yield SqliteAuditRepository(db)
+    db.close()
+
+
+def record(n: int, activity: str, **fields: object) -> ActivityRecord:
+    return ActivityRecord.model_validate(
+        {
+            "id": f"evt_{n}",
+            "at": NOW + timedelta(minutes=n),
+            "activity": activity,
+            "user_id": "usr_a",
+            "user_name": "Anna",
+            "credential": "password",
+            "record": None,
+            "source": "10.0.0.1",
+            "outcome": "done",
+            "detail": "did something",
+            **fields,
+        }
+    )
+
+
+def test_a_store_filters_pages_and_purges(store: AuditRepository) -> None:
+    store.add(record(1, "users.created", record="usr_b"))
+    store.add(record(2, "users.token_issued", user_id=None, user_name="the host"))
+    store.add(record(3, "users_more.x"))
+    store.add(record(4, "auth.sign_in_failed", outcome="refused", credential=None))
+    newest = store.list(limit=10, before=None)
+    assert [r.id for r in newest] == ["evt_4", "evt_3", "evt_2", "evt_1"]
+    assert newest[0] == record(
+        4, "auth.sign_in_failed", outcome="refused", credential=None
+    )
+
+    def ids(**wanted: object) -> list[str]:
+        matching = ActivityFilter.model_validate(wanted)
+        return [r.id for r in store.list(limit=10, before=None, matching=matching)]
+
+    # An area, not the start of another one.
+    assert ids(activity="users") == ["evt_2", "evt_1"]
+    assert ids(activity="users.created") == ["evt_1"]
+    assert ids(user_id="usr_a") == ["evt_4", "evt_3", "evt_1"]
+    assert ids(record="usr_b") == ["evt_1"]
+    assert ids(after=NOW + timedelta(minutes=2), before=NOW + timedelta(minutes=4)) == [
+        "evt_3",
+        "evt_2",
+    ]
+    older = store.list(limit=2, before=(NOW + timedelta(minutes=3), "evt_3"))
+    assert [r.id for r in older] == ["evt_2", "evt_1"]
+    assert store.purge(NOW + timedelta(minutes=3)) == 2
+    assert [r.id for r in store.list(limit=10, before=None)] == ["evt_4", "evt_3"]
