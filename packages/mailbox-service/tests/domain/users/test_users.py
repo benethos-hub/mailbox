@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.domain.rights import permissions
-from benethos_mailbox_service.domain.rights.access import ADMIN_GRANT, Access
+from benethos_mailbox_service.domain.rights.access import ADMIN_SERVICE, Access
 from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN, bearer_for, browser_user, create_account
@@ -148,11 +148,11 @@ def test_a_user_with_a_renamed_right_stays_manageable(
     assert client.delete(f"/v1/users/{user['id']}").status_code == 204
 
 
-def test_an_admin_of_one_account_manages_itself(
+def test_a_manager_of_one_account_manages_itself(
     app_client: TestClient, services: Services
 ) -> None:
-    own = Grant(accounts=["acc_a"], allow=["admin"])
-    headers = bearer_for(services, own)
+    own = Grant(accounts=["acc_a"], allow=["mail.read", "accounts.manage"])
+    headers = bearer_for(services, own, service=["users.manage"])
     me = app_client.get("/v1/me", headers=headers).json()
     renamed = app_client.patch(
         f"/v1/users/{me['user_id']}", json={"name": "renamed"}, headers=headers
@@ -160,7 +160,11 @@ def test_an_admin_of_one_account_manages_itself(
     assert renamed.status_code == 200
     made = app_client.post(
         "/v1/users",
-        json={"name": "like-me", "grants": [own.model_dump()]},
+        json={
+            "name": "like-me",
+            "service": ["users.manage"],
+            "grants": [own.model_dump()],
+        },
         headers=headers,
     )
     assert made.status_code == 201
@@ -277,6 +281,7 @@ def test_role_lifecycle(client: TestClient) -> None:
     role = {"id": "reader", "grants": [{"accounts": ["*"], "allow": ["mail.read"]}]}
     stored = {
         "id": "reader",
+        "service": [],
         "grants": [
             {
                 "accounts": ["*"],
@@ -307,9 +312,9 @@ def _manager(services: Services, *extra: Grant) -> dict[str, str]:
     """A user who may manage users and read mail on acc_a only."""
     return bearer_for(
         services,
-        Grant(accounts=["*"], allow=["users.manage"]),
         Grant(accounts=["acc_a"], allow=["mail.read"]),
         *extra,
+        service=["users.manage"],
     )
 
 
@@ -334,7 +339,7 @@ def test_cannot_escalate_through_a_role(
 ) -> None:
     client.post(
         "/v1/roles",
-        json={"id": "all", "grants": [{"accounts": ["*"], "allow": ["admin"]}]},
+        json={"id": "all", "service": ["admin"]},
     )
     headers = _manager(services)
     response = app_client.post(
@@ -352,7 +357,7 @@ def test_cannot_change_the_role_of_a_stronger_user(
         json={
             "name": "strong",
             "roles": ["readers"],
-            "grants": [{"accounts": ["*"], "allow": ["admin"]}],
+            "service": ["admin"],
         },
     )
     headers = _manager(services)
@@ -367,7 +372,7 @@ def test_cannot_manage_a_stronger_user(
 ) -> None:
     strong = client.post(
         "/v1/users",
-        json={"name": "s", "grants": [{"accounts": ["*"], "allow": ["admin"]}]},
+        json={"name": "s", "service": ["admin"]},
     ).json()
     headers = _manager(services)
     assert (
@@ -426,7 +431,7 @@ def test_nobody_disables_itself_or_takes_its_own_ui_sign_in(
 def _ui_admin(services: Services, *, role: str | None = None) -> str:
     """A user who signs in to the UI with ``admin``, directly or by a role."""
     if role is None:
-        name, _ = browser_user(services, ADMIN_GRANT, name="boss")
+        name, _ = browser_user(services, service=list(ADMIN_SERVICE), name="boss")
     else:
         name, _ = browser_user(services, roles=[role], name="boss")
     found = services.auth.user_named(name)
@@ -439,7 +444,7 @@ def _ui_admin(services: Services, *, role: str | None = None) -> str:
     [
         {"disabled": True},
         {"ui_sign_in": False},
-        {"grants": [{"accounts": ["*"], "allow": ["mail.read"]}]},
+        {"service": ["users.manage"]},
     ],
 )
 def test_the_last_ui_administrator_cannot_be_changed_away(
@@ -463,14 +468,14 @@ def test_a_second_ui_administrator_may_go(
     client: TestClient, services: Services
 ) -> None:
     boss = _ui_admin(services)
-    browser_user(services, ADMIN_GRANT, name="deputy")
+    browser_user(services, service=list(ADMIN_SERVICE), name="deputy")
     assert client.patch(f"/v1/users/{boss}", json={"disabled": True}).status_code == 200
 
 
 def test_a_role_cannot_take_admin_from_the_last_ui_administrator(
     client: TestClient, services: Services
 ) -> None:
-    services.users.create_role(ADMIN, "admins", [ADMIN_GRANT])
+    services.users.create_role(ADMIN, "admins", [], list(ADMIN_SERVICE))
     _ui_admin(services, role="admins")
     refused = client.put(
         "/v1/roles/admins",
@@ -488,3 +493,73 @@ def test_without_a_ui_administrator_nothing_is_held_back(
     user = services.auth.user_named(name)
     assert user is not None
     assert client.delete(f"/v1/users/{user.id}").status_code == 204
+
+
+# --- rights of the service (PERMISSIONS.md 8.1, 8.2) -------------------------------
+
+
+@pytest.mark.parametrize("name", ["admin", "users.manage", "create_account"])
+def test_a_right_of_the_service_in_a_grant_answers_400(
+    client: TestClient, name: str
+) -> None:
+    grant = {"accounts": ["*"], "allow": ["mail.read", name]}
+    for answer in (
+        client.post("/v1/users", json={"name": "x", "grants": [grant]}),
+        client.post("/v1/roles", json={"id": "x", "grants": [grant]}),
+    ):
+        assert answer.status_code == 400
+        assert "name it in service" in answer.json()["error"]["message"]
+
+
+def test_a_right_on_accounts_in_service_answers_400(client: TestClient) -> None:
+    answer = client.post("/v1/users", json={"name": "x", "service": ["mail.read"]})
+    assert answer.status_code == 400
+    assert "name it in a grant" in answer.json()["error"]["message"]
+
+
+def test_service_rights_of_a_user_and_a_role(client: TestClient) -> None:
+    role = client.post(
+        "/v1/roles", json={"id": "hooks", "service": ["webhooks.manage"]}
+    ).json()
+    assert role["service"] == ["webhooks.manage"]
+    user = client.post(
+        "/v1/users",
+        json={"name": "u", "roles": ["hooks"], "service": ["users.read"]},
+    ).json()
+    assert user["service"] == ["users.read"]
+    token = client.post(f"/v1/users/{user['id']}/tokens", json={"name": "t"}).json()
+    me = client.get(
+        "/v1/me", headers={"Authorization": f"Bearer {token['token']}"}
+    ).json()
+    assert "create_webhook" in me["operations"] and "list_users" in me["operations"]
+    assert "create_user" not in me["operations"]
+    changed = client.patch(f"/v1/users/{user['id']}", json={"service": []}).json()
+    assert changed["service"] == []
+    replaced = client.put("/v1/roles/hooks", json={}).json()
+    assert replaced["service"] == []
+
+
+def test_users_read_sees_users_and_changes_none(
+    app_client: TestClient, client: TestClient, services: Services
+) -> None:
+    other = client.post("/v1/users", json={"name": "other"}).json()
+    reader = TestClient(
+        app_client.app, headers=bearer_for(services, service=["users.read"])
+    )
+    assert reader.get("/v1/users").status_code == 200
+    assert reader.get(f"/v1/users/{other['id']}").status_code == 200
+    assert reader.get(f"/v1/users/{other['id']}/tokens").status_code == 200
+    assert reader.get("/v1/roles").status_code == 200
+    assert reader.post("/v1/users", json={"name": "x"}).status_code == 403
+    made = reader.post(f"/v1/users/{other['id']}/tokens", json={"name": "t"})
+    assert made.status_code == 403
+
+
+def test_the_catalogue_names_the_groups_of_the_service(client: TestClient) -> None:
+    catalogue = client.get("/v1/permissions").json()
+    assert catalogue["service"] == list(permissions.SERVICE_GROUPS)
+    assert catalogue["groups"]["accounts.connect"] == [
+        "discover_account",
+        "start_oauth",
+        "create_account",
+    ]

@@ -201,13 +201,14 @@ def browser_user(
     services: Services,
     *grants: Grant,
     roles: list[str] | None = None,
+    service: list[str] | None = None,
     name: str | None = None,
 ) -> tuple[str, str]:
-    """A user with these grants and a password it need not change: the
+    """A user with these rights and a password it need not change: the
     name and the password to sign in to the UI with."""
     name = name or f"browser-{next(_BROWSER)}"
     user = services.users.create_user(
-        ADMIN, name, roles or [], list(grants), ui_sign_in=True
+        ADMIN, name, roles or [], list(grants), service=service, ui_sign_in=True
     )
     asyncio.run(
         services.auth.passwords.set(user.id, name, UI_PASSWORD, must_change=False)
@@ -219,26 +220,27 @@ def admin_bearer(services: Services) -> dict[str, str]:
     """The header of a token of a user with every right: the API's
     administrator in a test."""
     name = f"api-admin-{next(_LIMITED)}"
-    user = services.users.create_user(
-        ADMIN, name, [], [Grant(accounts=["*"], allow=[permissions.ADMIN])]
-    )
+    user = services.users.create_user(ADMIN, name, [], [], service=[permissions.ADMIN])
     _, plain = services.auth.issue_token(user.id, "tests")
     return {"Authorization": f"Bearer {plain}"}
 
 
 def browser_admin(services: Services) -> tuple[str, str]:
     """A user with every right, to sign in to the UI with."""
-    return browser_user(
-        services, Grant(accounts=["*"], allow=[permissions.ADMIN]), name="admin"
-    )
+    return browser_user(services, service=[permissions.ADMIN], name="admin")
 
 
 def bearer_for(
-    services: Services, *grants: Grant, roles: list[str] | None = None
+    services: Services,
+    *grants: Grant,
+    roles: list[str] | None = None,
+    service: list[str] | None = None,
 ) -> dict[str, str]:
-    """A user with these grants, and the header of a fresh token for it."""
+    """A user with these rights, and the header of a fresh token for it."""
     name = f"limited-{next(_LIMITED)}"
-    user = services.users.create_user(ADMIN, name, roles or [], list(grants))
+    user = services.users.create_user(
+        ADMIN, name, roles or [], list(grants), service=service
+    )
     _, plain = services.auth.issue_token(user.id, "test")
     return {"Authorization": f"Bearer {plain}"}
 

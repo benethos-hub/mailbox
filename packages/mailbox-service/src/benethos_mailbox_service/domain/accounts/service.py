@@ -33,7 +33,8 @@ class AccountService:
     """Records live in the repository, credentials in the vault, the live
     adapters in ``adapters``. Every method checks the caller's right.
     ``on_delete`` hears of an account deleted, with its id: the sync
-    forgets its state there."""
+    forgets its state there. ``on_connect`` hears of an account connected,
+    with the caller and its id: the caller gets ``accounts.manage`` there."""
 
     def __init__(
         self,
@@ -41,6 +42,7 @@ class AccountService:
         vault: CredentialVault,
         adapters: Adapters,
         on_delete: Callable[[str], None] | None = None,
+        on_connect: Callable[[Access, str], None] | None = None,
         check_host: HostCheck | None = None,
         idempotency: IdempotencyRepository | None = None,
         changes: ChangeFeed | None = None,
@@ -51,6 +53,7 @@ class AccountService:
         self._vault = vault
         self._adapters = adapters
         self._on_delete = on_delete
+        self._on_connect = on_connect
         self._idempotency = idempotency
         self._changes = changes
         # Every host in an account's settings passes this before the first
@@ -152,6 +155,8 @@ class AccountService:
                 host=host if isinstance(host, str) else None,
             )
         )
+        if self._on_connect is not None:
+            self._on_connect(access, account.id)
         return self._with_credentials(account)
 
     async def update(

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import importlib
+import json
 import os
 import pkgutil
 import re
@@ -20,11 +21,13 @@ from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ApiToken, ProviderType, User
 from benethos_mailbox_service.data.storage import (
     Database,
+    SqliteRoleRepository,
     SqliteTokenRepository,
     SqliteUserRepository,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION, migrations
 from benethos_mailbox_service.data.storage.sqlite.migrations import MIGRATIONS
+from benethos_mailbox_service.domain.rights import Access
 from benethos_mailbox_service.errors import (
     ConflictError,
     NotFoundError,
@@ -54,6 +57,8 @@ def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
     Database(path).close()
     raw = sqlite3.connect(path)
     with raw:
+        raw.execute("ALTER TABLE users DROP COLUMN service")
+        raw.execute("ALTER TABLE roles DROP COLUMN service")
         raw.execute(
             "INSERT INTO users (id, name, roles, grants)"
             " VALUES ('usr_1', 'u', '[]', '[]')"
@@ -72,6 +77,101 @@ def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
     raw.close()
     db = Database(path)
     assert [r[0] for r in db.query("SELECT id FROM webhooks")] == ["whk_1"]
+    db.close()
+
+
+def _at_schema_14(path: Path, users: dict[str, list[dict[str, object]]]) -> None:
+    """A database of schema 14: rights of the service still in the grants.
+    ``users``: a user's name to its grants. A role of each name as well."""
+    Database(path).close()
+    raw = sqlite3.connect(path)
+    with raw:
+        for number, (name, grants) in enumerate(users.items()):
+            raw.execute(
+                "INSERT INTO users (id, name, grants) VALUES (?, ?, ?)",
+                (f"usr_{number}", name, json.dumps(grants)),
+            )
+            raw.execute(
+                "INSERT INTO roles (id, grants) VALUES (?, ?)",
+                (name, json.dumps(grants)),
+            )
+        raw.execute("UPDATE meta SET value = '14' WHERE key = 'schema_version'")
+    raw.close()
+
+
+def test_rights_of_the_service_leave_the_grants(tmp_path: Path) -> None:
+    """PERMISSIONS.md 8.1: what a grant named of the service moves to the
+    service list, and nobody loses a right."""
+    path = tmp_path / "old.db"
+    every = ["*"]
+    limit = {"recipients": ["a@example.org"], "max_sends_per_day": 3}
+    _at_schema_14(
+        path,
+        {
+            "admin": [{"accounts": every, "allow": ["admin"]}],
+            "deputy": [{"accounts": ["acc_1"], "allow": ["admin"], **limit}],
+            "manager": [
+                {"accounts": ["acc_1"], "allow": ["users.manage", "mail.read"]}
+            ],
+            "operator": [
+                {"accounts": every, "allow": ["accounts.manage", "webhooks.manage"]},
+                {"accounts": ["acc_2"], "allow": ["create_account", "list_webhooks"]},
+            ],
+            "reader": [{"accounts": every, "allow": ["mail.read"]}],
+        },
+    )
+    db = Database(path)
+    users = {u.name: u for u in SqliteUserRepository(db).list()}
+    roles = {r.id: r for r in SqliteRoleRepository(db).list()}
+    for name in users:
+        assert (users[name].service, users[name].grants) == (
+            roles[name].service,
+            roles[name].grants,
+        )
+    assert users["admin"].service == ["admin"]
+    assert users["admin"].grants == []
+    deputy = users["deputy"]
+    assert deputy.service == ["users.manage", "webhooks.manage"]
+    assert len(deputy.grants) == 1
+    assert deputy.grants[0].accounts == ["acc_1"]
+    assert "send" in deputy.grants[0].allow and "mail.read" in deputy.grants[0].allow
+    assert deputy.grants[0].recipients == ["a@example.org"]
+    assert deputy.grants[0].max_sends_per_day == 3
+    assert users["manager"].service == ["users.manage"]
+    assert users["manager"].grants[0].allow == ["mail.read"]
+    operator = users["operator"]
+    # create_account on named accounts gave nothing: it is dropped.
+    assert operator.service == ["accounts.connect", "webhooks.manage", "list_webhooks"]
+    assert [g.allow for g in operator.grants] == [["accounts.manage"]]
+    assert users["reader"].service == []
+    assert users["reader"].grants[0].allow == ["mail.read"]
+    assert db.migrated is not None
+    assert "schema 15: user admin: admin moved" in "\n".join(db.migrated.notes)
+    assert not any("reader" in note for note in db.migrated.notes)
+    db.close()
+
+
+def test_nobody_loses_a_right_by_the_move(tmp_path: Path) -> None:
+    """The rights a grant gave before, by the catalogue of schema 14, are
+    the rights the user has after the move."""
+    path = tmp_path / "old.db"
+    _at_schema_14(
+        path,
+        {
+            "deputy": [{"accounts": ["acc_1"], "allow": ["admin"]}],
+            "operator": [{"accounts": ["*"], "allow": ["accounts.manage"]}],
+        },
+    )
+    db = Database(path)
+    users = {u.name: u for u in SqliteUserRepository(db).list()}
+    deputy = Access.for_user(users["deputy"], {})
+    assert deputy.allows("delete_message_permanent", "acc_1")
+    assert deputy.allows("create_user") and deputy.allows("create_webhook")
+    assert not deputy.allows("get_message", "acc_2")
+    assert not deputy.allows("create_account") and not deputy.is_admin()
+    operator = Access.for_user(users["operator"], {})
+    assert operator.allows("create_account") and operator.allows("discover_account")
+    assert operator.allows("verify_account", "acc_9")
     db.close()
 
 

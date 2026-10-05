@@ -539,7 +539,7 @@ registered that domain.
 
 | Method | Path | Right | Purpose |
 |---|---|---|---|
-| POST | `/v1/discovery` | `accounts.manage` | body `{"email": "…"}`, returns ranked candidates |
+| POST | `/v1/discovery` | `accounts.connect` | body `{"email": "…"}`, returns ranked candidates |
 
 POST rather than GET, so the address does not end up in access logs. A
 candidate carries: adapter, servers with host, port and encryption, the
@@ -1127,6 +1127,7 @@ As stored:
   "id": "usr_7f3a",
   "name": "Claude Desktop",
   "roles": [],
+  "service": [],
   "grants": [
     {"accounts": ["acc_gmx"], "allow": ["mail.read", "mail.write", "drafts"]}
   ],
@@ -1167,15 +1168,21 @@ with the role
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
   | `audit` | `list_sends`, `list_all_sends` |
-  | `accounts.manage` | `create_account`, `update_account`, `delete_account`, `verify_account`, `discover_account`, credentials of mail accounts |
-  | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook`. Not account-bound |
-  | `users.manage` | users, their tokens, roles. Not account-bound |
-  | `admin` | everything, and `show_recovery_key` (the recovery key in the UI) and `read_service_log` (the log page), [UI.md](UI.md) 6.5, which only `admin` on every account gives and no grant names |
+  | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, credentials of mail accounts |
+  | `accounts.connect` | `discover_account`, `start_oauth`, `create_account`. Of the service |
+  | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook`. Of the service |
+  | `users.read` | users, their tokens, roles, to read. Of the service |
+  | `users.manage` | users, their tokens, roles. Of the service |
+  | `admin` | everything, and `show_recovery_key` (the recovery key in the UI) and `read_service_log` (the log page), [UI.md](UI.md) 6.5, which nothing else gives. Of the service |
 
   Permanent deletion and sending are their own groups on purpose: they are
   the two things that cannot be taken back.
 - **Account level.** `accounts` is a list of account ids or `"*"`. `"*"`
   includes accounts added later, an explicit list does not.
+- **Rights of the service** act on no account. A user and a role name
+  them in a list `service` beside the grants, never in a grant
+  ([PERMISSIONS.md](PERMISSIONS.md) 8.1). Whoever connects an account
+  gets `accounts.manage` on it.
 - **Effective rights** of a user are the union of its direct grants and the
   grants of its roles. Default deny.
 - **Check per request.** Credential → user → the route's `operationId` and
@@ -1325,13 +1332,13 @@ included for a grant on every account.
 |---|---|---|
 | GET | `/v1/me` | any authenticated user. Who am I, and my effective rights resolved to operations per account |
 | GET | `/v1/permissions` | any authenticated user. The catalogue of operations and groups |
-| GET / POST | `/v1/users` | `users.manage` |
-| GET / PATCH / DELETE | `/v1/users/{user_id}` | `users.manage`. Name, roles, grants, disabled, `ui_sign_in` |
-| GET / POST | `/v1/users/{user_id}/tokens` | `users.manage`. POST returns the token once |
+| GET / POST | `/v1/users` | GET `users.read`, POST `users.manage` |
+| GET / PATCH / DELETE | `/v1/users/{user_id}` | GET `users.read`, the others `users.manage`. Name, roles, service, grants, disabled, `ui_sign_in` |
+| GET / POST | `/v1/users/{user_id}/tokens` | GET `users.read`, POST `users.manage`. POST returns the token once |
 | DELETE | `/v1/users/{user_id}/tokens/{token_id}` | `users.manage`. Revoke |
 | POST | `/v1/users/{user_id}/password` | `users.manage`. A password to change at the next sign-in, or a one-time password answered once |
-| GET / POST | `/v1/roles` | `users.manage` |
-| GET / PUT / DELETE | `/v1/roles/{role_id}` | `users.manage` |
+| GET / POST | `/v1/roles` | GET `users.read`, POST `users.manage` |
+| GET / PUT / DELETE | `/v1/roles/{role_id}` | GET `users.read`, the others `users.manage` |
 
 #### And the MCP server
 

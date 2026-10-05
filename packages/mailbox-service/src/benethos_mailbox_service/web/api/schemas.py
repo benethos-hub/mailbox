@@ -11,7 +11,13 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, SecretStr
 
-from ...data.models import ApiToken, DraftMessage, Grant, ProviderType
+from ...data.models import (
+    SERVICE_DESCRIPTION,
+    ApiToken,
+    DraftMessage,
+    Grant,
+    ProviderType,
+)
 
 
 class AccountCreate(BaseModel):
@@ -115,7 +121,7 @@ class Me(BaseModel):
         description="Every account the caller may act on, with its operations"
     )
     operations: list[str] = Field(
-        description="Operations not bound to one existing account"
+        description="Operations of the service, bound to no account"
     )
 
 
@@ -123,11 +129,18 @@ class PermissionCatalogue(BaseModel):
     groups: dict[str, list[str]] = Field(
         description="Group name to the operations it allows"
     )
+    service: list[str] = Field(
+        description=(
+            "The groups of the service. They and `admin` are named in a user's "
+            "or a role's `service`, the other groups in a grant's `allow`."
+        )
+    )
 
 
 class UserCreate(BaseModel):
     name: str
     roles: list[str] = Field(default_factory=list)
+    service: list[str] = Field(default_factory=list, description=SERVICE_DESCRIPTION)
     grants: list[Grant] = Field(default_factory=list)
     ui_sign_in: bool = Field(
         default=False,
@@ -142,6 +155,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     name: str | None = None
     roles: list[str] | None = None
+    service: list[str] | None = Field(default=None, description=SERVICE_DESCRIPTION)
     grants: list[Grant] | None = None
     disabled: bool | None = Field(
         default=None, description="Not for the caller itself."
@@ -157,10 +171,12 @@ class UserUpdate(BaseModel):
 
 class RoleCreate(BaseModel):
     id: str
+    service: list[str] = Field(default_factory=list, description=SERVICE_DESCRIPTION)
     grants: list[Grant] = Field(default_factory=list)
 
 
 class RoleReplace(BaseModel):
+    service: list[str] = Field(default_factory=list, description=SERVICE_DESCRIPTION)
     grants: list[Grant] = Field(default_factory=list)
 
 

@@ -521,17 +521,15 @@ async def test_rate_limit_per_user() -> None:
     await s.discover(ADMIN, "a@firma.example")
 
 
-async def test_discovery_needs_accounts_manage_on_every_account() -> None:
+async def test_discovery_needs_accounts_connect() -> None:
     s = service(FakeSource(ISPDB))
-    one_account = Access(
-        "usr_1", "one", [Grant(accounts=["acc_a"], allow=["accounts.manage"])]
+    every_account = Access(
+        "usr_1", "one", [Grant(accounts=["*"], allow=["accounts.manage"])]
     )
     with pytest.raises(ForbiddenError, match="discover_account"):
-        await s.discover(one_account, "a@firma.example")
-    everywhere = Access(
-        "usr_2", "all", [Grant(accounts=["*"], allow=["discover_account"])]
-    )
-    await s.discover(everywhere, "a@firma.example")
+        await s.discover(every_account, "a@firma.example")
+    connects = Access("usr_2", "all", [], service=["discover_account"])
+    await s.discover(connects, "a@firma.example")
 
 
 # --- assembly and API ---------------------------------------------------------------
@@ -612,5 +610,5 @@ def test_openapi_names_the_right(api: tuple[Any, TestClient]) -> None:
     _, client = api
     operation = client.get("/openapi.json").json()["paths"]["/v1/discovery"]["post"]
     assert operation["operationId"] == "discover_account"
-    assert operation["x-permission"] == "accounts.manage"
+    assert operation["x-permission"] == "accounts.connect"
     assert "429" in operation["responses"]

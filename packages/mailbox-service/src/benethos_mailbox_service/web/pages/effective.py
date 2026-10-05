@@ -45,7 +45,5 @@ def view_of(rights: EffectiveRights) -> EffectiveView:
                 warnings=account.warnings,
             )
         )
-    groups, operations = permissions.summarize(
-        rights.operations, permissions.NOT_ON_AN_ACCOUNT
-    )
+    groups, operations = permissions.summarize(rights.operations, permissions.SERVICE)
     return EffectiveView(accounts=rows, groups=groups, operations=operations)

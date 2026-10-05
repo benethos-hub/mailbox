@@ -1,8 +1,8 @@
 """What one caller may do: the effective rights of a user.
 
-Built from the user's direct grants and the grants of its roles. Every
-domain service asks an ``Access`` before it acts, so the JSON API and the
-configuration UI share one check.
+Built from the user's direct grants and service rights and those of its
+roles. Every domain service asks an ``Access`` before it acts, so the
+JSON API and the configuration UI share one check.
 """
 
 from __future__ import annotations
@@ -20,8 +20,8 @@ log = logging.getLogger(__name__)
 ALL_ACCOUNTS = "*"
 ANY_RECIPIENT = "*"
 SEND_OPERATIONS = frozenset(permissions.GROUPS["send"])
-# Every right on every account: what the first user gets.
-ADMIN_GRANT = Grant(accounts=[ALL_ACCOUNTS], allow=[permissions.ADMIN])
+# Every right: what the first user gets, in its service rights.
+ADMIN_SERVICE = (permissions.ADMIN,)
 
 
 @dataclass(frozen=True)
@@ -67,6 +67,7 @@ class Access:
         credential_id: str | None = None,
         roles: Iterable[str] = (),
         *,
+        service: Iterable[str] = (),
         credential_name: str | None = None,
         source: str | None = None,
     ) -> None:
@@ -80,7 +81,13 @@ class Access:
         self.source = source
         # The roles whose grants are among ``grants``, to show them.
         self.roles = tuple(roles)
-        self._rules = tuple(_rule(grant) for grant in grants)
+        service = list(service)
+        self._service = _service_operations(service)
+        rules = [_rule(grant) for grant in grants]
+        if permissions.ADMIN in service:
+            # admin is every right: on every account as well.
+            rules.append(_Rule(None, permissions.ON_AN_ACCOUNT, SendLimit(None, None)))
+        self._rules = tuple(rules)
 
     @classmethod
     def for_user(
@@ -93,23 +100,26 @@ class Access:
         source: str | None = None,
     ) -> Access:
         grants = list(user.grants)
+        service = list(user.service)
         for role_id in user.roles:
             role = roles.get(role_id)
             if role is not None:
                 grants.extend(role.grants)
+                service.extend(role.service)
         return cls(
             user.id,
             user.name,
             grants,
             credential_id,
             user.roles,
+            service=service,
             credential_name=credential_name,
             source=source,
         )
 
     @classmethod
     def admin(cls, user_id: str, name: str) -> Access:
-        return cls(user_id, name, [ADMIN_GRANT])
+        return cls(user_id, name, [], service=ADMIN_SERVICE)
 
     def is_admin(self) -> bool:
         """Whether the caller holds ``admin``: the rights only it gives."""
@@ -118,20 +128,11 @@ class Access:
     def allows(self, operation: str, account_id: str | None = None) -> bool:
         if operation in permissions.AUTHENTICATED_OPERATIONS:
             return True
-        for rule in self._rules:
-            if operation not in rule.operations:
-                continue
-            if operation in permissions.ACCOUNT_FREE:
-                return True
-            if operation in permissions.ALL_ACCOUNTS:
-                if rule.accounts is None:
-                    return True
-                continue
-            if account_id is not None and (
-                rule.accounts is None or account_id in rule.accounts
-            ):
-                return True
-        return False
+        if operation in permissions.SERVICE:
+            return operation in self._service
+        return account_id is not None and any(
+            operation in rule.operations for rule in self._on(account_id)
+        )
 
     def filter(self, operation: str, account_ids: Iterable[str]) -> list[str]:
         """The accounts of ``account_ids`` the operation is allowed on, each
@@ -141,17 +142,13 @@ class Access:
     def sees(self, account_id: str) -> bool:
         """Whether the account exists for this caller at all: some right on
         it that is about existing accounts."""
-        return any(
-            rule.operations - permissions.NOT_ON_AN_ACCOUNT
-            for rule in self._on(account_id)
-        )
+        return any(rule.operations for rule in self._on(account_id))
 
     def anywhere(self, operation: str) -> bool:
         """Whether the operation is allowed on at least one account, or
         without one."""
         return self.allows(operation) or any(
             operation in rule.operations
-            and operation not in permissions.ALL_ACCOUNTS
             and (rule.accounts is None or bool(rule.accounts))
             for rule in self._rules
         )
@@ -201,24 +198,22 @@ class Access:
             limit.recipients is None for limit in self.sending_limits(account_id)
         )
 
-    def covers(self, grants: Iterable[Grant]) -> bool:
-        """Whether every right in ``grants`` is one this caller holds itself,
-        sending no wider than its own grants allow. A name that is no right
-        (any more) grants nothing and asks for nothing: new grants are
-        checked for such names before."""
+    def covers(self, grants: Iterable[Grant], service: Iterable[str] = ()) -> bool:
+        """Whether every right in ``grants`` and ``service`` is one this
+        caller holds itself, sending no wider than its own grants allow. A
+        name that is no right (any more) grants nothing and asks for
+        nothing: new rights are checked for such names before."""
+        service = list(service)
+        if permissions.ADMIN in service and not self.is_admin():
+            return False
+        if not _service_operations(service) <= self._service:
+            return False
         for grant in grants:
             rule = _rule(grant)
             for operation in rule.operations:
-                if operation in permissions.ACCOUNT_FREE:
-                    if not self.allows(operation):
-                        return False
-                elif ALL_ACCOUNTS in grant.accounts:
+                if ALL_ACCOUNTS in grant.accounts:
                     if not self._allows_everywhere(operation, rule.limit):
                         return False
-                elif operation in permissions.ALL_ACCOUNTS:
-                    # Such as create_account: a grant on named accounts
-                    # grants it nowhere, so it asks for nothing.
-                    continue
                 elif not all(
                     self._allows_within(operation, a, rule.limit)
                     for a in grant.accounts
@@ -238,8 +233,8 @@ class Access:
         )
 
     def general_operations(self) -> frozenset[str]:
-        """Operations not bound to one existing account."""
-        return frozenset(op for op in permissions.NOT_ON_AN_ACCOUNT if self.allows(op))
+        """Operations of the service: bound to no existing account."""
+        return self._service
 
     def _allows_everywhere(self, operation: str, limit: SendLimit) -> bool:
         return any(
@@ -266,7 +261,17 @@ def _rule(grant: Grant) -> _Rule:
     operations, unknown = permissions.expand_known(grant.allow)
     if unknown:
         log.warning("a stored grant names rights that do not exist: %s", unknown)
+    # A grant gives rights on accounts alone, whatever it names.
+    operations &= permissions.ON_AN_ACCOUNT
     return _Rule(accounts, operations, SendLimit(recipients, grant.max_sends_per_day))
+
+
+def _service_operations(names: Iterable[str]) -> frozenset[str]:
+    """The operations of the service that ``names`` give."""
+    operations, unknown = permissions.expand_known(names)
+    if unknown:
+        log.warning("stored service rights name rights that do not exist: %s", unknown)
+    return operations & permissions.SERVICE
 
 
 def recipient_matches(pattern: str, address: str) -> bool:

@@ -22,6 +22,8 @@ from . import (
     v0011_webhook_attempts,
     v0012_ui_sign_in,
     v0013_webhooks_of_deleted_users,
+    v0014_service_rights,
+    v0015_service_rights_moved,
 )
 from .step import Migration
 
@@ -39,6 +41,8 @@ MIGRATIONS: list[Migration] = [
     v0011_webhook_attempts.MIGRATION,
     v0012_ui_sign_in.MIGRATION,
     v0013_webhooks_of_deleted_users.MIGRATION,
+    v0014_service_rights.MIGRATION,
+    v0015_service_rights_moved.MIGRATION,
 ]
 
 SCHEMA_VERSION = len(MIGRATIONS)

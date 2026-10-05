@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import breadcrumb, card, csrf_field, danger_card, fact, facts with context %}
-{% from "components/grants.html" import grant_editor, grants_of %}
+{% from "components/grants.html" import grant_editor, grants_of, service_editor, service_of %}
 {% block title %}{{ role.id }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}Role {{ role.id }}{% endblock %}
 {% block subheading %}{{ breadcrumb([("Roles", "/ui/roles"), (role.id, None)]) }}{% endblock %}
 {% block content %}
 {% call facts("Role") %}
+  {% call fact("Service rights") %}{{ service_of(role.service) }}{% endcall %}
   {% call fact("Grants") %}{{ grants_of(role.grants, names) }}{% endcall %}
   {% if holders is not none %}
   {% call fact("Users") %}{% for user in holders %}<a class="tag" href="/ui/users/{{ user.id }}">{{ user.name }}</a> {% else %}—{% endfor %}{% endcall %}
@@ -16,6 +17,10 @@
 <form method="post" action="/ui/roles/{{ role.id | segment }}">
   {{ csrf_field() }}
   {% call card("Change", meta="Takes effect at once for every user with this role.") %}
+    <details class="fold"{% if err %} open{% endif %}>
+      <summary>Service rights</summary>
+      {{ service_editor(service, service_names, group_ops) }}
+    </details>
     {{ grant_editor(rows, account_choices, groups, group_ops) }}
     <div class="form-actions"><button class="primary" type="submit">Save</button></div>
   {% endcall %}

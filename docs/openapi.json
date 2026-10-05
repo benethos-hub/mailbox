@@ -353,7 +353,7 @@
             "bearerAuth": []
           }
         ],
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "post": {
         "tags": [
@@ -606,7 +606,7 @@
             }
           }
         },
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "patch": {
         "tags": [
@@ -1132,7 +1132,7 @@
             }
           }
         },
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "post": {
         "tags": [
@@ -1516,7 +1516,7 @@
             "bearerAuth": []
           }
         ],
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "post": {
         "tags": [
@@ -1769,7 +1769,7 @@
             }
           }
         },
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "put": {
         "tags": [
@@ -2260,7 +2260,7 @@
             "bearerAuth": []
           }
         ],
-        "x-permission": "accounts.manage"
+        "x-permission": "accounts.connect"
       }
     },
     "/v1/accounts/{account_id}": {
@@ -2910,7 +2910,7 @@
             "bearerAuth": []
           }
         ],
-        "x-permission": "accounts.manage"
+        "x-permission": "accounts.connect"
       }
     },
     "/v1/oauth/{provider}/start": {
@@ -3048,7 +3048,7 @@
             }
           }
         },
-        "x-permission": "accounts.manage"
+        "x-permission": "accounts.connect"
       }
     },
     "/v1/messages": {
@@ -8228,7 +8228,7 @@
           "allow"
         ],
         "title": "Grant",
-        "description": "Rights on accounts: operation or group names, account ids or ``*``.\n``recipients`` and ``max_sends_per_day`` narrow sending under this grant."
+        "description": "Rights on accounts: operation or group names, account ids or ``*``.\n``recipients`` and ``max_sends_per_day`` narrow sending under this grant.\nRights of the service belong in ``service``, not in a grant."
       },
       "HTTPValidationError": {
         "properties": {
@@ -8365,7 +8365,7 @@
             },
             "type": "array",
             "title": "Operations",
-            "description": "Operations not bound to one existing account"
+            "description": "Operations of the service, bound to no account"
           }
         },
         "type": "object",
@@ -9197,11 +9197,20 @@
             "type": "object",
             "title": "Groups",
             "description": "Group name to the operations it allows"
+          },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "The groups of the service. They and `admin` are named in a user's or a role's `service`, the other groups in a grant's `allow`."
           }
         },
         "type": "object",
         "required": [
-          "groups"
+          "groups",
+          "service"
         ],
         "title": "PermissionCatalogue"
       },
@@ -9249,6 +9258,14 @@
             "type": "string",
             "title": "Id"
           },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+          },
           "grants": {
             "items": {
               "$ref": "#/components/schemas/Grant"
@@ -9262,13 +9279,21 @@
           "id"
         ],
         "title": "Role",
-        "description": "A named, reusable set of grants."
+        "description": "A named, reusable set of grants and service rights."
       },
       "RoleCreate": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
+          },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -9286,6 +9311,14 @@
       },
       "RoleReplace": {
         "properties": {
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+          },
           "grants": {
             "items": {
               "$ref": "#/components/schemas/Grant"
@@ -9688,6 +9721,14 @@
             "type": "array",
             "title": "Roles"
           },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+          },
           "grants": {
             "items": {
               "$ref": "#/components/schemas/Grant"
@@ -9727,6 +9768,14 @@
             },
             "type": "array",
             "title": "Roles"
+          },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -9774,6 +9823,21 @@
               }
             ],
             "title": "Roles"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
           },
           "grants": {
             "anyOf": [

@@ -210,16 +210,52 @@ def test_no_escalation_through_the_form(
         app_client,
         *browser_user(
             services,
-            Grant(accounts=[account_id], allow=["users.manage", "mail.read"]),
+            Grant(accounts=[account_id], allow=["mail.read"]),
+            service=["users.manage"],
         ),
     )
     refused = post(
-        app_client,
-        "/ui/users",
-        {"name": "wider", "grants": "1", "g0_accounts": "*", "g0_allow": "admin"},
+        app_client, "/ui/users", {"name": "wider", "grants": "0", "service": "admin"}
     )
     assert "cannot grant or manage rights the caller lacks" in refused.text
     assert "wider" not in [u.name for u in services.users.list_users(ADMIN)]
+
+
+def test_the_editor_gives_rights_of_the_service(
+    ui: TestClient, services: Services
+) -> None:
+    made = post(
+        ui,
+        "/ui/users",
+        {
+            "name": "operator",
+            "service": ["accounts.connect", "webhooks.manage"],
+            "service_more": "list_users",
+            "grants": "1",
+            "g0_accounts": "*",
+            "g0_allow": "accounts.manage",
+        },
+    )
+    assert "operator created" in made.text
+    user = services.auth.user_named("operator")
+    assert user is not None
+    assert user.service == ["accounts.connect", "webhooks.manage", "list_users"]
+    page = ui.get(f"/ui/users/{user.id}").text
+    assert 'name="service" value="webhooks.manage" checked' in page
+    assert 'name="service_more" value="list_users"' in page
+
+
+def test_a_right_of_the_service_in_a_grant_is_refused(
+    ui: TestClient, services: Services
+) -> None:
+    refused = post(
+        ui,
+        "/ui/users",
+        {"name": "x", "grants": "1", "g0_accounts": "*", "g0_more": "users.manage"},
+    )
+    assert refused.status_code == 400
+    assert "users.manage is a right of the service" in refused.text
+    assert services.auth.user_named("x") is None
 
 
 # --- tokens ---------------------------------------------------------------------------
@@ -318,7 +354,7 @@ def test_a_user_keeps_roles_the_editor_cannot_list(
         app_client,
         *browser_user(
             services,
-            Grant(accounts=["*"], allow=["list_users", "get_user", "update_user"]),
+            service=["list_users", "get_user", "update_user"],
         ),
     )
     page = app_client.get(f"/ui/users/{target.id}").text
@@ -386,9 +422,7 @@ def test_rights_of_lists_only_accounts_the_caller_sees(
     user = services.users.create_user(
         ADMIN, "reader", [], [Grant(accounts=["*"], allow=["mail.read"])]
     )
-    manager = Access(
-        "usr_m", "manager", [Grant(accounts=["*"], allow=["users.manage"])]
-    )
+    manager = Access("usr_m", "manager", [], service=["users.manage"])
     assert services.users.rights_of(manager, user.id).accounts == []
     assert len(services.users.rights_of(ADMIN, user.id).accounts) == 1
 
@@ -443,7 +477,10 @@ def test_the_editor_shows_what_the_mcp_server_uses(ui: TestClient) -> None:
     used, rest = form.split("Not used by the MCP server", 1)
     assert "Used by the MCP server" in used
     assert 'value="send"' in used.split("Used by the MCP server", 1)[1]
-    assert 'value="mail.delete"' in rest and 'value="admin"' in rest
+    assert 'value="mail.delete"' in rest and 'value="admin"' not in rest
+    service = used.split("Used by the MCP server", 1)[0]
+    assert 'name="service" value="admin"' in service
+    assert 'name="service" value="accounts.connect"' in service
 
 
 def test_a_new_user_gets_a_one_time_password_shown_once(
@@ -629,3 +666,17 @@ def test_a_page_looks_its_session_up_once(
     monkeypatch.setattr(services.auth, "session_access", counted)
     ui.get(f"/ui/users/{user.id}")
     assert len(looked_up) == 1
+
+
+def test_users_read_opens_the_pages_and_changes_nothing(
+    app_client: TestClient, services: Services
+) -> None:
+    target = services.users.create_user(ADMIN, "target", [], [])
+    sign_in(app_client, *browser_user(services, service=["users.read"]))
+    home = app_client.get("/ui").text
+    assert 'href="/ui/users"' in home and 'href="/ui/roles"' in home
+    page = app_client.get(f"/ui/users/{target.id}").text
+    assert "Effective rights" in page and "Tokens" in page
+    assert 'name="service"' not in page and "New user" not in page
+    refused = post(app_client, f"/ui/users/{target.id}", {"name": "x", "grants": "0"})
+    assert "missing right: update_user" in refused.text

@@ -1,7 +1,12 @@
-{# Grants: one line to read, and the editor inside a form (see grants.py).
+{# Rights: the service rights and the grants, one line each to read, and
+   their editor inside a form (see grants.py).
    Roles: as tags, and as checkboxes to give. #}
 
 {% macro grants_of(grants, names) %}{% for grant in grants %}{{ grant_summary(grant, names) }}{% else %}—{% endfor %}{% endmacro %}
+
+{% macro service_of(service) %}{% for right in service %}<span class="tag accent">{{ right }}</span> {% else %}—{% endfor %}{% endmacro %}
+
+{% macro rights_of(service, grants, names) %}{% if service %}<div class="grant"><span class="muted">of the service</span> {{ service_of(service) }}</div>{% endif %}{% if grants or not service %}{{ grants_of(grants, names) }}{% endif %}{% endmacro %}
 
 {% macro role_tags(roles) %}{% for role in roles %}<a class="tag" href="/ui/roles/{{ role | segment }}">{{ role }}</a> {% else %}—{% endfor %}{% endmacro %}
 
@@ -22,6 +27,25 @@
   {% for right in grant.allow %}<span class="tag accent">{{ right }}</span> {% endfor %}
   {% if grant.recipients is not none %}<span class="muted">sending to</span> {{ grant.recipients | join(", ") }}{% endif %}
   {% if grant.max_sends_per_day is not none %}<span class="muted">at most</span> {{ grant.max_sends_per_day }} <span class="muted">mails a day</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro service_editor(service, service_names, group_ops) %}
+<div class="field">
+  <span class="label">Rights of the service</span>
+  <div class="checks">
+    {% for name in service_names %}
+    <label class="check" title="{{ group_ops[name] }}"><input type="checkbox" name="service" value="{{ name }}"{% if name in service.groups %} checked{% endif %} /> {{ name }}</label>
+    {% endfor %}
+  </div>
+  <span class="hint">Bound to no account: connecting accounts, users and roles, webhooks. admin is every right.</span>
+</div>
+<div class="form-grid">
+  <div class="field">
+    <label for="f-service_more">Single rights</label>
+    <input id="f-service_more" name="service_more" value="{{ service.more }}" placeholder="e.g. list_webhooks" />
+    <span class="hint">Operation names of the service, beyond the groups.</span>
+  </div>
 </div>
 {% endmacro %}
 

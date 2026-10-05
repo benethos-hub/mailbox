@@ -30,7 +30,8 @@ def main() -> int:
     token = os.environ.get("MAILBOX_SERVICE_TOKEN")
     if not token:
         sys.exit(
-            "set MAILBOX_SERVICE_TOKEN to a token with accounts.manage and mail.read"
+            "set MAILBOX_SERVICE_TOKEN to a token with accounts.connect, "
+            "and accounts.manage and mail.read on every account"
         )
     env = read_env()
     run = Run()

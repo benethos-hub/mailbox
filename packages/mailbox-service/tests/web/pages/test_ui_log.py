@@ -63,9 +63,7 @@ def test_the_admin_reads_the_log(logged: tuple[TestClient, Services]) -> None:
 
 def test_the_log_is_for_the_admin_alone(logged: tuple[TestClient, Services]) -> None:
     client, services = logged
-    sign_in(
-        client, *browser_user(services, Grant(accounts=["*"], allow=["users.manage"]))
-    )
+    sign_in(client, *browser_user(services, service=["users.manage"]))
     assert 'href="/ui/log"' not in client.get("/ui").text
     assert client.get("/ui/log").status_code == 403
 

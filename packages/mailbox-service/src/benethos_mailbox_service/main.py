@@ -183,16 +183,6 @@ def build_services(
         sync = SyncService(
             adapters, repos.index, feed=changes, clock=clock, activity=activity
         )
-        accounts = AccountService(
-            repos.accounts,
-            vault,
-            adapters,
-            on_delete=sync.forget_account,
-            check_host=fetcher.checked_address,
-            idempotency=repos.idempotency,
-            changes=changes,
-            activity=activity,
-        )
         lockout = timedelta(minutes=settings.sign_in_lockout_minutes)
         auth = AuthService(
             repos.users,
@@ -216,6 +206,26 @@ def build_services(
             ),
             activity=activity,
         )
+        users = UserService(
+            repos.users,
+            repos.roles,
+            repos.tokens,
+            adapters,
+            auth,
+            repos.webhooks,
+            activity=activity,
+        )
+        accounts = AccountService(
+            repos.accounts,
+            vault,
+            adapters,
+            on_delete=sync.forget_account,
+            on_connect=users.connected,
+            check_host=fetcher.checked_address,
+            idempotency=repos.idempotency,
+            changes=changes,
+            activity=activity,
+        )
         worker = (
             SyncWorker(
                 adapters,
@@ -236,15 +246,7 @@ def build_services(
             accounts=accounts,
             adapters=adapters,
             auth=auth,
-            users=UserService(
-                repos.users,
-                repos.roles,
-                repos.tokens,
-                adapters,
-                auth,
-                repos.webhooks,
-                activity=activity,
-            ),
+            users=users,
             mailbox=MailboxService(
                 adapters,
                 sync,

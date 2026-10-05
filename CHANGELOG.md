@@ -6,8 +6,30 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `service` on users and roles, in `POST`, `PATCH` and `PUT`: rights of
+  the service, bound to no account. `accounts.connect`, `users.read`,
+  `users.manage`, `webhooks.manage` and `admin` belong there, or single
+  operations of them. `/v1/permissions` lists these groups as `service`.
+- `accounts.connect`: `discover_account`, `start_oauth` and
+  `create_account`, which were part of `accounts.manage`.
+- `users.read`: `list_users`, `get_user`, `list_tokens`, `list_roles` and
+  `get_role`, to see users and roles without changing them. `users.manage`
+  keeps every right it had.
+- Whoever connects an account gets `accounts.manage` on it, unless it
+  holds that there already.
+
 ### Changed
 
+- A right of the service or `admin` in a grant's `allow` answers `400`,
+  and a right on accounts in `service` as well. Stored rights move at the
+  first start: what a grant named of the service goes to `service`, a
+  grant with `accounts.manage` on every account gets `accounts.connect`.
+  Nobody loses a right. The log names each user and role whose rights
+  moved.
+- `accounts.manage` is about existing accounts alone: `update_account`,
+  `delete_account` and `verify_account`.
 - A change that would leave no enabled administrator who can sign in to
   the UI answers `409`: disabling, deleting, taking `admin` or the UI
   sign-in away, directly or through a role. Where there is none to begin

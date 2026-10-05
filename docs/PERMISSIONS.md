@@ -44,9 +44,10 @@ decides is marked as decided, everything else is the proposal.
 | **Right** | the name of one operation, e.g. `send_message` | the catalogue, `/v1/permissions` |
 | **Group** | a named set of rights, e.g. `mail.read` | the catalogue |
 | **Grant** | rights on accounts, with constraints: `{accounts, allow, recipients, max_sends_per_day}` | part of a user or a role |
-| **Role** | a named, reusable set of grants | `/v1/roles`, UI Roles |
+| **Service rights** | rights of the service, bound to no account: `{service: [...]}` | part of a user or a role |
+| **Role** | a named, reusable set of grants and service rights | `/v1/roles`, UI Roles |
 | **Constraint** | a narrowing of a grant that changes no right: which recipients, how many sends a day | part of the grant |
-| **Effective rights** | the union of a user's grants and those of its roles | `/v1/me`, the user's page |
+| **Effective rights** | the union of a user's rights and those of its roles | `/v1/me`, the user's page |
 
 ## 3. The catalogue
 
@@ -61,30 +62,31 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
 | `send` | `send_message`, `send_draft` | an account |
 | `audit` | `list_sends`, `list_all_sends` | an account |
-| `accounts.manage` | `update_account`, `delete_account`, `verify_account`, and `discover_account`, `create_account`, `start_oauth` | an account, the last three every account |
+| `accounts.manage` | `update_account`, `delete_account`, `verify_account` | an account |
+| `accounts.connect` | `discover_account`, `start_oauth`, `create_account` | the service |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |
-| `users.manage` | users, tokens, passwords, roles: fourteen rights | the service |
-| `admin` | everything, and `show_recovery_key` and `read_service_log`, which no grant names | the service |
+| `users.read` | `list_users`, `get_user`, `list_tokens`, `list_roles`, `get_role` | the service |
+| `users.manage` | `users.read` and changes to users, tokens, passwords, roles: fourteen rights | the service |
+| `admin` | everything, and `show_recovery_key` and `read_service_log`, which nothing else gives | the service |
 
-Three kinds of right hide in this table, and the model treats them
-differently without saying so in the grant:
+Two kinds of right, kept in two lists of a user or a role (8.1):
 
-- **Account-bound rights** act on one account. A grant names the
-  accounts, `*` for every account, also those added later.
-- **Service rights** act on the service: `users.manage`,
-  `webhooks.manage`, `admin`. A grant that names them ignores its
-  accounts list.
-- **Rights on accounts that do not exist yet**: `discover_account`,
-  `create_account`, `start_oauth`. They need a grant with `*`. A grant
-  naming `accounts.manage` on one account gives `update_account` and
-  `verify_account` there, and nothing of connecting.
+- **Rights on accounts** act on one account. A grant names them in
+  `allow`, and names the accounts, `*` for every account, also those
+  added later.
+- **Rights of the service** act on no account: `accounts.connect`,
+  `users.read`, `users.manage`, `webhooks.manage` and `admin`, or single
+  operations of them. They are named in `service`. A name in the wrong
+  list answers `400`.
+- Whoever connects an account gets `accounts.manage` on it, unless it
+  holds that there already.
 
 Two operations are open to every user: `get_me` and `list_permissions`.
 
 ## 4. How a right is resolved
 
-- **Effective rights** are the union of the user's grants and the grants
-  of its roles. A role is a name for grants, nothing more. A right
+- **Effective rights** are the union of the user's grants and service
+  rights and those of its roles. A role is a name for grants, nothing more. A right
   unknown to the catalogue, for example one renamed since the grant was
   written, grants nothing and is logged. It never locks anyone out.
 - **Per request**: credential, then user, then the route's right and the
@@ -143,7 +145,8 @@ from becoming a way up:
 
 - **API**: `x-permission` on every operation, `/v1/me`,
   `/v1/permissions`, the user and role resources, `403` naming the right.
-- **UI**: the grant editor with a row per grant, accounts as tick boxes,
+- **UI**: the editor with the service rights as tick boxes and single
+  rights in a text field, and a row per grant: accounts as tick boxes,
   groups as tick boxes with their rights as a hint, single rights in a
   text field, recipients and the daily limit. The user's page shows the
   effective rights per account, the sending limits and the warning

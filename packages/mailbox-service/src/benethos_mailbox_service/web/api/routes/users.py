@@ -33,7 +33,8 @@ async def get_me(caller: Caller, users: Users) -> Me:
 @router.get("/permissions")
 async def list_permissions(caller: Caller) -> PermissionCatalogue:
     return PermissionCatalogue(
-        groups={group: list(ops) for group, ops in permissions.GROUPS.items()}
+        groups={group: list(ops) for group, ops in permissions.GROUPS.items()},
+        service=list(permissions.SERVICE_GROUPS),
     )
 
 
@@ -45,7 +46,12 @@ async def list_users(caller: Caller, users: Users) -> list[User]:
 @router.post("/users", status_code=status.HTTP_201_CREATED)
 async def create_user(data: UserCreate, caller: Caller, users: Users) -> User:
     return users.create_user(
-        caller, data.name, data.roles, data.grants, ui_sign_in=data.ui_sign_in
+        caller,
+        data.name,
+        data.roles,
+        data.grants,
+        service=data.service,
+        ui_sign_in=data.ui_sign_in,
     )
 
 
@@ -63,6 +69,7 @@ async def update_user(
         user_id,
         name=data.name,
         roles=data.roles,
+        service=data.service,
         grants=data.grants,
         disabled=data.disabled,
         ui_sign_in=data.ui_sign_in,
@@ -116,7 +123,7 @@ async def list_roles(caller: Caller, users: Users) -> list[Role]:
 
 @router.post("/roles", status_code=status.HTTP_201_CREATED)
 async def create_role(data: RoleCreate, caller: Caller, users: Users) -> Role:
-    return users.create_role(caller, data.id, data.grants)
+    return users.create_role(caller, data.id, data.grants, data.service)
 
 
 @router.get("/roles/{role_id}")
@@ -128,7 +135,7 @@ async def get_role(role_id: str, caller: Caller, users: Users) -> Role:
 async def replace_role(
     role_id: str, data: RoleReplace, caller: Caller, users: Users
 ) -> Role:
-    return users.replace_role(caller, role_id, data.grants)
+    return users.replace_role(caller, role_id, data.grants, data.service)
 
 
 @router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)

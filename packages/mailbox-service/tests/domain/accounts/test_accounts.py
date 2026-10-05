@@ -3,6 +3,11 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.main import Services
+
+from ...conftest import ADMIN, bearer_for
+
 
 def test_create_list_get_delete(client: TestClient) -> None:
     created = client.post(
@@ -88,3 +93,42 @@ def test_a_422_does_not_echo_the_request(client: TestClient) -> None:
     assert set(error) == {"type", "loc", "msg"}
     assert error["loc"] == ["body", "email"]
     assert error["type"] == "missing"
+
+
+# --- whoever connects an account (PERMISSIONS.md 8.1) -----------------------------
+
+
+def test_the_connector_gets_accounts_manage_on_what_it_connected(
+    app_client: TestClient, services: Services
+) -> None:
+    """It can verify and remove what it connected, and read nothing."""
+    connector = TestClient(
+        app_client.app, headers=bearer_for(services, service=["accounts.connect"])
+    )
+    created = connector.post(
+        "/v1/accounts", json={"provider": "memory", "email": "new@example.org"}
+    )
+    assert created.status_code == 201
+    account_id = created.json()["id"]
+    [account] = connector.get("/v1/me").json()["accounts"]
+    assert account["id"] == account_id
+    assert account["operations"] == [
+        "delete_account",
+        "update_account",
+        "verify_account",
+    ]
+    assert connector.get(f"/v1/accounts/{account_id}/messages").status_code == 403
+    assert connector.delete(f"/v1/accounts/{account_id}").status_code == 204
+
+
+def test_a_connector_that_manages_every_account_gets_no_grant(
+    app_client: TestClient, services: Services
+) -> None:
+    every = Grant(accounts=["*"], allow=["accounts.manage"])
+    headers = bearer_for(services, every, service=["accounts.connect"])
+    connector = TestClient(app_client.app, headers=headers)
+    connector.post(
+        "/v1/accounts", json={"provider": "memory", "email": "n@example.org"}
+    )
+    me = connector.get("/v1/me").json()
+    assert services.users.get_user(ADMIN, me["user_id"]).grants == [every]

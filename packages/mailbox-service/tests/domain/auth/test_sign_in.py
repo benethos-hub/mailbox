@@ -152,7 +152,8 @@ async def test_setting_a_password_needs_the_right_and_the_rights(
         ADMIN,
         "Helper",
         [],
-        [Grant(accounts=["acc_1"], allow=["users.manage"])],
+        [Grant(accounts=["acc_1"], allow=["mail.read"])],
+        service=["users.manage"],
         ui_sign_in=True,
     )
     await services.users.set_password(ADMIN, helper.id, OTHER)
@@ -295,7 +296,8 @@ async def test_nobody_takes_its_own_sign_in_or_disables_itself(
         ADMIN,
         "Helper",
         [],
-        [Grant(accounts=["*"], allow=["users.manage"])],
+        [],
+        service=["users.manage"],
         ui_sign_in=True,
     )
     await services.users.set_password(ADMIN, helper.id, OTHER)

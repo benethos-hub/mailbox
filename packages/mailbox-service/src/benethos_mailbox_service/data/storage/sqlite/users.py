@@ -18,15 +18,17 @@ class SqliteUserRepository(SqliteRows[User]):
 
     def save(self, user: User) -> None:
         self._db.execute(
-            "INSERT INTO users (id, name, roles, grants, disabled, ui_sign_in)"
-            " VALUES (?, ?, ?, ?, ?, ?)"
+            "INSERT INTO users (id, name, roles, service, grants, disabled,"
+            " ui_sign_in) VALUES (?, ?, ?, ?, ?, ?, ?)"
             " ON CONFLICT(id) DO UPDATE SET name = excluded.name,"
-            " roles = excluded.roles, grants = excluded.grants,"
-            " disabled = excluded.disabled, ui_sign_in = excluded.ui_sign_in",
+            " roles = excluded.roles, service = excluded.service,"
+            " grants = excluded.grants, disabled = excluded.disabled,"
+            " ui_sign_in = excluded.ui_sign_in",
             (
                 user.id,
                 user.name,
                 json.dumps(user.roles),
+                json.dumps(user.service),
                 _grants_json(user.grants),
                 int(user.disabled),
                 int(user.ui_sign_in),
@@ -42,6 +44,7 @@ def _user(row: sqlite3.Row) -> User:
         id=row["id"],
         name=row["name"],
         roles=json.loads(row["roles"]),
+        service=json.loads(row["service"]),
         grants=_grants(row["grants"]),
         disabled=bool(row["disabled"]),
         ui_sign_in=bool(row["ui_sign_in"]),
@@ -54,14 +57,19 @@ class SqliteRoleRepository(SqliteRows[Role]):
 
     def save(self, role: Role) -> None:
         self._db.execute(
-            "INSERT INTO roles (id, grants) VALUES (?, ?)"
-            " ON CONFLICT(id) DO UPDATE SET grants = excluded.grants",
-            (role.id, _grants_json(role.grants)),
+            "INSERT INTO roles (id, service, grants) VALUES (?, ?, ?)"
+            " ON CONFLICT(id) DO UPDATE SET service = excluded.service,"
+            " grants = excluded.grants",
+            (role.id, json.dumps(role.service), _grants_json(role.grants)),
         )
 
 
 def _role(row: sqlite3.Row) -> Role:
-    return Role(id=row["id"], grants=_grants(row["grants"]))
+    return Role(
+        id=row["id"],
+        service=json.loads(row["service"]),
+        grants=_grants(row["grants"]),
+    )
 
 
 class SqliteTokenRepository:

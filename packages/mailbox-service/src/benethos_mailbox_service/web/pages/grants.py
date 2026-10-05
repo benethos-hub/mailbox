@@ -1,11 +1,13 @@
-"""Grants in a form: the rows of the grant editor, read back into grants.
+"""Rights in a form: the service rights and the rows of the grant editor,
+read back into a list of names and into grants.
 
-A row ``i`` carries ``g<i>_accounts`` (account ids or ``*``),
-``g<i>_allow`` (groups or ``admin``), ``g<i>_more`` (further operation
-names), ``g<i>_recipients`` (one pattern per line), ``g<i>_max`` (sends per
-day) and ``g<i>_remove``. ``grants`` says how many rows the form has. A row
-with neither accounts nor rights is the empty one for adding and is left
-out.
+The service rights are ``service`` (groups or ``admin``) and
+``service_more`` (further operation names). A grant row ``i`` carries
+``g<i>_accounts`` (account ids or ``*``), ``g<i>_allow`` (groups),
+``g<i>_more`` (further operation names), ``g<i>_recipients`` (one pattern
+per line), ``g<i>_max`` (sends per day) and ``g<i>_remove``. ``grants``
+says how many rows the form has. A row with neither accounts nor rights
+is the empty one for adding and is left out.
 """
 
 from __future__ import annotations
@@ -20,7 +22,11 @@ from ...data.models import Account, Grant
 from ...domain.rights import permissions
 from .forms import FormError, first_problem
 
-GROUP_NAMES = (permissions.ADMIN, *permissions.GROUPS)
+# The groups a grant names, and the rights of the service.
+GROUP_NAMES = tuple(
+    name for name in permissions.GROUPS if name not in permissions.SERVICE_GROUPS
+)
+SERVICE_NAMES = (permissions.ADMIN, *permissions.SERVICE_GROUPS)
 
 # The groups the MCP server works with, and the tools each opens there, as
 # the tool table of the MCP server's README documents them. A test compares
@@ -50,7 +56,7 @@ GROUP_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 def group_hint(name: str) -> str:
     """The tooltip of a group: its operations, and its MCP tools if any."""
-    hint = ", ".join(permissions.GROUPS.get(name, ("every right",)))
+    hint = ", ".join(permissions.GROUPS.get(name, ("every right on every account",)))
     if name in MCP_TOOLS:
         hint += ". MCP tools: " + ", ".join(MCP_TOOLS[name])
     elif name == "accounts.read":
@@ -82,6 +88,35 @@ class GrantRow:
 
 
 EMPTY_ROW = GrantRow([], [], "", "", "")
+
+
+@dataclass(frozen=True)
+class ServiceRow:
+    """The service rights as the editor shows them: groups to tick, the
+    rest as single operations."""
+
+    groups: list[str]
+    more: str
+
+
+def service_of(names: list[str]) -> ServiceRow:
+    """The editor's service rights for ``names``."""
+    return ServiceRow(
+        groups=[name for name in names if name in SERVICE_NAMES],
+        more=" ".join(name for name in names if name not in SERVICE_NAMES),
+    )
+
+
+def read_service(form: Any) -> list[str]:
+    """The service rights a submitted editor holds."""
+    names = [str(v) for v in form.getlist("service") if v]
+    names += [v for v in _SPLIT.split(str(form.get("service_more") or "")) if v]
+    return list(dict.fromkeys(names))
+
+
+def typed_service(form: Any) -> ServiceRow:
+    """The service rights as they were submitted, unchecked."""
+    return service_of(read_service(form))
 
 
 def rows_of(grants: list[Grant]) -> list[GrantRow]:

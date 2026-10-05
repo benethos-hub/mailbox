@@ -69,7 +69,7 @@ The sidebar keeps its three groups, renamed by what a person looks for:
 |---|---|---|
 | (top) | Overview, Mail | everyone |
 | Mailboxes | Accounts, Sends, Webhooks | with a right on at least one account, Webhooks with `webhooks.manage` |
-| Service | Users, Roles, Status, Log, Recovery key | with `users.manage`, Status with `accounts.read`, Log and Recovery key for the admin |
+| Service | Users, Roles, Status, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Log and Recovery key for the admin |
 
 The foot of the sidebar names the signed-in user and links to their own
 page, Password and Sign out. Changes, if built, is a tab of the account
@@ -297,8 +297,7 @@ account's last sync and last error in memory, so they are empty after a
 restart until the first pass.
 
 The recovery key page shows the key once after **Show**, with the
-warning of the CLI, and only to a user with the `admin` grant on every
-account. **Show** asks for the user's password again. The key is never
+warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again. The key is never
 stored or logged, the log only says that it was shown and to whom.
 
 The log page lists the newest lines of the service log, newest first,

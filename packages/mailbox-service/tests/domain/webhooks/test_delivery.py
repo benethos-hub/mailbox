@@ -135,7 +135,7 @@ async def test_the_api_shows_a_webhook_with_its_posts(
     assert post["error"] == "the receiver answered 500"
     other = TestClient(
         client.app,
-        headers=bearer_for(services, Grant(accounts=["*"], allow=["webhooks.manage"])),
+        headers=bearer_for(services, service=["webhooks.manage"]),
     )
     assert other.get(f"/v1/webhooks/{created['id']}").status_code == 404
 
@@ -175,7 +175,8 @@ async def test_only_accounts_the_creator_may_read(
         client.app,
         headers=bearer_for(
             services,
-            Grant(accounts=[account_id], allow=["mail.read", "webhooks.manage"]),
+            Grant(accounts=[account_id], allow=["mail.read"]),
+            service=["webhooks.manage"],
         ),
     )
     hook(limited)
@@ -189,7 +190,9 @@ async def test_a_creator_that_is_gone_hears_nothing(
     client: TestClient, services: Services, account_id: str, receiver: Receiver
 ) -> None:
     headers = bearer_for(
-        services, Grant(accounts=["*"], allow=["mail.read", "webhooks.manage"])
+        services,
+        Grant(accounts=["*"], allow=["mail.read"]),
+        service=["webhooks.manage"],
     )
     limited = TestClient(client.app, headers=headers)
     hook(limited)
