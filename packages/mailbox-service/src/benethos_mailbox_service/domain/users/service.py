@@ -260,6 +260,7 @@ class UserService:
         # Only grants given now must name known rights. A stored one may
         # name a right a release renamed, and grants nothing by it.
         self._check_grantable(access, updated.roles, updated.grants, grants or [])
+        self._require_an_administrator(replaced=updated)
         self._users.save(updated)
         changed = tuple(
             key for key in changes if getattr(user, key) != getattr(updated, key)
@@ -277,6 +278,7 @@ class UserService:
         user = self._managed(access, "delete_user", user_id)
         if user_id == access.user_id:
             raise ConflictError("a user cannot delete itself")
+        self._require_an_administrator(deleted=user_id)
         self._tokens.delete_for_user(user_id)
         self._auth.passwords.delete(user_id)
         # Its webhooks would post by nobody's rights, and nobody could
@@ -424,6 +426,7 @@ class UserService:
         self._require_covers(access, self._roles.get(role_id).grants)
         for holder in self._holders(role_id):
             self._require_covers_user(access, holder)
+        self._require_an_administrator(role=Role(id=role_id, grants=grants))
         role = self._save_role(access, Role(id=role_id, grants=grants))
         self._activity.record(
             said.RoleReplaced(by=Actor.of(access), role_id=role.id, grants=len(grants))
@@ -469,6 +472,32 @@ class UserService:
         _validate(grants if new is None else new)
         self._require_covers(access, [*grants, *self._role_grants(role_ids)])
 
+    def _require_an_administrator(
+        self,
+        *,
+        replaced: User | None = None,
+        deleted: str | None = None,
+        role: Role | None = None,
+    ) -> None:
+        """Refuse a change that would leave no enabled administrator who
+        can sign in to the UI, where there was one (PERMISSIONS.md 8.3).
+        The way back would be the host's ``users set-password`` alone."""
+        users = self._users.list()
+        roles = {r.id: r for r in self._roles.list()}
+        if not _administrators(users, roles):
+            return
+        after = [
+            replaced if replaced is not None and u.id == replaced.id else u
+            for u in users
+            if u.id != deleted
+        ]
+        if role is not None:
+            roles = {**roles, role.id: role}
+        if not _administrators(after, roles):
+            raise ConflictError(
+                "no enabled administrator who can sign in to the UI would be left"
+            )
+
     def _role_grants(self, role_ids: Iterable[str]) -> list[Grant]:
         grants: list[Grant] = []
         for role_id in role_ids:
@@ -494,6 +523,17 @@ class UserService:
     def _require_covers(access: Access, grants: list[Grant]) -> None:
         if not access.covers(grants):
             raise ForbiddenError("cannot grant or manage rights the caller lacks")
+
+
+def _administrators(users: Iterable[User], roles: dict[str, Role]) -> list[str]:
+    """The enabled users with ``admin`` who may sign in to the UI."""
+    return [
+        user.id
+        for user in users
+        if not user.disabled
+        and user.ui_sign_in
+        and Access.for_user(user, roles).is_admin()
+    ]
 
 
 def _self_or_get_user(access: Access, user_id: str) -> None:

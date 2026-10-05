@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- A change that would leave no enabled administrator who can sign in to
+  the UI answers `409`: disabling, deleting, taking `admin` or the UI
+  sign-in away, directly or through a role. Where there is none to begin
+  with, nothing is held back. `users set-password` on the host stays the
+  way back.
+
 ## [0.2.0] - 2026-10-03
 
 The status is alpha: usable with real accounts for testing. The API and

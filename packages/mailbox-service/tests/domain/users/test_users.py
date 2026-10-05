@@ -5,10 +5,10 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.domain.rights import permissions
-from benethos_mailbox_service.domain.rights.access import Access
+from benethos_mailbox_service.domain.rights.access import ADMIN_GRANT, Access
 from benethos_mailbox_service.main import Services
 
-from ...conftest import bearer_for, create_account
+from ...conftest import ADMIN, bearer_for, browser_user, create_account
 
 READ_A = {"accounts": ["acc_a"], "allow": ["mail.read"]}
 # As the API answers it: constraints not set are null.
@@ -418,3 +418,73 @@ def test_nobody_disables_itself_or_takes_its_own_ui_sign_in(
         refused = client.patch(f"/v1/users/{me['user_id']}", json=change)
         assert refused.status_code == 409, change
     assert client.get("/v1/me").status_code == 200
+
+
+# --- the last administrator stays (PERMISSIONS.md 8.3) ----------------------------
+
+
+def _ui_admin(services: Services, *, role: str | None = None) -> str:
+    """A user who signs in to the UI with ``admin``, directly or by a role."""
+    if role is None:
+        name, _ = browser_user(services, ADMIN_GRANT, name="boss")
+    else:
+        name, _ = browser_user(services, roles=[role], name="boss")
+    found = services.auth.user_named(name)
+    assert found is not None
+    return found.id
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"disabled": True},
+        {"ui_sign_in": False},
+        {"grants": [{"accounts": ["*"], "allow": ["mail.read"]}]},
+    ],
+)
+def test_the_last_ui_administrator_cannot_be_changed_away(
+    client: TestClient, services: Services, change: dict[str, object]
+) -> None:
+    boss = _ui_admin(services)
+    refused = client.patch(f"/v1/users/{boss}", json=change)
+    assert refused.status_code == 409, change
+    assert "administrator" in refused.json()["error"]["message"]
+
+
+def test_the_last_ui_administrator_cannot_be_deleted(
+    client: TestClient, services: Services
+) -> None:
+    boss = _ui_admin(services)
+    assert client.delete(f"/v1/users/{boss}").status_code == 409
+    assert services.users.get_user(ADMIN, boss).id == boss
+
+
+def test_a_second_ui_administrator_may_go(
+    client: TestClient, services: Services
+) -> None:
+    boss = _ui_admin(services)
+    browser_user(services, ADMIN_GRANT, name="deputy")
+    assert client.patch(f"/v1/users/{boss}", json={"disabled": True}).status_code == 200
+
+
+def test_a_role_cannot_take_admin_from_the_last_ui_administrator(
+    client: TestClient, services: Services
+) -> None:
+    services.users.create_role(ADMIN, "admins", [ADMIN_GRANT])
+    _ui_admin(services, role="admins")
+    refused = client.put(
+        "/v1/roles/admins",
+        json={"grants": [{"accounts": ["*"], "allow": ["mail.read"]}]},
+    )
+    assert refused.status_code == 409
+
+
+def test_without_a_ui_administrator_nothing_is_held_back(
+    client: TestClient, services: Services
+) -> None:
+    """An API admin alone is no administrator of the UI: no change waits
+    for one."""
+    name, _ = browser_user(services, Grant(accounts=["*"], allow=["mail.read"]))
+    user = services.auth.user_named(name)
+    assert user is not None
+    assert client.delete(f"/v1/users/{user.id}").status_code == 204

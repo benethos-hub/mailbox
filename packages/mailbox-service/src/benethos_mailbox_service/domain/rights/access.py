@@ -111,6 +111,10 @@ class Access:
     def admin(cls, user_id: str, name: str) -> Access:
         return cls(user_id, name, [ADMIN_GRANT])
 
+    def is_admin(self) -> bool:
+        """Whether the caller holds ``admin``: the rights only it gives."""
+        return all(self.allows(op) for op in permissions.ADMIN_ONLY)
+
     def allows(self, operation: str, account_id: str | None = None) -> bool:
         if operation in permissions.AUTHENTICATED_OPERATIONS:
             return True
