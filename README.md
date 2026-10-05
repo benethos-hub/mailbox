@@ -1,4 +1,4 @@
-# Mailbox Service
+# Mailbox
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![PyPI mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
@@ -10,8 +10,8 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
 One REST API for all your mailboxes, whichever provider they are at, and
-an MCP server on top. Scripts, tools and AI assistants work with your
-mail through one door you control.
+an MCP server on top. Scripts, tools and AI agents work with your mail
+through one door you control.
 
 > **Status: alpha, version 0.2.0.** Usable with real accounts for
 > testing. The API and the configuration may still change. Stored data
@@ -25,26 +25,50 @@ info@ address at some hoster, maybe a Gmail account. Each speaks its own
 dialect: IMAP here, Microsoft Graph there. Every tool that wants to work
 with mail has to learn all of them and has to be given the passwords.
 
-Mailbox Service turns that around. One service, running on your own machine
-or server, holds the connections to all accounts. Everything else talks
-to that service only, through one REST API that looks the same for every
-provider. The service decides who may do what. A script, an app or an AI
-assistant gets a token of its own. That token opens exactly the accounts
-and operations it was given, nothing more.
+Mailbox turns that around. It has two parts. The Mailbox Service runs on
+your own machine or server and holds the connections to all accounts.
+Everything else talks to that service only, through one REST API that
+looks the same for every provider. The MCP server builds on it and opens
+it to AI agents. The service decides who may do what. A script, an app
+or an AI agent gets a token of its own. That token opens exactly the
+accounts and operations it was given, nothing more.
 
-That makes a few things simple that are hard otherwise:
+That makes a few things simple that are hard otherwise.
 
-- **Automation across accounts.** A script files invoices into a folder,
-  archives newsletters, forwards order confirmations or reports what came
-  in overnight. It works the same way for every account. It never sees a mail
-  password, only its own token.
-- **An AI assistant for your mail.** Through the MCP server, Claude or
-  another assistant can search and read mail, summarize threads, sort
-  messages and write replies. You decide by its rights whether it may
-  send on its own or only prepare drafts for a person to send.
-- **Controlled access.** A bookkeeping tool reads the invoice folder of one
-  account and nothing else. A newsletter job sends from info@, to a fixed
-  list of recipients, at most a few times a day. Every send is recorded.
+### Working with an AI agent in your mail
+
+Through the MCP server, Claude or another AI agent works with every
+account you gave it. A few requests it handles today:
+
+- "What came in since last night?"
+- "Move every invoice from Company XY to the folder Accounting."
+- "Forward today's invoices to our tax advisor."
+- "Show me all mail from Company XY between the 1st and the 15th of
+  September."
+- "Which mails with attachments came this week? Read the invoice and tell
+  me the amount and the due date."
+- "Sum up the mails about the offer and write a draft reply."
+- "Mark last week's newsletters as read and move them to the archive."
+
+Its rights decide whether it may send on its own or only leave drafts
+for a person to send. A grant can also name the recipients it may write
+to, such as the tax advisor's address alone, and how many mails it may
+send a day. A mail to anyone else is refused.
+
+### More uses
+
+- **Controlled access.** A bookkeeping tool reads one account and nothing
+  else. It may neither send nor delete, and it never sees a mail password,
+  only its own token.
+- **Automation across accounts.** A script files invoices, archives
+  newsletters and forwards order confirmations. It works the same way for
+  GMX, Microsoft 365 and your own mail server.
+- **Sending with guard rails.** A newsletter job sends from info@, to a
+  fixed list of recipients, at most a few times a day.
+- **React instead of polling.** Signed webhooks tell your own system
+  about new mail, a ticket tool or an internal dashboard for example.
+- **Traceable.** Every send is recorded in the audit: by whom, when and
+  under which grant.
 - **One inbox for your own tools.** A dashboard or a small internal app
   lists, searches and answers mail from every account with one client.
 - **Self-hosted.** The service stores the credentials encrypted. Mail
@@ -81,8 +105,10 @@ That makes a few things simple that are hard otherwise:
 - **Operation:** encrypted backup and restore, container images, a
   compose file.
 
-Planned next: Gmail and JMAP, and an audit of administration beside
-the audit of sends. The order is in [docs/ROADMAP.md](docs/ROADMAP.md).
+Planned next: rights down to a folder, so the bookkeeping tool sees the
+invoice folder alone, threads across folders, Gmail and JMAP, and an
+audit of administration beside the audit of sends. The order is in
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Providers
 
@@ -106,7 +132,7 @@ provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
 | `benethos-mailbox-mcp` | the MCP server, a client of the REST API only | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
 
 ```
- AI assistant ──MCP──► benethos-mailbox-mcp ──┐
+ AI agent ──────MCP──► benethos-mailbox-mcp ──┐
  scripts, apps ───────────────────────────────┼─REST──► benethos-mailbox-service ──► IMAP / Graph / ...
  browser ─────────────────────────────── /ui ─┘
 ```
@@ -123,8 +149,8 @@ compose file.
 2. Open `http://127.0.0.1:8080/ui`, sign in as `admin` with the
    one-time password, choose a password of your own and connect your
    accounts.
-3. Give your scripts or your assistant a user with the rights they need,
-   and for an assistant, add the MCP server to it:
+3. Give your scripts or your AI agent a user with the rights they need,
+   and for an agent, add the MCP server to it:
    [packages/mailbox-mcp](packages/mailbox-mcp/README.md).
 
 ## Documentation
