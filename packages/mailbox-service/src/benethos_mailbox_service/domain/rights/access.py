@@ -59,11 +59,19 @@ class _Rule:
     operations: frozenset[str]
     limit: SendLimit
     expires_at: datetime | None = None  # None: never
+    folders: frozenset[str] | None = None  # None: every folder
 
     def within(self, own: _Rule, operation: str) -> bool:
         """Whether ``operation`` under this rule is at most as wide as
-        under ``own``: sending as narrow, and ending no later."""
+        under ``own``: sending as narrow, in no other folders, and ending
+        no later."""
         if operation in SEND_OPERATIONS and not self.limit.within(own.limit):
+            return False
+        if (
+            operation in permissions.IN_FOLDERS
+            and own.folders is not None
+            and (self.folders is None or not self.folders <= own.folders)
+        ):
             return False
         return own.expires_at is None or (
             self.expires_at is not None and self.expires_at <= own.expires_at
@@ -194,6 +202,23 @@ class Access:
         where = f" on account {account_id}" if account_id else ""
         raise ForbiddenError(f"missing right: {operation}{where}")
 
+    def folder_scopes(
+        self, operation: str, account_id: str
+    ) -> list[frozenset[str]] | None:
+        """The folders of each grant that allows ``operation`` on the
+        account (PERMISSIONS.md 8.5). None: some grant reaches every
+        folder, or the operation is not about folders. A call passes when
+        one grant reaches every folder it touches."""
+        if operation not in permissions.IN_FOLDERS:
+            return None
+        scopes = []
+        for rule in self._on(account_id):
+            if operation in rule.operations:
+                if rule.folders is None:
+                    return None
+                scopes.append(rule.folders)
+        return scopes
+
     def send_limits(self, operation: str, account_id: str) -> list[SendLimit]:
         """The limits of every grant that allows ``operation`` on the
         account. A send is allowed when one of them allows it."""
@@ -279,6 +304,7 @@ def _rule(grant: Grant) -> _Rule:
         operations,
         SendLimit(recipients, grant.max_sends_per_day),
         grant.expires_at,
+        frozenset(grant.folders) if grant.folders is not None else None,
     )
 
 

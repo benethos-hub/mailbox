@@ -805,3 +805,26 @@ def test_the_sender_template_wants_recipients(
     assert "Role sender created." in made.text
     [grant] = services.users.get_role(ADMIN, "sender").grants
     assert grant.recipients == ["*@example.org"] and grant.max_sends_per_day == 10
+
+
+def test_the_editor_narrows_a_grant_to_folders(
+    ui: TestClient, services: Services
+) -> None:
+    made = post(
+        ui,
+        "/ui/users",
+        {
+            "name": "bookkeeper",
+            "grants": "1",
+            "g0_accounts": "*",
+            "g0_allow": "mail.read",
+            "g0_folders": "inbox\r\nInvoices 2026\r\n",
+        },
+    )
+    assert "bookkeeper created" in made.text
+    user = services.auth.user_named("bookkeeper")
+    assert user is not None
+    assert user.grants[0].folders == ["inbox", "Invoices 2026"]
+    page = ui.get(f"/ui/users/{user.id}").text
+    assert "in the folders</span> inbox, Invoices 2026" in page
+    assert ">inbox\nInvoices 2026</textarea>" in page

@@ -187,7 +187,7 @@ async def list_changes(
     """Messages created, updated or deleted in this account since `since`,
     oldest first, ids only. Ask again with the answer's `state` for the
     next ones. Without `since`, start from the current state."""
-    return mailbox.list_changes(caller, account_id, since=since, limit=limit)
+    return await mailbox.list_changes(caller, account_id, since=since, limit=limit)
 
 
 @router.get("/drafts")

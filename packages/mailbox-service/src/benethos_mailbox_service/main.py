@@ -246,19 +246,20 @@ def build_services(
         webhooks = WebhookService(
             repos.webhooks, vault, changes, clock=clock, activity=activity
         )
+        mailbox = MailboxService(
+            adapters,
+            sync,
+            Idempotency(repos.idempotency, clock=clock, activity=activity),
+            sends,
+            clock=clock,
+            activity=activity,
+        )
         return Services(
             accounts=accounts,
             adapters=adapters,
             auth=auth,
             users=users,
-            mailbox=MailboxService(
-                adapters,
-                sync,
-                Idempotency(repos.idempotency, clock=clock, activity=activity),
-                sends,
-                clock=clock,
-                activity=activity,
-            ),
+            mailbox=mailbox,
             discovery=discovery or build_discovery(settings, fetcher, activity),
             sync=sync,
             index=repos.index,
@@ -278,6 +279,7 @@ def build_services(
                 ),
                 access_of=auth.access_of,
                 account_ids=adapters.ids,
+                hearing=mailbox.hearing,
                 retries=Retries(
                     attempts=settings.webhook_attempts,
                     first_retry=settings.webhook_first_retry,

@@ -22,9 +22,9 @@ class SqliteChangeLogRepository:
     def append(self, records: Iterable[ChangeRecord]) -> None:
         with self._db.transaction() as conn:
             conn.executemany(
-                "INSERT INTO changes (account_id, message_id, type, at)"
-                " VALUES (?, ?, ?, ?)",
-                [(e.account_id, e.id, e.type, iso(e.at)) for e in records],
+                "INSERT INTO changes (account_id, message_id, type, at, folder_id)"
+                " VALUES (?, ?, ?, ?, ?)",
+                [(e.account_id, e.id, e.type, iso(e.at), e.folder_id) for e in records],
             )
 
     def after(
@@ -95,5 +95,6 @@ def _logged(row: sqlite3.Row) -> LoggedChange:
             id=row["message_id"],
             account_id=row["account_id"],
             at=parse_iso(row["at"]),
+            folder_id=row["folder_id"],
         ),
     )

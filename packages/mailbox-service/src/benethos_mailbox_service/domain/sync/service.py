@@ -126,10 +126,12 @@ class SyncService:
             # Read back: a sync may have added the same place meanwhile.
             known = self._index.by_native(account_id, natives)
             if synced:
-                ours = {e.id for e in added}
+                ours = {e.id: e.folder_id for e in added}
                 self.changed(
                     MessagesCreated(
-                        account_id, [e.id for e in known.values() if e.id in ours]
+                        account_id,
+                        [e.id for e in known.values() if e.id in ours],
+                        ours,
                     )
                 )
         return [known[native].id for native in natives]
@@ -171,6 +173,14 @@ class SyncService:
         """An account is deleted: its ids and its sync state go."""
         self._index.forget_account(account_id)
         self._states.pop(account_id, None)
+
+    def folder_of(self, account_id: str, message_id: str) -> str | None:
+        """The folder the index has for a message, None where it keeps no
+        index or does not know the message."""
+        if not self.mapped(account_id):
+            return None
+        entry = self._index.get(account_id, message_id)
+        return entry.folder_id if entry is not None else None
 
     def forget(self, account_id: str, message_id: str) -> None:
         """A message is gone for good: its id answers 404 from now on."""
@@ -268,6 +278,8 @@ class SyncService:
         states: dict[str, str] = {}
         seen: dict[str, datetime | None] = {}  # id -> created
         removed: set[str] = set()
+        where: dict[str, str] = {}  # id -> the folder it was seen in
+        gone_from: dict[str, str] = {}  # id -> the folder it left
         arrived_new: set[str] = set()  # in folders asked for the first time
         since: dict[str, datetime] = {}
         for folder_id in folders:
@@ -280,6 +292,8 @@ class SyncService:
                 last = None
                 found = await self._folder_changes(account_id, folder_id, None)
             states[folder_id] = json.dumps({"token": found.token, "at": iso(now)})
+            for message in found.changed:
+                where[message.id] = folder_id
             if last is None:
                 arrived_new |= {m.id for m in found.changed}
                 continue
@@ -287,6 +301,7 @@ class SyncService:
                 seen[message.id] = message.created
                 since[message.id] = last[1]
             removed |= set(found.removed)
+            gone_from.update((i, folder_id) for i in found.removed)
         self._index.apply(account_id, IndexChanges(states=states))
         if not before:
             return _Counts(len(folders))
@@ -299,9 +314,9 @@ class SyncService:
         updated = [i for i in seen if i not in created]
         updated += sorted((removed & arrived_new) - set(seen))
         deleted = sorted(removed - set(seen) - arrived_new)
-        self.changed(MessagesCreated(account_id, created))
-        self.changed(MessagesUpdated(account_id, updated))
-        self.changed(MessagesDeleted(account_id, deleted))
+        self.changed(MessagesCreated(account_id, created, where))
+        self.changed(MessagesUpdated(account_id, updated, where))
+        self.changed(MessagesDeleted(account_id, deleted, gone_from))
         return _Counts(len(folders), len(created), len(updated), len(deleted))
 
     async def _folder_changes(
@@ -370,12 +385,26 @@ class SyncService:
         self._index.apply(account_id, changes)
         if not before:
             return _Counts(len(states))
-        self.changed(MessagesCreated(account_id, [e.id for e in changes.added]))
+        self.changed(
+            MessagesCreated(
+                account_id,
+                [e.id for e in changes.added],
+                {e.id: e.folder_id for e in changes.added},
+            )
+        )
         # A message renumbered in its folder (a new UIDVALIDITY) did not
         # change for the caller. One that went to another folder did.
         elsewhere = [e.id for e, n in moved.items() if present[n] != e.folder_id]
-        self.changed(MessagesUpdated(account_id, elsewhere + flagged))
-        self.changed(MessagesDeleted(account_id, changes.removed))
+        now_in = {e.id: present[n] for e, n in moved.items()}
+        now_in.update((e.id, e.folder_id) for e in stayed.values())
+        self.changed(MessagesUpdated(account_id, elsewhere + flagged, now_in))
+        self.changed(
+            MessagesDeleted(
+                account_id,
+                changes.removed,
+                {e.id: e.folder_id for e in left if e not in moved},
+            )
+        )
         return _Counts(
             len(states),
             len(changes.added),

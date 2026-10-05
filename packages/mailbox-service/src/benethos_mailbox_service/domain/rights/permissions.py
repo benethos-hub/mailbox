@@ -105,6 +105,11 @@ for _group, _operations in GROUPS.items():
     for _operation in _operations:
         GROUP_OF.setdefault(_operation, _group)
 
+# Operations on mail in folders: those a grant's folders narrow.
+IN_FOLDERS: frozenset[str] = frozenset(
+    GROUPS["mail.read"] + GROUPS["mail.write"] + GROUPS["mail.delete"]
+)
+
 # The operations of the service, and those on one existing account.
 SERVICE: frozenset[str] = (
     frozenset(op for group in SERVICE_GROUPS for op in GROUPS[group]) | ADMIN_ONLY

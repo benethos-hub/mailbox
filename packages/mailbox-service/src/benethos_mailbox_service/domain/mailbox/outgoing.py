@@ -35,7 +35,7 @@ from ...data.models import (
     SendResult,
     SentMessage,
 )
-from ...errors import BadRequestError, MailboxServiceError
+from ...errors import BadRequestError, MailboxServiceError, missing_message
 from .. import changes
 from ..activity import ActivityLog, Actor
 from ..activity import mailbox as said
@@ -43,6 +43,7 @@ from ..rights import Access
 from . import replies
 from .calls import Calls
 from .idempotency import Idempotency
+from .reach import reach_of
 from .sending import Operation, SendControl
 
 M = TypeVar("M", bound=DraftMessage)
@@ -94,7 +95,7 @@ class Outgoing:
         self, access: Access, account_id: str, message: OutgoingMessage
     ) -> SendResult:
         raw, message_id, message, original = await self._compose(
-            account_id, message, draft=False
+            access, account_id, message, draft=False
         )
         # Checked once composed: a reply finds its recipients in the original.
         recipients = _addressed(message.recipients())
@@ -198,18 +199,21 @@ class Outgoing:
     # --- composing ------------------------------------------------------------------
 
     async def _compose(
-        self, account_id: str, message: M, *, draft: bool
+        self, access: Access, account_id: str, message: M, *, draft: bool
     ) -> tuple[bytes, str, M, Message | None]:
         """The message as bytes, from the account's address, with a fresh
-        Date and Message-ID. A reference is filled in from the original.
-        Returns the bytes, the Message-ID, the message as filled in and the
-        original, if any."""
+        Date and Message-ID. A reference is filled in from the original,
+        which must be in a folder the caller may read. Returns the bytes,
+        the Message-ID, the message as filled in and the original, if any."""
         account = self._calls.record(account_id)
         extras = compose.Extras()
         original: Message | None = None
         reference = message.reference
         if reference is not None:
             original = await self._calls.message(account_id, reference.message_id)
+            reach = await reach_of(self._calls, access, "get_message", account_id)
+            if reach is not None and not reach.sees(original.folder_ids):
+                raise missing_message(reference.message_id)
             message, extras = await self._answer(
                 account_id, account.email, message, reference, original
             )
@@ -290,7 +294,7 @@ class Outgoing:
         """Store a draft in the drafts folder, composed like a message to
         send. A reference is filled in now and remembered for the send."""
         _require(access, "create_draft", account_id, draft)
-        raw, _, composed, _ = await self._compose(account_id, draft, draft=True)
+        raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
         _limited(composed.recipients())
         saved = await self._calls.call(account_id, lambda p: p.save_draft(raw, None))
         return await self._calls.published_one(account_id, saved)
@@ -324,7 +328,7 @@ class Outgoing:
                 for attachment_id in keep_attachments
             ]
             draft = draft.model_copy(update={"attachments": kept + draft.attachments})
-        raw, _, composed, _ = await self._compose(account_id, draft, draft=True)
+        raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
         _limited(composed.recipients())
         saved = await self._calls.on_message(
             account_id, draft_id, lambda p, native: p.save_draft(raw, native)

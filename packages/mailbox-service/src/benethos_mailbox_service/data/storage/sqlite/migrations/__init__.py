@@ -24,6 +24,7 @@ from . import (
     v0013_webhooks_of_deleted_users,
     v0014_service_rights,
     v0015_service_rights_moved,
+    v0016_change_folders,
 )
 from .step import Migration
 
@@ -43,6 +44,7 @@ MIGRATIONS: list[Migration] = [
     v0013_webhooks_of_deleted_users.MIGRATION,
     v0014_service_rights.MIGRATION,
     v0015_service_rights_moved.MIGRATION,
+    v0016_change_folders.MIGRATION,
 ]
 
 SCHEMA_VERSION = len(MIGRATIONS)

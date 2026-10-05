@@ -363,3 +363,24 @@ def test_a_change_names_messages_or_its_account() -> None:
         ("message.sent", "msg_9"),
         ("account.needs_reauth", "acc_1"),
     ]
+
+
+async def test_the_sync_records_each_change_with_its_folder(
+    imap_services: Services, imap_account_id: str, server: FakeMailBox
+) -> None:
+    """For a grant narrowed to folders (PERMISSIONS.md 8.5): where a new
+    or moved message is now, where a deleted one was."""
+    await imap_services.sync.sync_account(imap_account_id)
+    server.other_client_moves("INBOX", 1, "Archive", 5)
+    del server.folders["INBOX"].messages[2]
+    server.add("INBOX", 6, make_message("New"))
+    await imap_services.sync.sync_account(imap_account_id)
+    folders = {
+        e.record.type: e.record.folder_id
+        for e in imap_services.changes.after([imap_account_id], 0, limit=1000)
+    }
+    assert folders == {
+        "message.created": mappers.folder_id("INBOX"),
+        "message.updated": mappers.folder_id("Archive"),
+        "message.deleted": mappers.folder_id("INBOX"),
+    }

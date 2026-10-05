@@ -20,6 +20,7 @@ READ_A_OUT = {
     **READ_A,
     "recipients": None,
     "max_sends_per_day": None,
+    "folders": None,
     "expires_at": None,
 }
 
@@ -297,6 +298,7 @@ def test_role_lifecycle(client: TestClient) -> None:
                 "allow": ["mail.read"],
                 "recipients": None,
                 "max_sends_per_day": None,
+                "folders": None,
                 "expires_at": None,
             }
         ],

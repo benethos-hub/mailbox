@@ -49,6 +49,9 @@ class ChangeRecord(BaseModel):
     id: str
     account_id: str
     at: datetime
+    # The message's folder when the change was noticed, None where unknown.
+    # Kept for the folders of a grant, never handed out.
+    folder_id: str | None = Field(default=None, exclude=True)
 
 
 class ChangePage(BaseModel):

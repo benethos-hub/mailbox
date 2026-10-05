@@ -40,6 +40,18 @@ class Grant(BaseModel):
             "this grant. Null: no limit."
         ),
     )
+    folders: list[Annotated[str, Field(min_length=1, max_length=200)]] | None = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+        description=(
+            "Reading, writing and deleting mail only in these folders and "
+            "their subfolders: a role such as `inbox`, or a folder's name or "
+            "id. Moves stay among them. Deleting to the trash is allowed "
+            "from them, reading the trash only when it is listed. Null: "
+            "every folder."
+        ),
+    )
     expires_at: AwareDatetime | None = Field(
         default=None,
         description=(

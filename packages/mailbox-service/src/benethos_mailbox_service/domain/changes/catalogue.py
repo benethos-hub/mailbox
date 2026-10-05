@@ -8,8 +8,8 @@ part of the API. A change is recorded as a class, never by its name:
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import ClassVar
 
 from ...data.models import ChangeKind
@@ -26,6 +26,10 @@ class MailboxChange:
         """What the change names, one record each: here the account."""
         return [self.account_id]
 
+    def folder_of(self, record_id: str) -> str | None:
+        """The folder of what a record names, None where unknown."""
+        return None
+
 
 @dataclass(frozen=True)
 class MessagesChanged(MailboxChange):
@@ -33,9 +37,15 @@ class MessagesChanged(MailboxChange):
     Webhooks hear of all five."""
 
     message_ids: Sequence[str]
+    # Each message's folder where it is known: where it is now, or for a
+    # deletion where it was.
+    folders: Mapping[str, str] = field(default_factory=dict, compare=False, hash=False)
 
     def ids(self) -> Sequence[str]:
         return self.message_ids
+
+    def folder_of(self, record_id: str) -> str | None:
+        return self.folders.get(record_id) or None
 
 
 @dataclass(frozen=True)

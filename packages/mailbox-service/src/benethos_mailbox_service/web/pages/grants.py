@@ -5,8 +5,9 @@ The service rights are ``service`` (groups or ``admin``) and
 ``service_more`` (further operation names). A grant row ``i`` carries
 ``g<i>_accounts`` (account ids or ``*``), ``g<i>_allow`` (groups),
 ``g<i>_more`` (further operation names), ``g<i>_recipients`` (one pattern
-per line), ``g<i>_max`` (sends per day), ``g<i>_expires`` (a local date and
-time, empty for never) and ``g<i>_remove``. ``grants``
+per line), ``g<i>_max`` (sends per day), ``g<i>_folders`` (one folder per
+line, empty for every folder), ``g<i>_expires`` (a local date and time,
+empty for never) and ``g<i>_remove``. ``grants``
 says how many rows the form has. A row with neither accounts nor rights
 is the empty one for adding and is left out.
 """
@@ -89,6 +90,8 @@ class GrantRow:
     max_per_day: str
     # As the field shows it, local time to the minute, empty for never.
     expires: str = ""
+    # One folder per line, empty for every folder.
+    folders: str = ""
 
 
 EMPTY_ROW = GrantRow([], [], "", "", "")
@@ -205,6 +208,7 @@ def rows_of(grants: list[Grant]) -> list[GrantRow]:
                 if grant.expires_at is not None
                 else ""
             ),
+            folders="\n".join(grant.folders or []),
         )
         for grant in grants
     ]
@@ -232,6 +236,7 @@ def typed_rows(form: Any) -> list[GrantRow]:
                 recipients=str(form.get(prefix + "recipients") or "").strip(),
                 max_per_day=str(form.get(prefix + "max") or "").strip(),
                 expires=str(form.get(prefix + "expires") or "").strip(),
+                folders=str(form.get(prefix + "folders") or "").strip(),
             )
         )
     return [*rows, EMPTY_ROW]
@@ -277,6 +282,12 @@ def read_grants(form: Any) -> list[Grant]:
         limit = str(form.get(prefix + "max") or "").strip()
         if limit and not limit.isdigit():
             raise GrantFormError(f"grant {index + 1}: sends per day must be a number")
+        # A folder's name may hold spaces: one per line.
+        folders = [
+            line.strip()
+            for line in str(form.get(prefix + "folders") or "").splitlines()
+            if line.strip()
+        ]
         expires = str(form.get(prefix + "expires") or "").strip()
         try:
             # The browser sends local time without a zone: the service's.
@@ -294,6 +305,7 @@ def read_grants(form: Any) -> list[Grant]:
                     allow=allow,
                     recipients=recipients or None,
                     max_sends_per_day=int(limit) if limit else None,
+                    folders=folders or None,
                     expires_at=expires_at,
                 )
             )

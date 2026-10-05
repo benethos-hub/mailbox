@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import datetime
+from functools import partial
 from typing import Any
 
 from ...common.clock import utc_now
@@ -19,6 +20,7 @@ from ...data.models import (
     BatchItemResult,
     BatchResult,
     ChangePage,
+    ChangeRecord,
     Folder,
     FolderCreate,
     FolderRole,
@@ -32,7 +34,14 @@ from ...data.models import (
     MessageUpdate,
     Page,
 )
-from ...errors import ConflictError, MailboxServiceError, NotFoundError, missing
+from ...errors import (
+    ConflictError,
+    ForbiddenError,
+    MailboxServiceError,
+    NotFoundError,
+    missing,
+    missing_message,
+)
 from ..accounts import Adapters
 from ..activity import ActivityLog
 from ..rights import Access
@@ -42,6 +51,7 @@ from .calls import Calls, public
 from .fingerprint import fingerprint
 from .idempotency import Idempotency
 from .outgoing import Outgoing
+from .reach import Reach, reach_of
 from .sending import SendControl
 
 # The keyword of a draft, \Draft on IMAP.
@@ -70,14 +80,24 @@ class MailboxService:
     # --- folders ----------------------------------------------------------------------
 
     async def list_folders(self, access: Access, account_id: str) -> list[Folder]:
+        """The account's folders, those the grants reach where they name
+        folders."""
         access.require("list_folders", account_id)
-        return await self._folders(account_id)
+        folders = await self._folders(account_id)
+        reach = await self._reach(access, "list_folders", account_id, folders)
+        return folders if reach is None else [f for f in folders if f.id in reach.ids]
 
     async def create_folder(
         self, access: Access, account_id: str, new: FolderCreate
     ) -> Folder:
+        """Where the grants name folders, only inside one of them."""
         access.require("create_folder", account_id)
         parent = await self._folder_by_role(account_id, new.parent_id)
+        reach = await self._reach(access, "create_folder", account_id)
+        if reach is not None:
+            if parent is None:
+                raise _outside("create_folder", "at the top")
+            _require_folder(reach, parent)
         return await self._calls.call(
             account_id, lambda p: p.create_folder(new.name, parent)
         )
@@ -88,13 +108,22 @@ class MailboxService:
         """Rename or move. Folders with a role stay where mail clients expect
         them. The messages inside keep their ids: a sync follows them."""
         access.require("update_folder", account_id)
-        folder, _ = await self._own_folder(account_id, folder_id)
+        folder, folders = await self._own_folder(account_id, folder_id)
+        reach = await self._reach(access, "update_folder", account_id, folders)
+        if reach is not None:
+            _require_folder(reach, folder_id)
         name = changes.name or folder.name
         parent = (
             await self._folder_by_role(account_id, changes.parent_id)
             if changes.moves
             else folder.parent_id
         )
+        if reach is not None and changes.moves:
+            if parent is None:
+                raise _outside("update_folder", "at the top")
+            _require_folder(reach, parent)
+            if not reach.holds(folder_id, parent):
+                raise _outside("update_folder", "into the folders of another grant")
         updated = await self._calls.call(
             account_id, lambda p: p.update_folder(folder_id, name, parent)
         )
@@ -112,6 +141,9 @@ class MailboxService:
         its messages with it on many servers, and they cannot be taken back."""
         access.require("delete_folder", account_id)
         folder, folders = await self._own_folder(account_id, folder_id)
+        reach = await self._reach(access, "delete_folder", account_id, folders)
+        if reach is not None:
+            _require_folder(reach, folder_id)
         if any(f.parent_id == folder_id for f in folders):
             raise ConflictError(f"the folder {folder.name} has subfolders")
         contents = await self._calls.call(
@@ -126,6 +158,60 @@ class MailboxService:
 
     async def _folders(self, account_id: str) -> list[Folder]:
         return await self._calls.call(account_id, lambda p: p.list_folders())
+
+    async def _reach(
+        self,
+        access: Access,
+        operation: str,
+        account_id: str,
+        folders: list[Folder] | None = None,
+    ) -> Reach | None:
+        return await reach_of(self._calls, access, operation, account_id, folders)
+
+    async def _outside(
+        self,
+        access: Access,
+        operation: str,
+        account_id: str,
+        ids: list[str],
+        into: list[str] | None = None,
+    ) -> dict[str, MailboxServiceError]:
+        """The messages of ``ids`` the grants' folders keep ``operation``
+        from, each with its error: one in no folder they reach answers as
+        not found, a move ``into`` other folders as forbidden. Empty where
+        the grants reach every folder."""
+        reach = await self._reach(access, operation, account_id)
+        if reach is None:
+            return {}
+        places = await self._calls.places(account_id, ids)
+        refused: dict[str, MailboxServiceError] = {}
+        for message_id in ids:
+            place = [f for f in places.get(message_id, []) if f in reach.ids]
+            if not place:
+                refused[message_id] = missing_message(message_id)
+            elif into and not any(reach.holds(f, *into) for f in place):
+                refused[message_id] = _outside(operation, "into these folders")
+        return refused
+
+    async def _require_reached(
+        self,
+        access: Access,
+        operation: str,
+        account_id: str,
+        message_id: str,
+        into: list[str] | None = None,
+    ) -> None:
+        refused = await self._outside(access, operation, account_id, [message_id], into)
+        if refused:
+            raise refused[message_id]
+
+    async def hearing(
+        self, access: Access, account_id: str
+    ) -> Callable[[ChangeRecord], bool] | None:
+        """What of the account's changes the caller may hear of, None for
+        all: the change feed and the webhooks."""
+        reach = await self._reach(access, "list_changes", account_id)
+        return reach.hears if reach is not None else None
 
     async def _own_folder(
         self, account_id: str, folder_id: str
@@ -175,12 +261,17 @@ class MailboxService:
         role such as ``inbox``."""
         access.require("list_messages", account_id)
         folder = await self._folder_by_role(account_id, folder_id)
+        reach = await self._reach(access, "list_messages", account_id)
+        if reach is not None and folder is not None:
+            _require_folder(reach, folder)
         page = await self._calls.call(
             account_id,
             lambda p: p.list_messages(
                 folder, limit=limit, cursor=cursor, search=search
             ),
         )
+        if reach is not None:
+            page = _in_reach(page, reach)
         return await self._calls.published_page(account_id, page)
 
     async def get_message(
@@ -188,6 +279,9 @@ class MailboxService:
     ) -> Message:
         access.require("get_message", account_id)
         message = await self._calls.message(account_id, message_id)
+        reach = await self._reach(access, "get_message", account_id)
+        if reach is not None and not reach.sees(message.folder_ids):
+            raise missing_message(message_id)
         if message.reference is not None and DRAFT_KEYWORD not in message.keywords:
             # Only a draft of this service carries one. In a received mail
             # the header is the sender's.
@@ -203,13 +297,21 @@ class MailboxService:
     ) -> MessageSummary:
         access.require("update_message", account_id)
         changes = await self._folders_by_role(account_id, changes)
+        await self._require_reached(
+            access, "update_message", account_id, message_id, changes.folder_ids
+        )
         return await self._calls.update_one(account_id, message_id, changes)
 
     async def delete_message(
         self, access: Access, account_id: str, message_id: str, permanent: bool
     ) -> None:
-        """Into the trash, or for good: then its own right (CONCEPT 7.5)."""
+        """Into the trash, or for good: then its own right (CONCEPT 7.5).
+        Into the trash from any folder the grants reach, whether they reach
+        the trash or not."""
         access.require(_delete_right(permanent), account_id)
+        await self._require_reached(
+            access, _delete_right(permanent), account_id, message_id
+        )
         await self._calls.delete_one(account_id, message_id, permanent)
 
     async def batch_messages(
@@ -223,14 +325,30 @@ class MailboxService:
             access.require("update_message", account_id)
             assert batch.changes is not None
             changes = await self._folders_by_role(account_id, batch.changes)
-            outcomes = await self._calls.update(account_id, batch.ids, changes)
+            outcomes = dict(
+                await self._outside(
+                    access, "update_message", account_id, batch.ids, changes.folder_ids
+                )
+            )
+            rest = [i for i in batch.ids if i not in outcomes]
+            if rest:
+                outcomes.update(await self._calls.update(account_id, rest, changes))
         else:
-            access.require(_delete_right(batch.permanent), account_id)
-            outcomes = await self._calls.delete(account_id, batch.ids, batch.permanent)
+            operation = _delete_right(batch.permanent)
+            access.require(operation, account_id)
+            outcomes = dict(
+                await self._outside(access, operation, account_id, batch.ids)
+            )
+            rest = [i for i in batch.ids if i not in outcomes]
+            if rest:
+                outcomes.update(
+                    await self._calls.delete(account_id, rest, batch.permanent)
+                )
         return BatchResult(results=[_item(i, outcomes[i]) for i in batch.ids])
 
     async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:
         access.require("get_message_raw", account_id)
+        await self._require_reached(access, "get_message_raw", account_id, message_id)
         return await self._calls.on_message(
             account_id, message_id, lambda p, native: p.get_raw(native)
         )
@@ -239,20 +357,22 @@ class MailboxService:
         self, access: Access, account_id: str, message_id: str, attachment_id: str
     ) -> AttachmentContent:
         access.require("get_attachment", account_id)
+        await self._require_reached(access, "get_attachment", account_id, message_id)
         return await self._calls.attachment(account_id, message_id, attachment_id)
 
     # --- across accounts ---------------------------------------------------------
 
     # --- changes ----------------------------------------------------------------------
 
-    def list_changes(
+    async def list_changes(
         self, access: Access, account_id: str, *, since: str | None, limit: int
     ) -> ChangePage:
         """What changed in one account since a point in the change feed."""
         access.require("list_changes", account_id)
-        return self._changes.page([account_id], since, limit=limit)
+        keep = await self.hearing(access, account_id) if since else None
+        return self._changes.page([account_id], since, limit=limit, keep=keep)
 
-    def list_all_changes(
+    async def list_all_changes(
         self,
         access: Access,
         *,
@@ -266,7 +386,12 @@ class MailboxService:
         visible = access.filter(
             "list_all_changes", (a for a in account_ids or existing if a in existing)
         )
-        return self._changes.page(visible, since, limit=limit)
+        keep: Callable[[ChangeRecord], bool] | None = None
+        if since:
+            hearing = {a: await self.hearing(access, a) for a in visible}
+            if any(h is not None for h in hearing.values()):
+                keep = partial(_heard, hearing)
+        return self._changes.page(visible, since, limit=limit, keep=keep)
 
     async def list_all_messages(
         self,
@@ -289,6 +414,15 @@ class MailboxService:
             "list_all_messages", (a for a in account_ids or existing if a in existing)
         )
         failures: list[AccountFailure] = []
+        # Where grants name folders: what each account's reach is. An
+        # account whose folders cannot be read now fails like any other.
+        narrowed = [a for a in visible if access.folder_scopes("list_all_messages", a)]
+        reaches = await merge.per_account(
+            narrowed,
+            lambda a: self._reach(access, "list_all_messages", a),
+            failures,
+        )
+        visible = [a for a in visible if a not in narrowed or a in reaches]
         query = fingerprint(folder_role, search)
         if cursor:
             positions = {
@@ -297,11 +431,11 @@ class MailboxService:
                 if a in visible
             }
         else:
-            positions = await self._start(visible, folder_role, failures)
+            positions = await self._start(visible, folder_role, failures, reaches)
 
         chunks = await merge.per_account(
             [a for a, p in positions.items() if not p.done],
-            lambda a: self._window(a, positions[a], search, limit),
+            lambda a: self._window(a, positions[a], search, limit, reaches.get(a)),
             failures,
         )
         # An account that failed is named in ``failures`` and keeps its place
@@ -343,6 +477,7 @@ class MailboxService:
         account_ids: list[str],
         role: FolderRole | None,
         failures: list[AccountFailure],
+        reaches: dict[str, Reach | None],
     ) -> dict[str, merge.Position]:
         if role is None:
             return {a: merge.Position(None, None, 0) for a in account_ids}
@@ -350,7 +485,8 @@ class MailboxService:
         positions = {}
         for account_id, found in folders.items():
             match = next((f for f in found if f.role is role), None)
-            if match is not None:
+            reach = reaches.get(account_id)
+            if match is not None and (reach is None or match.id in reach.ids):
                 positions[account_id] = merge.Position(match.id, None, 0)
         return positions
 
@@ -360,12 +496,15 @@ class MailboxService:
         position: merge.Position,
         search: MessageFilter | None,
         limit: int,
+        reach: Reach | None = None,
     ) -> list[merge.Chunk]:
         """At least ``limit`` of the account's next messages, or all it has
-        left, so that merging by date cannot skip a newer one."""
+        left, so that merging by date cannot skip a newer one. Out of
+        ``reach`` left out: the same each time a page is read, so the
+        offsets into it hold."""
 
         async def page(cursor: str | None) -> Page[MessageSummary]:
-            return await self._calls.call(
+            found = await self._calls.call(
                 account_id,
                 lambda p: p.list_messages(
                     position.folder_id,
@@ -374,6 +513,7 @@ class MailboxService:
                     search=search,
                 ),
             )
+            return found if reach is None else _in_reach(found, reach)
 
         first = await page(position.cursor)
         chunks = [
@@ -401,6 +541,33 @@ def find_folder(folders: list[Folder], wanted: str) -> Folder | None:
     return next(
         (f for f in folders if f.id == wanted or (f.role and f.role.value == wanted)),
         None,
+    )
+
+
+def _in_reach(page: Page[MessageSummary], reach: Reach) -> Page[MessageSummary]:
+    """The page without the messages out of reach."""
+    return Page[MessageSummary](
+        items=[item for item in page.items if reach.sees(item.folder_ids)],
+        next_cursor=page.next_cursor,
+    )
+
+
+def _heard(
+    hearing: dict[str, Callable[[ChangeRecord], bool] | None], record: ChangeRecord
+) -> bool:
+    hears = hearing.get(record.account_id)
+    return hears is None or hears(record)
+
+
+def _require_folder(reach: Reach, folder_id: str) -> None:
+    """A folder out of reach answers as one that does not exist."""
+    if folder_id not in reach.ids:
+        raise missing("folder", folder_id)
+
+
+def _outside(operation: str, where: str) -> ForbiddenError:
+    return ForbiddenError(
+        f"missing right: {operation} {where}, outside the folders of the grants"
     )
 
 

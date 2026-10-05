@@ -29,8 +29,15 @@ from ... import __version__
 from ...common.clock import utc_now
 from ...common.ids import new_id
 from ...common.ratelimit import backoff
+from ...data.models import ChangeRecord
 from ...data.secrets import CredentialVault
-from ...data.storage import Attempt, Delivery, WebhookRecord, WebhookRepository
+from ...data.storage import (
+    Attempt,
+    Delivery,
+    LoggedChange,
+    WebhookRecord,
+    WebhookRepository,
+)
 from ...errors import MailboxServiceError
 from ..activity import DISPATCHER, ActivityLog
 from ..activity import webhooks as said
@@ -41,6 +48,8 @@ from .service import sealed_label
 
 # How the dispatcher waits: anyio.sleep, or a fake in tests.
 Sleep = Callable[[float], Awaitable[None]]
+# What of an account's changes a creator may hear of, None for all.
+Hearing = Callable[[Access, str], Awaitable[Callable[[ChangeRecord], bool] | None]]
 
 BATCH = 100
 # How often the log is looked at for new events, in seconds.
@@ -78,6 +87,11 @@ def _longest(_shortest: float, longest: float) -> float:
 DEFAULT_RETRIES = Retries()
 
 
+def _of_the_account(record: ChangeRecord) -> bool:
+    """Only what is not about a message."""
+    return not record.type.startswith("message.")
+
+
 def signature(secret: str, timestamp: int, body: bytes) -> str:
     """The value of ``X-Mailbox-Signature`` for a body."""
     signed = f"{timestamp}.".encode() + body
@@ -95,6 +109,7 @@ class WebhookDispatcher:
         *,
         access_of: Callable[[str], Access | None],
         account_ids: Callable[[], list[str]],
+        hearing: Hearing | None = None,
         retries: Retries = DEFAULT_RETRIES,
         clock: Callable[[], datetime] = utc_now,
         sleep: Sleep = anyio.sleep,
@@ -106,6 +121,7 @@ class WebhookDispatcher:
         self._poster = poster
         self._access_of = access_of
         self._account_ids = account_ids
+        self._hearing = hearing
         self._retries = retries
         self._clock = clock
         self._sleep = sleep
@@ -166,7 +182,12 @@ class WebhookDispatcher:
                 self._save(record, replace(delivery, cursor=last), note)
             return False
         more = len(found) > BATCH
-        batch = found[:BATCH]
+        window = found[:BATCH]
+        batch = await self._heard(access, window)
+        if not batch:
+            # Nothing the creator may hear of: past it, without a post.
+            self._save(record, replace(delivery, cursor=window[-1].seq), note)
+            return more
         delivery_id = new_id("dlv")
         body = json.dumps(
             {
@@ -182,7 +203,7 @@ class WebhookDispatcher:
             Attempt(record.webhook.id, delivery_id, now, len(batch), status, error),
             keep=LOGGED,
         )
-        end = batch[-1].seq
+        end = window[-1].seq
         if error is None:
             if delivery.attempts or record.webhook.last_error is not None:
                 self._activity.record(
@@ -231,6 +252,26 @@ class WebhookDispatcher:
             error,
         )
         return False
+
+    async def _heard(
+        self, access: Access | None, window: list[LoggedChange]
+    ) -> list[LoggedChange]:
+        """The changes the creator may hear of, where its grants name
+        folders (PERMISSIONS.md 8.5). An account whose folders cannot be
+        read now gives none of its changes of messages."""
+        if self._hearing is None or access is None:
+            return window
+        hearing: dict[str, Callable[[ChangeRecord], bool] | None] = {}
+        for account_id in dict.fromkeys(e.record.account_id for e in window):
+            try:
+                hearing[account_id] = await self._hearing(access, account_id)
+            except MailboxServiceError:
+                hearing[account_id] = _of_the_account
+        return [
+            e
+            for e in window
+            if (hears := hearing[e.record.account_id]) is None or hears(e.record)
+        ]
 
     def _accounts(self, record: WebhookRecord, access: Access | None) -> list[str]:
         """The accounts the webhook hears of: its own list or every one,

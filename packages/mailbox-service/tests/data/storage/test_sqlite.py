@@ -59,6 +59,7 @@ def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
     with raw:
         raw.execute("ALTER TABLE users DROP COLUMN service")
         raw.execute("ALTER TABLE roles DROP COLUMN service")
+        raw.execute("ALTER TABLE changes DROP COLUMN folder_id")
         raw.execute(
             "INSERT INTO users (id, name, roles, grants)"
             " VALUES ('usr_1', 'u', '[]', '[]')"
@@ -95,6 +96,7 @@ def _at_schema_14(path: Path, users: dict[str, list[dict[str, object]]]) -> None
                 "INSERT INTO roles (id, grants) VALUES (?, ?)",
                 (name, json.dumps(grants)),
             )
+        raw.execute("ALTER TABLE changes DROP COLUMN folder_id")
         raw.execute("UPDATE meta SET value = '14' WHERE key = 'schema_version'")
     raw.close()
 

@@ -53,13 +53,14 @@ account you gave it. A few requests it handles today:
 Its rights decide whether it may send on its own or only leave drafts
 for a person to send. A grant can also name the recipients it may write
 to, such as the tax advisor's address alone, and how many mails it may
-send a day. A mail to anyone else is refused.
+send a day. A mail to anyone else is refused. It can keep the agent to
+some folders, such as the invoices, and end after a week.
 
 ### More uses
 
-- **Controlled access.** A bookkeeping tool reads one account and nothing
-  else. It may neither send nor delete, and it never sees a mail password,
-  only its own token.
+- **Controlled access.** A bookkeeping tool reads the invoice folder of
+  one account and nothing else. It may neither send nor delete, and it
+  never sees a mail password, only its own token.
 - **Automation across accounts.** A script files invoices, archives
   newsletters and forwards order confirmations. It works the same way for
   GMX, Microsoft 365 and your own mail server.
@@ -93,8 +94,8 @@ send a day. A mail to anyone else is refused.
   CONDSTORE. Webhooks post the same events, signed, to a URL of your
   choice, a host in your local network included.
 - **Users and rights:** users, roles and grants per account and per
-  operation, API tokens, limits on sending (allowed recipients, sends per
-  day) and an audit of every send.
+  operation, down to folders, grants that expire, API tokens, limits on
+  sending (allowed recipients, sends per day) and an audit of every send.
 - **MCP server:** reads, sorts, writes drafts, sends and tells what is
   new, over stdio or streamable HTTP, offering only the tools its token
   may use. Mail content
@@ -105,9 +106,8 @@ send a day. A mail to anyone else is refused.
 - **Operation:** encrypted backup and restore, container images, a
   compose file.
 
-Planned next: rights down to a folder, so the bookkeeping tool sees the
-invoice folder alone, threads across folders, Gmail and JMAP, and an
-audit of administration beside the audit of sends. The order is in
+Planned next: threads across folders, Gmail and JMAP, and an audit of
+administration beside the audit of sends. The order is in
 [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Providers

@@ -30,6 +30,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   warns of an account where the token may read mail and send it anywhere.
 - The UI's New role page offers four templates that fill the form:
   Reader, Agent, Sender and Operator.
+- `folders` on a grant: reading, writing and deleting mail only in these
+  folders and their subfolders, named by role, name or id. The inbox
+  reaches itself alone: some servers keep every folder below it. A message or
+  folder outside answers `404`, a move or a new folder outside `403`.
+  Deleting to the trash stays allowed, reading the trash needs it in the
+  list. Folder lists, message lists, the change feed and webhooks leave
+  out the rest, and a reply or forward needs its original in reach. The
+  editor has a field "Only in the folders".
 
 ### Changed
 

@@ -8221,6 +8221,25 @@
             "title": "Max Sends Per Day",
             "description": "Mails the user may send from one account in any 24 hours under this grant. Null: no limit."
           },
+          "folders": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 100,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folders",
+            "description": "Reading, writing and deleting mail only in these folders and their subfolders: a role such as `inbox`, or a folder's name or id. Moves stay among them. Deleting to the trash is allowed from them, reading the trash only when it is listed. Null: every folder."
+          },
           "expires_at": {
             "anyOf": [
               {

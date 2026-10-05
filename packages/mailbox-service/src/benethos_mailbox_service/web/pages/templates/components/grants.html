@@ -29,6 +29,7 @@
   {% for account in grant.accounts %}<span class="tag">{{ "every account" if account == "*" else names.get(account, account) }}</span> {% endfor %}
   <span class="muted">may</span>
   {% for right in grant.allow %}<span class="tag accent">{{ right }}</span> {% endfor %}
+  {% if grant.folders is not none %}<span class="muted">in the folders</span> {{ grant.folders | join(", ") }}{% endif %}
   {% if grant.recipients is not none %}<span class="muted">sending to</span> {{ grant.recipients | join(", ") }}{% endif %}
   {% if grant.max_sends_per_day is not none %}<span class="muted">at most</span> {{ grant.max_sends_per_day }} <span class="muted">mails a day</span>{% endif %}
   {% if grant.expires_at is not none %}{% if grant.expires_at | past %}<span class="tag bad">expired</span> <span class="muted">on</span> {{ grant.expires_at | when }}{% else %}<span class="muted">until</span> {{ grant.expires_at | when }}{% endif %}{% endif %}
@@ -91,6 +92,11 @@
       <label for="f-g{{ i }}_max">Sends per day</label>
       <input id="f-g{{ i }}_max" name="g{{ i }}_max" inputmode="numeric" value="{{ row.max_per_day }}" />
       <span class="hint">From one account, in any 24 hours. Empty: no limit.</span>
+    </div>
+    <div class="field">
+      <label for="f-g{{ i }}_folders">Only in the folders</label>
+      <textarea id="f-g{{ i }}_folders" name="g{{ i }}_folders" rows="2" placeholder="inbox, Invoices">{{ row.folders }}</textarea>
+      <span class="hint">One per line: a role such as inbox, or a name. Subfolders count, but the inbox reaches itself alone. Empty: every folder.</span>
     </div>
     <div class="field">
       <label for="f-g{{ i }}_expires">Valid until</label>

@@ -43,10 +43,10 @@ decides is marked as decided, everything else is the proposal.
 | **Credential** | how a user proves who it is: a token for the API and the MCP server, a password for the UI | the user's page |
 | **Right** | the name of one operation, e.g. `send_message` | the catalogue, `/v1/permissions` |
 | **Group** | a named set of rights, e.g. `mail.read` | the catalogue |
-| **Grant** | rights on accounts, with constraints: `{accounts, allow, recipients, max_sends_per_day, expires_at}` | part of a user or a role |
+| **Grant** | rights on accounts, with constraints: `{accounts, allow, recipients, max_sends_per_day, folders, expires_at}` | part of a user or a role |
 | **Service rights** | rights of the service, bound to no account: `{service: [...]}` | part of a user or a role |
 | **Role** | a named, reusable set of grants and service rights | `/v1/roles`, UI Roles |
-| **Constraint** | a narrowing of a grant that changes no right: which recipients, how many sends a day, until when | part of the grant |
+| **Constraint** | a narrowing of a grant that changes no right: which recipients, how many sends a day, which folders, until when | part of the grant |
 | **Effective rights** | the union of a user's rights and those of its roles | `/v1/me`, the user's page |
 
 ## 3. The catalogue
@@ -95,6 +95,15 @@ Two operations are open to every user: `get_me` and `list_permissions`.
 - **Cross-account operations filter.** `list_accounts`, `/v1/messages`,
   `/v1/changes` and the UI's mail page show the accounts the user has a
   right on, and leave the others out.
+- **Folders.** Where every grant that allows an operation on mail names
+  `folders`, the call keeps to them: folders listed and their
+  subfolders, by role, name or id. The inbox reaches itself alone, since
+  some IMAP servers keep every folder below it. A message or folder outside answers
+  `404`, a move or a new folder outside answers `403`. Lists, the change
+  feed and webhooks leave out what is outside. A change keeps the folder
+  it happened in. A deletion whose folder is unknown, made before the
+  folder was kept or in an account without an index, goes to everyone
+  who may read the account: it names an id and nothing else.
 - **Not seen, not there.** An account outside every grant answers `404`.
   An account inside a grant, but without the right asked for, answers
   `403` and names the missing right.
