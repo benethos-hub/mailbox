@@ -15,6 +15,7 @@ log. The word "event" is kept free for neither.
 
 from __future__ import annotations
 
+from .audit import Audit
 from .base import (
     DISPATCHER,
     HOST,
@@ -46,6 +47,7 @@ __all__ = [
     "WORKER",
     "Activity",
     "ActivityLog",
+    "Audit",
     "Actor",
     "Failure",
     "accounts",

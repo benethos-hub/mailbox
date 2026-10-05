@@ -19,7 +19,7 @@
   {% call card("Change", meta="Takes effect at once for every user with this role.") %}
     <details class="fold"{% if err %} open{% endif %}>
       <summary>Service rights</summary>
-      {{ service_editor(service, service_names, group_ops) }}
+      {{ service_editor(service, service_names, service_ops) }}
     </details>
     {{ grant_editor(rows, account_choices, groups, group_ops) }}
     <div class="form-actions"><button class="primary" type="submit">Save</button></div>

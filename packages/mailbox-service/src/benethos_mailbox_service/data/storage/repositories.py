@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Literal, Protocol
 
 from .accounts import AccountRepository, InMemoryAccountRepository
+from .audit import AuditRepository, InMemoryAuditRepository
 from .changes import ChangeLogRepository, InMemoryChangeLogRepository
 from .credentials import (
     CredentialRepository,
@@ -26,6 +27,7 @@ from .sqlite import (
     Database,
     Migrated,
     SqliteAccountRepository,
+    SqliteAuditRepository,
     SqliteChangeLogRepository,
     SqliteCredentialRepository,
     SqliteIdempotencyRepository,
@@ -90,6 +92,7 @@ class Repositories:
     sends: SendLogRepository
     changes: ChangeLogRepository
     webhooks: WebhookRepository
+    audit: AuditRepository
     # The store behind them, for backups and for closing. None in memory.
     store: Store | None = None
 
@@ -115,6 +118,7 @@ def open_repositories(
             sends=InMemorySendLogRepository(),
             changes=InMemoryChangeLogRepository(),
             webhooks=InMemoryWebhookRepository(),
+            audit=InMemoryAuditRepository(),
         )
     db = Database(database_path)
     return Repositories(
@@ -130,5 +134,6 @@ def open_repositories(
         sends=SqliteSendLogRepository(db),
         changes=SqliteChangeLogRepository(db),
         webhooks=SqliteWebhookRepository(db),
+        audit=SqliteAuditRepository(db),
         store=db,
     )

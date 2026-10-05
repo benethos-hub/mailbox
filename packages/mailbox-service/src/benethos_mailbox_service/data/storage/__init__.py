@@ -8,6 +8,7 @@ their own, SQLite in ``sqlite/``, the in-memory base in ``table``.
 from __future__ import annotations
 
 from .accounts import AccountRepository, InMemoryAccountRepository
+from .audit import AuditRepository, InMemoryAuditRepository
 from .changes import ChangeLogRepository, InMemoryChangeLogRepository, LoggedChange
 from .credentials import (
     CredentialRepository,
@@ -36,6 +37,7 @@ from .sqlite import (
     Database,
     Migrated,
     SqliteAccountRepository,
+    SqliteAuditRepository,
     SqliteChangeLogRepository,
     SqliteCredentialRepository,
     SqliteIdempotencyRepository,
@@ -69,6 +71,9 @@ from .webhooks import (
 )
 
 __all__ = [
+    "AuditRepository",
+    "InMemoryAuditRepository",
+    "SqliteAuditRepository",
     "AccountRepository",
     "Attempt",
     "ChangeLogRepository",

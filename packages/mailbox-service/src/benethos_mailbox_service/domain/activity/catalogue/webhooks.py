@@ -14,6 +14,7 @@ from ..base import Activity, Failure, plural
 @dataclass(frozen=True, kw_only=True)
 class WebhookCreated(Activity):
     name: ClassVar[str] = "created"
+    audited: ClassVar[bool] = True
 
     webhook_id: str
     host: str
@@ -32,16 +33,23 @@ class WebhookCreated(Activity):
             f"{', '.join(self.events)} of {accounts}"
         )
 
+    def touched(self) -> str | None:
+        return self.webhook_id
+
 
 @dataclass(frozen=True, kw_only=True)
 class WebhookRemoved(Activity):
     name: ClassVar[str] = "removed"
+    audited: ClassVar[bool] = True
 
     webhook_id: str
     host: str
 
     def says(self) -> str:
         return f"removed webhook {self.webhook_id} to {self.host}"
+
+    def touched(self) -> str | None:
+        return self.webhook_id
 
 
 @dataclass(frozen=True, kw_only=True)

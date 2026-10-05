@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from .accounts import SqliteAccountRepository
+from .audit import SqliteAuditRepository
 from .changes import SqliteChangeLogRepository
 from .credentials import SqliteCredentialRepository, SqliteKeyRepository
 from .database import (
@@ -33,6 +34,7 @@ __all__ = [
     "SqliteMessageIndexRepository",
     "SqlitePasswordRepository",
     "SqliteRoleRepository",
+    "SqliteAuditRepository",
     "SqliteSendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",

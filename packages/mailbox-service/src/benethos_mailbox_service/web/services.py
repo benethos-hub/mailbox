@@ -12,6 +12,7 @@ from typing import Annotated, Protocol
 from fastapi import Depends, Request
 
 from ..domain.accounts import AccountService, OAuthService
+from ..domain.activity import Audit
 from ..domain.auth import AuthService
 from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
@@ -33,6 +34,7 @@ class Services(Protocol):
     status: StatusService
     recovery: RecoveryKey
     log: ServiceLog
+    audit: Audit
 
 
 def services_of(request: Request) -> Services:
@@ -80,6 +82,10 @@ def get_recovery(request: Request) -> RecoveryKey:
     return services_of(request).recovery
 
 
+def get_audit(request: Request) -> Audit:
+    return services_of(request).audit
+
+
 Accounts = Annotated[AccountService, Depends(get_accounts)]
 Auth = Annotated[AuthService, Depends(get_auth)]
 Discoverer = Annotated[DiscoveryService, Depends(get_discovery)]
@@ -90,3 +96,4 @@ Webhooks = Annotated[WebhookService, Depends(get_webhooks)]
 Status = Annotated[StatusService, Depends(get_status)]
 Recovery = Annotated[RecoveryKey, Depends(get_recovery)]
 Log = Annotated[ServiceLog, Depends(get_log)]
+Activities = Annotated[Audit, Depends(get_audit)]

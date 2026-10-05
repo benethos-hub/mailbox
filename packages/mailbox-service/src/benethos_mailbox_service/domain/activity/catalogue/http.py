@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 from ....common.sizes import megabytes
+from ....data.models import ActivityOutcome
 from ..base import Activity
 
 
@@ -34,6 +35,8 @@ class RequestsLimited(Activity):
     Written once when the limit engages, not per refused request."""
 
     name: ClassVar[str] = "rate_limited"
+    audited: ClassVar[bool] = True
+    outcome: ClassVar[ActivityOutcome] = "refused"
     level: ClassVar[int] = logging.WARNING
 
     path: str

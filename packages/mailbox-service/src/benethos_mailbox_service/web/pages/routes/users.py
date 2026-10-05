@@ -30,6 +30,7 @@ from ..grants import (
     read_service,
     require_recipients,
     rows_of,
+    service_hint,
     service_of,
     typed_rows,
     typed_service,
@@ -65,9 +66,8 @@ def _editor(
         "rows": rows,
         "account_choices": account_choices(accounts.list(caller), rows),
         "groups": GROUP_SECTIONS,
-        "group_ops": {
-            name: group_hint(name) for name in (*SERVICE_NAMES, *GROUP_NAMES)
-        },
+        "group_ops": {name: group_hint(name) for name in GROUP_NAMES},
+        "service_ops": {name: service_hint(name) for name in SERVICE_NAMES},
     }
 
 

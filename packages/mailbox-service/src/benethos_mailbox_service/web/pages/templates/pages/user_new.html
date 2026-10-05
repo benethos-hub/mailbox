@@ -24,7 +24,7 @@
     {% if role_choices %}{{ role_checks(role_choices, typed.roles if typed else []) }}{% endif %}
   {% endcall %}
   {% call card("Service rights", meta="You can hand out only rights you hold yourself.") %}
-    {{ service_editor(service, service_names, group_ops) }}
+    {{ service_editor(service, service_names, service_ops) }}
   {% endcall %}
   {% call card("Grants", meta="Rights on accounts.") %}
     {{ grant_editor(rows, account_choices, groups, group_ops) }}

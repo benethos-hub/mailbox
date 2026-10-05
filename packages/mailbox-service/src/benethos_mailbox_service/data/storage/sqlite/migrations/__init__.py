@@ -29,6 +29,7 @@ from .versions.v0013_webhooks_of_deleted_users import V0013WebhooksOfDeletedUser
 from .versions.v0014_service_rights import V0014ServiceRights
 from .versions.v0015_service_rights_moved import V0015ServiceRightsMoved
 from .versions.v0016_change_folders import V0016ChangeFolders
+from .versions.v0017_activity import V0017Activity
 
 MIGRATIONS = MigrationRegistry(
     V0001AccountsUsers(),
@@ -47,6 +48,7 @@ MIGRATIONS = MigrationRegistry(
     V0014ServiceRights(),
     V0015ServiceRightsMoved(),
     V0016ChangeFolders(),
+    V0017Activity(),
 )
 
 SCHEMA_VERSION = MIGRATIONS.schema_version

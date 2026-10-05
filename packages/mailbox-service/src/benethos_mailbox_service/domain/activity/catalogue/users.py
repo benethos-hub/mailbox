@@ -15,6 +15,7 @@ from ..base import Activity, plural, user
 @dataclass(frozen=True, kw_only=True)
 class UserCreated(Activity):
     name: ClassVar[str] = "created"
+    audited: ClassVar[bool] = True
 
     user: User
 
@@ -27,10 +28,14 @@ class UserCreated(Activity):
             f"signs in to {sign_in}"
         )
 
+    def touched(self) -> str | None:
+        return self.user.id
+
 
 @dataclass(frozen=True, kw_only=True)
 class UserChanged(Activity):
     name: ClassVar[str] = "changed"
+    audited: ClassVar[bool] = True
 
     user: User
     # The names of the fields that changed: name, roles, grants, ...
@@ -39,10 +44,14 @@ class UserChanged(Activity):
     def says(self) -> str:
         return f"changed user {user(self.user)}: {', '.join(self.changed)}"
 
+    def touched(self) -> str | None:
+        return self.user.id
+
 
 @dataclass(frozen=True, kw_only=True)
 class UserDeleted(Activity):
     name: ClassVar[str] = "deleted"
+    audited: ClassVar[bool] = True
 
     user: User
     webhooks: int
@@ -52,15 +61,22 @@ class UserDeleted(Activity):
             f"deleted user {user(self.user)} and its {plural(self.webhooks, 'webhook')}"
         )
 
+    def touched(self) -> str | None:
+        return self.user.id
+
 
 @dataclass(frozen=True, kw_only=True)
 class MadeApiUser(Activity):
     name: ClassVar[str] = "made_api_user"
+    audited: ClassVar[bool] = True
 
     user: User
 
     def says(self) -> str:
         return f"made {user(self.user)} an API user: its password is deleted"
+
+    def touched(self) -> str | None:
+        return self.user.id
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -68,19 +84,27 @@ class UiSignInAllowed(Activity):
     """The host gave an API user its UI sign-in back."""
 
     name: ClassVar[str] = "sign_in_allowed"
+    audited: ClassVar[bool] = True
 
     user: User
 
     def says(self) -> str:
         return f"let {user(self.user)} sign in to the UI again"
 
+    def touched(self) -> str | None:
+        return self.user.id
+
 
 @dataclass(frozen=True, kw_only=True)
 class PasswordChanged(Activity):
     name: ClassVar[str] = "password_changed"
+    audited: ClassVar[bool] = True
 
     def says(self) -> str:
         return "changed its password"
+
+    def touched(self) -> str | None:
+        return self.by.user_id
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -89,6 +113,7 @@ class PasswordSet(Activity):
     actor typed, or a one-time password the service made."""
 
     name: ClassVar[str] = "password_set"
+    audited: ClassVar[bool] = True
 
     user: User
     one_time: bool
@@ -98,10 +123,14 @@ class PasswordSet(Activity):
             return f"made a one-time password for {user(self.user)}"
         return f"set the password of {user(self.user)}"
 
+    def touched(self) -> str | None:
+        return self.user.id
+
 
 @dataclass(frozen=True, kw_only=True)
 class TokenIssued(Activity):
     name: ClassVar[str] = "token_issued"
+    audited: ClassVar[bool] = True
 
     token_id: str
     token_name: str
@@ -119,10 +148,14 @@ class TokenIssued(Activity):
             f"{user(self.user)}, {expires}"
         )
 
+    def touched(self) -> str | None:
+        return self.token_id
+
 
 @dataclass(frozen=True, kw_only=True)
 class TokenRevoked(Activity):
     name: ClassVar[str] = "token_revoked"
+    audited: ClassVar[bool] = True
 
     token_id: str
     token_name: str
@@ -131,10 +164,14 @@ class TokenRevoked(Activity):
     def says(self) -> str:
         return f"revoked token {self.token_name} ({self.token_id}) of {user(self.user)}"
 
+    def touched(self) -> str | None:
+        return self.token_id
+
 
 @dataclass(frozen=True, kw_only=True)
 class RoleCreated(Activity):
     name: ClassVar[str] = "role_created"
+    audited: ClassVar[bool] = True
 
     role_id: str
     service: tuple[str, ...] = ()
@@ -143,10 +180,14 @@ class RoleCreated(Activity):
     def says(self) -> str:
         return f"created role {self.role_id} with {rights(self.service, self.grants)}"
 
+    def touched(self) -> str | None:
+        return self.role_id
+
 
 @dataclass(frozen=True, kw_only=True)
 class RoleReplaced(Activity):
     name: ClassVar[str] = "role_replaced"
+    audited: ClassVar[bool] = True
 
     role_id: str
     service: tuple[str, ...] = ()
@@ -158,10 +199,14 @@ class RoleReplaced(Activity):
             f"{rights(self.service, self.grants)} now"
         )
 
+    def touched(self) -> str | None:
+        return self.role_id
+
 
 @dataclass(frozen=True, kw_only=True)
 class RoleDeleted(Activity):
     name: ClassVar[str] = "role_deleted"
+    audited: ClassVar[bool] = True
 
     role_id: str
 
@@ -175,3 +220,6 @@ def rights(service: Iterable[str], grants: int) -> str:
     names = ", ".join(service)
     counted = plural(grants, "grant")
     return f"service {names}, {counted}" if names else counted
+
+    def touched(self) -> str | None:
+        return self.role_id

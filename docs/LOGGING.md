@@ -235,6 +235,8 @@ Drafts are mail content and change nothing others see: not logged.
 | INFO | the host created the keys, stored the master key | | printed, add the line |
 | INFO | opened the database with schema N; the file was rewritten once: from now on it shrinks after deletions | schema, notes | `system.migrated`, once for a database made by an earlier version |
 | INFO | backup written / restored (from the host) | file, schema, time | printed, add the line |
+| INFO | purged N records older than D from the audit | count, before | once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` ([AUDIT.md](AUDIT.md)) |
+| ERROR | an activity could not be kept in the audit | the activity, traceback | its line is in the log |
 
 ### 5.9 Rate limits
 
@@ -469,6 +471,8 @@ and that each is listed here.
 | `system.key_imported` | the host stored the master key from a recovery key |
 | `system.backup_written` | the host wrote a backup |
 | `system.backup_restored` | the host restored a backup |
+| `system.audit_purged` | old records purged from the audit of administration |
+| `system.not_audited` | an activity the audit could not keep |
 | `auth.signed_in` | a sign-in to the UI |
 | `auth.sign_in_failed` | a failed sign-in to the UI |
 | `auth.signed_out` | a sign-out of the UI |

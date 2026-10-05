@@ -9295,7 +9295,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "The groups of the service. They and `admin` are named in a user's or a role's `service`, the other groups in a grant's `allow`."
+            "description": "The groups of the service. They and `admin` are named in a user's or a role's `service`, the other groups in a grant's `allow`. `audit` is in both: in a grant its operations on accounts, in `service` `list_activity`."
           }
         },
         "type": "object",
@@ -9355,7 +9355,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -9384,7 +9384,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -9408,7 +9408,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -9818,7 +9818,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -9866,7 +9866,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -9928,7 +9928,7 @@
               }
             ],
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "anyOf": [

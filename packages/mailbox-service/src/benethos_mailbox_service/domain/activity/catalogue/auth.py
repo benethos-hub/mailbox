@@ -7,13 +7,14 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ....data.models import User
+from ....data.models import ActivityOutcome, User
 from ..base import Activity, user
 
 
 @dataclass(frozen=True, kw_only=True)
 class UiSignIn(Activity):
     name: ClassVar[str] = "signed_in"
+    audited: ClassVar[bool] = True
 
     def says(self) -> str:
         return "signed in to the UI"
@@ -25,6 +26,8 @@ class UiSignInFailed(Activity):
     into the name field must not reach the log."""
 
     name: ClassVar[str] = "sign_in_failed"
+    audited: ClassVar[bool] = True
+    outcome: ClassVar[ActivityOutcome] = "refused"
     level: ClassVar[int] = logging.WARNING
 
     user: User | None
@@ -36,6 +39,9 @@ class UiSignInFailed(Activity):
 
     def why(self) -> str:
         return self.reason
+
+    def touched(self) -> str | None:
+        return self.user.id if self.user else None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -49,6 +55,8 @@ class SignedOut(Activity):
 @dataclass(frozen=True, kw_only=True)
 class ConfirmFailed(Activity):
     name: ClassVar[str] = "confirm_failed"
+    audited: ClassVar[bool] = True
+    outcome: ClassVar[ActivityOutcome] = "refused"
     level: ClassVar[int] = logging.WARNING
 
     def says(self) -> str:
@@ -61,6 +69,8 @@ class TokenRefused(Activity):
     know at all counts against the sign-in throttle alone."""
 
     name: ClassVar[str] = "token_refused"
+    audited: ClassVar[bool] = True
+    outcome: ClassVar[ActivityOutcome] = "refused"
     level: ClassVar[int] = logging.WARNING
 
     token_id: str
@@ -74,6 +84,9 @@ class TokenRefused(Activity):
     def why(self) -> str:
         return self.reason
 
+    def touched(self) -> str | None:
+        return self.token_id
+
 
 @dataclass(frozen=True, kw_only=True)
 class SourceLockedOut(Activity):
@@ -81,6 +94,8 @@ class SourceLockedOut(Activity):
     address."""
 
     name: ClassVar[str] = "locked_out"
+    audited: ClassVar[bool] = True
+    outcome: ClassVar[ActivityOutcome] = "refused"
     level: ClassVar[int] = logging.WARNING
 
     minutes: int
@@ -112,6 +127,8 @@ class NameBraked(Activity):
     a password."""
 
     name: ClassVar[str] = "name_braked"
+    audited: ClassVar[bool] = True
+    outcome: ClassVar[ActivityOutcome] = "refused"
     level: ClassVar[int] = logging.WARNING
 
     user: User | None
@@ -123,3 +140,6 @@ class NameBraked(Activity):
 
     def why(self) -> str:
         return f"the name waits {self.seconds} seconds"
+
+    def touched(self) -> str | None:
+        return self.user.id if self.user else None
