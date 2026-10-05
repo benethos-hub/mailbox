@@ -50,6 +50,8 @@ def navigation(caller: Access) -> list[Group]:
         service.append(Entry("roles", "Roles", "◈", "/ui/roles"))
     if caller.sees_status():
         service.append(Entry("status", "Status", "◉", "/ui/status"))
+    if caller.allows("list_activity"):
+        service.append(Entry("audit", "Audit", "✎", "/ui/audit"))
     if caller.allows("read_service_log"):
         service.append(Entry("log", "Log", "☰", "/ui/log"))
     if caller.allows("show_recovery_key"):

@@ -10,7 +10,8 @@ form. It makes a user, a role and a token, uses the token on the API,
 and sets the user's password, which the user changes at its sign-in.
 It reads mail, opens the pages and follows their forms. It opens the
 status, adds and removes a webhook, shows the recovery key of its own
-service, reads its log, and makes a user with a one-time password. It
+service, reads its log, makes a user with a one-time password, and reads
+what it did in the audit, on its page, a user's page and the API. It
 writes on the test accounts only: a folder and a draft on the first,
 which it removes again, and one mail from the first to the second,
 deleted for good on both sides. Credentials and mail content are never printed.
@@ -602,6 +603,56 @@ def check_sends(
     run.check("every account's sends together", receiver_email in together)
 
 
+def check_audit(run: Run, browser: httpx.Client, url: str, admin: Admin) -> None:
+    """The audit of administration names what this run did, never a
+    secret. Read-only."""
+    page = browser.get("/ui/audit").text
+    kinds = set(re.findall(r'<span class="mono">(\w+\.\w+)</span>', page))
+    wanted = {
+        "auth.signed_in",
+        "users.created",
+        "users.token_issued",
+        "users.role_created",
+        "webhooks.created",
+        "webhooks.removed",
+        "system.recovery_shown",
+        "system.log_read",
+    }
+    run.check(
+        "the Audit page names what this run did",
+        wanted <= kinds,
+        ", ".join(sorted(wanted - kinds)),
+    )
+    run.check("and no token", "mbx_" not in page)
+    hooks = browser.get("/ui/audit", params={"activity": "webhooks"}).text
+    run.check(
+        "its filter keeps an area",
+        set(re.findall(r'<span class="mono">(\w+\.\w+)</span>', hooks))
+        == {"webhooks.created", "webhooks.removed"},
+    )
+    own = re.search(r'href="(/ui/users/usr_\w+)"', browser.get("/ui").text)
+    card = browser.get(own.group(1)).text if own else ""
+    # The newest ten: this run did more since its sign-in.
+    run.check(
+        "the own page shows its recent activity",
+        "Recent activity" in card
+        and len(re.findall(r'<span class="mono">\w+\.\w+</span>', card)) == 10,
+    )
+    with httpx.Client(
+        base_url=url, headers={"Authorization": f"Bearer {admin.token}"}, timeout=30
+    ) as api:
+        answer = api.get("/v1/audit", params={"activity": "auth", "limit": 5})
+        items = answer.json().get("items", []) if answer.status_code == 200 else []
+        run.check(
+            "GET /v1/audit names the sign-ins through the UI",
+            any(
+                i["activity"] == "auth.signed_in" and i["credential"] == "password"
+                for i in items
+            ),
+            str(answer.status_code),
+        )
+
+
 def main() -> int:
     env = read_env()
     test_accounts = accounts(env)[:2]
@@ -637,6 +688,8 @@ def main() -> int:
             check_frame(run, browser, emails)
             print("\n== status, webhooks, recovery key, log")
             check_service(run, browser, url, admin, emails)
+            print("\n== the audit of administration")
+            check_audit(run, browser, url, admin)
     return run.finish()
 
 

@@ -9,10 +9,10 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
 from ....common.clock import utc_now
-from ....data.models import Grant, Role
+from ....data.models import ActivityFilter, Grant, Role
 from ....domain.rights import Access
 from ....domain.users import UserService
-from ...services import Users, get_accounts, get_users
+from ...services import Users, get_accounts, get_audit, get_users
 from ..deps import Actor, Viewer, account_names, if_allowed
 from ..effective import view_of
 from ..filters import Field, filter_bar
@@ -37,8 +37,12 @@ from ..grants import (
 )
 from ..session import show_once, take_once
 from ..templates import back, render, segment
+from . import audit as audit_routes
 
 router = APIRouter()
+
+# The newest activities of a user its page shows.
+RECENT = 10
 
 # Longer than that is a token without an end: leave the field empty for one.
 MAX_TOKEN_DAYS = 3650
@@ -234,6 +238,19 @@ def _user_page(
         can_revoke=caller.allows("revoke_token"),
         has_password=users.has_password(caller, user_id),
         can_set_password=caller.allows("set_password"),
+        activity=if_allowed(
+            caller,
+            "list_activity",
+            lambda: (
+                get_audit(request)
+                .list_activity(
+                    caller, limit=RECENT, matching=ActivityFilter(user_id=user_id)
+                )
+                .items
+            ),
+            None,
+        ),
+        outcomes=audit_routes.OUTCOMES,
         **_editor(request, caller, found.service, found.grants, form),
     )
 

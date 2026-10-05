@@ -30,6 +30,7 @@ from .errors import error_page
 from .forms import Failed
 from .routes import (
     accounts,
+    audit,
     compose,
     drafts,
     folders,
@@ -64,6 +65,7 @@ AREAS = (
     sends,
     oauth,
     status,
+    audit,
     users,
     webhooks,
 )

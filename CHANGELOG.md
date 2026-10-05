@@ -48,6 +48,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `audit` in `service` reads it. `audit` in a grant stays the audit of
   sends. `/v1/permissions` lists `audit` among the groups of the service,
   with `list_activity` in the group.
+- The UI has a page Audit under Service, and a user's page a card Recent
+  activity, both for `audit` in `service`.
 
 ### Changed
 

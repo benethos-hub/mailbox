@@ -77,8 +77,9 @@ done. Update the roadmap in the same commit that finishes an item.
   `uv run python live/ui.py` checks it against the test accounts. It sends
   one mail from the first test account to the second and deletes it for
   good on both sides. It also opens the status, adds and removes a
-  webhook, shows the recovery key of its own service, reads its log and
-  makes a user with a one-time password.
+  webhook, shows the recovery key of its own service, reads its log,
+  makes a user with a one-time password and reads the audit of
+  administration.
   How the pages look and behave, and the checklist for a new page:
   `docs/UI.md`.
 - Microsoft accounts: `docs/microsoft.md` sets up the app registration.

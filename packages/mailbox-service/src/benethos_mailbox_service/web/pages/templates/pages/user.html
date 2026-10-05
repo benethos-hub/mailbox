@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import action, anywhere_tag, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, new_row, related, rights_tags, secret_card with context %}
+{% from "components/audit.html" import activity_rows %}
 {% from "components/grants.html" import grant_editor, grants_of, role_checks, role_tags, sending_of, service_editor, service_of %}
 {% block title %}{{ user.name }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ user.name }}{% endblock %}
@@ -86,6 +87,15 @@
     </form>
   {% endcall %}
   {% endif %}
+{% endcall %}
+{% endif %}
+
+{% if activity is not none %}
+{% call related("Recent activity", meta="what this user did, newest first") %}
+  <div class="body tight">
+    {% if activity %}{{ activity_rows(activity, outcomes, False, who=False) }}{% else %}{{ empty("Nothing in the audit.") }}{% endif %}
+  </div>
+  <div class="body"><a href="/ui/audit?who={{ user.id }}">All its activity</a> · <a href="/ui/audit?record={{ user.id }}">What was done to it</a></div>
 {% endcall %}
 {% endif %}
 

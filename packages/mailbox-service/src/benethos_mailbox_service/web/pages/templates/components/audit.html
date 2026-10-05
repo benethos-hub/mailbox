@@ -1,0 +1,33 @@
+{# The rows of the audit of administration, for its page and the card on
+   a user's page. ``outcomes``: the tag class of each outcome,
+   ``user_pages``: whether a user's name links to its page. #}
+{% macro credential_of(r) %}{% if not r.credential %}not signed in{% elif r.credential == "password" %}the UI{% elif r.credential == "host" %}a command on the host{% else %}token <span class="mono">{{ r.credential[6:22] }}…</span>{% endif %}{% endmacro %}
+
+{% macro activity_rows(records, outcomes, user_pages, who=True) %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>When</th>{% if who %}<th>Who</th>{% endif %}<th>What</th><th>Outcome</th></tr>
+    </thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td>{{ r.at | when }}</td>
+        {% if who %}
+        <td class="name">
+          {% if r.user_id and user_pages %}<a href="/ui/users/{{ r.user_id }}">{{ r.user_name }}</a>{% else %}{{ r.user_name }}{% endif %}
+          <span class="sub">{{ credential_of(r) }}{% if r.source %} from {{ r.source }}{% endif %}</span>
+        </td>
+        {% endif %}
+        <td>
+          <span class="mono">{{ r.activity }}</span>
+          <span class="sub">{{ r.detail }}</span>
+          {% if r.record %}<span class="sub"><a class="mono" href="/ui/audit?record={{ r.record | urlencode }}" title="Everything about this record">{{ r.record[:20] }}{% if r.record | length > 20 %}…{% endif %}</a></span>{% endif %}
+        </td>
+        <td><span class="tag {{ outcomes[r.outcome] }}">{{ r.outcome }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}

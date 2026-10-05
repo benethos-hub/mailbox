@@ -117,6 +117,18 @@ class Audit:
         return Page[ActivityRecord](items=records, next_cursor=next_cursor)
 
 
+def audited() -> list[str]:
+    """The names of every activity the audit keeps, sorted."""
+    found: set[str] = set()
+    todo: list[type[Activity]] = [Activity]
+    while todo:
+        for cls in todo.pop().__subclasses__():
+            todo.append(cls)
+            if cls.audited and cls.name:
+                found.add(cls.kind())
+    return sorted(found)
+
+
 def _before(carried: Any) -> tuple[datetime, str]:
     """The time and the id a cursor of the audit continues before."""
     at, record_id = carried

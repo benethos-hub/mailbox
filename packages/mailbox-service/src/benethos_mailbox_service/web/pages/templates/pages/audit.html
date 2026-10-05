@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import empty, filter_bar, pager %}
+{% from "components/audit.html" import activity_rows %}
+{% block title %}Audit · {{ APP_NAME }}{% endblock %}
+{% block heading %}Audit{% endblock %}
+{% block subheading %}<div class="sub">Who signed in and who changed users, tokens, roles, accounts and webhooks. {% if days %}Kept {{ days }} days{% else %}Kept for ever{% endif %}</div>{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="body">{{ filter_bar(bar, problem) }}</div>
+  <div class="body tight">
+    {% if records %}
+    {{ activity_rows(records, outcomes, user_pages) }}
+    {% else %}
+    {{ empty("Nothing" ~ (" that matches." if bar.chips else " yet.")) }}
+    {% endif %}
+  </div>
+  {{ pager(pages) }}
+</section>
+{% endblock %}
