@@ -25,7 +25,6 @@ from .migrations import MIGRATIONS, SCHEMA_VERSION
 
 # Stays below SQLite's limit of host parameters in one statement.
 IN_CHUNK = 500
-_SCHEMA_VERSION = "SELECT value FROM meta WHERE key = 'schema_version'"
 
 
 @dataclass(frozen=True)
@@ -220,8 +219,8 @@ class Database:
             yield True
 
     def schema_version(self) -> int:
-        row = self.one(_SCHEMA_VERSION)
-        return int(row[0]) if row else 0
+        with self._lock, translated():
+            return MIGRATIONS.version_of(self._connection)
 
     def close(self) -> None:
         with self._lock:
@@ -241,9 +240,7 @@ class Database:
         """``rewritten``: the file was rewritten to shrink from now on,
         said with the notes of the schema."""
         with self.transaction() as db:
-            db.execute(
-                "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)"
-            )
+            MIGRATIONS.prepare(db)
         current = self.schema_version()
         if current > SCHEMA_VERSION:
             raise StorageError(
@@ -251,17 +248,9 @@ class Database:
                 f"({SCHEMA_VERSION}): run a newer version of the service"
             )
         notes: list[str] = []
-        for version, migration in enumerate(MIGRATIONS[current:], current + 1):
+        for migration in MIGRATIONS.pending(current):
             with self.transaction() as db:
-                said = migration.before(db) if migration.before else []
-                for statement in migration.statements:
-                    db.execute(statement)
-                db.execute(
-                    "INSERT OR REPLACE INTO meta (key, value)"
-                    " VALUES ('schema_version', ?)",
-                    (str(version),),
-                )
-            notes += [f"schema {version}: {note}" for note in said]
+                notes += MIGRATIONS.apply(db, migration)
         if rewritten:
             notes.append(
                 "the file was rewritten once: from now on it shrinks after deletions"
@@ -315,11 +304,11 @@ def inspect_snapshot(data: bytes) -> int:
         result = copy.execute("PRAGMA integrity_check").fetchone()[0]
         if result != "ok":
             raise ValueError(f"database integrity check failed: {result}")
-        row = copy.execute(_SCHEMA_VERSION).fetchone()
+        version = MIGRATIONS.version_of(copy)
     except sqlite3.DatabaseError as exc:
         raise ValueError(f"not a database: {exc}") from None
     finally:
         copy.close()
-    if row is None:
+    if not version:
         raise ValueError("not a database of this service")
-    return int(row[0])
+    return version

@@ -162,12 +162,15 @@ rule 1.
 - Lists are paged with an opaque `next_cursor`, never with page numbers.
 - `CHANGELOG.md` gets an entry under `[Unreleased]` in the same commit as the
   change, written for someone using the API.
-- A change to the database schema is a new migration: a module
-  `vNNNN_<subject>.py` in `data/storage/sqlite/migrations/` with the next
-  number, added to `MIGRATIONS` there. Its docstring says what it does and
-  why. Each statement stands alone, and a step in Python goes into
-  `before`. A migration that shipped in a release is never changed:
-  `RELEASED` in `tests/data/storage/test_sqlite.py` holds a hash of each.
+- A change to the database schema is a new migration: a class
+  `VNNNN<Subject>` of the base `Migration` in a module
+  `vNNNN_<subject>.py` in `data/storage/sqlite/migrations/versions/` with
+  the next number, added to the registry `MIGRATIONS` in
+  `migrations/__init__.py`. The module's docstring says what it
+  does and why. Each statement stands alone, and a step in Python is the
+  method `before`. A migration that shipped in a release is never changed:
+  `RELEASED` in `tests/data/storage/test_sqlite.py` holds the fingerprint
+  of each.
 
 ## Git and commits
 

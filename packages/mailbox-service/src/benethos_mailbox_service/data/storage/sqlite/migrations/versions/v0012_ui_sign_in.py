@@ -4,11 +4,12 @@ far keep it, those without are API users.
 
 from __future__ import annotations
 
-from .step import Migration
+from ..migration import Migration
 
-MIGRATION = Migration(
-    [
+
+class V0012UiSignIn(Migration):
+    version = 12
+    statements = (
         "ALTER TABLE users ADD COLUMN ui_sign_in INTEGER NOT NULL DEFAULT 0",
         "UPDATE users SET ui_sign_in = 1 WHERE id IN (SELECT user_id FROM passwords)",
-    ],
-)
+    )

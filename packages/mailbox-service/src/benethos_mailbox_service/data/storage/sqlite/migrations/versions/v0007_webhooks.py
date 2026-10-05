@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from .step import Migration
+from ..migration import Migration
 
-MIGRATION = Migration(
-    [
+
+class V0007Webhooks(Migration):
+    version = 7
+    statements = (
         """
         CREATE TABLE webhooks (
             id TEXT PRIMARY KEY,
@@ -24,5 +26,4 @@ MIGRATION = Migration(
             last_error TEXT
         )
         """,
-    ],
-)
+    )

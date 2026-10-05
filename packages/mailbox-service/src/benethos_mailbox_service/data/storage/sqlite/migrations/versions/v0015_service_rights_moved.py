@@ -26,7 +26,7 @@ import json
 import sqlite3
 from typing import Any
 
-from .step import Migration
+from ..migration import Migration
 
 _SERVICE_GROUPS = ("users.manage", "webhooks.manage")
 _SERVICE_OPERATIONS = (
@@ -91,26 +91,27 @@ def split(grants: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]
     return kept, list(dict.fromkeys(service))
 
 
-def _moved(db: sqlite3.Connection) -> list[str]:
-    """Move the rights of the service, and say whose moved."""
-    notes = []
-    for table, what in (("users", "user"), ("roles", "role")):
-        name = "name" if table == "users" else "id"
-        rows = db.execute(f"SELECT id, {name}, grants FROM {table}").fetchall()
-        for row in rows:
-            grants, service = split(json.loads(row["grants"]))
-            if not service and grants == json.loads(row["grants"]):
-                continue
-            db.execute(
-                f"UPDATE {table} SET grants = ?, service = ? WHERE id = ?",
-                (json.dumps(grants), json.dumps(service), row["id"]),
-            )
-            if service:
-                notes.append(
-                    f"{what} {row[name]}: {', '.join(service)} "
-                    "moved from its grants to its rights of the service"
+class V0015ServiceRightsMoved(Migration):
+    version = 15
+    statements = ()
+
+    def before(self, db: sqlite3.Connection) -> list[str]:
+        """Move the rights of the service, and say whose moved."""
+        notes = []
+        for table, what in (("users", "user"), ("roles", "role")):
+            name = "name" if table == "users" else "id"
+            rows = db.execute(f"SELECT id, {name}, grants FROM {table}").fetchall()
+            for row in rows:
+                grants, service = split(json.loads(row["grants"]))
+                if not service and grants == json.loads(row["grants"]):
+                    continue
+                db.execute(
+                    f"UPDATE {table} SET grants = ?, service = ? WHERE id = ?",
+                    (json.dumps(grants), json.dumps(service), row["id"]),
                 )
-    return notes
-
-
-MIGRATION = Migration([], before=_moved)
+                if service:
+                    notes.append(
+                        f"{what} {row[name]}: {', '.join(service)} "
+                        "moved from its grants to its rights of the service"
+                    )
+        return notes

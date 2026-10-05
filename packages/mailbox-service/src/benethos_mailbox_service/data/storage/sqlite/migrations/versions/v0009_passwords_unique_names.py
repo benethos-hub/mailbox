@@ -10,24 +10,12 @@ from __future__ import annotations
 
 import sqlite3
 
-from .step import Migration
+from ..migration import Migration
 
 
-def _renamed(db: sqlite3.Connection) -> list[str]:
-    """The names the first statement is about to change, to be logged."""
-    rows = db.execute(
-        "SELECT id, name FROM users WHERE rowid NOT IN"
-        " (SELECT MIN(rowid) FROM users GROUP BY lower(name))"
-    ).fetchall()
-    return [
-        f"user {row['name']} renamed to {row['name']}-{row['id'][4:12]}: "
-        "the name was taken regardless of case"
-        for row in rows
-    ]
-
-
-MIGRATION = Migration(
-    [
+class V0009PasswordsUniqueNames(Migration):
+    version = 9
+    statements = (
         """
         UPDATE users SET name = name || '-' || substr(id, 5, 8)
             WHERE rowid NOT IN (SELECT MIN(rowid) FROM users GROUP BY lower(name))
@@ -41,6 +29,16 @@ MIGRATION = Migration(
             updated_at TEXT NOT NULL
         )
         """,
-    ],
-    before=_renamed,
-)
+    )
+
+    def before(self, db: sqlite3.Connection) -> list[str]:
+        """The names the first statement is about to change, to be logged."""
+        rows = db.execute(
+            "SELECT id, name FROM users WHERE rowid NOT IN"
+            " (SELECT MIN(rowid) FROM users GROUP BY lower(name))"
+        ).fetchall()
+        return [
+            f"user {row['name']} renamed to {row['name']}-{row['id'][4:12]}: "
+            "the name was taken regardless of case"
+            for row in rows
+        ]

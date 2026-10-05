@@ -4,11 +4,12 @@ their grants (PERMISSIONS.md 8.1). Schema 15 fills it.
 
 from __future__ import annotations
 
-from .step import Migration
+from ..migration import Migration
 
-MIGRATION = Migration(
-    [
+
+class V0014ServiceRights(Migration):
+    version = 14
+    statements = (
         "ALTER TABLE users ADD COLUMN service TEXT NOT NULL DEFAULT '[]'",
         "ALTER TABLE roles ADD COLUMN service TEXT NOT NULL DEFAULT '[]'",
-    ],
-)
+    )
