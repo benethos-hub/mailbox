@@ -1,7 +1,8 @@
 # Users, roles and rights
 
-Proposal of 2026-09-27. One place for the whole model: who may do what,
-how that is written down, checked and shown, and what should change.
+Proposal of 2026-09-27, section 8 decided on 2026-10-05. One place for
+the whole model: who may do what, how that is written down, checked and
+shown, and what should change.
 [CONCEPT 7.5](CONCEPT.md#75-users-permissions-and-authentication) keeps
 the record of decisions and the details of credentials. [UI.md](UI.md)
 says how the pages look. This file says how the rights work, as they are
@@ -159,8 +160,10 @@ from becoming a way up:
 
 ## 8. What should change
 
-Eight changes, each one pull request. The first two change the model,
-the rest add to it. None removes a right anyone holds.
+Eight changes. The first two change the model, the rest add to it.
+None removes a right anyone holds. **Decided 2026-10-05:** 8.1 to 8.5,
+8.7 and 8.8 as below, with the answers of section 10. 8.6 follows on its
+own. Of 8.5 only `folders` is built now.
 
 ### 8.1 Service rights leave the grant
 
@@ -192,9 +195,11 @@ that do not apply. The proposal: a user (and a role) has two lists.
   its password for a moment and needs a grant on it afterwards: the
   creator gets `accounts.manage` on the new account, and nothing else, so
   it can verify and remove what it connected. Mail rights on it are given
-  as on any account.
+  as on any account. **Decided 2026-10-05.**
 - `admin` in `service` means every right, as today. `admin` in a grant's
-  `allow` is no longer accepted.
+  `allow` is no longer accepted. **Decided 2026-10-05:** a request that
+  names a service right or `admin` in a grant's `allow` answers `400`
+  and says it belongs in `service`. Nothing is rewritten silently.
 - Migration: a stored grant that names a service right or `admin` moves
   those names to `service` and keeps the rest. A grant with `*` and
   `accounts.manage` gets `accounts.connect` in `service`, since it could
@@ -226,7 +231,8 @@ is left who may sign in to the UI and repair it. The way back is then
 the host: `users set-password`. The proposal: the service refuses a
 change that would leave no enabled user with `admin` and `ui_sign_in`,
 with `409` and a message that says so. The host command stays as the
-last resort.
+last resort. **Decided 2026-10-05:** refused, not allowed with a
+warning.
 
 ### 8.4 A grant can expire
 
@@ -245,8 +251,13 @@ Both narrow a grant and are checked in the domain, as `recipients` is:
   for every folder. `mail.read` with `folders: ["inbox", "Invoices"]`
   lists and reads there and nowhere else. `mail.write` with folders
   moves only between them. Planned in CONCEPT 7.5 already.
+  **Decided 2026-10-05:** a listed folder includes its subfolders, so
+  `Invoices` covers `Invoices/2026`. Deleting to the trash stays allowed
+  under `mail.write` with folders. Reading the trash needs it in the
+  list. Deleting for good stays a right of its own.
 - **`identities`**: which sender identities of an account a send may use,
   null for every one (IDEAS). Waits for identities in the account model.
+  **Decided 2026-10-05:** not built now.
 
 A constraint applies per grant, as today: a call passes when one grant
 that allows it accepts everything about the call.
@@ -279,11 +290,12 @@ offers them as templates, not stored until saved and changed at will:
 | Template | Grants |
 |---|---|
 | Reader | `mail.read` on chosen accounts |
-| Assistant | `mail.read`, `mail.write`, `drafts` on chosen accounts. What the MCP server needs to sort and draft, without sending |
+| Agent | `mail.read`, `mail.write`, `drafts` on chosen accounts. What the MCP server needs to sort and draft, without sending |
 | Sender | `send` with `recipients` required and a daily limit, on chosen accounts |
 | Operator | `accounts.manage`, `audit` on every account, `accounts.connect` and `webhooks.manage` in service |
 
-The API gets nothing new: a template is a filled form.
+The API gets nothing new: a template is a filled form. **Decided
+2026-10-05:** these four, the second named Agent.
 
 ### 8.8 `/v1/me` names the sending limits
 
@@ -291,6 +303,9 @@ Per account the caller may send from, the recipients and the daily
 limit of each grant that allows it, and how many sends are left today.
 The MCP server tells the model before it tries, and the UI's overview
 shows the person what its own token may send. IDEAS has the shape.
+**Decided 2026-10-05:** the MCP server's `list_accounts` names the limits
+and the warning about reading and sending anywhere, so the model knows
+them before it sends.
 
 ## 9. Order of work
 
@@ -305,17 +320,18 @@ shows the person what its own token may send. IDEAS has the shape.
 7. 8.5, the constraints, when identities exist and folders are asked for.
 
 Every step keeps the existing tests green, adds its own and, where a
-page changes, a walk in `live/ui.py`.
+page changes, a walk in `live/ui.py`. **Decided 2026-10-05:** steps 2,
+3, 4, 6 and 7 on one branch, a commit per step, one pull request. Step 5
+follows on its own branch.
 
-## 10. Open questions
+## 10. Questions answered
 
-- 8.1: should the creator of an account get `accounts.manage` on it, or
-  nothing until an administrator grants it?
-- 8.3: refuse the change, or allow it and warn on the overview until it
-  is repaired?
-- 8.6: is 90 days the right default, and does the audit page belong
-  under Service or on the overview?
-- 8.7: are four templates enough, and are their names right?
-- Is a grant per user still wanted at all, or should every right come
-  through a role? Grants per user keep small deployments simple, roles
-  keep large ones honest. The proposal keeps both.
+- **Decided 2026-10-05:** the creator of an account gets
+  `accounts.manage` on it (8.1).
+- **Decided 2026-10-05:** a change that would leave no administrator is
+  refused (8.3).
+- **Decided 2026-10-05:** four templates, Reader, Agent, Sender and
+  Operator (8.7).
+- **Decided 2026-10-05:** grants per user stay beside roles.
+- Open: is 90 days the right default for the audit of 8.6, and does its
+  page belong under Service or on the overview?
