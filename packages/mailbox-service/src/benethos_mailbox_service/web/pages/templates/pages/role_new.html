@@ -5,9 +5,18 @@
 {% block heading %}New role{% endblock %}
 {% block subheading %}{{ breadcrumb([("Roles", "/ui/roles"), ("New role", None)]) }}{% endblock %}
 {% block content %}
+{% call card("Start from", meta="A template fills the form. Nothing is stored until you create the role, and every field can be changed.") %}
+  <ul class="lines">
+    {% for t in templates %}
+    <li><a href="/ui/roles/new?template={{ t.id }}"{% if chosen and chosen.id == t.id %} aria-current="true"{% endif %}><strong>{{ t.title }}</strong></a>: {{ t.summary }}.</li>
+    {% endfor %}
+    {% if chosen %}<li><a href="/ui/roles/new">Empty form</a></li>{% endif %}
+  </ul>
+{% endcall %}
 <form method="post" action="/ui/roles">
   {{ csrf_field() }}
-  {% call card("Role") %}
+  {% if chosen %}<input type="hidden" name="template" value="{{ chosen.id }}" />{% endif %}
+  {% call card("Role", meta=("From the template " ~ chosen.title ~ (". Name the recipients before you create it" if chosen.recipients_required else "") ~ ".") if chosen else None) %}
     <div class="form-grid">
       <div class="field">
         <label for="f-id">Name</label>

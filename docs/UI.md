@@ -270,7 +270,10 @@ list and on its page, and the list filters by it. Its page has no
 Password card. The Change card switches the UI sign-in on and off, but
 not for the signed-in user itself. Switched on, the Password card
 offers a one-time password. New role is an editor page too. It takes the path
-`/ui/roles/new`, so the UI cannot open a role named `new`. The user page shows the effective rights as
+`/ui/roles/new`, so the UI cannot open a role named `new`. It offers four
+templates that fill the form, Reader, Agent, Sender and Operator
+([PERMISSIONS.md](PERMISSIONS.md) 8.7). Nothing is stored until the role
+is created, and Sender wants the recipients named. The user page shows the effective rights as
 today, then tokens, then Change, then Danger. Roles the same without
 tokens. A token is created in the Tokens card and shown once.
 

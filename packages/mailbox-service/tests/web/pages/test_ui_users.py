@@ -18,6 +18,7 @@ from benethos_mailbox_service.web.pages.grants import (
     GROUP_NAMES,
     GROUP_SECTIONS,
     MCP_TOOLS,
+    ROLE_TEMPLATES,
     GrantFormError,
     group_hint,
     read_grants,
@@ -744,3 +745,63 @@ def test_the_overview_names_the_own_sending_limits(
     )
     home = app_client.get("/ui").text
     assert "to *@example.org, at most 2 a day, 2 left now" in home
+
+
+# --- roles to start from (PERMISSIONS.md 8.7) ------------------------------------
+
+
+def test_the_new_role_page_offers_four_templates(ui: TestClient) -> None:
+    page = ui.get("/ui/roles/new").text
+    for template in ("reader", "agent", "sender", "operator"):
+        assert f'href="/ui/roles/new?template={template}"' in page
+    assert [t.title for t in ROLE_TEMPLATES.values()] == [
+        "Reader",
+        "Agent",
+        "Sender",
+        "Operator",
+    ]
+
+
+@pytest.mark.parametrize("template", list(ROLE_TEMPLATES))
+def test_every_template_names_rights_of_the_right_kind(template: str) -> None:
+    chosen = ROLE_TEMPLATES[template]
+    permissions.check_service(chosen.service)
+    for grant in chosen.grants:
+        permissions.check_grant(grant.allow)
+
+
+def test_a_template_fills_the_form(ui: TestClient, account_id: str) -> None:
+    agent = ui.get("/ui/roles/new?template=agent").text
+    assert 'name="id" value="agent"' in agent
+    for group in ("mail.read", "mail.write", "drafts"):
+        assert f'name="g0_allow" value="{group}" checked' in agent
+    assert 'name="g0_allow" value="send" checked' not in agent
+    assert f'name="g0_accounts" value="{account_id}" checked' not in agent
+    operator = ui.get("/ui/roles/new?template=operator").text
+    assert 'name="service" value="accounts.connect" checked' in operator
+    assert 'name="service" value="webhooks.manage" checked' in operator
+    assert 'name="g0_accounts" value="*" checked' in operator
+    assert 'name="g0_allow" value="accounts.manage" checked' in operator
+    unknown = ui.get("/ui/roles/new?template=nothing").text
+    assert 'name="id" value=""' in unknown
+
+
+def test_the_sender_template_wants_recipients(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    form = {
+        "template": "sender",
+        "id": "sender",
+        "grants": "1",
+        "g0_accounts": account_id,
+        "g0_allow": "send",
+        "g0_max": "10",
+    }
+    refused = post(ui, "/ui/roles", form)
+    assert refused.status_code == 400
+    assert "name the recipients it may send to" in refused.text
+    assert 'name="template" value="sender"' in refused.text
+    made = post(ui, "/ui/roles", {**form, "g0_recipients": "*@example.org"})
+    assert "Role sender created." in made.text
+    [grant] = services.users.get_role(ADMIN, "sender").grants
+    assert grant.recipients == ["*@example.org"] and grant.max_sends_per_day == 10

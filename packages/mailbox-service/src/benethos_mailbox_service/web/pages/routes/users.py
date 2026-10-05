@@ -20,6 +20,7 @@ from ..forms import FormError, failing, text_of
 from ..grants import (
     GROUP_NAMES,
     GROUP_SECTIONS,
+    ROLE_TEMPLATES,
     SERVICE_NAMES,
     GrantRow,
     ServiceRow,
@@ -27,6 +28,7 @@ from ..grants import (
     group_hint,
     read_grants,
     read_service,
+    require_recipients,
     rows_of,
     service_of,
     typed_rows,
@@ -362,25 +364,48 @@ async def list_roles(request: Request, caller: Viewer, users: Users) -> HTMLResp
 
 
 @router.get("/roles/new")
-async def new_role(request: Request, caller: Viewer) -> HTMLResponse:
-    """The editor of a new role. It takes the path of a role named
-    "new", whose page the UI then cannot open: the API still can."""
+async def new_role(
+    request: Request, caller: Viewer, template: str = ""
+) -> HTMLResponse:
+    """The editor of a new role, empty or filled from a template. It takes
+    the path of a role named "new", whose page the UI then cannot open:
+    the API still can."""
     caller.require("create_role")
-    return _new_role_page(request, caller)
+    return _new_role_page(request, caller, template=template)
 
 
 def _new_role_page(
-    request: Request, caller: Access, form: Any = None, err: str | None = None
+    request: Request,
+    caller: Access,
+    form: Any = None,
+    err: str | None = None,
+    template: str = "",
 ) -> HTMLResponse:
-    """The editor of a new role, empty or as ``form`` held it."""
+    """The editor of a new role: empty, filled from ``template``, or as
+    ``form`` held it."""
+    if form is not None:
+        template = str(form.get("template") or "")
+    chosen = ROLE_TEMPLATES.get(template)
+    if form is not None:
+        typed_id = text_of(form, "id")
+    else:
+        typed_id = chosen.id if chosen is not None else ""
     return render(
         request,
         "pages/role_new.html",
         page="roles",
         status_code=REFUSED if err else 200,
         err=err,
-        typed_id=text_of(form, "id") if form is not None else "",
-        **_editor(request, caller, [], [], form),
+        typed_id=typed_id,
+        templates=ROLE_TEMPLATES.values(),
+        chosen=chosen,
+        **_editor(
+            request,
+            caller,
+            list(chosen.service) if chosen is not None else [],
+            list(chosen.grants) if chosen is not None else [],
+            form,
+        ),
     )
 
 
@@ -402,7 +427,11 @@ async def create_role(request: Request, caller: Actor, users: Users) -> Response
     with failing(
         "/ui/roles/new", again=lambda err: _new_role_page(request, caller, form, err)
     ):
-        role = users.create_role(caller, role_id, read_grants(form), read_service(form))
+        grants = read_grants(form)
+        chosen = ROLE_TEMPLATES.get(str(form.get("template") or ""))
+        if chosen is not None and chosen.recipients_required:
+            require_recipients(grants)
+        role = users.create_role(caller, role_id, grants, read_service(form))
     return back(request, _role_path(role.id), f"Role {role.id} created.")
 
 

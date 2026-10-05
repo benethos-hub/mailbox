@@ -28,6 +28,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `sends_left`, how many more the limit allows now.
 - The MCP server's `list_accounts` names these limits beside `send`, and
   warns of an account where the token may read mail and send it anywhere.
+- The UI's New role page offers four templates that fill the form:
+  Reader, Agent, Sender and Operator.
 
 ### Changed
 

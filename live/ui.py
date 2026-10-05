@@ -237,6 +237,13 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
     """A reader of the first test account made through the pages, its
     token, a sign-in with it, and the token revoked."""
     csrf = csrf_of(browser.get("/ui/users").text)
+    agent = browser.get("/ui/roles/new", params={"template": "agent"}).text
+    run.check(
+        "the template Agent fills the form of a new role",
+        'name="id" value="agent"' in agent
+        and 'name="g0_allow" value="drafts" checked' in agent
+        and 'name="g0_allow" value="send" checked' not in agent,
+    )
     role = browser.post(
         "/ui/roles",
         data={

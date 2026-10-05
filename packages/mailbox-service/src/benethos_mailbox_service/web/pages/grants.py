@@ -98,6 +98,67 @@ EXPIRES_FORMAT = "%Y-%m-%dT%H:%M"
 
 
 @dataclass(frozen=True)
+class RoleTemplate:
+    """A filled form of the New role page (PERMISSIONS.md 8.7): nothing
+    is stored until it is saved, and every field can be changed."""
+
+    id: str
+    title: str
+    summary: str
+    service: tuple[str, ...]
+    grants: tuple[Grant, ...]
+    # Every grant that sends must name its recipients.
+    recipients_required: bool = False
+
+
+ROLE_TEMPLATES: dict[str, RoleTemplate] = {
+    t.id: t
+    for t in (
+        RoleTemplate(
+            "reader",
+            "Reader",
+            "reads mail on the accounts you choose",
+            (),
+            (Grant(accounts=[], allow=["mail.read"]),),
+        ),
+        RoleTemplate(
+            "agent",
+            "Agent",
+            "reads, sorts and drafts on the accounts you choose, never sends: "
+            "what the MCP server needs",
+            (),
+            (Grant(accounts=[], allow=["mail.read", "mail.write", "drafts"]),),
+        ),
+        RoleTemplate(
+            "sender",
+            "Sender",
+            "sends from the accounts you choose, to the recipients you name, "
+            "a few a day",
+            (),
+            (Grant(accounts=[], allow=["send"], max_sends_per_day=10),),
+            recipients_required=True,
+        ),
+        RoleTemplate(
+            "operator",
+            "Operator",
+            "connects and manages every account, reads its audit, manages webhooks",
+            ("accounts.connect", "webhooks.manage"),
+            (Grant(accounts=["*"], allow=["accounts.manage", "audit"]),),
+        ),
+    )
+}
+
+
+def require_recipients(grants: list[Grant]) -> None:
+    """Refuse a grant that sends to anyone: what a template asks for."""
+    for index, grant in enumerate(grants):
+        if "send" in grant.allow and not grant.recipients:
+            raise GrantFormError(
+                f"grant {index + 1}: name the recipients it may send to"
+            )
+
+
+@dataclass(frozen=True)
 class ServiceRow:
     """The service rights as the editor shows them: groups to tick, the
     rest as single operations."""
