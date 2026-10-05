@@ -5,12 +5,18 @@ feed and replies filtered."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.data.models import Folder, FolderRole, Grant
+from benethos_mailbox_service.data.models import (
+    ChangeRecord,
+    Folder,
+    FolderRole,
+    Grant,
+)
 from benethos_mailbox_service.domain.mailbox.reach import Reach
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.main import Services
@@ -295,3 +301,25 @@ def test_the_inbox_reaches_itself_alone() -> None:
         "INBOX.Bills",
         "INBOX.Bills.2026",
     }
+
+
+def test_what_a_narrowed_reader_hears_of() -> None:
+    reach = Reach([frozenset({"Invoices"})], [INVOICES, PRIVATE])
+
+    def heard(kind: str, folder: str | None) -> bool:
+        record = ChangeRecord(
+            type=kind,  # type: ignore[arg-type]
+            id="x",
+            account_id="a",
+            at=datetime(2026, 10, 5, tzinfo=UTC),
+            folder_id=folder,
+        )
+        return reach.hears(record)
+
+    assert heard("message.updated", "f_inv")
+    assert not heard("message.updated", "f_priv")
+    # A deletion of unknown place names an id alone, a change of unknown
+    # place more: only the first is heard of.
+    assert heard("message.deleted", None)
+    assert not heard("message.created", None)
+    assert heard("account.needs_reauth", None)
