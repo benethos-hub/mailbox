@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from .step import Migration
+from .migration import Migration
 
-MIGRATION = Migration(
-    [
+
+class WebhookAttempts(Migration):
+    version = 11
+    statements = (
         """
         CREATE TABLE webhook_attempts (
             seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,5 +20,4 @@ MIGRATION = Migration(
         )
         """,
         "CREATE INDEX webhook_attempts_webhook ON webhook_attempts (webhook_id, seq)",
-    ],
-)
+    )

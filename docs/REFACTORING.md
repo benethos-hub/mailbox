@@ -765,7 +765,8 @@ hash lives in the tests and not with the thing it hashes.
 
 ### 11.2 Proposed
 
-One base class in `step.py`:
+One base class in `migration.py`, the module named as the class,
+`step.py` until now:
 
 ```python
 class Migration(ABC):
@@ -797,7 +798,7 @@ soon enough. A module then reads:
 ```python
 class PasswordsUniqueNames(Migration):
     version = 9
-    statements = (...)
+    statements = ...
 
     def before(self, db: sqlite3.Connection) -> list[str]: ...
 ```
@@ -842,7 +843,7 @@ having here, and it is not part of this proposal.
 One branch from `main`, one pull request, each step passing all checks:
 
 1. This section.
-2. `step.py`: the class above.
+2. `migration.py`: the class above, `step.py` renamed.
 3. The sixteen modules, by script: `MIGRATION = Migration([...])`
    becomes a class with `version` and `statements` as a tuple, the
    statement texts untouched, 9 and 15 with `before` as a method.

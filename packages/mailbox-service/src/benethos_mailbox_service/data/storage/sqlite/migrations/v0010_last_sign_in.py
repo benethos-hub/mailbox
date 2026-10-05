@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from .step import Migration
+from .migration import Migration
 
-MIGRATION = Migration(
-    [
-        "ALTER TABLE passwords ADD COLUMN last_sign_in_at TEXT",
-    ],
-)
+
+class LastSignIn(Migration):
+    version = 10
+    statements = ("ALTER TABLE passwords ADD COLUMN last_sign_in_at TEXT",)

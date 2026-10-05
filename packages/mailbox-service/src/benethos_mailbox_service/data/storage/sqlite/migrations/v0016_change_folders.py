@@ -5,10 +5,9 @@ Changes logged before have none.
 
 from __future__ import annotations
 
-from .step import Migration
+from .migration import Migration
 
-MIGRATION = Migration(
-    [
-        "ALTER TABLE changes ADD COLUMN folder_id TEXT",
-    ],
-)
+
+class ChangeFolders(Migration):
+    version = 16
+    statements = ("ALTER TABLE changes ADD COLUMN folder_id TEXT",)

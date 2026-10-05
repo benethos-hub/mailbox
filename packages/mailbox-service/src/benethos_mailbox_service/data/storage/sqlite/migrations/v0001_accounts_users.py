@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from .step import Migration
+from .migration import Migration
 
-MIGRATION = Migration(
-    [
+
+class AccountsUsers(Migration):
+    version = 1
+    statements = (
         """
         CREATE TABLE accounts (
             id TEXT PRIMARY KEY,
@@ -43,5 +45,4 @@ MIGRATION = Migration(
             revoked_at TEXT
         )
         """,
-    ],
-)
+    )

@@ -251,17 +251,15 @@ class Database:
                 f"({SCHEMA_VERSION}): run a newer version of the service"
             )
         notes: list[str] = []
-        for version, migration in enumerate(MIGRATIONS[current:], current + 1):
+        for migration in MIGRATIONS[current:]:
             with self.transaction() as db:
-                said = migration.before(db) if migration.before else []
-                for statement in migration.statements:
-                    db.execute(statement)
+                said = migration.apply(db)
                 db.execute(
                     "INSERT OR REPLACE INTO meta (key, value)"
                     " VALUES ('schema_version', ?)",
-                    (str(version),),
+                    (str(migration.version),),
                 )
-            notes += [f"schema {version}: {note}" for note in said]
+            notes += [f"schema {migration.version}: {note}" for note in said]
         if rewritten:
             notes.append(
                 "the file was rewritten once: from now on it shrinks after deletions"

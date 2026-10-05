@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from .step import Migration
+from .migration import Migration
 
-MIGRATION = Migration(
-    [
+
+class SendAudit(Migration):
+    version = 5
+    statements = (
         """
         CREATE TABLE sends (
             id TEXT PRIMARY KEY,
@@ -23,5 +25,4 @@ MIGRATION = Migration(
         """,
         "CREATE INDEX sends_account ON sends (account_id, created_at)",
         "CREATE INDEX sends_user ON sends (user_id, account_id, created_at)",
-    ],
-)
+    )

@@ -26,7 +26,10 @@ from benethos_mailbox_service.data.storage import (
     SqliteUserRepository,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION, migrations
-from benethos_mailbox_service.data.storage.sqlite.migrations import MIGRATIONS
+from benethos_mailbox_service.data.storage.sqlite.migrations import (
+    MIGRATIONS,
+    Migration,
+)
 from benethos_mailbox_service.domain.rights import Access
 from benethos_mailbox_service.errors import (
     ConflictError,
@@ -425,6 +428,25 @@ def test_times_are_stored_in_utc() -> None:
         iso(datetime(2026, 9, 27, 12, 0))
 
 
+def test_a_migration_runs_before_then_its_statements() -> None:
+    class Step(Migration):
+        version = 99
+        statements = ("INSERT INTO log VALUES ('statement')",)
+
+        def before(self, db: sqlite3.Connection) -> list[str]:
+            db.execute("INSERT INTO log VALUES ('before')")
+            return ["said so"]
+
+    db = sqlite3.connect(":memory:")
+    db.execute("CREATE TABLE log (step TEXT)")
+    assert Step().apply(db) == ["said so"]
+    assert [row[0] for row in db.execute("SELECT step FROM log")] == [
+        "before",
+        "statement",
+    ]
+    assert Step.fingerprint() == hashlib.sha256(Step.statements[0].encode()).hexdigest()
+
+
 def test_each_migration_step_is_one_statement() -> None:
     """Executed one by one: a second statement in a step would be cut off
     by sqlite3, one that ended early would be refused."""
@@ -436,18 +458,21 @@ def test_each_migration_step_is_one_statement() -> None:
 
 def test_each_migration_module_is_in_the_list_at_its_number() -> None:
     """A module left out of MIGRATIONS, or one at the wrong place, would
-    change the schema a version stands for."""
+    change the schema a version stands for. The class says its version,
+    and it is the number in the name of its module."""
     found = {
         module.name: importlib.import_module(f"{migrations.__name__}.{module.name}")
         for module in pkgutil.iter_modules(migrations.__path__)
-        if module.name != "step"
+        if module.name != "migration"
     }
     numbers = []
     for name, module in found.items():
         named = re.fullmatch(r"v(\d{4})_\w+", name)
         assert named, f"{name} is not named vNNNN_<subject>"
         numbers.append(int(named[1]))
-        assert module.MIGRATION is MIGRATIONS[numbers[-1] - 1], name
+        migration = MIGRATIONS[numbers[-1] - 1]
+        assert type(migration).__module__ == module.__name__, name
+        assert migration.version == numbers[-1], name
     assert sorted(numbers) == list(range(1, SCHEMA_VERSION + 1))
 
 
@@ -473,8 +498,7 @@ RELEASED = {
 
 
 def fingerprint(number: int) -> str:
-    statements = MIGRATIONS[number - 1].statements
-    return hashlib.sha256("\n;\n".join(statements).encode()).hexdigest()
+    return MIGRATIONS[number - 1].fingerprint()
 
 
 @pytest.mark.parametrize("number", sorted(RELEASED))

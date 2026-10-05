@@ -4,10 +4,12 @@ are a cache of 24 hours, so the old ones are dropped.
 
 from __future__ import annotations
 
-from .step import Migration
+from .migration import Migration
 
-MIGRATION = Migration(
-    [
+
+class IdempotencyPerUser(Migration):
+    version = 8
+    statements = (
         "DROP TABLE idempotency",
         """
         CREATE TABLE idempotency (
@@ -22,5 +24,4 @@ MIGRATION = Migration(
         )
         """,
         "CREATE INDEX idempotency_created ON idempotency (created_at)",
-    ],
-)
+    )

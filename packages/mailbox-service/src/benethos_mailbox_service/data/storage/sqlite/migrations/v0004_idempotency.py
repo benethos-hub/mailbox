@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from .step import Migration
+from .migration import Migration
 
-MIGRATION = Migration(
-    [
+
+class Idempotency(Migration):
+    version = 4
+    statements = (
         """
         CREATE TABLE idempotency (
             account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -18,5 +20,4 @@ MIGRATION = Migration(
         )
         """,
         "CREATE INDEX idempotency_created ON idempotency (created_at)",
-    ],
-)
+    )

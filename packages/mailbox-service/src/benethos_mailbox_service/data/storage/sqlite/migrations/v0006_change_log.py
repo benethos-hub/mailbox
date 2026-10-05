@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from .step import Migration
+from .migration import Migration
 
-MIGRATION = Migration(
-    [
+
+class ChangeLog(Migration):
+    version = 6
+    statements = (
         """
         CREATE TABLE changes (
             seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,5 +19,4 @@ MIGRATION = Migration(
         """,
         "CREATE INDEX changes_account ON changes (account_id, seq)",
         "CREATE INDEX changes_at ON changes (at)",
-    ],
-)
+    )
