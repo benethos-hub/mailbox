@@ -293,7 +293,8 @@ full, which activities, which fields, storage, API and page, is
   `audit` appears in both lists), paged newest first, filters by user,
   operation and day.
 - UI: a card **Recent activity** on the user's page with its own
-  activities, and a page **Audit** under Service for `users.read`.
+  activities, and a page **Audit** under Service, both for `audit`
+  in `service`.
 - Kept for `MAILBOX_SERVICE_AUDIT_DAYS` days, 90 by default. The
   setting exists since 0.2.0 for the audit of sends.
 
@@ -348,5 +349,6 @@ follows on its own branch.
 - **Decided 2026-10-05:** four templates, Reader, Agent, Sender and
   Operator (8.7).
 - **Decided 2026-10-05:** grants per user stay beside roles.
-- Open: is 90 days the right default for the audit of 8.6, and does its
-  page belong under Service or on the overview?
+- **Decided 2026-10-05:** the audit of 8.6 keeps its records 90 days
+  by default, its page is under Service, and `audit` in `service` reads
+  it. The rest of its answers are in [AUDIT.md](AUDIT.md) section 7.

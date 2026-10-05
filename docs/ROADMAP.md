@@ -239,7 +239,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
     lines. Step 6 done: the HTTP request limit, per token or UI session
     and per client address, `429` with `Retry-After`, and every limit a
     setting ([LIMITS.md](LIMITS.md))
-  - planned: the audit of administration of [AUDIT.md](AUDIT.md)
+  - in progress: the audit of administration of [AUDIT.md](AUDIT.md),
+    decided 2026-10-05 (PERMISSIONS.md 8.6)
   - with the new providers: the OAuth round trip
   - recovery key, status: moved to phase 4b
 - Threads (6.3): for IMAP built across folders from the id mapping,
@@ -249,8 +250,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   done: the last administrator stays (8.3), service rights apart from
   grants and `users.read` (8.1, 8.2), sending limits in `/v1/me` and
   grants that expire (8.8, 8.4), role templates (8.7), the grant
-  constraint `folders` (8.5). The audit of administration (8.6) follows
-  on its own. `identities` (8.5) waits for identities in the account
+  constraint `folders` (8.5). The audit of administration (8.6) is in
+  progress on its own. `identities` (8.5) waits for identities in the account
   model
 - `pop3` adapter (5.2)
 - **The domain in packages by area, and the change feed as typed

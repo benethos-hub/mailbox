@@ -5,8 +5,9 @@ step, [LOGGING.md](LOGGING.md), names every activity the service logs. This
 step stores those a person caused, so "who changed what, when" can be
 answered after the log is gone. It is the design of
 [PERMISSIONS.md 8.6](PERMISSIONS.md#86-an-audit-of-administration) in
-full. Nothing of it is built until the user asks. What the user decides
-is marked as decided, everything else is the proposal.
+full. **Decided 2026-10-05:** it is built, with the answers of
+section 7. What the user decides is marked as decided, everything else
+is the proposal.
 
 ## 1. Log and audit
 
@@ -70,7 +71,7 @@ as the send audit does. `user_name` is written for that reason.
   the service, so the group `audit` appears in both lists of
   PERMISSIONS.md 8.1. `x-permission` as on every route, the OpenAPI
   document regenerated.
-- **UI**: a page **Audit** under Service for `users.read`, a list page
+- **UI**: a page **Audit** under Service for `audit` in `service`, a list page
   of UI.md 4.1 with the filter bar, and a card **Recent activity** on
   the user's page with that user's newest activities.
 - **The log page** stays as it is: the audit does not replace it.
@@ -101,11 +102,14 @@ with `host` as the credential.
 
 Each step a commit on one branch, a CHANGELOG entry for the API.
 
-## 7. Open questions
+## 7. Questions answered
 
-- 90 days by default: the send audit keeps its records that long since
-  2026-09-29, and `0` keeps them for ever. The same for this one?
-- Should a failed sign-in with an unknown name be stored at all? It
-  names what an attacker typed.
-- Does the Audit page belong under Service, or is the card on the user's
-  page enough for a start?
+- **Decided 2026-10-05:** `audit` in `service` reads the audit: the
+  API, the Audit page and the Recent activity card. In a grant `audit`
+  stays the audit of sends of accounts.
+- **Decided 2026-10-05:** `MAILBOX_SERVICE_AUDIT_DAYS` keeps this audit
+  as well, 90 days by default, `0` for ever.
+- **Decided 2026-10-05:** a failed sign-in with a name that is no
+  user's is stored as "an unknown name", never with what was typed.
+- **Decided 2026-10-05:** the page Audit under Service, and the card
+  Recent activity on each user's page.
