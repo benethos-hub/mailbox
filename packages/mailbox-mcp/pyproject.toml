@@ -41,6 +41,8 @@ classifiers = [
 # Deliberately small: no service package, no mail libraries. Everything this
 # server knows about mail it learns from the REST API.
 dependencies = [
+    # Each minimum is a version without a known vulnerability: the job
+    # lowest-versions of ci.yml checks them against OSV.
     # Plain `mcp`, not `mcp[cli]`: the extra only adds the `mcp` command and
     # its dependencies. It lives in the workspace dev group.
     "mcp>=2.0.0,<3",
@@ -51,8 +53,8 @@ dependencies = [
     "uvicorn>=0.31",
     # Imported here as well, though mcp brings them: the ASGI types of the
     # transport, the tools' cancel scopes and their fields.
-    "starlette>=0.27",
-    "anyio>=4.9",
+    "starlette>=1.3.1",
+    "anyio>=4.14.2",
     "pydantic>=2.12",
 ]
 

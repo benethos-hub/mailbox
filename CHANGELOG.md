@@ -53,6 +53,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Minimum versions without a known vulnerability. `benethos-mailbox-service`:
+  fastapi 0.133.0, starlette 1.3.1 (now named, fastapi asks for no safe
+  version), python-multipart 0.0.31, cryptography 50, anyio 4.14.2,
+  jinja2 3.1.6, dnspython 2.6.1. `benethos-mailbox-mcp`: starlette 1.3.1,
+  anyio 4.14.2. An install from the lockfile, as the images do, had them
+  already.
 - The project is named Mailbox, its packages `mailbox-service` and
   `mailbox-mcp`. The OpenAPI document's title is `mailbox-service`, the
   MCP server's `mailbox-mcp`. On PyPI and ghcr.io the names stay

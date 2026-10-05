@@ -102,6 +102,8 @@ jobs:
   # allows. An environment that already holds an older fastapi or
   # defusedxml keeps it, as long as it meets the minimum. Dependabot moves
   # uv.lock, never the minimums, so they fall behind the code unnoticed.
+  # Each environment is also checked against OSV: a minimum with a known
+  # vulnerability lets someone install it.
   # Not a required check: a failure here means raising a minimum.
   lowest-versions:
     runs-on: ubuntu-latest
@@ -121,6 +123,13 @@ jobs:
           uv pip list --python /tmp/lowest/bin/python
           /tmp/lowest/bin/python -m pytest -q -p no:cacheprovider
 
+      - name: No known vulnerability in their lowest versions
+        run: |
+          set -euo pipefail
+          uv pip freeze --python /tmp/lowest/bin/python --exclude-editable > /tmp/lowest.txt
+          uvx pip-audit==2.10.1 --strict --disable-pip --no-deps \
+            --vulnerability-service osv -r /tmp/lowest.txt
+
       # Alone, the MCP server may get older versions than beside the service,
       # uvicorn for one.
       - name: The MCP server alone on its lowest versions
@@ -131,6 +140,13 @@ jobs:
             -e packages/mailbox-mcp "pytest>=9.1.1" "pytest-asyncio>=1.0"
           uv pip list --python /tmp/lowest-mcp/bin/python
           /tmp/lowest-mcp/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-mcp/tests
+
+      - name: No known vulnerability in the MCP server's lowest versions
+        run: |
+          set -euo pipefail
+          uv pip freeze --python /tmp/lowest-mcp/bin/python --exclude-editable > /tmp/lowest-mcp.txt
+          uvx pip-audit==2.10.1 --strict --disable-pip --no-deps \
+            --vulnerability-service osv -r /tmp/lowest-mcp.txt
 
   # Both images are built on every push, so a broken Dockerfile shows up
   # here and not first in a release.
