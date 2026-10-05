@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import anywhere_tag, card, empty, fact, facts, rights_tags %}
-{% from "components/grants.html" import role_tags %}
+{% from "components/grants.html" import role_tags, sending_of %}
 {% block title %}Overview · {{ APP_NAME }}{% endblock %}
 {% block heading %}Overview{% endblock %}
 {% block subheading %}<div class="sub">Signed in as {{ rights.name }}</div>{% endblock %}
@@ -23,7 +23,7 @@
 {% call card("Your accounts", meta=rows | length, tight=True) %}
 <div class="table-scroll">
   <table>
-    <thead><tr><th>Account</th><th>Status</th><th>You may</th><th></th></tr></thead>
+    <thead><tr><th>Account</th><th>Status</th><th>You may</th><th>Sending</th><th></th></tr></thead>
     <tbody>
       {% for row in rows %}
       {% set account = row.rights %}
@@ -37,6 +37,7 @@
           {{ rights_tags(row.view.groups, row.view.operations) }}
           {% if "read_and_send_anywhere" in account.warnings %}{{ anywhere_tag() }}{% endif %}
         </td>
+        <td>{{ sending_of(account.sending) }}</td>
         <td class="actions">{% if row.mail %}<a class="btn small" href="{{ row.mail }}">Mail</a>{% endif %}</td>
       </tr>
       {% endfor %}

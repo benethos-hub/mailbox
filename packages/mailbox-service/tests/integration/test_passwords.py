@@ -154,6 +154,9 @@ def test_the_migration_renames_a_name_taken_twice(
         raw.execute("DROP INDEX users_name")
         raw.execute("DROP TABLE passwords")
         raw.execute("DROP TABLE webhook_attempts")
+        raw.execute("ALTER TABLE users DROP COLUMN service")
+        raw.execute("ALTER TABLE roles DROP COLUMN service")
+        raw.execute("ALTER TABLE changes DROP COLUMN folder_id")
         raw.execute("ALTER TABLE users DROP COLUMN ui_sign_in")
         raw.execute("UPDATE meta SET value = '8' WHERE key = 'schema_version'")
         raw.execute("INSERT INTO users (id, name) VALUES ('usr_11111111aa', 'Anna')")
@@ -177,6 +180,9 @@ def test_the_migration_keeps_the_ui_sign_in_of_who_has_a_password(
     raw = sqlite3.connect(path)
     with raw:
         # Back to schema 11: users without the switch, one with a password.
+        raw.execute("ALTER TABLE users DROP COLUMN service")
+        raw.execute("ALTER TABLE roles DROP COLUMN service")
+        raw.execute("ALTER TABLE changes DROP COLUMN folder_id")
         raw.execute("ALTER TABLE users DROP COLUMN ui_sign_in")
         raw.execute("UPDATE meta SET value = '11' WHERE key = 'schema_version'")
         raw.execute("INSERT INTO users (id, name) VALUES ('usr_a', 'anna')")

@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from ... import __version__
-from ...common.clock import log_time
+from ...common.clock import log_time, utc_now
 from ...data.models import Address
 from .navigation import navigation, own_page
 from .session import PATH, SignInRequired, show_once
@@ -41,6 +41,11 @@ def when(value: datetime | None) -> str:
     if value is None:
         return MISSING
     return value.astimezone().strftime("%Y-%m-%d %H:%M")
+
+
+def past(value: datetime | None) -> bool:
+    """Whether a time has come: an expired grant, for example."""
+    return value is not None and value <= utc_now()
 
 
 def size(value: int | None) -> str:
@@ -75,6 +80,7 @@ def segment(value: str) -> str:
 
 templates.env.filters.update(
     when=when,
+    past=past,
     moment=log_time,
     size=size,
     address=address,

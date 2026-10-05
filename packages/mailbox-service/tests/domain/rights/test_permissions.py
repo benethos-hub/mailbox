@@ -69,9 +69,48 @@ def test_a_stored_right_that_no_longer_exists_grants_nothing() -> None:
     assert unknown == ["mail.gone"]
 
 
-def test_every_operation_has_exactly_one_group() -> None:
-    seen = [op for ops in permissions.GROUPS.values() for op in ops]
+def test_every_operation_has_exactly_one_group_but_users_read() -> None:
+    """users.read is a part of users.manage, the one group inside another."""
+    groups = {g: ops for g, ops in permissions.GROUPS.items() if g != "users.read"}
+    seen = [op for ops in groups.values() for op in ops]
     assert len(seen) == len(set(seen))
+    assert set(permissions.GROUPS["users.read"]) < set(
+        permissions.GROUPS["users.manage"]
+    )
+    assert permissions.permission_of("list_users") == "users.read"
+    assert permissions.permission_of("create_user") == "users.manage"
+
+
+def test_summarize_names_the_larger_group_alone() -> None:
+    groups, rest = permissions.summarize(
+        permissions.GROUPS["users.manage"], permissions.SERVICE
+    )
+    assert groups == ["users.manage"] and rest == []
+    groups, rest = permissions.summarize(
+        [*permissions.GROUPS["users.read"], "create_token"], permissions.SERVICE
+    )
+    assert groups == ["users.read"] and rest == ["create_token"]
+
+
+@pytest.mark.parametrize(
+    "name", ["admin", "users.manage", "accounts.connect", "create_user"]
+)
+def test_a_grant_refuses_a_right_of_the_service(name: str) -> None:
+    with pytest.raises(BadRequestError, match="name it in service"):
+        permissions.check_grant(["mail.read", name])
+
+
+@pytest.mark.parametrize("name", ["mail.read", "accounts.manage", "get_message"])
+def test_the_service_list_refuses_a_right_on_accounts(name: str) -> None:
+    with pytest.raises(BadRequestError, match="name it in a grant"):
+        permissions.check_service(["users.read", name])
+
+
+def test_both_lists_refuse_an_unknown_name() -> None:
+    with pytest.raises(BadRequestError, match="unknown right"):
+        permissions.check_grant(["mail.everything"])
+    with pytest.raises(BadRequestError, match="unknown right"):
+        permissions.check_service(["users.everything"])
 
 
 def test_known_names_cover_groups_operations_and_admin() -> None:
@@ -82,15 +121,14 @@ def test_known_names_cover_groups_operations_and_admin() -> None:
 
 
 @pytest.mark.parametrize("operation", ["show_recovery_key", "read_service_log"])
-def test_admin_on_every_account_alone(operation: str) -> None:
+def test_admin_alone(operation: str) -> None:
     """The recovery key opens every secret, the log names users and
-    addresses: no grant names them, admin on every account gives them."""
+    addresses: no name but admin gives them."""
     assert operation not in permissions.known_names()
     with pytest.raises(BadRequestError):
         permissions.expand([operation])
-    everywhere = Access("u", "u", [Grant(accounts=["*"], allow=["admin"])])
-    assert everywhere.allows(operation)
-    on_one = Access("u", "u", [Grant(accounts=["acc_1"], allow=["admin"])])
-    assert not on_one.allows(operation)
-    managers = Access("u", "u", [Grant(accounts=["*"], allow=["users.manage"])])
-    assert not managers.allows(operation)
+    assert Access("u", "u", [], service=["admin"]).allows(operation)
+    every_group = [*permissions.SERVICE_GROUPS]
+    assert not Access("u", "u", [], service=every_group).allows(operation)
+    stored = Access("u", "u", [Grant(accounts=["*"], allow=["admin"])])
+    assert not stored.allows(operation)

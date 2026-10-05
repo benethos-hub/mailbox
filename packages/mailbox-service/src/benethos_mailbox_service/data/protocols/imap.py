@@ -123,6 +123,9 @@ class ImapSession:
         self._factory = client_factory
         self._client_id = client_id
         self._client: Any = None
+        # The personal namespace, asked once per connection: the client
+        # it was asked on, and the answer.
+        self._namespace: tuple[Any, tuple[str, str | None]] | None = None
 
     @property
     def connected(self) -> bool:
@@ -487,16 +490,19 @@ class ImapSession:
     def personal_namespace(self) -> tuple[str, str | None]:
         """Where top-level folders of the user go (RFC 2342), e.g.
         ``("INBOX.", ".")`` on servers that keep all folders below the inbox,
-        and its delimiter."""
+        and its delimiter. Asked once per connection."""
         with _errors():
             client = self._require()
-            if "NAMESPACE" not in _capabilities(client):
-                return "", None
-            personal = client.namespace().personal
-        if not personal:
-            return "", None
-        prefix, delimiter = personal[0]
-        return _text(prefix), _text(delimiter) if delimiter else None
+            if self._namespace is not None and self._namespace[0] is client:
+                return self._namespace[1]
+            found: tuple[str, str | None] = ("", None)
+            if "NAMESPACE" in _capabilities(client):
+                personal = client.namespace().personal
+                if personal:
+                    prefix, delimiter = personal[0]
+                    found = (_text(prefix), _text(delimiter) if delimiter else None)
+        self._namespace = (client, found)
+        return found
 
     def create_folder(self, name: str) -> None:
         """Create and subscribe: mail clients such as Outlook list only

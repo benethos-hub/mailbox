@@ -1,7 +1,8 @@
 # Users, roles and rights
 
-Proposal of 2026-09-27. One place for the whole model: who may do what,
-how that is written down, checked and shown, and what should change.
+Proposal of 2026-09-27, section 8 decided on 2026-10-05. One place for
+the whole model: who may do what, how that is written down, checked and
+shown, and what should change.
 [CONCEPT 7.5](CONCEPT.md#75-users-permissions-and-authentication) keeps
 the record of decisions and the details of credentials. [UI.md](UI.md)
 says how the pages look. This file says how the rights work, as they are
@@ -42,10 +43,11 @@ decides is marked as decided, everything else is the proposal.
 | **Credential** | how a user proves who it is: a token for the API and the MCP server, a password for the UI | the user's page |
 | **Right** | the name of one operation, e.g. `send_message` | the catalogue, `/v1/permissions` |
 | **Group** | a named set of rights, e.g. `mail.read` | the catalogue |
-| **Grant** | rights on accounts, with constraints: `{accounts, allow, recipients, max_sends_per_day}` | part of a user or a role |
-| **Role** | a named, reusable set of grants | `/v1/roles`, UI Roles |
-| **Constraint** | a narrowing of a grant that changes no right: which recipients, how many sends a day | part of the grant |
-| **Effective rights** | the union of a user's grants and those of its roles | `/v1/me`, the user's page |
+| **Grant** | rights on accounts, with constraints: `{accounts, allow, recipients, max_sends_per_day, folders, expires_at}` | part of a user or a role |
+| **Service rights** | rights of the service, bound to no account: `{service: [...]}` | part of a user or a role |
+| **Role** | a named, reusable set of grants and service rights | `/v1/roles`, UI Roles |
+| **Constraint** | a narrowing of a grant that changes no right: which recipients, how many sends a day, which folders, until when | part of the grant |
+| **Effective rights** | the union of a user's rights and those of its roles | `/v1/me`, the user's page |
 
 ## 3. The catalogue
 
@@ -60,30 +62,31 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
 | `send` | `send_message`, `send_draft` | an account |
 | `audit` | `list_sends`, `list_all_sends` | an account |
-| `accounts.manage` | `update_account`, `delete_account`, `verify_account`, and `discover_account`, `create_account`, `start_oauth` | an account, the last three every account |
+| `accounts.manage` | `update_account`, `delete_account`, `verify_account` | an account |
+| `accounts.connect` | `discover_account`, `start_oauth`, `create_account` | the service |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |
-| `users.manage` | users, tokens, passwords, roles: fourteen rights | the service |
-| `admin` | everything, and `show_recovery_key` and `read_service_log`, which no grant names | the service |
+| `users.read` | `list_users`, `get_user`, `list_tokens`, `list_roles`, `get_role` | the service |
+| `users.manage` | `users.read` and changes to users, tokens, passwords, roles: fourteen rights | the service |
+| `admin` | everything, and `show_recovery_key` and `read_service_log`, which nothing else gives | the service |
 
-Three kinds of right hide in this table, and the model treats them
-differently without saying so in the grant:
+Two kinds of right, kept in two lists of a user or a role (8.1):
 
-- **Account-bound rights** act on one account. A grant names the
-  accounts, `*` for every account, also those added later.
-- **Service rights** act on the service: `users.manage`,
-  `webhooks.manage`, `admin`. A grant that names them ignores its
-  accounts list.
-- **Rights on accounts that do not exist yet**: `discover_account`,
-  `create_account`, `start_oauth`. They need a grant with `*`. A grant
-  naming `accounts.manage` on one account gives `update_account` and
-  `verify_account` there, and nothing of connecting.
+- **Rights on accounts** act on one account. A grant names them in
+  `allow`, and names the accounts, `*` for every account, also those
+  added later.
+- **Rights of the service** act on no account: `accounts.connect`,
+  `users.read`, `users.manage`, `webhooks.manage` and `admin`, or single
+  operations of them. They are named in `service`. A name in the wrong
+  list answers `400`.
+- Whoever connects an account gets `accounts.manage` on it, unless it
+  holds that there already.
 
 Two operations are open to every user: `get_me` and `list_permissions`.
 
 ## 4. How a right is resolved
 
-- **Effective rights** are the union of the user's grants and the grants
-  of its roles. A role is a name for grants, nothing more. A right
+- **Effective rights** are the union of the user's grants and service
+  rights and those of its roles. A role is a name for grants, nothing more. A right
   unknown to the catalogue, for example one renamed since the grant was
   written, grants nothing and is logged. It never locks anyone out.
 - **Per request**: credential, then user, then the route's right and the
@@ -92,12 +95,23 @@ Two operations are open to every user: `get_me` and `list_permissions`.
 - **Cross-account operations filter.** `list_accounts`, `/v1/messages`,
   `/v1/changes` and the UI's mail page show the accounts the user has a
   right on, and leave the others out.
+- **Folders.** Where every grant that allows an operation on mail names
+  `folders`, the call keeps to them: folders listed and their
+  subfolders, by role, name or id. On an IMAP server that keeps every
+  folder below the inbox (`INBOX.Sent`), the folders right below it are
+  at the top, as mail clients show them. A message or folder outside answers
+  `404`, a move or a new folder outside answers `403`. Lists, the change
+  feed and webhooks leave out what is outside. A change keeps the folder
+  it happened in. A deletion whose folder is unknown, made before the
+  folder was kept or in an account without an index, goes to everyone
+  who may read the account: it names an id and nothing else.
 - **Not seen, not there.** An account outside every grant answers `404`.
   An account inside a grant, but without the right asked for, answers
   `403` and names the missing right.
 - **`/v1/me`** answers who the caller is, every account it may act on
-  with the operations there, the operations not bound to an account, and
-  a warning per account the caller may read mail in and send it anywhere
+  with the operations there and the limits of each grant that allows
+  sending, with the sends left, the operations of the service, and a
+  warning per account the caller may read mail in and send it anywhere
   from. The MCP server builds its tools from it. The UI's overview and
   user page show the same in words.
 
@@ -109,7 +123,8 @@ from becoming a way up:
 - **Hands out only what it holds.** Every grant given, directly or
   through a role, must be covered by the giver's own effective rights, on
   the same accounts. A send right is covered only by a send right of the
-  giver with recipients and a limit at least as narrow.
+  giver with recipients and a limit at least as narrow. A grant of the
+  giver that expires covers only a grant that expires no later.
 - **Manages only whom it covers.** Changing, deleting, giving a token or
   a password to a user needs the giver to cover that user's effective
   rights. A token or a password for another user means signing in as
@@ -142,16 +157,17 @@ from becoming a way up:
 
 - **API**: `x-permission` on every operation, `/v1/me`,
   `/v1/permissions`, the user and role resources, `403` naming the right.
-- **UI**: the grant editor with a row per grant, accounts as tick boxes,
+- **UI**: the editor with the service rights as tick boxes and single
+  rights in a text field, and a row per grant: accounts as tick boxes,
   groups as tick boxes with their rights as a hint, single rights in a
   text field, recipients and the daily limit. The user's page shows the
   effective rights per account, the sending limits and the warning
   "reads and sends anywhere". Pages and buttons appear only for those
   with the right.
-- **MCP server**: at start `/v1/me` decides which tools exist. The
-  warning per account goes into the server's instructions, since a mail
-  with injected instructions could carry data out through a user that
-  reads mail and sends anywhere.
+- **MCP server**: at start `/v1/me` decides which tools exist.
+  `list_accounts` names the limits on sending per account, and warns of
+  an account where the token may read mail and send it anywhere, since a
+  mail with injected instructions could carry data out through it.
 - **Audit**: sends in the database (`/v1/accounts/{id}/sends`,
   `/v1/sends`, UI Sends).
   Sign-ins, failed sign-ins, password changes and rights changes in the
@@ -159,8 +175,10 @@ from becoming a way up:
 
 ## 8. What should change
 
-Eight changes, each one pull request. The first two change the model,
-the rest add to it. None removes a right anyone holds.
+Eight changes. The first two change the model, the rest add to it.
+None removes a right anyone holds. **Decided 2026-10-05:** 8.1 to 8.5,
+8.7 and 8.8 as below, with the answers of section 10. 8.6 follows on its
+own. Of 8.5 only `folders` is built now.
 
 ### 8.1 Service rights leave the grant
 
@@ -192,9 +210,11 @@ that do not apply. The proposal: a user (and a role) has two lists.
   its password for a moment and needs a grant on it afterwards: the
   creator gets `accounts.manage` on the new account, and nothing else, so
   it can verify and remove what it connected. Mail rights on it are given
-  as on any account.
+  as on any account. **Decided 2026-10-05.**
 - `admin` in `service` means every right, as today. `admin` in a grant's
-  `allow` is no longer accepted.
+  `allow` is no longer accepted. **Decided 2026-10-05:** a request that
+  names a service right or `admin` in a grant's `allow` answers `400`
+  and says it belongs in `service`. Nothing is rewritten silently.
 - Migration: a stored grant that names a service right or `admin` moves
   those names to `service` and keeps the rest. A grant with `*` and
   `accounts.manage` gets `accounts.connect` in `service`, since it could
@@ -226,7 +246,8 @@ is left who may sign in to the UI and repair it. The way back is then
 the host: `users set-password`. The proposal: the service refuses a
 change that would leave no enabled user with `admin` and `ui_sign_in`,
 with `409` and a message that says so. The host command stays as the
-last resort.
+last resort. **Decided 2026-10-05:** refused, not allowed with a
+warning.
 
 ### 8.4 A grant can expire
 
@@ -245,8 +266,13 @@ Both narrow a grant and are checked in the domain, as `recipients` is:
   for every folder. `mail.read` with `folders: ["inbox", "Invoices"]`
   lists and reads there and nowhere else. `mail.write` with folders
   moves only between them. Planned in CONCEPT 7.5 already.
+  **Decided 2026-10-05:** a listed folder includes its subfolders, so
+  `Invoices` covers `Invoices/2026`. Deleting to the trash stays allowed
+  under `mail.write` with folders. Reading the trash needs it in the
+  list. Deleting for good stays a right of its own.
 - **`identities`**: which sender identities of an account a send may use,
   null for every one (IDEAS). Waits for identities in the account model.
+  **Decided 2026-10-05:** not built now.
 
 A constraint applies per grant, as today: a call passes when one grant
 that allows it accepts everything about the call.
@@ -279,18 +305,22 @@ offers them as templates, not stored until saved and changed at will:
 | Template | Grants |
 |---|---|
 | Reader | `mail.read` on chosen accounts |
-| Assistant | `mail.read`, `mail.write`, `drafts` on chosen accounts. What the MCP server needs to sort and draft, without sending |
+| Agent | `mail.read`, `mail.write`, `drafts` on chosen accounts. What the MCP server needs to sort and draft, without sending |
 | Sender | `send` with `recipients` required and a daily limit, on chosen accounts |
 | Operator | `accounts.manage`, `audit` on every account, `accounts.connect` and `webhooks.manage` in service |
 
-The API gets nothing new: a template is a filled form.
+The API gets nothing new: a template is a filled form. **Decided
+2026-10-05:** these four, the second named Agent.
 
 ### 8.8 `/v1/me` names the sending limits
 
 Per account the caller may send from, the recipients and the daily
 limit of each grant that allows it, and how many sends are left today.
 The MCP server tells the model before it tries, and the UI's overview
-shows the person what its own token may send. IDEAS has the shape.
+shows the person what its own token may send.
+**Decided 2026-10-05:** the MCP server's `list_accounts` names the limits
+and the warning about reading and sending anywhere, so the model knows
+them before it sends.
 
 ## 9. Order of work
 
@@ -305,17 +335,18 @@ shows the person what its own token may send. IDEAS has the shape.
 7. 8.5, the constraints, when identities exist and folders are asked for.
 
 Every step keeps the existing tests green, adds its own and, where a
-page changes, a walk in `live/ui.py`.
+page changes, a walk in `live/ui.py`. **Decided 2026-10-05:** steps 2,
+3, 4, 6 and 7 on one branch, a commit per step, one pull request. Step 5
+follows on its own branch.
 
-## 10. Open questions
+## 10. Questions answered
 
-- 8.1: should the creator of an account get `accounts.manage` on it, or
-  nothing until an administrator grants it?
-- 8.3: refuse the change, or allow it and warn on the overview until it
-  is repaired?
-- 8.6: is 90 days the right default, and does the audit page belong
-  under Service or on the overview?
-- 8.7: are four templates enough, and are their names right?
-- Is a grant per user still wanted at all, or should every right come
-  through a role? Grants per user keep small deployments simple, roles
-  keep large ones honest. The proposal keeps both.
+- **Decided 2026-10-05:** the creator of an account gets
+  `accounts.manage` on it (8.1).
+- **Decided 2026-10-05:** a change that would leave no administrator is
+  refused (8.3).
+- **Decided 2026-10-05:** four templates, Reader, Agent, Sender and
+  Operator (8.7).
+- **Decided 2026-10-05:** grants per user stay beside roles.
+- Open: is 90 days the right default for the audit of 8.6, and does its
+  page belong under Service or on the overview?

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import card, empty %}
-{% from "components/grants.html" import grants_of %}
+{% from "components/grants.html" import rights_of %}
 {% block title %}Roles · {{ APP_NAME }}{% endblock %}
 {% block heading %}Roles{% endblock %}
-{% block subheading %}<div class="sub">Named sets of grants that users share</div>{% endblock %}
+{% block subheading %}<div class="sub">Named sets of rights that users share</div>{% endblock %}
 {% block actions %}
 {% if can_create %}<a class="btn primary" href="/ui/roles/new">New role</a>{% endif %}
 {% endblock %}
@@ -12,12 +12,12 @@
 {% call card("Roles", meta=roles | length, tight=True) %}
 <div class="table-scroll">
   <table>
-    <thead><tr><th>Role</th><th>Grants</th><th class="num">Users</th></tr></thead>
+    <thead><tr><th>Role</th><th>Rights</th><th class="num">Users</th></tr></thead>
     <tbody>
       {% for role in roles %}
       <tr>
         <td class="name"><a href="/ui/roles/{{ role.id | segment }}">{{ role.id }}</a></td>
-        <td>{{ grants_of(role.grants, names) }}</td>
+        <td>{{ rights_of(role.service, role.grants, names) }}</td>
         <td class="num">{{ used.get(role.id) | or_missing }}</td>
       </tr>
       {% endfor %}

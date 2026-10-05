@@ -227,7 +227,7 @@ the tools that fit:
 
 | Tool | Needs | What it does |
 |---|---|---|
-| `list_accounts` | – | the accounts, their addresses, what may be done on each |
+| `list_accounts` | – | the accounts, their addresses, what may be done on each, the limits on sending and a warning where the token may read and send anywhere |
 | `list_folders` | `mail.read` | folders with id, name, role and counts |
 | `search_messages` | `mail.read` | find mail by text, sender, recipient, subject, days, flags, attachments, in one account or all |
 | `get_message` | `mail.read` | one mail as plain text, cut to `max_chars` |

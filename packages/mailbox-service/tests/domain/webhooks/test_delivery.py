@@ -14,7 +14,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.data.models import Grant, ProviderType
+from benethos_mailbox_service.data.models import Folder, Grant, ProviderType
 from benethos_mailbox_service.data.protocols.http import (
     WebhookPoster,
     is_receiver_address,
@@ -24,7 +24,7 @@ from benethos_mailbox_service.domain.webhooks.delivery import BATCH, Retries, si
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 from benethos_mailbox_service.main import Services
 
-from ...conftest import ADMIN, bearer_for
+from ...conftest import ADMIN, bearer_for, memory_of
 
 pytestmark = pytest.mark.usefixtures("master_key")
 URL = "https://hooks.example.com/mail"
@@ -135,7 +135,7 @@ async def test_the_api_shows_a_webhook_with_its_posts(
     assert post["error"] == "the receiver answered 500"
     other = TestClient(
         client.app,
-        headers=bearer_for(services, Grant(accounts=["*"], allow=["webhooks.manage"])),
+        headers=bearer_for(services, service=["webhooks.manage"]),
     )
     assert other.get(f"/v1/webhooks/{created['id']}").status_code == 404
 
@@ -175,7 +175,8 @@ async def test_only_accounts_the_creator_may_read(
         client.app,
         headers=bearer_for(
             services,
-            Grant(accounts=[account_id], allow=["mail.read", "webhooks.manage"]),
+            Grant(accounts=[account_id], allow=["mail.read"]),
+            service=["webhooks.manage"],
         ),
     )
     hook(limited)
@@ -189,7 +190,9 @@ async def test_a_creator_that_is_gone_hears_nothing(
     client: TestClient, services: Services, account_id: str, receiver: Receiver
 ) -> None:
     headers = bearer_for(
-        services, Grant(accounts=["*"], allow=["mail.read", "webhooks.manage"])
+        services,
+        Grant(accounts=["*"], allow=["mail.read"]),
+        service=["webhooks.manage"],
     )
     limited = TestClient(client.app, headers=headers)
     hook(limited)
@@ -440,3 +443,31 @@ async def test_a_failed_round_does_not_end_the_dispatcher(
         await services.deliveries.run()
     assert len(rounds) == 2
     assert "the dispatcher could not finish a round" in caplog.text
+
+
+async def test_a_creator_narrowed_to_folders_hears_of_them_alone(
+    client: TestClient, services: Services, account_id: str, receiver: Receiver
+) -> None:
+    """PERMISSIONS.md 8.5: the webhook keeps to its creator's folders."""
+    memory = memory_of(services, account_id)
+    memory.folders.append(Folder(id="f_inv", name="Invoices"))
+    memory.messages[1] = memory.messages[1].model_copy(update={"folder_ids": ["f_inv"]})
+    limited = TestClient(
+        client.app,
+        headers=bearer_for(
+            services,
+            Grant(accounts=[account_id], allow=["mail.read"], folders=["Invoices"]),
+            service=["webhooks.manage"],
+        ),
+    )
+    created = hook(limited)
+    mark_read(client, account_id, "m0")
+    mark_read(client, account_id, "m1")
+    await services.deliveries.deliver_due()
+    assert [e["id"] for e in receiver.events()] == ["m1"]
+    assert "folder_id" not in receiver.events()[0]
+    mark_read(client, account_id, "m2")
+    await services.deliveries.deliver_due()
+    # Nothing to hear of: no post, and the cursor moves past it.
+    assert len(receiver.posts) == 1
+    assert stored(services, created["id"]).delivery.cursor == services.changes.last()

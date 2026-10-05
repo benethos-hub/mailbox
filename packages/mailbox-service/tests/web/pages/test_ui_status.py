@@ -64,7 +64,7 @@ def test_the_recovery_key_is_for_admin_alone(
     services.vault.initialize()
     sign_in(
         app_client,
-        *browser_user(services, Grant(accounts=["*"], allow=["users.manage"])),
+        *browser_user(services, service=["users.manage"]),
     )
     assert 'href="/ui/recovery-key"' not in app_client.get("/ui").text
     assert app_client.get("/ui/recovery-key").status_code == 403

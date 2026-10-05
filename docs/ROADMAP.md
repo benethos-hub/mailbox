@@ -244,9 +244,14 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   - recovery key, status: moved to phase 4b
 - Threads (6.3): for IMAP built across folders from the id mapping,
   which then also keeps `In-Reply-To` and `References`
-- Users, roles and rights: the changes of [PERMISSIONS.md](PERMISSIONS.md)
-  section 8, a proposal of 2026-09-27, among them the grant constraint
-  `folders` (7.5)
+- **Users, roles and rights: the changes of
+  [PERMISSIONS.md](PERMISSIONS.md) section 8**, decided 2026-10-05,
+  done: the last administrator stays (8.3), service rights apart from
+  grants and `users.read` (8.1, 8.2), sending limits in `/v1/me` and
+  grants that expire (8.8, 8.4), role templates (8.7), the grant
+  constraint `folders` (8.5). The audit of administration (8.6) follows
+  on its own. `identities` (8.5) waits for identities in the account
+  model
 - `pop3` adapter (5.2)
 - **The domain in packages by area, and the change feed as typed
   classes like the activities ([REFACTORING.md](REFACTORING.md))**,

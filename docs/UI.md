@@ -69,7 +69,7 @@ The sidebar keeps its three groups, renamed by what a person looks for:
 |---|---|---|
 | (top) | Overview, Mail | everyone |
 | Mailboxes | Accounts, Sends, Webhooks | with a right on at least one account, Webhooks with `webhooks.manage` |
-| Service | Users, Roles, Status, Log, Recovery key | with `users.manage`, Status with `accounts.read`, Log and Recovery key for the admin |
+| Service | Users, Roles, Status, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Log and Recovery key for the admin |
 
 The foot of the sidebar names the signed-in user and links to their own
 page, Password and Sign out. Changes, if built, is a tab of the account
@@ -270,7 +270,10 @@ list and on its page, and the list filters by it. Its page has no
 Password card. The Change card switches the UI sign-in on and off, but
 not for the signed-in user itself. Switched on, the Password card
 offers a one-time password. New role is an editor page too. It takes the path
-`/ui/roles/new`, so the UI cannot open a role named `new`. The user page shows the effective rights as
+`/ui/roles/new`, so the UI cannot open a role named `new`. It offers four
+templates that fill the form, Reader, Agent, Sender and Operator
+([PERMISSIONS.md](PERMISSIONS.md) 8.7). Nothing is stored until the role
+is created, and Sender wants the recipients named. The user page shows the effective rights as
 today, then tokens, then Change, then Danger. Roles the same without
 tokens. A token is created in the Tokens card and shown once.
 
@@ -297,8 +300,7 @@ account's last sync and last error in memory, so they are empty after a
 restart until the first pass.
 
 The recovery key page shows the key once after **Show**, with the
-warning of the CLI, and only to a user with the `admin` grant on every
-account. **Show** asks for the user's password again. The key is never
+warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again. The key is never
 stored or logged, the log only says that it was shown and to whom.
 
 The log page lists the newest lines of the service log, newest first,

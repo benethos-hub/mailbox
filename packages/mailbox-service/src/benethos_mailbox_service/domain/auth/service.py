@@ -312,6 +312,7 @@ class AuthService:
             token.id if token is not None else None,
             credential_name=token.name if token is not None else None,
             source=source,
+            now=self._clock(),
         )
 
     def _require_users(self) -> None:

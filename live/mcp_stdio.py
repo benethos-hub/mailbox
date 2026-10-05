@@ -79,6 +79,29 @@ async def mcp_session(url: str, token: str) -> AsyncIterator[ClientSession]:
         yield session
 
 
+async def check_folders(run: Run, url: str, token: str, account_id: str) -> None:
+    """A grant with ``folders`` (PERMISSIONS.md 8.5): the inbox alone.
+    Read-only."""
+    async with mcp_session(url, token) as session:
+        listed = await session.call_tool("list_folders", {"account_id": account_id})
+        found = listed.structured_content or {}
+        roles = [f.get("role") for f in found.get("result", [])]
+        run.check(
+            "list_folders shows the inbox alone",
+            not listed.is_error and roles == ["inbox"],
+            ", ".join(str(r) for r in roles),
+        )
+        searched = await session.call_tool(
+            "search_messages", {"folder": "archive", "limit": 5}
+        )
+        page = searched.structured_content or {}
+        run.check(
+            "search_messages finds nothing in the archive",
+            not searched.is_error and not page.get("messages"),
+            f"{len(page.get('messages', []))} messages",
+        )
+
+
 async def check_tools(run: Run, url: str, token: str, emails: set[str]) -> None:
     async with mcp_session(url, token) as session:
         tools = {tool.name for tool in (await session.list_tools()).tools}
@@ -501,6 +524,11 @@ async def check_constraints(
                 "refused" if refused.is_error else "sent",
             )
         async with mcp_session(url, once) as session:
+            listed = text_of(await session.call_tool("list_accounts", {}))
+            run.check(
+                "list_accounts names the limits before a send",
+                f"only to {other}, at most 1 a day, 1 left now" in listed,
+            )
             results = []
             for title in subjects:
                 results.append(
@@ -547,6 +575,9 @@ def main() -> int:
         emails = {a["email"].lower() for a in test_accounts}
         print("\n== the MCP server over stdio, reading")
         anyio.run(check_tools, run, url, token, emails)
+        inbox_only = user_token(client, ids, ["mail.read"], folders=["inbox"])
+        print("\n== the MCP server over stdio, a grant narrowed to the inbox")
+        anyio.run(check_folders, run, url, inbox_only, ids[0])
         print("\n== the MCP server over stdio, writing")
         anyio.run(check_writing, run, url, writer, client, ids[0])
         drafter = user_token(client, ids, ["mail.read", "drafts"])

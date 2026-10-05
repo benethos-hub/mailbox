@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import card, empty, filter_bar %}
-{% from "components/grants.html" import grants_of, role_tags %}
+{% from "components/grants.html" import rights_of, role_tags %}
 {% block title %}Users · {{ APP_NAME }}{% endblock %}
 {% block heading %}Users{% endblock %}
 {% block subheading %}<div class="sub">Who may use the service, and with which rights</div>{% endblock %}
@@ -13,7 +13,7 @@
 {% if users %}
 <div class="table-scroll">
   <table>
-    <thead><tr><th>Name</th><th>Roles</th><th>Grants</th></tr></thead>
+    <thead><tr><th>Name</th><th>Roles</th><th>Rights</th></tr></thead>
     <tbody>
       {% for user in users %}
       <tr>
@@ -25,7 +25,7 @@
           <span class="sub mono">{{ user.id[:16] }}…</span>
         </td>
         <td>{{ role_tags(user.roles) }}</td>
-        <td>{{ grants_of(user.grants, names) }}</td>
+        <td>{{ rights_of(user.service, user.grants, names) }}</td>
       </tr>
       {% endfor %}
     </tbody>

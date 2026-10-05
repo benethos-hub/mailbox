@@ -1,13 +1,22 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import breadcrumb, card, csrf_field with context %}
-{% from "components/grants.html" import grant_editor %}
+{% from "components/grants.html" import grant_editor, service_editor %}
 {% block title %}New role · {{ APP_NAME }}{% endblock %}
 {% block heading %}New role{% endblock %}
 {% block subheading %}{{ breadcrumb([("Roles", "/ui/roles"), ("New role", None)]) }}{% endblock %}
 {% block content %}
+{% call card("Start from", meta="A template fills the form. Nothing is stored until you create the role, and every field can be changed.") %}
+  <ul class="lines">
+    {% for t in templates %}
+    <li><a href="/ui/roles/new?template={{ t.id }}"{% if chosen and chosen.id == t.id %} aria-current="true"{% endif %}><strong>{{ t.title }}</strong></a>: {{ t.summary }}.</li>
+    {% endfor %}
+    {% if chosen %}<li><a href="/ui/roles/new">Empty form</a></li>{% endif %}
+  </ul>
+{% endcall %}
 <form method="post" action="/ui/roles">
   {{ csrf_field() }}
-  {% call card("Role") %}
+  {% if chosen %}<input type="hidden" name="template" value="{{ chosen.id }}" />{% endif %}
+  {% call card("Role", meta=("From the template " ~ chosen.title ~ (". Name the recipients before you create it" if chosen.recipients_required else "") ~ ".") if chosen else None) %}
     <div class="form-grid">
       <div class="field">
         <label for="f-id">Name</label>
@@ -16,7 +25,10 @@
       </div>
     </div>
   {% endcall %}
-  {% call card("Grants", meta="You can hand out only rights you hold yourself.") %}
+  {% call card("Service rights", meta="You can hand out only rights you hold yourself.") %}
+    {{ service_editor(service, service_names, group_ops) }}
+  {% endcall %}
+  {% call card("Grants", meta="Rights on accounts.") %}
     {{ grant_editor(rows, account_choices, groups, group_ops) }}
   {% endcall %}
   <div class="form-actions">

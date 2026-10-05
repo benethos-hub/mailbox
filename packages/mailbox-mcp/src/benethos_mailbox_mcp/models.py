@@ -27,12 +27,23 @@ class Attachment:
 
 
 @dataclass(frozen=True)
+class Sending:
+    """One grant that allows sending from an account: to whom, how many in
+    24 hours, how many of those are left. None: no narrowing."""
+
+    recipients: tuple[str, ...] | None
+    max_per_day: int | None
+    left: int | None
+
+
+@dataclass(frozen=True)
 class MeAccount:
     id: str
     email: str
     display_name: str | None
     operations: frozenset[str]
     warnings: frozenset[str]
+    sending: tuple[Sending, ...] = ()
 
 
 @dataclass(frozen=True)

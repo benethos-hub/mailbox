@@ -116,7 +116,8 @@ def test_accounts_must_be_readable_by_the_creator(
         client.app,
         headers=bearer_for(
             ready,
-            Grant(accounts=[account_id], allow=["mail.read", "webhooks.manage"]),
+            Grant(accounts=[account_id], allow=["mail.read"]),
+            service=["webhooks.manage"],
         ),
     )
     ok = limited.post("/v1/webhooks", json={**HOOK, "accounts": [account_id]})
@@ -131,7 +132,7 @@ def test_each_user_sees_and_removes_only_its_own(
     mine = client.post("/v1/webhooks", json=HOOK).json()["id"]
     someone = TestClient(
         client.app,
-        headers=bearer_for(ready, Grant(accounts=["*"], allow=["webhooks.manage"])),
+        headers=bearer_for(ready, service=["webhooks.manage"]),
     )
     theirs = someone.post("/v1/webhooks", json=HOOK).json()["id"]
     assert [w["id"] for w in someone.get("/v1/webhooks").json()] == [theirs]
@@ -149,7 +150,7 @@ def test_deleting_a_user_removes_its_webhooks(
         "/v1/users",
         json={
             "name": "hooks",
-            "grants": [{"accounts": ["*"], "allow": ["webhooks.manage"]}],
+            "service": ["webhooks.manage"],
         },
     ).json()
     token = client.post(f"/v1/users/{made['id']}/tokens", json={"name": "t"}).json()

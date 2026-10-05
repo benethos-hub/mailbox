@@ -381,7 +381,9 @@ class ImapProvider:
     # --- the sequences, each under the lock -------------------------------------
 
     def _list_folders(self, subscriptions: bool = False) -> list[Folder]:
-        return mappers.to_folders(self._session.list_folders(subscriptions))
+        raws = self._session.list_folders(subscriptions)
+        prefix, _ = self._session.personal_namespace()
+        return mappers.to_folders(raws, prefix)
 
     def _list_messages(
         self,

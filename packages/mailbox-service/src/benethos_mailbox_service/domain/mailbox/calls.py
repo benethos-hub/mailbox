@@ -75,6 +75,23 @@ class Calls:
             account_id, message_id, lambda p, native: p.get_message(native)
         )
 
+    async def places(self, account_id: str, ids: list[str]) -> dict[str, list[str]]:
+        """Each message's folders: from the index, or asked of the provider
+        where the account keeps none. Empty for one not found."""
+        found: dict[str, list[str]] = {}
+        for message_id in ids:
+            folder = self._sync.folder_of(account_id, message_id)
+            if folder is not None:
+                found[message_id] = [folder]
+                continue
+            try:
+                message = await self.message(account_id, message_id)
+            except MessageNotFoundError:
+                found[message_id] = []
+                continue
+            found[message_id] = list(message.folder_ids)
+        return found
+
     async def attachment(
         self, account_id: str, message_id: str, attachment_id: str
     ) -> AttachmentContent:
@@ -115,7 +132,9 @@ class Calls:
     def relocate(self, account_id: str, message_id: str, now: MessageSummary) -> None:
         """A message we stored anew: its id points to the new place."""
         self._sync.relocate(account_id, message_id, now.id, folder_of(now))
-        self._sync.changed(MessagesUpdated(account_id, [message_id]))
+        self._sync.changed(
+            MessagesUpdated(account_id, [message_id], {message_id: folder_of(now)})
+        )
 
     def changed(self, change: MailboxChange) -> None:
         """Record a change in the change feed."""
@@ -123,8 +142,11 @@ class Calls:
 
     def forget(self, account_id: str, message_id: str) -> None:
         """A message is gone for good: its id answers 404 from now on."""
+        was = self._sync.folder_of(account_id, message_id)
         self._sync.forget(account_id, message_id)
-        self._sync.changed(MessagesDeleted(account_id, [message_id]))
+        self._sync.changed(
+            MessagesDeleted(account_id, [message_id], {message_id: was or ""})
+        )
 
     # --- changes, one or many ---------------------------------------------------------
 
@@ -136,13 +158,15 @@ class Calls:
             account_id, ids, lambda p, n: p.update_messages(n, changes)
         )
         results: dict[str, MessageSummary | MailboxServiceError] = {}
+        folders: dict[str, str] = {}
         for message_id, outcome in outcomes.items():
             if isinstance(outcome, MailboxServiceError):
                 results[message_id] = outcome
                 continue
             self._follow(account_id, message_id, natives[message_id], outcome)
             results[message_id] = public(outcome, message_id, account_id)
-        self._sync.changed(MessagesUpdated(account_id, _done(results)))
+            folders[message_id] = folder_of(outcome)
+        self._sync.changed(MessagesUpdated(account_id, _done(results), folders))
         return results
 
     async def update_one(
@@ -162,20 +186,23 @@ class Calls:
             account_id, ids, lambda p, n: p.delete_messages(n, permanent)
         )
         results: dict[str, None | MailboxServiceError] = {}
+        folders: dict[str, str] = {}
         for message_id, outcome in outcomes.items():
             if isinstance(outcome, MailboxServiceError):
                 results[message_id] = outcome
                 continue
             if permanent:
+                folders[message_id] = self._sync.folder_of(account_id, message_id) or ""
                 self._sync.forget(account_id, message_id)
             elif outcome is not None:
                 self._follow(account_id, message_id, natives[message_id], outcome)
+                folders[message_id] = folder_of(outcome)
             results[message_id] = None
         done = _done(results)
         self._sync.changed(
-            MessagesDeleted(account_id, done)
+            MessagesDeleted(account_id, done, folders)
             if permanent
-            else MessagesUpdated(account_id, done)
+            else MessagesUpdated(account_id, done, folders)
         )
         return results
 

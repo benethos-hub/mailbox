@@ -51,7 +51,7 @@ from .sending import (
     SendResult,
     SentMessage,
 )
-from .users import ApiToken, Grant, Role, User
+from .users import SERVICE_DESCRIPTION, ApiToken, Grant, Role, User
 from .webhooks import (
     CHANGE_KINDS,
     CreatedWebhook,
@@ -89,6 +89,7 @@ __all__ = [
     "FolderRole",
     "FolderUpdate",
     "Grant",
+    "SERVICE_DESCRIPTION",
     "Hint",
     "ItemError",
     "MailServer",

@@ -50,7 +50,13 @@ class ChangeFeed:
         """One record for each id the change names, in this order."""
         now = self._clock()
         records = [
-            ChangeRecord(type=change.kind, id=i, account_id=change.account_id, at=now)
+            ChangeRecord(
+                type=change.kind,
+                id=i,
+                account_id=change.account_id,
+                at=now,
+                folder_id=change.folder_of(i),
+            )
             for i in dict.fromkeys(change.ids())
         ]
         if not records:
@@ -60,10 +66,17 @@ class ChangeFeed:
             self.purge()
 
     def page(
-        self, account_ids: list[str], since: str | None, *, limit: int
+        self,
+        account_ids: list[str],
+        since: str | None,
+        *,
+        limit: int,
+        keep: Callable[[ChangeRecord], bool] | None = None,
     ) -> ChangePage:
         """The changes of these accounts after the point ``since``, at most
-        ``limit``. Without ``since`` only the current point."""
+        ``limit``. Without ``since`` only the current point. ``keep``
+        leaves out what the caller may not hear of: a page may then hold
+        fewer, and the state still moves past them."""
         # Read first: a change recorded meanwhile is in the answer or after
         # the state it hands out, never skipped.
         last = self._log.last()
@@ -79,6 +92,8 @@ class ChangeFeed:
             self._log.after(account_ids, seq, limit=limit + 1, types=FEED_KINDS), limit
         )
         end = found[-1].seq if more else max([last, *(e.seq for e in found)])
+        if keep is not None:
+            found = [e for e in found if keep(e.record)]
         return ChangePage(
             changes=[Change.model_validate(e.record.model_dump()) for e in found],
             state=_state(end),

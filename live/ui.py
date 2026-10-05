@@ -237,6 +237,13 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
     """A reader of the first test account made through the pages, its
     token, a sign-in with it, and the token revoked."""
     csrf = csrf_of(browser.get("/ui/users").text)
+    agent = browser.get("/ui/roles/new", params={"template": "agent"}).text
+    run.check(
+        "the template Agent fills the form of a new role",
+        'name="id" value="agent"' in agent
+        and 'name="g0_allow" value="drafts" checked' in agent
+        and 'name="g0_allow" value="send" checked' not in agent,
+    )
     role = browser.post(
         "/ui/roles",
         data={
@@ -255,6 +262,7 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
             "name": "ui-live-reader",
             "signs_in_to": "ui",
             "roles": "ui-live-reader",
+            "service": "users.read",
             "grants": "1",
             "g0_accounts": account_id,
             "g0_allow": "send",
@@ -264,10 +272,28 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
     )
     user_path = created.url.path
     if not run.check(
-        "create a user with a role and a narrowed grant",
+        "create a user with a role, a service right and a narrowed grant",
         "ui-live-reader created." in created.text and "/ui/users/usr_" in user_path,
     ):
         return
+    run.check(
+        "its page ticks the service right users.read",
+        'name="service" value="users.read" checked' in created.text,
+    )
+    refused = browser.post(
+        "/ui/users",
+        data={
+            "csrf_token": csrf,
+            "name": "ui-live-refused",
+            "grants": "1",
+            "g0_accounts": "*",
+            "g0_more": "users.manage",
+        },
+    )
+    run.check(
+        "a right of the service in a grant is refused",
+        refused.status_code == 400 and "is a right of the service" in refused.text,
+    )
     page = browser.post(
         f"{user_path}/tokens", data={"csrf_token": csrf, "name": "live", "days": "1"}
     ).text

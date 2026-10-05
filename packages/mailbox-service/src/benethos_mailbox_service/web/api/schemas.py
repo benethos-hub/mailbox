@@ -11,7 +11,13 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, SecretStr
 
-from ...data.models import ApiToken, DraftMessage, Grant, ProviderType
+from ...data.models import (
+    SERVICE_DESCRIPTION,
+    ApiToken,
+    DraftMessage,
+    Grant,
+    ProviderType,
+)
 
 
 class AccountCreate(BaseModel):
@@ -89,6 +95,24 @@ class ErrorResponse(BaseModel):
     error: ErrorDetail
 
 
+class MeSending(BaseModel):
+    """One grant that allows sending from the account. A send passes when
+    one of them accepts every recipient and has sends left."""
+
+    recipients: list[str] | None = Field(
+        description="Send only to these: an address, `*@domain`. Null: to anyone."
+    )
+    max_sends_per_day: int | None = Field(
+        description="Mails in any 24 hours under this grant. Null: no limit."
+    )
+    sends_left: int | None = Field(
+        description=(
+            "How many more the limit allows now: it less the mails the caller "
+            "sent from the account in the last 24 hours. Null: no limit."
+        )
+    )
+
+
 class MeAccount(BaseModel):
     """An account the caller may act on."""
 
@@ -104,6 +128,10 @@ class MeAccount(BaseModel):
             "use to carry data out. Narrow sending with a grant's `recipients`."
         ),
     )
+    sending: list[MeSending] = Field(
+        default_factory=list,
+        description="One entry per grant that allows sending here. Empty: none.",
+    )
 
 
 class Me(BaseModel):
@@ -115,7 +143,7 @@ class Me(BaseModel):
         description="Every account the caller may act on, with its operations"
     )
     operations: list[str] = Field(
-        description="Operations not bound to one existing account"
+        description="Operations of the service, bound to no account"
     )
 
 
@@ -123,11 +151,18 @@ class PermissionCatalogue(BaseModel):
     groups: dict[str, list[str]] = Field(
         description="Group name to the operations it allows"
     )
+    service: list[str] = Field(
+        description=(
+            "The groups of the service. They and `admin` are named in a user's "
+            "or a role's `service`, the other groups in a grant's `allow`."
+        )
+    )
 
 
 class UserCreate(BaseModel):
     name: str
     roles: list[str] = Field(default_factory=list)
+    service: list[str] = Field(default_factory=list, description=SERVICE_DESCRIPTION)
     grants: list[Grant] = Field(default_factory=list)
     ui_sign_in: bool = Field(
         default=False,
@@ -142,6 +177,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     name: str | None = None
     roles: list[str] | None = None
+    service: list[str] | None = Field(default=None, description=SERVICE_DESCRIPTION)
     grants: list[Grant] | None = None
     disabled: bool | None = Field(
         default=None, description="Not for the caller itself."
@@ -157,10 +193,12 @@ class UserUpdate(BaseModel):
 
 class RoleCreate(BaseModel):
     id: str
+    service: list[str] = Field(default_factory=list, description=SERVICE_DESCRIPTION)
     grants: list[Grant] = Field(default_factory=list)
 
 
 class RoleReplace(BaseModel):
+    service: list[str] = Field(default_factory=list, description=SERVICE_DESCRIPTION)
     grants: list[Grant] = Field(default_factory=list)
 
 

@@ -217,3 +217,14 @@ async def test_a_delta_asks_for_immutable_ids(graph: FakeGraph) -> None:
     await provider.folder_changes(graph.well_known["inbox"], None)
     [request] = graph.requests[-1:]
     assert "ImmutableId" in request.headers["prefer"]
+
+
+async def test_a_change_names_its_folder(
+    sync: SyncService, graph: FakeGraph, clock: Clock
+) -> None:
+    await sync.sync_account(ACC)
+    clock.later(graph)
+    graph.add_message(subject="New")
+    await sync.sync_account(ACC)
+    [logged] = sync.feed.after([ACC], 0, limit=100)
+    assert logged.record.folder_id == graph.well_known["inbox"]

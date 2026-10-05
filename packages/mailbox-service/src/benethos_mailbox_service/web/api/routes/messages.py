@@ -52,7 +52,7 @@ async def list_all_changes(
     """Messages created, updated or deleted since `since` in every account
     the caller may read, oldest first, ids only. The state is the same
     point as in the feed of one account."""
-    return mailbox.list_all_changes(
+    return await mailbox.list_all_changes(
         caller, account_ids=accounts, since=since, limit=limit
     )
 

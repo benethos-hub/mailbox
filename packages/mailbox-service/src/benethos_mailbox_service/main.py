@@ -183,16 +183,6 @@ def build_services(
         sync = SyncService(
             adapters, repos.index, feed=changes, clock=clock, activity=activity
         )
-        accounts = AccountService(
-            repos.accounts,
-            vault,
-            adapters,
-            on_delete=sync.forget_account,
-            check_host=fetcher.checked_address,
-            idempotency=repos.idempotency,
-            changes=changes,
-            activity=activity,
-        )
         lockout = timedelta(minutes=settings.sign_in_lockout_minutes)
         auth = AuthService(
             repos.users,
@@ -216,6 +206,30 @@ def build_services(
             ),
             activity=activity,
         )
+        sends = SendControl(
+            repos.sends, clock=clock, activity=activity, days=settings.audit_days
+        )
+        users = UserService(
+            repos.users,
+            repos.roles,
+            repos.tokens,
+            adapters,
+            auth,
+            repos.webhooks,
+            activity=activity,
+            sent=sends.sent_recently,
+        )
+        accounts = AccountService(
+            repos.accounts,
+            vault,
+            adapters,
+            on_delete=sync.forget_account,
+            on_connect=users.connected,
+            check_host=fetcher.checked_address,
+            idempotency=repos.idempotency,
+            changes=changes,
+            activity=activity,
+        )
         worker = (
             SyncWorker(
                 adapters,
@@ -232,32 +246,20 @@ def build_services(
         webhooks = WebhookService(
             repos.webhooks, vault, changes, clock=clock, activity=activity
         )
+        mailbox = MailboxService(
+            adapters,
+            sync,
+            Idempotency(repos.idempotency, clock=clock, activity=activity),
+            sends,
+            clock=clock,
+            activity=activity,
+        )
         return Services(
             accounts=accounts,
             adapters=adapters,
             auth=auth,
-            users=UserService(
-                repos.users,
-                repos.roles,
-                repos.tokens,
-                adapters,
-                auth,
-                repos.webhooks,
-                activity=activity,
-            ),
-            mailbox=MailboxService(
-                adapters,
-                sync,
-                Idempotency(repos.idempotency, clock=clock, activity=activity),
-                SendControl(
-                    repos.sends,
-                    clock=clock,
-                    activity=activity,
-                    days=settings.audit_days,
-                ),
-                clock=clock,
-                activity=activity,
-            ),
+            users=users,
+            mailbox=mailbox,
             discovery=discovery or build_discovery(settings, fetcher, activity),
             sync=sync,
             index=repos.index,
@@ -277,6 +279,7 @@ def build_services(
                 ),
                 access_of=auth.access_of,
                 account_ids=adapters.ids,
+                hearing=mailbox.hearing,
                 retries=Retries(
                     attempts=settings.webhook_attempts,
                     first_retry=settings.webhook_first_retry,

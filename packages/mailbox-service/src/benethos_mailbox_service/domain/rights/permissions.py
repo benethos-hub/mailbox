@@ -3,6 +3,10 @@
 A right is the name of an operation (its ``operationId``). Groups bundle
 operations so grants stay readable. Every protected route must appear here,
 the web layer refuses to start otherwise.
+
+Two kinds of right (PERMISSIONS.md 8.1). Rights on accounts are named in
+a grant, which says on which accounts. Rights of the service act on no
+account and are named in the ``service`` list of a user or a role.
 """
 
 from __future__ import annotations
@@ -48,16 +52,13 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "send": ("send_message", "send_draft"),
     # Who sent what to whom, never content.
     "audit": ("list_sends", "list_all_sends"),
-    "accounts.manage": (
-        "discover_account",
-        # Connecting needs create_account, signing in again update_account:
-        # the domain checks those.
-        "start_oauth",
-        "create_account",
-        "update_account",
-        "delete_account",
-        "verify_account",
-    ),
+    # Signing in again by OAuth is update_account: the domain checks it.
+    "accounts.manage": ("update_account", "delete_account", "verify_account"),
+    # Accounts that do not exist yet. Connecting by OAuth needs
+    # create_account as well: the domain checks it.
+    "accounts.connect": ("discover_account", "start_oauth", "create_account"),
+    # Who exists, never a change. users.manage holds every one of them.
+    "users.read": ("list_users", "get_user", "list_tokens", "list_roles", "get_role"),
     "users.manage": (
         "list_users",
         "create_user",
@@ -84,10 +85,12 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Operations that do not act on one account. A grant allows them regardless
-# of the accounts it names.
-ACCOUNT_FREE: frozenset[str] = frozenset(
-    GROUPS["users.manage"] + GROUPS["webhooks.manage"]
+# The groups of the service: named in ``service``, never in a grant.
+SERVICE_GROUPS: tuple[str, ...] = (
+    "accounts.connect",
+    "users.read",
+    "users.manage",
+    "webhooks.manage",
 )
 
 # Rights only ``admin`` gives, in no group and not to be granted by name.
@@ -95,17 +98,23 @@ ACCOUNT_FREE: frozenset[str] = frozenset(
 # stored secret. The service log names users, addresses and accounts.
 ADMIN_ONLY: frozenset[str] = frozenset({"show_recovery_key", "read_service_log"})
 
-# Operations that act on accounts which may not exist yet, or on all of
-# them. They need a grant on every account ("*").
-ALL_ACCOUNTS: frozenset[str] = (
-    frozenset({"discover_account", "create_account", "start_oauth"}) | ADMIN_ONLY
+# Each operation's group. One in two groups belongs to the smaller one,
+# which comes first: list_users to users.read.
+GROUP_OF: dict[str, str] = {}
+for _group, _operations in GROUPS.items():
+    for _operation in _operations:
+        GROUP_OF.setdefault(_operation, _group)
+
+# Operations on mail in folders: those a grant's folders narrow.
+IN_FOLDERS: frozenset[str] = frozenset(
+    GROUPS["mail.read"] + GROUPS["mail.write"] + GROUPS["mail.delete"]
 )
 
-GROUP_OF: dict[str, str] = {op: group for group, ops in GROUPS.items() for op in ops}
-
-# Operations not bound to one existing account, and those that are.
-NOT_ON_AN_ACCOUNT: frozenset[str] = ACCOUNT_FREE | ALL_ACCOUNTS
-ON_AN_ACCOUNT: frozenset[str] = frozenset(GROUP_OF) - NOT_ON_AN_ACCOUNT
+# The operations of the service, and those on one existing account.
+SERVICE: frozenset[str] = (
+    frozenset(op for group in SERVICE_GROUPS for op in GROUPS[group]) | ADMIN_ONLY
+)
+ON_AN_ACCOUNT: frozenset[str] = frozenset(GROUP_OF) - SERVICE
 
 
 def permission_of(operation: str) -> str | None:
@@ -124,13 +133,18 @@ def summarize(
     is among them. The rest are single operations."""
     held = frozenset(operations)
     within = frozenset(scope)
-    groups: list[str] = []
-    covered: set[str] = set()
-    for group, members in GROUPS.items():
-        part = frozenset(members) & within
-        if part and part <= held:
-            groups.append(group)
-            covered |= part
+    whole = {
+        group: part
+        for group, members in GROUPS.items()
+        if (part := frozenset(members) & within) and part <= held
+    }
+    # A group inside a larger one held whole is not named as well.
+    groups = [
+        group
+        for group, part in whole.items()
+        if not any(part < other for other in whole.values())
+    ]
+    covered = frozenset[str]().union(*whole.values())
     return groups, sorted(held - covered)
 
 
@@ -161,5 +175,36 @@ def expand_known(names: Iterable[str]) -> tuple[frozenset[str], list[str]]:
 
 
 def known_names() -> frozenset[str]:
-    """Every name a grant may use: groups, operations and ``admin``."""
+    """Every name a grant or ``service`` may use: groups, operations and
+    ``admin``."""
     return frozenset(GROUPS) | frozenset(GROUP_OF) | {ADMIN}
+
+
+def is_service(name: str) -> bool:
+    """Whether a name is a right of the service: ``admin``, a group of the
+    service or one of its operations."""
+    return name == ADMIN or name in SERVICE_GROUPS or name in SERVICE
+
+
+def check_grant(names: Iterable[str]) -> None:
+    """Refuse a name a grant may not use: unknown, or a right of the
+    service, which belongs in ``service``."""
+    for name in names:
+        if name not in known_names():
+            raise BadRequestError(f"unknown right: {name}")
+        if is_service(name):
+            raise BadRequestError(
+                f"{name} is a right of the service: name it in service, not in a grant"
+            )
+
+
+def check_service(names: Iterable[str]) -> None:
+    """Refuse a name ``service`` may not hold: unknown, or a right on
+    accounts, which belongs in a grant."""
+    for name in names:
+        if name not in known_names():
+            raise BadRequestError(f"unknown right: {name}")
+        if not is_service(name):
+            raise BadRequestError(
+                f"{name} is a right on accounts: name it in a grant, not in service"
+            )

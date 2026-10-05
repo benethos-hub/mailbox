@@ -6,6 +6,57 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `service` on users and roles, in `POST`, `PATCH` and `PUT`: rights of
+  the service, bound to no account. `accounts.connect`, `users.read`,
+  `users.manage`, `webhooks.manage` and `admin` belong there, or single
+  operations of them. `/v1/permissions` lists these groups as `service`.
+- `accounts.connect`: `discover_account`, `start_oauth` and
+  `create_account`, which were part of `accounts.manage`.
+- `users.read`: `list_users`, `get_user`, `list_tokens`, `list_roles` and
+  `get_role`, to see users and roles without changing them. `users.manage`
+  keeps every right it had.
+- Whoever connects an account gets `accounts.manage` on it, unless it
+  holds that there already.
+- `expires_at` on a grant, with a time zone, null for never. An expired
+  grant grants nothing and stays until it is removed. A grant is handed
+  out for no longer than the giver holds it. The editor has a field
+  "Valid until", and the user's page marks an expired grant.
+- `/v1/me` gives each account a `sending` list, one entry per grant that
+  allows sending there: its `recipients`, `max_sends_per_day` and
+  `sends_left`, how many more the limit allows now.
+- The MCP server's `list_accounts` names these limits beside `send`, and
+  warns of an account where the token may read mail and send it anywhere.
+- The UI's New role page offers four templates that fill the form:
+  Reader, Agent, Sender and Operator.
+- `folders` on a grant: reading, writing and deleting mail only in these
+  folders and their subfolders, named by role, name or id. A message or
+  folder outside answers `404`, a move or a new folder outside `403`.
+  Deleting to the trash stays allowed, reading the trash needs it in the
+  list. Folder lists, message lists, the change feed and webhooks leave
+  out the rest, and a reply or forward needs its original in reach. The
+  editor has a field "Only in the folders".
+
+### Changed
+
+- A right of the service or `admin` in a grant's `allow` answers `400`,
+  and a right on accounts in `service` as well. Stored rights move at the
+  first start: what a grant named of the service goes to `service`, a
+  grant with `accounts.manage` on every account gets `accounts.connect`.
+  Nobody loses a right. The log names each user and role whose rights
+  moved.
+- `accounts.manage` is about existing accounts alone: `update_account`,
+  `delete_account` and `verify_account`.
+- On an IMAP server that keeps every folder below the inbox, such as
+  `INBOX.Sent`, the folders right below it are at the top, as mail
+  clients show them: `parent_id` is null for them. Their ids stay.
+- A change that would leave no enabled administrator who can sign in to
+  the UI answers `409`: disabling, deleting, taking `admin` or the UI
+  sign-in away, directly or through a role. Where there is none to begin
+  with, nothing is held back. `users set-password` on the host stays the
+  way back.
+
 ## [0.2.0] - 2026-10-03
 
 The status is alpha: usable with real accounts for testing. The API and

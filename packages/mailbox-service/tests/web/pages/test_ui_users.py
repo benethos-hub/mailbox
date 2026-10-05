@@ -18,6 +18,7 @@ from benethos_mailbox_service.web.pages.grants import (
     GROUP_NAMES,
     GROUP_SECTIONS,
     MCP_TOOLS,
+    ROLE_TEMPLATES,
     GrantFormError,
     group_hint,
     read_grants,
@@ -210,16 +211,52 @@ def test_no_escalation_through_the_form(
         app_client,
         *browser_user(
             services,
-            Grant(accounts=[account_id], allow=["users.manage", "mail.read"]),
+            Grant(accounts=[account_id], allow=["mail.read"]),
+            service=["users.manage"],
         ),
     )
     refused = post(
-        app_client,
-        "/ui/users",
-        {"name": "wider", "grants": "1", "g0_accounts": "*", "g0_allow": "admin"},
+        app_client, "/ui/users", {"name": "wider", "grants": "0", "service": "admin"}
     )
     assert "cannot grant or manage rights the caller lacks" in refused.text
     assert "wider" not in [u.name for u in services.users.list_users(ADMIN)]
+
+
+def test_the_editor_gives_rights_of_the_service(
+    ui: TestClient, services: Services
+) -> None:
+    made = post(
+        ui,
+        "/ui/users",
+        {
+            "name": "operator",
+            "service": ["accounts.connect", "webhooks.manage"],
+            "service_more": "list_users",
+            "grants": "1",
+            "g0_accounts": "*",
+            "g0_allow": "accounts.manage",
+        },
+    )
+    assert "operator created" in made.text
+    user = services.auth.user_named("operator")
+    assert user is not None
+    assert user.service == ["accounts.connect", "webhooks.manage", "list_users"]
+    page = ui.get(f"/ui/users/{user.id}").text
+    assert 'name="service" value="webhooks.manage" checked' in page
+    assert 'name="service_more" value="list_users"' in page
+
+
+def test_a_right_of_the_service_in_a_grant_is_refused(
+    ui: TestClient, services: Services
+) -> None:
+    refused = post(
+        ui,
+        "/ui/users",
+        {"name": "x", "grants": "1", "g0_accounts": "*", "g0_more": "users.manage"},
+    )
+    assert refused.status_code == 400
+    assert "users.manage is a right of the service" in refused.text
+    assert services.auth.user_named("x") is None
 
 
 # --- tokens ---------------------------------------------------------------------------
@@ -318,7 +355,7 @@ def test_a_user_keeps_roles_the_editor_cannot_list(
         app_client,
         *browser_user(
             services,
-            Grant(accounts=["*"], allow=["list_users", "get_user", "update_user"]),
+            service=["list_users", "get_user", "update_user"],
         ),
     )
     page = app_client.get(f"/ui/users/{target.id}").text
@@ -374,8 +411,8 @@ def test_rights_of_joins_roles_and_grants(services: Services, account_id: str) -
     rights = services.users.rights_of(ADMIN, user.id)
     [account] = rights.accounts
     assert {"get_message", "create_draft", "send_message"} <= set(account.operations)
-    assert [(s.recipients, s.max_per_day) for s in account.sending] == [
-        (("bot@example.org",), 3)
+    assert [(s.recipients, s.max_sends_per_day) for s in account.sending] == [
+        (["bot@example.org"], 3)
     ]
     assert account.warnings == []
 
@@ -386,9 +423,7 @@ def test_rights_of_lists_only_accounts_the_caller_sees(
     user = services.users.create_user(
         ADMIN, "reader", [], [Grant(accounts=["*"], allow=["mail.read"])]
     )
-    manager = Access(
-        "usr_m", "manager", [Grant(accounts=["*"], allow=["users.manage"])]
-    )
+    manager = Access("usr_m", "manager", [], service=["users.manage"])
     assert services.users.rights_of(manager, user.id).accounts == []
     assert len(services.users.rights_of(ADMIN, user.id).accounts) == 1
 
@@ -443,7 +478,10 @@ def test_the_editor_shows_what_the_mcp_server_uses(ui: TestClient) -> None:
     used, rest = form.split("Not used by the MCP server", 1)
     assert "Used by the MCP server" in used
     assert 'value="send"' in used.split("Used by the MCP server", 1)[1]
-    assert 'value="mail.delete"' in rest and 'value="admin"' in rest
+    assert 'value="mail.delete"' in rest and 'value="admin"' not in rest
+    service = used.split("Used by the MCP server", 1)[0]
+    assert 'name="service" value="admin"' in service
+    assert 'name="service" value="accounts.connect"' in service
 
 
 def test_a_new_user_gets_a_one_time_password_shown_once(
@@ -629,3 +667,164 @@ def test_a_page_looks_its_session_up_once(
     monkeypatch.setattr(services.auth, "session_access", counted)
     ui.get(f"/ui/users/{user.id}")
     assert len(looked_up) == 1
+
+
+def test_users_read_opens_the_pages_and_changes_nothing(
+    app_client: TestClient, services: Services
+) -> None:
+    target = services.users.create_user(ADMIN, "target", [], [])
+    sign_in(app_client, *browser_user(services, service=["users.read"]))
+    home = app_client.get("/ui").text
+    assert 'href="/ui/users"' in home and 'href="/ui/roles"' in home
+    page = app_client.get(f"/ui/users/{target.id}").text
+    assert "Effective rights" in page and "Tokens" in page
+    assert 'name="service"' not in page and "New user" not in page
+    refused = post(app_client, f"/ui/users/{target.id}", {"name": "x", "grants": "0"})
+    assert "missing right: update_user" in refused.text
+
+
+def test_the_editor_sets_and_shows_an_expiry(
+    ui: TestClient, services: Services
+) -> None:
+    made = post(
+        ui,
+        "/ui/users",
+        {
+            "name": "week",
+            "grants": "2",
+            "g0_accounts": "*",
+            "g0_allow": "mail.read",
+            "g0_expires": "2099-12-31T18:30",
+            "g1_accounts": "*",
+            "g1_allow": "drafts",
+            "g1_expires": "2001-01-01T00:00",
+        },
+    )
+    assert "week created" in made.text
+    user = services.auth.user_named("week")
+    assert user is not None
+    first, second = (grant.expires_at for grant in user.grants)
+    assert first is not None and second is not None
+    assert first.astimezone().strftime("%Y-%m-%dT%H:%M") == "2099-12-31T18:30"
+    page = ui.get(f"/ui/users/{user.id}").text
+    assert 'name="g0_expires" type="datetime-local" value="2099-12-31T18:30"' in page
+    assert "until</span> 2099-12-31 18:30" in page
+    assert '<span class="tag bad">expired</span>' in page
+
+
+def test_a_wrong_expiry_is_refused(ui: TestClient) -> None:
+    refused = post(
+        ui,
+        "/ui/users",
+        {
+            "name": "x",
+            "grants": "1",
+            "g0_accounts": "*",
+            "g0_allow": "mail.read",
+            "g0_expires": "next week",
+        },
+    )
+    assert refused.status_code == 400
+    assert "valid until must be a date and a time" in refused.text
+
+
+def test_the_overview_names_the_own_sending_limits(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    sign_in(
+        app_client,
+        *browser_user(
+            services,
+            Grant(
+                accounts=[account_id],
+                allow=["mail.read", "send"],
+                recipients=["*@example.org"],
+                max_sends_per_day=2,
+            ),
+        ),
+    )
+    home = app_client.get("/ui").text
+    assert "to *@example.org, at most 2 a day, 2 left now" in home
+
+
+# --- roles to start from (PERMISSIONS.md 8.7) ------------------------------------
+
+
+def test_the_new_role_page_offers_four_templates(ui: TestClient) -> None:
+    page = ui.get("/ui/roles/new").text
+    for template in ("reader", "agent", "sender", "operator"):
+        assert f'href="/ui/roles/new?template={template}"' in page
+    assert [t.title for t in ROLE_TEMPLATES.values()] == [
+        "Reader",
+        "Agent",
+        "Sender",
+        "Operator",
+    ]
+
+
+@pytest.mark.parametrize("template", list(ROLE_TEMPLATES))
+def test_every_template_names_rights_of_the_right_kind(template: str) -> None:
+    chosen = ROLE_TEMPLATES[template]
+    permissions.check_service(chosen.service)
+    for grant in chosen.grants:
+        permissions.check_grant(grant.allow)
+
+
+def test_a_template_fills_the_form(ui: TestClient, account_id: str) -> None:
+    agent = ui.get("/ui/roles/new?template=agent").text
+    assert 'name="id" value="agent"' in agent
+    for group in ("mail.read", "mail.write", "drafts"):
+        assert f'name="g0_allow" value="{group}" checked' in agent
+    assert 'name="g0_allow" value="send" checked' not in agent
+    assert f'name="g0_accounts" value="{account_id}" checked' not in agent
+    operator = ui.get("/ui/roles/new?template=operator").text
+    assert 'name="service" value="accounts.connect" checked' in operator
+    assert 'name="service" value="webhooks.manage" checked' in operator
+    assert 'name="g0_accounts" value="*" checked' in operator
+    assert 'name="g0_allow" value="accounts.manage" checked' in operator
+    unknown = ui.get("/ui/roles/new?template=nothing").text
+    assert 'name="id" value=""' in unknown
+
+
+def test_the_sender_template_wants_recipients(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    form = {
+        "template": "sender",
+        "id": "sender",
+        "grants": "1",
+        "g0_accounts": account_id,
+        "g0_allow": "send",
+        "g0_max": "10",
+    }
+    refused = post(ui, "/ui/roles", form)
+    assert refused.status_code == 400
+    assert "name the recipients it may send to" in refused.text
+    assert 'name="template" value="sender"' in refused.text
+    made = post(ui, "/ui/roles", {**form, "g0_recipients": "*@example.org"})
+    assert "Role sender created." in made.text
+    [grant] = services.users.get_role(ADMIN, "sender").grants
+    assert grant.recipients == ["*@example.org"] and grant.max_sends_per_day == 10
+
+
+def test_the_editor_narrows_a_grant_to_folders(
+    ui: TestClient, services: Services
+) -> None:
+    made = post(
+        ui,
+        "/ui/users",
+        {
+            "name": "bookkeeper",
+            "grants": "1",
+            "g0_accounts": "*",
+            "g0_allow": "mail.read",
+            "g0_folders": "inbox\r\nInvoices 2026\r\n",
+        },
+    )
+    assert "bookkeeper created" in made.text
+    user = services.auth.user_named("bookkeeper")
+    assert user is not None
+    assert user.grants[0].folders == ["inbox", "Invoices 2026"]
+    page = ui.get(f"/ui/users/{user.id}").text
+    assert "in the folders</span> inbox, Invoices 2026" in page
+    assert ">inbox\nInvoices 2026</textarea>" in page

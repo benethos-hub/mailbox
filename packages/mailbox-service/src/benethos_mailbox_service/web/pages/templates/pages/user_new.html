@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import breadcrumb, card, csrf_field with context %}
-{% from "components/grants.html" import grant_editor, role_checks %}
+{% from "components/grants.html" import grant_editor, role_checks, service_editor %}
 {% block title %}New user · {{ APP_NAME }}{% endblock %}
 {% block heading %}New user{% endblock %}
 {% block subheading %}{{ breadcrumb([("Users", "/ui/users"), ("New user", None)]) }}{% endblock %}
 {% block content %}
 <form method="post" action="/ui/users">
   {{ csrf_field() }}
-  {% call card("User", meta="A user acts with its roles and grants. It signs in to the UI with a password, and to the API with a token.") %}
+  {% call card("User", meta="A user acts with its roles, service rights and grants. It signs in to the UI with a password, and to the API with a token.") %}
     <div class="form-grid">
       <div class="field">
         <label for="f-name">Name</label>
@@ -23,7 +23,10 @@
     </div>
     {% if role_choices %}{{ role_checks(role_choices, typed.roles if typed else []) }}{% endif %}
   {% endcall %}
-  {% call card("Grants", meta="You can hand out only rights you hold yourself.") %}
+  {% call card("Service rights", meta="You can hand out only rights you hold yourself.") %}
+    {{ service_editor(service, service_names, group_ops) }}
+  {% endcall %}
+  {% call card("Grants", meta="Rights on accounts.") %}
     {{ grant_editor(rows, account_choices, groups, group_ops) }}
   {% endcall %}
   <div class="form-actions">

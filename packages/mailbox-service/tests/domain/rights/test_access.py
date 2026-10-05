@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
 from benethos_mailbox_service.data.models import Grant, Role, User
@@ -7,8 +9,8 @@ from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import ForbiddenError, NotFoundError
 
 
-def access(*grants: Grant) -> Access:
-    return Access("usr_1", "test", grants)
+def access(*grants: Grant, service: tuple[str, ...] = ()) -> Access:
+    return Access("usr_1", "test", grants, service=service)
 
 
 def test_grant_on_one_account() -> None:
@@ -45,13 +47,33 @@ def test_account_bound_operation_needs_an_account() -> None:
     assert not a.allows("list_messages")
 
 
-def test_create_account_needs_every_account() -> None:
-    assert access(Grant(accounts=["*"], allow=["accounts.manage"])).allows(
+def test_connecting_is_a_right_of_the_service() -> None:
+    assert access(service=("accounts.connect",)).allows("create_account")
+    assert not access(Grant(accounts=["*"], allow=["accounts.manage"])).allows(
         "create_account"
     )
-    assert not access(Grant(accounts=["acc_a"], allow=["accounts.manage"])).allows(
-        "create_account"
-    )
+
+
+def test_a_grant_gives_no_right_of_the_service() -> None:
+    """Even one stored before the move: a grant is about accounts."""
+    a = access(Grant(accounts=["*"], allow=["admin", "users.manage"]))
+    assert a.allows("delete_account", "acc_a")
+    assert not a.allows("list_users")
+    assert not a.is_admin()
+
+
+def test_a_service_list_gives_no_right_on_accounts() -> None:
+    a = access(service=("users.manage", "mail.read"))
+    assert a.allows("create_user")
+    assert not a.allows("list_messages", "acc_a")
+    assert not a.sees("acc_a")
+
+
+def test_users_read_reads_and_changes_nothing() -> None:
+    a = access(service=("users.read",))
+    assert all(a.allows(op) for op in ("list_users", "get_user", "list_tokens"))
+    assert all(a.allows(op) for op in ("list_roles", "get_role"))
+    assert not a.allows("create_token") and not a.allows("update_user")
 
 
 def test_admin_allows_everything() -> None:
@@ -67,7 +89,7 @@ def test_require_hides_unseen_accounts_as_not_found() -> None:
 
 
 def test_a_right_on_accounts_to_come_shows_no_account() -> None:
-    a = access(Grant(accounts=["*"], allow=["discover_account", "create_account"]))
+    a = access(service=("discover_account", "create_account"))
     assert not a.sees("acc_a")
     with pytest.raises(NotFoundError):
         a.require("list_messages", "acc_a")
@@ -118,11 +140,8 @@ def test_a_right_that_no_longer_exists_does_not_block_covers() -> None:
     assert a.covers([renamed])
 
 
-@pytest.mark.parametrize("right", ["accounts.manage", "admin"])
-def test_covers_what_the_caller_holds_on_named_accounts(right: str) -> None:
-    # accounts.manage and admin name create_account and the like, which a
-    # grant on named accounts grants nowhere.
-    held = Grant(accounts=["acc_a"], allow=[right])
+def test_covers_what_the_caller_holds_on_named_accounts() -> None:
+    held = Grant(accounts=["acc_a"], allow=["accounts.manage"])
     a = access(held)
     assert a.covers([held])
     assert not a.allows("create_account")
@@ -132,13 +151,26 @@ def test_covers_what_the_caller_holds_on_named_accounts(right: str) -> None:
 def test_covers_star_needs_star() -> None:
     a = access(Grant(accounts=["*"], allow=["mail.read"]))
     assert a.covers([Grant(accounts=["*"], allow=["list_messages"])])
-    assert Access.admin("x", "x").covers([Grant(accounts=["*"], allow=["admin"])])
+    assert Access.admin("x", "x").covers([], ["admin"])
+
+
+def test_covers_the_service_rights_the_caller_holds() -> None:
+    a = access(service=("users.manage",))
+    assert a.covers([], ["users.read", "create_user"])
+    assert not a.covers([], ["webhooks.manage"])
+    # admin is every right: only an administrator hands it out.
+    every = access(
+        Grant(accounts=["*"], allow=["mail.read"]),
+        service=("users.manage", "webhooks.manage", "accounts.connect"),
+    )
+    assert not every.covers([], ["admin"])
 
 
 def test_operations_on_an_account() -> None:
     a = access(
         Grant(accounts=["acc_a"], allow=["accounts.read"]),
         Grant(accounts=["*"], allow=["accounts.manage"]),
+        service=("accounts.connect",),
     )
     assert a.operations_on("acc_a") == {
         "list_accounts",
@@ -161,9 +193,8 @@ def test_anywhere_finds_a_right_on_some_account() -> None:
     )
     assert a.anywhere("list_sends")
     assert not a.anywhere("send_message")
-    # Connecting needs every account, a grant on one does not count.
     assert not a.anywhere("create_account")
-    assert access(Grant(accounts=[], allow=["users.manage"])).anywhere("list_users")
+    assert access(service=("users.manage",)).anywhere("list_users")
 
 
 def test_filter_keeps_the_accounts_the_operation_is_allowed_on() -> None:
@@ -186,3 +217,23 @@ def test_a_batch_needs_its_right_and_the_operation() -> None:
 def test_the_status_is_for_who_may_list_some_account() -> None:
     assert access(Grant(accounts=["acc_a"], allow=["list_accounts"])).sees_status()
     assert not access(Grant(accounts=["acc_a"], allow=["list_messages"])).sees_status()
+
+
+NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+
+
+def test_a_grant_ends_at_its_expiry() -> None:
+    grant = Grant(accounts=["acc_a"], allow=["mail.read"], expires_at=NOW)
+    before = Access("u", "u", [grant], now=NOW - timedelta(seconds=1))
+    assert before.allows("list_messages", "acc_a")
+    at = Access("u", "u", [grant], now=NOW)
+    assert not at.allows("list_messages", "acc_a")
+    assert not at.sees("acc_a")
+
+
+def test_an_expired_grant_asks_nothing_of_a_manager() -> None:
+    """A manager may change a user whose expired grant it does not hold:
+    that grant grants nothing."""
+    manager = Access("u", "u", [], now=NOW)
+    expired = Grant(accounts=["*"], allow=["send"], expires_at=NOW)
+    assert manager.covers([expired])

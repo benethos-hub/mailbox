@@ -20,12 +20,19 @@ from ..forms import FormError, failing, text_of
 from ..grants import (
     GROUP_NAMES,
     GROUP_SECTIONS,
+    ROLE_TEMPLATES,
+    SERVICE_NAMES,
     GrantRow,
+    ServiceRow,
     account_choices,
     group_hint,
     read_grants,
+    read_service,
+    require_recipients,
     rows_of,
+    service_of,
     typed_rows,
+    typed_service,
 )
 from ..session import show_once, take_once
 from ..templates import back, render, segment
@@ -43,18 +50,24 @@ REFUSED = 400
 def _editor(
     request: Request,
     caller: Access,
+    service: list[str],
     grants: list[Grant],
-    rows: list[GrantRow] | None = None,
+    form: Any = None,
 ) -> dict[str, Any]:
-    """What the grant editor needs. ``rows`` as typed, else those of
-    ``grants``."""
+    """What the editor of rights needs: the service rights and the grant
+    rows, as ``form`` held them, else those of ``service`` and ``grants``."""
     accounts = get_accounts(request)
-    rows = rows if rows is not None else rows_of(grants)
+    rows: list[GrantRow] = typed_rows(form) if form is not None else rows_of(grants)
+    held: ServiceRow = typed_service(form) if form is not None else service_of(service)
     return {
+        "service": held,
+        "service_names": SERVICE_NAMES,
         "rows": rows,
         "account_choices": account_choices(accounts.list(caller), rows),
         "groups": GROUP_SECTIONS,
-        "group_ops": {name: group_hint(name) for name in GROUP_NAMES},
+        "group_ops": {
+            name: group_hint(name) for name in (*SERVICE_NAMES, *GROUP_NAMES)
+        },
     }
 
 
@@ -122,7 +135,7 @@ def _new_user_page(
         typed=typed,
         role_choices=_role_choices(request, caller, typed["roles"] if typed else []),
         can_set_password=caller.allows("set_password"),
-        **_editor(request, caller, [], _typed_rows(form)),
+        **_editor(request, caller, [], [], form),
     )
 
 
@@ -146,11 +159,6 @@ def _typed_token(form: Any) -> dict[str, str]:
     }
 
 
-def _typed_rows(form: Any) -> list[GrantRow] | None:
-    """The grant rows of ``form`` as typed, None without a form."""
-    return typed_rows(form) if form is not None else None
-
-
 @router.post("/users")
 async def create_user(request: Request, caller: Actor, users: Users) -> Response:
     form = await request.form()
@@ -164,6 +172,7 @@ async def create_user(request: Request, caller: Actor, users: Users) -> Response
             typed["name"],
             typed["roles"],
             read_grants(form),
+            service=read_service(form),
             ui_sign_in=ui_sign_in,
         )
     here = f"/ui/users/{user.id}"
@@ -225,7 +234,7 @@ def _user_page(
         can_revoke=caller.allows("revoke_token"),
         has_password=users.has_password(caller, user_id),
         can_set_password=caller.allows("set_password"),
-        **_editor(request, caller, found.grants, _typed_rows(form)),
+        **_editor(request, caller, found.service, found.grants, form),
     )
 
 
@@ -250,6 +259,7 @@ async def update_user(
             user_id,
             name=typed["name"] or None,
             roles=typed["roles"],
+            service=read_service(form),
             grants=read_grants(form),
             disabled=typed["disabled"],
             ui_sign_in=ui_sign_in,
@@ -354,25 +364,48 @@ async def list_roles(request: Request, caller: Viewer, users: Users) -> HTMLResp
 
 
 @router.get("/roles/new")
-async def new_role(request: Request, caller: Viewer) -> HTMLResponse:
-    """The editor of a new role. It takes the path of a role named
-    "new", whose page the UI then cannot open: the API still can."""
+async def new_role(
+    request: Request, caller: Viewer, template: str = ""
+) -> HTMLResponse:
+    """The editor of a new role, empty or filled from a template. It takes
+    the path of a role named "new", whose page the UI then cannot open:
+    the API still can."""
     caller.require("create_role")
-    return _new_role_page(request, caller)
+    return _new_role_page(request, caller, template=template)
 
 
 def _new_role_page(
-    request: Request, caller: Access, form: Any = None, err: str | None = None
+    request: Request,
+    caller: Access,
+    form: Any = None,
+    err: str | None = None,
+    template: str = "",
 ) -> HTMLResponse:
-    """The editor of a new role, empty or as ``form`` held it."""
+    """The editor of a new role: empty, filled from ``template``, or as
+    ``form`` held it."""
+    if form is not None:
+        template = str(form.get("template") or "")
+    chosen = ROLE_TEMPLATES.get(template)
+    if form is not None:
+        typed_id = text_of(form, "id")
+    else:
+        typed_id = chosen.id if chosen is not None else ""
     return render(
         request,
         "pages/role_new.html",
         page="roles",
         status_code=REFUSED if err else 200,
         err=err,
-        typed_id=text_of(form, "id") if form is not None else "",
-        **_editor(request, caller, [], _typed_rows(form)),
+        typed_id=typed_id,
+        templates=ROLE_TEMPLATES.values(),
+        chosen=chosen,
+        **_editor(
+            request,
+            caller,
+            list(chosen.service) if chosen is not None else [],
+            list(chosen.grants) if chosen is not None else [],
+            form,
+        ),
     )
 
 
@@ -394,7 +427,11 @@ async def create_role(request: Request, caller: Actor, users: Users) -> Response
     with failing(
         "/ui/roles/new", again=lambda err: _new_role_page(request, caller, form, err)
     ):
-        role = users.create_role(caller, role_id, read_grants(form))
+        grants = read_grants(form)
+        chosen = ROLE_TEMPLATES.get(str(form.get("template") or ""))
+        if chosen is not None and chosen.recipients_required:
+            require_recipients(grants)
+        role = users.create_role(caller, role_id, grants, read_service(form))
     return back(request, _role_path(role.id), f"Role {role.id} created.")
 
 
@@ -429,7 +466,7 @@ def _role_page(
         names=account_names(request, caller),
         can_update=caller.allows("replace_role"),
         can_delete=caller.allows("delete_role"),
-        **_editor(request, caller, found.grants, _typed_rows(form)),
+        **_editor(request, caller, found.service, found.grants, form),
     )
 
 
@@ -443,7 +480,7 @@ async def replace_role(
         here,
         again=lambda err: _role_page(request, caller, role_id, users, form, err),
     ):
-        users.replace_role(caller, role_id, read_grants(form))
+        users.replace_role(caller, role_id, read_grants(form), read_service(form))
     return back(request, here, "Saved.")
 
 

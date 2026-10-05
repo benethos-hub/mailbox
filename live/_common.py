@@ -28,7 +28,6 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import Access
@@ -332,9 +331,7 @@ def admin_token(services: Services, name: str = "live") -> str:
     """A token of a new user with every right, for a script that runs the
     services in its own process."""
     caller = Access.admin("usr_live_script", "live script")
-    user = services.users.create_user(
-        caller, name, [], [Grant(accounts=["*"], allow=[permissions.ADMIN])]
-    )
+    user = services.users.create_user(caller, name, [], [], service=[permissions.ADMIN])
     return services.auth.issue_token(user.id, "live check")[1]
 
 

@@ -1,17 +1,22 @@
-"""Grants in a form: the rows of the grant editor, read back into grants.
+"""Rights in a form: the service rights and the rows of the grant editor,
+read back into a list of names and into grants.
 
-A row ``i`` carries ``g<i>_accounts`` (account ids or ``*``),
-``g<i>_allow`` (groups or ``admin``), ``g<i>_more`` (further operation
-names), ``g<i>_recipients`` (one pattern per line), ``g<i>_max`` (sends per
-day) and ``g<i>_remove``. ``grants`` says how many rows the form has. A row
-with neither accounts nor rights is the empty one for adding and is left
-out.
+The service rights are ``service`` (groups or ``admin``) and
+``service_more`` (further operation names). A grant row ``i`` carries
+``g<i>_accounts`` (account ids or ``*``), ``g<i>_allow`` (groups),
+``g<i>_more`` (further operation names), ``g<i>_recipients`` (one pattern
+per line), ``g<i>_max`` (sends per day), ``g<i>_folders`` (one folder per
+line, empty for every folder), ``g<i>_expires`` (a local date and time,
+empty for never) and ``g<i>_remove``. ``grants``
+says how many rows the form has. A row with neither accounts nor rights
+is the empty one for adding and is left out.
 """
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from pydantic import ValidationError
@@ -20,7 +25,11 @@ from ...data.models import Account, Grant
 from ...domain.rights import permissions
 from .forms import FormError, first_problem
 
-GROUP_NAMES = (permissions.ADMIN, *permissions.GROUPS)
+# The groups a grant names, and the rights of the service.
+GROUP_NAMES = tuple(
+    name for name in permissions.GROUPS if name not in permissions.SERVICE_GROUPS
+)
+SERVICE_NAMES = (permissions.ADMIN, *permissions.SERVICE_GROUPS)
 
 # The groups the MCP server works with, and the tools each opens there, as
 # the tool table of the MCP server's README documents them. A test compares
@@ -50,7 +59,7 @@ GROUP_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 def group_hint(name: str) -> str:
     """The tooltip of a group: its operations, and its MCP tools if any."""
-    hint = ", ".join(permissions.GROUPS.get(name, ("every right",)))
+    hint = ", ".join(permissions.GROUPS.get(name, ("every right on every account",)))
     if name in MCP_TOOLS:
         hint += ". MCP tools: " + ", ".join(MCP_TOOLS[name])
     elif name == "accounts.read":
@@ -79,9 +88,106 @@ class GrantRow:
     recipients: str
     # As the field shows it, empty for no limit.
     max_per_day: str
+    # As the field shows it, local time to the minute, empty for never.
+    expires: str = ""
+    # One folder per line, empty for every folder.
+    folders: str = ""
 
 
 EMPTY_ROW = GrantRow([], [], "", "", "")
+
+# How a local date and time comes from and goes to the field.
+EXPIRES_FORMAT = "%Y-%m-%dT%H:%M"
+
+
+@dataclass(frozen=True)
+class RoleTemplate:
+    """A filled form of the New role page (PERMISSIONS.md 8.7): nothing
+    is stored until it is saved, and every field can be changed."""
+
+    id: str
+    title: str
+    summary: str
+    service: tuple[str, ...]
+    grants: tuple[Grant, ...]
+    # Every grant that sends must name its recipients.
+    recipients_required: bool = False
+
+
+ROLE_TEMPLATES: dict[str, RoleTemplate] = {
+    t.id: t
+    for t in (
+        RoleTemplate(
+            "reader",
+            "Reader",
+            "reads mail on the accounts you choose",
+            (),
+            (Grant(accounts=[], allow=["mail.read"]),),
+        ),
+        RoleTemplate(
+            "agent",
+            "Agent",
+            "reads, sorts and drafts on the accounts you choose, never sends: "
+            "what the MCP server needs",
+            (),
+            (Grant(accounts=[], allow=["mail.read", "mail.write", "drafts"]),),
+        ),
+        RoleTemplate(
+            "sender",
+            "Sender",
+            "sends from the accounts you choose, to the recipients you name, "
+            "a few a day",
+            (),
+            (Grant(accounts=[], allow=["send"], max_sends_per_day=10),),
+            recipients_required=True,
+        ),
+        RoleTemplate(
+            "operator",
+            "Operator",
+            "connects and manages every account, reads its audit, manages webhooks",
+            ("accounts.connect", "webhooks.manage"),
+            (Grant(accounts=["*"], allow=["accounts.manage", "audit"]),),
+        ),
+    )
+}
+
+
+def require_recipients(grants: list[Grant]) -> None:
+    """Refuse a grant that sends to anyone: what a template asks for."""
+    for index, grant in enumerate(grants):
+        if "send" in grant.allow and not grant.recipients:
+            raise GrantFormError(
+                f"grant {index + 1}: name the recipients it may send to"
+            )
+
+
+@dataclass(frozen=True)
+class ServiceRow:
+    """The service rights as the editor shows them: groups to tick, the
+    rest as single operations."""
+
+    groups: list[str]
+    more: str
+
+
+def service_of(names: list[str]) -> ServiceRow:
+    """The editor's service rights for ``names``."""
+    return ServiceRow(
+        groups=[name for name in names if name in SERVICE_NAMES],
+        more=" ".join(name for name in names if name not in SERVICE_NAMES),
+    )
+
+
+def read_service(form: Any) -> list[str]:
+    """The service rights a submitted editor holds."""
+    names = [str(v) for v in form.getlist("service") if v]
+    names += [v for v in _SPLIT.split(str(form.get("service_more") or "")) if v]
+    return list(dict.fromkeys(names))
+
+
+def typed_service(form: Any) -> ServiceRow:
+    """The service rights as they were submitted, unchecked."""
+    return service_of(read_service(form))
 
 
 def rows_of(grants: list[Grant]) -> list[GrantRow]:
@@ -97,6 +203,12 @@ def rows_of(grants: list[Grant]) -> list[GrantRow]:
                 if grant.max_sends_per_day is not None
                 else ""
             ),
+            expires=(
+                grant.expires_at.astimezone().strftime(EXPIRES_FORMAT)
+                if grant.expires_at is not None
+                else ""
+            ),
+            folders="\n".join(grant.folders or []),
         )
         for grant in grants
     ]
@@ -123,6 +235,8 @@ def typed_rows(form: Any) -> list[GrantRow]:
                 more=more,
                 recipients=str(form.get(prefix + "recipients") or "").strip(),
                 max_per_day=str(form.get(prefix + "max") or "").strip(),
+                expires=str(form.get(prefix + "expires") or "").strip(),
+                folders=str(form.get(prefix + "folders") or "").strip(),
             )
         )
     return [*rows, EMPTY_ROW]
@@ -168,6 +282,22 @@ def read_grants(form: Any) -> list[Grant]:
         limit = str(form.get(prefix + "max") or "").strip()
         if limit and not limit.isdigit():
             raise GrantFormError(f"grant {index + 1}: sends per day must be a number")
+        # A folder's name may hold spaces: one per line.
+        folders = [
+            line.strip()
+            for line in str(form.get(prefix + "folders") or "").splitlines()
+            if line.strip()
+        ]
+        expires = str(form.get(prefix + "expires") or "").strip()
+        try:
+            # The browser sends local time without a zone: the service's.
+            expires_at = (
+                datetime.fromisoformat(expires).astimezone() if expires else None
+            )
+        except ValueError:
+            raise GrantFormError(
+                f"grant {index + 1}: valid until must be a date and a time"
+            ) from None
         try:
             grants.append(
                 Grant(
@@ -175,6 +305,8 @@ def read_grants(form: Any) -> list[Grant]:
                     allow=allow,
                     recipients=recipients or None,
                     max_sends_per_day=int(limit) if limit else None,
+                    folders=folders or None,
+                    expires_at=expires_at,
                 )
             )
         except ValidationError as exc:

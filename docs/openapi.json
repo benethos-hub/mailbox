@@ -353,7 +353,7 @@
             "bearerAuth": []
           }
         ],
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "post": {
         "tags": [
@@ -606,7 +606,7 @@
             }
           }
         },
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "patch": {
         "tags": [
@@ -1132,7 +1132,7 @@
             }
           }
         },
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "post": {
         "tags": [
@@ -1516,7 +1516,7 @@
             "bearerAuth": []
           }
         ],
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "post": {
         "tags": [
@@ -1769,7 +1769,7 @@
             }
           }
         },
-        "x-permission": "users.manage"
+        "x-permission": "users.read"
       },
       "put": {
         "tags": [
@@ -2260,7 +2260,7 @@
             "bearerAuth": []
           }
         ],
-        "x-permission": "accounts.manage"
+        "x-permission": "accounts.connect"
       }
     },
     "/v1/accounts/{account_id}": {
@@ -2910,7 +2910,7 @@
             "bearerAuth": []
           }
         ],
-        "x-permission": "accounts.manage"
+        "x-permission": "accounts.connect"
       }
     },
     "/v1/oauth/{provider}/start": {
@@ -3048,7 +3048,7 @@
             }
           }
         },
-        "x-permission": "accounts.manage"
+        "x-permission": "accounts.connect"
       }
     },
     "/v1/messages": {
@@ -8220,6 +8220,38 @@
             ],
             "title": "Max Sends Per Day",
             "description": "Mails the user may send from one account in any 24 hours under this grant. Null: no limit."
+          },
+          "folders": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 100,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folders",
+            "description": "Reading, writing and deleting mail only in these folders and their subfolders: a role such as `inbox`, or a folder's name or id. Moves stay among them. Deleting to the trash is allowed from them, reading the trash only when it is listed. Null: every folder."
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At",
+            "description": "When the grant ends, with a time zone. Null: never. An expired grant grants nothing and stays until it is removed."
           }
         },
         "type": "object",
@@ -8228,7 +8260,7 @@
           "allow"
         ],
         "title": "Grant",
-        "description": "Rights on accounts: operation or group names, account ids or ``*``.\n``recipients`` and ``max_sends_per_day`` narrow sending under this grant."
+        "description": "Rights on accounts: operation or group names, account ids or ``*``.\n``recipients`` and ``max_sends_per_day`` narrow sending under this grant.\nRights of the service belong in ``service``, not in a grant."
       },
       "HTTPValidationError": {
         "properties": {
@@ -8365,7 +8397,7 @@
             },
             "type": "array",
             "title": "Operations",
-            "description": "Operations not bound to one existing account"
+            "description": "Operations of the service, bound to no account"
           }
         },
         "type": "object",
@@ -8414,6 +8446,14 @@
             "type": "array",
             "title": "Warnings",
             "description": "`read_and_send_anywhere`: the caller may read mail here and send it to any address, which a mail with injected instructions could use to carry data out. Narrow sending with a grant's `recipients`."
+          },
+          "sending": {
+            "items": {
+              "$ref": "#/components/schemas/MeSending"
+            },
+            "type": "array",
+            "title": "Sending",
+            "description": "One entry per grant that allows sending here. Empty: none."
           }
         },
         "type": "object",
@@ -8424,6 +8464,57 @@
         ],
         "title": "MeAccount",
         "description": "An account the caller may act on."
+      },
+      "MeSending": {
+        "properties": {
+          "recipients": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipients",
+            "description": "Send only to these: an address, `*@domain`. Null: to anyone."
+          },
+          "max_sends_per_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Sends Per Day",
+            "description": "Mails in any 24 hours under this grant. Null: no limit."
+          },
+          "sends_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sends Left",
+            "description": "How many more the limit allows now: it less the mails the caller sent from the account in the last 24 hours. Null: no limit."
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipients",
+          "max_sends_per_day",
+          "sends_left"
+        ],
+        "title": "MeSending",
+        "description": "One grant that allows sending from the account. A send passes when\none of them accepts every recipient and has sends left."
       },
       "Message": {
         "properties": {
@@ -9197,11 +9288,20 @@
             "type": "object",
             "title": "Groups",
             "description": "Group name to the operations it allows"
+          },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "The groups of the service. They and `admin` are named in a user's or a role's `service`, the other groups in a grant's `allow`."
           }
         },
         "type": "object",
         "required": [
-          "groups"
+          "groups",
+          "service"
         ],
         "title": "PermissionCatalogue"
       },
@@ -9249,6 +9349,14 @@
             "type": "string",
             "title": "Id"
           },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+          },
           "grants": {
             "items": {
               "$ref": "#/components/schemas/Grant"
@@ -9262,13 +9370,21 @@
           "id"
         ],
         "title": "Role",
-        "description": "A named, reusable set of grants."
+        "description": "A named, reusable set of grants and service rights."
       },
       "RoleCreate": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
+          },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -9286,6 +9402,14 @@
       },
       "RoleReplace": {
         "properties": {
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+          },
           "grants": {
             "items": {
               "$ref": "#/components/schemas/Grant"
@@ -9688,6 +9812,14 @@
             "type": "array",
             "title": "Roles"
           },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
+          },
           "grants": {
             "items": {
               "$ref": "#/components/schemas/Grant"
@@ -9727,6 +9859,14 @@
             },
             "type": "array",
             "title": "Roles"
+          },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -9774,6 +9914,21 @@
               }
             ],
             "title": "Roles"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `admin`, or single operations of them. `admin` is every right."
           },
           "grants": {
             "anyOf": [

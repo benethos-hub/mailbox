@@ -7,7 +7,7 @@ may do is ``Access``.
 from __future__ import annotations
 
 from . import permissions
-from .access import ADMIN_GRANT, Access, SendLimit
+from .access import ADMIN_SERVICE, Access, SendLimit
 from .permissions import permission_of
 
-__all__ = ["ADMIN_GRANT", "Access", "SendLimit", "permission_of", "permissions"]
+__all__ = ["ADMIN_SERVICE", "Access", "SendLimit", "permission_of", "permissions"]

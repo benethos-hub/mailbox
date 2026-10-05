@@ -7,7 +7,7 @@ only manage a user whose rights it holds itself.
 from __future__ import annotations
 
 import secrets
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -30,10 +30,20 @@ from ..accounts import Adapters
 from ..activity import HOST, ActivityLog, Actor
 from ..activity import users as said
 from ..auth import MAX_NAME, AuthService, TokenState
-from ..rights import ADMIN_GRANT, Access, SendLimit, permissions
+from ..rights import ADMIN_SERVICE, Access, permissions
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18
+
+
+@dataclass(frozen=True)
+class Sending:
+    """One grant that allows sending from an account: to whom, how many in
+    24 hours, and how many of those are left now (PERMISSIONS.md 8.8)."""
+
+    recipients: list[str] | None  # None: to anyone
+    max_sends_per_day: int | None  # None: no limit
+    sends_left: int | None  # None: no limit
 
 
 @dataclass(frozen=True)
@@ -47,7 +57,7 @@ class AccountRights:
     warnings: list[str]
     # One entry per grant that allows sending here. A send passes when one
     # of them allows it. Empty when no grant allows sending.
-    sending: list[SendLimit]
+    sending: list[Sending]
     status: AccountStatus = AccountStatus.CONNECTED
 
 
@@ -70,8 +80,12 @@ class UserService:
         auth: AuthService,
         webhooks: WebhookRepository,
         activity: ActivityLog | None = None,
+        sent: Callable[[str, str], int] | None = None,
     ) -> None:
+        """``sent``: how many mails a user sent from an account in the last
+        24 hours, by user and account id."""
         self._users = users
+        self._sent = sent
         self._roles = roles
         self._tokens = tokens
         self._adapters = adapters
@@ -111,7 +125,7 @@ class UserService:
                         display_name=account.display_name,
                         operations=sorted(operations),
                         warnings=_warnings(access, account_id, operations),
-                        sending=access.sending_limits(account_id),
+                        sending=self._sending(access, account_id),
                         status=account.status,
                     )
                 )
@@ -122,6 +136,26 @@ class UserService:
             operations=sorted(access.general_operations()),
             roles=list(roles),
         )
+
+    def _sending(self, access: Access, account_id: str) -> list[Sending]:
+        limits = access.sending_limits(account_id)
+        sent = (
+            self._sent(access.user_id, account_id)
+            if self._sent is not None and any(x.max_per_day for x in limits)
+            else 0
+        )
+        return [
+            Sending(
+                recipients=list(limit.recipients)
+                if limit.recipients is not None
+                else None,
+                max_sends_per_day=limit.max_per_day,
+                sends_left=max(0, limit.max_per_day - sent)
+                if limit.max_per_day is not None
+                else None,
+            )
+            for limit in limits
+        ]
 
     # --- setup ----------------------------------------------------------------
 
@@ -134,7 +168,7 @@ class UserService:
         user = User(
             id=new_id("usr"),
             name=name,
-            grants=[ADMIN_GRANT],
+            service=list(ADMIN_SERVICE),
             ui_sign_in=True,
         )
         self._users.save(user)
@@ -204,6 +238,7 @@ class UserService:
         roles: list[str],
         grants: list[Grant],
         *,
+        service: list[str] | None = None,
         ui_sign_in: bool = False,
     ) -> User:
         """A new user. Without ``ui_sign_in`` an API user: tokens only."""
@@ -214,10 +249,11 @@ class UserService:
             id=new_id("usr"),
             name=name,
             roles=roles,
+            service=service or [],
             grants=grants,
             ui_sign_in=ui_sign_in,
         )
-        self._check_grantable(access, user.roles, user.grants)
+        self._check_grantable(access, user)
         self._users.save(user)
         self._activity.record(said.UserCreated(by=Actor.of(access), user=user))
         return user
@@ -229,6 +265,7 @@ class UserService:
         *,
         name: str | None = None,
         roles: list[str] | None = None,
+        service: list[str] | None = None,
         grants: list[Grant] | None = None,
         disabled: bool | None = None,
         ui_sign_in: bool | None = None,
@@ -250,6 +287,7 @@ class UserService:
             for key, value in {
                 "name": name,
                 "roles": roles,
+                "service": service,
                 "grants": grants,
                 "disabled": disabled,
                 "ui_sign_in": ui_sign_in,
@@ -257,9 +295,10 @@ class UserService:
             if value is not None
         }
         updated = user.model_copy(update=changes)
-        # Only grants given now must name known rights. A stored one may
-        # name a right a release renamed, and grants nothing by it.
-        self._check_grantable(access, updated.roles, updated.grants, grants or [])
+        # Only rights given now must be known. A stored one may name a
+        # right a release renamed, and grants nothing by it.
+        self._check_grantable(access, updated, grants or [], service or [])
+        self._require_an_administrator(replaced=updated)
         self._users.save(updated)
         changed = tuple(
             key for key in changes if getattr(user, key) != getattr(updated, key)
@@ -277,6 +316,7 @@ class UserService:
         user = self._managed(access, "delete_user", user_id)
         if user_id == access.user_id:
             raise ConflictError("a user cannot delete itself")
+        self._require_an_administrator(deleted=user_id)
         self._tokens.delete_for_user(user_id)
         self._auth.passwords.delete(user_id)
         # Its webhooks would post by nobody's rights, and nobody could
@@ -406,25 +446,42 @@ class UserService:
         access.require("get_role")
         return self._roles.get(role_id)
 
-    def create_role(self, access: Access, role_id: str, grants: list[Grant]) -> Role:
+    def create_role(
+        self,
+        access: Access,
+        role_id: str,
+        grants: list[Grant],
+        service: list[str] | None = None,
+    ) -> Role:
         access.require("create_role")
         role_id = _named("a role", role_id)
         if role_id in {role.id for role in self._roles.list()}:
             raise ConflictError(f"role {role_id} exists")
-        role = self._save_role(access, Role(id=role_id, grants=grants))
+        role = self._save_role(
+            access, Role(id=role_id, service=service or [], grants=grants)
+        )
         self._activity.record(
             said.RoleCreated(by=Actor.of(access), role_id=role.id, grants=len(grants))
         )
         return role
 
-    def replace_role(self, access: Access, role_id: str, grants: list[Grant]) -> Role:
+    def replace_role(
+        self,
+        access: Access,
+        role_id: str,
+        grants: list[Grant],
+        service: list[str] | None = None,
+    ) -> Role:
         """The role's holders change with it: the caller must be able to
         manage each of them, as for a change to the user itself."""
         access.require("replace_role")
-        self._require_covers(access, self._roles.get(role_id).grants)
+        before = self._roles.get(role_id)
+        self._require_covers(access, before.grants, before.service)
         for holder in self._holders(role_id):
             self._require_covers_user(access, holder)
-        role = self._save_role(access, Role(id=role_id, grants=grants))
+        new = Role(id=role_id, service=service or [], grants=grants)
+        self._require_an_administrator(role=new)
+        role = self._save_role(access, new)
         self._activity.record(
             said.RoleReplaced(by=Actor.of(access), role_id=role.id, grants=len(grants))
         )
@@ -433,7 +490,7 @@ class UserService:
     def delete_role(self, access: Access, role_id: str) -> None:
         access.require("delete_role")
         role = self._roles.get(role_id)
-        self._require_covers(access, role.grants)
+        self._require_covers(access, role.grants, role.service)
         users = [user.id for user in self._holders(role_id)]
         if users:
             raise ConflictError(f"role {role_id} is used by {', '.join(users)}")
@@ -451,32 +508,90 @@ class UserService:
 
     # --- rules ----------------------------------------------------------------
 
+    # --- an account connected ------------------------------------------------
+
+    def connected(self, access: Access, account_id: str) -> None:
+        """Whoever connects an account gets ``accounts.manage`` on it, so
+        it can verify and remove what it connected (PERMISSIONS.md 8.1).
+        Nothing for a caller that holds it there already, nor for one that
+        is no stored user."""
+        manage = permissions.GROUPS["accounts.manage"]
+        if all(access.allows(op, account_id) for op in manage):
+            return
+        try:
+            user = self._users.get(access.user_id)
+        except NotFoundError:
+            return
+        grant = Grant(accounts=[account_id], allow=["accounts.manage"])
+        updated = user.model_copy(update={"grants": [*user.grants, grant]})
+        self._users.save(updated)
+        self._activity.record(
+            said.UserChanged(by=Actor.of(access), user=updated, changed=("grants",))
+        )
+
     def _save_role(self, access: Access, role: Role) -> Role:
-        _validate(role.grants)
-        self._require_covers(access, role.grants)
+        _validate(role.grants, role.service)
+        self._require_covers(access, role.grants, role.service)
         self._roles.save(role)
         return role
 
     def _check_grantable(
         self,
         access: Access,
-        role_ids: list[str],
-        grants: list[Grant],
-        new: list[Grant] | None = None,
+        user: User,
+        grants: list[Grant] | None = None,
+        service: list[str] | None = None,
     ) -> None:
-        """The caller covers ``grants`` and the roles. ``new``, the grants
-        given now, all of them unless said, name known rights."""
-        _validate(grants if new is None else new)
-        self._require_covers(access, [*grants, *self._role_grants(role_ids)])
+        """The caller covers the user's rights and roles. ``grants`` and
+        ``service``, the rights given now, all of them unless said, name
+        known rights of the right kind."""
+        _validate(
+            user.grants if grants is None else grants,
+            user.service if service is None else service,
+        )
+        role_grants, role_service = self._role_rights(user.roles)
+        self._require_covers(
+            access, [*user.grants, *role_grants], [*user.service, *role_service]
+        )
 
-    def _role_grants(self, role_ids: Iterable[str]) -> list[Grant]:
+    def _require_an_administrator(
+        self,
+        *,
+        replaced: User | None = None,
+        deleted: str | None = None,
+        role: Role | None = None,
+    ) -> None:
+        """Refuse a change that would leave no enabled administrator who
+        can sign in to the UI, where there was one (PERMISSIONS.md 8.3).
+        The way back would be the host's ``users set-password`` alone."""
+        users = self._users.list()
+        roles = {r.id: r for r in self._roles.list()}
+        if not _administrators(users, roles):
+            return
+        after = [
+            replaced if replaced is not None and u.id == replaced.id else u
+            for u in users
+            if u.id != deleted
+        ]
+        if role is not None:
+            roles = {**roles, role.id: role}
+        if not _administrators(after, roles):
+            raise ConflictError(
+                "no enabled administrator who can sign in to the UI would be left"
+            )
+
+    def _role_rights(self, role_ids: Iterable[str]) -> tuple[list[Grant], list[str]]:
+        """The grants and the service rights of the roles together."""
         grants: list[Grant] = []
+        service: list[str] = []
         for role_id in role_ids:
             try:
-                grants.extend(self._roles.get(role_id).grants)
+                role = self._roles.get(role_id)
             except NotFoundError:
                 raise BadRequestError(f"unknown role: {role_id}") from None
-        return grants
+            grants.extend(role.grants)
+            service.extend(role.service)
+        return grants, service
 
     def _managed(self, access: Access, operation: str, user_id: str) -> User:
         """The user the caller does ``operation`` on: with the right to it,
@@ -488,12 +603,26 @@ class UserService:
 
     def _require_covers_user(self, access: Access, user: User) -> None:
         roles = [role for role in user.roles if _exists(self._roles, role)]
-        self._require_covers(access, [*user.grants, *self._role_grants(roles)])
+        grants, service = self._role_rights(roles)
+        self._require_covers(access, [*user.grants, *grants], [*user.service, *service])
 
     @staticmethod
-    def _require_covers(access: Access, grants: list[Grant]) -> None:
-        if not access.covers(grants):
+    def _require_covers(
+        access: Access, grants: list[Grant], service: Iterable[str] = ()
+    ) -> None:
+        if not access.covers(grants, service):
             raise ForbiddenError("cannot grant or manage rights the caller lacks")
+
+
+def _administrators(users: Iterable[User], roles: dict[str, Role]) -> list[str]:
+    """The enabled users with ``admin`` who may sign in to the UI."""
+    return [
+        user.id
+        for user in users
+        if not user.disabled
+        and user.ui_sign_in
+        and Access.for_user(user, roles).is_admin()
+    ]
 
 
 def _self_or_get_user(access: Access, user_id: str) -> None:
@@ -513,11 +642,14 @@ def _named(what: str, name: str) -> str:
     return name
 
 
-def _validate(grants: Iterable[Grant]) -> None:
+def _validate(grants: Iterable[Grant], service: Iterable[str]) -> None:
+    """Rights on accounts in grants, rights of the service in ``service``:
+    a name in the wrong place answers 400, it is never moved silently."""
+    permissions.check_service(service)
     for grant in grants:
         if not grant.accounts:
             raise BadRequestError("a grant needs at least one account or '*'")
-        permissions.expand(grant.allow)
+        permissions.check_grant(grant.allow)
 
 
 def _exists(roles: RoleRepository, role_id: str) -> bool:
