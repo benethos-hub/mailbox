@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
@@ -20,9 +21,10 @@ class UserCreated(Activity):
     def says(self) -> str:
         roles = ", ".join(self.user.roles) or "none"
         sign_in = "the UI and the API" if self.user.ui_sign_in else "the API"
+        held = rights(self.user.service, len(self.user.grants))
         return (
-            f"created user {user(self.user)}: roles {roles}, "
-            f"{plural(len(self.user.grants), 'grant')}, signs in to {sign_in}"
+            f"created user {user(self.user)}: roles {roles}, {held}, "
+            f"signs in to {sign_in}"
         )
 
 
@@ -135,10 +137,11 @@ class RoleCreated(Activity):
     name: ClassVar[str] = "role_created"
 
     role_id: str
+    service: tuple[str, ...] = ()
     grants: int
 
     def says(self) -> str:
-        return f"created role {self.role_id} with {plural(self.grants, 'grant')}"
+        return f"created role {self.role_id} with {rights(self.service, self.grants)}"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -146,11 +149,13 @@ class RoleReplaced(Activity):
     name: ClassVar[str] = "role_replaced"
 
     role_id: str
+    service: tuple[str, ...] = ()
     grants: int
 
     def says(self) -> str:
         return (
-            f"replaced role {self.role_id}: it has {plural(self.grants, 'grant')} now"
+            f"replaced role {self.role_id}: it has "
+            f"{rights(self.service, self.grants)} now"
         )
 
 
@@ -162,3 +167,11 @@ class RoleDeleted(Activity):
 
     def says(self) -> str:
         return f"deleted role {self.role_id}"
+
+
+def rights(service: Iterable[str], grants: int) -> str:
+    """``1 grant``, or ``service admin, 1 grant`` with rights of the
+    service."""
+    names = ", ".join(service)
+    counted = plural(grants, "grant")
+    return f"service {names}, {counted}" if names else counted

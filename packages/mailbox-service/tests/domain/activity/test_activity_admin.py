@@ -73,12 +73,19 @@ def test_a_user_its_changes_and_its_tokens(
 def test_roles(services: Services, caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.INFO):
         services.users.create_role(ADMIN, "readers", [READER])
-        services.users.replace_role(ADMIN, "readers", [READER, READER])
+        services.users.replace_role(
+            ADMIN, "readers", [READER, READER], service=["users.read"]
+        )
         services.users.delete_role(ADMIN, "readers")
+        bea = services.users.create_user(
+            ADMIN, "Bea", [], [READER], service=["webhooks.manage"]
+        )
     assert lines(caplog) == [
         f"{WHO} created role readers with 1 grant",
-        f"{WHO} replaced role readers: it has 2 grants now",
+        f"{WHO} replaced role readers: it has service users.read, 2 grants now",
         f"{WHO} deleted role readers",
+        f"{WHO} created user Bea ({bea.id}): roles none, service "
+        "webhooks.manage, 1 grant, signs in to the API",
     ]
 
 
