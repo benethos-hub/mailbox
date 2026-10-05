@@ -812,7 +812,7 @@ MIGRATIONS: tuple[Migration, ...] = (V0001AccountsUsers(), V0002Credentials(), .
 SCHEMA_VERSION = MIGRATIONS[-1].version
 ```
 
-`Migrations`, in `registry.py`, is what the tuple was: the steps in
+`MigrationRegistry`, in `registry.py`, is what the tuple was: the steps in
 order, checked as it is made to be numbered from 1 without a gap. It
 knows `schema_version`, gives a `step` by its version and the steps
 `pending` for a database at a version, and it owns the table `meta`:
@@ -857,7 +857,7 @@ One branch from `main`, one pull request, each step passing all checks:
    becomes a class `VNNNN<Subject>` with `version` and `statements` as
    a tuple, the statement texts untouched, 9 and 15 with `before` as a
    method.
-   `__init__.py` lists the instances in a `Migrations` registry,
+   `__init__.py` lists the instances in a `MigrationRegistry`,
    `registry.py`, which owns `meta` and runs a step. The sixteen modules
    move to `versions/`.
    `Database._migrate` asks it for the pending steps and calls `apply`.

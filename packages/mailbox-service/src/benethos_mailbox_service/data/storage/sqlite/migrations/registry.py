@@ -12,7 +12,7 @@ from .migration import Migration
 _VERSION = "SELECT value FROM meta WHERE key = 'schema_version'"
 
 
-class Migrations:
+class MigrationRegistry:
     """The steps from an empty database to the current schema, numbered
     from 1 without a gap. Each one is run in a transaction of its own,
     which the database opens, and recorded in ``meta`` as it commits."""

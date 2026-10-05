@@ -29,7 +29,7 @@ from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 from benethos_mailbox_service.data.storage.sqlite.migrations import (
     MIGRATIONS,
     Migration,
-    Migrations,
+    MigrationRegistry,
     versions,
 )
 from benethos_mailbox_service.domain.rights import Access
@@ -463,7 +463,7 @@ class _Two(Migration):
 
 
 def test_the_registry_knows_its_steps_and_the_version_they_reach() -> None:
-    registry = Migrations(_One(), _Two())
+    registry = MigrationRegistry(_One(), _Two())
     assert registry.schema_version == 2
     assert len(registry) == 2
     assert [step.version for step in registry] == [1, 2]
@@ -476,13 +476,13 @@ def test_the_registry_knows_its_steps_and_the_version_they_reach() -> None:
 
 def test_the_registry_refuses_a_gap_or_a_wrong_place() -> None:
     with pytest.raises(ValueError, match="_Two says version 2 but stands at 1"):
-        Migrations(_Two(), _One())
+        MigrationRegistry(_Two(), _One())
     with pytest.raises(ValueError, match="_Two says version 2 but stands at 1"):
-        Migrations(_Two())
+        MigrationRegistry(_Two())
 
 
 def test_the_registry_runs_a_step_and_records_its_version() -> None:
-    registry = Migrations(_One(), _Two())
+    registry = MigrationRegistry(_One(), _Two())
     db = sqlite3.connect(":memory:")
     registry.prepare(db)
     assert registry.version_of(db) == 0

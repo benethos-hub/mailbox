@@ -12,7 +12,7 @@ fingerprint of each.
 from __future__ import annotations
 
 from .migration import Migration
-from .registry import Migrations
+from .registry import MigrationRegistry
 from .versions.v0001_accounts_users import V0001AccountsUsers
 from .versions.v0002_credentials import V0002Credentials
 from .versions.v0003_message_index import V0003MessageIndex
@@ -30,7 +30,7 @@ from .versions.v0014_service_rights import V0014ServiceRights
 from .versions.v0015_service_rights_moved import V0015ServiceRightsMoved
 from .versions.v0016_change_folders import V0016ChangeFolders
 
-MIGRATIONS = Migrations(
+MIGRATIONS = MigrationRegistry(
     V0001AccountsUsers(),
     V0002Credentials(),
     V0003MessageIndex(),
@@ -51,4 +51,4 @@ MIGRATIONS = Migrations(
 
 SCHEMA_VERSION = MIGRATIONS.schema_version
 
-__all__ = ["MIGRATIONS", "SCHEMA_VERSION", "Migration", "Migrations"]
+__all__ = ["MIGRATIONS", "SCHEMA_VERSION", "Migration", "MigrationRegistry"]
