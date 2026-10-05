@@ -194,7 +194,8 @@ packages/mailbox-service/
       activity/         # what was done, and by whom: the service log.
                         #   Activity, ActivityLog, catalogue/ one module
                         #   per area: activity.<area>.<name>
-                        #   (docs/LOGGING.md 7.2)
+                        #   (docs/LOGGING.md 7.2), Audit: those marked
+                        #   audited kept and read (docs/AUDIT.md)
       locks.py          # KeyedLocks: one lock per key, for the services
       paging.py         # the cursors this service hands out itself, the
                         #   page they continue
