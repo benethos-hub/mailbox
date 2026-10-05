@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -68,6 +70,46 @@ async def test_a_retried_step_counts_its_own_work_as_done(
     await imap.create_folder("Kunden", None)
     with pytest.raises(ConflictError):
         await imap.create_folder("Kunden", None)
+
+
+async def test_the_folders_below_the_namespace_are_at_the_top(
+    below_inbox: FakeMailBox,
+) -> None:
+    """As mail clients show them: INBOX.Sent is no subfolder of the inbox.
+    A folder below one of them stays its subfolder."""
+    imap = provider(below_inbox)
+    kunden = await imap.create_folder("Kunden", None)
+    await imap.create_folder("2026", kunden.id)
+    folders = {f.name: f for f in await imap.list_folders()}
+    assert folders["INBOX"].parent_id is None
+    assert folders["Sent"].parent_id is None
+    assert folders["Kunden"].parent_id is None
+    assert folders["2026"].parent_id == kunden.id
+
+
+async def test_without_a_namespace_a_folder_below_the_inbox_stays_there() -> None:
+    box = FakeMailBox()
+    box.delimiter = "."
+    box.folders = {"INBOX": FakeFolder(), "INBOX.Bills": FakeFolder()}
+    folders = {f.name: f for f in await provider(box).list_folders()}
+    assert folders["Bills"].parent_id == mappers.folder_id("INBOX")
+
+
+async def test_the_namespace_is_asked_once_per_connection(
+    below_inbox: FakeMailBox,
+) -> None:
+    imap = provider(below_inbox)
+    asked = []
+    original = below_inbox.namespace
+
+    def counted() -> Any:
+        asked.append(1)
+        return original()
+
+    below_inbox.namespace = counted  # type: ignore[method-assign]
+    await imap.list_folders()
+    await imap.list_folders()
+    assert len(asked) == 1
 
 
 async def test_a_subfolder(below_inbox: FakeMailBox) -> None:

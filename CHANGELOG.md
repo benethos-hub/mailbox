@@ -31,8 +31,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The UI's New role page offers four templates that fill the form:
   Reader, Agent, Sender and Operator.
 - `folders` on a grant: reading, writing and deleting mail only in these
-  folders and their subfolders, named by role, name or id. The inbox
-  reaches itself alone: some servers keep every folder below it. A message or
+  folders and their subfolders, named by role, name or id. A message or
   folder outside answers `404`, a move or a new folder outside `403`.
   Deleting to the trash stays allowed, reading the trash needs it in the
   list. Folder lists, message lists, the change feed and webhooks leave
@@ -49,6 +48,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   moved.
 - `accounts.manage` is about existing accounts alone: `update_account`,
   `delete_account` and `verify_account`.
+- On an IMAP server that keeps every folder below the inbox, such as
+  `INBOX.Sent`, the folders right below it are at the top, as mail
+  clients show them: `parent_id` is null for them. Their ids stay.
 - A change that would leave no enabled administrator who can sign in to
   the UI answers `409`: disabling, deleting, taking `admin` or the UI
   sign-in away, directly or through a role. Where there is none to begin

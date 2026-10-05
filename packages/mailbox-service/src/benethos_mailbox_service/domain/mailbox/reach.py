@@ -2,19 +2,20 @@
 (PERMISSIONS.md 8.5).
 
 A grant's ``folders`` names folders by role, name or id. A listed folder
-reaches its subfolders as well, except the inbox: some IMAP servers keep
-every folder below it (``INBOX.Sent``), so ``inbox`` reaches the inbox
-alone. A folder below it is named itself. A call passes when one grant
-that allows it reaches every folder the call touches. A caller with a
-grant that reaches every folder has no ``Reach``: nothing is checked or
-filtered for it, and nothing is asked of the provider.
+reaches its subfolders as well. The IMAP adapter puts the folders of a
+server that keeps them below the inbox (``INBOX.Sent``) at the top, as
+mail clients show them, so ``inbox`` reaches no more than the inbox
+there. A call passes when one grant that allows it reaches every folder
+the call touches. A caller with a grant that reaches every folder has no
+``Reach``: nothing is checked or filtered for it, and nothing is asked
+of the provider.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
 
-from ...data.models import ChangeRecord, Folder, FolderRole
+from ...data.models import ChangeRecord, Folder
 from ..rights import Access
 from .calls import Calls
 
@@ -69,13 +70,10 @@ async def reach_of(
 
 
 def _within(folder: Folder, names: frozenset[str], by_id: dict[str, Folder]) -> bool:
-    """Whether the folder or one above it is named: by id, name or role.
-    Above the inbox nothing counts but the inbox itself."""
+    """Whether the folder or one above it is named: by id, name or role."""
     seen: set[str] = set()
     current: Folder | None = folder
     while current is not None and current.id not in seen:
-        if current is not folder and current.role is FolderRole.INBOX:
-            return False
         if (
             current.id in names
             or current.name in names

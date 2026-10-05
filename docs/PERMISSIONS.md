@@ -97,8 +97,9 @@ Two operations are open to every user: `get_me` and `list_permissions`.
   right on, and leave the others out.
 - **Folders.** Where every grant that allows an operation on mail names
   `folders`, the call keeps to them: folders listed and their
-  subfolders, by role, name or id. The inbox reaches itself alone, since
-  some IMAP servers keep every folder below it. A message or folder outside answers
+  subfolders, by role, name or id. On an IMAP server that keeps every
+  folder below the inbox (`INBOX.Sent`), the folders right below it are
+  at the top, as mail clients show them. A message or folder outside answers
   `404`, a move or a new folder outside answers `403`. Lists, the change
   feed and webhooks leave out what is outside. A change keeps the folder
   it happened in. A deletion whose folder is unknown, made before the

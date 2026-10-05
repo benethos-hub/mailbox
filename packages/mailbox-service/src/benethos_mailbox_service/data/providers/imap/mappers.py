@@ -146,10 +146,11 @@ def parse_cursor(value: str) -> tuple[str, int, int]:
 # --- folders ------------------------------------------------------------------
 
 
-def to_folders(raws: list[RawFolder]) -> list[Folder]:
+def to_folders(raws: list[RawFolder], prefix: str = "") -> list[Folder]:
     """Every selectable folder, with roles from flags first, then from the
-    localised names for roles no flag claimed."""
-    folders = [f for f in (to_folder(raw) for raw in raws) if f is not None]
+    localised names for roles no flag claimed. ``prefix``: that of the
+    user's personal namespace, such as ``INBOX.``."""
+    folders = [f for f in (to_folder(raw, prefix) for raw in raws) if f is not None]
     claimed = {f.role for f in folders if f.role is not None}
     names = {f.id: f.name.casefold() for f in folders}
     result = []
@@ -164,14 +165,19 @@ def to_folders(raws: list[RawFolder]) -> list[Folder]:
     return result
 
 
-def to_folder(raw: RawFolder) -> Folder | None:
-    """A folder, or ``None`` for one that cannot hold messages."""
+def to_folder(raw: RawFolder, prefix: str = "") -> Folder | None:
+    """A folder, or ``None`` for one that cannot hold messages. A folder
+    right below ``prefix``, the personal namespace, is at the top, as mail
+    clients show it: on a server with ``INBOX.`` the folder ``INBOX.Sent``
+    is no subfolder of the inbox."""
     flags = {flag.lower() for flag in raw.flags}
     if flags & _NOT_SELECTABLE:
         return None
     parent = None
     if raw.delimiter and raw.delimiter in raw.name:
-        parent = folder_id(raw.name.rsplit(raw.delimiter, 1)[0])
+        above = raw.name.rsplit(raw.delimiter, 1)[0]
+        if above + raw.delimiter != prefix:
+            parent = folder_id(above)
     display = raw.name.rsplit(raw.delimiter, 1)[-1] if raw.delimiter else raw.name
     return Folder(
         id=folder_id(raw.name),

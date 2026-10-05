@@ -288,19 +288,14 @@ def test_folders_are_handed_out_no_wider() -> None:
     assert not access.covers([Grant(accounts=["a"], allow=["mail.read"])])
 
 
-def test_the_inbox_reaches_itself_alone() -> None:
-    """Some IMAP servers keep every folder below the inbox: naming the
-    inbox must not reach them all. A folder below it is named itself."""
-    inbox = Folder(id="INBOX", name="INBOX", role=FolderRole.INBOX)
-    sent = Folder(id="INBOX.Sent", name="Sent", role=FolderRole.SENT, parent_id="INBOX")
-    bills = Folder(id="INBOX.Bills", name="Bills", parent_id="INBOX")
-    year = Folder(id="INBOX.Bills.2026", name="2026", parent_id="INBOX.Bills")
-    folders = [inbox, sent, bills, year]
-    assert Reach([frozenset({"inbox"})], folders).ids == {"INBOX"}
-    assert Reach([frozenset({"Bills"})], folders).ids == {
-        "INBOX.Bills",
-        "INBOX.Bills.2026",
-    }
+def test_the_inbox_reaches_its_own_subfolders() -> None:
+    """A folder someone made below the inbox, as Outlook allows on
+    Microsoft accounts, goes with it."""
+    inbox = Folder(id="inbox", name="Inbox", role=FolderRole.INBOX)
+    bills = Folder(id="f_bills", name="Bills", parent_id="inbox")
+    sent = Folder(id="sent", name="Sent", role=FolderRole.SENT)
+    reach = Reach([frozenset({"inbox"})], [inbox, bills, sent])
+    assert reach.ids == {"inbox", "f_bills"}
 
 
 def test_what_a_narrowed_reader_hears_of() -> None:
