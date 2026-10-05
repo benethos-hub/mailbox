@@ -25,11 +25,11 @@ info@ address at some hoster, maybe a Gmail account. Each speaks its own
 dialect: IMAP here, Microsoft Graph there. Every tool that wants to work
 with mail has to learn all of them and has to be given the passwords.
 
-Mailbox turns that around. It has two parts. The Mailbox Service runs on
+Mailbox turns that around. It has two parts. `mailbox-service` runs on
 your own machine or server and holds the connections to all accounts.
 Everything else talks to that service only, through one REST API that
-looks the same for every provider. The MCP server builds on it and opens
-it to AI agents. The service decides who may do what. A script, an app
+looks the same for every provider. `mailbox-mcp`, the MCP server, builds
+on it and opens it to AI agents. The service decides who may do what. A script, an app
 or an AI agent gets a token of its own. That token opens exactly the
 accounts and operations it was given, nothing more.
 
@@ -130,17 +130,18 @@ provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
 
 | Package | What it is | Runs | Read more |
 |---|---|---|---|
-| `benethos-mailbox-service` | the service: REST API, configuration UI, users and rights, accounts, encrypted credentials, provider adapters, background sync | permanently | [packages/mailbox-service](packages/mailbox-service/README.md) |
-| `benethos-mailbox-mcp` | the MCP server, a client of the REST API only | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
+| `mailbox-service` | the service: REST API, configuration UI, users and rights, accounts, encrypted credentials, provider adapters, background sync | permanently | [packages/mailbox-service](packages/mailbox-service/README.md) |
+| `mailbox-mcp` | the MCP server, a client of the REST API only | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
 
 ```
- AI agent ──────MCP──► benethos-mailbox-mcp ──┐
- scripts, apps ───────────────────────────────┼─REST──► benethos-mailbox-service ──► IMAP / Graph / ...
- browser ─────────────────────────────── /ui ─┘
+ AI agent ──────MCP──► mailbox-mcp ──┐
+ scripts, apps ──────────────────────┼─REST──► mailbox-service ──► IMAP / Graph / ...
+ browser ────────────────────── /ui ─┘
 ```
 
 A release publishes both to PyPI and as container images on ghcr.io,
-under the same version. Each package has its own README. It explains how
+under the same version, as `benethos-mailbox-service` and
+`benethos-mailbox-mcp`. Each package has its own README. It explains how
 to install, start and configure it, with the container image and the
 compose file.
 

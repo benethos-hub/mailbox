@@ -53,6 +53,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The project is named Mailbox, its packages `mailbox-service` and
+  `mailbox-mcp`. The OpenAPI document's title is `mailbox-service`, the
+  MCP server's `mailbox-mcp`. On PyPI and ghcr.io the names stay
+  `benethos-mailbox-service` and `benethos-mailbox-mcp`.
 - A right of the service or `admin` in a grant's `allow` answers `400`,
   and a right on accounts in `service` as well. Stored rights move at the
   first start: what a grant named of the service goes to `service`, a

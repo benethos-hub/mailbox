@@ -124,10 +124,10 @@ jobs:
         include:
           - image: benethos-mailbox-service
             package: packages/mailbox-service
-            description: "Mailbox Service: one REST API for several mail providers and accounts."
+            description: "Mailbox, mailbox-service: one REST API for several mail providers and accounts."
           - image: benethos-mailbox-mcp
             package: packages/mailbox-mcp
-            description: "MCP server for the Mailbox Service over streamable HTTP. Reaches mail through that REST API only."
+            description: "Mailbox, mailbox-mcp: the MCP server over streamable HTTP. Reaches mail through the REST API of mailbox-service only."
     permissions:
       contents: read
       packages: write # push to ghcr.io as the GITHUB_TOKEN identity

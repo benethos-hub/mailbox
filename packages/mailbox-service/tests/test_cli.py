@@ -159,7 +159,7 @@ def test_openapi_needs_no_key_and_no_oauth_app(
     )
     assert main(["openapi"]) == 0
     out, err = capsys.readouterr()
-    assert json.loads(out)["info"]["title"] == "Mailbox Service"
+    assert json.loads(out)["info"]["title"] == "mailbox-service"
     assert err == ""
 
 

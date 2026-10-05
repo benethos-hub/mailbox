@@ -411,7 +411,7 @@ def create_app(
                 services.activity.record(said.ServiceStopped(by=SERVICE))
 
     app = FastAPI(
-        title="Mailbox Service",
+        title="mailbox-service",
         version=__version__,
         description=(
             "Unified REST API for several mail providers and accounts. "

@@ -34,7 +34,7 @@ def build_server(operations: Iterable[str]) -> MCPServer:
     allowed = set(operations)
     server = MCPServer(
         name="benethos-mailbox-mcp",
-        title="Mailbox MCP Server",
+        title="mailbox-mcp",
         version=__version__,
         instructions=_INSTRUCTIONS,
     )
@@ -78,7 +78,7 @@ def _reason(exc: ToolError) -> str:
     if isinstance(exc, ApiError):
         return f"{exc.code} (HTTP {exc.status})"
     if isinstance(exc, ServiceUnavailableError):
-        return "the mailbox service is not reachable"
+        return "mailbox-service is not reachable"
     return "the arguments were refused"
 
 
@@ -86,7 +86,7 @@ def started(operations: Iterable[str], transport_name: str) -> None:
     """What the server serves, at start."""
     names = sorted(tool.fn.__name__ for tool in _chosen(set(operations)))
     logger.info(
-        "serving %d tools over %s for the mailbox service at %s: %s",
+        "serving %d tools over %s for mailbox-service at %s: %s",
         len(names),
         transport_name,
         service_url(),

@@ -207,7 +207,7 @@ def test_the_log_names_no_request_url(
 def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
 
     async def unreachable() -> set[str]:
-        raise ToolError("The mailbox service is not reachable")
+        raise ToolError("mailbox-service is not reachable")
 
     monkeypatch.setattr(server, "allowed_operations", unreachable)
     with pytest.raises(SystemExit, match="not reachable"):
@@ -305,7 +305,7 @@ def test_the_start_names_the_service_and_the_tools(
     with caplog.at_level(logging.INFO):
         cli.main([])
     assert (
-        "serving 1 tools over stdio for the mailbox service at "
+        "serving 1 tools over stdio for mailbox-service at "
         "http://127.0.0.1:8080: list_accounts" in caplog.text
     )
 
@@ -317,7 +317,7 @@ def test_the_start_names_the_service_and_the_tools(
             ApiError(403, "recipient_not_allowed", "no grant allows a@x.org"),
             "recipient_not_allowed (HTTP 403)",
         ),
-        (ServiceUnavailableError("gone"), "the mailbox service is not reachable"),
+        (ServiceUnavailableError("gone"), "mailbox-service is not reachable"),
         (ToolError("not an address: a@x.org"), "the arguments were refused"),
     ],
 )
