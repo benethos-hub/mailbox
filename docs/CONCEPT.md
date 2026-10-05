@@ -1167,7 +1167,7 @@ with the role
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
-  | `audit` | `list_sends`, `list_all_sends` |
+  | `audit` | `list_sends`, `list_all_sends` on accounts, `list_activity` in `service` |
   | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, credentials of mail accounts |
   | `accounts.connect` | `discover_account`, `start_oauth`, `create_account`. Of the service |
   | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook`. Of the service |
@@ -1311,9 +1311,10 @@ their own.
 #### Audit log
 
 User, credential, operation, account, status, time. Never content, never a
-secret. The audit of administration, beyond sends, is designed in
-[AUDIT.md](AUDIT.md) and comes after the service log of
-[LOGGING.md](LOGGING.md).
+secret. The audit of administration, beyond sends, is
+[AUDIT.md](AUDIT.md): sign-ins and changes to users, tokens, roles,
+accounts and webhooks, read by `GET /v1/audit` with `audit` in
+`service`.
 
 **Decided 2026-09-24:** the audit of sends is built first, together with
 the send limits, which count from it. Every attempt through `send_message`
@@ -1341,6 +1342,7 @@ included for a grant on every account.
 | POST | `/v1/users/{user_id}/password` | `users.manage`. A password to change at the next sign-in, or a one-time password answered once |
 | GET / POST | `/v1/roles` | GET `users.read`, POST `users.manage` |
 | GET / PUT / DELETE | `/v1/roles/{role_id}` | GET `users.read`, the others `users.manage` |
+| GET | `/v1/audit` | `audit` in `service`. The audit of administration, newest first ([AUDIT.md](AUDIT.md)) |
 
 #### And the MCP server
 

@@ -37,6 +37,19 @@ adheres to [Semantic Versioning](https://semver.org/).
   list. Folder lists, message lists, the change feed and webhooks leave
   out the rest, and a reply or forward needs its original in reach. The
   editor has a field "Only in the folders".
+- `GET /v1/audit` (`list_activity`): the audit of administration, newest
+  first. Sign-ins, failed ones and refused tokens, and who changed users,
+  passwords, tokens, roles, accounts and webhooks, with the user, the
+  credential, the client address, the record touched, the outcome and
+  what was done. Never a secret, never mail content, and a failed sign-in
+  with a name that is no user's keeps no name. Filters `user`,
+  `activity` (a name or its area), `record`, `after`, `before`. Kept for
+  `MAILBOX_SERVICE_AUDIT_DAYS` days, as the audit of sends.
+- `audit` in `service` reads it. `audit` in a grant stays the audit of
+  sends. `/v1/permissions` lists `audit` among the groups of the service,
+  with `list_activity` in the group.
+- The UI has a page Audit under Service, and a user's page a card Recent
+  activity, both for `audit` in `service`.
 
 ### Changed
 

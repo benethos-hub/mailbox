@@ -59,7 +59,14 @@ from .data.storage import (
     open_repositories,
 )
 from .domain.accounts import AccountService, Adapters, OAuthService
-from .domain.activity import DISPATCHER, SERVICE, WORKER, ActivityLog, Actor
+from .domain.activity import (
+    DISPATCHER,
+    SERVICE,
+    WORKER,
+    ActivityLog,
+    Actor,
+    Audit,
+)
 from .domain.activity import system as said
 from .domain.auth import AuthService, Passwords, SignInThrottle
 from .domain.changes import ChangeFeed
@@ -89,6 +96,8 @@ class Services:
     status: StatusService
     recovery: RecoveryKey
     log: ServiceLog
+    # The audit of administration, read by list_activity.
+    audit: Audit
     # Every repository behind the services, closed with them.
     repositories: Repositories
     activity: ActivityLog = field(default_factory=ActivityLog)
@@ -132,8 +141,9 @@ def build_services(
     replaces the key provider the settings name, ``clock`` the time of
     every service. ``logbook`` holds the log lines the log page shows:
     ``serve`` hands in the one its log writes to."""
-    activity = ActivityLog(clock)
     repos = open_repositories(settings.storage, settings.database_path)
+    audit = Audit(repos.audit, clock=clock, days=settings.audit_days)
+    activity = ActivityLog(clock, audit)
     try:
         migrated = repos.store.migrated if repos.store is not None else None
         if migrated is not None:
@@ -291,6 +301,7 @@ def build_services(
             status=StatusService(accounts, sync, worker, webhooks),
             recovery=RecoveryKey(auth, vault),
             log=ServiceLog(logbook or LogBook(), activity),
+            audit=audit,
             repositories=repos,
             activity=activity,
             oauth_clients=clients,

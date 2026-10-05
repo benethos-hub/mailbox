@@ -128,7 +128,9 @@ class AuthService:
             raise UnauthorizedError(WRONG)
         self._throttle.succeeded(source)
         self._names.succeeded(key)
-        self.activity.record(said.UiSignIn(by=Actor(user.name, user.id, source=source)))
+        self.activity.record(
+            said.UiSignIn(by=Actor.signed_in(user.name, user.id, source))
+        )
         previous = self.passwords.signed_in(user.id)
         return SignedIn(user.id, stored.must_change, stored.updated_at, previous)
 

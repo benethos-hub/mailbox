@@ -15,6 +15,7 @@ from ..base import Activity, Failure, account
 @dataclass(frozen=True, kw_only=True)
 class AccountConnected(Activity):
     name: ClassVar[str] = "connected"
+    audited: ClassVar[bool] = True
 
     account: Account
     host: str | None
@@ -26,12 +27,16 @@ class AccountConnected(Activity):
             f"{self.account.provider.value}{where}"
         )
 
+    def touched(self) -> str | None:
+        return self.account.id
+
 
 @dataclass(frozen=True, kw_only=True)
 class ConnectFailed(Failure):
     """The address as typed: the account was not stored."""
 
     name: ClassVar[str] = "connect_failed"
+    audited: ClassVar[bool] = True
 
     address: str
     provider: str
@@ -43,6 +48,7 @@ class ConnectFailed(Failure):
 @dataclass(frozen=True, kw_only=True)
 class AccountChanged(Activity):
     name: ClassVar[str] = "changed"
+    audited: ClassVar[bool] = True
 
     account: Account
     # What changed: the display name, settings, the names of credentials.
@@ -51,25 +57,36 @@ class AccountChanged(Activity):
     def says(self) -> str:
         return f"changed account {account(self.account)}: {', '.join(self.changed)}"
 
+    def touched(self) -> str | None:
+        return self.account.id
+
 
 @dataclass(frozen=True, kw_only=True)
 class AccountVerified(Activity):
     name: ClassVar[str] = "verified"
+    audited: ClassVar[bool] = True
 
     account: Account
 
     def says(self) -> str:
         return f"verified account {account(self.account)}"
 
+    def touched(self) -> str | None:
+        return self.account.id
+
 
 @dataclass(frozen=True, kw_only=True)
 class AccountRemoved(Activity):
     name: ClassVar[str] = "removed"
+    audited: ClassVar[bool] = True
 
     account: Account
 
     def says(self) -> str:
         return f"removed account {account(self.account)}"
+
+    def touched(self) -> str | None:
+        return self.account.id
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -123,6 +140,7 @@ class AccountUnreachable(Activity):
 @dataclass(frozen=True, kw_only=True)
 class OAuthStarted(Activity):
     name: ClassVar[str] = "oauth_started"
+    audited: ClassVar[bool] = True
 
     provider: str
     # None to connect a new account.
@@ -133,10 +151,14 @@ class OAuthStarted(Activity):
             return f"started a sign-in with {self.provider} to connect an account"
         return f"started a sign-in with {self.provider} for {account(self.account)}"
 
+    def touched(self) -> str | None:
+        return self.account.id if self.account else None
+
 
 @dataclass(frozen=True, kw_only=True)
 class OAuthFinished(Activity):
     name: ClassVar[str] = "oauth_finished"
+    audited: ClassVar[bool] = True
 
     provider: str
     account: Account
@@ -149,10 +171,14 @@ class OAuthFinished(Activity):
             f"finished the sign-in with {self.provider}: {account(self.account)} {done}"
         )
 
+    def touched(self) -> str | None:
+        return self.account.id
+
 
 @dataclass(frozen=True, kw_only=True)
 class OAuthFailed(Failure):
     name: ClassVar[str] = "oauth_failed"
+    audited: ClassVar[bool] = True
 
     provider: str
 

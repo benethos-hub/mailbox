@@ -69,7 +69,8 @@ some folders, such as the invoices, and end after a week.
 - **React instead of polling.** Signed webhooks tell your own system
   about new mail, a ticket tool or an internal dashboard for example.
 - **Traceable.** Every send is recorded in the audit: by whom, when and
-  under which grant.
+  under which grant. So is every sign-in and every change to users,
+  tokens, roles, accounts and webhooks.
 - **One inbox for your own tools.** A dashboard or a small internal app
   lists, searches and answers mail from every account with one client.
 - **Self-hosted.** The service stores the credentials encrypted. Mail
@@ -95,19 +96,20 @@ some folders, such as the invoices, and end after a week.
   choice, a host in your local network included.
 - **Users and rights:** users, roles and grants per account and per
   operation, down to folders, grants that expire, API tokens, limits on
-  sending (allowed recipients, sends per day) and an audit of every send.
+  sending (allowed recipients, sends per day), an audit of every send
+  and an audit of administration.
 - **MCP server:** reads, sorts, writes drafts, sends and tells what is
   new, over stdio or streamable HTTP, offering only the tools its token
   may use. Mail content
   reaches the model marked as foreign text.
 - **Configuration UI** in the browser under `/ui`: accounts, users,
   rights, tokens, reading and writing mail, the send audit, webhooks,
-  the status of accounts and sync, the service log.
+  the status of accounts and sync, the audit of administration, the
+  service log.
 - **Operation:** encrypted backup and restore, container images, a
   compose file.
 
-Planned next: threads across folders, Gmail and JMAP, and an audit of
-administration beside the audit of sends. The order is in
+Planned next: threads across folders, Gmail and JMAP. The order is in
 [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Providers

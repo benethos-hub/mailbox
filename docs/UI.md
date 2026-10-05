@@ -69,7 +69,7 @@ The sidebar keeps its three groups, renamed by what a person looks for:
 |---|---|---|
 | (top) | Overview, Mail | everyone |
 | Mailboxes | Accounts, Sends, Webhooks | with a right on at least one account, Webhooks with `webhooks.manage` |
-| Service | Users, Roles, Status, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Log and Recovery key for the admin |
+| Service | Users, Roles, Status, Audit, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Audit with `audit` in `service`, Log and Recovery key for the admin |
 
 The foot of the sidebar names the signed-in user and links to their own
 page, Password and Sign out. Changes, if built, is a tab of the account
@@ -97,6 +97,7 @@ The click budget, counted from the overview after signing in:
 | See which account is not syncing | 1 | Overview, or Status |
 | Show the recovery key | 2 | Recovery key, Show |
 | Read the service log | 1 | Log |
+| See who changed a user | 1 | Audit, or 2: Users, the user |
 
 A task that needs more than five clicks is a bug of the navigation, not
 of the person.
@@ -115,7 +116,7 @@ opens its detail page by its name. A row carries no delete button and no
 form. The one exception is the tick box for a batch on mail lists, whose
 actions sit in one toolbar above the table.
 
-Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Changes, Log.
+Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Changes, Audit, Log.
 
 ### 4.2 Detail
 
@@ -172,6 +173,7 @@ The options per list, with the same names where the field is the same:
 | Webhooks | url | account, failing |
 | Changes | – | account, event, from day |
 | Log | text in the message or source | the least level |
+| Audit | record id | who, activity (an area or a name), from day, before day |
 
 Mail's filters are the API's query parameters, a test holds them
 together (`test_openapi.py`). The others need no new API: the domain's
@@ -274,7 +276,10 @@ offers a one-time password. New role is an editor page too. It takes the path
 templates that fill the form, Reader, Agent, Sender and Operator
 ([PERMISSIONS.md](PERMISSIONS.md) 8.7). Nothing is stored until the role
 is created, and Sender wants the recipients named. The user page shows the effective rights as
-today, then tokens, then Change, then Danger. Roles the same without
+today, then tokens, then Recent activity, then Change, then Danger.
+Recent activity is the user's newest ten activities of the audit, for
+`audit` in `service`, with links to all of them and to what was done to
+the user. Roles the same without
 tokens. A token is created in the Tokens card and shown once.
 
 ### 6.4 Webhooks
@@ -302,6 +307,14 @@ restart until the first pass.
 The recovery key page shows the key once after **Show**, with the
 warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again. The key is never
 stored or logged, the log only says that it was shown and to whom.
+
+The Audit page lists the audit of administration of
+[AUDIT.md](AUDIT.md), newest first, to a user with `audit` in
+`service`: sign-ins, failed ones and refused tokens, and who changed
+users, tokens, roles, accounts and webhooks. Each row has the time, who
+and how they came, the activity and what was done, and the outcome. A
+record's id narrows the list to that record. Unlike the log it outlives
+a restart, for `MAILBOX_SERVICE_AUDIT_DAYS` days.
 
 The log page lists the newest lines of the service log, newest first,
 to the same admin alone: they name users, client addresses and

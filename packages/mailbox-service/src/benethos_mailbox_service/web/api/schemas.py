@@ -154,7 +154,9 @@ class PermissionCatalogue(BaseModel):
     service: list[str] = Field(
         description=(
             "The groups of the service. They and `admin` are named in a user's "
-            "or a role's `service`, the other groups in a grant's `allow`."
+            "or a role's `service`, the other groups in a grant's `allow`. "
+            "`audit` is in both: in a grant its operations on accounts, in "
+            "`service` `list_activity`."
         )
     )
 

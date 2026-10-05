@@ -27,7 +27,7 @@ from .forms import FormError, first_problem
 
 # The groups a grant names, and the rights of the service.
 GROUP_NAMES = tuple(
-    name for name in permissions.GROUPS if name not in permissions.SERVICE_GROUPS
+    name for name in permissions.GROUPS if not permissions.is_service(name)
 )
 SERVICE_NAMES = (permissions.ADMIN, *permissions.SERVICE_GROUPS)
 
@@ -58,13 +58,23 @@ GROUP_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 
 def group_hint(name: str) -> str:
-    """The tooltip of a group: its operations, and its MCP tools if any."""
-    hint = ", ".join(permissions.GROUPS.get(name, ("every right on every account",)))
+    """The tooltip of a group in a grant: its operations, and its MCP tools
+    if any."""
+    hint = ", ".join(permissions.of_scope(name, permissions.ON_AN_ACCOUNT))
+    if name == permissions.ADMIN:
+        hint = "every right on every account"
     if name in MCP_TOOLS:
         hint += ". MCP tools: " + ", ".join(MCP_TOOLS[name])
     elif name == "accounts.read":
         hint += ". The MCP server does not need it: it reads its accounts from /v1/me"
     return hint
+
+
+def service_hint(name: str) -> str:
+    """The tooltip of a right of the service: its operations."""
+    if name == permissions.ADMIN:
+        return "every right, on every account as well"
+    return ", ".join(permissions.of_scope(name, permissions.SERVICE))
 
 
 _SPLIT = re.compile(r"[\s,;]+")

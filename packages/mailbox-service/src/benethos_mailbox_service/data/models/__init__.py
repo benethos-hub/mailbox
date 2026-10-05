@@ -8,7 +8,14 @@ Callers import from here, not the modules.
 from __future__ import annotations
 
 from .accounts import Account, AccountStatus, CredentialInfo, ProviderType
-from .audit import SendFilter, SendOutcome, SendRecord
+from .audit import (
+    ActivityFilter,
+    ActivityOutcome,
+    ActivityRecord,
+    SendFilter,
+    SendOutcome,
+    SendRecord,
+)
 from .batch import BatchItemResult, BatchResult, ItemError, MessageBatch
 from .changes import (
     FEED_KINDS,
@@ -62,6 +69,9 @@ from .webhooks import (
 )
 
 __all__ = [
+    "ActivityFilter",
+    "ActivityOutcome",
+    "ActivityRecord",
     "Account",
     "AccountFailure",
     "AccountStatus",

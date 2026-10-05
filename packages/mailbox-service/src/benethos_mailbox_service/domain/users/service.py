@@ -461,7 +461,12 @@ class UserService:
             access, Role(id=role_id, service=service or [], grants=grants)
         )
         self._activity.record(
-            said.RoleCreated(by=Actor.of(access), role_id=role.id, grants=len(grants))
+            said.RoleCreated(
+                by=Actor.of(access),
+                role_id=role.id,
+                service=tuple(role.service),
+                grants=len(grants),
+            )
         )
         return role
 
@@ -483,7 +488,12 @@ class UserService:
         self._require_an_administrator(role=new)
         role = self._save_role(access, new)
         self._activity.record(
-            said.RoleReplaced(by=Actor.of(access), role_id=role.id, grants=len(grants))
+            said.RoleReplaced(
+                by=Actor.of(access),
+                role_id=role.id,
+                service=tuple(role.service),
+                grants=len(grants),
+            )
         )
         return role
 

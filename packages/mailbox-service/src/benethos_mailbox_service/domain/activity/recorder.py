@@ -1,9 +1,11 @@
-"""The recorder: each activity as one line of the log.
+"""The recorder: each activity as one line of the log, and the record
+of the audit for one marked ``audited``.
 
 The line goes to the logger of the activity, ``activity.<area>.<name>``
 below the service's package, so the level of the service's log applies,
 and a level set on one name applies to it alone. The audit of
-docs/AUDIT.md will be written here as well.
+docs/AUDIT.md keeps its record whatever the level: nothing else writes
+one.
 """
 
 from __future__ import annotations
@@ -17,7 +19,9 @@ from typing import TypeVar
 
 from ...common.clock import utc_now
 from ...errors import MailboxServiceError
-from .base import Activity, Failure
+from .audit import Audit
+from .base import SERVICE, Activity, Failure
+from .catalogue import system
 
 PACKAGE = __name__.partition(".")[0]
 
@@ -29,13 +33,19 @@ def logger_of(activity: type[Activity]) -> logging.Logger:
 
 
 class ActivityLog:
-    def __init__(self, clock: Callable[[], datetime] = utc_now) -> None:
+    def __init__(
+        self, clock: Callable[[], datetime] = utc_now, audit: Audit | None = None
+    ) -> None:
+        """``audit``: where an activity marked ``audited`` is kept. None
+        keeps nothing, for a service or a test that needs no audit."""
         self._clock = clock
+        self._audit = audit
 
     def record(self, activity: A) -> A:
-        """Write the activity's line at its level. A failure that is not one
-        of ours is an error, with its traceback. Returns the activity with
-        its time, for tests."""
+        """Write the activity's line at its level, and keep it in the
+        audit when it is marked so. A failure that is not one of ours is
+        an error, with its traceback. Returns the activity with its time,
+        for tests."""
         if activity.at is None:
             activity = replace(activity, at=self._clock())
         level = activity.level
@@ -48,7 +58,24 @@ class ActivityLog:
         # The line is only built when it is written.
         if log.isEnabledFor(level):
             log.log(level, "%s", activity.line(), exc_info=exc_info)
+        if activity.audited and self._audit is not None:
+            self._keep(self._audit, activity)
         return activity
+
+    def _keep(self, audit: Audit, activity: Activity) -> None:
+        """The audit's record of the activity. What it was about has
+        happened, so a failure to keep it is recorded, not raised."""
+        try:
+            purged = audit.keep(activity)
+        except Exception as exc:
+            self.record(
+                system.NotAudited(by=SERVICE, activity=activity.kind(), error=exc)
+            )
+            return
+        if purged is not None:
+            self.record(
+                system.AuditPurged(by=SERVICE, count=purged.count, before=purged.before)
+            )
 
     @contextmanager
     def on_failure(

@@ -6,7 +6,9 @@ the web layer refuses to start otherwise.
 
 Two kinds of right (PERMISSIONS.md 8.1). Rights on accounts are named in
 a grant, which says on which accounts. Rights of the service act on no
-account and are named in the ``service`` list of a user or a role.
+account and are named in the ``service`` list of a user or a role. One
+group is in both lists: ``audit`` reads the sends of accounts in a
+grant, and the audit of administration in ``service``.
 """
 
 from __future__ import annotations
@@ -50,8 +52,9 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
     # Cannot be taken back either.
     "send": ("send_message", "send_draft"),
-    # Who sent what to whom, never content.
-    "audit": ("list_sends", "list_all_sends"),
+    # Who sent what to whom, never content. In service: who did what in
+    # the service (docs/AUDIT.md).
+    "audit": ("list_sends", "list_all_sends", "list_activity"),
     # Signing in again by OAuth is update_account: the domain checks it.
     "accounts.manage": ("update_account", "delete_account", "verify_account"),
     # Accounts that do not exist yet. Connecting by OAuth needs
@@ -85,13 +88,18 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# The groups of the service: named in ``service``, never in a grant.
+# The groups of the service: named in ``service``. Never in a grant,
+# but for those in both lists.
 SERVICE_GROUPS: tuple[str, ...] = (
     "accounts.connect",
     "users.read",
     "users.manage",
     "webhooks.manage",
+    "audit",
 )
+# The groups in both lists: in a grant they give their operations on
+# accounts, in ``service`` those of the service.
+SHARED_GROUPS: tuple[str, ...] = ("audit",)
 
 # Rights only ``admin`` gives, in no group and not to be granted by name.
 # Showing the recovery key hands out the master key, which opens every
@@ -112,7 +120,14 @@ IN_FOLDERS: frozenset[str] = frozenset(
 
 # The operations of the service, and those on one existing account.
 SERVICE: frozenset[str] = (
-    frozenset(op for group in SERVICE_GROUPS for op in GROUPS[group]) | ADMIN_ONLY
+    frozenset(
+        op
+        for group in SERVICE_GROUPS
+        if group not in SHARED_GROUPS
+        for op in GROUPS[group]
+    )
+    | {"list_activity"}
+    | ADMIN_ONLY
 )
 ON_AN_ACCOUNT: frozenset[str] = frozenset(GROUP_OF) - SERVICE
 
@@ -181,9 +196,21 @@ def known_names() -> frozenset[str]:
 
 
 def is_service(name: str) -> bool:
-    """Whether a name is a right of the service: ``admin``, a group of the
-    service or one of its operations."""
-    return name == ADMIN or name in SERVICE_GROUPS or name in SERVICE
+    """Whether a name is a right of the service alone: ``admin``, a group
+    of the service that is in no grant, or one of its operations."""
+    return (
+        name == ADMIN
+        or (name in SERVICE_GROUPS and name not in SHARED_GROUPS)
+        or name in SERVICE
+    )
+
+
+def of_scope(name: str, scope: frozenset[str]) -> tuple[str, ...]:
+    """The operations a group or operation name gives within ``scope``:
+    ``SERVICE`` for the list ``service``, ``ON_AN_ACCOUNT`` for a grant."""
+    if name == ADMIN:
+        return tuple(sorted(scope))
+    return tuple(op for op in GROUPS.get(name, (name,)) if op in scope)
 
 
 def check_grant(names: Iterable[str]) -> None:
@@ -204,7 +231,7 @@ def check_service(names: Iterable[str]) -> None:
     for name in names:
         if name not in known_names():
             raise BadRequestError(f"unknown right: {name}")
-        if not is_service(name):
+        if not is_service(name) and name not in SHARED_GROUPS:
             raise BadRequestError(
                 f"{name} is a right on accounts: name it in a grant, not in service"
             )

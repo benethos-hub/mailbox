@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import ClassVar
 
-from ..base import Activity, Failure
+from ....common.clock import log_time
+from ..base import Activity, Failure, plural
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -107,6 +109,7 @@ class RecoveryKeyShown(Activity):
     """The master key written out went to a person's screen."""
 
     name: ClassVar[str] = "recovery_shown"
+    audited: ClassVar[bool] = True
 
     def says(self) -> str:
         return "was shown the recovery key in the UI"
@@ -118,6 +121,7 @@ class LogRead(Activity):
     logged, once per visit, not per page of it."""
 
     name: ClassVar[str] = "log_read"
+    audited: ClassVar[bool] = True
 
     def says(self) -> str:
         return "read the service log"
@@ -161,3 +165,34 @@ class BackupRestored(Activity):
 
     def says(self) -> str:
         return f"restored the backup {self.file} of {self.made}, schema {self.schema}"
+
+
+@dataclass(frozen=True, kw_only=True)
+class AuditPurged(Activity):
+    """Records older than the audit keeps are gone. The normal course,
+    once an hour at most."""
+
+    name: ClassVar[str] = "audit_purged"
+
+    count: int
+    before: datetime
+
+    def says(self) -> str:
+        return (
+            f"purged {plural(self.count, 'record')} older than "
+            f"{log_time(self.before)} from the audit"
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class NotAudited(Failure):
+    """An activity the audit could not keep. Its line is in the log."""
+
+    name: ClassVar[str] = "not_audited"
+    level: ClassVar[int] = logging.ERROR
+
+    # The activity's <area>.<name>.
+    activity: str
+
+    def says(self) -> str:
+        return f"could not keep {self.activity} in the audit"

@@ -36,15 +36,15 @@
 </div>
 {% endmacro %}
 
-{% macro service_editor(service, service_names, group_ops) %}
+{% macro service_editor(service, service_names, service_ops) %}
 <div class="field">
   <span class="label">Rights of the service</span>
   <div class="checks">
     {% for name in service_names %}
-    <label class="check" title="{{ group_ops[name] }}"><input type="checkbox" name="service" value="{{ name }}"{% if name in service.groups %} checked{% endif %} /> {{ name }}</label>
+    <label class="check" title="{{ service_ops[name] }}"><input type="checkbox" name="service" value="{{ name }}"{% if name in service.groups %} checked{% endif %} /> {{ name }}</label>
     {% endfor %}
   </div>
-  <span class="hint">Bound to no account: connecting accounts, users and roles, webhooks. admin is every right.</span>
+  <span class="hint">Bound to no account: connecting accounts, users and roles, webhooks, the audit of administration. admin is every right.</span>
 </div>
 <div class="form-grid">
   <div class="field">
