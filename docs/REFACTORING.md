@@ -7,7 +7,9 @@ packages by area, and a shape for the change feed like the one
 the data layer and `common`, the same rules applied there. Section 9 is
 the code written twice, merged into helpers once the modules are in
 place. Section 10 is the MCP server, added later the same day: its
-tools in a package, one module per kind. Behaviour, the API and the
+tools in a package, one module per kind. Section 11, a proposal of
+2026-10-05, is the migrations of the schema: one class per step.
+Behaviour, the API and the
 OpenAPI document stay as they are
 throughout. The rules that came out of it, in short, are
 [ARCHITECTURE.md](ARCHITECTURE.md). What the user decided is marked as
@@ -729,3 +731,128 @@ every tool are in `tests/tools/`, one file per kind, `test_server.py`
 keeps what goes through the server: the choice by rights, the bounds
 of the arguments, the start and the log. ARCHITECTURE.md 3 says how a
 tool is added.
+
+## 11. The migrations of the schema
+
+Proposal of 2026-10-05. Each step of the schema becomes a class of
+one base, so a step describes itself: its number, its statements and
+its Python, in one place. The database runs a step without knowing
+what is in it. Nothing a user of the service sees changes, and no
+migration that shipped changes either: the hashes in `RELEASED` are
+the proof.
+
+### 11.1 Today
+
+`migrations/step.py` holds `Migration`, a frozen dataclass of
+`statements`, a list of single SQL statements, and `before`, an
+optional function that runs first and returns what to log. Each
+module `vNNNN_<subject>.py` builds one as the constant `MIGRATION`.
+`migrations/__init__.py` imports every module and lists the constants
+in `MIGRATIONS` by hand, `SCHEMA_VERSION` is the length of the list.
+`Database._migrate` walks the list from the stored version on, a
+transaction per step: `before`, the statements, then `meta`.
+
+Three tests hold it together: every statement stands alone, every
+module is in the list at its number, found by a scan of the package,
+and `RELEASED` keeps a hash of the statements of every migration that
+shipped. Two of sixteen steps have Python, 9 and 15, both through
+`before`.
+
+What is wrong with it is small. A step's number is not in the step, it
+is its place in a list. `before` is a hook on a record, not a method of
+a step, so a step with logic reads as data with an attachment. The
+hash lives in the tests and not with the thing it hashes.
+
+### 11.2 Proposed
+
+One base class in `step.py`:
+
+```python
+class Migration(ABC):
+    """The step from schema version - 1 to version, in one transaction."""
+
+    version: ClassVar[int]
+    statements: ClassVar[tuple[str, ...]]
+
+    def before(self, db: sqlite3.Connection) -> list[str]:
+        """Runs first. What to log once the step is committed."""
+        return []
+
+    def apply(self, db: sqlite3.Connection) -> list[str]:
+        said = self.before(db)
+        for statement in self.statements:
+            db.execute(statement)
+        return said
+
+    @classmethod
+    def fingerprint(cls) -> str:
+        return hashlib.sha256("\n;\n".join(cls.statements).encode()).hexdigest()
+```
+
+`apply` is the template: the same for every step, never overridden.
+`before` is overridden by the steps with logic. No `abstractmethod`:
+a class without `version` or `statements` fails the tests, which is
+soon enough. A module then reads:
+
+```python
+class PasswordsUniqueNames(Migration):
+    version = 9
+    statements = (...)
+
+    def before(self, db: sqlite3.Connection) -> list[str]: ...
+```
+
+The statements stay byte for byte, so each fingerprint stays, and
+`RELEASED` is left as it is. `__init__.py` keeps the registry:
+
+```python
+MIGRATIONS: tuple[Migration, ...] = (AccountsUsers(), Credentials(), ...)
+SCHEMA_VERSION = MIGRATIONS[-1].version
+```
+
+`Database._migrate` calls `migration.apply(db)` and writes
+`migration.version` to `meta`. The rest of it stays.
+
+The fingerprint covers the statements, not the Python of `before`,
+today as after. A hash over source breaks on a comment. That a shipped
+step's Python is not touched stays a rule for review, as it is now.
+
+### 11.3 A registry, not reflection
+
+The list in `__init__.py` stays, written by hand. A scan of the
+package (`pkgutil`, `__subclasses__`) would save two lines per
+migration and cost more: the order would hang on file names, a typo in
+a name would drop a step without a word, mypy and ruff would see the
+modules as unused, and the check that the numbers run from 1 to N
+without a gap would move from the tests into code that runs at every
+start. The test `test_each_migration_module_is_in_the_list_at_its_number`
+does that scan already, and the tests are where it belongs. The rule of
+[ARCHITECTURE.md](ARCHITECTURE.md) holds too: an `__init__.py` exports,
+it has no side effects.
+
+If the two places per migration, the import and the list, ever
+bother: `__init_subclass__` on the base, each class entering itself
+into a dict by `version` as it is imported, a second class with the
+same number refused at once. The imports in `__init__.py` are then the
+registry, the list goes. That is the one piece of reflection worth
+having here, and it is not part of this proposal.
+
+### 11.4 Order of work
+
+One branch from `main`, one pull request, each step passing all checks:
+
+1. This section.
+2. `step.py`: the class above.
+3. The sixteen modules, by script: `MIGRATION = Migration([...])`
+   becomes a class with `version` and `statements` as a tuple, the
+   statement texts untouched, 9 and 15 with `before` as a method.
+   `__init__.py` lists the instances. `Database._migrate` calls
+   `apply`.
+4. The tests: `fingerprint` from the class, one test more that
+   `version` is the number in the module's name, `RELEASED` as it is.
+5. CLAUDE.md's convention and ARCHITECTURE.md's two lines about
+   `migrations/` say "a class in a module".
+
+Then once a database file of 0.2.0, schema 13, opened by the service:
+the log says it migrated to the current schema, and `live/ui.py` runs
+against it. No CHANGELOG entry: the API does not change.
