@@ -41,27 +41,32 @@ classifiers = [
     "Topic :: Communications :: Email",
 ]
 dependencies = [
-    "fastapi>=0.129.1",
+    # Each minimum is a version without a known vulnerability: the job
+    # lowest-versions of ci.yml checks them against OSV.
+    "fastapi>=0.133.0",
+    # fastapi brings it, but asks for no version without known
+    # vulnerabilities. The UI's sessions check request.url.path.
+    "starlette>=1.3.1",
     "uvicorn>=0.38",
     # The configuration UI: server-rendered pages (web/pages/) and their
     # forms.
-    "jinja2>=3.1",
-    "python-multipart>=0.0.20",
+    "jinja2>=3.1.6",
+    "python-multipart>=0.0.31",
     "pydantic>=2.12",
     "pydantic-settings>=2.10",
     # Outbound HTTP: autodiscovery, later the Gmail and Microsoft Graph
     # adapters.
     "httpx>=0.28",
     # AES-256-GCM for stored credentials.
-    "cryptography>=44",
+    "cryptography>=50",
     # The OS credential store that holds the master key on a host.
     "keyring>=25",
     # IMAP: search builder, message parsing, folder name decoding.
     "imap-tools>=1.10",
     # Worker threads for the synchronous IMAP library.
-    "anyio>=4",
+    "anyio>=4.14.2",
     # Autodiscovery: MX and SRV lookups.
-    "dnspython>=2.6",
+    "dnspython>=2.6.1",
     # Autodiscovery: autoconfig XML without entity expansion.
     "defusedxml>=0.7.1",
     # Autodiscovery: where a domain ends. Ships its own copy of the list.
