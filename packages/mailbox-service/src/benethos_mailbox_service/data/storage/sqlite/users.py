@@ -134,7 +134,7 @@ def _token(row: sqlite3.Row) -> ApiToken:
 
 
 def _grants_json(grants: list[Grant]) -> str:
-    return json.dumps([g.model_dump() for g in grants])
+    return json.dumps([g.model_dump(mode="json") for g in grants])
 
 
 def _grants(raw: str) -> list[Grant]:

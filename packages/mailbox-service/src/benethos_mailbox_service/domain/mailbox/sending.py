@@ -126,6 +126,12 @@ class SendControl:
                 )
             return sent
 
+    def sent_recently(self, user_id: str, account_id: str) -> int:
+        """Mails the user sent from the account in the last 24 hours: what
+        its send limits count."""
+        since = self._clock() - WINDOW
+        return len(self._store.sent_since(user_id, account_id, since, outcome="sent"))
+
     @property
     def days(self) -> int:
         """How long a record is kept, 0 for ever."""

@@ -46,3 +46,34 @@ async def test_errors_are_tool_errors(make_client: Callable) -> None:
     )
     with pytest.raises(ToolError, match="wrong token"):
         await accounts.list_accounts()
+
+
+async def test_list_accounts_names_the_limits_on_sending(api: Callable) -> None:
+    """The model knows before it sends (PERMISSIONS.md 8.8)."""
+    sender = {
+        **ME["accounts"][0],
+        "operations": [*READ, "send_message"],
+        "sending": [
+            {
+                "recipients": ["*@example.org"],
+                "max_sends_per_day": 10,
+                "sends_left": 3,
+            },
+            {"recipients": None, "max_sends_per_day": None, "sends_left": None},
+        ],
+        "warnings": ["read_and_send_anywhere"],
+    }
+    api(routes={"/v1/me": {**ME, "accounts": [sender]}})
+    [shown] = await accounts.list_accounts()
+    assert shown["can"] == ["read", "send"]
+    assert shown["sending"] == [
+        "only to *@example.org, at most 10 a day, 3 left now",
+        "to anyone, no daily limit",
+    ]
+    assert "send it to any address" in shown["warning"]
+
+
+async def test_no_sending_shown_without_the_right_to_send(api: Callable) -> None:
+    api(routes={"/v1/me": ME})
+    [shown] = await accounts.list_accounts()
+    assert "sending" not in shown and "warning" not in shown

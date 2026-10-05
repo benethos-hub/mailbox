@@ -19,6 +19,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   keeps every right it had.
 - Whoever connects an account gets `accounts.manage` on it, unless it
   holds that there already.
+- `expires_at` on a grant, with a time zone, null for never. An expired
+  grant grants nothing and stays until it is removed. A grant is handed
+  out for no longer than the giver holds it. The editor has a field
+  "Valid until", and the user's page marks an expired grant.
+- `/v1/me` gives each account a `sending` list, one entry per grant that
+  allows sending there: its `recipients`, `max_sends_per_day` and
+  `sends_left`, how many more the limit allows now.
+- The MCP server's `list_accounts` names these limits beside `send`, and
+  warns of an account where the token may read mail and send it anywhere.
 
 ### Changed
 

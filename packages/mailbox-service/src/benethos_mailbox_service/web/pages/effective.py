@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...domain.rights import SendLimit, permissions
-from ...domain.users import EffectiveRights
+from ...domain.rights import permissions
+from ...domain.users import EffectiveRights, Sending
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class AccountRow:
     email: str
     groups: list[str]
     operations: list[str]
-    sending: list[SendLimit]
+    sending: list[Sending]
     warnings: list[str]
 
 

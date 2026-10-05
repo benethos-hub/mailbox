@@ -10,7 +10,9 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 
+from ...common.clock import utc_now
 from ...data.models import Grant, Role, User
 from ...errors import ForbiddenError, missing
 from . import permissions
@@ -56,6 +58,16 @@ class _Rule:
     accounts: frozenset[str] | None  # None means every account, "*"
     operations: frozenset[str]
     limit: SendLimit
+    expires_at: datetime | None = None  # None: never
+
+    def within(self, own: _Rule, operation: str) -> bool:
+        """Whether ``operation`` under this rule is at most as wide as
+        under ``own``: sending as narrow, and ending no later."""
+        if operation in SEND_OPERATIONS and not self.limit.within(own.limit):
+            return False
+        return own.expires_at is None or (
+            self.expires_at is not None and self.expires_at <= own.expires_at
+        )
 
 
 class Access:
@@ -70,6 +82,7 @@ class Access:
         service: Iterable[str] = (),
         credential_name: str | None = None,
         source: str | None = None,
+        now: datetime | None = None,
     ) -> None:
         self.user_id = user_id
         self.name = name
@@ -83,7 +96,11 @@ class Access:
         self.roles = tuple(roles)
         service = list(service)
         self._service = _service_operations(service)
-        rules = [_rule(grant) for grant in grants]
+        # A grant that has expired grants nothing (PERMISSIONS.md 8.4).
+        self._now = now or utc_now()
+        rules = [
+            rule for grant in grants if not _expired(rule := _rule(grant), self._now)
+        ]
         if permissions.ADMIN in service:
             # admin is every right: on every account as well.
             rules.append(_Rule(None, permissions.ON_AN_ACCOUNT, SendLimit(None, None)))
@@ -98,6 +115,7 @@ class Access:
         *,
         credential_name: str | None = None,
         source: str | None = None,
+        now: datetime | None = None,
     ) -> Access:
         grants = list(user.grants)
         service = list(user.service)
@@ -115,6 +133,7 @@ class Access:
             service=service,
             credential_name=credential_name,
             source=source,
+            now=now,
         )
 
     @classmethod
@@ -200,9 +219,10 @@ class Access:
 
     def covers(self, grants: Iterable[Grant], service: Iterable[str] = ()) -> bool:
         """Whether every right in ``grants`` and ``service`` is one this
-        caller holds itself, sending no wider than its own grants allow. A
-        name that is no right (any more) grants nothing and asks for
-        nothing: new rights are checked for such names before."""
+        caller holds itself, sending no wider and ending no later than its
+        own grants. A name that is no right (any more) grants nothing and
+        asks for nothing, nor does a grant that has expired: new rights are
+        checked for such names before."""
         service = list(service)
         if permissions.ADMIN in service and not self.is_admin():
             return False
@@ -210,21 +230,19 @@ class Access:
             return False
         for grant in grants:
             rule = _rule(grant)
+            if _expired(rule, self._now):
+                continue
+            places: list[str | None] = (
+                [None] if ALL_ACCOUNTS in grant.accounts else list(grant.accounts)
+            )
             for operation in rule.operations:
-                if ALL_ACCOUNTS in grant.accounts:
-                    if not self._allows_everywhere(operation, rule.limit):
+                for place in places:
+                    if not any(
+                        operation in own.operations and rule.within(own, operation)
+                        for own in self._on(place)
+                    ):
                         return False
-                elif not all(
-                    self._allows_within(operation, a, rule.limit)
-                    for a in grant.accounts
-                ):
-                    return False
         return True
-
-    def _allows_within(self, operation: str, account_id: str, limit: SendLimit) -> bool:
-        if operation not in SEND_OPERATIONS:
-            return self.allows(operation, account_id)
-        return any(limit.within(own) for own in self.send_limits(operation, account_id))
 
     def operations_on(self, account_id: str) -> frozenset[str]:
         """Every account-bound operation allowed on one account."""
@@ -235,13 +253,6 @@ class Access:
     def general_operations(self) -> frozenset[str]:
         """Operations of the service: bound to no existing account."""
         return self._service
-
-    def _allows_everywhere(self, operation: str, limit: SendLimit) -> bool:
-        return any(
-            operation in rule.operations
-            and (operation not in SEND_OPERATIONS or limit.within(rule.limit))
-            for rule in self._on(None)
-        )
 
     def _on(self, account_id: str | None) -> Iterator[_Rule]:
         """The rules that reach the account. None: those on every account."""
@@ -263,7 +274,16 @@ def _rule(grant: Grant) -> _Rule:
         log.warning("a stored grant names rights that do not exist: %s", unknown)
     # A grant gives rights on accounts alone, whatever it names.
     operations &= permissions.ON_AN_ACCOUNT
-    return _Rule(accounts, operations, SendLimit(recipients, grant.max_sends_per_day))
+    return _Rule(
+        accounts,
+        operations,
+        SendLimit(recipients, grant.max_sends_per_day),
+        grant.expires_at,
+    )
+
+
+def _expired(rule: _Rule, now: datetime) -> bool:
+    return rule.expires_at is not None and rule.expires_at <= now
 
 
 def _service_operations(names: Iterable[str]) -> frozenset[str]:

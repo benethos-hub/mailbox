@@ -1204,7 +1204,7 @@ with the role
 - **Constraints.** A grant can narrow further without changing the model:
   `recipients` (send only to `*@firma.de`) and `max_sends_per_day` come
   with the MCP send tools, since they are the main guard against prompt
-  injection (7.7). `folders` (read only `INBOX` and `Rechnungen`) follows
+  injection (7.7). `expires_at` ends a grant at a time. `folders` (read only `INBOX` and `Rechnungen`) follows
   later.
 
   **Decided 2026-09-24:** `recipients` takes addresses, `*@domain` and `*`

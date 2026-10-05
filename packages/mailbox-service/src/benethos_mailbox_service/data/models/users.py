@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field
 
 RECIPIENT_PATTERN = r"^(\*|\*@[^\s@*]+|[^\s@*]+@[^\s@*]+)$"
 
@@ -38,6 +38,13 @@ class Grant(BaseModel):
         description=(
             "Mails the user may send from one account in any 24 hours under "
             "this grant. Null: no limit."
+        ),
+    )
+    expires_at: AwareDatetime | None = Field(
+        default=None,
+        description=(
+            "When the grant ends, with a time zone. Null: never. An expired "
+            "grant grants nothing and stays until it is removed."
         ),
     )
 

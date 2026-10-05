@@ -501,6 +501,11 @@ async def check_constraints(
                 "refused" if refused.is_error else "sent",
             )
         async with mcp_session(url, once) as session:
+            listed = text_of(await session.call_tool("list_accounts", {}))
+            run.check(
+                "list_accounts names the limits before a send",
+                f"only to {other}, at most 1 a day, 1 left now" in listed,
+            )
             results = []
             for title in subjects:
                 results.append(

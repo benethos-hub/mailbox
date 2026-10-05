@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import secrets
+from datetime import datetime, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.common.clock import utc_now
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import ADMIN_SERVICE, Access
@@ -12,7 +16,12 @@ from ...conftest import ADMIN, bearer_for, browser_user, create_account
 
 READ_A = {"accounts": ["acc_a"], "allow": ["mail.read"]}
 # As the API answers it: constraints not set are null.
-READ_A_OUT = {**READ_A, "recipients": None, "max_sends_per_day": None}
+READ_A_OUT = {
+    **READ_A,
+    "recipients": None,
+    "max_sends_per_day": None,
+    "expires_at": None,
+}
 
 
 def test_me_for_an_admin(client: TestClient, account_id: str) -> None:
@@ -38,6 +47,7 @@ def test_me_for_a_limited_user(app_client: TestClient, services: Services) -> No
             "display_name": None,
             "operations": sorted(permissions.GROUPS["mail.read"]),
             "warnings": [],
+            "sending": [],
         }
     ]
     assert me["operations"] == []
@@ -96,10 +106,9 @@ def test_me_lists_the_limits_of_every_sending_grant(
         ],
     )
     [account] = services.users.me(access).accounts
-    assert [(s.recipients, s.max_per_day) for s in account.sending] == [
-        (("*@a.org",), None),
-        (None, 2),
-    ]
+    assert [
+        (s.recipients, s.max_sends_per_day, s.sends_left) for s in account.sending
+    ] == [(["*@a.org"], None, None), (None, 2, 2)]
 
 
 def test_an_admin_is_warned(client: TestClient, account_id: str) -> None:
@@ -288,6 +297,7 @@ def test_role_lifecycle(client: TestClient) -> None:
                 "allow": ["mail.read"],
                 "recipients": None,
                 "max_sends_per_day": None,
+                "expires_at": None,
             }
         ],
     }
@@ -563,3 +573,97 @@ def test_the_catalogue_names_the_groups_of_the_service(client: TestClient) -> No
         "start_oauth",
         "create_account",
     ]
+
+
+# --- sending limits in /v1/me (PERMISSIONS.md 8.8) ---------------------------------
+
+
+def test_me_names_the_sends_left(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    limited = Grant(
+        accounts=[account_id],
+        allow=["send"],
+        recipients=["*@example.com"],
+        max_sends_per_day=2,
+    )
+    headers = bearer_for(services, limited)
+    mail = {"to": [{"email": "bob@example.com"}], "subject": "Hi", "text": "x"}
+    sent = app_client.post(
+        f"/v1/accounts/{account_id}/send", json=mail, headers=headers
+    )
+    assert sent.status_code == 200
+    [account] = app_client.get("/v1/me", headers=headers).json()["accounts"]
+    assert account["sending"] == [
+        {"recipients": ["*@example.com"], "max_sends_per_day": 2, "sends_left": 1}
+    ]
+
+
+# --- a grant can expire (PERMISSIONS.md 8.4) ---------------------------------------
+
+
+def test_an_expired_grant_grants_nothing(
+    app_client: TestClient, client: TestClient, services: Services, account_id: str
+) -> None:
+    past = (utc_now() - timedelta(minutes=1)).isoformat()
+    future = (utc_now() + timedelta(days=7)).isoformat()
+    made = client.post(
+        "/v1/users",
+        json={
+            "name": "contractor",
+            "grants": [
+                {"accounts": [account_id], "allow": ["mail.read"], "expires_at": past},
+                {"accounts": [account_id], "allow": ["drafts"], "expires_at": future},
+            ],
+        },
+    ).json()
+    assert made["grants"][0]["expires_at"] is not None
+    token = client.post(f"/v1/users/{made['id']}/tokens", json={"name": "t"}).json()
+    headers = {"Authorization": f"Bearer {token['token']}"}
+    [account] = app_client.get("/v1/me", headers=headers).json()["accounts"]
+    assert "create_draft" in account["operations"]
+    assert "list_messages" not in account["operations"]
+    messages = app_client.get(f"/v1/accounts/{account_id}/messages", headers=headers)
+    assert messages.status_code == 403
+
+
+def test_an_expiry_needs_a_time_zone(client: TestClient) -> None:
+    grant = {
+        "accounts": ["*"],
+        "allow": ["mail.read"],
+        "expires_at": "2099-01-01T00:00",
+    }
+    assert (
+        client.post("/v1/users", json={"name": "x", "grants": [grant]}).status_code
+        == 422
+    )
+
+
+def test_a_right_held_for_a_while_is_handed_out_for_no_longer(
+    app_client: TestClient, services: Services
+) -> None:
+    """A contractor with users.manage and a grant for a week cannot give
+    anyone that grant for longer, nor without an end."""
+    week = utc_now() + timedelta(days=7)
+    headers = bearer_for(
+        services,
+        Grant(accounts=["acc_a"], allow=["mail.read"], expires_at=week),
+        service=["users.manage"],
+    )
+
+    def made(expires_at: datetime | None) -> int:
+        grant = {
+            "accounts": ["acc_a"],
+            "allow": ["mail.read"],
+            "expires_at": expires_at.isoformat() if expires_at else None,
+        }
+        return app_client.post(
+            "/v1/users",
+            json={"name": f"u{secrets.token_hex(3)}", "grants": [grant]},
+            headers=headers,
+        ).status_code
+
+    assert made(None) == 403
+    assert made(week + timedelta(days=1)) == 403
+    assert made(week) == 201
+    assert made(week - timedelta(days=1)) == 201

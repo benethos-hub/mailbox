@@ -28,6 +28,7 @@ from .models import (
     Outcome,
     Page,
     Recipient,
+    Sending,
     Sent,
 )
 
@@ -141,6 +142,7 @@ class MailboxApiClient:
                     display_name=a.get("display_name"),
                     operations=frozenset(a.get("operations", [])),
                     warnings=frozenset(a.get("warnings", [])),
+                    sending=tuple(_sending(s) for s in a.get("sending", [])),
                 )
                 for a in found.get("accounts", [])
             ],
@@ -423,6 +425,15 @@ def _scoped(account_id: str | None, what: str) -> str:
 
 def _given(values: Mapping[str, Any] | None) -> dict[str, Any]:
     return {k: v for k, v in (values or {}).items() if v is not None}
+
+
+def _sending(item: dict[str, Any]) -> Sending:
+    recipients = item.get("recipients")
+    return Sending(
+        recipients=tuple(recipients) if recipients is not None else None,
+        max_per_day=item.get("max_sends_per_day"),
+        left=item.get("sends_left"),
+    )
 
 
 def _folder(item: dict[str, Any]) -> Folder:

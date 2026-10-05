@@ -206,6 +206,9 @@ def build_services(
             ),
             activity=activity,
         )
+        sends = SendControl(
+            repos.sends, clock=clock, activity=activity, days=settings.audit_days
+        )
         users = UserService(
             repos.users,
             repos.roles,
@@ -214,6 +217,7 @@ def build_services(
             auth,
             repos.webhooks,
             activity=activity,
+            sent=sends.sent_recently,
         )
         accounts = AccountService(
             repos.accounts,
@@ -251,12 +255,7 @@ def build_services(
                 adapters,
                 sync,
                 Idempotency(repos.idempotency, clock=clock, activity=activity),
-                SendControl(
-                    repos.sends,
-                    clock=clock,
-                    activity=activity,
-                    days=settings.audit_days,
-                ),
+                sends,
                 clock=clock,
                 activity=activity,
             ),

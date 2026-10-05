@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import action, anywhere_tag, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, new_row, related, rights_tags, secret_card with context %}
-{% from "components/grants.html" import grant_editor, grants_of, role_checks, role_tags, service_editor, service_of %}
+{% from "components/grants.html" import grant_editor, grants_of, role_checks, role_tags, sending_of, service_editor, service_of %}
 {% block title %}{{ user.name }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ user.name }}{% endblock %}
 {% block subheading %}{{ breadcrumb([("Users", "/ui/users"), (user.name, None)]) }}{% endblock %}
@@ -32,11 +32,7 @@
         <tr>
           <td class="name">{{ row.email }}{% for warning in row.warnings %}<span class="sub">{{ anywhere_tag() }}</span>{% endfor %}</td>
           <td>{{ rights_tags(row.groups, row.operations) }}</td>
-          <td>
-            {% for limit in row.sending %}
-            <div>{% if limit.recipients is none %}to anyone{% else %}to {{ limit.recipients | join(", ") }}{% endif %}, {% if limit.max_per_day is none %}no daily limit{% else %}at most {{ limit.max_per_day }} a day{% endif %}</div>
-            {% else %}<span class="muted">—</span>{% endfor %}
-          </td>
+          <td>{{ sending_of(row.sending) }}</td>
         </tr>
         {% endfor %}
       </tbody>

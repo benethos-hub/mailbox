@@ -4,10 +4,11 @@
 
 from __future__ import annotations
 
-from .service import AccountRights, EffectiveRights, UserService
+from .service import AccountRights, EffectiveRights, Sending, UserService
 
 __all__ = [
     "AccountRights",
     "EffectiveRights",
+    "Sending",
     "UserService",
 ]

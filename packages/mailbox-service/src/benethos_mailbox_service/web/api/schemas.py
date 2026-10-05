@@ -95,6 +95,24 @@ class ErrorResponse(BaseModel):
     error: ErrorDetail
 
 
+class MeSending(BaseModel):
+    """One grant that allows sending from the account. A send passes when
+    one of them accepts every recipient and has sends left."""
+
+    recipients: list[str] | None = Field(
+        description="Send only to these: an address, `*@domain`. Null: to anyone."
+    )
+    max_sends_per_day: int | None = Field(
+        description="Mails in any 24 hours under this grant. Null: no limit."
+    )
+    sends_left: int | None = Field(
+        description=(
+            "How many more the limit allows now: it less the mails the caller "
+            "sent from the account in the last 24 hours. Null: no limit."
+        )
+    )
+
+
 class MeAccount(BaseModel):
     """An account the caller may act on."""
 
@@ -109,6 +127,10 @@ class MeAccount(BaseModel):
             "it to any address, which a mail with injected instructions could "
             "use to carry data out. Narrow sending with a grant's `recipients`."
         ),
+    )
+    sending: list[MeSending] = Field(
+        default_factory=list,
+        description="One entry per grant that allows sending here. Empty: none.",
     )
 
 

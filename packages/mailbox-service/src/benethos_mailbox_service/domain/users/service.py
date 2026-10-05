@@ -7,7 +7,7 @@ only manage a user whose rights it holds itself.
 from __future__ import annotations
 
 import secrets
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -30,10 +30,20 @@ from ..accounts import Adapters
 from ..activity import HOST, ActivityLog, Actor
 from ..activity import users as said
 from ..auth import MAX_NAME, AuthService, TokenState
-from ..rights import ADMIN_SERVICE, Access, SendLimit, permissions
+from ..rights import ADMIN_SERVICE, Access, permissions
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18
+
+
+@dataclass(frozen=True)
+class Sending:
+    """One grant that allows sending from an account: to whom, how many in
+    24 hours, and how many of those are left now (PERMISSIONS.md 8.8)."""
+
+    recipients: list[str] | None  # None: to anyone
+    max_sends_per_day: int | None  # None: no limit
+    sends_left: int | None  # None: no limit
 
 
 @dataclass(frozen=True)
@@ -47,7 +57,7 @@ class AccountRights:
     warnings: list[str]
     # One entry per grant that allows sending here. A send passes when one
     # of them allows it. Empty when no grant allows sending.
-    sending: list[SendLimit]
+    sending: list[Sending]
     status: AccountStatus = AccountStatus.CONNECTED
 
 
@@ -70,8 +80,12 @@ class UserService:
         auth: AuthService,
         webhooks: WebhookRepository,
         activity: ActivityLog | None = None,
+        sent: Callable[[str, str], int] | None = None,
     ) -> None:
+        """``sent``: how many mails a user sent from an account in the last
+        24 hours, by user and account id."""
         self._users = users
+        self._sent = sent
         self._roles = roles
         self._tokens = tokens
         self._adapters = adapters
@@ -111,7 +125,7 @@ class UserService:
                         display_name=account.display_name,
                         operations=sorted(operations),
                         warnings=_warnings(access, account_id, operations),
-                        sending=access.sending_limits(account_id),
+                        sending=self._sending(access, account_id),
                         status=account.status,
                     )
                 )
@@ -122,6 +136,26 @@ class UserService:
             operations=sorted(access.general_operations()),
             roles=list(roles),
         )
+
+    def _sending(self, access: Access, account_id: str) -> list[Sending]:
+        limits = access.sending_limits(account_id)
+        sent = (
+            self._sent(access.user_id, account_id)
+            if self._sent is not None and any(x.max_per_day for x in limits)
+            else 0
+        )
+        return [
+            Sending(
+                recipients=list(limit.recipients)
+                if limit.recipients is not None
+                else None,
+                max_sends_per_day=limit.max_per_day,
+                sends_left=max(0, limit.max_per_day - sent)
+                if limit.max_per_day is not None
+                else None,
+            )
+            for limit in limits
+        ]
 
     # --- setup ----------------------------------------------------------------
 

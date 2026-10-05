@@ -410,8 +410,8 @@ def test_rights_of_joins_roles_and_grants(services: Services, account_id: str) -
     rights = services.users.rights_of(ADMIN, user.id)
     [account] = rights.accounts
     assert {"get_message", "create_draft", "send_message"} <= set(account.operations)
-    assert [(s.recipients, s.max_per_day) for s in account.sending] == [
-        (("bot@example.org",), 3)
+    assert [(s.recipients, s.max_sends_per_day) for s in account.sending] == [
+        (["bot@example.org"], 3)
     ]
     assert account.warnings == []
 
@@ -680,3 +680,67 @@ def test_users_read_opens_the_pages_and_changes_nothing(
     assert 'name="service"' not in page and "New user" not in page
     refused = post(app_client, f"/ui/users/{target.id}", {"name": "x", "grants": "0"})
     assert "missing right: update_user" in refused.text
+
+
+def test_the_editor_sets_and_shows_an_expiry(
+    ui: TestClient, services: Services
+) -> None:
+    made = post(
+        ui,
+        "/ui/users",
+        {
+            "name": "week",
+            "grants": "2",
+            "g0_accounts": "*",
+            "g0_allow": "mail.read",
+            "g0_expires": "2099-12-31T18:30",
+            "g1_accounts": "*",
+            "g1_allow": "drafts",
+            "g1_expires": "2001-01-01T00:00",
+        },
+    )
+    assert "week created" in made.text
+    user = services.auth.user_named("week")
+    assert user is not None
+    first, second = (grant.expires_at for grant in user.grants)
+    assert first is not None and second is not None
+    assert first.astimezone().strftime("%Y-%m-%dT%H:%M") == "2099-12-31T18:30"
+    page = ui.get(f"/ui/users/{user.id}").text
+    assert 'name="g0_expires" type="datetime-local" value="2099-12-31T18:30"' in page
+    assert "until</span> 2099-12-31 18:30" in page
+    assert '<span class="tag bad">expired</span>' in page
+
+
+def test_a_wrong_expiry_is_refused(ui: TestClient) -> None:
+    refused = post(
+        ui,
+        "/ui/users",
+        {
+            "name": "x",
+            "grants": "1",
+            "g0_accounts": "*",
+            "g0_allow": "mail.read",
+            "g0_expires": "next week",
+        },
+    )
+    assert refused.status_code == 400
+    assert "valid until must be a date and a time" in refused.text
+
+
+def test_the_overview_names_the_own_sending_limits(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    sign_in(
+        app_client,
+        *browser_user(
+            services,
+            Grant(
+                accounts=[account_id],
+                allow=["mail.read", "send"],
+                recipients=["*@example.org"],
+                max_sends_per_day=2,
+            ),
+        ),
+    )
+    home = app_client.get("/ui").text
+    assert "to *@example.org, at most 2 a day, 2 left now" in home

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
 from benethos_mailbox_service.data.models import Grant, Role, User
@@ -215,3 +217,23 @@ def test_a_batch_needs_its_right_and_the_operation() -> None:
 def test_the_status_is_for_who_may_list_some_account() -> None:
     assert access(Grant(accounts=["acc_a"], allow=["list_accounts"])).sees_status()
     assert not access(Grant(accounts=["acc_a"], allow=["list_messages"])).sees_status()
+
+
+NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+
+
+def test_a_grant_ends_at_its_expiry() -> None:
+    grant = Grant(accounts=["acc_a"], allow=["mail.read"], expires_at=NOW)
+    before = Access("u", "u", [grant], now=NOW - timedelta(seconds=1))
+    assert before.allows("list_messages", "acc_a")
+    at = Access("u", "u", [grant], now=NOW)
+    assert not at.allows("list_messages", "acc_a")
+    assert not at.sees("acc_a")
+
+
+def test_an_expired_grant_asks_nothing_of_a_manager() -> None:
+    """A manager may change a user whose expired grant it does not hold:
+    that grant grants nothing."""
+    manager = Access("u", "u", [], now=NOW)
+    expired = Grant(accounts=["*"], allow=["send"], expires_at=NOW)
+    assert manager.covers([expired])

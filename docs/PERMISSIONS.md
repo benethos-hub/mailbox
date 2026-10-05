@@ -43,10 +43,10 @@ decides is marked as decided, everything else is the proposal.
 | **Credential** | how a user proves who it is: a token for the API and the MCP server, a password for the UI | the user's page |
 | **Right** | the name of one operation, e.g. `send_message` | the catalogue, `/v1/permissions` |
 | **Group** | a named set of rights, e.g. `mail.read` | the catalogue |
-| **Grant** | rights on accounts, with constraints: `{accounts, allow, recipients, max_sends_per_day}` | part of a user or a role |
+| **Grant** | rights on accounts, with constraints: `{accounts, allow, recipients, max_sends_per_day, expires_at}` | part of a user or a role |
 | **Service rights** | rights of the service, bound to no account: `{service: [...]}` | part of a user or a role |
 | **Role** | a named, reusable set of grants and service rights | `/v1/roles`, UI Roles |
-| **Constraint** | a narrowing of a grant that changes no right: which recipients, how many sends a day | part of the grant |
+| **Constraint** | a narrowing of a grant that changes no right: which recipients, how many sends a day, until when | part of the grant |
 | **Effective rights** | the union of a user's rights and those of its roles | `/v1/me`, the user's page |
 
 ## 3. The catalogue
@@ -99,8 +99,9 @@ Two operations are open to every user: `get_me` and `list_permissions`.
   An account inside a grant, but without the right asked for, answers
   `403` and names the missing right.
 - **`/v1/me`** answers who the caller is, every account it may act on
-  with the operations there, the operations not bound to an account, and
-  a warning per account the caller may read mail in and send it anywhere
+  with the operations there and the limits of each grant that allows
+  sending, with the sends left, the operations of the service, and a
+  warning per account the caller may read mail in and send it anywhere
   from. The MCP server builds its tools from it. The UI's overview and
   user page show the same in words.
 
@@ -112,7 +113,8 @@ from becoming a way up:
 - **Hands out only what it holds.** Every grant given, directly or
   through a role, must be covered by the giver's own effective rights, on
   the same accounts. A send right is covered only by a send right of the
-  giver with recipients and a limit at least as narrow.
+  giver with recipients and a limit at least as narrow. A grant of the
+  giver that expires covers only a grant that expires no later.
 - **Manages only whom it covers.** Changing, deleting, giving a token or
   a password to a user needs the giver to cover that user's effective
   rights. A token or a password for another user means signing in as
@@ -152,10 +154,10 @@ from becoming a way up:
   effective rights per account, the sending limits and the warning
   "reads and sends anywhere". Pages and buttons appear only for those
   with the right.
-- **MCP server**: at start `/v1/me` decides which tools exist. The
-  warning per account goes into the server's instructions, since a mail
-  with injected instructions could carry data out through a user that
-  reads mail and sends anywhere.
+- **MCP server**: at start `/v1/me` decides which tools exist.
+  `list_accounts` names the limits on sending per account, and warns of
+  an account where the token may read mail and send it anywhere, since a
+  mail with injected instructions could carry data out through it.
 - **Audit**: sends in the database (`/v1/accounts/{id}/sends`,
   `/v1/sends`, UI Sends).
   Sign-ins, failed sign-ins, password changes and rights changes in the
@@ -305,7 +307,7 @@ The API gets nothing new: a template is a filled form. **Decided
 Per account the caller may send from, the recipients and the daily
 limit of each grant that allows it, and how many sends are left today.
 The MCP server tells the model before it tries, and the UI's overview
-shows the person what its own token may send. IDEAS has the shape.
+shows the person what its own token may send.
 **Decided 2026-10-05:** the MCP server's `list_accounts` names the limits
 and the warning about reading and sending anywhere, so the model knows
 them before it sends.

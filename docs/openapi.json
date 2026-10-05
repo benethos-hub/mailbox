@@ -8220,6 +8220,19 @@
             ],
             "title": "Max Sends Per Day",
             "description": "Mails the user may send from one account in any 24 hours under this grant. Null: no limit."
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At",
+            "description": "When the grant ends, with a time zone. Null: never. An expired grant grants nothing and stays until it is removed."
           }
         },
         "type": "object",
@@ -8414,6 +8427,14 @@
             "type": "array",
             "title": "Warnings",
             "description": "`read_and_send_anywhere`: the caller may read mail here and send it to any address, which a mail with injected instructions could use to carry data out. Narrow sending with a grant's `recipients`."
+          },
+          "sending": {
+            "items": {
+              "$ref": "#/components/schemas/MeSending"
+            },
+            "type": "array",
+            "title": "Sending",
+            "description": "One entry per grant that allows sending here. Empty: none."
           }
         },
         "type": "object",
@@ -8424,6 +8445,57 @@
         ],
         "title": "MeAccount",
         "description": "An account the caller may act on."
+      },
+      "MeSending": {
+        "properties": {
+          "recipients": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipients",
+            "description": "Send only to these: an address, `*@domain`. Null: to anyone."
+          },
+          "max_sends_per_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Sends Per Day",
+            "description": "Mails in any 24 hours under this grant. Null: no limit."
+          },
+          "sends_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sends Left",
+            "description": "How many more the limit allows now: it less the mails the caller sent from the account in the last 24 hours. Null: no limit."
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipients",
+          "max_sends_per_day",
+          "sends_left"
+        ],
+        "title": "MeSending",
+        "description": "One grant that allows sending from the account. A send passes when\none of them accepts every recipient and has sends left."
       },
       "Message": {
         "properties": {
