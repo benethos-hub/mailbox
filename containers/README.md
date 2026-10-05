@@ -54,6 +54,14 @@ docker build -f containers/benethos-mailbox-service/Dockerfile -t benethos-mailb
 docker build -f containers/benethos-mailbox-mcp/Dockerfile -t benethos-mailbox-mcp:local .
 ```
 
+The build of the service warns `SecretsUsedInArgOrEnv` for
+`MAILBOX_SERVICE_KEY_PROVIDER` and `MAILBOX_SERVICE_KEY_FILE`. Docker's
+check reads the names of variables alone, and both contain `KEY`. They
+hold no secret: one says that the master key is a file, the other where
+the file is mounted. The key itself never enters the image, it is
+mounted as a secret when the container starts. The warning is left as
+it is.
+
 `ci.yml` builds both on every pull request and every push to `main`,
 for arm64 as well. It checks that the
 compose file keeps every port on the loopback address. It also starts the
