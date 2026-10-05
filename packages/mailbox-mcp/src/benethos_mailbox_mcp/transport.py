@@ -150,7 +150,7 @@ def serve_stdio(server: MCPServer) -> None:
             "client owns this process, so the token is ignored",
             ENV_VAR,
         )
-    logger.info("Starting Mailbox MCP server (stdio)")
+    logger.info("Starting mailbox-mcp (stdio)")
     server.run(transport="stdio")
 
 
@@ -167,7 +167,7 @@ def serve_http(
     """Over streamable HTTP, behind the bearer guard where a token is set."""
     token = token_from_env()
     logger.info(
-        "Starting Mailbox MCP server (streamable HTTP) on http://%s:%s%s",
+        "Starting mailbox-mcp (streamable HTTP) on http://%s:%s%s",
         host,
         port,
         path,

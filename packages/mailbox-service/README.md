@@ -1,4 +1,4 @@
-# benethos-mailbox-service
+# mailbox-service
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![PyPI mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
@@ -10,13 +10,14 @@
 > API and the configuration may still change. Stored data is carried
 > forward by migrations.
 
-The Mailbox Service: one REST API (OpenAPI 3.1) for several mail
+The service of Mailbox, on PyPI as `benethos-mailbox-service`: one REST
+API (OpenAPI 3.1) for several mail
 providers and accounts, with a configuration UI in the browser. It runs
 permanently, holds the connections to the accounts, keeps their
 credentials encrypted and syncs in the background. It keeps a feed of
 what changed in the mailboxes and posts it to webhooks. Scripts, apps and
 the
-MCP server [`benethos-mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp)
+MCP server [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp)
 reach mail only through it, each with a token of its own.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).

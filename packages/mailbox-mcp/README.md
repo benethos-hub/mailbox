@@ -1,4 +1,4 @@
-# benethos-mailbox-mcp
+# mailbox-mcp
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![PyPI mailbox-mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
@@ -10,14 +10,15 @@
 > API and the configuration may still change. Stored data is carried
 > forward by migrations.
 
-The MCP server for the Mailbox Service. It gives Claude and other AI
+The MCP server of Mailbox, on PyPI as `benethos-mailbox-mcp`. It gives
+Claude and other AI
 assistants your mailboxes, as far as its token allows. It searches and
 reads mail, tells what is new since it last looked, looks at attachments
 (PDF pages as images), sorts messages, writes drafts and, if you let it,
 sends.
 
 It reaches mail only through the REST API of
-[`benethos-mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service),
+[`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service),
 which has to be running. It holds no mail password and no mail library.
 The rights of the user whose token it carries decide what it may do. It
 runs in one of two ways. Over stdio, the MCP client starts it, and it ends

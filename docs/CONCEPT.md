@@ -1,4 +1,4 @@
-# Concept — Mailbox Service
+# Concept — Mailbox
 
 > **Status: draft, 2026-09-24. The software is alpha, version 0.2.0.**
 > Describes the target design. What is built today is marked in
@@ -1448,7 +1448,7 @@ account and re-issuing every token.
 
 ## 8. MCP server
 
-Its own distribution, `benethos-mailbox-mcp`, in the same uv workspace
+Its own package, `mailbox-mcp` (`benethos-mailbox-mcp` on PyPI), in the same uv workspace
 as the service (**decided 2026-09-24**). It depends on `mcp` and `httpx`
 only, never on the service package, so `uvx benethos-mailbox-mcp` stays
 small and the REST-only rule is enforced by the dependency list itself. A
@@ -1638,7 +1638,10 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    `MAILBOX_SERVICE_`. A descriptive name rather than a brand: it says what the
    service is, and cannot collide with anyone's trademark. "Mail gateway"
    was ruled out because it already names a different kind of product,
-   the filtering gateway in front of a mail server.
+   the filtering gateway in front of a mail server. **Decided
+   2026-10-05:** the project is named Mailbox, its packages
+   `mailbox-service` and `mailbox-mcp`. On PyPI and ghcr.io they keep
+   the names `benethos-mailbox-service` and `benethos-mailbox-mcp`.
 3. **Gmail priority:** is Gmail needed early, or are GMX / web.de /
    T-Online over IMAP the main use? Microsoft accounts are supported
    already (phase 5).

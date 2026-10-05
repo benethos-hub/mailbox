@@ -1,4 +1,4 @@
-"""The one place that talks to the Mailbox Service: its paths, the shapes it
+"""The one place that talks to mailbox-service: its paths, the shapes it
 takes and the shapes it answers with.
 
 The tools name what they want in their own terms. This module turns
@@ -122,11 +122,11 @@ class MailboxApiClient:
             exc, httpx.ConnectTimeout
         ):
             return ToolError(
-                f"The mailbox service did not answer within {seconds:g} s. "
+                f"mailbox-service did not answer within {seconds:g} s. "
                 "Try a narrower request."
             )
         return ServiceUnavailableError(
-            f"The mailbox service is not reachable at {self.base_url}. "
+            f"mailbox-service is not reachable at {self.base_url}. "
             "Start it with `benethos-mailbox-service serve`."
         )
 

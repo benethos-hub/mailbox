@@ -4,7 +4,7 @@
 > API and the configuration may still change. Stored data is carried
 > forward by migrations.
 
-The phases in which Mailbox Service is built. What each item means is designed
+The phases in which Mailbox is built. What each item means is designed
 in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 
 | Phase | Topic | State |

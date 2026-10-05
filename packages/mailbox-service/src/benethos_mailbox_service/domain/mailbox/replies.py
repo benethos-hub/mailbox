@@ -1,7 +1,7 @@
 """Replies and forwards (CONCEPT 6.4), made from the original: recipients
 where the caller named none, subject, quote and what goes with it.
 
-Pure functions: the mailbox service fetches the original, these decide what
+Pure functions: the service fetches the original, these decide what
 the answer looks like.
 """
 

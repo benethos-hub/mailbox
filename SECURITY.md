@@ -1,6 +1,6 @@
 # Security
 
-Mailbox Service holds access to people's mailboxes: their credentials, their
+Mailbox holds access to people's mailboxes: their credentials, their
 mail and the right to send in their name. Reports of weaknesses are very
 welcome.
 
