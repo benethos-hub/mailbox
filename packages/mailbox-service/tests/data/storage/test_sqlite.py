@@ -25,10 +25,12 @@ from benethos_mailbox_service.data.storage import (
     SqliteTokenRepository,
     SqliteUserRepository,
 )
-from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION, migrations
+from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 from benethos_mailbox_service.data.storage.sqlite.migrations import (
     MIGRATIONS,
     Migration,
+    Migrations,
+    versions,
 )
 from benethos_mailbox_service.domain.rights import Access
 from benethos_mailbox_service.errors import (
@@ -447,6 +449,50 @@ def test_a_migration_runs_before_then_its_statements() -> None:
     assert Step.fingerprint() == hashlib.sha256(Step.statements[0].encode()).hexdigest()
 
 
+class _One(Migration):
+    version = 1
+    statements = ("CREATE TABLE one (id INTEGER)",)
+
+
+class _Two(Migration):
+    version = 2
+    statements = ("CREATE TABLE two (id INTEGER)",)
+
+    def before(self, db: sqlite3.Connection) -> list[str]:
+        return ["two is coming"]
+
+
+def test_the_registry_knows_its_steps_and_the_version_they_reach() -> None:
+    registry = Migrations(_One(), _Two())
+    assert registry.schema_version == 2
+    assert len(registry) == 2
+    assert [step.version for step in registry] == [1, 2]
+    assert isinstance(registry.step(2), _Two)
+    assert [step.version for step in registry.pending(1)] == [2]
+    assert registry.pending(2) == ()
+    with pytest.raises(ValueError, match="no migration to schema 3"):
+        registry.step(3)
+
+
+def test_the_registry_refuses_a_gap_or_a_wrong_place() -> None:
+    with pytest.raises(ValueError, match="_Two says version 2 but stands at 1"):
+        Migrations(_Two(), _One())
+    with pytest.raises(ValueError, match="_Two says version 2 but stands at 1"):
+        Migrations(_Two())
+
+
+def test_the_registry_runs_a_step_and_records_its_version() -> None:
+    registry = Migrations(_One(), _Two())
+    db = sqlite3.connect(":memory:")
+    registry.prepare(db)
+    assert registry.version_of(db) == 0
+    assert registry.apply(db, registry.step(1)) == []
+    assert registry.version_of(db) == 1
+    assert registry.apply(db, registry.step(2)) == ["schema 2: two is coming"]
+    assert registry.version_of(db) == 2
+    assert db.execute("SELECT count(*) FROM two").fetchone()[0] == 0
+
+
 def test_each_migration_step_is_one_statement() -> None:
     """Executed one by one: a second statement in a step would be cut off
     by sqlite3, one that ended early would be refused."""
@@ -461,16 +507,15 @@ def test_each_migration_module_is_in_the_list_at_its_number() -> None:
     change the schema a version stands for. The class says its version,
     and it is the number in the name of its module."""
     found = {
-        module.name: importlib.import_module(f"{migrations.__name__}.{module.name}")
-        for module in pkgutil.iter_modules(migrations.__path__)
-        if module.name != "migration"
+        module.name: importlib.import_module(f"{versions.__name__}.{module.name}")
+        for module in pkgutil.iter_modules(versions.__path__)
     }
     numbers = []
     for name, module in found.items():
         named = re.fullmatch(r"v(\d{4})_\w+", name)
         assert named, f"{name} is not named vNNNN_<subject>"
         numbers.append(int(named[1]))
-        migration = MIGRATIONS[numbers[-1] - 1]
+        migration = MIGRATIONS.step(numbers[-1])
         assert type(migration).__module__ == module.__name__, name
         assert migration.version == numbers[-1], name
         assert type(migration).__name__.startswith(f"V{numbers[-1]:04d}"), name
@@ -499,7 +544,7 @@ RELEASED = {
 
 
 def fingerprint(number: int) -> str:
-    return MIGRATIONS[number - 1].fingerprint()
+    return MIGRATIONS.step(number).fingerprint()
 
 
 @pytest.mark.parametrize("number", sorted(RELEASED))

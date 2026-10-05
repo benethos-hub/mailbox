@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from .migration import Migration
+from ..migration import Migration
 
 
 class V0009PasswordsUniqueNames(Migration):

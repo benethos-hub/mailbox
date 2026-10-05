@@ -231,8 +231,9 @@ packages/mailbox-service/
                         #   signin.py its endpoints and the scopes it needs
       storage/          # own records, one module per subject, table.py
                         #   for the in-memory ones, sqlite/ the database,
-                        #   sqlite/migrations/ one class per schema
-                        #   version, repositories.py opens one of them
+                        #   sqlite/migrations/ the base, the registry,
+                        #   versions/ one class per schema version,
+                        #   repositories.py opens one of them
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials
       backup.py         # encrypted backups of the database, restore

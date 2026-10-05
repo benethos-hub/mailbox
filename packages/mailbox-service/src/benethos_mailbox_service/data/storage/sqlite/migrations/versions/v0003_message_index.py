@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .migration import Migration
+from ..migration import Migration
 
 
 class V0003MessageIndex(Migration):

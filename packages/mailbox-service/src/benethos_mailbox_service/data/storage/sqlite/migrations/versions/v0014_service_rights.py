@@ -4,7 +4,7 @@ their grants (PERMISSIONS.md 8.1). Schema 15 fills it.
 
 from __future__ import annotations
 
-from .migration import Migration
+from ..migration import Migration
 
 
 class V0014ServiceRights(Migration):

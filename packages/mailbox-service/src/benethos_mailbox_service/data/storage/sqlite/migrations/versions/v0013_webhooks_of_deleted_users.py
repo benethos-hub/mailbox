@@ -4,7 +4,7 @@ before were posted to by nobody's rights, and nobody could remove them.
 
 from __future__ import annotations
 
-from .migration import Migration
+from ..migration import Migration
 
 
 class V0013WebhooksOfDeletedUsers(Migration):

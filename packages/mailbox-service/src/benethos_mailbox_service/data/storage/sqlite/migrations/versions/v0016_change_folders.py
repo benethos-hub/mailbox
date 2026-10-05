@@ -5,7 +5,7 @@ Changes logged before have none.
 
 from __future__ import annotations
 
-from .migration import Migration
+from ..migration import Migration
 
 
 class V0016ChangeFolders(Migration):

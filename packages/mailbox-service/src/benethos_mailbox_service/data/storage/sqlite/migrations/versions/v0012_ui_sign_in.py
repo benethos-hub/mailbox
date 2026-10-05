@@ -4,7 +4,7 @@ far keep it, those without are API users.
 
 from __future__ import annotations
 
-from .migration import Migration
+from ..migration import Migration
 
 
 class V0012UiSignIn(Migration):

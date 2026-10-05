@@ -812,8 +812,16 @@ MIGRATIONS: tuple[Migration, ...] = (V0001AccountsUsers(), V0002Credentials(), .
 SCHEMA_VERSION = MIGRATIONS[-1].version
 ```
 
-`Database._migrate` calls `migration.apply(db)` and writes
-`migration.version` to `meta`. The rest of it stays.
+`Migrations`, in `registry.py`, is what the tuple was: the steps in
+order, checked as it is made to be numbered from 1 without a gap. It
+knows `schema_version`, gives a `step` by its version and the steps
+`pending` for a database at a version, and it owns the table `meta`:
+`prepare`, `version_of`, and `apply`, which runs one step and records
+its version. `Database._migrate` opens a transaction per pending step
+and calls `apply`. The rest of it stays, and `__init__.py` holds the
+enumeration alone. The steps move to a package of their own,
+`migrations/versions/`, so the base and the registry stand apart from
+what is run once and never changes.
 
 The fingerprint covers the statements, not the Python of `before`,
 today as after. A hash over source breaks on a comment. That a shipped
@@ -849,8 +857,10 @@ One branch from `main`, one pull request, each step passing all checks:
    becomes a class `VNNNN<Subject>` with `version` and `statements` as
    a tuple, the statement texts untouched, 9 and 15 with `before` as a
    method.
-   `__init__.py` lists the instances. `Database._migrate` calls
-   `apply`.
+   `__init__.py` lists the instances in a `Migrations` registry,
+   `registry.py`, which owns `meta` and runs a step. The sixteen modules
+   move to `versions/`.
+   `Database._migrate` asks it for the pending steps and calls `apply`.
 4. The tests: `fingerprint` from the class, one test more that
    `version` is the number in the module's name, `RELEASED` as it is.
 5. CLAUDE.md's convention and ARCHITECTURE.md's two lines about

@@ -26,7 +26,7 @@ import json
 import sqlite3
 from typing import Any
 
-from .migration import Migration
+from ..migration import Migration
 
 _SERVICE_GROUPS = ("users.manage", "webhooks.manage")
 _SERVICE_OPERATIONS = (
