@@ -39,6 +39,9 @@ COPY --from=build /opt/venv /opt/venv
 # service listens on every interface. The compose file publishes the port on
 # the host's loopback address alone (CONCEPT 8.1). The master key is a file,
 # mounted as a secret.
+# The build warns SecretsUsedInArgOrEnv for KEY_PROVIDER and KEY_FILE: the
+# check reads names alone. Both say where the key comes from and hold no
+# secret, so the warning stays and is no fault (containers/README.md).
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     MAILBOX_SERVICE_HOST=0.0.0.0 \
