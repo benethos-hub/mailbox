@@ -255,6 +255,14 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   constraint `folders` (8.5), the audit of administration (8.6) on its
   own branch. `identities` (8.5) waits for identities in the account
   model
+- **The API and the UI show the same data**, decided 2026-10-06, done:
+  the UI's filters of sends, users, accounts and webhooks at the API with
+  the same query names, a user's sign-in to the UI in `UserInfo`,
+  keywords in the UI, and `GET /v1/status` with `get_status` in
+  `accounts.read`
+- Paging for the lists that answer everything at once: accounts, users,
+  roles, tokens, webhooks and folders. Decided 2026-10-06 as the next
+  item. Its design in CONCEPT.md comes first
 - `pop3` adapter (5.2)
 - **The domain in packages by area, and the change feed as typed
   classes like the activities ([REFACTORING.md](REFACTORING.md))**,
