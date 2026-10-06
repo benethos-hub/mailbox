@@ -7810,6 +7810,114 @@
         },
         "x-permission": "audit"
       }
+    },
+    "/v1/status": {
+      "get": {
+        "tags": [
+          "status"
+        ],
+        "summary": "Get Status",
+        "description": "The sync worker and the accounts the caller may see the status of:\nhow their last pass went and whether one needs a look. Nothing is\nasked of a provider, so it suits a monitor. Kept in memory: empty\nagain after a restart. The caller's failing webhooks are\n`GET /v1/webhooks?failing=true`.",
+        "operationId": "get_status",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-permission": "accounts.read"
+      }
     }
   },
   "components": {
@@ -7965,6 +8073,91 @@
           "disabled"
         ],
         "title": "AccountStatus"
+      },
+      "AccountSync": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/ProviderType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountStatus"
+          },
+          "synced": {
+            "type": "boolean",
+            "title": "Synced",
+            "description": "Whether a sync pass does anything for it"
+          },
+          "watching": {
+            "type": "boolean",
+            "title": "Watching",
+            "description": "Whether a watcher waits for its server to report a change"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At",
+            "description": "The last pass that succeeded, null for none since the start"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error",
+            "description": "Why the last pass failed. A pass that succeeds clears it"
+          },
+          "last_error_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error At"
+          },
+          "attention": {
+            "type": "boolean",
+            "title": "Attention",
+            "description": "Whether a person should look: the account is not connected, or its last pass failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "provider",
+          "status",
+          "synced",
+          "watching",
+          "last_sync_at",
+          "last_error",
+          "last_error_at",
+          "attention"
+        ],
+        "title": "AccountSync",
+        "description": "An account and how its sync goes."
       },
       "AccountUpdate": {
         "properties": {
@@ -10344,6 +10537,35 @@
         ],
         "title": "ServerProtocol"
       },
+      "ServiceStatus": {
+        "properties": {
+          "worker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkerStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the worker is switched off"
+          },
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountSync"
+            },
+            "type": "array",
+            "title": "Accounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "worker",
+          "accounts"
+        ],
+        "title": "ServiceStatus",
+        "description": "The sync worker and the accounts. Nothing is asked of a provider\nfor it."
+      },
       "SourceOutcome": {
         "type": "string",
         "enum": [
@@ -11085,6 +11307,53 @@
         ],
         "title": "WebhookPost",
         "description": "One post to a webhook's receiver."
+      },
+      "WorkerStatus": {
+        "properties": {
+          "interval": {
+            "type": "number",
+            "title": "Interval",
+            "description": "Seconds between two rounds over the accounts"
+          },
+          "push": {
+            "type": "boolean",
+            "title": "Push",
+            "description": "Whether watchers wait for a server to report a change"
+          },
+          "last_pass_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Pass At",
+            "description": "When the last round ended, null before the first"
+          },
+          "watchers": {
+            "type": "integer",
+            "title": "Watchers",
+            "description": "How many accounts watchers may wait on at once"
+          },
+          "watching": {
+            "type": "integer",
+            "title": "Watching",
+            "description": "How many accounts watchers wait on now, of every account"
+          }
+        },
+        "type": "object",
+        "required": [
+          "interval",
+          "push",
+          "last_pass_at",
+          "watchers",
+          "watching"
+        ],
+        "title": "WorkerStatus",
+        "description": "What the sync worker does. Kept in its memory: empty again after a\nrestart."
       }
     },
     "securitySchemes": {

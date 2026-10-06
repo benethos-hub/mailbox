@@ -25,7 +25,9 @@ AUTHENTICATED = "authenticated"
 AUTHENTICATED_OPERATIONS: frozenset[str] = frozenset({"get_me", "list_permissions"})
 
 GROUPS: dict[str, tuple[str, ...]] = {
-    "accounts.read": ("list_accounts", "get_account"),
+    # get_status: the accounts' sync and the worker, for the accounts the
+    # caller may list.
+    "accounts.read": ("list_accounts", "get_account", "get_status"),
     "mail.read": (
         "list_all_messages",
         "list_folders",

@@ -646,6 +646,13 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
 | GET | `/v1/providers` | the built-in presets, the same data discovery uses first |
+| GET | `/v1/status` | the sync worker and the accounts the caller may see the status of, as the UI's status page shows them. Nothing is asked of a provider |
+
+**Decided 2026-10-06, the status at the API:** `get_status` in
+`accounts.read`, for the accounts the caller may list. The worker names
+how many accounts it watches, never which. Webhooks are not part of it:
+`GET /v1/webhooks?failing=true` names the failing ones. The MCP server
+has no tool for it.
 
 ### 6.2 Folders
 
@@ -1161,7 +1168,7 @@ with the role
 
   | Group | Operations |
   |---|---|
-  | `accounts.read` | `list_accounts`, `get_account` |
+  | `accounts.read` | `list_accounts`, `get_account`, `get_status` |
   | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_changes`, `list_all_changes`, and the planned `list_threads`, `get_thread` |
   | `mail.write` | `update_message`, `delete_message` to trash, `batch_messages`, `create_folder`, `update_folder` |
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |

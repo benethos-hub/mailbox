@@ -75,10 +75,10 @@ class StatusService:
         return self._sync.state(account_id)
 
     def status(self, access: Access) -> ServiceStatus:
-        """The accounts the caller may list, the worker and the caller's
-        webhooks."""
+        """The accounts the caller may list and see the status of, the
+        worker and the caller's webhooks."""
         if not access.sees_status():
-            raise ForbiddenError("missing right: list_accounts")
+            raise ForbiddenError("missing right: get_status")
         worker = self._worker.state() if self._worker is not None else None
         watching = worker.watching if worker is not None else frozenset()
         accounts = [
@@ -88,7 +88,7 @@ class StatusService:
                 synced=self._sync.watched(account.id),
                 watching=account.id in watching,
             )
-            for account in self._accounts.list(access)
+            for account in self._accounts.list(access, may="get_status")
         ]
         webhooks = (
             self._webhooks.list_webhooks(access)

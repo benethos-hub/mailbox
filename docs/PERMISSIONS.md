@@ -55,7 +55,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 
 | Group | Rights | Bound to |
 |---|---|---|
-| `accounts.read` | `list_accounts`, `get_account` | an account |
+| `accounts.read` | `list_accounts`, `get_account`, `get_status` | an account |
 | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_changes`, `list_all_changes` | an account |
 | `mail.write` | `update_message`, `delete_message` (to the trash), `batch_messages`, `create_folder`, `update_folder` | an account |
 | `mail.delete` | `delete_message_permanent`, `delete_folder` | an account |

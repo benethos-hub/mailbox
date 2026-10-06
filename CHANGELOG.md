@@ -64,6 +64,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   password still to be changed.
 - The UI shows a message's keywords in the list and adds or removes them
   on the message. Those starting with `$` stay as they are.
+- `GET /v1/status` (`get_status`, in `accounts.read`): the sync worker
+  and the accounts the caller may see the status of, as the UI's status
+  page shows them. Per account its status, the last pass, the last error
+  and whether it needs a look. Nothing is asked of a provider. The UI's
+  status page needs `get_status` too, which `accounts.read` holds.
 
 ### Changed
 
