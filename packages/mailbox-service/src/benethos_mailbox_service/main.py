@@ -229,17 +229,6 @@ def build_services(
             activity=activity,
             sent=sends.sent_recently,
         )
-        accounts = AccountService(
-            repos.accounts,
-            vault,
-            adapters,
-            on_delete=sync.forget_account,
-            on_connect=users.connected,
-            check_host=fetcher.checked_address,
-            idempotency=repos.idempotency,
-            changes=changes,
-            activity=activity,
-        )
         worker = (
             SyncWorker(
                 adapters,
@@ -252,6 +241,18 @@ def build_services(
             )
             if settings.sync_interval
             else None
+        )
+        accounts = AccountService(
+            repos.accounts,
+            vault,
+            adapters,
+            on_delete=sync.forget_account,
+            on_connect=users.connected,
+            on_ready=worker.take_up if worker is not None else None,
+            check_host=fetcher.checked_address,
+            idempotency=repos.idempotency,
+            changes=changes,
+            activity=activity,
         )
         webhooks = WebhookService(
             repos.webhooks, vault, changes, clock=clock, activity=activity

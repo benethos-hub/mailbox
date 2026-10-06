@@ -5,9 +5,8 @@
 
 A service of its own runs as a process, with SQLite in a temporary folder.
 Both accounts of the test server connect over JMAP with their passwords,
-then the service starts again, so its worker takes them up at once. It
-polls only every ten minutes: what it reports in between came through the
-server's push. Then:
+and its worker takes them up at once. It polls only every ten minutes:
+what it reports in between came through the server's push. Then:
 
 1. the first sends one mail to the second through JMAP, and keeps a read
    copy in its sent folder,
@@ -93,12 +92,8 @@ def main() -> int:
         headers = {"Authorization": f"Bearer {admin.token}"}
         with httpx.Client(base_url=url, headers=headers, timeout=60) as client:
             ids = connect(run, client, sender, receiver)
-        if ids is None:
-            return run.finish()
-        stop(process)
-        process = start_service(service, url, init_keys=False)
-        with httpx.Client(base_url=url, headers=headers, timeout=60) as client:
-            checks(run, client, ids, receiver)
+            if ids is not None:
+                checks(run, client, ids, receiver)
     finally:
         stop(process)
         shutil.rmtree(data_dir, ignore_errors=True)
@@ -151,7 +146,7 @@ def checks(
         return bool(found.get("last_sync_at") and found.get("watching"))
 
     if not run.check(
-        "the worker synced it and waits for a push",
+        "the worker took it up at once: synced, waiting for a push",
         bool(polled(ready, tries=30, pause=1.0)),
     ):
         return

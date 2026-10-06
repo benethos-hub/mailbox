@@ -268,6 +268,9 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   decided 2026-10-06, done: accounts and users, in the API and the UI,
   with one generic pager for lists held whole. Roles, tokens, webhooks
   and folders stay one list
+- **The worker takes up an account at once (6.5)**, decided 2026-10-06,
+  done: connected, changed or verified, it is synced and watched
+  without waiting for the next round
 - **`pop3` adapter (5.2)**, decided 2026-10-06, done: one inbox, read
   and deleted for good, polled by the sync. Accounts and `/v1/me` name
   their capabilities, the UI and the MCP server go by them. Discovery

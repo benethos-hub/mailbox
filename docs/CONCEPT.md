@@ -877,7 +877,12 @@ Changes made through the API enter the feed for every provider. A
 `since` older than the kept changes answers `410 changes_expired`, and
 the client starts again from a new state. Without `since`, the answer
 holds no changes, only the current state. The first sync of an account
-records no changes: the messages already there are not new. The feed may
+records no changes: the messages already there are not new. **Decided
+2026-10-06:** the worker takes an account up at once when it is connected,
+its servers or credential change, or it is verified, not at its next
+round: its first sync runs then, and a watcher starts where the server
+can push. A mail that arrives after that first sync is in the feed. With
+the worker off, nothing changes. The feed may
 name a change more than once, e.g. a flag set through the API and seen
 again through CONDSTORE. A client treats a repeated entry as harmless.
 
