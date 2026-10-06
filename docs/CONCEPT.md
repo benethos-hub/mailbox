@@ -1634,7 +1634,10 @@ mode, since it would put the service package into the MCP installation.
 - API tests run against the `memory` adapter through `TestClient`.
 - IMAP adapter tests use a fake `IMAPClient` object at the library boundary.
   Additionally a Stalwart container, which speaks IMAP, SMTP and JMAP,
-  for an optional integration job (5.6).
+  for an optional integration job (5.6). The container is
+  `containers/test-mail-server/`, since 2026-10-06: IMAP, POP3, SMTP and
+  JMAP, two accounts and a local test CA, made by `setup.sh` on any
+  machine with Docker. The integration job is not built yet.
 - Gmail and Graph adapter tests use `httpx.MockTransport` with recorded,
   anonymized response shapes.
 - `live/` holds manual smoke scripts, outside `testpaths`. They run

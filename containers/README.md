@@ -14,7 +14,10 @@ containers/
     Dockerfile                   # build context: the repository root
   benethos-mailbox-mcp/
     Dockerfile                   # the MCP server over streamable HTTP
-  secrets/                       # local, not versioned: master_key
+  test-mail-server/              # Stalwart as a mail server for tests,
+                                 #   set up by setup.sh, see its README.md
+  secrets/                       # local, not versioned: master_key, the
+                                 #   test mail server's passwords and CA
 ```
 
 How to start and run them, with `docker run` or with compose:

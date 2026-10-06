@@ -89,6 +89,10 @@ done. Update the roadmap in the same commit that finishes an item.
   from it to the first test account and deletes it for good on both sides,
   and checks that the change feed learns of the sent copy through Graph
   delta queries.
+- A test mail server of our own: `sh containers/test-mail-server/setup.sh`
+  makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
+  `127.0.0.1:30xxx`, two accounts and a local test CA
+  (`containers/test-mail-server/README.md`).
 
 ## Project layout
 
@@ -103,7 +107,9 @@ data/                     # one folder per package, created when missing,
 live/                     # manual checks against the test accounts,
                           #   what they share in _common.py
 containers/               # one folder per image, compose.yaml, README.md,
-                          #   secrets/ local (the master key)
+                          #   test-mail-server/ (Stalwart for tests),
+                          #   secrets/ local (the master key, the test
+                          #   mail server's passwords and CA)
 .github/workflows/        # ci.yml: checks, fresh install, lowest
                           #   versions, images,
                           #   publish.yml: on a release both packages to
