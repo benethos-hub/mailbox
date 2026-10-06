@@ -136,6 +136,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The sync worker takes up an account at once when it is connected, its
+  servers or credential change, or it is verified after a rejected login.
+  Before, it waited for its next round, 5 minutes by default: a mail that
+  arrived in between never reached the change feed, and push started
+  late.
 - **Breaking:** `containers/compose.yaml` moved to `containers/dev/` and
   builds from the repository only. `MAILBOX_SERVICE_IMAGE` and
   `MAILBOX_MCP_IMAGE` are gone: the published images run from

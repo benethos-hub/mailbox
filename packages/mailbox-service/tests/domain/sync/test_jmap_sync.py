@@ -5,6 +5,7 @@ it, a push wakes the worker, and the API serves the account as any other."""
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import httpx
 import pytest
@@ -39,6 +40,14 @@ def server() -> FakeJmap:
 
 @pytest.fixture
 def jmap_services(server: FakeJmap, monkeypatch: pytest.MonkeyPatch) -> Services:
+    return services_for(server, monkeypatch)
+
+
+def services_for(
+    server: FakeJmap, monkeypatch: pytest.MonkeyPatch, **settings: Any
+) -> Services:
+    """The services, with JMAP accounts against ``server``. ``settings``
+    change those of the tests."""
     monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
 
     def factory(
@@ -52,7 +61,9 @@ def jmap_services(server: FakeJmap, monkeypatch: pytest.MonkeyPatch) -> Services
             http=ServerClient(transport=httpx.MockTransport(server)),
         )
 
-    services = build_services(Settings(storage="memory"), provider_factory=factory)
+    services = build_services(
+        Settings(storage="memory", **settings), provider_factory=factory
+    )
     services.vault.initialize()
     return services
 

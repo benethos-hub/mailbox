@@ -4,13 +4,17 @@ Every ``interval`` seconds it syncs each account whose ids are mapped. Where
 the provider can push, a watcher per account waits for the server to report
 a change (IMAP IDLE, JMAP's event source) and syncs at once, at most
 ``watchers`` of them: an IMAP watcher holds a thread for as long as it
-waits. Further accounts are
-polled only. Accounts whose login was rejected are left alone until they
-are verified.
+waits. Further accounts are polled only. Accounts whose login was rejected
+are left alone until they are verified.
+
+An account connected, changed or verified is taken up at once, not at the
+next round: its first sync sets the state the change feed counts from, so
+a mail that arrives after it is reported.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -18,6 +22,7 @@ from functools import partial
 
 import anyio
 from anyio.abc import TaskGroup
+from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
 from ...common.clock import utc_now
 from ...common.ratelimit import backoff
@@ -83,6 +88,8 @@ class SyncWorker:
         # Accounts told they are polled only, once each while it lasts.
         self._postponed: set[str] = set()
         self._last_pass_at: datetime | None = None
+        # Accounts to take up at once, while the worker runs.
+        self._taken: MemoryObjectSendStream[str] | None = None
 
     def state(self) -> WorkerState:
         return WorkerState(
@@ -98,30 +105,60 @@ class SyncWorker:
         self._activity.record(
             said.WorkerStarted(by=WORKER, interval=self._interval, push=self._push)
         )
-        async with anyio.create_task_group() as watchers:
-            await rounds(
-                lambda: self.poll(watchers),
-                pause=self._interval,
-                sleep=self._sleep,
-                activity=self._activity,
-                by=WORKER,
-            )
+        taken, waiting = anyio.create_memory_object_stream[str](math.inf)
+        self._taken = taken
+        try:
+            async with anyio.create_task_group() as watchers:
+                watchers.start_soon(self._taking_up, waiting, watchers)
+                await rounds(
+                    lambda: self.poll(watchers),
+                    pause=self._interval,
+                    sleep=self._sleep,
+                    activity=self._activity,
+                    by=WORKER,
+                )
+        finally:
+            self._taken = None
+            taken.close()
+
+    def take_up(self, account_id: str) -> None:
+        """Sync an account and watch it at once, not at the next round: one
+        just connected, changed or verified. Returns at once, the work runs
+        in the worker. Before the worker runs, nothing: its first round
+        takes every account up."""
+        # A changed server may offer what the old one did not.
+        self._no_push.discard(account_id)
+        if self._taken is not None:
+            self._taken.send_nowait(account_id)
+
+    async def _taking_up(
+        self, waiting: MemoryObjectReceiveStream[str], watchers: TaskGroup
+    ) -> None:
+        """Each account handed to ``take_up``, in a task of its own: a long
+        first sync holds up no other."""
+        async with waiting:
+            async for account_id in waiting:
+                watchers.start_soon(self._turn, account_id, watchers)
 
     async def poll(self, watchers: TaskGroup | None = None) -> None:
         """One round over every account, one after the other."""
         for account_id in self._adapters.ids():
-            try:
-                if not self._wanted(account_id):
-                    continue
-                if watchers is not None and self._push_for(account_id):
-                    self._start_watching(watchers, account_id)
-                await self._sync.sync_account(account_id)
-            except NotFoundError:
-                continue  # deleted meanwhile
-            except Exception as exc:
-                # A bug in one adapter must not stop the sync of the others.
-                self._failed(account_id, exc)
+            await self._turn(account_id, watchers)
         self._last_pass_at = self._clock()
+
+    async def _turn(self, account_id: str, watchers: TaskGroup | None) -> None:
+        """Sync one account, and watch it where it can push."""
+        try:
+            if not self._wanted(account_id):
+                return
+            if watchers is not None and self._push_for(account_id):
+                self._start_watching(watchers, account_id)
+            await self._sync.sync_account(account_id)
+        except NotFoundError:
+            return  # deleted meanwhile
+        except Exception as exc:
+            # A bug in one adapter must not stop the sync of the others.
+            self._failed(account_id, exc)
 
     def _start_watching(self, watchers: TaskGroup, account_id: str) -> None:
         """A watcher for the account, while there is room for one. Past

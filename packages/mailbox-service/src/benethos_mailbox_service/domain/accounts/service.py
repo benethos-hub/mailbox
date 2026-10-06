@@ -37,7 +37,9 @@ class AccountService:
     adapters in ``adapters``. Every method checks the caller's right.
     ``on_delete`` hears of an account deleted, with its id: the sync
     forgets its state there. ``on_connect`` hears of an account connected,
-    with the caller and its id: the caller gets ``accounts.manage`` there."""
+    with the caller and its id: the caller gets ``accounts.manage`` there.
+    ``on_ready`` hears of an account connected, changed or verified, with
+    its id: the sync worker takes it up at once."""
 
     def __init__(
         self,
@@ -46,6 +48,7 @@ class AccountService:
         adapters: Adapters,
         on_delete: Callable[[str], None] | None = None,
         on_connect: Callable[[Access, str], None] | None = None,
+        on_ready: Callable[[str], None] | None = None,
         check_host: HostCheck | None = None,
         idempotency: IdempotencyRepository | None = None,
         changes: ChangeFeed | None = None,
@@ -57,6 +60,7 @@ class AccountService:
         self._adapters = adapters
         self._on_delete = on_delete
         self._on_connect = on_connect
+        self._on_ready = on_ready
         self._idempotency = idempotency
         self._changes = changes
         # Every host in an account's settings passes this before the first
@@ -174,6 +178,7 @@ class AccountService:
         )
         if self._on_connect is not None:
             self._on_connect(access, account.id)
+        self._ready(account.id)
         return self._with_credentials(account)
 
     async def update(
@@ -239,6 +244,7 @@ class AccountService:
             # builds a new one.
             await self._adapters.drop(account_id)
             self._adapters.set_status(account_id, AccountStatus.CONNECTED)
+            self._ready(account_id)
         if what:
             self._activity.record(
                 said.AccountChanged(
@@ -256,6 +262,8 @@ class AccountService:
         self._activity.record(
             said.AccountVerified(by=Actor.of(access), account=account)
         )
+        # A rejected login left the account alone until now.
+        self._ready(account_id)
         return self._with_credentials(account)
 
     async def delete(self, access: Access, account_id: str) -> None:
@@ -271,6 +279,10 @@ class AccountService:
         self._repository.delete(account_id)
         await self._adapters.drop(account_id)
         self._activity.record(said.AccountRemoved(by=Actor.of(access), account=account))
+
+    def _ready(self, account_id: str) -> None:
+        if self._on_ready is not None:
+            self._on_ready(account_id)
 
     def signs_in_with_oauth(self, provider: ProviderType) -> bool:
         """Whether accounts of ``provider`` connect through an OAuth app of
