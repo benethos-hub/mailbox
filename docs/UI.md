@@ -152,6 +152,11 @@ middle, the message where the list was when one is opened, with **Back
 to the list** at the top. Not a three-pane client. The rework keeps this
 layout and gives it the filter bar and the pager of every other list.
 
+A message shows its keywords, and the list shows them as tags. Whoever
+may change the message adds or removes one there, one at a time.
+Keywords starting with `$`, such as `$answered`, belong to the mail
+protocol: they show beside the flags and are not changed in the UI.
+
 ### 4.5 The filter bar
 
 One component above every list that filters. Always the same shape:
@@ -435,6 +440,8 @@ All four steps are done, as the roadmap's phase 4b records.
   contrast rule of section 7.
 - 2026-10-06: the filters of Sends, Users, Accounts and Webhooks at the
   API as well, the UI's query names those of the API (4.5).
+- 2026-10-06: keywords in the UI, on one message at a time, those of
+  the mail protocol not changed there (4.4).
 
 The Service card of the overview shows to everyone with `accounts.read`,
 and Accounts, Users and Roles list everything with the pager hidden,

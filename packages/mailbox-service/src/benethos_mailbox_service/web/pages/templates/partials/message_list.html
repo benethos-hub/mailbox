@@ -28,6 +28,7 @@
           {% if m.starred %}<span class="tag warn" title="starred">★</span>{% endif %}
           {% if m.has_attachments %}<span class="tag" title="has attachments">📎</span>{% endif %}
           {% if "$answered" in m.keywords %}<span class="tag" title="answered">↩</span>{% endif %}
+          {% for keyword in m.keywords | own_keywords %}<span class="tag">{{ keyword }}</span>{% endfor %}
         </td>
       </tr>
       {% endfor %}

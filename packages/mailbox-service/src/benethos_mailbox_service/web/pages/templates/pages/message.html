@@ -12,6 +12,7 @@
 {% if can_raw %}<a class="btn" href="/ui/accounts/{{ account.id }}/mail/{{ message.id }}/raw">Download original</a>{% endif %}
 {% endblock %}
 {% block content %}
+{% set url = "/ui/accounts/" ~ account.id ~ "/mail/" ~ message.id %}
 <p class="back"><a href="{{ back_to }}">← Back to the list</a></p>
 <section class="card">
   <div class="body">
@@ -22,17 +23,28 @@
       {% if message.bcc %}<dt>Bcc</dt><dd>{{ message.bcc | addresses }}</dd>{% endif %}
       {% if message.reply_to %}<dt>Reply to</dt><dd>{{ message.reply_to | addresses }}</dd>{% endif %}
       <dt>Date</dt><dd>{{ message.date | when }}</dd>
+      {% set own = message.keywords | own_keywords %}
       <dt>Flags</dt>
       <dd>
         {{ "unread" if message.unread else "read" }}{% if message.starred %}, starred{% endif %}
-        {% for keyword in message.keywords %}<span class="tag">{{ keyword }}</span> {% endfor %}
+        {% for keyword in message.keywords if keyword not in own %}<span class="tag">{{ keyword }}</span> {% endfor %}
+      </dd>
+      <dt>Keywords</dt>
+      <dd>
+        {% for keyword in own %}<span class="tag">{{ keyword }}</span>{% if can.change %} {{ action(url ~ "/keywords", "Remove " ~ keyword, fields={"remove": keyword}) }}{% endif %} {% else %}{{ "—" if not can.change }}{% endfor %}
+        {% if can.change %}
+        <form class="inline toolbar" method="post" action="{{ url }}/keywords">
+          {{ csrf_field() }}
+          <input name="add" aria-label="New keyword" placeholder="New keyword" maxlength="100" />
+          <button class="small" type="submit">Add</button>
+        </form>
+        {% endif %}
       </dd>
       <dt>Id</dt><dd class="mono">{{ message.id }}</dd>
     </dl>
   </div>
 </section>
 
-{% set url = "/ui/accounts/" ~ account.id ~ "/mail/" ~ message.id %}
 {% if can.change or can.trash or can.purge %}
 <section class="card">
   <div class="body toolbar">

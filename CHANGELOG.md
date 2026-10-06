@@ -62,6 +62,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   the next sign-in) and `last_sign_in_at`. The schema is `UserInfo`, the
   fields of `User` and these three. The user's page in the UI names a
   password still to be changed.
+- The UI shows a message's keywords in the list and adds or removes them
+  on the message. Those starting with `$` stay as they are.
 
 ### Changed
 

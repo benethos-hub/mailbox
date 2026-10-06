@@ -73,6 +73,12 @@ def or_missing(value: Any) -> Any:
     return MISSING if value is None or value == "" else value
 
 
+def own_keywords(values: Iterable[str]) -> list[str]:
+    """The keywords a person sets. Those starting with ``$``, such as
+    ``$answered``, belong to the mail protocol (docs/UI.md, 4.4)."""
+    return [value for value in values if not value.startswith("$")]
+
+
 def segment(value: str) -> str:
     """Free text as one part of a path, e.g. a role name."""
     return quote(str(value), safe="")
@@ -86,6 +92,7 @@ templates.env.filters.update(
     address=address,
     addresses=addresses,
     or_missing=or_missing,
+    own_keywords=own_keywords,
     segment=segment,
 )
 templates.env.globals.update(APP_NAME="Mailbox", VERSION=__version__)

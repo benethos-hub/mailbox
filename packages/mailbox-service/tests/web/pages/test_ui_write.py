@@ -41,6 +41,37 @@ def test_flags_on_a_message(
     assert "Unstar" in ui.get(url).text
 
 
+def test_keywords_on_a_message(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    adapter = memory_of(services, account_id)
+
+    def held() -> list[str]:
+        return next(m for m in adapter.messages if m.id == "m3").keywords
+
+    held().append("$answered")
+    url = f"/ui/accounts/{account_id}/mail/m3"
+    post(ui, f"{url}/keywords", {"add": "  project-x "})
+    post(ui, f"{url}/keywords", {"add": "later"})
+    post(ui, f"{url}/keywords", {"add": "LATER"})  # held already
+    assert held() == ["$answered", "later", "project-x"]
+    page = ui.get(url).text
+    assert "Remove project-x" in page and "Remove $answered" not in page
+    post(ui, f"{url}/keywords", {"remove": "project-x"})
+    assert held() == ["$answered", "later"]
+    listing = ui.get(f"/ui/accounts/{account_id}/mail").text
+    assert '<span class="tag">later</span>' in listing
+    assert '<span class="tag">$answered</span>' not in listing
+    for refused, reason in (
+        ("$junk", "belong to the mail protocol"),
+        ("two words", "without spaces"),
+        ("", "Type a keyword."),
+    ):
+        answer = post(ui, f"{url}/keywords", {"add": refused})
+        assert reason in html.unescape(answer.text), refused
+    assert held() == ["$answered", "later"]
+
+
 def test_move_trash_and_purge_a_message(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
@@ -70,6 +101,7 @@ def test_a_reader_gets_no_buttons(
     )
     page = app_client.get(f"/ui/accounts/{account_id}/mail/m1").text
     assert "Mark unread" not in page and "Reply" not in page and "Move" not in page
+    assert "New keyword" not in page
     listing = app_client.get(f"/ui/accounts/{account_id}/mail").text
     assert 'id="batch"' not in listing and "Write" not in listing
     refused = post(
