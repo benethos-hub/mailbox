@@ -288,6 +288,11 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   version, Caddy for HTTPS as a profile, `setup.sh` for the first start.
   The MCP server runs with each client, an instance per client. `containers/` holds `images/`, and `dev/`,
   `production/` and `test-mail-server/` each with its own `secrets/`
+- **MCP server instances and certificates in operation (8.1)**, decided
+  2026-10-06, done: instances beside the service from the template
+  `mcp.yaml` with the profile `mcp`, reached on `127.0.0.1` or through a
+  route of Caddy each. `MAILBOX_TLS` picks Let's Encrypt, Caddy's CA or
+  a certificate of your own
 
 ## Keeping this file current
 

@@ -1,13 +1,15 @@
 # Mailbox in operation: the published images from the GitHub container
 # registry, nothing built. It needs no clone of the repository, only this
 # folder: this file, an .env beside it (template .env.example), the
-# Caddyfile for the profile https and secrets/master_key. README.md says
-# how to set it up, setup.sh does the first start.
+# Caddyfile and caddy.d/ for the profile https, mcp.yaml for MCP server
+# instances and secrets/master_key. README.md says how to set it up,
+# setup.sh does the first start.
 #
 # The service listens on the loopback address of the host (CONCEPT 8.1).
 # Only Caddy, with the profile https, listens on every address, on the
 # ports 80 and 443. The MCP server is not here: each client starts one of
-# its own, with its own token (README.md, "Clients").
+# its own, or instances run beside the service with the profile mcp,
+# from compose.override.yaml (README.md, "Clients").
 
 # The name of the compose file before, so its volume of data stays.
 name: benethos-mailbox
@@ -56,9 +58,10 @@ services:
       - no-new-privileges:true
 
   # HTTPS in front, with the profile https: Caddy gets a certificate for
-  # MAILBOX_DOMAIN from Let's Encrypt and passes the requests on to the
-  # service. Without a domain it serves localhost with a certificate of its
-  # own CA.
+  # MAILBOX_DOMAIN as MAILBOX_TLS says (Caddyfile) and passes the requests
+  # on to the service, and to MCP server instances by the routes in
+  # caddy.d/. Without a domain it serves localhost with a certificate of
+  # its own CA.
   caddy:
     profiles: [https]
     image: caddy:2
@@ -73,8 +76,12 @@ services:
       - "443:443/udp"
     environment:
       MAILBOX_DOMAIN: ${MAILBOX_DOMAIN:-localhost}
+      MAILBOX_TLS: ${MAILBOX_TLS:-acme}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy.d:/etc/caddy/caddy.d:ro
+      # The certificate of your own, for MAILBOX_TLS=files.
+      - ./secrets/tls:/certs:ro
       - caddy-data:/data
       - caddy-config:/config
     networks:

@@ -14,8 +14,11 @@ containers/
     mailbox-mcp/Dockerfile       # the MCP server over streamable HTTP
   production/                    # in operation, the published images:
     compose.yaml                 #   the service, Caddy for HTTPS (profile
-                                 #   https). Each client runs its own MCP
-                                 #   server
+                                 #   https)
+    mcp.yaml                     #   the template of an MCP server
+                                 #   instance, run from
+                                 #   compose.override.yaml (profile mcp)
+    caddy.d/                     #   the routes of Caddy to instances
     setup.sh                     # the first start, see its README.md
   dev/                           # for development, built from the repository
     compose.yaml                 # the service, the MCP server with the
@@ -79,5 +82,6 @@ it is.
 `ci.yml` builds both on every pull request and every push to `main`,
 for arm64 as well. It checks that the
 compose files in `dev/` and `production/` keep every port on the loopback
-address, all but Caddy's 80 and 443. It also starts the
+address, all but Caddy's 80 and 443, production with the instances of
+its example override file. It also starts the
 service until its health check reports healthy.

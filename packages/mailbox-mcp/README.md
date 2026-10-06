@@ -214,11 +214,16 @@ published on the host, or the host name behind a proxy.
 ### Beside a service in operation
 
 [containers/production/](https://github.com/benethos-hub/mailbox/tree/main/containers/production)
-runs the service alone. The MCP server acts as one user, with that
-user's token, so each client starts one of its own: over stdio as above,
-with `MAILBOX_SERVICE_URL` set to the service's address, for example
-`https://<MAILBOX_DOMAIN>` behind its Caddy. The container above suits a
-client that connects over HTTP, one container per token. For
+runs the service. The MCP server acts as one user, with that user's
+token, so each client has one of its own. Usually the client starts it
+over stdio as above, with `MAILBOX_SERVICE_URL` set to the service's
+address, for example `https://<MAILBOX_DOMAIN>` behind its Caddy. For a
+client that connects over HTTP, instances of this image run beside the
+service with the profile `mcp`, one per token, from the template
+`mcp.yaml`. Caddy can route to each under a path of its own, such as
+`https://<MAILBOX_DOMAIN>/mcp/agent`. Its
+[README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md#mcp-server-instances)
+has the steps, also for an instance on another host. For
 development,
 [containers/dev/compose.yaml](https://github.com/benethos-hub/mailbox/blob/main/containers/dev/compose.yaml)
 starts it beside a service built from the repository, with the profile

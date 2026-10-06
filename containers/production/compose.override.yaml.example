@@ -1,0 +1,41 @@
+# MCP server instances beside the service. Copy to compose.override.yaml,
+# which compose reads with compose.yaml, and keep one block per instance.
+# They start with the profile mcp in COMPOSE_PROFILES, never without it.
+# README.md, "MCP server instances", has the steps.
+#
+# Each instance names an env_file under secrets/mcp/ with its two tokens:
+#   MAILBOX_SERVICE_TOKEN=<the API token of the user it acts as>
+#   MAILBOX_MCP_BEARER_TOKEN=<what its clients send, openssl rand -hex 32>
+
+# What every instance on this host shares: the template, the profile, the
+# network of the service, and the start after the service.
+x-instance: &instance
+  extends:
+    file: mcp.yaml
+    service: mailbox-mcp
+  profiles: [mcp]
+  networks:
+    - mailbox
+  depends_on:
+    mailbox-service:
+      condition: service_healthy
+
+services:
+  # For a client on this host: http://127.0.0.1:8101/mcp
+  mcp-assistant:
+    <<: *instance
+    env_file: secrets/mcp/assistant.env
+    ports:
+      - "127.0.0.1:8101:8000"
+    environment:
+      MAILBOX_MCP_ALLOWED_HOSTS: 127.0.0.1:8101,localhost:8101
+
+  # For clients elsewhere, through Caddy of the profile https:
+  # https://<MAILBOX_DOMAIN>/mcp/agent, with caddy.d/agent.caddy
+  # (template caddy.d/mcp.caddy.example). It needs no port on the host.
+  mcp-agent:
+    <<: *instance
+    env_file: secrets/mcp/agent.env
+    environment:
+      MAILBOX_MCP_PATH: /mcp/agent
+      MAILBOX_MCP_ALLOWED_HOSTS: ${MAILBOX_DOMAIN:?set MAILBOX_DOMAIN in .env}

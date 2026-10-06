@@ -1,8 +1,33 @@
 # HTTPS in front of Mailbox, with the profile https of compose.yaml. Caddy
-# gets and renews the certificate for MAILBOX_DOMAIN itself, and sets
-# X-Forwarded-For, -Proto and -Host, which the service believes from
+# sets X-Forwarded-For, -Proto and -Host, which the service believes from
 # Caddy's address alone.
+#
+# MAILBOX_TLS in .env says where the certificate comes from:
+#   acme      Let's Encrypt, the default. The ports 80 and 443 must reach
+#             this host from the internet.
+#   internal  the CA of Caddy, for a network without access from the
+#             internet. Clients must trust its root certificate.
+#   files     a certificate of your own, e.g. of a company CA:
+#             secrets/tls/server.pem (with its chain) and server.key.
+
+(tls-acme) {
+}
+
+(tls-internal) {
+	tls internal
+}
+
+(tls-files) {
+	tls /certs/server.pem /certs/server.key
+}
 
 {$MAILBOX_DOMAIN} {
-	reverse_proxy mailbox-service:8080
+	import tls-{$MAILBOX_TLS}
+
+	# The routes of MCP server instances, one file each.
+	import /etc/caddy/caddy.d/*.caddy
+
+	handle {
+		reverse_proxy mailbox-service:8080
+	}
 }

@@ -1,0 +1,35 @@
+# The template of an MCP server instance in operation, the published
+# image. It starts nothing itself: each instance is a service that
+# extends it, in compose.override.yaml beside the service
+# (template compose.override.yaml.example), or in a compose file of its
+# own on another host. README.md, "MCP server instances", says how.
+#
+# An instance acts as one user, with that user's API token, and admits
+# its clients with a bearer token of its own. Both go into an env_file
+# under secrets/mcp/, never into this file or the instance's block.
+
+services:
+  mailbox-mcp:
+    image: ghcr.io/benethos-hub/benethos-mailbox-mcp:${MAILBOX_VERSION:?set MAILBOX_VERSION in .env}
+    # At most 5 files of 10 MB of log, as the service.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    restart: unless-stopped
+    environment:
+      # The service in the same compose project. On another host the
+      # instance names the service's https address instead.
+      MAILBOX_SERVICE_URL: http://mailbox-service:8080
+      # Plain http inside the compose network. An https address does not
+      # use it.
+      MAILBOX_SERVICE_ALLOW_HTTP: "1"
+      MAILBOX_MCP_LOG_LEVEL: INFO
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

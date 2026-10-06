@@ -11,12 +11,22 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `containers/production/`: Mailbox in operation from the published
   images, without a clone of the repository. `.env` names the version,
   the profile `https` puts Caddy in front with a certificate from Let's
-  Encrypt. The MCP server is not part of it: each client starts one of
-  its own, with its own token, against the service's address. `setup.sh` does the
+  Encrypt. The MCP server is not part of it by default: each client starts
+  one of its own, with its own token, against the service's address. `setup.sh` does the
   first start: the master key, the keys, the first administrator. Its
   README has the same steps by hand. It keeps the project name
   `benethos-mailbox`, so the data volume of the compose file before
   stays: copy its `secrets/master_key` over.
+- MCP server instances beside the service in `containers/production/`,
+  for clients that connect over HTTP. Each is a block in
+  `compose.override.yaml` that extends `mcp.yaml`, with the profile
+  `mcp`, one user's token and a bearer token of its own. It listens on
+  `127.0.0.1`, or Caddy routes to it under a path of its own, such as
+  `/mcp/agent`, by a file in `caddy.d/`.
+- `MAILBOX_TLS` in `containers/production/.env`: where Caddy's
+  certificate comes from. `acme` is Let's Encrypt as before, `internal`
+  Caddy's own CA, `files` a certificate of your own in `secrets/tls/`,
+  for a network without access from the internet.
 
 - Settings and data in the folders of the operating system, for an
   installation without the repository: `%LOCALAPPDATA%\benethos-mailbox-service\`
