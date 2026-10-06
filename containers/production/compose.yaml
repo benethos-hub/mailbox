@@ -1,0 +1,142 @@
+# Mailbox in operation: the published images from the GitHub container
+# registry, nothing built. It needs no clone of the repository, only this
+# folder: this file, an .env beside it (template .env.example), the
+# Caddyfile for the profile https and secrets/master_key. README.md says
+# how to set it up, setup.sh does the first start.
+#
+# The service listens on the loopback address of the host (CONCEPT 8.1).
+# Only Caddy, with the profile https, listens on every address, on the
+# ports 80 and 443.
+
+# The name of the compose file before, so its volume of data stays.
+name: benethos-mailbox
+
+# Docker keeps what a container writes to stderr, and the service writes a
+# line per request. Without a cap the log grows for as long as the container
+# runs: at most 5 files of 10 MB each, the oldest dropped first.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  mailbox-service:
+    image: ghcr.io/benethos-hub/benethos-mailbox-service:${MAILBOX_VERSION:?set MAILBOX_VERSION in .env}
+    logging: *logging
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILBOX_SERVICE_PORT:-8080}:8080"
+    volumes:
+      - data:/data
+    secrets:
+      - master_key
+    # Every other setting of the service, MAILBOX_SERVICE_*, if the file
+    # exists. Template: service.env.example.
+    env_file:
+      - path: service.env
+        required: false
+    environment:
+      # The address people reach the service at. With MAILBOX_DOMAIN it is
+      # https://MAILBOX_DOMAIN, Caddy's address.
+      MAILBOX_SERVICE_PUBLIC_URL: ${MAILBOX_SERVICE_PUBLIC_URL:-${MAILBOX_DOMAIN:+https://${MAILBOX_DOMAIN}}}
+      # Whose X-Forwarded-* headers are believed: Caddy's address in the
+      # network below. A proxy of your own on the host comes from the
+      # network's gateway, 172.30.80.1.
+      MAILBOX_SERVICE_FORWARDED_ALLOW_IPS: ${MAILBOX_SERVICE_FORWARDED_ALLOW_IPS:-172.30.80.200}
+    networks:
+      - mailbox
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  # The MCP server over streamable HTTP, with the profile mcp. It needs
+  # MAILBOX_MCP_API_TOKEN (the API token of the user it acts as) and
+  # MAILBOX_MCP_BEARER_TOKEN (what its own clients must send).
+  mailbox-mcp:
+    profiles: [mcp]
+    image: ghcr.io/benethos-hub/benethos-mailbox-mcp:${MAILBOX_VERSION:?set MAILBOX_VERSION in .env}
+    logging: *logging
+    restart: unless-stopped
+    depends_on:
+      mailbox-service:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${MAILBOX_MCP_PORT:-8000}:8000"
+    environment:
+      MAILBOX_SERVICE_URL: http://mailbox-service:8080
+      # Plain http inside the compose network.
+      MAILBOX_SERVICE_ALLOW_HTTP: "1"
+      MAILBOX_SERVICE_TOKEN: ${MAILBOX_MCP_API_TOKEN:-}
+      MAILBOX_MCP_BEARER_TOKEN: ${MAILBOX_MCP_BEARER_TOKEN:-}
+      # The Host values clients use: the port on the host, and the domain
+      # behind Caddy.
+      MAILBOX_MCP_ALLOWED_HOSTS: 127.0.0.1:${MAILBOX_MCP_PORT:-8000},localhost:${MAILBOX_MCP_PORT:-8000},${MAILBOX_DOMAIN:-}
+      MAILBOX_MCP_LOG_LEVEL: ${MAILBOX_MCP_LOG_LEVEL:-INFO}
+    networks:
+      - mailbox
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  # HTTPS in front, with the profile https: Caddy gets a certificate for
+  # MAILBOX_DOMAIN from Let's Encrypt and passes the requests on, /mcp to
+  # the MCP server and everything else to the service. Without a domain it
+  # serves localhost with a certificate of its own CA.
+  caddy:
+    profiles: [https]
+    image: caddy:2
+    logging: *logging
+    restart: unless-stopped
+    depends_on:
+      mailbox-service:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      MAILBOX_DOMAIN: ${MAILBOX_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      mailbox:
+        ipv4_address: 172.30.80.200
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+
+secrets:
+  master_key:
+    file: ./secrets/master_key
+
+volumes:
+  data:
+  caddy-data:
+  caddy-config:
+
+# A fixed address range, so the service can name Caddy's address as the
+# one proxy it believes. Docker hands out the lower half itself, Caddy's
+# address lies above it.
+networks:
+  mailbox:
+    ipam:
+      config:
+        - subnet: 172.30.80.0/24
+          ip_range: 172.30.80.0/25

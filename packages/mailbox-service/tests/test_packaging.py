@@ -65,6 +65,8 @@ PATTERNS = {
     "status": r"version (\d+\.\d+\.\d+)\.",
     "tag": r"the version \(`(\d+\.\d+\.\d+)`\)",
     "image": r"ghcr\.io/benethos-hub/benethos-mailbox-(?:service|mcp):(\d+\.\d+\.\d+)",
+    # The version the compose file of operation runs.
+    "env": r"MAILBOX_VERSION=(\d+\.\d+\.\d+)",
     # The image tag of the minor line. It stays across a patch release and
     # moves with a minor one, so it is compared with the first two parts.
     "minor": r"the minor version\s+\(`(\d+\.\d+)`\)",
@@ -72,6 +74,9 @@ PATTERNS = {
 VERSION_EXAMPLES = [
     ("README.md", "status"),
     ("containers/README.md", "status"),
+    ("containers/production/.env.example", "env"),
+    ("containers/production/README.md", "image"),
+    ("packages/mailbox-service/README.md", "env"),
     ("docs/CONCEPT.md", "status"),
     ("docs/ROADMAP.md", "status"),
     ("docs/microsoft.md", "status"),

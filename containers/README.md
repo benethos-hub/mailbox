@@ -12,6 +12,10 @@ containers/
   images/                        # what the CI builds and publishes
     mailbox-service/Dockerfile   # build context: the repository root
     mailbox-mcp/Dockerfile       # the MCP server over streamable HTTP
+  production/                    # in operation, the published images:
+    compose.yaml                 #   the service, the MCP server (profile
+                                 #   mcp), Caddy for HTTPS (profile https)
+    setup.sh                     # the first start, see its README.md
   dev/                           # for development, built from the repository
     compose.yaml                 # the service, the MCP server with the
                                  #   profile mcp, ports on 127.0.0.1 only
@@ -21,6 +25,7 @@ containers/
 
 | Folder | For | Images |
 |---|---|---|
+| `production/` | running Mailbox, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
 | `dev/` | trying a change in a container | built from this repository |
 | `test-mail-server/` | the adapters against a mail server of our own | Stalwart |
 
@@ -72,5 +77,6 @@ it is.
 
 `ci.yml` builds both on every pull request and every push to `main`,
 for arm64 as well. It checks that the
-compose file in `dev/` keeps every port on the loopback address. It also starts the
+compose files in `dev/` and `production/` keep every port on the loopback
+address, all but Caddy's 80 and 443. It also starts the
 service until its health check reports healthy.

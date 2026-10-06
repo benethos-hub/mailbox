@@ -1623,6 +1623,16 @@ each place they run in has a folder of its own beside it, with its own
 `secrets/`: `dev/` builds from the repository, `test-mail-server/` is
 Stalwart for tests.
 
+**Decided 2026-10-06, operation:** `containers/production/` runs the
+published images without a clone of the repository. `.env` names a fixed
+version, and an update changes it. The MCP server comes with the profile
+`mcp`. With the profile `https`, Caddy stands in front, gets a
+certificate from Let's Encrypt and is the one container that listens on
+every address, on 80 and 443. The service believes the forwarded headers
+of Caddy's fixed address alone. The first start is `setup.sh` there, or
+the same steps by hand from its README. The project name stays
+`benethos-mailbox`, so the volume of the compose file before stays.
+
 Rules of the implementation (phase 3): the image holds the service package
 only, installed from the lockfile, and runs as a non-root user on a
 read-only root file system. Configuration comes from the environment, the

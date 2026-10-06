@@ -301,44 +301,19 @@ has the credentials. Keep a copy apart from the host.
 
 ### With compose
 
-The repository's
-[containers/compose.yaml](https://github.com/benethos-hub/mailbox/blob/main/containers/compose.yaml)
-runs the service. With the profile `mcp` it also runs the MCP server over
-HTTP. Both listen on `127.0.0.1` only. From the folder that holds the
-file:
+[containers/production/](https://github.com/benethos-hub/mailbox/tree/main/containers/production)
+runs the published images with compose, without a clone of the
+repository: the service, with the profile `mcp` the MCP server over HTTP,
+and with the profile `https` Caddy in front with a certificate from
+Let's Encrypt. The service and the MCP server listen on `127.0.0.1`
+only. `setup.sh` there does the first start in one run:
 
 ```sh
-export MAILBOX_SERVICE_IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.2.0
-
-mkdir -p secrets
-docker run --rm "$MAILBOX_SERVICE_IMAGE" keys generate > secrets/master_key
-chmod 400 secrets/master_key
-sudo chown 10001 secrets/master_key          # Linux: the container user reads it
-
-docker compose run --rm mailbox-service keys init
-docker compose run --rm mailbox-service users create-admin
-docker compose up -d
-curl http://127.0.0.1:8080/health
+sh setup.sh
 ```
 
-Without `MAILBOX_SERVICE_IMAGE`, compose builds the image from a clone of the
-repository. Settings go into the `environment` of the service in the
-compose file.
+The version runs as named in its `.env`, `MAILBOX_VERSION=0.2.0`. Its
+[README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md)
+has the same steps by hand, the update, backup and restore, and HTTPS
+with Caddy or a proxy of your own.
 
-Operation:
-
-```sh
-docker compose logs -f mailbox-service
-docker compose pull && docker compose up -d                        # update
-docker compose exec mailbox-service benethos-mailbox-service backup /data/backup.mbx
-docker compose cp mailbox-service:/data/backup.mbx .
-
-# restore, into a stopped service
-docker compose stop mailbox-service
-docker compose cp backup.mbx mailbox-service:/data/backup.mbx
-docker compose run --rm mailbox-service restore /data/backup.mbx
-docker compose up -d
-```
-
-Beyond your own machine, put a TLS reverse proxy in front and set
-`MAILBOX_SERVICE_PUBLIC_URL` to the address it serves.

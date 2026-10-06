@@ -283,6 +283,11 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   repository's folders stay first, `paths` names what applies. The key
   file never in the data folder (7.3). The MCP server reads an optional
   `.env` alike
+- **Containers in operation (8.1)**, decided 2026-10-06, done:
+  `containers/production/` runs the published images with a fixed
+  version, the MCP server and Caddy for HTTPS as profiles, `setup.sh` for
+  the first start. `containers/` holds `images/`, and `dev/`,
+  `production/` and `test-mail-server/` each with its own `secrets/`
 
 ## Keeping this file current
 
