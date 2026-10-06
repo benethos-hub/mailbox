@@ -1625,8 +1625,10 @@ Stalwart for tests.
 
 **Decided 2026-10-06, operation:** `containers/production/` runs the
 published images without a clone of the repository. `.env` names a fixed
-version, and an update changes it. The MCP server comes with the profile
-`mcp`. With the profile `https`, Caddy stands in front, gets a
+version, and an update changes it. The MCP server is not part of it:
+it acts as one user with that user's token, so each client starts one
+of its own, an instance per client, against the service's address.
+With the profile `https`, Caddy stands in front, gets a
 certificate from Let's Encrypt and is the one container that listens on
 every address, on 80 and 443. The service believes the forwarded headers
 of Caddy's fixed address alone. The first start is `setup.sh` there, or

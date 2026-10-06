@@ -13,8 +13,9 @@ containers/
     mailbox-service/Dockerfile   # build context: the repository root
     mailbox-mcp/Dockerfile       # the MCP server over streamable HTTP
   production/                    # in operation, the published images:
-    compose.yaml                 #   the service, the MCP server (profile
-                                 #   mcp), Caddy for HTTPS (profile https)
+    compose.yaml                 #   the service, Caddy for HTTPS (profile
+                                 #   https). Each client runs its own MCP
+                                 #   server
     setup.sh                     # the first start, see its README.md
   dev/                           # for development, built from the repository
     compose.yaml                 # the service, the MCP server with the

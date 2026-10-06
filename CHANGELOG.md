@@ -10,8 +10,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - `containers/production/`: Mailbox in operation from the published
   images, without a clone of the repository. `.env` names the version,
-  the profile `mcp` adds the MCP server, the profile `https` puts Caddy
-  in front with a certificate from Let's Encrypt. `setup.sh` does the
+  the profile `https` puts Caddy in front with a certificate from Let's
+  Encrypt. The MCP server is not part of it: each client starts one of
+  its own, with its own token, against the service's address. `setup.sh` does the
   first start: the master key, the keys, the first administrator. Its
   README has the same steps by hand. It keeps the project name
   `benethos-mailbox`, so the data volume of the compose file before

@@ -52,16 +52,7 @@ else
     exit 1
 fi
 
-# The MCP server needs the API token of a user, which the UI makes once
-# the service runs. Without it, everything else starts.
-services=$(docker compose config --services)
-token=$(sed -n 's/^MAILBOX_MCP_API_TOKEN=//p' .env)
-if [ -z "$token" ] && printf '%s\n' "$services" | grep -qx mailbox-mcp; then
-    services=$(printf '%s\n' "$services" | grep -vx mailbox-mcp)
-    say "The MCP server waits for MAILBOX_MCP_API_TOKEN in .env, see README.md."
-fi
-# shellcheck disable=SC2086 # one service name per word
-docker compose up -d --wait $services
+docker compose up -d --wait
 
 port=$(sed -n 's/^MAILBOX_SERVICE_PORT=//p' .env)
 say ""

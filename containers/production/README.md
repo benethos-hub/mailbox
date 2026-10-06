@@ -6,8 +6,8 @@ this folder is enough.
 
 | File | What it is |
 |---|---|
-| `compose.yaml` | the service, the MCP server (profile `mcp`) and Caddy (profile `https`) |
-| `.env.example` | template of `.env`: the version, the profiles, the ports, the domain, the tokens of the MCP server |
+| `compose.yaml` | the service, and Caddy for HTTPS (profile `https`) |
+| `.env.example` | template of `.env`: the version, the profile, the port, the domain |
 | `service.env.example` | template of `service.env`: further settings of the service |
 | `Caddyfile` | HTTPS in front, for the profile `https` |
 | `setup.sh` | the first start in one run |
@@ -63,20 +63,37 @@ password. The UI asks for a password of your own.
 has the credentials. Keep a copy apart from the host
 (`sudo cat secrets/master_key`).
 
-## The MCP server
+## Clients
 
-The MCP server acts as a user of the service, with that user's API
-token:
+The MCP server does not run here. It acts as one user, with that user's
+API token, so each client starts one of its own: Claude Desktop or
+Claude Code over stdio, an agent wherever it runs (CONCEPT 8.1). Per
+client:
 
-1. In the UI, make a user for it with the rights it should have, and a
-   token on that user's page.
-2. In `.env`: the token as `MAILBOX_MCP_API_TOKEN`, a long random value
-   as `MAILBOX_MCP_BEARER_TOKEN` (`openssl rand -base64 32`), and `mcp`
-   in `COMPOSE_PROFILES`.
-3. `docker compose up -d`
+1. In the UI, a user with the rights the client should have, and a token
+   on that user's page.
+2. The MCP server, started by the client, with the service's address and
+   that token, at the same version as the service:
 
-It listens on `http://127.0.0.1:8000/mcp`, and its clients send
-`Authorization: Bearer <MAILBOX_MCP_BEARER_TOKEN>`. More in
+```json
+{
+  "mcpServers": {
+    "mailbox": {
+      "command": "uvx",
+      "args": ["benethos-mailbox-mcp"],
+      "env": {
+        "MAILBOX_SERVICE_URL": "https://mail.example.org",
+        "MAILBOX_SERVICE_TOKEN": "<the user's token>"
+      }
+    }
+  }
+}
+```
+
+The address is `https://<MAILBOX_DOMAIN>` with the profile `https`, or
+that of your own proxy. Without either, the service answers on this host
+alone, at `http://127.0.0.1:8080`. More, for Claude Desktop, Claude Code
+and over HTTP:
 [packages/mailbox-mcp/README.md](../../packages/mailbox-mcp/README.md).
 
 ## HTTPS
@@ -87,9 +104,8 @@ Beyond your own machine, the service needs HTTPS in front. Two ways:
 whose DNS names this host, add `https` to `COMPOSE_PROFILES`, and let the
 ports 80 and 443 reach the host. Then `docker compose up -d`. Caddy gets
 the certificate from Let's Encrypt and renews it. The service is at
-`https://<domain>/ui`, the MCP server at `https://<domain>/mcp`. Caddy
-alone listens on every address, the service and the MCP server stay on
-`127.0.0.1`.
+`https://<domain>/ui`, and clients reach it at `https://<domain>`. Caddy
+alone listens on every address, the service stays on `127.0.0.1`.
 
 **A proxy of your own** on the host. It passes the requests to
 `http://127.0.0.1:8080`. In `.env`:
