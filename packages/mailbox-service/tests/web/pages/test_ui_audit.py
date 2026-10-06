@@ -50,7 +50,7 @@ def test_the_filter_bar_narrows_the_list(
     assert rows(activity="users") == {"users.created", "users.role_created"}
     assert rows(record=anna.id) == {"users.created"}
     # The admin of the test made both, the browser's user signed in.
-    assert rows(who=ADMIN.user_id) == {"users.created", "users.role_created"}
+    assert rows(user=ADMIN.user_id) == {"users.created", "users.role_created"}
     nothing = app_client.get("/ui/audit", params={"record": "usr_nobody"}).text
     assert "Nothing that matches." in nothing
     wrong = app_client.get("/ui/audit", params={"after": "not a day"})
@@ -86,7 +86,7 @@ def test_the_card_on_a_users_page(app_client: TestClient, services: Services) ->
     assert "users.role_created" in page
     # What was done to Anna is not what Anna did.
     assert "users.created" not in page
-    assert f'href="/ui/audit?who={anna.id}"' in page
+    assert f'href="/ui/audit?user={anna.id}"' in page
     assert f'href="/ui/audit?record={anna.id}"' in page
 
 

@@ -95,7 +95,7 @@
   <div class="body tight">
     {% if activity %}{{ activity_rows(activity, outcomes, False, who=False) }}{% else %}{{ empty("Nothing in the audit.") }}{% endif %}
   </div>
-  <div class="body"><a href="/ui/audit?who={{ user.id }}">All its activity</a> · <a href="/ui/audit?record={{ user.id }}">What was done to it</a></div>
+  <div class="body"><a href="/ui/audit?user={{ user.id }}">All its activity</a> · <a href="/ui/audit?record={{ user.id }}">What was done to it</a></div>
 {% endcall %}
 {% endif %}
 

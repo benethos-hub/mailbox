@@ -60,6 +60,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The UI's filters have the API's query names: `user` on Sends and
+  Audit, `recipient` on Sends. A kept link with `who` or `to` no longer
+  filters.
 - Minimum versions without a known vulnerability. `benethos-mailbox-service`:
   fastapi 0.133.0, starlette 1.3.1 (now named, fastapi asks for no safe
   version), python-multipart 0.0.31, cryptography 50, anyio 4.14.2,
