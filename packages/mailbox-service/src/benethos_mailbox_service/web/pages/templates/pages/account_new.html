@@ -70,7 +70,7 @@
 <section class="card">
   <header><h2>2. Your servers</h2><span class="meta">The provider refused. Nothing was stored.</span></header>
   <div class="body">
-    {{ connect_form(email, retry.settings, provider=retry.provider, folded=False, display_name=retry.display_name, error=retry.error, hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
+    {{ connect_form(email, retry.settings, provider=retry.provider, password_label="API token" if retry.settings.get("auth") == "token" else "Password", folded=False, display_name=retry.display_name, error=retry.error, hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
   </div>
 </section>
 {% endif %}
@@ -113,7 +113,7 @@
     {% for hint in candidate.hints %}
     <p class="muted">{{ hint.text }}{% if hint.url %} <a href="{{ hint.url }}" rel="noreferrer">More</a>{% endif %}</p>
     {% endfor %}
-    {{ connect_form(discovery.email, candidate.settings, suffix=loop.index, provider=candidate.provider.value, password_label="App password" if candidate.credential.value == "app_password" else "Password", hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
+    {{ connect_form(discovery.email, candidate.settings, suffix=loop.index, provider=candidate.provider.value, password_label={"app_password": "App password", "api_token": "API token"}.get(candidate.credential.value, "Password"), hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
   </div>
 </section>
 {% endfor %}
@@ -130,8 +130,15 @@
 <details class="card way"{% if not usable and not sign_ins %} open{% endif %}>
   <summary class="card-summary"><h2>Set up by hand</h2></summary>
   <div class="body">
-    {% if not usable and not sign_ins %}<p class="muted">No way to connect {{ discovery.email }} over IMAP or POP3 was found. Enter your provider's servers.</p>{% endif %}
+    {% if not usable and not sign_ins %}<p class="muted">No way to connect {{ discovery.email }} over JMAP, IMAP or POP3 was found. Enter your provider's servers.</p>{% endif %}
     {{ connect_form(discovery.email, {}, suffix="hand", folded=False, primary=not usable and not sign_ins) }}
+  </div>
+</details>
+
+<details class="card way">
+  <summary class="card-summary"><h2>Set up a JMAP server by hand</h2></summary>
+  <div class="body">
+    {{ connect_form(discovery.email, {}, suffix="jmap", provider="jmap", password_label="Password or API token", folded=False, primary=False, hint="Choose below which one it is. Tried against the server first, then stored encrypted.") }}
   </div>
 </details>
 

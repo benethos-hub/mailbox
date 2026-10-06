@@ -10,8 +10,9 @@
 {% if can_read %}<a class="btn primary" href="/ui/accounts/{{ account.id }}/mail">Mail</a>{% endif %}
 {% endblock %}
 {% block content %}
+{% set secret_name = "API token" if account.settings.get("auth") == "token" else "password" %}
 {% if account.status.value == "needs_reauth" %}
-<div class="notice err" role="alert">{% if signs_in_with_oauth %}{{ account.provider.value | capitalize }} no longer accepts this service's token: sign in again below.{% else %}The provider refused the stored password: enter the new one below.{% endif %}</div>
+<div class="notice err" role="alert">{% if signs_in_with_oauth %}{{ account.provider.value | capitalize }} no longer accepts this service's token: sign in again below.{% else %}The provider refused the stored {{ secret_name }}: enter the new one below.{% endif %}</div>
 {% endif %}
 
 {% set status_tag %}{% include "partials/account_status.html" %}{% endset %}
@@ -19,8 +20,10 @@
   {{ fact("Display name", account.display_name) }}
   {{ fact("Provider", account.provider.value) }}
   {% if not signs_in_with_oauth %}
-  {% call fact(account.provider.value | upper) %}{{ account.settings.get("host") | or_missing }}{% if account.settings.get("port") %}:{{ account.settings.port }}{% endif %}{% endcall %}
+  {% call fact(account.provider.value | upper) %}{{ account.settings.get("host") | or_missing }}{% if account.settings.get("port") %}:{{ account.settings.port }}{% endif %}{% if account.provider.value == "jmap" %}{{ account.settings.get("path", "") }}{% endif %}{% endcall %}
+  {% if account.provider.value != "jmap" %}
   {% call fact("SMTP") %}{{ account.settings.get("smtp_host") | or_missing }}{% if account.settings.get("smtp_port") %}:{{ account.settings.smtp_port }}{% endif %}{% endcall %}
+  {% endif %}
   {% endif %}
   {% call fact("Credentials") %}{{ credentials(account.credentials) }}{% endcall %}
   {% if sync is not none %}
@@ -30,7 +33,7 @@
 {% endcall %}
 
 {% if can_update %}
-{% call card("Change", meta="A new password or new servers are tried first. Nothing is stored unless the provider accepts them." if not signs_in_with_oauth else None) %}
+{% call card("Change", meta="A new " ~ secret_name ~ " or new servers are tried first. Nothing is stored unless the provider accepts them." if not signs_in_with_oauth else None) %}
 <form method="post" action="/ui/accounts/{{ account.id }}">
   {{ csrf_field() }}
   <div class="form-grid">
@@ -40,7 +43,7 @@
     </div>
     {% if not signs_in_with_oauth %}
     <div class="field">
-      <label for="f-password">New password</label>
+      <label for="f-password">New {{ secret_name }}</label>
       <input id="f-password" name="password" type="password" autocomplete="new-password" />
       <span class="hint">Empty: unchanged.</span>
     </div>
@@ -49,7 +52,7 @@
   {% if not signs_in_with_oauth %}
   <details class="fold"{% if typed %} open{% endif %}>
     <summary>Servers</summary>
-    {{ connection_fields(typed.settings if typed else account.settings, security, editing=True, protocol="pop3" if account.provider.value == "pop3" else "imap") }}
+    {{ connection_fields(typed.settings if typed else account.settings, security, editing=True, protocol=account.provider.value if account.provider.value in ("pop3", "jmap") else "imap") }}
   </details>
   {% endif %}
   <div class="form-actions"><button class="primary" type="submit">Save</button></div>

@@ -394,6 +394,90 @@ def test_connectable_prefers_imap() -> None:
     ]
 
 
+def jmap(
+    host: str,
+    source: DiscoverySourceName,
+    credential: CredentialKind = CredentialKind.PASSWORD,
+) -> Candidate:
+    server = MailServer(
+        protocol=ServerProtocol.JMAP,
+        host=host,
+        port=443,
+        security=Security.TLS,
+        path="/jmap/session",
+        reachable=True,
+    )
+    return Candidate(
+        provider=ProviderType.JMAP,
+        name=host,
+        credential=credential,
+        servers=[server],
+        source=source,
+    )
+
+
+async def test_jmap_comes_before_imap_and_is_not_probed() -> None:
+    network = Network()
+    s = service(
+        FakeSource(PRESET, found(imap("imap.firma.example", PRESET))),
+        FakeSource(
+            DiscoverySourceName.JMAP,
+            found(
+                jmap("jmap.firma.example", DiscoverySourceName.JMAP), by="firma.example"
+            ),
+        ),
+        network=network,
+    )
+    candidates = (await s.discover(ADMIN, "me@firma.example")).candidates
+    assert [c.provider for c in candidates] == [ProviderType.JMAP, ProviderType.IMAP]
+    assert candidates[0].confirmed
+    assert candidates[0].settings == {
+        "host": "jmap.firma.example",
+        "port": 443,
+        "path": "/jmap/session",
+        "username": "me@firma.example",
+    }
+    assert network.probed == ["imap.firma.example"]
+
+
+async def test_jmap_from_elsewhere_is_not_confirmed() -> None:
+    s = service(
+        FakeSource(
+            DiscoverySourceName.JMAP,
+            found(
+                jmap("mail.hoster.example", DiscoverySourceName.JMAP),
+                by="mail.hoster.example",
+            ),
+        )
+    )
+    [candidate] = (await s.discover(ADMIN, "me@firma.example")).candidates
+    assert not candidate.confirmed
+
+
+async def test_pop3_is_left_out_beside_jmap() -> None:
+    s = service(
+        FakeSource(ISPDB, found(pop3("pop.firma.example", ISPDB))),
+        FakeSource(
+            DiscoverySourceName.JMAP,
+            found(jmap("jmap.firma.example", DiscoverySourceName.JMAP)),
+        ),
+    )
+    candidates = (await s.discover(ADMIN, "me@firma.example")).candidates
+    assert [c.provider for c in candidates] == [ProviderType.JMAP]
+
+
+def test_connectable_offers_jmap_then_imap() -> None:
+    token = jmap("api.x.example", PRESET, CredentialKind.API_TOKEN)
+    oauth = jmap("o.x.example", PRESET, CredentialKind.OAUTH)
+    found = discovery_module.connectable(
+        [imap("imap.x.example", ISPDB), oauth, token, pop3("pop.x.example", ISPDB)]
+    )
+    assert [c.servers[0].host for c in found] == ["api.x.example", "imap.x.example"]
+    assert discovery_module.connectable([pop3("pop.x.example", ISPDB), token]) == [
+        token
+    ]
+
+
 async def test_candidates_without_imap_are_kept_without_settings() -> None:
     oauth = Candidate(
         provider=ProviderType.GMAIL,
@@ -587,12 +671,14 @@ def test_default_sources_in_order_and_ispdb_switch() -> None:
     assert [s.name for s in default_sources(fetcher, ispdb=True)] == [
         PRESET,
         AUTOCONFIG,
+        DiscoverySourceName.JMAP,
         ISPDB,
         MX,
     ]
     assert [s.name for s in default_sources(fetcher, ispdb=False)] == [
         PRESET,
         AUTOCONFIG,
+        DiscoverySourceName.JMAP,
         MX,
     ]
 

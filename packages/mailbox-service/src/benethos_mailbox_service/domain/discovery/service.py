@@ -2,15 +2,17 @@
 
 The sources in ``data/discovery`` only look up. Decided here:
 
-- **Trust.** Presets are confirmed. An autoconfig answer from the address's
-  own domain is confirmed. Otherwise an ISPDB or autoconfig answer is
+- **Trust.** Presets are confirmed. An autoconfig or JMAP answer from the
+  address's own domain is confirmed. Otherwise an ISPDB or autoconfig answer is
   confirmed only when every server lies in the address's registrable domain
   or is a server of a preset. What MX points to is never confirmed.
 - **Safety.** Before a server is probed, its host must resolve to public
   addresses. A candidate whose server does not is dropped. The probe
-  connects anonymously and sends no credential.
+  connects anonymously and sends no credential. A JMAP server is not
+  probed: the source that found it has asked it already.
 - **Ranking.** Confirmed before unconfirmed, reachable before unreachable,
-  then the order of the sources. Duplicates are merged into the first.
+  JMAP before the rest, then the order of the sources. Duplicates are
+  merged into the first.
 - **Limits.** Per user a number of discoveries per minute, and each domain's
   findings are cached for a day.
 - **What can be connected.** Which candidates this service connects today,
@@ -71,8 +73,16 @@ MAX_CALLERS = 10_000
 
 # Whitespace and control characters, in no address.
 _BLANK = re.compile(r"[\s\x00-\x1f\x7f]")
-# The servers a candidate reads mail from, probed before it is offered.
-_INCOMING = (ServerProtocol.IMAP, ServerProtocol.POP3)
+# The servers a candidate reads mail from.
+_INCOMING = (ServerProtocol.JMAP, ServerProtocol.IMAP, ServerProtocol.POP3)
+# Those probed before they are offered.
+_PROBED = (ServerProtocol.IMAP, ServerProtocol.POP3)
+
+
+# What a JMAP or IMAP candidate keeps POP3 out of the list.
+_BEFORE_POP3 = (ProviderType.JMAP, ProviderType.IMAP)
+_PASSWORDS = (CredentialKind.PASSWORD, CredentialKind.APP_PASSWORD)
+_JMAP_CREDENTIALS = (*_PASSWORDS, CredentialKind.API_TOKEN)
 
 
 @dataclass(frozen=True)
@@ -130,14 +140,15 @@ class DiscoveryService:
             hints += [h for h in result.finding.hints if h not in hints]
             for candidate in result.finding.candidates:
                 _merge(candidates, self._judged(candidate, result.finding, query))
-        if any(c.provider is ProviderType.IMAP for c in candidates):
-            # POP3 only where no IMAP is (CONCEPT 5.2).
+        if any(c.provider in _BEFORE_POP3 for c in candidates):
+            # POP3 only where no IMAP or JMAP is (CONCEPT 5.2).
             candidates = [c for c in candidates if c.provider is not ProviderType.POP3]
         candidates = await self._probed(candidates)
         candidates.sort(
             key=lambda c: (
                 not c.confirmed,
                 _unreachable(c),
+                c.provider is not ProviderType.JMAP,
                 self._order.get(c.source, len(self._order)),
             )
         )
@@ -237,7 +248,8 @@ class DiscoveryService:
         elif candidate.source is DiscoverySourceName.MX:
             confirmed = False
         elif (
-            candidate.source is DiscoverySourceName.AUTOCONFIG
+            candidate.source
+            in (DiscoverySourceName.AUTOCONFIG, DiscoverySourceName.JMAP)
             and finding.answered_by is not None
             and registrable_domain(finding.answered_by) == own
         ):
@@ -256,7 +268,7 @@ class DiscoveryService:
             dict.fromkeys(
                 (s.protocol, s.host, s.port, s.security)
                 for c in candidates
-                if (s := _incoming(c)) is not None
+                if (s := _incoming(c)) is not None and s.protocol in _PROBED
             )
         )[:MAX_PROBES]
         outcome: dict[tuple[ServerProtocol, str, int, str], MailServer | None] = {}
@@ -323,7 +335,7 @@ def _query(email: str) -> Query:
 
 
 def _incoming(candidate: Candidate) -> MailServer | None:
-    """The server a candidate reads mail from: IMAP or POP3."""
+    """The server a candidate reads mail from: JMAP, IMAP or POP3."""
     return next((s for s in candidate.servers if s.protocol in _INCOMING), None)
 
 
@@ -395,15 +407,19 @@ def _username(template: str | None, email: str) -> str:
 
 
 def connectable(candidates: list[Candidate]) -> list[Candidate]:
-    """What this service can connect today: IMAP with a password, and POP3
-    with a password only where no IMAP is (CONCEPT 5.2)."""
-    with_password = [
+    """What this service can connect today: JMAP with a password or an API
+    token first, then IMAP with a password, and POP3 with a password only
+    where neither is (CONCEPT 5.2)."""
+    jmap = [
         c
         for c in candidates
-        if c.credential in (CredentialKind.PASSWORD, CredentialKind.APP_PASSWORD)
+        if c.provider is ProviderType.JMAP and c.credential in _JMAP_CREDENTIALS
     ]
+    with_password = [c for c in candidates if c.credential in _PASSWORDS]
     imap = [c for c in with_password if c.provider is ProviderType.IMAP]
-    return imap or [c for c in with_password if c.provider is ProviderType.POP3]
+    if jmap or imap:
+        return jmap + imap
+    return [c for c in with_password if c.provider is ProviderType.POP3]
 
 
 def sign_ins(candidates: list[Candidate], configured: Iterable[str]) -> list[Candidate]:

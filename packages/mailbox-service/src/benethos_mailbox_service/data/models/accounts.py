@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 class ProviderType(StrEnum):
     IMAP = "imap"
     POP3 = "pop3"
+    JMAP = "jmap"
     GMAIL = "gmail"
     MICROSOFT = "microsoft"
     MEMORY = "memory"

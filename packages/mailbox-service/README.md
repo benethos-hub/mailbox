@@ -69,9 +69,11 @@ benethos-mailbox-service serve
 
 Then connect accounts in the UI (Accounts, Connect an account) or with
 `POST /v1/accounts`. An IMAP account needs its address and an app
-password. The service looks up the servers from the address. A POP3
-account, for a mailbox without IMAP, works the same way: the inbox only,
-without folders, read state or search. Microsoft
+password. The service looks up the servers from the address. A JMAP
+account, at Fastmail, Stalwart or any JMAP server, signs in with an API
+token or a password and sends through JMAP. A POP3 account, for a
+mailbox without IMAP, works the same way: the inbox only, without
+folders, read state or search. Microsoft
 accounts sign in with OAuth and need an app registration first:
 [docs/microsoft.md](https://github.com/benethos-hub/mailbox/blob/main/docs/microsoft.md).
 
@@ -140,7 +142,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_KEY_FILE` | | the key file, for `file`. Outside the data folder |
 | `MAILBOX_SERVICE_MASTER_KEY` | | the recovery key, for `env` |
 | `MAILBOX_SERVICE_SYNC_INTERVAL` | `300` | seconds between two polls of every folder. `0` switches the sync off. |
-| `MAILBOX_SERVICE_SYNC_IDLE` | `true` | watch the inbox over IMAP IDLE, with a second connection per account |
+| `MAILBOX_SERVICE_SYNC_IDLE` | `true` | wait for the server to report a change: IMAP IDLE, with a second connection per account, or a JMAP server's event source |
 | `MAILBOX_SERVICE_SYNC_WATCHERS` | `50` | accounts watched at once, each in a thread of its own. Further accounts are polled only. |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
 | `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audit of sends keeps a record. `0` keeps every record. |

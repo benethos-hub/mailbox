@@ -98,6 +98,10 @@ done. Update the roadmap in the same commit that finishes an item.
   (`containers/test-mail-server/README.md`). `uv run python live/pop3.py`
   checks the POP3 adapter against it: one mail from the first account to
   the second, read, found by the sync and deleted for good.
+  `uv run python live/jmap.py` checks the JMAP adapter against it, with a
+  service of its own as a process: one mail from the first account to the
+  second, reported by push, changed, put in a folder and back, a draft,
+  then deleted for good on both sides.
 ## Project layout
 
 A uv workspace with two distributions and one lockfile.

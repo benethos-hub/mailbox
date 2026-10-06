@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -111,6 +111,20 @@ class Fetched:
     body: bytes
 
 
+@dataclass(frozen=True)
+class Answered:
+    """An answer of any status, after redirects."""
+
+    host: str
+    port: int
+    # The path and query that answered.
+    path: str
+    status: int
+    headers: Mapping[str, str]
+    # Read for a 200 only.
+    body: bytes
+
+
 class SafeFetcher:
     def __init__(
         self,
@@ -133,6 +147,14 @@ class SafeFetcher:
     async def get(self, url: str) -> Fetched | None:
         """The body of a ``200`` answer. None when there is nothing to find:
         the host does not resolve, or the answer is not ``200``."""
+        found = await self.answer(url)
+        if found is None or found.status != 200:
+            return None
+        return Fetched(host=found.host, body=found.body)
+
+    async def answer(self, url: str) -> Answered | None:
+        """The answer at the end of the redirects, whatever its status, the
+        body read for a ``200`` only. None when a host does not resolve."""
         async with new_client(self._transport, self._timeout) as client:
             target = parse_url(url)
             for _ in range(MAX_REDIRECTS + 1):
@@ -149,9 +171,7 @@ class SafeFetcher:
                 if isinstance(response, str):
                     target = target.join(response)
                     continue
-                if response is None:
-                    return None
-                return Fetched(host=host, body=response)
+                return response
         raise ProviderError(f"refused to follow more than {MAX_REDIRECTS} redirects")
 
     async def checked_address(self, host: str, port: int) -> str | None:
@@ -182,15 +202,27 @@ class SafeFetcher:
 
     async def _send(
         self, client: httpx.AsyncClient, target: httpx.URL, host: str, address: str
-    ) -> bytes | str | None:
-        """The body, the next location of a redirect, or None."""
+    ) -> Answered | str:
+        """The answer, or the next location of a redirect."""
         request = pinned_request(client, "GET", target, host, address)
         response = await client.send(request, stream=True)
         try:
-            if response.is_redirect:
-                return response.headers.get("location") or None
-            if response.status_code != 200:
-                return None
-            return await read_capped(response, host, self._max_bytes)
+            location = response.headers.get("location")
+            if response.is_redirect and location:
+                return str(location)
+            body = (
+                await read_capped(response, host, self._max_bytes)
+                if response.status_code == 200
+                else b""
+            )
+            path = target.raw_path.decode("ascii")
+            return Answered(
+                host=host,
+                port=target.port or 443,
+                path=path,
+                status=response.status_code,
+                headers=dict(response.headers),
+                body=body,
+            )
         finally:
             await response.aclose()

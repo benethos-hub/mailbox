@@ -8763,6 +8763,7 @@
         "enum": [
           "password",
           "app_password",
+          "api_token",
           "oauth"
         ],
         "title": "CredentialKind",
@@ -8828,6 +8829,7 @@
         "enum": [
           "preset",
           "autoconfig",
+          "jmap",
           "ispdb",
           "mx"
         ],
@@ -9353,6 +9355,17 @@
               }
             ],
             "title": "Username"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
           },
           "reachable": {
             "anyOf": [
@@ -10408,6 +10421,7 @@
         "enum": [
           "imap",
           "pop3",
+          "jmap",
           "gmail",
           "microsoft",
           "memory"
@@ -10670,7 +10684,8 @@
         "enum": [
           "imap",
           "pop3",
-          "smtp"
+          "smtp",
+          "jmap"
         ],
         "title": "ServerProtocol"
       },

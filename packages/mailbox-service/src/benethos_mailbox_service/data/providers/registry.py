@@ -20,6 +20,8 @@ from .guard import Pace
 from .imap import ImapProvider
 from .imap import probe as probe_imap
 from .imap import settings_from as imap_settings
+from .jmap import JmapProvider
+from .jmap import settings_from as jmap_settings
 from .memory import MemoryProvider
 from .microsoft import MicrosoftProvider
 from .microsoft import endpoints as microsoft_endpoints
@@ -68,6 +70,10 @@ _REGISTRY: dict[
     ProviderType.POP3: lambda settings, credentials, pick, pace, _watchers: (
         Pop3Provider(settings, credentials, pick=pick, pace=pace)
     ),
+    # JMAP waits for pushes without a thread, and the server sets the pace.
+    ProviderType.JMAP: lambda settings, credentials, pick, _pace, _watchers: (
+        JmapProvider(settings, credentials, pick=pick)
+    ),
 }
 # Providers that sign in with OAuth: they get a token source instead.
 _SIGNED_IN: dict[
@@ -85,11 +91,12 @@ _SIGN_IN: dict[ProviderType, Callable[[str | None], Endpoints]] = {
 
 
 # What an adapter assumes where the settings say nothing, given the
-# account's address: IMAP and POP3 log in with the address unless told
-# otherwise.
+# account's address: IMAP, POP3 and JMAP with a password log in with the
+# address unless told otherwise.
 _DEFAULTS: dict[ProviderType, Callable[[str], dict[str, str | int | bool]]] = {
     ProviderType.IMAP: lambda email: {"username": email},
     ProviderType.POP3: lambda email: {"username": email},
+    ProviderType.JMAP: lambda email: {"username": email},
 }
 
 
@@ -107,6 +114,7 @@ _FROM_SERVERS: dict[
 ] = {
     ProviderType.IMAP: imap_settings,
     ProviderType.POP3: pop3_settings,
+    ProviderType.JMAP: jmap_settings,
 }
 
 

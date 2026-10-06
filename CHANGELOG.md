@@ -8,6 +8,22 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- JMAP accounts, `"provider": "jmap"`, for Fastmail, Stalwart, Cyrus and
+  any JMAP server. The settings name `host`, `port` and `path` of the
+  session (default `/.well-known/jmap`), and `auth`: `password` with
+  `username`, or `token` with the credential `token`. Everything an IMAP
+  account does works, sending included, through JMAP without SMTP
+  settings. Ids stay when a message moves, and a message can be in
+  several folders (`labels`). The change feed learns of changes since a
+  state, and the server's event source wakes the sync. A deleted message
+  is reported without a folder. A replaced draft gets a new id.
+- Discovery asks `https://{domain}/.well-known/jmap` and the SRV record
+  `_jmap._tcp`, without a credential: `jmap` is a source, a `provider`
+  of a candidate and a `protocol` of a server, whose `path` names the
+  session. A JMAP candidate comes before IMAP, and POP3 is offered only
+  where neither is. `api_token` is a new `credential`. The Fastmail
+  preset offers JMAP with an API token. The UI connects a JMAP server
+  from discovery or by hand, with a password or an API token.
 - POP3 accounts, `"provider": "pop3"`, for mailboxes without IMAP. The
   inbox is the one folder. Messages are listed newest first, read and
   deleted for good, and sending goes over SMTP. Read state, stars,

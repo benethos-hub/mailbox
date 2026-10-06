@@ -218,13 +218,15 @@ packages/mailbox-service/
                         #   an address in Unicode
       protocols/        # the wire, one library each, in our types:
                         #   imap.py (IMAPClient), smtp.py (smtplib),
-                        #   pop3.py (poplib),
+                        #   pop3.py (poplib), jmap.py (JMAP over http),
                         #   oauth.py (OAuth 2.0 with PKCE, refresh, token
                         #   source), transport.py: the Server, TLS,
                         #   timeouts, the failures below every library
         http/           # httpx: base.py (the client, the capped read),
                         #   safe.py (hosts users typed, SSRF guard),
                         #   api.py (JSON to a provider's known hosts),
+                        #   server.py (JSON to a server an account
+                        #   names, at the checked address),
                         #   post.py (posts to webhook receivers)
       providers/        # the adapters: base.py, rules.py, registry.py
                         #   (build_provider, sign_in, probe_server)
@@ -232,8 +234,9 @@ packages/mailbox-service/
         sender.py       # SmtpSender: sending for IMAP, POP3, ...
         imap/, memory/, # one directory per provider (adapter)
         microsoft/,     #   microsoft: Graph over data/protocols/http,
-        pop3/           #   signin.py its endpoints and the scopes it
-                        #   needs. pop3: one inbox, a session per step
+        pop3/, jmap/    #   signin.py its endpoints and the scopes it
+                        #   needs. pop3: one inbox, a session per step.
+                        #   jmap: over data/protocols/jmap.py
       storage/          # own records, one module per subject, table.py
                         #   for the in-memory ones, sqlite/ the database,
                         #   sqlite/migrations/ the base, the registry,
@@ -404,12 +407,12 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/registry.py` | memory, imap, microsoft, pop3 (planned: gmail, jmap) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/registry.py` | memory, imap, microsoft, pop3, jmap (planned: gmail) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
-| Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX (planned: JMAP well-known, Microsoft realm, SRV, guessing) | any further lookup, or one switched off |
-| HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
+| Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
+| HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Folders for settings and data | `folders()` in `config.py` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |

@@ -213,7 +213,11 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
     An app of the deployment's own stays the option (CONCEPT 5.4)
 - `gmail` adapter with OAuth, own Google Cloud client per deployment (5.5)
 - Gmail history in the worker
-- `jmap` adapter for Fastmail and JMAP servers (5.6)
+- **`jmap` adapter for Fastmail and JMAP servers (5.6)**, decided
+  2026-10-06, done: a password or an API token, sending through JMAP,
+  changes since a state and push through the event source. Discovery
+  asks `/.well-known/jmap` and SRV, JMAP before IMAP. Checked against
+  Stalwart (`live/jmap.py`)
 - Configuration UI under `/ui` (1.1), brought forward on 2026-09-24:
   - **frame: sign-in with an API token, server-side session, CSRF,
     security headers, layout**, done. Phase 4a replaced the token with

@@ -279,7 +279,10 @@ class SyncService:
         seen: dict[str, datetime | None] = {}  # id -> created
         removed: set[str] = set()
         where: dict[str, str] = {}  # id -> the folder it was seen in
-        gone_from: dict[str, str] = {}  # id -> the folder it left
+        # id -> the folder it left. Empty where several folders say so: a
+        # provider that cannot tell where a deleted message was (JMAP)
+        # reports it removed from each.
+        gone_from: dict[str, str] = {}
         arrived_new: set[str] = set()  # in folders asked for the first time
         since: dict[str, datetime] = {}
         for folder_id in folders:
@@ -301,7 +304,10 @@ class SyncService:
                 seen[message.id] = message.created
                 since[message.id] = last[1]
             removed |= set(found.removed)
-            gone_from.update((i, folder_id) for i in found.removed)
+            for message_id in found.removed:
+                was = gone_from.setdefault(message_id, folder_id)
+                if was != folder_id:
+                    gone_from[message_id] = ""
         self._index.apply(account_id, IndexChanges(states=states))
         if not before:
             return _Counts(len(folders))
