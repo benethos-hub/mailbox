@@ -227,7 +227,9 @@ async def update_draft(
     caller: Caller,
     mailbox: Mailbox,
 ) -> MessageSummary:
-    """Replace a draft as a whole. Its id stays. Stored attachments are
+    """Replace a draft as a whole. The answer names its id from now on:
+    an IMAP draft keeps its id, a Microsoft or JMAP draft gets a new one,
+    since the provider stores a new message. Stored attachments are
     gone unless `keep_attachments` names them. A draft sent as it is
     stored, every attachment kept, is not stored again. An id that names
     no draft answers `404`."""

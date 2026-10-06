@@ -180,6 +180,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   with, nothing is held back. `users set-password` on the host stays the
   way back.
 
+### Fixed
+
+- `PUT /v1/accounts/{account_id}/drafts/{draft_id}` said the draft keeps
+  its id. That holds for IMAP only: a Microsoft or JMAP draft is stored
+  as a new message under a new id, which the answer names. The UI's
+  "Save" and "Send" on an edited draft used the old id at Microsoft and
+  JMAP and ended in `404`, with the draft saved and nothing sent. They
+  now go on with the new id. The MCP server's `update_draft` says so.
+
 ## [0.2.0] - 2026-10-03
 
 The status is alpha: usable with real accounts for testing. The API and

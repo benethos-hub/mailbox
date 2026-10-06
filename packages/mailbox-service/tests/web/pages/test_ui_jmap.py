@@ -122,3 +122,59 @@ def test_a_discovered_jmap_server(browser: TestClient) -> None:
     assert 'name="provider" value="jmap"' in page
     assert ">API token<" in page and 'value="/jmap/session"' in page
     assert '<option value="token" selected>' in page
+
+
+# --- a draft that gets a new id when it is replaced -----------------------------------
+
+
+def saved_draft(browser: TestClient, account_id: str) -> str:
+    saved = post(
+        browser,
+        f"/ui/accounts/{account_id}/compose",
+        {"to": "bob@example.org", "subject": "Plan", "text": "first", "do": "save"},
+    )
+    assert "Draft saved." in saved.text
+    return saved.url.path
+
+
+def test_a_draft_edited_and_sent(
+    browser: TestClient, account_id: str, server: FakeJmap
+) -> None:
+    first = saved_draft(browser, account_id)
+    edited = post(
+        browser,
+        first,
+        {"to": "bob@example.org", "subject": "Plan", "text": "second", "do": "save"},
+    )
+    assert "Draft saved." in edited.text and "second" in edited.text
+    second = edited.url.path
+    assert second != first and browser.get(first).status_code == 404
+    sent = post(
+        browser,
+        second,
+        {"to": "bob@example.org", "subject": "Plan", "text": "third", "do": "send"},
+    )
+    assert "Sent." in sent.text, sent.text
+    [submission] = server.submissions
+    assert b"third" in server.raw_of(submission["emailId"])
+    assert submission["envelope"]["rcptTo"] == [{"email": "bob@example.org"}]
+
+
+def test_a_draft_saved_but_not_sent(
+    browser: TestClient, account_id: str, server: FakeJmap
+) -> None:
+    first = saved_draft(browser, account_id)
+    server.refuse_submission = {"type": "forbiddenToSend", "description": "quota"}
+    refused = post(
+        browser,
+        first,
+        {"to": "bob@example.org", "subject": "Plan", "text": "second", "do": "send"},
+    )
+    assert refused.status_code == 409 and "quota" in refused.text
+    [now] = [
+        e["id"]
+        for e in server.emails.values()
+        if "drafts" in e["mailboxIds"] and b"second" in server.raw_of(e["id"])
+    ]
+    # The form goes on with the draft as it is stored now.
+    assert f'action="/ui/accounts/{account_id}/drafts/{now}"' in refused.text

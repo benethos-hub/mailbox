@@ -15,6 +15,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
 from ....data.models import DraftMessage, Message
+from ....domain.mailbox import MailboxService
+from ....domain.rights import Access
 from ....errors import MailboxServiceError
 from ...services import Mailbox
 from ..deps import Actor, Viewer, account_of
@@ -101,9 +103,11 @@ async def draft_submit(
     """Save the draft, save and send it, or delete it."""
     form = await request.form()
     account = account_of(request, caller, account_id)
-    here = f"/ui/accounts/{account_id}/drafts/{draft_id}"
     doing = str(form.get("do") or "save")
     stored: Message | None = None
+    # The draft's id from here on: a provider may store a replaced draft
+    # under a new one (Microsoft, JMAP).
+    current = draft_id
     try:
         if doing == "delete":
             await mailbox.outgoing.delete_draft(caller, account_id, draft_id)
@@ -113,23 +117,39 @@ async def draft_submit(
         if stored.reference is not None:
             fields["reference"] = stored.reference.model_copy(update={"quote": False})
         # A draft sent as it is stored is not stored again (the domain).
-        await mailbox.outgoing.update_draft(
+        saved = await mailbox.outgoing.update_draft(
             caller,
             account_id,
             draft_id,
             build(DraftMessage, fields),
             keep_attachments=_kept(stored, form),
         )
+        current = saved.id
         if doing != "send":
-            return back(request, here, "Draft saved.")
+            return back(
+                request, f"/ui/accounts/{account_id}/drafts/{current}", "Draft saved."
+            )
         result = await mailbox.outgoing.send_draft(
             caller,
             account_id,
-            draft_id,
+            current,
             text_of(form, "idempotency_key", strip=False) or None,
         )
     except (ComposeError, MailboxServiceError) as exc:
+        if current != draft_id:
+            # Saved under its new id, then not sent: the form goes on with it.
+            stored = await _stored_or_none(mailbox, caller, account_id, current)
         return await show_again(
-            request, caller, account, form, exc, draft_id=draft_id, stored=stored
+            request, caller, account, form, exc, draft_id=current, stored=stored
         )
     return back(request, mail_url(account_id), sent_text(result))
+
+
+async def _stored_or_none(
+    mailbox: MailboxService, caller: Access, account_id: str, draft_id: str
+) -> Message | None:
+    """The draft as stored now, None if it cannot be read."""
+    try:
+        return await mailbox.get_message(caller, account_id, draft_id)
+    except MailboxServiceError:
+        return None

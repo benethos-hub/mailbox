@@ -6214,7 +6214,7 @@
           "mailbox"
         ],
         "summary": "Update Draft",
-        "description": "Replace a draft as a whole. Its id stays. Stored attachments are\ngone unless `keep_attachments` names them. A draft sent as it is\nstored, every attachment kept, is not stored again. An id that names\nno draft answers `404`.",
+        "description": "Replace a draft as a whole. The answer names its id from now on:\nan IMAP draft keeps its id, a Microsoft or JMAP draft gets a new one,\nsince the provider stores a new message. Stored attachments are\ngone unless `keep_attachments` names them. A draft sent as it is\nstored, every attachment kept, is not stored again. An id that names\nno draft answers `404`.",
         "operationId": "update_draft",
         "security": [
           {
