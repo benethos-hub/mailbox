@@ -7,7 +7,7 @@ credentials (CONCEPT 7.5).
 from __future__ import annotations
 
 from .passwords import Passwords
-from .service import MAX_NAME, AuthService, SignedIn, TokenState
+from .service import MAX_NAME, AuthService, SignedIn, SignInState, TokenState
 from .throttle import SignInThrottle
 
 __all__ = [
@@ -15,6 +15,7 @@ __all__ = [
     "MAX_NAME",
     "Passwords",
     "SignInThrottle",
+    "SignInState",
     "SignedIn",
     "TokenState",
 ]

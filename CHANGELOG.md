@@ -57,6 +57,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   `GET /v1/users`: `name` (part of it), `role`, `disabled`, `ui_sign_in`.
   `GET /v1/accounts`: `address` (part of it), `provider`, `status`.
   `GET /v1/webhooks`: `url` (part of it), `account`, `failing`.
+- A user in the answers of `/v1/users` says how it signs in to the UI:
+  `has_password`, `must_change` (a password set for it, to be changed at
+  the next sign-in) and `last_sign_in_at`. The schema is `UserInfo`, the
+  fields of `User` and these three. The user's page in the UI names a
+  password still to be changed.
 
 ### Changed
 

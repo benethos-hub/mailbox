@@ -6,6 +6,7 @@ are. What lives here is what only a caller of the API sends or receives.
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import datetime
 from typing import Literal
 
@@ -17,7 +18,9 @@ from ...data.models import (
     DraftMessage,
     Grant,
     ProviderType,
+    User,
 )
+from ...domain.auth import SignInState
 
 
 class AccountCreate(BaseModel):
@@ -230,6 +233,25 @@ class TokenInfo(BaseModel):
         return cls.model_validate(
             {**token.model_dump(exclude={"token_hash"}), "state": state}
         )
+
+
+class UserInfo(User):
+    """A user, with how it signs in to the UI. Never the password."""
+
+    has_password: bool = Field(description="Whether the user has a password for the UI")
+    must_change: bool = Field(
+        description=(
+            "Whether the password is one set for the user, a one-time "
+            "password among them, to be changed at the next sign-in"
+        )
+    )
+    last_sign_in_at: datetime | None = Field(
+        description="The last sign-in to the UI, null for none yet"
+    )
+
+    @classmethod
+    def of(cls, user: User, state: SignInState) -> UserInfo:
+        return cls.model_validate({**user.model_dump(), **asdict(state)})
 
 
 class TokenCreated(TokenInfo):

@@ -338,7 +338,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/User"
+                    "$ref": "#/components/schemas/UserInfo"
                   },
                   "title": "Response List Users"
                 }
@@ -465,7 +465,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/UserInfo"
                 }
               }
             }
@@ -593,7 +593,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/UserInfo"
                 }
               }
             }
@@ -729,7 +729,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/User"
+                  "$ref": "#/components/schemas/UserInfo"
                 }
               }
             }
@@ -10565,7 +10565,48 @@
         "title": "TokenInfo",
         "description": "A token without its secret."
       },
-      "User": {
+      "UserCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "service": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service",
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "type": "array",
+            "title": "Grants"
+          },
+          "ui_sign_in": {
+            "type": "boolean",
+            "title": "Ui Sign In",
+            "description": "May sign in to the configuration UI. Without: an API user, tokens only. A password is then set in the UI or with `POST /v1/users/{user_id}/password`.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "UserCreate"
+      },
+      "UserInfo": {
         "properties": {
           "id": {
             "type": "string",
@@ -10607,56 +10648,41 @@
             "title": "Ui Sign In",
             "description": "Whether the user may sign in to the configuration UI with a password. Without it, the user works with tokens only.",
             "default": false
+          },
+          "has_password": {
+            "type": "boolean",
+            "title": "Has Password",
+            "description": "Whether the user has a password for the UI"
+          },
+          "must_change": {
+            "type": "boolean",
+            "title": "Must Change",
+            "description": "Whether the password is one set for the user, a one-time password among them, to be changed at the next sign-in"
+          },
+          "last_sign_in_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sign In At",
+            "description": "The last sign-in to the UI, null for none yet"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "name"
+          "name",
+          "has_password",
+          "must_change",
+          "last_sign_in_at"
         ],
-        "title": "User",
-        "description": "Someone or something that calls the API."
-      },
-      "UserCreate": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "roles": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Roles"
-          },
-          "service": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
-          },
-          "grants": {
-            "items": {
-              "$ref": "#/components/schemas/Grant"
-            },
-            "type": "array",
-            "title": "Grants"
-          },
-          "ui_sign_in": {
-            "type": "boolean",
-            "title": "Ui Sign In",
-            "description": "May sign in to the configuration UI. Without: an API user, tokens only. A password is then set in the UI or with `POST /v1/users/{user_id}/password`.",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "UserCreate"
+        "title": "UserInfo",
+        "description": "A user, with how it signs in to the UI. Never the password."
       },
       "UserUpdate": {
         "properties": {

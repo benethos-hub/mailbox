@@ -21,6 +21,7 @@ from ..schemas import (
     TokenCreated,
     TokenInfo,
     UserCreate,
+    UserInfo,
     UserUpdate,
 )
 
@@ -53,16 +54,17 @@ async def list_users(
         bool | None,
         Query(description="`false`: the API users, who work with tokens only"),
     ] = None,
-) -> list[User]:
+) -> list[UserInfo]:
     """Every user. The filter parameters narrow the list together."""
-    return users.list_users(
+    found = users.list_users(
         caller, name=name, role=role, disabled=disabled, ui_sign_in=ui_sign_in
     )
+    return [_user(users, user) for user in found]
 
 
 @router.post("/users", status_code=status.HTTP_201_CREATED)
-async def create_user(data: UserCreate, caller: Caller, users: Users) -> User:
-    return users.create_user(
+async def create_user(data: UserCreate, caller: Caller, users: Users) -> UserInfo:
+    made = users.create_user(
         caller,
         data.name,
         data.roles,
@@ -70,18 +72,19 @@ async def create_user(data: UserCreate, caller: Caller, users: Users) -> User:
         service=data.service,
         ui_sign_in=data.ui_sign_in,
     )
+    return _user(users, made)
 
 
 @router.get("/users/{user_id}")
-async def get_user(user_id: str, caller: Caller, users: Users) -> User:
-    return users.get_user(caller, user_id)
+async def get_user(user_id: str, caller: Caller, users: Users) -> UserInfo:
+    return _user(users, users.get_user(caller, user_id))
 
 
 @router.patch("/users/{user_id}")
 async def update_user(
     user_id: str, data: UserUpdate, caller: Caller, users: Users
-) -> User:
-    return users.update_user(
+) -> UserInfo:
+    changed = users.update_user(
         caller,
         user_id,
         name=data.name,
@@ -91,6 +94,7 @@ async def update_user(
         disabled=data.disabled,
         ui_sign_in=data.ui_sign_in,
     )
+    return _user(users, changed)
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -158,6 +162,11 @@ async def replace_role(
 @router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_role(role_id: str, caller: Caller, users: Users) -> None:
     users.delete_role(caller, role_id)
+
+
+def _user(users: UserService, user: User) -> UserInfo:
+    """A user as the API shows it: with how it signs in to the UI."""
+    return UserInfo.of(user, users.sign_in_state(user))
 
 
 def _info(users: UserService, token: ApiToken) -> TokenInfo:

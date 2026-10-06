@@ -13,6 +13,7 @@ from benethos_mailbox_service.domain.rights.access import ADMIN_SERVICE, Access
 from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN, bearer_for, browser_user, create_account
+from ...ui_helpers import sign_in
 
 READ_A = {"accounts": ["acc_a"], "allow": ["mail.read"]}
 # As the API answers it: constraints not set are null.
@@ -447,6 +448,26 @@ def test_the_list_filters(client: TestClient) -> None:
     assert names(ui_sign_in="true") == ["Hanna"]
     assert names(ui_sign_in="false", disabled="false", name="a") == ["Anna"]
     assert client.get("/v1/users", params={"disabled": "maybe"}).status_code == 422
+
+
+def test_a_user_names_how_it_signs_in_to_the_ui(
+    client: TestClient, app_client: TestClient
+) -> None:
+    def state(user: dict[str, object]) -> tuple[object, ...]:
+        return (user["has_password"], user["must_change"], user["last_sign_in_at"])
+
+    made = client.post("/v1/users", json={"name": "Anna", "ui_sign_in": True})
+    anna = made.json()["id"]
+    assert state(made.json()) == (False, False, None)
+    url = f"/v1/users/{anna}/password"
+    password = client.post(url, json={}).json()["password"]
+    assert state(client.get(f"/v1/users/{anna}").json()) == (True, True, None)
+    sign_in(app_client, "Anna", password)
+    [listed] = client.get("/v1/users", params={"name": "Anna"}).json()
+    has_password, must_change, last = state(listed)
+    assert (has_password, must_change) == (True, True)
+    assert isinstance(last, str) and last.endswith("Z")
+    assert "hash" not in str(listed) and password not in str(listed)
 
 
 def test_nobody_disables_itself_or_takes_its_own_ui_sign_in(

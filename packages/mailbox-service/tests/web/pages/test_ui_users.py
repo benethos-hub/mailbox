@@ -165,7 +165,8 @@ def test_the_page_says_whether_a_user_can_sign_in(
         f"/ui/users/{bot.id}/password",
         {"new_password": secret, "repeat_password": secret},
     )
-    assert "with a password" in ui.get(f"/ui/users/{bot.id}").text
+    set_for_it = ui.get(f"/ui/users/{bot.id}").text
+    assert "with a password set for it, to change at the next sign-in" in set_for_it
     own = services.auth.user_named("admin")
     assert own is not None
     mine = ui.get(f"/ui/users/{own.id}").text

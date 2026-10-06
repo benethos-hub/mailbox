@@ -226,7 +226,7 @@ def _user_page(
         can_list_tokens=tokens is not None,
         new_token=take_once(request, f"token:{user_id}"),
         new_password=take_once(request, f"password:{user_id}"),
-        last_sign_in=users.last_sign_in(caller, user_id),
+        sign_in=users.sign_in_state(found),
         role_choices=_role_choices(
             request, caller, [*found.roles, *(typed["roles"] if typed else [])]
         ),
@@ -236,7 +236,6 @@ def _user_page(
         can_delete=caller.allows("delete_user") and found.id != caller.user_id,
         can_create_token=caller.allows("create_token"),
         can_revoke=caller.allows("revoke_token"),
-        has_password=users.has_password(caller, user_id),
         can_set_password=caller.allows("set_password"),
         activity=if_allowed(
             caller,
