@@ -141,14 +141,16 @@
 {% endmacro %}
 
 {# The links below a list: to the next page, and from a later page back to
-   the first. ``pages``: (more, first), as ``page_links`` gives them. #}
-{% macro pager(pages) %}
+   the first. ``pages``: (more, first), as ``page_links`` gives them.
+   ``back`` and ``on`` name the links: by default for a list newest
+   first. #}
+{% macro pager(pages, back="Newest", on="Older") %}
 {% set more, first = pages %}
 {% if more or first %}
 <div class="body toolbar">
-  {% if first %}<a class="btn small" href="{{ first }}">Newest</a>{% endif %}
+  {% if first %}<a class="btn small" href="{{ first }}">{{ back }}</a>{% endif %}
   <span class="grow"></span>
-  {% if more %}<a class="btn small" href="{{ more }}">Older</a>{% endif %}
+  {% if more %}<a class="btn small" href="{{ more }}">{{ on }}</a>{% endif %}
 </div>
 {% endif %}
 {% endmacro %}

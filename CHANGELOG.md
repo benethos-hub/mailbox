@@ -72,6 +72,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** `GET /v1/accounts` and `GET /v1/users` are paged like
+  the other lists. They answer `{"items": [...], "next_cursor": ...}`
+  instead of an array and take `limit` (1 to 200, default 50) and
+  `cursor`. Accounts come by address, users by name, both regardless of
+  case. The filters narrow the list before it is paged. The UI pages
+  Accounts and Users the same way.
 - The UI's filters have the API's query names: `user` on Sends and
   Audit, `recipient` on Sends. A kept link with `who` or `to` no longer
   filters.

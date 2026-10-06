@@ -4,8 +4,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from ....data.models import Account, AccountStatus, ProviderType
-from ..deps import Accounts, Caller
+from ....data.models import Account, AccountStatus, Page, ProviderType
+from ..deps import Accounts, Caller, Limit
 from ..schemas import AccountCreate, AccountUpdate
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
@@ -20,10 +20,19 @@ async def list_accounts(
     ] = None,
     provider: ProviderType | None = None,
     status: AccountStatus | None = None,
-) -> list[Account]:
-    """The accounts the caller may list. The filter parameters narrow the
-    list together."""
-    return accounts.list(caller, address=address, provider=provider, status=status)
+    limit: Limit = 50,
+    cursor: str | None = None,
+) -> Page[Account]:
+    """The accounts the caller may list, by address regardless of case.
+    The filter parameters narrow the list together, before it is paged."""
+    return accounts.page(
+        caller,
+        limit=limit,
+        cursor=cursor,
+        address=address,
+        provider=provider,
+        status=status,
+    )
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

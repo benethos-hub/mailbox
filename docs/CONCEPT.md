@@ -636,7 +636,7 @@ Base path `/v1`, JSON, bearer authentication on everything except
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/v1/accounts` | list |
+| GET | `/v1/accounts` | list, paged by address (6.6) |
 | POST | `/v1/accounts` | create with credentials (IMAP/POP3/SMTP, app password), connection is tested first |
 | GET | `/v1/accounts/{account_id}` | get, including `status` and `capabilities` |
 | PATCH | `/v1/accounts/{account_id}` | display name, settings, new password |
@@ -886,6 +886,26 @@ Rules of the implementation (built before phase 3):
 - `has_attachments` on IMAP is a `multipart/mixed` message, the same rule
   as the field in a summary.
 - `native` is not built yet.
+
+#### The service's own lists
+
+Decided 2026-10-06. `GET /v1/accounts` (`list_accounts`) and
+`GET /v1/users` (`list_users`) are paged like the lists of mail, with
+`limit` (1–200, default 50) and `cursor`.
+
+- Accounts come by address, users by name, both regardless of case, and
+  by id where two are equal.
+- The cursor carries the sort key of the last item on the page. The next
+  page starts after it, so an account or user added or removed in
+  between does not shift it.
+- The filter parameters narrow the list before it is paged. A page holds
+  only matches.
+- One generic piece pages every list the service holds whole. A list
+  names its order: the prefix of its cursors and the key of an item.
+- Roles, the tokens of a user, webhooks and folders stay one list. They
+  are few, and folders form a tree that is wanted whole. `GET /v1/me`
+  and `GET /v1/status` stay whole as well, as an overview of what the
+  caller may see.
 
 #### Across accounts
 

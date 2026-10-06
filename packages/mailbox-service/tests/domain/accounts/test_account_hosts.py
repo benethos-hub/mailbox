@@ -85,7 +85,7 @@ def test_a_private_host_is_refused(world: World, host: str) -> None:
     error = response.json()["error"]
     assert error["code"] == "bad_request"
     assert "non-public" in error["message"]
-    assert world.client.get("/v1/accounts").json() == []
+    assert world.client.get("/v1/accounts").json()["items"] == []
 
 
 def test_the_smtp_host_is_checked_too(world: World) -> None:
@@ -160,4 +160,4 @@ def test_a_host_that_turns_private_later_is_not_connected_to() -> None:
     )
     assert response.status_code == 502, response.text
     assert "non-public" in response.json()["error"]["message"]
-    assert world.client.get("/v1/accounts").json() == []
+    assert world.client.get("/v1/accounts").json()["items"] == []

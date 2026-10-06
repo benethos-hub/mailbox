@@ -346,7 +346,7 @@ def test_api_refuses_credentials_before_keys_exist(client: TestClient) -> None:
     )
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "setup_required"
-    assert client.get("/v1/accounts").json() == []
+    assert client.get("/v1/accounts").json()["items"] == []
 
 
 def test_keys_init_and_import_commands(

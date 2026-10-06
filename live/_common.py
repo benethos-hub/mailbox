@@ -118,8 +118,8 @@ def register(
     """The test account in the service, added through the API with IMAP and
     the SMTP server discovery finds: its id, and what happened. An account
     whose address the service has already is not added again."""
-    known = client.get("/v1/accounts").json()
-    for existing in known:
+    known = client.get("/v1/accounts", params={"address": account["email"]})
+    for existing in known.json()["items"]:
         if existing.get("email", "").lower() == account["email"].lower():
             return str(existing["id"]), "already there"
     found = client.post("/v1/discovery", json={"email": account["email"]}).json()

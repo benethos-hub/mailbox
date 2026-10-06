@@ -10,7 +10,7 @@ from pydantic import SecretStr
 
 from ...common import redact
 from ...common.ids import new_id
-from ...data.models import Account, AccountStatus, ProviderType
+from ...data.models import Account, AccountStatus, Page, ProviderType
 from ...data.protocols import HostCheck
 from ...data.providers import (
     CredentialReader,
@@ -22,11 +22,14 @@ from ...data.providers import (
 from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository, IdempotencyRepository
 from ...errors import BadRequestError, MailboxServiceError
+from .. import paging
 from ..activity import ActivityLog, Actor
 from ..activity import accounts as said
 from ..changes import ChangeFeed
 from ..rights import Access
 from .adapters import REFRESH_TOKEN, Adapters
+
+BY_ADDRESS = paging.Order[Account]("ac_", lambda a: (a.email.casefold(), a.id))
 
 
 class AccountService:
@@ -82,6 +85,20 @@ class AccountService:
             and (provider is None or account.provider is provider)
             and (status is None or account.status is status)
         ]
+
+    def page(
+        self,
+        access: Access,
+        *,
+        limit: int,
+        cursor: str | None = None,
+        address: str | None = None,
+        provider: ProviderType | None = None,
+        status: AccountStatus | None = None,
+    ) -> Page[Account]:
+        """A page of ``list``, by address regardless of case."""
+        found = self.list(access, address=address, provider=provider, status=status)
+        return paging.page(found, BY_ADDRESS, limit=limit, cursor=cursor)
 
     def get(self, access: Access, account_id: str) -> Account:
         access.require("get_account", account_id)

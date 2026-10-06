@@ -124,7 +124,8 @@ def feed_types(
 
 
 def microsoft_account(client: httpx.Client, email: str) -> dict[str, Any] | None:
-    for account in client.get("/v1/accounts").json():
+    found = client.get("/v1/accounts", params={"address": email}).json()
+    for account in found["items"]:
         if account["provider"] == "microsoft" and account["email"] == email:
             return dict(account)
     return None

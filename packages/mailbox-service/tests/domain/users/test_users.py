@@ -129,7 +129,7 @@ def test_user_lifecycle(client: TestClient) -> None:
     user = created.json()
     assert user["id"].startswith("usr_")
     assert client.get(f"/v1/users/{user['id']}").json() == user
-    assert user["id"] in [u["id"] for u in client.get("/v1/users").json()]
+    assert user["id"] in [u["id"] for u in client.get("/v1/users").json()["items"]]
 
     # An API user unless said otherwise.
     assert user["ui_sign_in"] is False
@@ -439,7 +439,9 @@ def test_the_list_filters(client: TestClient) -> None:
         answer = client.get("/v1/users", params=params)
         assert answer.status_code == 200, answer.text
         return sorted(
-            u["name"] for u in answer.json() if not u["name"].startswith("api-")
+            u["name"]
+            for u in answer.json()["items"]
+            if not u["name"].startswith("api-")
         )
 
     assert names(name="ANNA") == ["Anna", "Hanna"]
@@ -463,7 +465,7 @@ def test_a_user_names_how_it_signs_in_to_the_ui(
     password = client.post(url, json={}).json()["password"]
     assert state(client.get(f"/v1/users/{anna}").json()) == (True, True, None)
     sign_in(app_client, "Anna", password)
-    [listed] = client.get("/v1/users", params={"name": "Anna"}).json()
+    [listed] = client.get("/v1/users", params={"name": "Anna"}).json()["items"]
     has_password, must_change, last = state(listed)
     assert (has_password, must_change) == (True, True)
     assert isinstance(last, str) and last.endswith("Z")
@@ -712,3 +714,24 @@ def test_a_right_held_for_a_while_is_handed_out_for_no_longer(
     assert made(week + timedelta(days=1)) == 403
     assert made(week) == 201
     assert made(week - timedelta(days=1)) == 201
+
+
+def test_the_list_pages_by_name(client: TestClient) -> None:
+    for name in ("carl", "Anna", "bob"):
+        client.post("/v1/users", json={"name": name})
+
+    def names(**params: str | int) -> tuple[list[str], str | None]:
+        # Not "b": the admin of the tests is named api-admin-N.
+        answer = client.get("/v1/users", params={"name": "a", **params})
+        assert answer.status_code == 200, answer.text
+        body = answer.json()
+        assert all("has_password" in u for u in body["items"])  # UserInfo
+        found = [u["name"] for u in body["items"]]
+        return ["admin" if n.startswith("api-") else n for n in found], body[
+            "next_cursor"
+        ]
+
+    first, cursor = names(limit=2)
+    assert (first, cursor is not None) == (["Anna", "admin"], True)
+    assert names(limit=2, cursor=str(cursor)) == (["carl"], None)
+    assert client.get("/v1/users", params={"cursor": "nope"}).status_code == 400

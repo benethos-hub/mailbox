@@ -36,7 +36,7 @@ from ..grants import (
     typed_service,
 )
 from ..session import show_once, take_once
-from ..templates import back, render, segment
+from ..templates import PAGE_SIZE, back, page_links, render, segment
 from . import audit as audit_routes
 
 router = APIRouter()
@@ -102,18 +102,22 @@ async def list_users(request: Request, caller: Viewer, users: Users) -> HTMLResp
         ),
         search=Field("name", "Name"),
     )
+    found = users.page_users(
+        caller,
+        limit=PAGE_SIZE,
+        cursor=request.query_params.get("cursor"),
+        name=bar.value("name") or None,
+        role=bar.value("role") or None,
+        disabled=True if bar.value("disabled") else None,
+        ui_sign_in=False if bar.value("api_only") else None,
+    )
     return render(
         request,
         "pages/users.html",
         page="users",
         bar=bar,
-        users=users.list_users(
-            caller,
-            name=bar.value("name") or None,
-            role=bar.value("role") or None,
-            disabled=True if bar.value("disabled") else None,
-            ui_sign_in=False if bar.value("api_only") else None,
-        ),
+        users=found.items,
+        pages=page_links(request, found.next_cursor),
         names=account_names(request, caller),
         can_create=caller.allows("create_user"),
     )

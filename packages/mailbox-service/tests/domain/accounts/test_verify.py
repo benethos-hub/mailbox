@@ -78,7 +78,7 @@ def test_a_wrong_credential_stores_nothing(world) -> None:  # type: ignore[no-un
     response = client.post("/v1/accounts", json=wrong)
     assert response.status_code == 502
     assert response.json()["error"]["code"] == "provider_auth_failed"
-    assert client.get("/v1/accounts").json() == []
+    assert client.get("/v1/accounts").json()["items"] == []
 
 
 def test_a_missing_credential_is_a_bad_request(world) -> None:  # type: ignore[no-untyped-def]
@@ -87,14 +87,14 @@ def test_a_missing_credential_is_a_bad_request(world) -> None:  # type: ignore[n
     response = client.post("/v1/accounts", json=missing)
     assert response.status_code == 400
     assert "password" in response.json()["error"]["message"]
-    assert client.get("/v1/accounts").json() == []
+    assert client.get("/v1/accounts").json()["items"] == []
 
 
 def test_bad_settings_store_nothing(world) -> None:  # type: ignore[no-untyped-def]
     _, client = world
     plain = {**NEW_ACCOUNT, "settings": {**NEW_ACCOUNT["settings"], "security": "none"}}
     assert client.post("/v1/accounts", json=plain).status_code == 400
-    assert client.get("/v1/accounts").json() == []
+    assert client.get("/v1/accounts").json()["items"] == []
 
 
 def test_verify_after_the_password_changed(world, server: FakeMailBox) -> None:  # type: ignore[no-untyped-def]

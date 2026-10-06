@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, credentials, empty, filter_bar with context %}
+{% from "components/ui.html" import card, credentials, empty, filter_bar, pager with context %}
 {% block title %}Accounts · {{ APP_NAME }}{% endblock %}
 {% block heading %}Accounts{% endblock %}
 {% block subheading %}<div class="sub">The mailboxes this service connects</div>{% endblock %}
@@ -7,7 +7,7 @@
 {% if can_create %}<a class="btn primary" href="/ui/accounts/new">Connect an account</a>{% endif %}
 {% endblock %}
 {% block content %}
-{% call card("Accounts", meta=accounts | length, tight=True) %}
+{% call card("Accounts", meta=none if pages[0] or pages[1] else accounts | length, tight=True) %}
 <div class="body list-bar">{{ filter_bar(bar, problem) }}</div>
 {% if accounts %}
 <div class="table-scroll">
@@ -31,5 +31,6 @@
 {% else %}
 {{ empty("No account matches." if bar.chips else "No account yet, or none you may see.") }}
 {% endif %}
+{{ pager(pages, back="First", on="Next") }}
 {% endcall %}
 {% endblock %}
