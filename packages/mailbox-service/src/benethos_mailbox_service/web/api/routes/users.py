@@ -6,10 +6,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from ....data.models import ApiToken, Role, User
+from ....data.models import ApiToken, Page, Role, User
 from ....domain.rights import permissions
 from ....domain.users import UserService
-from ..deps import Caller, Users
+from ..deps import Caller, Limit, Users
 from ..schemas import (
     Me,
     PasswordSet,
@@ -54,12 +54,24 @@ async def list_users(
         bool | None,
         Query(description="`false`: the API users, who work with tokens only"),
     ] = None,
-) -> list[UserInfo]:
-    """Every user. The filter parameters narrow the list together."""
-    found = users.list_users(
-        caller, name=name, role=role, disabled=disabled, ui_sign_in=ui_sign_in
+    limit: Limit = 50,
+    cursor: str | None = None,
+) -> Page[UserInfo]:
+    """Every user, by name regardless of case. The filter parameters
+    narrow the list together, before it is paged."""
+    found = users.page_users(
+        caller,
+        limit=limit,
+        cursor=cursor,
+        name=name,
+        role=role,
+        disabled=disabled,
+        ui_sign_in=ui_sign_in,
     )
-    return [_user(users, user) for user in found]
+    return Page[UserInfo](
+        items=[_user(users, user) for user in found.items],
+        next_cursor=found.next_cursor,
+    )
 
 
 @router.post("/users", status_code=status.HTTP_201_CREATED)

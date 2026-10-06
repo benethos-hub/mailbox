@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import html
+import re
 from dataclasses import replace
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from starlette.datastructures import FormData
 
@@ -247,3 +250,23 @@ def test_a_refused_change_keeps_what_was_typed(
     assert 'value="10993"' in refused.text
     assert "s3cret-pw" not in refused.text
     assert 'name="host" value="imap.example.org"' in ui.get(url).text
+
+
+def test_accounts_page_by_address(
+    ui: TestClient, services: Services, account_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from benethos_mailbox_service.web.pages.routes import accounts
+
+    from ...conftest import create_account
+
+    monkeypatch.setattr(accounts, "PAGE_SIZE", 2)
+    for email in ("zed@example.org", "a@example.net"):
+        create_account(services.accounts, "memory", email)
+    first = ui.get("/ui/accounts").text
+    assert "a@example.net" in first and "me@example.com" in first
+    assert "zed@example.org" not in first
+    on = re.search(r'href="([^"]*cursor=[^"]*)">Next', first)
+    assert on is not None
+    second = ui.get(html.unescape(on.group(1))).text
+    assert "zed@example.org" in second and "a@example.net" not in second
+    assert ">First</a>" in second

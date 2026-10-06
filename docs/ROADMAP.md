@@ -260,9 +260,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   the same query names, a user's sign-in to the UI in `UserInfo`,
   keywords in the UI, and `GET /v1/status` with `get_status` in
   `accounts.read`
-- Paging for the lists that answer everything at once: accounts, users,
-  roles, tokens, webhooks and folders. Decided 2026-10-06 as the next
-  item. Its design in CONCEPT.md comes first
+- **Paging for the lists that answered everything at once (6.6)**,
+  decided 2026-10-06, done: accounts and users, in the API and the UI,
+  with one generic pager for lists held whole. Roles, tokens, webhooks
+  and folders stay one list
 - `pop3` adapter (5.2)
 - **The domain in packages by area, and the change feed as typed
   classes like the activities ([REFACTORING.md](REFACTORING.md))**,

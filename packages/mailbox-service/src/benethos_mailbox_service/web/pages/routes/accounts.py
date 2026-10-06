@@ -20,7 +20,7 @@ from ...services import Accounts, Discoverer, Status, get_oauth
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
 from ..forms import failing, text_of
-from ..templates import back, render
+from ..templates import PAGE_SIZE, back, page_links, render
 
 router = APIRouter()
 
@@ -105,18 +105,22 @@ async def list_accounts(
         status = AccountStatus(bar.value("status")) if bar.value("status") else None
     except ValueError:
         provider, status, problem = None, None, "Filter: unknown provider or status"
+    found = accounts.page(
+        caller,
+        limit=PAGE_SIZE,
+        cursor=request.query_params.get("cursor"),
+        address=bar.value("address") or None,
+        provider=provider,
+        status=status,
+    )
     return render(
         request,
         "pages/accounts.html",
         page="accounts",
         bar=bar,
         problem=problem,
-        accounts=accounts.list(
-            caller,
-            address=bar.value("address") or None,
-            provider=provider,
-            status=status,
-        ),
+        accounts=found.items,
+        pages=page_links(request, found.next_cursor),
         can_create=caller.allows("create_account"),
     )
 

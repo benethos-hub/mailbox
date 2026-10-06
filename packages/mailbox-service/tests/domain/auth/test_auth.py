@@ -193,7 +193,7 @@ def test_list_accounts_shows_only_granted(
 ) -> None:
     a, _ = two_accounts
     headers = bearer_for(services, Grant(accounts=[a], allow=["accounts.read"]))
-    listed = app_client.get("/v1/accounts", headers=headers).json()
+    listed = app_client.get("/v1/accounts", headers=headers).json()["items"]
     assert [x["id"] for x in listed] == [a]
 
 

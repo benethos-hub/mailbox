@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, empty, filter_bar %}
+{% from "components/ui.html" import card, empty, filter_bar, pager %}
 {% from "components/grants.html" import rights_of, role_tags %}
 {% block title %}Users · {{ APP_NAME }}{% endblock %}
 {% block heading %}Users{% endblock %}
@@ -8,7 +8,7 @@
 {% if can_create %}<a class="btn primary" href="/ui/users/new">New user</a>{% endif %}
 {% endblock %}
 {% block content %}
-{% call card("Users", meta=users | length, tight=True) %}
+{% call card("Users", meta=none if pages[0] or pages[1] else users | length, tight=True) %}
 <div class="body list-bar">{{ filter_bar(bar) }}</div>
 {% if users %}
 <div class="table-scroll">
@@ -34,5 +34,6 @@
 {% else %}
 {{ empty("No user matches." if bar.chips else "No user yet.") }}
 {% endif %}
+{{ pager(pages, back="First", on="Next") }}
 {% endcall %}
 {% endblock %}

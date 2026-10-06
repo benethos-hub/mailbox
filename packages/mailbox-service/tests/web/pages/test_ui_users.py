@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import re
 from pathlib import Path
 
@@ -829,3 +830,21 @@ def test_the_editor_narrows_a_grant_to_folders(
     page = ui.get(f"/ui/users/{user.id}").text
     assert "in the folders</span> inbox, Invoices 2026" in page
     assert ">inbox\nInvoices 2026</textarea>" in page
+
+
+def test_users_page_by_name_with_the_filter(
+    ui: TestClient, services: Services, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from benethos_mailbox_service.web.pages.routes import users
+
+    monkeypatch.setattr(users, "PAGE_SIZE", 2)
+    for name in ("page-c", "Page-a", "page-b"):
+        services.users.create_user(ADMIN, name, [], [])
+    first = ui.get("/ui/users", params={"name": "page"}).text
+    assert ">Page-a</a>" in first and ">page-b</a>" in first
+    assert ">page-c</a>" not in first and ">First</a>" not in first
+    on = re.search(r'href="([^"]*cursor=[^"]*)">Next', first)
+    assert on is not None and "name=page" in on.group(1)
+    second = ui.get(html.unescape(on.group(1))).text
+    assert ">page-c</a>" in second and ">Page-a</a>" not in second
+    assert ">First</a>" in second and ">Next</a>" not in second

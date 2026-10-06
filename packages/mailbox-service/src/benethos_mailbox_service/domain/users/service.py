@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ...common.ids import new_id
-from ...data.models import AccountStatus, ApiToken, Grant, Role, User
+from ...data.models import AccountStatus, ApiToken, Grant, Page, Role, User
 from ...data.storage import (
     RoleRepository,
     TokenRepository,
@@ -26,6 +26,7 @@ from ...errors import (
     NotFoundError,
     missing,
 )
+from .. import paging
 from ..accounts import Adapters
 from ..activity import HOST, ActivityLog, Actor
 from ..activity import users as said
@@ -34,6 +35,8 @@ from ..rights import ADMIN_SERVICE, Access, permissions
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18
+
+BY_NAME = paging.Order[User]("u_", lambda u: (u.name.casefold(), u.id))
 
 
 @dataclass(frozen=True)
@@ -226,6 +229,23 @@ class UserService:
             and (disabled is None or user.disabled == disabled)
             and (ui_sign_in is None or user.ui_sign_in == ui_sign_in)
         ]
+
+    def page_users(
+        self,
+        access: Access,
+        *,
+        limit: int,
+        cursor: str | None = None,
+        name: str | None = None,
+        role: str | None = None,
+        disabled: bool | None = None,
+        ui_sign_in: bool | None = None,
+    ) -> Page[User]:
+        """A page of ``list_users``, by name regardless of case."""
+        found = self.list_users(
+            access, name=name, role=role, disabled=disabled, ui_sign_in=ui_sign_in
+        )
+        return paging.page(found, BY_NAME, limit=limit, cursor=cursor)
 
     def get_user(self, access: Access, user_id: str) -> User:
         access.require("get_user")

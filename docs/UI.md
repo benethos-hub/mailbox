@@ -196,10 +196,10 @@ one of its filters, paged with one cursor across the accounts.
 
 Every list that can grow beyond one page pages with the cursor of the
 domain and shows one pager under the table: **Newest** back to the first
-page, **Older** for the next. Page sizes are constants of the page
-module. Accounts, Users and Roles page too, once the tables have a
-cursor. Until then they list everything and the pager stays hidden, so
-the layout does not change when paging arrives.
+page, **Older** for the next. Accounts and Users, sorted by address and
+by name, name them **First** and **Next**. Page sizes are constants of
+the page module. A paged card shows no count in its header, since there
+is no total. Roles, tokens and webhooks list everything.
 
 ### 4.7 Messages and errors
 
@@ -442,7 +442,7 @@ All four steps are done, as the roadmap's phase 4b records.
   API as well, the UI's query names those of the API (4.5).
 - 2026-10-06: keywords in the UI, on one message at a time, those of
   the mail protocol not changed there (4.4).
+- 2026-10-06: Accounts and Users paged like their lists in the API,
+  Roles not (4.6).
 
-The Service card of the overview shows to everyone with `accounts.read`,
-and Accounts, Users and Roles list everything with the pager hidden,
-until a need shows otherwise.
+The Service card of the overview shows to everyone with `accounts.read`.

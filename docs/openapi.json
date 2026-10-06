@@ -251,7 +251,7 @@
           "users"
         ],
         "summary": "List Users",
-        "description": "Every user. The filter parameters narrow the list together.",
+        "description": "Every user, by name regardless of case. The filter parameters\nnarrow the list together, before it is paged.",
         "operationId": "list_users",
         "security": [
           {
@@ -328,6 +328,34 @@
               "title": "Ui Sign In"
             },
             "description": "`false`: the API users, who work with tokens only"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
           }
         ],
         "responses": {
@@ -336,11 +364,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserInfo"
-                  },
-                  "title": "Response List Users"
+                  "$ref": "#/components/schemas/Page_UserInfo_"
                 }
               }
             }
@@ -2116,7 +2140,7 @@
           "accounts"
         ],
         "summary": "List Accounts",
-        "description": "The accounts the caller may list. The filter parameters narrow the\nlist together.",
+        "description": "The accounts the caller may list, by address regardless of case.\nThe filter parameters narrow the list together, before it is paged.",
         "operationId": "list_accounts",
         "security": [
           {
@@ -2173,6 +2197,34 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
           }
         ],
         "responses": {
@@ -2181,11 +2233,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Account"
-                  },
-                  "title": "Response List Accounts"
+                  "$ref": "#/components/schemas/Page_Account_"
                 }
               }
             }
@@ -10111,6 +10159,33 @@
         "title": "OutgoingMessage",
         "description": "A message to send. The service sets From, Date and Message-ID. It\nneeds a recipient, unless it is a reply: that finds one in the original."
       },
+      "Page_Account_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Account"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[Account]"
+      },
       "Page_ActivityRecord_": {
         "properties": {
           "items": {
@@ -10191,6 +10266,33 @@
           "items"
         ],
         "title": "Page[SendRecord]"
+      },
+      "Page_UserInfo_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UserInfo"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[UserInfo]"
       },
       "PasswordSet": {
         "properties": {

@@ -3,15 +3,56 @@ the page they continue."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any, TypeVar
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from typing import Any, Generic, TypeVar
 
 from ..common import opaque
+from ..data.models import Page
 from ..errors import BadRequestError
 
 T = TypeVar("T")
 
 INVALID = "invalid cursor"
+
+# The sort key of an item: what a cursor carries, so plain JSON values.
+Key = tuple[str | int, ...]
+
+
+@dataclass(frozen=True)
+class Order(Generic[T]):
+    """The order a list is paged in. ``prefix`` tells its cursors apart
+    from those of other lists. ``key`` ranks the items and is unique per
+    item, so an id comes last."""
+
+    prefix: str
+    key: Callable[[T], Key]
+
+
+def page(
+    items: Iterable[T], order: Order[T], *, limit: int, cursor: str | None
+) -> Page[T]:
+    """The page of ``items`` in ``order`` that ``cursor`` continues, for a
+    list held whole. The cursor carries the key of the last item shown,
+    so an item added or removed in between does not shift the next page."""
+    ranked = sorted(items, key=order.key)
+    if cursor is not None:
+        after = decode_cursor(order.prefix, cursor, _key)
+        try:
+            ranked = [item for item in ranked if order.key(item) > after]
+        except TypeError:  # a key of another shape, of another order
+            raise BadRequestError(INVALID) from None
+    shown, more = split_page(ranked, limit)
+    next_cursor = encode_cursor(order.prefix, order.key(shown[-1])) if more else None
+    return Page[T](items=shown, next_cursor=next_cursor)
+
+
+def _key(carried: Any) -> Key:
+    if not isinstance(carried, list) or not all(
+        isinstance(part, str | int) and not isinstance(part, bool) for part in carried
+    ):
+        raise ValueError("not a sort key")
+    return tuple(carried)
 
 
 def encode_cursor(prefix: str, value: object) -> str:

@@ -18,7 +18,9 @@ def test_create_list_get_delete(client: TestClient) -> None:
     assert account["id"].startswith("acc_")
     assert account["status"] == "connected"
 
-    assert [a["id"] for a in client.get("/v1/accounts").json()] == [account["id"]]
+    assert [a["id"] for a in client.get("/v1/accounts").json()["items"]] == [
+        account["id"]
+    ]
     assert client.get(f"/v1/accounts/{account['id']}").json() == account
 
     assert client.delete(f"/v1/accounts/{account['id']}").status_code == 204
@@ -32,7 +34,7 @@ def test_the_list_filters(client: TestClient) -> None:
     def emails(**params: str) -> list[str]:
         answer = client.get("/v1/accounts", params=params)
         assert answer.status_code == 200, answer.text
-        return sorted(a["email"] for a in answer.json())
+        return sorted(a["email"] for a in answer.json()["items"])
 
     assert emails() == ["anna@example.com", "bob@example.org"]
     assert emails(address="EXAMPLE.ORG") == ["bob@example.org"]
@@ -72,7 +74,7 @@ def test_the_settings_come_back(client: TestClient) -> None:
         },
     ).json()
     assert created["settings"] == {"host": "imap.example.org", "port": 993}
-    listed = client.get("/v1/accounts").json()
+    listed = client.get("/v1/accounts").json()["items"]
     assert [a["settings"] for a in listed if a["id"] == created["id"]] == [
         {"host": "imap.example.org", "port": 993}
     ]
@@ -152,3 +154,23 @@ def test_a_connector_that_manages_every_account_gets_no_grant(
     )
     me = connector.get("/v1/me").json()
     assert services.users.get_user(ADMIN, me["user_id"]).grants == [every]
+
+
+def test_the_list_pages_by_address(client: TestClient) -> None:
+    for email in ("carl@example.com", "Anna@example.com", "bob@example.org"):
+        client.post("/v1/accounts", json={"provider": "memory", "email": email})
+    first = client.get("/v1/accounts", params={"limit": 2}).json()
+    assert [a["email"] for a in first["items"]] == [
+        "Anna@example.com",
+        "bob@example.org",
+    ]
+    rest = client.get(
+        "/v1/accounts", params={"limit": 2, "cursor": first["next_cursor"]}
+    ).json()
+    assert [a["email"] for a in rest["items"]] == ["carl@example.com"]
+    assert rest["next_cursor"] is None
+
+    narrowed = client.get("/v1/accounts", params={"limit": 1, "address": "example.com"})
+    assert [a["email"] for a in narrowed.json()["items"]] == ["Anna@example.com"]
+    assert client.get("/v1/accounts", params={"cursor": "nope"}).status_code == 400
+    assert client.get("/v1/accounts", params={"limit": 0}).status_code == 422
