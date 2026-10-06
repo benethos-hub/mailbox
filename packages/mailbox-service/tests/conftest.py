@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service import main
+from benethos_mailbox_service import config, main
 from benethos_mailbox_service.common import redact
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
@@ -90,6 +90,13 @@ def no_configuration_from_this_machine(
     """The suite must not read a developer's ``.env`` or environment, and must
     never write into the real data directory."""
     monkeypatch.setitem(Settings.model_config, "env_file", None)
+    # Nor the settings file in the repository, which load_settings reads,
+    # nor the folders of the operating system.
+    monkeypatch.setattr(config, "ENV_FILE", f"config/{config.APP}/no-such.env")
+    system = tmp_path_factory.mktemp("system")
+    monkeypatch.setattr(
+        config, "system_folders", lambda: (system / "config", system / "data")
+    )
     for name in list(os.environ):
         if name.startswith("MAILBOX_SERVICE_"):
             monkeypatch.delenv(name)

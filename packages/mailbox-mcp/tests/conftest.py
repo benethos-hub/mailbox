@@ -10,17 +10,24 @@ from typing import Any, NamedTuple
 import httpx
 import pytest
 
-from benethos_mailbox_mcp import tools
+from benethos_mailbox_mcp import config, tools
 from benethos_mailbox_mcp.client import MailboxApiClient
 
 Handler = Callable[[httpx.Request], httpx.Response]
 
 
 @pytest.fixture(autouse=True)
-def no_configuration_from_this_machine(monkeypatch: pytest.MonkeyPatch) -> None:
+def no_configuration_from_this_machine(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Neither the environment of this machine nor a settings file in the
+    repository or in the config folder of the operating system."""
     for name in list(os.environ):
-        if name.startswith("MAILBOX_SERVICE_"):
+        if name.startswith(config.PREFIXES):
             monkeypatch.delenv(name)
+    monkeypatch.setattr(config, "ENV_FILE", f"config/{config.APP}/no-such.env")
+    system = tmp_path_factory.mktemp("system")
+    monkeypatch.setattr(config, "config_folder", lambda: system)
 
 
 @pytest.fixture

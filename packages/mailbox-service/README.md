@@ -75,13 +75,34 @@ accounts sign in with OAuth and need an app registration first:
 
 ## Where things live
 
-The service works from the folder it is started in:
+Installed with `pip` or `uv tool`, the service keeps its settings and
+data in the folders of the operating system for the user:
+
+| System | Settings (`.env`) | Data |
+|---|---|---|
+| Windows | `%LOCALAPPDATA%\benethos-mailbox-service\config` | `%LOCALAPPDATA%\benethos-mailbox-service\data` |
+| Linux | `~/.config/benethos-mailbox-service` | `~/.local/share/benethos-mailbox-service` |
+| macOS | `~/Library/Application Support/benethos-mailbox-service/config` | `~/Library/Application Support/benethos-mailbox-service/data` |
+
+Started in a folder that has `config/benethos-mailbox-service/` or
+`data/benethos-mailbox-service/`, as the repository does, it works from
+there instead, as before. The command names what applies, never a value
+of the settings:
+
+```
+benethos-mailbox-service paths
+```
 
 | What | Where |
 |---|---|
-| settings | the environment, or `config/benethos-mailbox-service/.env` (the environment wins) |
-| the database | `data/benethos-mailbox-service/mailbox.db`, readable by its owner only |
+| settings | the environment, or `.env` in the settings folder (the environment wins) |
+| the database | `mailbox.db` in the data folder, readable by its owner only |
 | the master key | the OS credential store (keyring), or a file or variable (see `MAILBOX_SERVICE_KEY_PROVIDER`) |
+
+The keyring is the default and the safest place. A key file is for a
+server without one, or a container. It never lies in the data folder,
+which a backup or a copy takes along. The service refuses it there.
+`paths` suggests `master.key` in the settings folder.
 
 A template for the settings file with every option:
 [config/benethos-mailbox-service/.env.example](https://github.com/benethos-hub/mailbox/blob/main/config/benethos-mailbox-service/.env.example).
@@ -111,10 +132,10 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` | `120` | requests a minute per API token or UI session, a burst of half as many at once. `0` switches the limit off. |
 | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` | `30` | the same per client address, for requests without a credential |
 | `MAILBOX_SERVICE_LOG_LEVEL` | `INFO` | `critical`, `error`, `warning`, `info`, `debug` or `trace`, see [Logs](#logs) |
-| `MAILBOX_SERVICE_DATA_DIR` | `data/benethos-mailbox-service` | where the database lives |
+| `MAILBOX_SERVICE_DATA_DIR` | the data folder, see [Where things live](#where-things-live) | where the database lives |
 | `MAILBOX_SERVICE_STORAGE` | `sqlite` | or `memory`, which keeps nothing |
 | `MAILBOX_SERVICE_KEY_PROVIDER` | `keyring` | where the master key lives: `keyring`, `file` or `env` |
-| `MAILBOX_SERVICE_KEY_FILE` | | the key file, for `file` |
+| `MAILBOX_SERVICE_KEY_FILE` | | the key file, for `file`. Outside the data folder |
 | `MAILBOX_SERVICE_MASTER_KEY` | | the recovery key, for `env` |
 | `MAILBOX_SERVICE_SYNC_INTERVAL` | `300` | seconds between two polls of every folder. `0` switches the sync off. |
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | watch the inbox over IMAP IDLE, with a second connection per account |
@@ -197,6 +218,7 @@ holds is written as `***`, should a message or a traceback carry one.
 | `backup verify FILE [--recovery-key]` | checks a backup |
 | `restore FILE [--recovery-key [--replace-master-key]]` | replaces the database with a backup. Stop the service first. |
 | `openapi` | prints the OpenAPI document |
+| `paths` | names the settings file, the data folder, the database and where the master key is |
 
 A backup holds accounts, users, rights, token hashes and the encrypted
 credentials, never mail. It is encrypted as a whole and opens only with

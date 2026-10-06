@@ -196,8 +196,20 @@ def test_key_provider_from_settings(tmp_path: Path) -> None:
         FileKeyProvider,
     )
     assert isinstance(key_provider(Settings(key_provider="env")), EnvKeyProvider)
-    with pytest.raises(KeyProviderError, match="KEY_FILE"):
+    with pytest.raises(KeyProviderError, match="KEY_FILE.*paths"):
         key_provider(Settings(key_provider="file"))
+
+
+def test_a_key_file_in_the_data_folder_is_refused(tmp_path: Path) -> None:
+    """A copy of the data folder would carry the key to its credentials."""
+    for inside in (tmp_path / "master.key", tmp_path / "keys" / "master.key"):
+        settings = Settings(key_provider="file", key_file=inside, data_dir=tmp_path)
+        with pytest.raises(KeyProviderError, match="lies in the data folder"):
+            key_provider(settings)
+    beside = Settings(
+        key_provider="file", key_file=tmp_path / "data.key", data_dir=tmp_path / "data"
+    )
+    assert isinstance(key_provider(beside), FileKeyProvider)
 
 
 # --- the vault ----------------------------------------------------------------
@@ -355,7 +367,7 @@ def test_keys_init_and_import_commands(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     key_file = tmp_path / "master.key"
-    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "sqlite")
     monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
     monkeypatch.setenv("MAILBOX_SERVICE_KEY_FILE", str(key_file))

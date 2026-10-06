@@ -129,9 +129,21 @@ MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos
 | `--allowed-origins` | `MAILBOX_MCP_ALLOWED_ORIGINS` | none, comma-separated |
 | `--log-level` | `MAILBOX_MCP_LOG_LEVEL` | `INFO` |
 | – | `MAILBOX_MCP_BEARER_TOKEN` | none, what HTTP clients must send |
+| `--env-file` | `MAILBOX_MCP_ENV_FILE` | a settings file, see below |
 
-The command line wins over the environment. The settings come from the
-environment only. The MCP client passes them in its configuration.
+The command line wins over the environment, the environment over a
+settings file. An MCP client usually passes the settings in its own
+configuration. Without a client, or for a server over HTTP, they can
+go into a `.env` file. The first that exists is read: the file named
+with `--env-file` or `MAILBOX_MCP_ENV_FILE`, which must exist, then
+`config/benethos-mailbox-mcp/.env` in the working directory, then `.env`
+in the settings folder of the operating system:
+`%LOCALAPPDATA%\benethos-mailbox-mcp\config` on Windows,
+`~/.config/benethos-mailbox-mcp` on Linux,
+`~/Library/Application Support/benethos-mailbox-mcp/config` on macOS.
+It sets only `MAILBOX_MCP_*` and `MAILBOX_SERVICE_*`. It holds the API
+token, so keep it readable by its owner alone. Template:
+[config/benethos-mailbox-mcp/.env.example](https://github.com/benethos-hub/mailbox/blob/main/config/benethos-mailbox-mcp/.env.example).
 
 `MAILBOX_SERVICE_URL` takes `https` anywhere and `http` to this machine
 only (`localhost`, `127.0.0.1`, `::1`), since the token goes with every

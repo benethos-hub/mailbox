@@ -276,10 +276,13 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   in a package, one module per kind, section 10, done. The
   architecture, the layout of the code and the seams:
   [ARCHITECTURE.md](ARCHITECTURE.md)
-- Settings and data in the folders of the operating system, for a service
-  installed without the repository: `%APPDATA%` on Windows,
-  `~/.config` and `~/.local/share` on Linux (`platformdirs`). A file
-  named with `--env-file` and the repository's `config/` stay first.
+- **Settings and data in the folders of the operating system, for a
+  service installed without the repository (7.4)**, decided 2026-10-06,
+  done: `%LOCALAPPDATA%` on Windows, `~/.config` and `~/.local/share`
+  on Linux (`platformdirs`). A file named with `--env-file` and the
+  repository's folders stay first, `paths` names what applies. The key
+  file never in the data folder (7.3). The MCP server reads an optional
+  `.env` alike
 
 ## Keeping this file current
 

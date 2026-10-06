@@ -363,7 +363,16 @@ def key_provider(
     if settings.key_provider == "file":
         if settings.key_file is None:
             raise KeyProviderError(
-                "MAILBOX_SERVICE_KEY_FILE must be set for the file key provider"
+                "MAILBOX_SERVICE_KEY_FILE must be set for the file key provider. "
+                "`benethos-mailbox-service paths` suggests one"
+            )
+        if settings.key_file.resolve().is_relative_to(settings.data_dir.resolve()):
+            # A copy or a backup of the data folder would carry the key to
+            # the credentials with them (CONCEPT 7.4).
+            raise KeyProviderError(
+                f"the key file {settings.key_file} lies in the data folder "
+                f"{settings.data_dir}. Keep it apart, e.g. in the config folder "
+                "that `benethos-mailbox-service paths` names"
             )
         return FileKeyProvider(settings.key_file)
     return KeyringKeyProvider()
