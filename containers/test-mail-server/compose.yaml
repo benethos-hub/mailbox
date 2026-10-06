@@ -1,0 +1,31 @@
+# Stalwart as a mail server for tests: IMAP, POP3, SMTP and JMAP on
+# ports 30000 + the standard port, on 127.0.0.1 only. setup.sh makes it,
+# README.md says how to use it.
+name: mailbox-test-mail-server
+
+services:
+  stalwart:
+    image: stalwartlabs/stalwart:v0.16
+    container_name: mailbox-stalwart
+    restart: unless-stopped
+    env_file: ../secrets/test-mail-server.env
+    environment:
+      STALWART_RECOVERY_MODE: ${STALWART_RECOVERY_MODE:-false}
+    ports:
+      - "127.0.0.1:30465:465"
+      - "127.0.0.1:30587:587"
+      - "127.0.0.1:30143:143"
+      - "127.0.0.1:30993:993"
+      - "127.0.0.1:30110:110"
+      - "127.0.0.1:30995:995"
+      - "127.0.0.1:30443:443"
+      - "127.0.0.1:30080:8080"
+    volumes:
+      - etc:/etc/stalwart
+      - data:/var/lib/stalwart
+
+volumes:
+  etc:
+    name: mailbox-stalwart-etc
+  data:
+    name: mailbox-stalwart-data
