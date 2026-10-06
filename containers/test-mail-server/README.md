@@ -18,14 +18,14 @@ volumes, sets up the domain `mailbox.test` (reserved for tests, RFC 2606),
 a certificate of a local test CA, the listeners and the accounts `test1`
 and `test2`, and checks that TLS answers with that certificate.
 
-What it keeps between runs, in `containers/secrets/` (not versioned):
+What it keeps between runs, in `secrets/` beside it (not versioned):
 
 | File | Holds |
 |---|---|
-| `test-mail-server.env` | the administrator of Stalwart's recovery mode |
-| `test-mail-server-accounts.env` | the addresses and passwords of the two accounts |
-| `test-mail-server-tls/ca.pem` | the test CA, which a client must trust |
-| `test-mail-server-tls/` | the CA's key and the server's certificate and key |
+| `admin.env` | the administrator of Stalwart's recovery mode |
+| `accounts.env` | the addresses and passwords of the two accounts |
+| `tls/ca.pem` | the test CA, which a client must trust |
+| `tls/` | the CA's key and the server's certificate and key |
 
 So a second run gives the same accounts, and a client that trusts the CA
 keeps trusting it. Delete these files for new passwords and a new CA.
@@ -53,7 +53,7 @@ resolve to private addresses, which the service refuses unless they are
 named as internal:
 
 ```
-export SSL_CERT_FILE=containers/secrets/test-mail-server-tls/ca.pem
+export SSL_CERT_FILE=containers/test-mail-server/secrets/tls/ca.pem
 export MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS='["localhost"]'
 ```
 
@@ -71,7 +71,7 @@ docker compose -f containers/test-mail-server/compose.yaml down -v   # remove it
 
 To change its configuration, start it in recovery mode, which serves only
 the management API on port 30080, with the administrator of
-`test-mail-server.env`:
+`secrets/admin.env`:
 
 ```
 STALWART_RECOVERY_MODE=true docker compose -f containers/test-mail-server/compose.yaml up -d --force-recreate

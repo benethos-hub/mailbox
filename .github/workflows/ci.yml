@@ -158,34 +158,46 @@ jobs:
       - name: Build both images
         run: |
           set -euo pipefail
-          docker build -t benethos-mailbox-service:ci -f containers/benethos-mailbox-service/Dockerfile .
-          docker build -t benethos-mailbox-mcp:ci -f containers/benethos-mailbox-mcp/Dockerfile .
+          docker build -t benethos-mailbox-service:ci -f containers/images/mailbox-service/Dockerfile .
+          docker build -t benethos-mailbox-mcp:ci -f containers/images/mailbox-mcp/Dockerfile .
 
-      # The compose file publishes every port on the loopback address only
+      # The compose files publish every port on the loopback address only
       # (CONCEPT 8.1). That is asserted here, so a change cannot drop it
-      # unnoticed. Anyone running it may still publish wider in their own
-      # copy or an override file.
-      - name: Compose is valid and keeps every port on the loopback address
+      # unnoticed. The one exception is Caddy of the profile https in
+      # production, which is there to listen on 80 and 443 everywhere.
+      # Anyone running them may still publish wider in their own copy or
+      # an override file.
+      - name: Compose files are valid and keep every port on the loopback address
         working-directory: containers
         run: |
           set -euo pipefail
-          mkdir -p secrets && touch secrets/master_key
-          docker compose --profile mcp config -q
-          docker compose --profile mcp config --format json > /tmp/compose.json
-          python3 - <<'PY'
+          for place in dev production; do
+            mkdir -p "$place/secrets" && touch "$place/secrets/master_key"
+            if [ -e "$place/.env.example" ]; then cp "$place/.env.example" "$place/.env"; fi
+            (cd "$place" && docker compose --profile mcp --profile https config -q)
+            (cd "$place" && docker compose --profile mcp --profile https config --format json) > "/tmp/$place.json"
+            python3 - "$place" <<'PY'
           import json
+          import sys
 
-          services = json.load(open("/tmp/compose.json"))["services"]
-          assert services, "the compose file defines no services"
+          place = sys.argv[1]
+          # Who may listen on every address, and on which ports.
+          public = {("production", "caddy"): {"80", "443"}}
+          services = json.load(open(f"/tmp/{place}.json"))["services"]
+          assert services, f"{place}: the compose file defines no services"
           for name, service in services.items():
               for port in service.get("ports") or []:
-                  host_ip = port.get("host_ip")
+                  host_ip, published = port.get("host_ip"), str(port.get("published"))
+                  if published in public.get((place, name), set()):
+                      print(f"OK: {place} {name} publishes {published} everywhere, as meant")
+                      continue
                   assert host_ip in ("127.0.0.1", "::1"), (
-                      f"{name} publishes port {port.get('published')} on "
+                      f"{place}: {name} publishes port {published} on "
                       f"{host_ip or 'every interface'}, not on the loopback address"
                   )
-                  print(f"OK: {name} publishes {host_ip}:{port.get('published')}")
+                  print(f"OK: {place} {name} publishes {host_ip}:{published}")
           PY
+          done
 
       # The release publishes linux/arm64 as well. Build it here so that an
       # arm64-only break does not first surface in a release. Nothing is
@@ -200,7 +212,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: containers/benethos-mailbox-service/Dockerfile
+          file: containers/images/mailbox-service/Dockerfile
           platforms: linux/arm64
           push: false
           cache-from: type=gha,scope=benethos-mailbox-service
@@ -210,7 +222,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: containers/benethos-mailbox-mcp/Dockerfile
+          file: containers/images/mailbox-mcp/Dockerfile
           platforms: linux/arm64
           push: false
           cache-from: type=gha,scope=benethos-mailbox-mcp

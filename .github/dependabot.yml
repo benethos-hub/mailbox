@@ -36,8 +36,8 @@ updates:
   # use the same bases, so one group brings each update as one pull request.
   - package-ecosystem: "docker"
     directories:
-      - "/containers/benethos-mailbox-service"
-      - "/containers/benethos-mailbox-mcp"
+      - "/containers/images/mailbox-service"
+      - "/containers/images/mailbox-mcp"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5

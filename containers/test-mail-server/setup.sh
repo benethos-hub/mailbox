@@ -5,16 +5,16 @@
 #
 #   sh containers/test-mail-server/setup.sh
 #
-# What it keeps between runs, in containers/secrets/ (not versioned): the
+# What it keeps between runs, in secrets/ beside it (not versioned): the
 # admin and account passwords and the test CA, so a second run gives the
 # same accounts and a client that trusts the CA keeps trusting it.
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
-secrets="$(cd "$here/.." && pwd)/secrets"
-tls="$secrets/test-mail-server-tls"
-admin_env="$secrets/test-mail-server.env"
-accounts_env="$secrets/test-mail-server-accounts.env"
+secrets="$here/secrets"
+tls="$secrets/tls"
+admin_env="$secrets/admin.env"
+accounts_env="$secrets/accounts.env"
 cli_image="ghcr.io/stalwartlabs/cli:1.0"
 network="mailbox-test-mail-server_default"
 domain="mailbox.test"

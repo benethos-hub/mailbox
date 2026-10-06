@@ -1,0 +1,14 @@
+# HTTPS in front of Mailbox, with the profile https of compose.yaml. Caddy
+# gets and renews the certificate for MAILBOX_DOMAIN itself, and sets
+# X-Forwarded-For, -Proto and -Host, which the service believes from
+# Caddy's address alone.
+
+{$MAILBOX_DOMAIN} {
+	# The MCP server, with the profile mcp. Without it this path answers 502.
+	handle /mcp* {
+		reverse_proxy mailbox-mcp:8000
+	}
+	handle {
+		reverse_proxy mailbox-service:8080
+	}
+}

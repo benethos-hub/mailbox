@@ -3,7 +3,7 @@
 # The MCP server, benethos-mailbox-mcp, over streamable HTTP. Build context:
 # the repository root, where the workspace lockfile lives:
 #
-#   docker build -f containers/benethos-mailbox-mcp/Dockerfile .
+#   docker build -f containers/images/mailbox-mcp/Dockerfile .
 #
 # Only the MCP package goes into the image. It reaches mail through the REST
 # API of the service alone (MAILBOX_SERVICE_URL, MAILBOX_SERVICE_TOKEN).

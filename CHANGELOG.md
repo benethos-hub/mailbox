@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `containers/production/`: Mailbox in operation from the published
+  images, without a clone of the repository. `.env` names the version,
+  the profile `mcp` adds the MCP server, the profile `https` puts Caddy
+  in front with a certificate from Let's Encrypt. `setup.sh` does the
+  first start: the master key, the keys, the first administrator. Its
+  README has the same steps by hand. It keeps the project name
+  `benethos-mailbox`, so the data volume of the compose file before
+  stays: copy its `secrets/master_key` over.
+
 - Settings and data in the folders of the operating system, for an
   installation without the repository: `%LOCALAPPDATA%\benethos-mailbox-service\`
   with `config` and `data` on Windows, `~/.config/benethos-mailbox-service/`
@@ -86,6 +95,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** `containers/compose.yaml` moved to `containers/dev/` and
+  builds from the repository only. `MAILBOX_SERVICE_IMAGE` and
+  `MAILBOX_MCP_IMAGE` are gone: the published images run from
+  `containers/production/`. The Dockerfiles are in `containers/images/`.
 - **Breaking:** a key file in the data folder is refused
   (`MAILBOX_SERVICE_KEY_FILE` below `MAILBOX_SERVICE_DATA_DIR`). A copy
   of the folder would carry the key to the credentials with it. Move the

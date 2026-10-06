@@ -109,10 +109,10 @@ data/                     # one folder per package, created when missing,
                           #   only .gitkeep is versioned
 live/                     # manual checks against the test accounts,
                           #   what they share in _common.py
-containers/               # one folder per image, compose.yaml, README.md,
-                          #   test-mail-server/ (Stalwart for tests),
-                          #   secrets/ local (the master key, the test
-                          #   mail server's passwords and CA)
+containers/               # images/ (one folder per image), and one folder
+                          #   per place they run: dev/ (built from the
+                          #   repository), test-mail-server/ (Stalwart
+                          #   for tests). Each keeps its secrets/ local
 .github/workflows/        # ci.yml: checks, fresh install, lowest
                           #   versions, images,
                           #   publish.yml: on a release both packages to

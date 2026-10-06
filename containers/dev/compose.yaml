@@ -1,11 +1,11 @@
-# The service as a container, bound to the loopback address of the host
-# (CONCEPT 8.1). The first start: packages/mailbox-service/README.md, "Container".
-#
-# MAILBOX_SERVICE_IMAGE names the image to run, e.g. from the GitHub container
-# registry: ghcr.io/<owner>/benethos-mailbox-service:<version>. Without it, the
-# image is built from this repository.
+# For development: the service, and the MCP server with the profile mcp,
+# built from this repository and bound to the loopback address of the host
+# (CONCEPT 8.1). To run the published images instead: ../production/.
+# The first start takes the steps of ../production/README.md, run in this
+# folder after `docker compose build`. The master key lives in
+# secrets/master_key here, not versioned.
 
-name: benethos-mailbox
+name: mailbox-dev
 
 # Docker keeps what a container writes to stderr, and the service writes a
 # line per request. Without a cap the log grows for as long as the container
@@ -18,11 +18,11 @@ x-logging: &logging
 
 services:
   mailbox-service:
-    image: ${MAILBOX_SERVICE_IMAGE:-benethos-mailbox-service:local}
+    image: benethos-mailbox-service:local
     logging: *logging
     build:
-      context: ..
-      dockerfile: containers/benethos-mailbox-service/Dockerfile
+      context: ../..
+      dockerfile: containers/images/mailbox-service/Dockerfile
     restart: unless-stopped
     ports:
       - "127.0.0.1:${MAILBOX_SERVICE_PORT:-8080}:8080"
@@ -47,11 +47,11 @@ services:
   # MAILBOX_MCP_BEARER_TOKEN (what its own clients must send).
   mailbox-mcp:
     profiles: [mcp]
-    image: ${MAILBOX_MCP_IMAGE:-benethos-mailbox-mcp:local}
+    image: benethos-mailbox-mcp:local
     logging: *logging
     build:
-      context: ..
-      dockerfile: containers/benethos-mailbox-mcp/Dockerfile
+      context: ../..
+      dockerfile: containers/images/mailbox-mcp/Dockerfile
     restart: unless-stopped
     depends_on:
       mailbox-service:
