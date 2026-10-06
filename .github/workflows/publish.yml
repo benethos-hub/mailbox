@@ -123,9 +123,11 @@ jobs:
       matrix:
         include:
           - image: benethos-mailbox-service
+            folder: mailbox-service
             package: packages/mailbox-service
             description: "Mailbox, mailbox-service: one REST API for several mail providers and accounts."
           - image: benethos-mailbox-mcp
+            folder: mailbox-mcp
             package: packages/mailbox-mcp
             description: "Mailbox, mailbox-mcp: the MCP server over streamable HTTP. Reaches mail through the REST API of mailbox-service only."
     permissions:
@@ -194,7 +196,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: containers/${{ matrix.image }}/Dockerfile
+          file: containers/images/${{ matrix.folder }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

@@ -3,7 +3,7 @@
 # The service, benethos-mailbox-service. Build context: the repository root, where
 # the workspace lockfile lives:
 #
-#   docker build -f containers/benethos-mailbox-service/Dockerfile .
+#   docker build -f containers/images/mailbox-service/Dockerfile .
 #
 # Only the service package goes into the image, installed from the lockfile
 # without the development tools. The MCP server is not part of it.

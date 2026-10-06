@@ -158,15 +158,15 @@ jobs:
       - name: Build both images
         run: |
           set -euo pipefail
-          docker build -t benethos-mailbox-service:ci -f containers/benethos-mailbox-service/Dockerfile .
-          docker build -t benethos-mailbox-mcp:ci -f containers/benethos-mailbox-mcp/Dockerfile .
+          docker build -t benethos-mailbox-service:ci -f containers/images/mailbox-service/Dockerfile .
+          docker build -t benethos-mailbox-mcp:ci -f containers/images/mailbox-mcp/Dockerfile .
 
       # The compose file publishes every port on the loopback address only
       # (CONCEPT 8.1). That is asserted here, so a change cannot drop it
       # unnoticed. Anyone running it may still publish wider in their own
       # copy or an override file.
       - name: Compose is valid and keeps every port on the loopback address
-        working-directory: containers
+        working-directory: containers/dev
         run: |
           set -euo pipefail
           mkdir -p secrets && touch secrets/master_key
@@ -200,7 +200,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: containers/benethos-mailbox-service/Dockerfile
+          file: containers/images/mailbox-service/Dockerfile
           platforms: linux/arm64
           push: false
           cache-from: type=gha,scope=benethos-mailbox-service
@@ -210,7 +210,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: containers/benethos-mailbox-mcp/Dockerfile
+          file: containers/images/mailbox-mcp/Dockerfile
           platforms: linux/arm64
           push: false
           cache-from: type=gha,scope=benethos-mailbox-mcp

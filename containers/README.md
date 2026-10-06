@@ -4,23 +4,28 @@
 > API and the configuration may still change. Stored data is carried
 > forward by migrations.
 
-One folder per image, and a compose file for running them.
+The images, and the places they run in, each in a folder of its own.
+Each place keeps its secrets in its own `secrets/`, never versioned.
 
 ```
 containers/
-  compose.yaml                   # the service, and the MCP server with the
+  images/                        # what the CI builds and publishes
+    mailbox-service/Dockerfile   # build context: the repository root
+    mailbox-mcp/Dockerfile       # the MCP server over streamable HTTP
+  dev/                           # for development, built from the repository
+    compose.yaml                 # the service, the MCP server with the
                                  #   profile mcp, ports on 127.0.0.1 only
-  benethos-mailbox-service/
-    Dockerfile                   # build context: the repository root
-  benethos-mailbox-mcp/
-    Dockerfile                   # the MCP server over streamable HTTP
   test-mail-server/              # Stalwart as a mail server for tests,
                                  #   set up by setup.sh, see its README.md
-  secrets/                       # local, not versioned: master_key, the
-                                 #   test mail server's passwords and CA
 ```
 
-How to start and run them, with `docker run` or with compose:
+| Folder | For | Images |
+|---|---|---|
+| `dev/` | trying a change in a container | built from this repository |
+| `test-mail-server/` | the adapters against a mail server of our own | Stalwart |
+
+How to start and run the service and the MCP server, with `docker run`
+or with compose:
 
 - the service: [packages/mailbox-service/README.md](../packages/mailbox-service/README.md#container)
 - the MCP server: [packages/mailbox-mcp/README.md](../packages/mailbox-mcp/README.md#container)
@@ -39,12 +44,12 @@ version as the PyPI packages:
 
 - Only the one package goes into each image, installed from `uv.lock`
   without the development tools.
-- They run as user `mailbox` (uid 10001). The compose file adds a
+- They run as user `mailbox` (uid 10001). The compose files add a
   read-only root file system, no capabilities and `no-new-privileges`.
 - Settings come from the environment only.
 - Both have a health check: the service on `GET /health`, the MCP server
   on its port.
-- The compose file caps the log Docker keeps of each container at 5
+- The compose files cap the log Docker keeps of each container at 5
   files of 10 MB, the oldest dropped first (`x-logging`). To keep more,
   raise `max-size` or `max-file`. To keep the log elsewhere, replace the
   driver, for example with `journald`, and read it with `journalctl
@@ -53,8 +58,8 @@ version as the PyPI packages:
 Built from the repository root:
 
 ```sh
-docker build -f containers/benethos-mailbox-service/Dockerfile -t benethos-mailbox-service:local .
-docker build -f containers/benethos-mailbox-mcp/Dockerfile -t benethos-mailbox-mcp:local .
+docker build -f containers/images/mailbox-service/Dockerfile -t benethos-mailbox-service:local .
+docker build -f containers/images/mailbox-mcp/Dockerfile -t benethos-mailbox-mcp:local .
 ```
 
 The build of the service warns `SecretsUsedInArgOrEnv` for
@@ -67,5 +72,5 @@ it is.
 
 `ci.yml` builds both on every pull request and every push to `main`,
 for arm64 as well. It checks that the
-compose file keeps every port on the loopback address. It also starts the
+compose file in `dev/` keeps every port on the loopback address. It also starts the
 service until its health check reports healthy.

@@ -1,4 +1,4 @@
-# Build context of the images in containers/: the repository root. Only
+# Build context of the images in containers/images/: the repository root. Only
 # pyproject.toml, uv.lock and packages/ are needed.
 **
 !pyproject.toml
