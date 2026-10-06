@@ -37,6 +37,18 @@ _TOKEN_LENGTH = 64
 
 TokenState = Literal["active", "expired", "revoked"]
 
+
+@dataclass(frozen=True)
+class SignInState:
+    """How a user signs in to the UI, never the password itself."""
+
+    has_password: bool
+    # Set by someone else, or a one-time password: changed at the next
+    # sign-in. False without a password.
+    must_change: bool
+    last_sign_in_at: datetime | None
+
+
 # A user name that fails this often in the window waits this long, from
 # any address: slower guessing at one account from many addresses, and
 # never a long lockout of its owner.
@@ -237,6 +249,12 @@ class AuthService:
         if token.expires_at is not None and token.expires_at <= self._clock():
             return "expired"
         return "active"
+
+    def sign_in_state(self, user_id: str) -> SignInState:
+        stored = self.passwords.stored(user_id)
+        if stored is None:
+            return SignInState(False, False, None)
+        return SignInState(True, stored.must_change, stored.last_sign_in_at)
 
     def _live_user(self, user_id: str) -> User:
         """The user, ``UnauthorizedError`` when it is gone or disabled."""

@@ -50,7 +50,7 @@ def _filter(bar: FilterBar) -> ActivityFilter | None:
     """What the bar asks for. Raises ``FormError``, a ``ValueError``, for
     a value that is no filter."""
     wanted = {
-        "user_id": bar.value("who") or None,
+        "user_id": bar.value("user") or None,
         "activity": bar.value("activity") or None,
         "record": bar.value("record") or None,
         "after": _day(bar.value("after")),
@@ -69,7 +69,7 @@ async def audit_page(
     bar = filter_bar(
         request,
         (
-            Field("who", "Who", "select", sorted(names.items(), key=lambda n: n[1])),
+            Field("user", "Who", "select", sorted(names.items(), key=lambda n: n[1])),
             Field("activity", "Activity", "select", activity_choices()),
             Field("after", "From day", "date"),
             Field("before", "Before day", "date"),

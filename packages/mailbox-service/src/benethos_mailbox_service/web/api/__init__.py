@@ -22,6 +22,7 @@ from .routes import (
     mailbox,
     messages,
     oauth,
+    status,
     users,
     webhooks,
 )
@@ -47,6 +48,7 @@ def install(app: FastAPI) -> None:
         mailbox.router,
         webhooks.router,
         audit.router,
+        status.router,
     ):
         for route in router.routes:
             if isinstance(route, APIRoute):

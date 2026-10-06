@@ -95,7 +95,7 @@ def test_filters_narrow_the_audit(
     other = create_account(services.accounts, "memory", "two@example.com").id
     _send(ui, account_id, "bob@example.org")
     _send(ui, other, "carol@example.org")
-    by_recipient = ui.get("/ui/sends", params={"to": "CAROL"}).text
+    by_recipient = ui.get("/ui/sends", params={"recipient": "CAROL"}).text
     assert "carol@example.org" in by_recipient and "bob@example.org" not in by_recipient
     assert "Recipient: CAROL" in by_recipient
     by_account = ui.get("/ui/sends", params={"account": account_id}).text

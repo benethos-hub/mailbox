@@ -29,7 +29,7 @@ from ...errors import (
 from ..accounts import Adapters
 from ..activity import HOST, ActivityLog, Actor
 from ..activity import users as said
-from ..auth import MAX_NAME, AuthService, TokenState
+from ..auth import MAX_NAME, AuthService, SignInState, TokenState
 from ..rights import ADMIN_SERVICE, Access, permissions
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
@@ -336,16 +336,11 @@ class UserService:
 
     # --- passwords ------------------------------------------------------------
 
-    def has_password(self, access: Access, user_id: str) -> bool:
-        """Whether the user can sign in to the UI."""
-        _self_or_get_user(access, user_id)
-        return self._auth.passwords.stored(user_id) is not None
-
-    def last_sign_in(self, access: Access, user_id: str) -> datetime | None:
-        """When the user last signed in to the UI."""
-        _self_or_get_user(access, user_id)
-        stored = self._auth.passwords.stored(user_id)
-        return stored.last_sign_in_at if stored is not None else None
+    def sign_in_state(self, user: User) -> SignInState:
+        """Whether the user has a password, must change it, and when it
+        last signed in to the UI. For a user the caller has read already,
+        as ``token_state`` is for a token."""
+        return self._auth.sign_in_state(user.id)
 
     async def change_password(self, access: Access, current: str, new: str) -> datetime:
         """The caller's own password, with the current one. Returns the new
@@ -633,13 +628,6 @@ def _administrators(users: Iterable[User], roles: dict[str, Role]) -> list[str]:
         and user.ui_sign_in
         and Access.for_user(user, roles).is_admin()
     ]
-
-
-def _self_or_get_user(access: Access, user_id: str) -> None:
-    """A caller reads about itself freely, about another user with
-    ``get_user``."""
-    if user_id != access.user_id:
-        access.require("get_user")
 
 
 def _named(what: str, name: str) -> str:

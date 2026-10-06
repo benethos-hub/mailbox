@@ -25,6 +25,26 @@ def test_create_list_get_delete(client: TestClient) -> None:
     assert client.get(f"/v1/accounts/{account['id']}").status_code == 404
 
 
+def test_the_list_filters(client: TestClient) -> None:
+    for email in ("anna@example.com", "bob@example.org"):
+        client.post("/v1/accounts", json={"provider": "memory", "email": email})
+
+    def emails(**params: str) -> list[str]:
+        answer = client.get("/v1/accounts", params=params)
+        assert answer.status_code == 200, answer.text
+        return sorted(a["email"] for a in answer.json())
+
+    assert emails() == ["anna@example.com", "bob@example.org"]
+    assert emails(address="EXAMPLE.ORG") == ["bob@example.org"]
+    assert emails(provider="memory", status="connected", address="anna") == [
+        "anna@example.com"
+    ]
+    assert emails(status="needs_reauth") == []
+    assert emails(provider="imap") == []
+    for wrong in ({"provider": "carrier pigeon"}, {"status": "asleep"}):
+        assert client.get("/v1/accounts", params=wrong).status_code == 422
+
+
 def test_unknown_account_has_error_envelope(client: TestClient) -> None:
     response = client.get("/v1/accounts/acc_missing")
     assert response.status_code == 404

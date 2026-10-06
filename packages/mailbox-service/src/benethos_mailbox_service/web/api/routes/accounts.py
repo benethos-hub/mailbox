@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, status
+from typing import Annotated
 
-from ....data.models import Account
+from fastapi import APIRouter, Query, status
+
+from ....data.models import Account, AccountStatus, ProviderType
 from ..deps import Accounts, Caller
 from ..schemas import AccountCreate, AccountUpdate
 
@@ -10,8 +12,18 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
 @router.get("")
-async def list_accounts(caller: Caller, accounts: Accounts) -> list[Account]:
-    return accounts.list(caller)
+async def list_accounts(
+    caller: Caller,
+    accounts: Accounts,
+    address: Annotated[
+        str | None, Query(description="Part of the address, regardless of case")
+    ] = None,
+    provider: ProviderType | None = None,
+    status: AccountStatus | None = None,
+) -> list[Account]:
+    """The accounts the caller may list. The filter parameters narrow the
+    list together."""
+    return accounts.list(caller, address=address, provider=provider, status=status)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

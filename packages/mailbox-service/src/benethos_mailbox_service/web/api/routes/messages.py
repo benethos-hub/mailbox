@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from ....data.models import ChangePage, FolderRole, MessagePage, Page, SendRecord
-from ..deps import Caller, Limit, Mailbox, Search, Since
+from ..deps import Caller, Limit, Mailbox, Search, SendSearch, Since
 from ..errors import CHANGES_ERRORS
 
 router = APIRouter(tags=["mailbox"])
@@ -59,9 +59,15 @@ async def list_all_changes(
 
 @router.get("/sends")
 async def list_all_sends(
-    caller: Caller, mailbox: Mailbox, limit: Limit = 50, cursor: str | None = None
+    caller: Caller,
+    mailbox: Mailbox,
+    matching: SendSearch,
+    limit: Limit = 50,
+    cursor: str | None = None,
 ) -> Page[SendRecord]:
     """The audit of sends of every account the caller may audit, newest
     first. An account deleted since stays in it for a caller whose grant
-    names every account."""
-    return mailbox.outgoing.list_all_sends(caller, limit=limit, cursor=cursor)
+    names every account. The filter parameters narrow the list together."""
+    return mailbox.outgoing.list_all_sends(
+        caller, limit=limit, cursor=cursor, matching=matching
+    )

@@ -574,6 +574,21 @@ def check_writing(
             f"{received}/flags", data={"csrf_token": csrf, "unread": "0"}
         )
         run.check("mark it read", "Mark unread" in read.text)
+        tagged = browser.post(
+            f"{received}/keywords", data={"csrf_token": csrf, "add": "live-check"}
+        )
+        run.check(
+            "give it a keyword",
+            "Remove live-check" in tagged.text and 'role="alert"' not in tagged.text,
+        )
+        untagged = browser.post(
+            f"{received}/keywords", data={"csrf_token": csrf, "remove": "live-check"}
+        )
+        run.check(
+            "take the keyword away",
+            "Remove live-check" not in untagged.text
+            and 'role="alert"' not in untagged.text,
+        )
         trashed = browser.post(f"{received}/delete", data={"csrf_token": csrf})
         run.check("move it to the trash", "Moved to the trash." in trashed.text)
         purged = browser.post(

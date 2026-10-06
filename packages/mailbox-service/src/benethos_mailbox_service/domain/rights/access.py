@@ -181,9 +181,9 @@ class Access:
         )
 
     def sees_status(self) -> bool:
-        """The status of the service is for callers who may list some
-        account."""
-        return self.anywhere("list_accounts")
+        """The status of the service is for callers who may see it of
+        some account."""
+        return self.anywhere("get_status")
 
     def batches(self, operation: str, account_id: str) -> bool:
         """Whether a batch of ``operation`` is allowed on the account: the

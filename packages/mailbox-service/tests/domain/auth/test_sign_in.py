@@ -171,12 +171,12 @@ async def test_a_one_time_password_signs_in_once_and_is_noted(
     services: Services,
 ) -> None:
     user = services.users.create_user(ADMIN, "Anna", [], [READER], ui_sign_in=True)
-    assert services.users.last_sign_in(ADMIN, user.id) is None
+    assert services.users.sign_in_state(user).last_sign_in_at is None
     password = await services.users.one_time_password(ADMIN, user.id)
     assert len(password) >= 24
     signed = await services.auth.sign_in("anna", password, source="10.0.0.1")
     assert signed.must_change is True and signed.previous is None
-    assert services.users.last_sign_in(ADMIN, user.id) is not None
+    assert services.users.sign_in_state(user).last_sign_in_at is not None
     again = await services.auth.sign_in("anna", password, source="10.0.0.1")
     assert again.previous is not None
     # Without users.manage no password for anyone, its own included.

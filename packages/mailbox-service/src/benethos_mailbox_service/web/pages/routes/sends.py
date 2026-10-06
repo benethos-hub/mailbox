@@ -42,9 +42,9 @@ def _filter(bar: FilterBar) -> SendFilter | None:
     """What the bar asks for. Raises ``FormError``, a ``ValueError``, for
     a value that is no filter."""
     wanted = {
-        "user_id": bar.value("who") or None,
+        "user_id": bar.value("user") or None,
         "outcome": bar.value("outcome") or None,
-        "recipient": bar.value("to") or None,
+        "recipient": bar.value("recipient") or None,
         "after": _day(bar.value("after")),
         "before": _day(bar.value("before")),
     }
@@ -63,12 +63,12 @@ async def sends(
         request,
         (
             Field("account", "Account", "select", [(a.id, a.email) for a in audited]),
-            Field("who", "Who", "select", sorted(names.items(), key=lambda n: n[1])),
+            Field("user", "Who", "select", sorted(names.items(), key=lambda n: n[1])),
             Field("outcome", "Outcome", "select", OUTCOMES),
             Field("after", "From day", "date"),
             Field("before", "Before day", "date"),
         ),
-        search=Field("to", "Recipient"),
+        search=Field("recipient", "Recipient"),
     )
     problem = ""
     try:

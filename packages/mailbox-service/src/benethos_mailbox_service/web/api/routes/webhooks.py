@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Response
+from typing import Annotated
+
+from fastapi import APIRouter, Query, Response
 
 from ....data.models import CreatedWebhook, Webhook, WebhookCreate, WebhookDetail
 from ..deps import Caller, Webhooks
@@ -11,10 +13,28 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
 @router.get("")
-async def list_webhooks(caller: Caller, webhooks: Webhooks) -> list[Webhook]:
+async def list_webhooks(
+    caller: Caller,
+    webhooks: Webhooks,
+    url: Annotated[
+        str | None, Query(description="Part of the URL, regardless of case")
+    ] = None,
+    account: Annotated[
+        str | None,
+        Query(
+            description=(
+                "An account id: the webhooks that hear of it, those of every "
+                "account among them"
+            )
+        ),
+    ] = None,
+    failing: Annotated[
+        bool | None, Query(description="Whether the last post failed")
+    ] = None,
+) -> list[Webhook]:
     """The caller's webhooks, with how their last delivery went. Never the
-    secret."""
-    return webhooks.list_webhooks(caller)
+    secret. The filter parameters narrow the list together."""
+    return webhooks.list_webhooks(caller, url=url, account=account, failing=failing)
 
 
 @router.post("", status_code=201)

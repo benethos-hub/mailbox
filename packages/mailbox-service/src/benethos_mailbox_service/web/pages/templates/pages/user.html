@@ -18,8 +18,8 @@
   {% call fact("Roles") %}{{ role_tags(user.roles) }}{% endcall %}
   {% call fact("Service rights") %}{{ service_of(user.service) }}{% endcall %}
   {% call fact("Grants") %}{{ grants_of(user.grants, names) }}{% endcall %}
-  {% call fact("Sign-in to the UI") %}{% if not user.ui_sign_in %}off: an API user, tokens only{% elif has_password %}with a password{% else %}not possible: no password yet{% endif %}{% endcall %}
-  {{ fact("Last sign-in", last_sign_in | when) }}
+  {% call fact("Sign-in to the UI") %}{% if not user.ui_sign_in %}off: an API user, tokens only{% elif sign_in.must_change %}with a password set for it, to change at the next sign-in{% elif sign_in.has_password %}with a password{% else %}not possible: no password yet{% endif %}{% endcall %}
+  {{ fact("Last sign-in", sign_in.last_sign_in_at | when) }}
   {{ fact("Id", user.id, cls="mono") }}
 {% endcall %}
 
@@ -95,7 +95,7 @@
   <div class="body tight">
     {% if activity %}{{ activity_rows(activity, outcomes, False, who=False) }}{% else %}{{ empty("Nothing in the audit.") }}{% endif %}
   </div>
-  <div class="body"><a href="/ui/audit?who={{ user.id }}">All its activity</a> · <a href="/ui/audit?record={{ user.id }}">What was done to it</a></div>
+  <div class="body"><a href="/ui/audit?user={{ user.id }}">All its activity</a> · <a href="/ui/audit?record={{ user.id }}">What was done to it</a></div>
 {% endcall %}
 {% endif %}
 

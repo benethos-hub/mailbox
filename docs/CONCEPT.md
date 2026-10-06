@@ -646,6 +646,13 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
 | GET | `/v1/providers` | the built-in presets, the same data discovery uses first |
+| GET | `/v1/status` | the sync worker and the accounts the caller may see the status of, as the UI's status page shows them. Nothing is asked of a provider |
+
+**Decided 2026-10-06, the status at the API:** `get_status` in
+`accounts.read`, for the accounts the caller may list. The worker names
+how many accounts it watches, never which. Webhooks are not part of it:
+`GET /v1/webhooks?failing=true` names the failing ones. The MCP server
+has no tool for it.
 
 ### 6.2 Folders
 
@@ -1161,7 +1168,7 @@ with the role
 
   | Group | Operations |
   |---|---|
-  | `accounts.read` | `list_accounts`, `get_account` |
+  | `accounts.read` | `list_accounts`, `get_account`, `get_status` |
   | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_changes`, `list_all_changes`, and the planned `list_threads`, `get_thread` |
   | `mail.write` | `update_message`, `delete_message` to trash, `batch_messages`, `create_folder`, `update_folder` |
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
@@ -1327,7 +1334,8 @@ record. Old ones are purged as a send comes in, once an hour at most.
 `GET /v1/accounts/{account_id}/sends` reads it, newest first, with the
 right `list_sends` (group `audit`). `GET /v1/sends` (`list_all_sends`)
 reads it across the accounts the caller may audit, deleted ones
-included for a grant on every account.
+included for a grant on every account. `user`, `outcome`, `recipient`
+(part of an address), `after` and `before` narrow both lists together.
 
 #### Endpoints
 
@@ -1336,7 +1344,7 @@ included for a grant on every account.
 | GET | `/v1/me` | any authenticated user. Who am I, and my effective rights resolved to operations per account |
 | GET | `/v1/permissions` | any authenticated user. The catalogue of operations and groups |
 | GET / POST | `/v1/users` | GET `users.read`, POST `users.manage` |
-| GET / PATCH / DELETE | `/v1/users/{user_id}` | GET `users.read`, the others `users.manage`. Name, roles, service, grants, disabled, `ui_sign_in` |
+| GET / PATCH / DELETE | `/v1/users/{user_id}` | GET `users.read`, the others `users.manage`. Name, roles, service, grants, disabled, `ui_sign_in`. Each answer also says how the user signs in to the UI: `has_password`, `must_change`, `last_sign_in_at` |
 | GET / POST | `/v1/users/{user_id}/tokens` | GET `users.read`, POST `users.manage`. POST returns the token once |
 | DELETE | `/v1/users/{user_id}/tokens/{token_id}` | `users.manage`. Revoke |
 | POST | `/v1/users/{user_id}/password` | `users.manage`. A password to change at the next sign-in, or a one-time password answered once |

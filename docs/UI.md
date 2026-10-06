@@ -152,6 +152,11 @@ middle, the message where the list was when one is opened, with **Back
 to the list** at the top. Not a three-pane client. The rework keeps this
 layout and gives it the filter bar and the pager of every other list.
 
+A message shows its keywords, and the list shows them as tags. Whoever
+may change the message adds or removes one there, one at a time.
+Keywords starting with `$`, such as `$answered`, belong to the mail
+protocol: they show beside the flags and are not changed in the UI.
+
 ### 4.5 The filter bar
 
 One component above every list that filters. Always the same shape:
@@ -176,8 +181,12 @@ The options per list, with the same names where the field is the same:
 | Audit | record id | who, activity (an area or a name), from day, before day |
 
 Mail's filters are the API's query parameters, a test holds them
-together (`test_openapi.py`). The others need no new API: the domain's
-list methods narrow what they give. Drafts have no filter bar: no
+together (`test_openapi.py`). Sends, Users, Accounts, Webhooks and Audit
+have their filters at the API as well, by the same list methods of the
+domain and with the same query names, held together by a test too. A
+day in the UI is a time with a zone at the API. Only the UI has the
+account of Sends, where the API has a list per account, and API only of
+Users, which is `ui_sign_in=false` there. Drafts have no filter bar: no
 provider searches its drafts. The drafts folder in Mail can be searched.
 
 Sends are one list for every account the caller may audit, the account
@@ -429,6 +438,10 @@ All four steps are done, as the roadmap's phase 4b records.
 - 2026-09-27: the Changes page not in phase 4b (6.6).
 - 2026-09-27: a lighter background. The other colours follow from the
   contrast rule of section 7.
+- 2026-10-06: the filters of Sends, Users, Accounts and Webhooks at the
+  API as well, the UI's query names those of the API (4.5).
+- 2026-10-06: keywords in the UI, on one message at a time, those of
+  the mail protocol not changed there (4.4).
 
 The Service card of the overview shows to everyone with `accounts.read`,
 and Accounts, Users and Roles list everything with the pager hidden,

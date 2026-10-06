@@ -7,10 +7,12 @@ from __future__ import annotations
 
 from .recovery import RecoveryKey
 from .servicelog import LEVELS, ServiceLog
-from .status import StatusService
+from .status import AccountHealth, ServiceStatus, StatusService
 
 __all__ = [
     "LEVELS",
+    "AccountHealth",
+    "ServiceStatus",
     "RecoveryKey",
     "ServiceLog",
     "StatusService",

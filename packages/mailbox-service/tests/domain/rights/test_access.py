@@ -175,6 +175,7 @@ def test_operations_on_an_account() -> None:
     assert a.operations_on("acc_a") == {
         "list_accounts",
         "get_account",
+        "get_status",
         "update_account",
         "delete_account",
         "verify_account",
@@ -214,8 +215,10 @@ def test_a_batch_needs_its_right_and_the_operation() -> None:
     assert not only.batches("update_message", "acc_a")
 
 
-def test_the_status_is_for_who_may_list_some_account() -> None:
-    assert access(Grant(accounts=["acc_a"], allow=["list_accounts"])).sees_status()
+def test_the_status_is_for_who_may_see_it_of_some_account() -> None:
+    assert access(Grant(accounts=["acc_a"], allow=["accounts.read"])).sees_status()
+    assert access(Grant(accounts=["acc_a"], allow=["get_status"])).sees_status()
+    assert not access(Grant(accounts=["acc_a"], allow=["list_accounts"])).sees_status()
     assert not access(Grant(accounts=["acc_a"], allow=["list_messages"])).sees_status()
 
 

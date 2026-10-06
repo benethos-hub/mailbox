@@ -50,9 +50,31 @@ adheres to [Semantic Versioning](https://semver.org/).
   with `list_activity` in the group.
 - The UI has a page Audit under Service, and a user's page a card Recent
   activity, both for `audit` in `service`.
+- Filters on the lists, as the UI has them. Each is optional, and a list
+  without one answers as before. `GET /v1/sends` and
+  `GET /v1/accounts/{id}/sends`: `user`, `outcome`, `recipient` (part of
+  an address), `after` and `before` (a time with a zone).
+  `GET /v1/users`: `name` (part of it), `role`, `disabled`, `ui_sign_in`.
+  `GET /v1/accounts`: `address` (part of it), `provider`, `status`.
+  `GET /v1/webhooks`: `url` (part of it), `account`, `failing`.
+- A user in the answers of `/v1/users` says how it signs in to the UI:
+  `has_password`, `must_change` (a password set for it, to be changed at
+  the next sign-in) and `last_sign_in_at`. The schema is `UserInfo`, the
+  fields of `User` and these three. The user's page in the UI names a
+  password still to be changed.
+- The UI shows a message's keywords in the list and adds or removes them
+  on the message. Those starting with `$` stay as they are.
+- `GET /v1/status` (`get_status`, in `accounts.read`): the sync worker
+  and the accounts the caller may see the status of, as the UI's status
+  page shows them. Per account its status, the last pass, the last error
+  and whether it needs a look. Nothing is asked of a provider. The UI's
+  status page needs `get_status` too, which `accounts.read` holds.
 
 ### Changed
 
+- The UI's filters have the API's query names: `user` on Sends and
+  Audit, `recipient` on Sends. A kept link with `who` or `to` no longer
+  filters.
 - Minimum versions without a known vulnerability. `benethos-mailbox-service`:
   fastapi 0.133.0, starlette 1.3.1 (now named, fastapi asks for no safe
   version), python-multipart 0.0.31, cryptography 50, anyio 4.14.2,

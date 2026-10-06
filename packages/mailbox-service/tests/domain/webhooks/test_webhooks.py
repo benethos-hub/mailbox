@@ -143,6 +143,32 @@ def test_each_user_sees_and_removes_only_its_own(
     assert client.delete(f"/v1/webhooks/{mine}").status_code == 404
 
 
+def test_the_list_filters(client: TestClient, ready: Services, account_id: str) -> None:
+    other = create_account(ready.accounts, ProviderType.MEMORY, "b@example.com").id
+    every = client.post("/v1/webhooks", json=HOOK).json()["id"]
+    named = client.post(
+        "/v1/webhooks",
+        json={"url": "https://other.example.net/in", "accounts": [account_id]},
+    ).json()["id"]
+    failing = ready.repositories.webhooks.get(named)
+    ready.repositories.webhooks.update(
+        named, failing.delivery, last_delivery_at=None, last_error="503"
+    )
+
+    def ids(**params: str) -> list[str]:
+        answer = client.get("/v1/webhooks", params=params)
+        assert answer.status_code == 200, answer.text
+        return sorted(w["id"] for w in answer.json())
+
+    assert ids() == sorted([every, named])
+    assert ids(url="OTHER.example") == [named]
+    # A webhook of every account hears of each.
+    assert ids(account=account_id) == sorted([every, named])
+    assert ids(account=other) == [every]
+    assert ids(failing="true") == [named]
+    assert ids(failing="false", url="hooks") == [every]
+
+
 def test_deleting_a_user_removes_its_webhooks(
     client: TestClient, ready: Services
 ) -> None:

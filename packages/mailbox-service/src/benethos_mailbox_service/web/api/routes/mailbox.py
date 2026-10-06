@@ -23,7 +23,7 @@ from ....data.models import (
     SendResult,
 )
 from ...responses import download
-from ..deps import Caller, Limit, Mailbox, Search, Since
+from ..deps import Caller, Limit, Mailbox, Search, SendSearch, Since
 from ..errors import CHANGES_ERRORS
 from ..schemas import DraftReplacement, ErrorResponse
 
@@ -167,13 +167,17 @@ async def list_sends(
     account_id: str,
     caller: Caller,
     mailbox: Mailbox,
+    matching: SendSearch,
     limit: Limit = 50,
     cursor: str | None = None,
 ) -> Page[SendRecord]:
     """The audit of sends from this account, newest first: every attempt
     through `send_message` or `send_draft`, sent, denied by a grant or
-    failed, with user, token and recipients, never content."""
-    return mailbox.outgoing.list_sends(caller, account_id, limit=limit, cursor=cursor)
+    failed, with user, token and recipients, never content. The filter
+    parameters narrow the list together."""
+    return mailbox.outgoing.list_sends(
+        caller, account_id, limit=limit, cursor=cursor, matching=matching
+    )
 
 
 @router.get("/changes", responses=CHANGES_ERRORS)

@@ -319,6 +319,36 @@ def test_the_audit_of_every_account(
     assert app_client.get("/v1/sends", headers=sender_only).json()["items"] == []
 
 
+def test_the_audit_filters(
+    app_client: TestClient, client: TestClient, services: Services, account_id: str
+) -> None:
+    headers = sender(services, account_id, recipients=["*@example.org"])
+    url = f"/v1/accounts/{account_id}/send"
+    app_client.post(url, json=mail("bob@example.org"), headers=headers)
+    app_client.post(url, json=mail("eve@evil.test"), headers=headers)
+    client.post(url, json=mail("Carol@Example.org"))
+    me = client.get("/v1/me").json()["user_id"]
+    for listing in (f"/v1/accounts/{account_id}/sends", "/v1/sends"):
+
+        def recipients(listing: str = listing, **params: str) -> list[str]:
+            page = client.get(listing, params=params).json()
+            return [r for record in page["items"] for r in record["recipients"]]
+
+        assert recipients(outcome="denied") == ["eve@evil.test"]
+        assert recipients(recipient="EXAMPLE.org") == [
+            "Carol@Example.org",
+            "bob@example.org",
+        ]
+        assert recipients(user=me) == ["Carol@Example.org"]
+        assert recipients(user=me, outcome="denied") == []
+        assert recipients(after="2999-01-01T00:00:00Z") == []
+        assert len(recipients(before="2999-01-01T00:00:00+02:00")) == 3
+        assert len(recipients()) == 3
+        # A time without a zone is not one, nor an outcome there is not.
+        for wrong in ({"after": "2026-10-06T10:00:00"}, {"outcome": "lost"}):
+            assert client.get(listing, params=wrong).status_code == 422
+
+
 def test_the_audit_needs_its_right(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:

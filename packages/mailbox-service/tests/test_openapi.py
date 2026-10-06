@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
 import pytest
+from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.__main__ import main
 from benethos_mailbox_service.data.models import MessageFilter
@@ -62,6 +64,34 @@ def test_the_search_form_uses_the_query_names_of_the_api() -> None:
     assert set(search.FIELDS) | set(search.FLAGS) <= query
     filtered = set(search.FIELDS.values()) | set(search.FLAGS)
     assert filtered == set(MessageFilter.model_fields)
+
+
+# Each list of the UI with a filter bar, the API's list of the same records,
+# and the filters only the UI has: the account of a page across accounts,
+# where the API has a path per account, and API only, which is
+# `ui_sign_in=false`.
+FILTERED_LISTS = [
+    ("/ui/sends", "/sends", {"account"}),
+    ("/ui/audit", "/audit", set()),
+    ("/ui/users", "/users", {"api_only"}),
+    ("/ui/accounts", "/accounts", set()),
+    ("/ui/webhooks", "/webhooks", set()),
+]
+
+
+@pytest.mark.parametrize(("page", "path", "ui_only"), FILTERED_LISTS)
+def test_the_filter_bars_use_the_query_names_of_the_api(
+    ui: TestClient, page: str, path: str, ui_only: set[str]
+) -> None:
+    """A filter reads the same in the UI's URL and at the API."""
+    html = ui.get(page).text
+    form = re.search(r'<form class="filter-bar".*?</form>', html, re.DOTALL)
+    assert form is not None, page
+    names = set(re.findall(r'name="([a-z_]+)"', form.group(0)))
+    listing = create_app().openapi()["paths"][f"{API_PREFIX}{path}"]["get"]
+    query = {p["name"] for p in listing["parameters"] if p["in"] == "query"}
+    assert names - ui_only <= query, page
+    assert ui_only.isdisjoint(query), page
 
 
 def test_cli_prints_the_document(capsys: pytest.CaptureFixture[str]) -> None:

@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from ....data.models import MessageBatch, MessageUpdate
 from ...services import Mailbox
 from ..deps import Actor
-from ..forms import failing, text_of
+from ..forms import FormError, failing, model_of, text_of
 from ..navigation import mail_url
 from ..templates import back, local_path
 
@@ -37,6 +37,34 @@ async def set_flags(
         starred=form["starred"] == "1" if "starred" in form else None,
     )
     with failing(here):
+        await mailbox.update_message(caller, account_id, message_id, changes)
+    return back(request, here)
+
+
+KEYWORD_RULE = "A keyword is up to 100 letters, digits or !#&'+-.^_|~, without spaces."
+
+
+@router.post("/accounts/{account_id}/mail/{message_id}/keywords")
+async def keywords(
+    request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
+) -> Response:
+    """Add a keyword or remove one. The others stay as the message has
+    them now, those of the mail protocol among them."""
+    form = await request.form()
+    here = f"/ui/accounts/{account_id}/mail/{message_id}"
+    adding = text_of(form, "add")
+    removing = text_of(form, "remove", strip=False)
+    with failing(here):
+        if adding.startswith("$"):
+            raise FormError("Keywords starting with $ belong to the mail protocol.")
+        if not adding and not removing:
+            raise FormError("Type a keyword.")
+        found = await mailbox.get_message(caller, account_id, message_id)
+        held = {keyword.casefold() for keyword in found.keywords}
+        wanted = [k for k in found.keywords if k != removing]
+        if adding and adding.casefold() not in held:
+            wanted.append(adding)
+        changes = model_of(MessageUpdate, {"keywords": wanted}, message=KEYWORD_RULE)
         await mailbox.update_message(caller, account_id, message_id, changes)
     return back(request, here)
 
