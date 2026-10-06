@@ -74,8 +74,9 @@ class Settings(BaseSettings):
     # Sync worker: seconds between two polls of every folder. 0 switches the
     # worker off.
     sync_interval: int = Field(default=300, ge=0)
-    # Sync worker: watch the inbox over IMAP IDLE, which needs a second
-    # connection per account.
+    # Sync worker: wait for the server to report a change, over IMAP IDLE,
+    # which needs a second connection per account, or a JMAP server's
+    # event source.
     sync_idle: bool = True
     # Sync worker: accounts watched over IDLE at once. Each watcher holds a
     # thread of its own, outside the pool that answers requests. Further

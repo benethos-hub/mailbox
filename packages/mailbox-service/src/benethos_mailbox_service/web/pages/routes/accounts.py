@@ -34,6 +34,9 @@ SETTING_FIELDS = (
     "smtp_port",
     "smtp_security",
     "smtp_username",
+    # JMAP: where the session is, and whether a password or a token signs in.
+    "path",
+    "auth",
 )
 NUMBERS = {"port", "smtp_port"}
 SECURITY = ("tls", "starttls")
@@ -70,9 +73,12 @@ def _typed_account(form: Any) -> dict[str, Any]:
     }
 
 
-def _password(form: Any) -> dict[str, SecretStr]:
+def _credentials(form: Any) -> dict[str, SecretStr]:
+    """The secret typed into the password field: an API token where the
+    form signs in with one (JMAP), else a password."""
     value = text_of(form, "password", strip=False)
-    return {"password": SecretStr(value)} if value else {}
+    field = "token" if text_of(form, "auth") == "token" else "password"
+    return {field: SecretStr(value)} if value else {}
 
 
 @router.get("/accounts")
@@ -192,7 +198,7 @@ async def create_account(
             email,
             display_name or None,
             settings,
-            _password(form),
+            _credentials(form),
         )
     except MailboxServiceError as exc:
         retry = {
@@ -273,7 +279,7 @@ async def update_account(
             caller,
             account_id,
             settings=_submitted(form),
-            credentials=_password(form),
+            credentials=_credentials(form),
             **changes,
         )
     return back(request, here, "Saved.")

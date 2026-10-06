@@ -453,6 +453,34 @@ built in.
 - Stalwart runs in a container and serves as the JMAP (and IMAP) server
   for integration tests (10).
 
+**Decided 2026-10-06, built:**
+
+- **The credential** is a password or an API token, chosen when the
+  account is added. A password goes as HTTP Basic (Stalwart, Cyrus), a
+  token as Bearer (Fastmail). Both are stored encrypted like any other.
+- **Sending** goes through JMAP itself (RFC 8621 7), without SMTP
+  settings. The message is stored in the drafts folder, submitted, and
+  moved to the sent folder once the server took it.
+- **The sync** asks what changed since a state (`Email/changes`), with the
+  ids of the server, which stay when a message moves. The server's event
+  source reports a change at once, as IDLE does for IMAP.
+- **Discovery** asks `/.well-known/jmap` of the address's domain and the
+  SRV record `_jmap._tcp`. Where a server offers JMAP and IMAP, JMAP comes
+  first and IMAP stays a choice beside it.
+
+How the adapter works: the session names the URLs of the API, of blobs and
+of the event source. Each is used on the server the account names, by its
+path, never by its host: the credential goes to no other host, and a
+server that names itself otherwise behind a proxy still works. A message
+can be in several folders (`labels`). JMAP reports changes for the whole
+account, not per folder: a message counts as changed in the folder it is
+in now and as removed from the others, so a move shows as one. A deleted
+message reaches the change feed without a folder, since JMAP does not say
+where it was. A message keeps its content as stored, so a draft that is
+replaced gets a new id. Discovery asks the server once, without a
+credential: a `401` names the schemes it takes, and only `Bearer` asks for
+an API token. POP3 is offered only where neither IMAP nor JMAP is.
+
 ### 5.7 Dates to watch
 
 | Date | What | Consequence here |
@@ -1749,7 +1777,10 @@ mode, since it would put the service package into the MCP installation.
   for an optional integration job (5.6). The container is
   `containers/test-mail-server/`, since 2026-10-06: IMAP, POP3, SMTP and
   JMAP, two accounts and a local test CA, made by `setup.sh` on any
-  machine with Docker. The integration job is not built yet.
+  machine with Docker. `live/pop3.py` and `live/jmap.py` check those
+  adapters against it. The integration job is not built yet.
+- The JMAP adapter's tests use `httpx.MockTransport` with a JMAP server in
+  memory.
 - Gmail and Graph adapter tests use `httpx.MockTransport` with recorded,
   anonymized response shapes.
 - `live/` holds manual smoke scripts, outside `testpaths`. They run

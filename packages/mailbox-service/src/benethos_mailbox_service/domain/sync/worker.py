@@ -2,8 +2,9 @@
 
 Every ``interval`` seconds it syncs each account whose ids are mapped. Where
 the provider can push, a watcher per account waits for the server to report
-a change in the inbox (IMAP IDLE) and syncs at once, at most ``watchers``
-of them: each holds a thread for as long as it waits. Further accounts are
+a change (IMAP IDLE, JMAP's event source) and syncs at once, at most
+``watchers`` of them: an IMAP watcher holds a thread for as long as it
+waits. Further accounts are
 polled only. Accounts whose login was rejected are left alone until they
 are verified.
 """

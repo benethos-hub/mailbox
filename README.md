@@ -80,8 +80,9 @@ some folders, such as the invoices, and end after a week.
 ## What it can do today
 
 - **Accounts:** IMAP with SMTP for sending, set up from the address alone
-  (autodiscovery), and Microsoft accounts (Outlook.com, Microsoft 365)
-  over Microsoft Graph with OAuth sign-in. Credentials are encrypted
+  (autodiscovery), JMAP servers such as Fastmail and Stalwart, and
+  Microsoft accounts (Outlook.com, Microsoft 365) over Microsoft Graph
+  with OAuth sign-in. Credentials are encrypted
   (AES-256-GCM) under a master key kept outside the database.
 - **Reading:** folders, lists and search, one account or all at once,
   messages as text and HTML, attachments, the raw source. Message ids stay
@@ -90,8 +91,8 @@ some folders, such as the invoices, and end after a week.
   reply, reply to all and forward. A retried send is not sent twice
   (`Idempotency-Key`).
 - **Changes:** a change feed names each message created, changed or
-  deleted since a point you keep, in IMAP and Microsoft accounts, flags
-  set in other mail clients included where the IMAP server offers
+  deleted since a point you keep, in IMAP, JMAP and Microsoft accounts,
+  flags set in other mail clients included where the IMAP server offers
   CONDSTORE. Webhooks post the same events, signed, to a URL of your
   choice, a host in your local network included.
 - **Users and rights:** users, roles and grants per account and per
@@ -109,7 +110,7 @@ some folders, such as the invoices, and end after a week.
 - **Operation:** encrypted backup and restore, container images, a
   compose file.
 
-Planned next: threads across folders, Gmail and JMAP. The order is in
+Planned next: threads across folders and Gmail. The order is in
 [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Providers
@@ -120,7 +121,7 @@ Planned next: threads across folders, Gmail and JMAP. The order is in
 | Microsoft 365, Outlook.com | Microsoft Graph | OAuth ([setup](docs/microsoft.md)) | available |
 | Proton Mail | IMAP + SMTP through Proton Mail Bridge | Bridge password | IMAP, not tested |
 | Gmail / Google Workspace | Gmail API | OAuth, with your own Google Cloud client | planned |
-| Fastmail, Stalwart, other JMAP servers | JMAP | API token | planned |
+| Fastmail, Stalwart, other JMAP servers | JMAP | API token or password | available |
 | legacy mailboxes without IMAP | POP3 + SMTP: the inbox only, no folders, no read state, no search | password | available |
 
 Not supportable: Tuta, which offers no IMAP and no API. Details per

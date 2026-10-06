@@ -1,7 +1,7 @@
 """The wire, one library each: ``imap`` (IMAPClient), ``smtp`` (smtplib),
 ``http`` (httpx), ``oauth`` (OAuth 2.0 over ``http``), ``pop3``
-(poplib). ``transport`` holds TLS, the timeouts and the failures below
-every library.
+(poplib), ``jmap`` (JMAP over ``http``). ``transport`` holds TLS, the
+timeouts and the failures below every library.
 
 Each module speaks its protocol and nothing else: no ids, no folders of the
 API, no decisions. Library errors leave it as ``MailboxServiceError``. It
@@ -11,14 +11,17 @@ imports nothing of ``providers``: the adapters there build on it, and
 
 from __future__ import annotations
 
+from . import jmap
 from .http import (
     Answer,
+    Answered,
     ApiClient,
     Fetched,
     HostCheck,
     Lookup,
     Resolve,
     SafeFetcher,
+    ServerClient,
     WebhookPoster,
     host_addresses,
     host_addresses_now,
@@ -62,6 +65,7 @@ from .transport import (
 
 __all__ = [
     "Answer",
+    "Answered",
     "ApiClient",
     "App",
     "Endpoints",
@@ -81,6 +85,7 @@ __all__ = [
     "Resolve",
     "SMTP_PORTS",
     "SafeFetcher",
+    "ServerClient",
     "SearchCriteria",
     "Server",
     "SmtpLogin",
@@ -92,5 +97,6 @@ __all__ = [
     "host_addresses_now",
     "is_public_address",
     "is_receiver_address",
+    "jmap",
     "new_pkce",
 ]

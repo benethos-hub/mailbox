@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "benethos-mailbox-service"
 version = "0.2.0"
-description = "Self-hosted mail service: one REST API and a web UI for IMAP and Microsoft 365 / Outlook.com accounts, with users, rights and encrypted credentials."
+description = "Self-hosted mail service: one REST API and a web UI for IMAP, JMAP and Microsoft 365 / Outlook.com accounts, with users, rights and encrypted credentials."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -15,6 +15,7 @@ keywords = [
     "email",
     "mail",
     "imap",
+    "jmap",
     "smtp",
     "microsoft-graph",
     "outlook",

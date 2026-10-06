@@ -33,8 +33,9 @@ Towards the mail servers:
 | IMAP pace | per account, commands and SMTP sends | 60 a minute, 10 at once | the request waits | `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE`, `MAILBOX_SERVICE_IMAP_BURST`, the account's `max_requests_per_minute` |
 | Unreachable server | per account | 3 attempts with backoff, then a pause of 30 seconds, doubled up to 15 minutes | `502 provider_unavailable`, the account shows `unreachable` | `MAILBOX_SERVICE_IMAP_ATTEMPTS`, `MAILBOX_SERVICE_IMAP_FIRST_PAUSE`, `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE` |
 | Rejected login | per account | no new attempt until the credential is replaced or the account is verified | `502 provider_auth_failed`, the account shows `needs_reauth` | fixed |
-| Watched accounts | for the whole service | 50 at once, each waiting in IDLE in a thread of its own | further accounts are polled only | `MAILBOX_SERVICE_SYNC_WATCHERS` |
+| Watched accounts | for the whole service | 50 at once, an IMAP one waiting in IDLE in a thread of its own, a JMAP one on its event source | further accounts are polled only | `MAILBOX_SERVICE_SYNC_WATCHERS` |
 | Microsoft Graph | per account | a pause as long as Graph's `Retry-After` | `502 provider_unavailable` | Graph |
+| JMAP server | per account | as many requests at once as the session's `maxConcurrentRequests`, 4 where it names none, and a pause as long as its `Retry-After` | the request waits, or `502 provider_unavailable` during the pause | the server |
 | Webhook posts | per webhook | 8 attempts, 30 seconds after the first failure, doubled up to 1 hour, 10 seconds to answer | the events are dropped | `MAILBOX_SERVICE_WEBHOOK_*` |
 
 Every `429` carries `Retry-After` in seconds. A limit of `0` switches the
@@ -63,8 +64,8 @@ The limits apply in this order. The first that refuses answers.
    caller may not see). Then the discovery limit, or the send limit,
    where only mails that went out count.
 5. **The mail server.** The account's pace makes the request wait. A
-   rejected login, an unreachable server or a pause Graph asked for
-   refuses it.
+   rejected login, an unreachable server or a pause Graph or a JMAP
+   server asked for refuses it.
 
 ## 3. How they work together
 

@@ -7,6 +7,7 @@ from ..protocols import SafeFetcher
 from .base import DiscoverySource
 from .isp import IspAutoconfigSource
 from .ispdb import IspdbSource
+from .jmap import JmapSource
 from .mx import MxSource
 from .presets import PresetSource, bundled
 
@@ -19,6 +20,7 @@ def default_sources(fetcher: SafeFetcher, *, ispdb: bool) -> list[DiscoverySourc
     sources: list[DiscoverySource] = [
         PresetSource(presets),
         IspAutoconfigSource(fetcher),
+        JmapSource(fetcher),
     ]
     if database is not None:
         sources.append(database)

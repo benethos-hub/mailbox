@@ -103,6 +103,16 @@
       "mx_domains": ["messagingengine.com"],
       "candidates": [
         {
+          "provider": "jmap",
+          "credential": "api_token",
+          "servers": [
+            {"protocol": "jmap", "host": "api.fastmail.com", "port": 443, "security": "tls", "path": "/jmap/session"}
+          ],
+          "hints": [
+            {"text": "Create an API token under Settings, Privacy & Security."}
+          ]
+        },
+        {
           "provider": "imap",
           "credential": "app_password",
           "servers": [

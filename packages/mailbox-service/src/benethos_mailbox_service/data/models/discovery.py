@@ -12,6 +12,7 @@ from .accounts import ProviderType
 class DiscoverySourceName(StrEnum):
     PRESET = "preset"
     AUTOCONFIG = "autoconfig"
+    JMAP = "jmap"
     ISPDB = "ispdb"
     MX = "mx"
 
@@ -20,6 +21,7 @@ class ServerProtocol(StrEnum):
     IMAP = "imap"
     POP3 = "pop3"
     SMTP = "smtp"
+    JMAP = "jmap"
 
 
 class Security(StrEnum):
@@ -34,6 +36,9 @@ class CredentialKind(StrEnum):
 
     PASSWORD = "password"
     APP_PASSWORD = "app_password"
+    # A token the person creates in the provider's settings, e.g. for JMAP
+    # at Fastmail.
+    API_TOKEN = "api_token"
     OAUTH = "oauth"
 
 
@@ -45,6 +50,8 @@ class MailServer(BaseModel):
     # The login name. In a candidate the address is filled in. Sources may
     # hand in a template with %EMAILADDRESS%, %EMAILLOCALPART%, %EMAILDOMAIN%.
     username: str | None = None
+    # JMAP: the path of the session resource on the host, after redirects.
+    path: str | None = None
     # Whether an anonymous connection succeeded. None: not tried.
     reachable: bool | None = None
     # What the server announced before any login, e.g. IDLE, AUTH=XOAUTH2.
