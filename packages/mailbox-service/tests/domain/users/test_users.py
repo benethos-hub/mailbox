@@ -427,6 +427,28 @@ def test_without_users_manage_nothing_is_listed(
     assert app_client.get("/v1/me", headers=headers).status_code == 200
 
 
+def test_the_list_filters(client: TestClient) -> None:
+    client.post("/v1/roles", json={"id": "reader", "grants": [READ_A]})
+    client.post("/v1/users", json={"name": "Anna", "roles": ["reader"]})
+    client.post("/v1/users", json={"name": "Hanna", "ui_sign_in": True})
+    bob = client.post("/v1/users", json={"name": "Bob"}).json()["id"]
+    client.patch(f"/v1/users/{bob}", json={"disabled": True})
+
+    def names(**params: str) -> list[str]:
+        answer = client.get("/v1/users", params=params)
+        assert answer.status_code == 200, answer.text
+        return sorted(
+            u["name"] for u in answer.json() if not u["name"].startswith("api-")
+        )
+
+    assert names(name="ANNA") == ["Anna", "Hanna"]
+    assert names(role="reader") == ["Anna"]
+    assert names(disabled="true") == ["Bob"]
+    assert names(ui_sign_in="true") == ["Hanna"]
+    assert names(ui_sign_in="false", disabled="false", name="a") == ["Anna"]
+    assert client.get("/v1/users", params={"disabled": "maybe"}).status_code == 422
+
+
 def test_nobody_disables_itself_or_takes_its_own_ui_sign_in(
     client: TestClient,
 ) -> None:

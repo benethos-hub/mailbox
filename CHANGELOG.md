@@ -50,6 +50,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   with `list_activity` in the group.
 - The UI has a page Audit under Service, and a user's page a card Recent
   activity, both for `audit` in `service`.
+- Filters on the lists, as the UI has them. Each is optional, and a list
+  without one answers as before. `GET /v1/sends` and
+  `GET /v1/accounts/{id}/sends`: `user`, `outcome`, `recipient` (part of
+  an address), `after` and `before` (a time with a zone).
+  `GET /v1/users`: `name` (part of it), `role`, `disabled`, `ui_sign_in`.
+  `GET /v1/accounts`: `address` (part of it), `provider`, `status`.
+  `GET /v1/webhooks`: `url` (part of it), `account`, `failing`.
 
 ### Changed
 

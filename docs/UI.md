@@ -176,8 +176,9 @@ The options per list, with the same names where the field is the same:
 | Audit | record id | who, activity (an area or a name), from day, before day |
 
 Mail's filters are the API's query parameters, a test holds them
-together (`test_openapi.py`). The others need no new API: the domain's
-list methods narrow what they give. Drafts have no filter bar: no
+together (`test_openapi.py`). Sends, Users, Accounts, Webhooks and Audit
+have their filters at the API as well, by the same list methods of the
+domain. Drafts have no filter bar: no
 provider searches its drafts. The drafts folder in Mail can be searched.
 
 Sends are one list for every account the caller may audit, the account
@@ -429,6 +430,8 @@ All four steps are done, as the roadmap's phase 4b records.
 - 2026-09-27: the Changes page not in phase 4b (6.6).
 - 2026-09-27: a lighter background. The other colours follow from the
   contrast rule of section 7.
+- 2026-10-06: the filters of Sends, Users, Accounts and Webhooks at the
+  API as well (4.5).
 
 The Service card of the overview shows to everyone with `accounts.read`,
 and Accounts, Users and Roles list everything with the pager hidden,

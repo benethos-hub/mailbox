@@ -251,17 +251,95 @@
           "users"
         ],
         "summary": "List Users",
+        "description": "Every user. The filter parameters narrow the list together.",
         "operationId": "list_users",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of the name, regardless of case",
+              "title": "Name"
+            },
+            "description": "Part of the name, regardless of case"
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A role the user holds",
+              "title": "Role"
+            },
+            "description": "A role the user holds"
+          },
+          {
+            "name": "disabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Disabled"
+            }
+          },
+          {
+            "name": "ui_sign_in",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`false`: the API users, who work with tokens only",
+              "title": "Ui Sign In"
+            },
+            "description": "`false`: the API users, who work with tokens only"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/User"
                   },
-                  "type": "array",
                   "title": "Response List Users"
                 }
               }
@@ -346,13 +424,18 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
         "x-permission": "users.read"
       },
       "post": {
@@ -361,15 +444,20 @@
         ],
         "summary": "Create User",
         "operationId": "create_user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UserCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -473,11 +561,6 @@
             }
           }
         },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
         "x-permission": "users.manage"
       }
     },
@@ -2033,17 +2116,75 @@
           "accounts"
         ],
         "summary": "List Accounts",
+        "description": "The accounts the caller may list. The filter parameters narrow the\nlist together.",
         "operationId": "list_accounts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of the address, regardless of case",
+              "title": "Address"
+            },
+            "description": "Part of the address, regardless of case"
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ProviderType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AccountStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Account"
                   },
-                  "type": "array",
                   "title": "Response List Accounts"
                 }
               }
@@ -2128,13 +2269,18 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
         "x-permission": "accounts.read"
       },
       "post": {
@@ -2143,15 +2289,20 @@
         ],
         "summary": "Create Account",
         "operationId": "create_account",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AccountCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -2255,11 +2406,6 @@
             }
           }
         },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
         "x-permission": "accounts.connect"
       }
     },
@@ -3586,7 +3732,7 @@
           "mailbox"
         ],
         "summary": "List All Sends",
-        "description": "The audit of sends of every account the caller may audit, newest\nfirst. An account deleted since stays in it for a caller whose grant\nnames every account.",
+        "description": "The audit of sends of every account the caller may audit, newest\nfirst. An account deleted since stays in it for a caller whose grant\nnames every account. The filter parameters narrow the list together.",
         "operationId": "list_all_sends",
         "security": [
           {
@@ -3621,6 +3767,101 @@
               ],
               "title": "Cursor"
             }
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A user id: the sends of that user",
+              "title": "User"
+            },
+            "description": "A user id: the sends of that user"
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "sent",
+                    "denied",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
+            }
+          },
+          {
+            "name": "recipient",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of a recipient's address, regardless of case",
+              "title": "Recipient"
+            },
+            "description": "Part of a recipient's address, regardless of case"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "At or after this time",
+              "title": "After"
+            },
+            "description": "At or after this time"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Before this time",
+              "title": "Before"
+            },
+            "description": "Before this time"
           }
         ],
         "responses": {
@@ -5210,7 +5451,7 @@
           "mailbox"
         ],
         "summary": "List Sends",
-        "description": "The audit of sends from this account, newest first: every attempt\nthrough `send_message` or `send_draft`, sent, denied by a grant or\nfailed, with user, token and recipients, never content.",
+        "description": "The audit of sends from this account, newest first: every attempt\nthrough `send_message` or `send_draft`, sent, denied by a grant or\nfailed, with user, token and recipients, never content. The filter\nparameters narrow the list together.",
         "operationId": "list_sends",
         "security": [
           {
@@ -5254,6 +5495,101 @@
               ],
               "title": "Cursor"
             }
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A user id: the sends of that user",
+              "title": "User"
+            },
+            "description": "A user id: the sends of that user"
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "sent",
+                    "denied",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
+            }
+          },
+          {
+            "name": "recipient",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of a recipient's address, regardless of case",
+              "title": "Recipient"
+            },
+            "description": "Part of a recipient's address, regardless of case"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "At or after this time",
+              "title": "After"
+            },
+            "description": "At or after this time"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Before this time",
+              "title": "Before"
+            },
+            "description": "Before this time"
           }
         ],
         "responses": {
@@ -6689,18 +7025,79 @@
           "webhooks"
         ],
         "summary": "List Webhooks",
-        "description": "The caller's webhooks, with how their last delivery went. Never the\nsecret.",
+        "description": "The caller's webhooks, with how their last delivery went. Never the\nsecret. The filter parameters narrow the list together.",
         "operationId": "list_webhooks",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part of the URL, regardless of case",
+              "title": "Url"
+            },
+            "description": "Part of the URL, regardless of case"
+          },
+          {
+            "name": "account",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "An account id: the webhooks that hear of it, those of every account among them",
+              "title": "Account"
+            },
+            "description": "An account id: the webhooks that hear of it, those of every account among them"
+          },
+          {
+            "name": "failing",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Whether the last post failed",
+              "title": "Failing"
+            },
+            "description": "Whether the last post failed"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Webhook"
                   },
-                  "type": "array",
                   "title": "Response List Webhooks"
                 }
               }
@@ -6785,13 +7182,18 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
         "x-permission": "webhooks.manage"
       },
       "post": {
@@ -6801,15 +7203,20 @@
         "summary": "Create Webhook",
         "description": "Register a URL for events. The answer holds the signing secret, the\nonly time it is shown. Each post carries the events since the last one,\nof the accounts the caller may read with `list_changes`.",
         "operationId": "create_webhook",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/WebhookCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -6913,11 +7320,6 @@
             }
           }
         },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
         "x-permission": "webhooks.manage"
       }
     },

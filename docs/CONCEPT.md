@@ -1327,7 +1327,8 @@ record. Old ones are purged as a send comes in, once an hour at most.
 `GET /v1/accounts/{account_id}/sends` reads it, newest first, with the
 right `list_sends` (group `audit`). `GET /v1/sends` (`list_all_sends`)
 reads it across the accounts the caller may audit, deleted ones
-included for a grant on every account.
+included for a grant on every account. `user`, `outcome`, `recipient`
+(part of an address), `after` and `before` narrow both lists together.
 
 #### Endpoints
 

@@ -12,8 +12,14 @@ from typing import Annotated
 
 from fastapi import Depends, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import AwareDatetime
 
-from ...data.models import SEARCH_TEXT_PATTERN, MessageFilter
+from ...data.models import (
+    SEARCH_TEXT_PATTERN,
+    MessageFilter,
+    SendFilter,
+    SendOutcome,
+)
 from ...domain.rights import Access
 from ..limits import signed_in
 from ..services import Accounts, Auth, Discoverer, Mailbox, Users, Webhooks
@@ -26,6 +32,7 @@ __all__ = [
     "Limit",
     "Mailbox",
     "Search",
+    "SendSearch",
     "Since",
     "Users",
     "Webhooks",
@@ -116,3 +123,35 @@ def message_filter(
 
 
 Search = Annotated[MessageFilter, Depends(message_filter)]
+
+
+def send_filter(
+    user: Annotated[
+        str | None, Query(description="A user id: the sends of that user")
+    ] = None,
+    outcome: SendOutcome | None = None,
+    recipient: Annotated[
+        str | None,
+        Query(description="Part of a recipient's address, regardless of case"),
+    ] = None,
+    after: Annotated[
+        AwareDatetime | None, Query(description="At or after this time")
+    ] = None,
+    before: Annotated[
+        AwareDatetime | None, Query(description="Before this time")
+    ] = None,
+) -> SendFilter | None:
+    """None when nothing narrows the list."""
+    wanted = {
+        "user_id": user,
+        "outcome": outcome,
+        "recipient": recipient,
+        "after": after,
+        "before": before,
+    }
+    if all(value is None for value in wanted.values()):
+        return None
+    return SendFilter.model_validate(wanted)
+
+
+SendSearch = Annotated[SendFilter | None, Depends(send_filter)]
