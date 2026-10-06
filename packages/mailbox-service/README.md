@@ -304,10 +304,11 @@ has the credentials. Keep a copy apart from the host.
 [containers/production/](https://github.com/benethos-hub/mailbox/tree/main/containers/production)
 runs the published images with compose, without a clone of the
 repository: the service, and with the profile `https` Caddy in front
-with a certificate from Let's Encrypt. The service listens on
-`127.0.0.1` only. The MCP server is not part of it: each client starts
-one of its own, with its own token. `setup.sh` there does the first
-start in one run:
+with a certificate from Let's Encrypt, from its own CA or of your own.
+The service listens on `127.0.0.1` only. Each client has an MCP server
+of its own, with its own token: started by the client, or as an
+instance beside the service with the profile `mcp`. `setup.sh` there
+does the first start in one run:
 
 ```sh
 sh setup.sh
@@ -315,6 +316,6 @@ sh setup.sh
 
 The version runs as named in its `.env`, `MAILBOX_VERSION=0.2.0`. Its
 [README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md)
-has the same steps by hand, the update, backup and restore, and HTTPS
-with Caddy or a proxy of your own.
+has the same steps by hand, the update, backup and restore, HTTPS
+with Caddy or a proxy of your own, and the MCP server instances.
 

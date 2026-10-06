@@ -39,6 +39,9 @@ config/**
 containers/**/secrets/
 # containers/production/service.env: settings, among them perhaps a secret
 containers/**/service.env
+# containers/production/: the MCP server instances and their routes in Caddy
+containers/production/compose.override.yaml
+containers/production/caddy.d/*.caddy
 
 # Service data: the database holds encrypted credentials, backups the same.
 # data/: per package, only the folders are versioned (.gitkeep)

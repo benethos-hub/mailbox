@@ -1635,6 +1635,21 @@ of Caddy's fixed address alone. The first start is `setup.sh` there, or
 the same steps by hand from its README. The project name stays
 `benethos-mailbox`, so the volume of the compose file before stays.
 
+**Decided 2026-10-06, MCP server instances and certificates:** for a
+client that connects over HTTP, MCP server instances may run beside the
+service, never by default. Each is a service of
+`compose.override.yaml` that extends the template `mcp.yaml`, with the
+profile `mcp`, one user's token and a bearer token of its own in
+`secrets/mcp/`. A port on `127.0.0.1` serves a client on the host. A
+route in Caddy, one file per instance in `caddy.d/` under a path of its
+own, serves clients elsewhere. An instance may also run on another host
+against the service's https address. No script adds instances, the
+README has the steps. `MAILBOX_TLS` says where Caddy's certificate comes
+from: `acme` (Let's Encrypt), `internal` (Caddy's CA) or `files` (one of
+your own, e.g. a company CA), so Caddy also serves a network without
+access from the internet. A certificate by DNS challenge, which needs a
+Caddy image of its own, is left out.
+
 Rules of the implementation (phase 3): the image holds the service package
 only, installed from the lockfile, and runs as a non-root user on a
 read-only root file system. Configuration comes from the environment, the

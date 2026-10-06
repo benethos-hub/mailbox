@@ -22,10 +22,21 @@ if [ ! -e .env ]; then
     say "Wrote .env from .env.example. It names version $(sed -n 's/^MAILBOX_VERSION=//p' .env)."
 fi
 
+# The folders compose mounts, made here so that docker does not make
+# them as root: the routes of MCP server instances, their tokens, and a
+# certificate of your own for MAILBOX_TLS=files.
+mkdir -p caddy.d secrets/mcp secrets/tls
+
 # The master key: a file only the container user (uid 10001) reads.
-mkdir -p secrets
 [ -e secrets/master_key ] || : >secrets/master_key
-chmod 700 secrets
+chmod 700 secrets secrets/mcp
+# Caddy runs as root without capabilities: it reads secrets/tls only if
+# the folder is open to it, and the key only if root owns it.
+chmod 755 secrets/tls
+if [ -e secrets/tls/server.key ]; then
+    chmod 600 secrets/tls/server.key
+    docker run --rm -v "$here/secrets/tls:/certs" caddy:2 chown 0 /certs/server.key
+fi
 image=$(docker compose config --images | grep benethos-mailbox-service)
 if [ ! -s secrets/master_key ]; then
     say "Making the master key"

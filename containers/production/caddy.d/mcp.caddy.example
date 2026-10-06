@@ -1,0 +1,9 @@
+# The route of one MCP server instance, here mcp-agent of
+# compose.override.yaml.example: https://<MAILBOX_DOMAIN>/mcp/agent.
+# Copy to <name>.caddy in this folder, and set the same path as
+# MAILBOX_MCP_PATH of the instance. Caddy reads every *.caddy here.
+
+@mcp-agent path /mcp/agent /mcp/agent/*
+handle @mcp-agent {
+	reverse_proxy mcp-agent:8000
+}

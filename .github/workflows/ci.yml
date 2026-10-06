@@ -165,8 +165,9 @@ jobs:
       # (CONCEPT 8.1). That is asserted here, so a change cannot drop it
       # unnoticed. The one exception is Caddy of the profile https in
       # production, which is there to listen on 80 and 443 everywhere.
-      # Anyone running them may still publish wider in their own copy or
-      # an override file.
+      # Production is checked with the MCP server instances of its
+      # example override file. Anyone running them may still publish
+      # wider in their own copy or override file.
       - name: Compose files are valid and keep every port on the loopback address
         working-directory: containers
         run: |
@@ -174,6 +175,12 @@ jobs:
           for place in dev production; do
             mkdir -p "$place/secrets" && touch "$place/secrets/master_key"
             if [ -e "$place/.env.example" ]; then cp "$place/.env.example" "$place/.env"; fi
+            if [ -e "$place/compose.override.yaml.example" ]; then
+              cp "$place/compose.override.yaml.example" "$place/compose.override.yaml"
+              echo "MAILBOX_DOMAIN=mailbox.example" >> "$place/.env"
+              mkdir -p "$place/secrets/mcp"
+              touch "$place/secrets/mcp/assistant.env" "$place/secrets/mcp/agent.env"
+            fi
             (cd "$place" && docker compose --profile mcp --profile https config -q)
             (cd "$place" && docker compose --profile mcp --profile https config --format json) > "/tmp/$place.json"
             python3 - "$place" <<'PY'
