@@ -8,6 +8,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- POP3 accounts, `"provider": "pop3"`, for mailboxes without IMAP. The
+  inbox is the one folder. Messages are listed newest first, read and
+  deleted for good, and sending goes over SMTP. Read state, stars,
+  keywords, a delete into the trash, search, folders and drafts answer
+  `501`. The sync polls the mailbox, so the change feed, `whats_new` and
+  webhooks report what arrives and leaves. A server without `UIDL` is
+  refused. Discovery offers POP3 where it finds no IMAP: `pop3` is a
+  `provider` of a candidate and a `protocol` of a server. The UI offers
+  POP3 when setting up by hand.
+- `capabilities` on an account and on each account of `/v1/me`: what it
+  can do beyond reading its inbox. `flags`, `folders` and `search` are
+  new. A POP3 account has none of them. The UI offers no action an
+  account cannot do, and the MCP server's `list_accounts` names what an
+  account lacks as `unsupported`.
 - `containers/production/`: Mailbox in operation from the published
   images, without a clone of the repository. `.env` names the version,
   the profile `https` puts Caddy in front with a certificate from Let's

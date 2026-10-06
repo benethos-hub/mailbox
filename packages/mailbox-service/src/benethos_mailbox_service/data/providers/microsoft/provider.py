@@ -74,6 +74,9 @@ class MicrosoftProvider:
         {
             Capability.SEND,
             Capability.DRAFTS,
+            Capability.FLAGS,
+            Capability.FOLDERS,
+            Capability.SEARCH,
             Capability.SERVER_SEARCH,
             Capability.STABLE_IDS,
             Capability.DELTA,

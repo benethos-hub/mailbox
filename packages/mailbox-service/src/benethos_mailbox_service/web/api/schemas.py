@@ -16,6 +16,7 @@ from ...data.models import (
     SERVICE_DESCRIPTION,
     AccountStatus,
     ApiToken,
+    Capability,
     DraftMessage,
     Grant,
     ProviderType,
@@ -136,6 +137,14 @@ class MeAccount(BaseModel):
     sending: list[MeSending] = Field(
         default_factory=list,
         description="One entry per grant that allows sending here. Empty: none.",
+    )
+    capabilities: list[Capability] = Field(
+        default_factory=list,
+        description=(
+            "What the account can do beyond reading its inbox, as in "
+            "`Account`. Without `flags`, `folders` or `search` (a POP3 "
+            "account) those operations answer `501`."
+        ),
     )
 
 

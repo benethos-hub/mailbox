@@ -8022,6 +8022,14 @@
             "type": "object",
             "title": "Settings",
             "description": "The connection settings: host, port, security, username, smtp_host, ... Never a secret. Secrets are `credentials`."
+          },
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/Capability"
+            },
+            "type": "array",
+            "title": "Capabilities",
+            "description": "What the account can do beyond reading its inbox. A POP3 account has no `flags`, `folders` or `search`: those operations answer `501`. Empty where the account cannot be reached through its settings."
           }
         },
         "type": "object",
@@ -8554,6 +8562,23 @@
         ],
         "title": "Candidate",
         "description": "One way to connect an address, as found by one source."
+      },
+      "Capability": {
+        "type": "string",
+        "enum": [
+          "send",
+          "drafts",
+          "flags",
+          "folders",
+          "search",
+          "labels",
+          "server_search",
+          "push",
+          "stable_ids",
+          "delta"
+        ],
+        "title": "Capability",
+        "description": "What an account's adapter can do beyond reading its inbox. Where one\nis missing, the operations that need it answer `501 not_supported`."
       },
       "Change": {
         "properties": {
@@ -9438,6 +9463,14 @@
             "type": "array",
             "title": "Sending",
             "description": "One entry per grant that allows sending here. Empty: none."
+          },
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/Capability"
+            },
+            "type": "array",
+            "title": "Capabilities",
+            "description": "What the account can do beyond reading its inbox, as in `Account`. Without `flags`, `folders` or `search` (a POP3 account) those operations answer `501`."
           }
         },
         "type": "object",
@@ -10374,6 +10407,7 @@
         "type": "string",
         "enum": [
           "imap",
+          "pop3",
           "gmail",
           "microsoft",
           "memory"
@@ -10635,6 +10669,7 @@
         "type": "string",
         "enum": [
           "imap",
+          "pop3",
           "smtp"
         ],
         "title": "ServerProtocol"

@@ -264,7 +264,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   decided 2026-10-06, done: accounts and users, in the API and the UI,
   with one generic pager for lists held whole. Roles, tokens, webhooks
   and folders stay one list
-- `pop3` adapter (5.2)
+- **`pop3` adapter (5.2)**, decided 2026-10-06, done: one inbox, read
+  and deleted for good, polled by the sync. Accounts and `/v1/me` name
+  their capabilities, the UI and the MCP server go by them. Discovery
+  offers POP3 only where no IMAP is
 - **The domain in packages by area, and the change feed as typed
   classes like the activities ([REFACTORING.md](REFACTORING.md))**,
   done, the tests in folders like the source. `data/` and `common/`

@@ -69,7 +69,9 @@ benethos-mailbox-service serve
 
 Then connect accounts in the UI (Accounts, Connect an account) or with
 `POST /v1/accounts`. An IMAP account needs its address and an app
-password. The service looks up the servers from the address. Microsoft
+password. The service looks up the servers from the address. A POP3
+account, for a mailbox without IMAP, works the same way: the inbox only,
+without folders, read state or search. Microsoft
 accounts sign in with OAuth and need an app registration first:
 [docs/microsoft.md](https://github.com/benethos-hub/mailbox/blob/main/docs/microsoft.md).
 

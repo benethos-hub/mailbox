@@ -38,6 +38,39 @@ async def test_list_accounts_says_what_is_allowed(api: Callable) -> None:
     ]
 
 
+async def test_list_accounts_names_what_an_account_cannot_do(api: Callable) -> None:
+    """A POP3 mailbox: no folders, no flags, no search, no drafts. The
+    drafts tools are not offered there, the rest is named."""
+    pop3 = {**ME["accounts"][0], "capabilities": ["send"]}
+    api(routes={"/v1/me": {**ME, "accounts": [pop3]}})
+    assert await accounts.list_accounts() == [
+        {
+            "id": "acc_1",
+            "email": "me@example.com",
+            "name": "Me",
+            "can": ["read"],
+            "unsupported": [
+                "read state, stars and keywords",
+                "folders, moving and the trash",
+                "search and filters",
+                "drafts",
+            ],
+        }
+    ]
+
+
+async def test_an_account_that_can_do_everything_names_no_limits(
+    api: Callable,
+) -> None:
+    full = {
+        **ME["accounts"][0],
+        "capabilities": ["drafts", "flags", "folders", "search", "send"],
+    }
+    api(routes={"/v1/me": {**ME, "accounts": [full]}})
+    [shown] = await accounts.list_accounts()
+    assert shown["can"] == ["read", "drafts"] and "unsupported" not in shown
+
+
 async def test_errors_are_tool_errors(make_client: Callable) -> None:
     make_client(
         lambda _: httpx.Response(

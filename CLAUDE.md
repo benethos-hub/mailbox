@@ -95,8 +95,9 @@ done. Update the roadmap in the same commit that finishes an item.
 - A test mail server of our own: `sh containers/test-mail-server/setup.sh`
   makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
   `127.0.0.1:30xxx`, two accounts and a local test CA
-  (`containers/test-mail-server/README.md`).
-
+  (`containers/test-mail-server/README.md`). `uv run python live/pop3.py`
+  checks the POP3 adapter against it: one mail from the first account to
+  the second, read, found by the sync and deleted for good.
 ## Project layout
 
 A uv workspace with two distributions and one lockfile.

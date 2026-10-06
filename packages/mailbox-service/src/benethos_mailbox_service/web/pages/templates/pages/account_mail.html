@@ -76,23 +76,23 @@
   </div>
 
   <section class="card">
-    <div class="body">{{ filter_bar(bar, problem) }}</div>
+    {% if can.search %}<div class="body">{{ filter_bar(bar, problem) }}</div>{% endif %}
     {% if selectable and messages %}
     <form id="batch" class="body toolbar" method="post" action="/ui/accounts/{{ account.id }}/mail/batch">
       {{ csrf_field() }}
       <input type="hidden" name="back" value="{{ here }}" />
       <label for="f-batch-action">Ticked messages</label>
       <select id="f-batch-action" name="action">
-        {% if can.change %}
+        {% if can.flag %}
         <option value="read">mark read</option>
         <option value="unread">mark unread</option>
         <option value="star">star</option>
         <option value="unstar">unstar</option>
-        <option value="move">move to …</option>
         {% endif %}
+        {% if can.move %}<option value="move">move to …</option>{% endif %}
         {% if can.trash and current.role != "trash" %}<option value="trash">move to the trash</option>{% endif %}
       </select>
-      {% if can.change %}
+      {% if can.move %}
       <select name="folder" aria-label="Folder to move to">
         <option value="">(folder, for move)</option>
         {{ folder_options(tree, [current.id]) }}

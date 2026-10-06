@@ -12,7 +12,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ...common.ids import new_id
-from ...data.models import AccountStatus, ApiToken, Grant, Page, Role, User
+from ...data.models import (
+    AccountStatus,
+    ApiToken,
+    Capability,
+    Grant,
+    Page,
+    Role,
+    User,
+)
 from ...data.storage import (
     RoleRepository,
     TokenRepository,
@@ -62,6 +70,7 @@ class AccountRights:
     # of them allows it. Empty when no grant allows sending.
     sending: list[Sending]
     status: AccountStatus = AccountStatus.CONNECTED
+    capabilities: list[Capability] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -130,6 +139,7 @@ class UserService:
                         warnings=_warnings(access, account_id, operations),
                         sending=self._sending(access, account_id),
                         status=account.status,
+                        capabilities=self._adapters.offered(account_id),
                     )
                 )
         return EffectiveRights(

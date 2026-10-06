@@ -180,10 +180,14 @@ async def account_mail_page(
     if current is None:
         return error_page(request, 404, f"The account has no folder {wanted}.")
     search, fields, problem = _search(request)
-    can = mail_rights(caller, account_id)
+    can = mail_rights(caller, account_id, account.capabilities)
+    # The ticked messages: only what the caller may do to many at once.
+    batch = caller.batches("update_message", account_id)
     can.update(
-        change=caller.batches("update_message", account_id),
-        trash=caller.batches("delete_message", account_id),
+        flag=can["flag"] and batch,
+        move=can["move"] and batch,
+        change=can["change"] and batch,
+        trash=can["trash"] and caller.batches("delete_message", account_id),
         purge=caller.batches("delete_message_permanent", account_id),
     )
     page = await mailbox.list_messages(
@@ -251,7 +255,7 @@ async def message(
         in_trash=any(
             f.role is FolderRole.TRASH for f in folders if f.id in found.folder_ids
         ),
-        can=mail_rights(caller, account_id),
+        can=mail_rights(caller, account_id, account.capabilities),
         can_raw=caller.allows("get_message_raw", account_id),
         can_attachment=caller.allows("get_attachment", account_id),
     )

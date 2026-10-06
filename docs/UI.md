@@ -391,7 +391,9 @@ These rules bind every page, the reworked ones and the ones to come.
 3. **The route decides nothing.** It reads the form, calls one domain
    method and renders or redirects. Rights are the domain's; the page
    only hides what `caller.allows(...)` denies, with the same names the
-   API uses in `x-permission`.
+   API uses in `x-permission`. The mail pages also hide what the account
+   cannot do, by its `capabilities` (`web/pages/rights.py`): a POP3
+   account shows no flags, folders, trash, filters or drafts.
 4. **A page has the context it needs, nothing more.** `page` names the
    sidebar entry, `me` the user, `csrf` the token. A template does not
    compute what a route can pass.

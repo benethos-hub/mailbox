@@ -71,6 +71,8 @@ MAX_CALLERS = 10_000
 
 # Whitespace and control characters, in no address.
 _BLANK = re.compile(r"[\s\x00-\x1f\x7f]")
+# The servers a candidate reads mail from, probed before it is offered.
+_INCOMING = (ServerProtocol.IMAP, ServerProtocol.POP3)
 
 
 @dataclass(frozen=True)
@@ -128,6 +130,9 @@ class DiscoveryService:
             hints += [h for h in result.finding.hints if h not in hints]
             for candidate in result.finding.candidates:
                 _merge(candidates, self._judged(candidate, result.finding, query))
+        if any(c.provider is ProviderType.IMAP for c in candidates):
+            # POP3 only where no IMAP is (CONCEPT 5.2).
+            candidates = [c for c in candidates if c.provider is not ProviderType.POP3]
         candidates = await self._probed(candidates)
         candidates.sort(
             key=lambda c: (
@@ -249,14 +254,14 @@ class DiscoveryService:
     async def _probed(self, candidates: list[Candidate]) -> list[Candidate]:
         servers = list(
             dict.fromkeys(
-                (s.host, s.port, s.security)
+                (s.protocol, s.host, s.port, s.security)
                 for c in candidates
-                if (s := _imap(c)) is not None
+                if (s := _incoming(c)) is not None
             )
         )[:MAX_PROBES]
-        outcome: dict[tuple[str, int, str], MailServer | None] = {}
+        outcome: dict[tuple[ServerProtocol, str, int, str], MailServer | None] = {}
 
-        async def run(key: tuple[str, int, str]) -> None:
+        async def run(key: tuple[ServerProtocol, str, int, str]) -> None:
             outcome[key] = await self._probe_one(*key)
 
         async with anyio.create_task_group() as group:
@@ -265,24 +270,24 @@ class DiscoveryService:
 
         kept = []
         for candidate in candidates:
-            imap = _imap(candidate)
-            if imap is None:
+            incoming = _incoming(candidate)
+            if incoming is None:
                 kept.append(candidate)
                 continue
-            key = (imap.host, imap.port, imap.security)
+            key = (incoming.protocol, incoming.host, incoming.port, incoming.security)
             if key not in outcome:
                 kept.append(candidate)
             elif (probed := outcome[key]) is not None:
-                kept.append(_replace_imap(candidate, imap, probed))
+                kept.append(_replace_incoming(candidate, incoming, probed))
         return kept
 
     async def _probe_one(
-        self, host: str, port: int, security: str
+        self, protocol: ServerProtocol, host: str, port: int, security: str
     ) -> MailServer | None:
         """The server with what the probe found, None when it must not be
         contacted."""
         template = MailServer(
-            protocol=ServerProtocol.IMAP, host=host, port=port, security=security
+            protocol=protocol, host=host, port=port, security=security
         )
         try:
             address = await self._check_host(host, port)
@@ -293,7 +298,7 @@ class DiscoveryService:
         try:
             with anyio.fail_after(PROBE_TIMEOUT):
                 capabilities = await self._probe(
-                    ServerProtocol.IMAP, host, port, template.security, address
+                    protocol, host, port, template.security, address
                 )
         except (MailboxServiceError, TimeoutError):
             return template.model_copy(update={"reachable": False})
@@ -317,18 +322,17 @@ def _query(email: str) -> Query:
     return Query(email=email, domain=ascii_domain)
 
 
-def _imap(candidate: Candidate) -> MailServer | None:
-    return next(
-        (s for s in candidate.servers if s.protocol is ServerProtocol.IMAP), None
-    )
+def _incoming(candidate: Candidate) -> MailServer | None:
+    """The server a candidate reads mail from: IMAP or POP3."""
+    return next((s for s in candidate.servers if s.protocol in _INCOMING), None)
 
 
 def _unreachable(candidate: Candidate) -> bool:
-    imap = _imap(candidate)
-    return imap is not None and imap.reachable is False
+    incoming = _incoming(candidate)
+    return incoming is not None and incoming.reachable is False
 
 
-def _replace_imap(
+def _replace_incoming(
     candidate: Candidate, old: MailServer, probed: MailServer
 ) -> Candidate:
     servers = [
@@ -364,8 +368,12 @@ def _merge(candidates: list[Candidate], new: Candidate) -> None:
 
 
 def _key(candidate: Candidate) -> tuple[object, ...]:
-    imap = _imap(candidate)
-    server = (imap.host, imap.port, imap.security) if imap else None
+    incoming = _incoming(candidate)
+    server = (
+        (incoming.protocol, incoming.host, incoming.port, incoming.security)
+        if incoming
+        else None
+    )
     return (candidate.provider, server)
 
 
@@ -387,13 +395,15 @@ def _username(template: str | None, email: str) -> str:
 
 
 def connectable(candidates: list[Candidate]) -> list[Candidate]:
-    """What this service can connect today: IMAP with a password."""
-    return [
+    """What this service can connect today: IMAP with a password, and POP3
+    with a password only where no IMAP is (CONCEPT 5.2)."""
+    with_password = [
         c
         for c in candidates
-        if c.provider is ProviderType.IMAP
-        and c.credential in (CredentialKind.PASSWORD, CredentialKind.APP_PASSWORD)
+        if c.credential in (CredentialKind.PASSWORD, CredentialKind.APP_PASSWORD)
     ]
+    imap = [c for c in with_password if c.provider is ProviderType.IMAP]
+    return imap or [c for c in with_password if c.provider is ProviderType.POP3]
 
 
 def sign_ins(candidates: list[Candidate], configured: Iterable[str]) -> list[Candidate]:

@@ -323,6 +323,7 @@ class AccountService:
             update={
                 "credentials": self._vault.info(account.id),
                 "settings": self._repository.settings(account.id),
+                "capabilities": self._adapters.offered(account.id),
             }
         )
 

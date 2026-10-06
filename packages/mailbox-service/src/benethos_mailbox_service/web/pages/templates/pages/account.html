@@ -19,7 +19,7 @@
   {{ fact("Display name", account.display_name) }}
   {{ fact("Provider", account.provider.value) }}
   {% if not signs_in_with_oauth %}
-  {% call fact("IMAP") %}{{ account.settings.get("host") | or_missing }}{% if account.settings.get("port") %}:{{ account.settings.port }}{% endif %}{% endcall %}
+  {% call fact(account.provider.value | upper) %}{{ account.settings.get("host") | or_missing }}{% if account.settings.get("port") %}:{{ account.settings.port }}{% endif %}{% endcall %}
   {% call fact("SMTP") %}{{ account.settings.get("smtp_host") | or_missing }}{% if account.settings.get("smtp_port") %}:{{ account.settings.smtp_port }}{% endif %}{% endcall %}
   {% endif %}
   {% call fact("Credentials") %}{{ credentials(account.credentials) }}{% endcall %}
@@ -49,7 +49,7 @@
   {% if not signs_in_with_oauth %}
   <details class="fold"{% if typed %} open{% endif %}>
     <summary>Servers</summary>
-    {{ connection_fields(typed.settings if typed else account.settings, security, editing=True) }}
+    {{ connection_fields(typed.settings if typed else account.settings, security, editing=True, protocol="pop3" if account.provider.value == "pop3" else "imap") }}
   </details>
   {% endif %}
   <div class="form-actions"><button class="primary" type="submit">Save</button></div>

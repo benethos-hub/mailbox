@@ -61,6 +61,12 @@ export MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS='["localhost"]'
 process then trusts only the test CA. Set it for a process that talks to
 this server alone.
 
+`uv run python live/pop3.py` checks the POP3 adapter against this server,
+with both accounts, as `live/.env` names them in
+`LIVE_TEST_SERVER_ACCOUNTS`. It sets `SSL_CERT_FILE` for itself and
+connects to `127.0.0.1`: on Windows `localhost` may go to `::1`, which the
+ports of WSL do not reach.
+
 ## Run it
 
 ```

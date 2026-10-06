@@ -235,7 +235,12 @@ Ids are opaque strings to clients. Nothing may parse them.
 Every adapter implements `data.providers.base.MailProvider` and declares a
 set of `Capability` values. The API answers `501 not_supported` for what an
 adapter cannot do, and `GET /v1/accounts/{id}` lists the capabilities so a
-client can tell in advance.
+client can tell in advance. `/v1/me` names them per account as well. Since
+2026-10-06 they include `flags` (read state, stars, keywords), `folders`
+(more than the inbox: folders, moving, the trash) and `search` (a filtered
+list). Every adapter but `pop3` has all three. The UI offers no action an
+account cannot do, and the MCP server's `list_accounts` names what an
+account lacks.
 
 | Adapter | Covers | Library | Licence | Notes |
 |---|---|---|---|---|
@@ -244,7 +249,7 @@ client can tell in advance.
 | `microsoft` | Microsoft 365, Outlook.com | Microsoft Graph over **httpx** | — | OAuth 2.0, the only sensible route (5.4) |
 | `gmail` | Gmail, Google Workspace | Gmail REST API over **httpx** | — | OAuth 2.0, no Google SDK needed (5.5) |
 | `jmap` | Fastmail, Stalwart, Cyrus, any JMAP server | JMAP (RFC 8620/8621) over **httpx** | — | API token or OAuth. A second generic protocol next to IMAP (5.6) |
-| `pop3` | legacy mailboxes | stdlib **poplib** | PSF | synchronous, worker thread, reduced (5.2) |
+| `pop3` | legacy mailboxes | stdlib **poplib** | PSF | synchronous, worker thread, reduced (5.2), built |
 | `memory` | tests and development | — | — | built |
 
 ### 5.1 IMAP: IMAPClient for the protocol, imap-tools for parsing
@@ -291,6 +296,30 @@ POP3 knows one mailbox, no flags, no folders, no search and no push. The
 get via `UIDL`, attachment download, delete. Read state and search are not
 supported (`501`), sending goes through SMTP. Recommendation: only offer
 POP3 where a provider has no IMAP at all, which is rare today.
+
+**Decided 2026-10-06, built:**
+
+- **Read state and stars** are not supported. Setting them, or keywords,
+  answers `501`. A message of a POP3 account is never unread or starred.
+- **Deleting** is for good only, with `DELE`. A delete into the trash
+  answers `501`: POP3 has no trash.
+- **Search, folders and drafts** answer `501`. The one folder is the inbox.
+- **The sync polls** the list of unique ids at the sync interval and
+  compares it, as for IMAP without IDLE. The change feed, `whats_new` and
+  webhooks report what arrived and what left. The adapter does not claim
+  `stable_ids`, so the domain keeps the id mapping and the sync runs. The
+  ids never move, so the mapping stays as it was.
+- **Discovery** offers POP3 only where it finds no IMAP. A POP3 account
+  can always be set up by hand, in the UI with the protocol to choose.
+- **A server without `UIDL`** is refused when the account connects:
+  without it no message keeps an id.
+
+How the adapter works: a POP3 session sees the mailbox as at its login,
+and the server locks the mailbox while it lasts. So every step logs in,
+works and quits at once, and deletions take effect at `QUIT`. A list reads
+the headers of its page with `TOP`, or the whole message where the server
+has no `TOP`. A line longer than poplib's 2048 bytes is read: mail breaks
+that limit of RFC 5322 often enough.
 
 ### 5.3 What each provider offers
 

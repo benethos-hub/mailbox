@@ -260,13 +260,30 @@ READ_AND_SEND_WARNING = (
 )
 
 
+# What an account may lack, as the model reads it: a POP3 mailbox has none
+# of these, and the tools that need them fail there.
+ACCOUNT_LIMITS = {
+    "flags": "read state, stars and keywords",
+    "folders": "folders, moving and the trash",
+    "search": "search and filters",
+    "drafts": "drafts",
+}
+
+
 def account(found: MeAccount, can: list[str]) -> dict[str, Any]:
+    able = found.capabilities
+    if able is not None and "drafts" not in able:
+        can = [kind for kind in can if kind != "drafts"]
     shown: dict[str, Any] = {
         "id": found.id,
         "email": found.email,
         "name": found.display_name,
         "can": can,
     }
+    if able is not None and (
+        lacking := [text for name, text in ACCOUNT_LIMITS.items() if name not in able]
+    ):
+        shown["unsupported"] = lacking
     if "send" in can and found.sending:
         shown["sending"] = [sending(limit) for limit in found.sending]
     if "read_and_send_anywhere" in found.warnings:

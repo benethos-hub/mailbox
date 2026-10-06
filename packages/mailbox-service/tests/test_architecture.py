@@ -46,6 +46,7 @@ LIBRARY_HOMES = {
     "imapclient": f"{PACKAGE}.data.protocols.imap",
     "imap_tools": f"{PACKAGE}.data.mail.parse",
     "smtplib": f"{PACKAGE}.data.protocols.smtp",
+    "poplib": f"{PACKAGE}.data.protocols.pop3",
     "httpx": f"{PACKAGE}.data.protocols.http",
     "dns": f"{PACKAGE}.data.discovery.dns",
     "defusedxml": f"{PACKAGE}.data.discovery.autoconfig",

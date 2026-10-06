@@ -56,7 +56,7 @@ async def drafts(
         emails=None,
         open_as="drafts",
         selectable=False,
-        can_write=mail_rights(caller, account_id)["write"],
+        can_write=mail_rights(caller, account_id, account.capabilities)["write"],
     )
 
 

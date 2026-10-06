@@ -34,6 +34,8 @@ from .base import Finding
 _SECURITY = {"SSL": Security.TLS, "TLS": Security.TLS, "STARTTLS": Security.STARTTLS}
 _PASSWORD = {"password-cleartext", "password-encrypted", "plain", "secure"}
 _OAUTH = "oauth2"
+# The incoming servers this service connects to, by the type the file gives.
+_INCOMING = {"imap": ServerProtocol.IMAP, "pop3": ServerProtocol.POP3}
 
 _USERNAME_TEMPLATE = re.compile(r"^[^\s<>]{1,256}$")
 
@@ -51,7 +53,9 @@ async def fetch(
 
 
 def parse(xml: bytes, domain: str, source: DiscoverySourceName) -> list[Candidate]:
-    """One candidate per usable IMAP server, in the file's order."""
+    """One candidate per usable IMAP server, in the file's order. One per
+    usable POP3 server only where the file names no usable IMAP server:
+    POP3 is offered where IMAP is not (CONCEPT 5.2)."""
     try:
         root = fromstring(xml)
     except (ParseError, DefusedXmlException, ValueError) as exc:
@@ -68,25 +72,26 @@ def parse(xml: bytes, domain: str, source: DiscoverySourceName) -> list[Candidat
         if element.get("type") == "smtp"
         and (server := _server(element, ServerProtocol.SMTP, domain))
     ]
-    candidates = []
+    found: dict[ServerProtocol, list[Candidate]] = {}
     for element in provider.iter("incomingServer"):
-        if element.get("type") != "imap":
+        protocol = _INCOMING.get(element.get("type") or "")
+        if protocol is None:
             continue
-        imap = _server(element, ServerProtocol.IMAP, domain)
+        incoming = _server(element, protocol, domain)
         credential = _credential(element)
-        if imap is None or credential is None:
+        if incoming is None or credential is None:
             continue
-        candidates.append(
+        found.setdefault(protocol, []).append(
             Candidate(
-                provider=ProviderType.IMAP,
+                provider=ProviderType(protocol.value),
                 name=name,
                 credential=credential,
-                servers=[imap, *smtp[:1]],
+                servers=[incoming, *smtp[:1]],
                 hints=hints,
                 source=source,
             )
         )
-    return candidates
+    return found.get(ServerProtocol.IMAP) or found.get(ServerProtocol.POP3, [])
 
 
 def _text(element: Element, tag: str) -> str | None:

@@ -44,6 +44,9 @@ class MeAccount:
     operations: frozenset[str]
     warnings: frozenset[str]
     sending: tuple[Sending, ...] = ()
+    # What the account can do beyond reading its inbox, e.g. "flags",
+    # "folders", "search", "drafts". None: a service that does not say.
+    capabilities: frozenset[str] | None = None
 
 
 @dataclass(frozen=True)

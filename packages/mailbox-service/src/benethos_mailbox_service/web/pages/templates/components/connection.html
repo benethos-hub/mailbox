@@ -1,20 +1,24 @@
-{# The connection fields of an IMAP account, with sending over SMTP, filled
-   in from ``values``. ``editing``: the account exists, an emptied field
-   removes that setting. #}
-{% macro connection_fields(values, security, editing=False, suffix="") %}
+{# The connection fields of an IMAP or POP3 account, with sending over
+   SMTP, filled in from ``values``. ``protocol``: "imap" or "pop3", None
+   where the form lets one choose. ``editing``: the account exists, an
+   emptied field removes that setting. #}
+{% macro connection_fields(values, security, editing=False, suffix="", protocol="imap") %}
 {% set ids = "-" ~ suffix if suffix else "" %}
+{% set ports = {"imap": "993 for tls, 143 for starttls", "pop3": "995 for tls, 110 for starttls"} %}
+{% set protocol = protocol if not protocol or protocol in ports else "imap" %}
+{% set incoming = protocol | upper if protocol else "Incoming" %}
 <div class="form-grid">
   <div class="field">
-    <label for="f-host{{ ids }}">IMAP server</label>
+    <label for="f-host{{ ids }}">{{ incoming }} server</label>
     <input id="f-host{{ ids }}" name="host" value="{{ values.get('host', '') }}"{% if not editing %} required{% endif %} />
   </div>
   <div class="field">
-    <label for="f-port{{ ids }}">IMAP port</label>
+    <label for="f-port{{ ids }}">{{ incoming }} port</label>
     <input id="f-port{{ ids }}" name="port" inputmode="numeric" value="{{ values.get('port', '') }}" />
-    <span class="hint">Empty: 993 for tls, 143 for starttls.</span>
+    <span class="hint">Empty: {% if protocol %}{{ ports[protocol] }}{% else %}993 or 143 for IMAP, 995 or 110 for POP3, for tls or starttls{% endif %}.</span>
   </div>
   <div class="field">
-    <label for="f-security{{ ids }}">IMAP security</label>
+    <label for="f-security{{ ids }}">{{ incoming }} security</label>
     <select id="f-security{{ ids }}" name="security">
       {% for option in security %}<option value="{{ option }}"{% if values.get('security', 'tls') == option %} selected{% endif %}>{{ option }}</option>{% endfor %}
     </select>
@@ -44,7 +48,7 @@
   <div class="field">
     <label for="f-smtp_username{{ ids }}">SMTP login name</label>
     <input id="f-smtp_username{{ ids }}" name="smtp_username" value="{{ values.get('smtp_username', '') }}" autocomplete="off" />
-    <span class="hint">Empty: the IMAP login name.</span>
+    <span class="hint">Empty: the login name above.</span>
   </div>
 </div>
 {% if editing %}<p class="hint faint">Only what you change is sent. A change of server logs in again first.</p>{% endif %}
