@@ -8,6 +8,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Settings and data in the folders of the operating system, for an
+  installation without the repository: `%LOCALAPPDATA%\benethos-mailbox-service\`
+  with `config` and `data` on Windows, `~/.config/benethos-mailbox-service/`
+  and `~/.local/share/benethos-mailbox-service/` on Linux. A file named
+  with `--env-file` comes first, then `config/benethos-mailbox-service/`
+  or `data/benethos-mailbox-service/` in the working directory, as
+  before.
+- `benethos-mailbox-service paths` names the settings file, the data
+  folder, the database and where the master key is.
+- The MCP server reads an optional `.env`: `--env-file` or
+  `MAILBOX_MCP_ENV_FILE`, else `config/benethos-mailbox-mcp/.env` in the
+  working directory, else its config folder of the operating system. The
+  environment wins over it.
+
 - `service` on users and roles, in `POST`, `PATCH` and `PUT`: rights of
   the service, bound to no account. `accounts.connect`, `users.read`,
   `users.manage`, `webhooks.manage` and `admin` belong there, or single
@@ -72,6 +86,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** a key file in the data folder is refused
+  (`MAILBOX_SERVICE_KEY_FILE` below `MAILBOX_SERVICE_DATA_DIR`). A copy
+  of the folder would carry the key to the credentials with it. Move the
+  file elsewhere, e.g. into the config folder that `paths` names.
 - **Breaking:** `GET /v1/accounts` and `GET /v1/users` are paged like
   the other lists. They answer `{"items": [...], "next_cursor": ...}`
   instead of an array and take `limit` (1 to 200, default 50) and

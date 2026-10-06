@@ -43,7 +43,10 @@ done. Update the roadmap in the same commit that finishes an item.
   versioned): the database in `data/benethos-mailbox-service/`. Every
   command of the service takes `--env-file PATH` (or
   `MAILBOX_SERVICE_ENV_FILE`) for a settings file elsewhere. Relative
-  paths in it then count from its folder.
+  paths in it then count from its folder. Installed without the
+  repository, the service uses the folders of the operating system
+  instead (CONCEPT 7.4). `uv run benethos-mailbox-service paths` names
+  what applies. The tests never read or write those folders.
 - Run the service: once `uv run benethos-mailbox-service keys init` and
   `uv run benethos-mailbox-service users create-admin` (prints a one-time
   password), then `uv run benethos-mailbox-service serve`. Sign in at

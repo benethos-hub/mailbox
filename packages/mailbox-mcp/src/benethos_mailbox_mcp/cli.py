@@ -1,5 +1,6 @@
 """The command line of the MCP server: its options, the environment
-``MAILBOX_MCP_*``, the log, and the start over stdio or streamable HTTP.
+``MAILBOX_MCP_*`` and the settings file, the log, and the start over stdio
+or streamable HTTP.
 The tools and what the token may do are ``server``'s."""
 
 from __future__ import annotations
@@ -9,11 +10,14 @@ import logging
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
 import anyio
 
-from . import __version__, server, tools, transport
+from . import __version__, config, server, tools, transport
 from .errors import ToolError
+
+logger = logging.getLogger(__name__)
 
 
 async def _at_start() -> set[str]:
@@ -38,10 +42,19 @@ def _env(name: str, default: str) -> str:
 
 def _build_parser() -> argparse.ArgumentParser:
     """Options on the command line win over ``MAILBOX_MCP_*`` in the
-    environment, which win over the defaults. The bearer token has no option:
-    an argument shows in the process list."""
+    environment, which win over the settings file, which wins over the
+    defaults. The bearer token has no option: an argument shows in the
+    process list."""
     parser = argparse.ArgumentParser(prog="benethos-mailbox-mcp")
     parser.add_argument("--version", action="version", version=__version__)
+    parser.add_argument(
+        "--env-file",
+        type=Path,
+        metavar="PATH",
+        help=f"the settings file, else {config.ENV_FILE_VARIABLE}, else "
+        f"{config.ENV_FILE} if it exists, else .env in the config folder of "
+        "the operating system. The environment wins over it.",
+    )
     parser.add_argument(
         "--transport", choices=TRANSPORTS, default=_env("TRANSPORT", "stdio")
     )
@@ -114,11 +127,25 @@ def configure_logging(level: str) -> None:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
+def _settings_file(argv: list[str] | None) -> Path | None:
+    """The settings file put into the environment, before the options read
+    their defaults from there."""
+    early = argparse.ArgumentParser(add_help=False)
+    early.add_argument("--env-file", type=Path, default=None)
+    try:
+        return config.load(early.parse_known_args(argv)[0].env_file)
+    except FileNotFoundError as exc:
+        sys.exit(f"benethos-mailbox-mcp: {exc}")
+
+
 def main(argv: list[str] | None = None) -> None:
+    loaded = _settings_file(argv)
     parser = _build_parser()
     args = parser.parse_args(argv)
     _check_environment(parser, args)
     configure_logging(args.log_level)
+    if loaded is not None:
+        logger.info("Settings from %s", loaded)
     try:
         operations = anyio.run(_at_start)
     except ToolError as exc:

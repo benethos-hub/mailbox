@@ -1,19 +1,29 @@
-"""Settings, resolved from the environment and an optional ``.env`` file."""
+"""Settings, resolved from the environment and an optional ``.env`` file,
+and the folders a command reads them from and keeps its data in."""
 
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Self
 
+import platformdirs
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Relative to the working directory, read when it exists. Template:
-# .env.example beside it.
-ENV_FILE = "config/benethos-mailbox-service/.env"
+APP = "benethos-mailbox-service"
+# The layout of the repository, relative to the working directory. The
+# settings file is read when it exists. Template: .env.example beside it.
+ENV_FILE = f"config/{APP}/.env"
+DATA_DIR = Path("data") / APP
 # Names another settings file, as --env-file does on the command line.
 ENV_FILE_VARIABLE = "MAILBOX_SERVICE_ENV_FILE"
+# The name `paths` suggests for a key file in the config folder.
+KEY_FILE_NAME = "master.key"
+# The settings that hold a path. A relative one counts from the folder
+# of the settings file.
+PATH_SETTINGS = ("data_dir", "key_file", "oauth_microsoft_client_secret_file")
 
 
 class Settings(BaseSettings):
@@ -43,9 +53,9 @@ class Settings(BaseSettings):
     log_level: Literal["critical", "error", "warning", "info", "debug", "trace"] = (
         "info"
     )
-    # Where the database lives. A relative path counts from the working
-    # directory.
-    data_dir: Path = Path("data/benethos-mailbox-service")
+    # Where the database lives. Without it the data folder that `paths`
+    # names. A relative path counts from the folder of the settings file.
+    data_dir: Path = DATA_DIR
     # "memory" keeps nothing across restarts. For tests and trying things out.
     storage: Literal["sqlite", "memory"] = "sqlite"
     # Where the master key comes from.
@@ -152,6 +162,21 @@ class Settings(BaseSettings):
         return (self.data_dir / "mailbox.db").resolve()
 
 
+Origin = Literal["named", "working directory", "system"]
+
+
+@dataclass(frozen=True)
+class Folders:
+    """Where a command reads its settings and keeps its data (CONCEPT 7.4).
+    ``env_file`` is read when it exists. ``data`` holds the database unless
+    ``MAILBOX_SERVICE_DATA_DIR`` moves it."""
+
+    origin: Origin
+    config: Path
+    env_file: Path
+    data: Path
+
+
 def named_settings_file(env_file: Path | None = None) -> Path | None:
     """A settings file named on purpose: ``env_file``, else the one
     ``MAILBOX_SERVICE_ENV_FILE`` names. None without either."""
@@ -161,35 +186,55 @@ def named_settings_file(env_file: Path | None = None) -> Path | None:
     return Path(named) if named else None
 
 
-def settings_file(env_file: Path | None = None) -> Path | None:
-    """The file the settings are read from, None when there is none."""
+def system_folders() -> tuple[Path, Path]:
+    """The config and the data folder of the operating system for this
+    user, never in a roaming profile on Windows. Where the system has one
+    folder for both, as Windows and macOS do, each gets its own below it,
+    so a copy of the data never carries a key file with it."""
+    config = Path(platformdirs.user_config_dir(APP, appauthor=False, roaming=False))
+    data = Path(platformdirs.user_data_dir(APP, appauthor=False, roaming=False))
+    if config == data:
+        return config / "config", data / "data"
+    return config, data
+
+
+def folders(env_file: Path | None = None) -> Folders:
+    """The folders that apply, first found first: the settings file named
+    on purpose, the repository's layout in the working directory where it
+    has either folder, else those of the operating system."""
     named = named_settings_file(env_file)
     if named is not None:
-        return named.resolve()
-    default = Settings.model_config.get("env_file")
-    if isinstance(default, str | Path) and Path(default).is_file():
-        return Path(default).resolve()
-    return None
+        named = named.resolve()
+        return Folders("named", named.parent, named, named.parent / DATA_DIR)
+    local = Path(ENV_FILE)
+    if local.parent.is_dir() or DATA_DIR.is_dir():
+        return Folders("working directory", local.parent, local, DATA_DIR)
+    config, data = system_folders()
+    return Folders("system", config, config / ".env", data)
+
+
+def settings_file(env_file: Path | None = None) -> Path | None:
+    """The file the settings are read from, None when there is none."""
+    found = folders(env_file).env_file
+    return found.resolve() if found.is_file() else None
 
 
 def load_settings(env_file: Path | None = None) -> Settings:
-    """The settings of a command. A file named on purpose must exist, and
-    a relative path in the settings then counts from its folder, so the
-    service finds its data wherever it is started. Without one it reads
-    ``ENV_FILE`` if it exists, and relative paths count from the working
-    directory."""
-    named = named_settings_file(env_file)
-    if named is None:
-        return Settings()
-    if not named.is_file():
-        raise FileNotFoundError(f"settings file {named} not found")
-    settings = Settings(_env_file=named)
-    base = named.resolve().parent
-    return settings.model_copy(
-        update={
-            key: base / value
-            for key in ("data_dir", "key_file", "oauth_microsoft_client_secret_file")
-            if isinstance(value := getattr(settings, key), Path)
-            and not value.is_absolute()
-        }
-    )
+    """The settings of a command. A file named on purpose must exist.
+    A relative path in the settings counts from the folder of the settings
+    file, so the service finds its data wherever it is started. In the
+    repository's layout that is the working directory, as before."""
+    where = folders(env_file)
+    if where.origin == "named" and not where.env_file.is_file():
+        raise FileNotFoundError(f"settings file {where.env_file} not found")
+    settings = Settings(_env_file=where.env_file if where.env_file.is_file() else None)
+    if where.origin == "working directory":
+        return settings
+    moved: dict[str, Path] = {
+        key: where.config / value
+        for key in PATH_SETTINGS
+        if isinstance(value := getattr(settings, key), Path) and not value.is_absolute()
+    }
+    if "data_dir" not in settings.model_fields_set:
+        moved["data_dir"] = where.data
+    return settings.model_copy(update=moved)

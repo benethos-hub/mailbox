@@ -121,11 +121,13 @@ its line here in the same commit.
 ```
 packages/mailbox-service/
   src/benethos_mailbox_service/
-    __main__.py         # CLI: serve, openapi, users, keys, backup, restore
+    __main__.py         # CLI: serve, openapi, paths, users, keys, backup,
+                        #   restore
     main.py             # assembly only: create_app, picks implementations
     logs.py             # assembly: the log of serve, format, level, masking
     config.py           # cross-cutting: Settings (MAILBOX_SERVICE_* env and
-                        #   config/benethos-mailbox-service/.env)
+                        #   the .env), the folders that apply: named,
+                        #   the repository's, the system's (platformdirs)
     errors.py           # cross-cutting: MailboxServiceError hierarchy, no HTTP
     common/             # cross-cutting: helpers several layers share,
                         #   standard library only
@@ -271,6 +273,8 @@ packages/mailbox-mcp/
     client.py           # ALL access to the REST API
     models.py           # the records the client answers with
     errors.py           # ToolError subclasses
+    config.py           # the optional .env, put into the environment
+                        #   (platformdirs, python-dotenv)
 ```
 
 `tests/test_architecture.py` of the MCP package keeps the modules in
@@ -406,6 +410,7 @@ noticing. Every change is measured against that.
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
+| Folders for settings and data | `folders()` in `config.py` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token, password for the UI | TOTP, OAuth client credentials |
 | MCP ↔ service | the REST API, `docs/openapi.json` | httpx client in `client.py` | a generated client |

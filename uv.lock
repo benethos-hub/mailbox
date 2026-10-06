@@ -148,8 +148,10 @@ dependencies = [
     { name = "anyio" },
     { name = "httpx" },
     { name = "mcp" },
+    { name = "platformdirs" },
     { name = "pydantic" },
     { name = "pypdfium2" },
+    { name = "python-dotenv" },
     { name = "starlette" },
     { name = "uvicorn" },
 ]
@@ -159,8 +161,10 @@ requires-dist = [
     { name = "anyio", specifier = ">=4.14.2" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "mcp", specifier = ">=2.0.0,<3" },
+    { name = "platformdirs", specifier = ">=4.3" },
     { name = "pydantic", specifier = ">=2.12" },
     { name = "pypdfium2", specifier = ">=4.30" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "starlette", specifier = ">=1.3.1" },
     { name = "uvicorn", specifier = ">=0.31" },
 ]
@@ -180,6 +184,7 @@ dependencies = [
     { name = "imapclient" },
     { name = "jinja2" },
     { name = "keyring" },
+    { name = "platformdirs" },
     { name = "publicsuffixlist" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -200,6 +205,7 @@ requires-dist = [
     { name = "imapclient", specifier = ">=4.1.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "keyring", specifier = ">=25" },
+    { name = "platformdirs", specifier = ">=4.3" },
     { name = "publicsuffixlist", specifier = ">=1.0" },
     { name = "pydantic", specifier = ">=2.12" },
     { name = "pydantic-settings", specifier = ">=2.10" },
@@ -1197,6 +1203,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5a/82/42f767fc1c1143d6fd36efb827202a2d997a375e160a71eb2888a925aac1/pathspec-1.1.1.tar.gz", hash = "sha256:17db5ecd524104a120e173814c90367a96a98d07c45b2e10c2f3919fff91bf5a", size = 135180, upload-time = "2026-04-27T01:46:08.907Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl", hash = "sha256:a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189", size = 57328, upload-time = "2026-04-27T01:46:07.06Z" },
+]
+
+[[package]]
+name = "platformdirs"
+version = "4.12.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/23/4a86fc741c38c5b69792a4ef954b281afa69bea9f083f881de1b0d23bc07/platformdirs-4.12.3.tar.gz", hash = "sha256:427fc0bb321ae0c5b037fa03238ca74820437be162e78b4848c4d4055b9b766c", size = 59538, upload-time = "2026-10-03T23:40:46.595Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c5/9b/6ce1ead737fe496611bda600c263b9a11ae7bd8f41bb13f9bd7e0a2c37a4/platformdirs-4.12.3-py3-none-any.whl", hash = "sha256:080f3b39423b5abfca9a23d84c4e9795f54d395cd8459867a8ded44084fcd5f8", size = 32493, upload-time = "2026-10-03T23:40:45.104Z" },
 ]
 
 [[package]]

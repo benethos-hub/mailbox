@@ -8,7 +8,14 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .config import ENV_FILE, Settings, load_settings, settings_file
+from .config import (
+    ENV_FILE,
+    KEY_FILE_NAME,
+    Settings,
+    folders,
+    load_settings,
+    settings_file,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -41,6 +48,11 @@ def _parser() -> argparse.ArgumentParser:
     serve.add_argument("--host")
     serve.add_argument("--port", type=int)
     commands.add_parser("openapi", help="print the OpenAPI document as JSON")
+    commands.add_parser(
+        "paths",
+        help="name the settings file, the data folder and where the master key is",
+        parents=[option],
+    )
 
     users = commands.add_parser(
         "users", help="manage users on this host", parents=[option]
@@ -114,9 +126,17 @@ def _parser() -> argparse.ArgumentParser:
 
 
 _ENV_FILE_HELP = (
-    f"the settings file, else MAILBOX_SERVICE_ENV_FILE, else {ENV_FILE} if it "
-    "exists. Relative paths in a file named here count from its folder."
+    f"the settings file, else MAILBOX_SERVICE_ENV_FILE, else {ENV_FILE} where "
+    "the working directory has the repository's folders, else the config "
+    "folder of the operating system. Relative paths in it count from its "
+    "folder. `paths` names the folders that apply."
 )
+
+_ORIGINS = {
+    "named": "the file named on purpose",
+    "working directory": "the repository's folders in the working directory",
+    "system": "the folders of the operating system",
+}
 
 
 def _run(args: argparse.Namespace) -> int:
@@ -124,6 +144,8 @@ def _run(args: argparse.Namespace) -> int:
         from .main import openapi_json
 
         sys.stdout.write(openapi_json())
+    elif args.command == "paths":
+        _paths(args.env_file)
     elif args.command == "users":
         _users(args)
     elif args.command == "keys":
@@ -160,6 +182,33 @@ def _run(args: argparse.Namespace) -> int:
             forwarded_allow_ips=settings.forwarded_allow_ips,
         )
     return 0
+
+
+def _paths(env_file: Path | None) -> None:
+    """Where this command's settings and data are. Paths only, never a
+    value of the settings."""
+    from .data.secrets import EnvKeyProvider, KeyringKeyProvider
+
+    where = folders(env_file)
+    settings = load_settings(env_file)
+    found = where.env_file.is_file()
+    if settings.key_provider == "keyring":
+        key = KeyringKeyProvider().describe()
+    elif settings.key_provider == "env":
+        key = EnvKeyProvider(None).describe()
+    elif settings.key_file is not None:
+        key = f"the key file {settings.key_file.resolve()}"
+    else:
+        suggested = (where.config / KEY_FILE_NAME).resolve()
+        key = f"a file, not set yet. Suggested: {suggested}"
+    print(f"From:          {_ORIGINS[where.origin]}")
+    print(
+        f"Settings file: {where.env_file.resolve()}"
+        + ("" if found else " (not there, the defaults apply)")
+    )
+    print(f"Data folder:   {settings.data_dir.resolve()}")
+    print(f"Database:      {settings.database_path}")
+    print(f"Master key:    {key}")
 
 
 def _users(args: argparse.Namespace) -> None:

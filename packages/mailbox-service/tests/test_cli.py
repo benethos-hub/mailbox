@@ -5,9 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_service import __version__
+from benethos_mailbox_service import __version__, config
 from benethos_mailbox_service.__main__ import _parser, main
 from benethos_mailbox_service.config import Settings, load_settings
+
+# The real one: conftest.py puts the system's folders into a test's own.
+SYSTEM_FOLDERS = config.system_folders
 
 
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -211,11 +214,75 @@ def test_an_absolute_path_in_a_named_file_stays(
     assert load_settings(folder / "service.env").data_dir == elsewhere
 
 
-def test_without_a_named_file_the_working_directory_is_the_base(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("folder", ["config", "data"])
+def test_the_repository_layout_in_the_working_directory_stays(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, folder: str
+) -> None:
+    """Either folder of the repository's layout keeps an installation
+    where it was: relative paths count from the working directory."""
+    settings_folder(tmp_path, monkeypatch)
+    (Path(folder) / "benethos-mailbox-service").mkdir(parents=True)
+    assert config.folders().origin == "working directory"
+    assert load_settings().data_dir == Path("data/benethos-mailbox-service")
+
+
+def test_without_the_repository_the_folders_of_the_system(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     settings_folder(tmp_path, monkeypatch)
-    assert load_settings().data_dir == Path("data/benethos-mailbox-service")
+    system, data = config.system_folders()  # in tmp_path, see conftest.py
+    assert config.folders().origin == "system"
+    assert load_settings().data_dir == data
+    assert config.settings_file() is None
+
+    system.mkdir(parents=True)
+    (system / ".env").write_text(
+        "MAILBOX_SERVICE_KEY_PROVIDER=file\nMAILBOX_SERVICE_KEY_FILE=master.key\n",
+        encoding="utf-8",
+    )
+    settings = load_settings()
+    assert settings.key_file == system / "master.key"
+    assert settings.data_dir == data
+    assert config.settings_file() == (system / ".env").resolve()
+    (system / ".env").write_text("MAILBOX_SERVICE_DATA_DIR=db\n", encoding="utf-8")
+    assert load_settings().data_dir == system / "db"
+
+
+def test_one_system_folder_for_both_gets_one_below_it_for_each(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """As on Windows and macOS: a copy of the data never holds a key file
+    from the config folder."""
+    import platformdirs
+
+    monkeypatch.setattr(platformdirs, "user_config_dir", lambda *a, **k: str(tmp_path))
+    monkeypatch.setattr(platformdirs, "user_data_dir", lambda *a, **k: str(tmp_path))
+    assert SYSTEM_FOLDERS() == (tmp_path / "config", tmp_path / "data")
+    other = tmp_path / "share"
+    monkeypatch.setattr(platformdirs, "user_data_dir", lambda *a, **k: str(other))
+    assert SYSTEM_FOLDERS() == (tmp_path, other)
+
+
+def test_paths_names_the_folders_and_never_a_value(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    folder = settings_folder(tmp_path, monkeypatch)
+    with (folder / "service.env").open("a", encoding="utf-8") as file:
+        file.write("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET=s3cret-value\n")
+    assert main(["paths", "--env-file", str(folder / "service.env")]) == 0
+    out = capsys.readouterr().out
+    assert "the file named on purpose" in out
+    assert str((folder / "data" / "mailbox.db").resolve()) in out
+    assert f"the key file {(folder / 'secrets' / 'master.key').resolve()}" in out
+    assert "s3cret-value" not in out
+
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
+    assert main(["paths"]) == 0
+    out = capsys.readouterr().out
+    system, _ = config.system_folders()
+    assert "the folders of the operating system" in out
+    assert "(not there, the defaults apply)" in out
+    assert f"Suggested: {(system / 'master.key').resolve()}" in out
 
 
 @pytest.mark.parametrize(
