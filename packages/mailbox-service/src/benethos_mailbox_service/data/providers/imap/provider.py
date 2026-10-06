@@ -130,7 +130,14 @@ async def probe(
 class ImapProvider:
     # PUSH needs IDLE, which wait_for_change finds out after the login.
     capabilities = frozenset(
-        {Capability.SERVER_SEARCH, Capability.PUSH, Capability.DRAFTS}
+        {
+            Capability.FLAGS,
+            Capability.FOLDERS,
+            Capability.SEARCH,
+            Capability.SERVER_SEARCH,
+            Capability.PUSH,
+            Capability.DRAFTS,
+        }
     )
 
     def __init__(

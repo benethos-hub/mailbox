@@ -27,7 +27,14 @@ from ..base import Capability, FolderChanges
 
 class MemoryProvider:
     capabilities = frozenset(
-        {Capability.SEND, Capability.DRAFTS, Capability.STABLE_IDS}
+        {
+            Capability.SEND,
+            Capability.DRAFTS,
+            Capability.FLAGS,
+            Capability.FOLDERS,
+            Capability.SEARCH,
+            Capability.STABLE_IDS,
+        }
     )
 
     def __init__(

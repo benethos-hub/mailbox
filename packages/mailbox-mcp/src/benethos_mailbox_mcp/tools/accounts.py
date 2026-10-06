@@ -21,7 +21,8 @@ async def list_accounts() -> list[dict[str, Any]]:
     may send, `sending` names the limits, one entry per grant: to whom, how
     many a day and how many are left. A send passes when one of them
     allows it. `warning` marks an account where you may read mail and send
-    it anywhere."""
+    it anywhere. `unsupported` names what an account cannot do, such as a
+    POP3 mailbox without folders: tools for that fail there."""
     me = await client().me()
     return [
         render.account(account, _capabilities(account.operations))

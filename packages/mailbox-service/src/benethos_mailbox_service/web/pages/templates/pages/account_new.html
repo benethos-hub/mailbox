@@ -15,6 +15,15 @@
   <input type="hidden" name="email" value="{{ email }}" />
   {% if provider %}<input type="hidden" name="provider" value="{{ provider }}" />{% endif %}
   <div class="form-grid">
+    {% if not provider %}
+    <div class="field">
+      <label for="f-provider{{ ids }}">Protocol</label>
+      <select id="f-provider{{ ids }}" name="provider">
+        <option value="imap" selected>IMAP</option>
+        <option value="pop3">POP3: the inbox only, no folders, no read state</option>
+      </select>
+    </div>
+    {% endif %}
     <div class="field">
       <label for="f-display_name{{ ids }}">Display name</label>
       <input id="f-display_name{{ ids }}" name="display_name" value="{{ display_name }}" placeholder="optional" />
@@ -29,10 +38,10 @@
   {% if folded %}
   <details class="fold">
     <summary>Servers</summary>
-    {{ connection_fields(settings, security, suffix=suffix) }}
+    {{ connection_fields(settings, security, suffix=suffix, protocol=provider) }}
   </details>
   {% else %}
-  <div class="fold">{{ connection_fields(settings, security, suffix=suffix) }}</div>
+  <div class="fold">{{ connection_fields(settings, security, suffix=suffix, protocol=provider) }}</div>
   {% endif %}
   <div class="form-actions"><button{% if primary %} class="primary"{% endif %} type="submit">Connect</button></div>
 </form>
@@ -121,7 +130,7 @@
 <details class="card way"{% if not usable and not sign_ins %} open{% endif %}>
   <summary class="card-summary"><h2>Set up by hand</h2></summary>
   <div class="body">
-    {% if not usable and not sign_ins %}<p class="muted">No way to connect {{ discovery.email }} over IMAP was found. Enter your provider's servers.</p>{% endif %}
+    {% if not usable and not sign_ins %}<p class="muted">No way to connect {{ discovery.email }} over IMAP or POP3 was found. Enter your provider's servers.</p>{% endif %}
     {{ connect_form(discovery.email, {}, suffix="hand", folded=False, primary=not usable and not sign_ins) }}
   </div>
 </details>

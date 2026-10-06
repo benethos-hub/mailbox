@@ -1,7 +1,7 @@
 """Sending over SMTP. The only module that imports ``smtplib``.
 
 Used through ``sender.SmtpSender`` by the adapters that have no sending of
-their own: IMAP, and later POP3. One connection per send: a session is not
+their own: IMAP and POP3. One connection per send: a session is not
 kept open between sends. Every library error leaves this module as a
 ``MailboxServiceError``.
 """

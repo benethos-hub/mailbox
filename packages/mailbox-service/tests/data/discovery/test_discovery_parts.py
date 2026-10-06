@@ -19,6 +19,7 @@ from benethos_mailbox_service.data.discovery.suffix import (
 from benethos_mailbox_service.data.models import (
     CredentialKind,
     DiscoverySourceName,
+    ProviderType,
     Security,
     ServerProtocol,
 )
@@ -436,6 +437,33 @@ def test_parse_drops_invalid_servers(host: str, port: str) -> None:
       <socketType>SSL</socketType><authentication>plain</authentication>
       </incomingServer></emailProvider></clientConfig>""".encode()
     assert autoconfig.parse(xml, "example.com", DiscoverySourceName.ISPDB) == []
+
+
+def test_parse_offers_pop3_only_without_imap() -> None:
+    """The file above names POP3 and IMAP: only IMAP is kept. A file with
+    POP3 alone gives a POP3 candidate (CONCEPT 5.2)."""
+    xml = b"""<clientConfig><emailProvider><displayName>Old Mail</displayName>
+      <incomingServer type="pop3"><hostname>pop.example.com</hostname>
+      <port>995</port><socketType>SSL</socketType>
+      <authentication>password-cleartext</authentication></incomingServer>
+      <incomingServer type="imap"><hostname>imap.example.com</hostname>
+      <port>143</port><socketType>plain</socketType>
+      <authentication>password-cleartext</authentication></incomingServer>
+      <outgoingServer type="smtp"><hostname>smtp.example.com</hostname>
+      <port>465</port><socketType>SSL</socketType>
+      <authentication>password-cleartext</authentication></outgoingServer>
+      </emailProvider></clientConfig>"""
+    [candidate] = autoconfig.parse(xml, "example.com", DiscoverySourceName.ISPDB)
+    assert candidate.provider is ProviderType.POP3
+    pop3, smtp = candidate.servers
+    assert (pop3.protocol, pop3.host, pop3.port) == (
+        ServerProtocol.POP3,
+        "pop.example.com",
+        995,
+    )
+    assert smtp.protocol is ServerProtocol.SMTP
+    with_imap = autoconfig.parse(CONFIG, "example.com", DiscoverySourceName.ISPDB)
+    assert {c.provider for c in with_imap} == {ProviderType.IMAP}
 
 
 def test_parse_keeps_a_host_under_an_idn_top_level_domain() -> None:

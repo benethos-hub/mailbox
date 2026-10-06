@@ -24,6 +24,7 @@
       {% if message.reply_to %}<dt>Reply to</dt><dd>{{ message.reply_to | addresses }}</dd>{% endif %}
       <dt>Date</dt><dd>{{ message.date | when }}</dd>
       {% set own = message.keywords | own_keywords %}
+      {% if "flags" in account.capabilities %}
       <dt>Flags</dt>
       <dd>
         {{ "unread" if message.unread else "read" }}{% if message.starred %}, starred{% endif %}
@@ -31,8 +32,8 @@
       </dd>
       <dt>Keywords</dt>
       <dd>
-        {% for keyword in own %}<span class="tag">{{ keyword }}</span>{% if can.change %} {{ action(url ~ "/keywords", "Remove " ~ keyword, fields={"remove": keyword}) }}{% endif %} {% else %}{{ "—" if not can.change }}{% endfor %}
-        {% if can.change %}
+        {% for keyword in own %}<span class="tag">{{ keyword }}</span>{% if can.flag %} {{ action(url ~ "/keywords", "Remove " ~ keyword, fields={"remove": keyword}) }}{% endif %} {% else %}{{ "—" if not can.flag }}{% endfor %}
+        {% if can.flag %}
         <form class="inline toolbar" method="post" action="{{ url }}/keywords">
           {{ csrf_field() }}
           <input name="add" aria-label="New keyword" placeholder="New keyword" maxlength="100" />
@@ -40,6 +41,7 @@
         </form>
         {% endif %}
       </dd>
+      {% endif %}
       <dt>Id</dt><dd class="mono">{{ message.id }}</dd>
     </dl>
   </div>
@@ -48,10 +50,11 @@
 {% if can.change or can.trash or can.purge %}
 <section class="card">
   <div class="body toolbar">
-    {% if can.change %}
+    {% if can.flag %}
     {{ action(url ~ "/flags", "Mark unread" if not message.unread else "Mark read", fields={"unread": "0" if message.unread else "1"}, cls="") }}
     {{ action(url ~ "/flags", "Unstar" if message.starred else "Star", fields={"starred": "0" if message.starred else "1"}, cls="") }}
-    {% if tree %}
+    {% endif %}
+    {% if can.move and tree %}
     <form class="inline toolbar" method="post" action="{{ url }}/move">
       {{ csrf_field() }}
       <select name="folder" aria-label="Move to folder">
@@ -59,7 +62,6 @@
       </select>
       <button type="submit">Move</button>
     </form>
-    {% endif %}
     {% endif %}
     <span class="grow"></span>
     {% if can.trash and not in_trash %}{{ action(url ~ "/delete", "Move to the trash", fields={"back": "/ui/accounts/" ~ account.id ~ "/mail"}, cls="") }}{% endif %}

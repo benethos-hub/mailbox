@@ -1,5 +1,5 @@
 """The wire, one library each: ``imap`` (IMAPClient), ``smtp`` (smtplib),
-``http`` (httpx), ``oauth`` (OAuth 2.0 over ``http``), later ``pop3``
+``http`` (httpx), ``oauth`` (OAuth 2.0 over ``http``), ``pop3``
 (poplib). ``transport`` holds TLS, the timeouts and the failures below
 every library.
 
@@ -44,6 +44,10 @@ from .oauth import (
     authorize_url,
     new_pkce,
 )
+from .pop3 import (
+    DEFAULT_PORTS as POP3_PORTS,
+)
+from .pop3 import Pop3Session
 from .smtp import (
     DEFAULT_PORTS as SMTP_PORTS,
 )
@@ -68,7 +72,9 @@ __all__ = [
     "ImapSession",
     "Lookup",
     "OAuthClient",
+    "POP3_PORTS",
     "Pick",
+    "Pop3Session",
     "Profile",
     "RawFolder",
     "RefreshingTokens",

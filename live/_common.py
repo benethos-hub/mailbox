@@ -89,6 +89,35 @@ def accounts(env: dict[str, str]) -> list[dict[str, str]]:
     return found
 
 
+def test_server_accounts(env: dict[str, str]) -> tuple[Path, list[dict[str, str]]]:
+    """The folder of the local test mail server's secrets, and its accounts,
+    from the file ``LIVE_TEST_SERVER_ACCOUNTS`` names
+    (``containers/test-mail-server/``). These are confirmed test accounts
+    too: the server is our own."""
+    pointer = env.get("LIVE_TEST_SERVER_ACCOUNTS")
+    if not pointer:
+        sys.exit("no LIVE_TEST_SERVER_ACCOUNTS in live/.env")
+    path = Path(pointer)
+    if not path.is_absolute():
+        path = ENV_FILE.parent.parent / path
+    values = read_env(path)
+    found = []
+    number = 1
+    while f"TEST_MAIL_USER_{number}" in values:
+        user = values[f"TEST_MAIL_USER_{number}"]
+        found.append(
+            {
+                "email": user,
+                "username": user,
+                "password": values.get(f"TEST_MAIL_PASSWORD_{number}", ""),
+            }
+        )
+        number += 1
+    if len(found) < 2:
+        sys.exit(f"{path} names fewer than two accounts")
+    return path.parent, found
+
+
 def imap_settings(
     env: dict[str, str], account: dict[str, str], discovered: dict[str, Any]
 ) -> dict[str, Any]:

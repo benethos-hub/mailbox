@@ -23,6 +23,9 @@ from .imap import settings_from as imap_settings
 from .memory import MemoryProvider
 from .microsoft import MicrosoftProvider
 from .microsoft import endpoints as microsoft_endpoints
+from .pop3 import Pop3Provider
+from .pop3 import probe as probe_pop3
+from .pop3 import settings_from as pop3_settings
 
 
 class ProviderFactory(Protocol):
@@ -62,6 +65,9 @@ _REGISTRY: dict[
     ProviderType.IMAP: lambda settings, credentials, pick, pace, watchers: ImapProvider(
         settings, credentials, pick=pick, pace=pace, watchers=watchers
     ),
+    ProviderType.POP3: lambda settings, credentials, pick, pace, _watchers: (
+        Pop3Provider(settings, credentials, pick=pick, pace=pace)
+    ),
 }
 # Providers that sign in with OAuth: they get a token source instead.
 _SIGNED_IN: dict[
@@ -79,9 +85,11 @@ _SIGN_IN: dict[ProviderType, Callable[[str | None], Endpoints]] = {
 
 
 # What an adapter assumes where the settings say nothing, given the
-# account's address: IMAP logs in with the address unless told otherwise.
+# account's address: IMAP and POP3 log in with the address unless told
+# otherwise.
 _DEFAULTS: dict[ProviderType, Callable[[str], dict[str, str | int | bool]]] = {
     ProviderType.IMAP: lambda email: {"username": email},
+    ProviderType.POP3: lambda email: {"username": email},
 }
 
 
@@ -98,6 +106,7 @@ _FROM_SERVERS: dict[
     Callable[[list[MailServer], CredentialKind, str], dict[str, str | int | bool]],
 ] = {
     ProviderType.IMAP: imap_settings,
+    ProviderType.POP3: pop3_settings,
 }
 
 
@@ -155,6 +164,8 @@ async def probe_server(
     """What a mail server announces before any login, e.g. ``IDLE`` or
     ``AUTH=XOAUTH2``. Connects anonymously to ``address``, the one just
     checked for ``host``, and sends no credential."""
-    if protocol is not ServerProtocol.IMAP:
-        raise NotSupportedError(f"cannot probe {protocol} servers yet")
-    return await probe_imap(host, port, str(security), address)
+    if protocol is ServerProtocol.IMAP:
+        return await probe_imap(host, port, str(security), address)
+    if protocol is ServerProtocol.POP3:
+        return await probe_pop3(host, port, str(security), address)
+    raise NotSupportedError(f"cannot probe {protocol} servers yet")

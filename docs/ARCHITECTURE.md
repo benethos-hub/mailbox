@@ -218,6 +218,7 @@ packages/mailbox-service/
                         #   an address in Unicode
       protocols/        # the wire, one library each, in our types:
                         #   imap.py (IMAPClient), smtp.py (smtplib),
+                        #   pop3.py (poplib),
                         #   oauth.py (OAuth 2.0 with PKCE, refresh, token
                         #   source), transport.py: the Server, TLS,
                         #   timeouts, the failures below every library
@@ -230,8 +231,9 @@ packages/mailbox-service/
         guard.py        # pacing, retries, blocked logins, for any adapter
         sender.py       # SmtpSender: sending for IMAP, POP3, ...
         imap/, memory/, # one directory per provider (adapter)
-        microsoft/      #   microsoft: Graph over data/protocols/http,
-                        #   signin.py its endpoints and the scopes it needs
+        microsoft/,     #   microsoft: Graph over data/protocols/http,
+        pop3/           #   signin.py its endpoints and the scopes it
+                        #   needs. pop3: one inbox, a session per step
       storage/          # own records, one module per subject, table.py
                         #   for the in-memory ones, sqlite/ the database,
                         #   sqlite/migrations/ the base, the registry,
@@ -402,8 +404,8 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/registry.py` | memory, imap, microsoft (planned: gmail, pop3) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
-| Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, later POP3) hold | stdlib smtplib | e.g. aiosmtplib |
+| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/registry.py` | memory, imap, microsoft, pop3 (planned: gmail, jmap) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, ISPDB, MX (planned: JMAP well-known, Microsoft realm, SRV, guessing) | any further lookup, or one switched off |

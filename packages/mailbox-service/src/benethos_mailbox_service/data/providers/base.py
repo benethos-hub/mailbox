@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
 from typing import Protocol
 
 from pydantic import SecretStr
@@ -13,6 +12,7 @@ from pydantic import SecretStr
 from ...errors import MailboxServiceError
 from ..models import (
     AttachmentContent,
+    Capability,
     Folder,
     Message,
     MessageFilter,
@@ -49,22 +49,6 @@ class TokenSource(Protocol):
         """A refresh the provider refused is asked again with the next call,
         e.g. when an account is verified. Until then it is not."""
         ...
-
-
-class Capability(StrEnum):
-    """What an adapter can do beyond the read-only core."""
-
-    SEND = "send"
-    DRAFTS = "drafts"
-    LABELS = "labels"  # a message can sit in several folders at once
-    SERVER_SEARCH = "server_search"
-    PUSH = "push"  # change notifications without polling, wait_for_change
-    # A message keeps its id when it is moved. Without it the domain keeps an
-    # id mapping (CONCEPT 4.1).
-    STABLE_IDS = "stable_ids"
-    # Reports what changed in a folder since a token, folder_changes (for
-    # Microsoft: Graph delta queries).
-    DELTA = "delta"
 
 
 @dataclass(frozen=True)

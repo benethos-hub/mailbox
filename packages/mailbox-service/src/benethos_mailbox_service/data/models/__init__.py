@@ -7,7 +7,13 @@ Callers import from here, not the modules.
 
 from __future__ import annotations
 
-from .accounts import Account, AccountStatus, CredentialInfo, ProviderType
+from .accounts import (
+    Account,
+    AccountStatus,
+    Capability,
+    CredentialInfo,
+    ProviderType,
+)
 from .audit import (
     ActivityFilter,
     ActivityOutcome,
@@ -75,6 +81,7 @@ __all__ = [
     "Account",
     "AccountFailure",
     "AccountStatus",
+    "Capability",
     "Address",
     "ApiToken",
     "Attachment",

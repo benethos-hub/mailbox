@@ -50,6 +50,14 @@ def test_me_for_a_limited_user(app_client: TestClient, services: Services) -> No
             "operations": sorted(permissions.GROUPS["mail.read"]),
             "warnings": [],
             "sending": [],
+            "capabilities": [
+                "drafts",
+                "flags",
+                "folders",
+                "search",
+                "send",
+                "stable_ids",
+            ],
         }
     ]
     assert me["operations"] == []

@@ -29,7 +29,7 @@ from ...data.providers import (
 )
 from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository
-from ...errors import ProviderAuthError, ProviderUnavailableError
+from ...errors import MailboxServiceError, ProviderAuthError, ProviderUnavailableError
 from ..activity import SERVICE, Activity, ActivityLog
 from ..activity import accounts as said
 from ..changes import AccountNeedsSignIn, ChangeFeed
@@ -127,6 +127,15 @@ class Adapters:
 
     def capabilities(self, account_id: str) -> frozenset[Capability]:
         return self.get(account_id).capabilities
+
+    def offered(self, account_id: str) -> list[Capability]:
+        """The capabilities as callers see them, sorted. None where the
+        adapter cannot be built, e.g. without the OAuth app of its provider:
+        a list of accounts never fails for one of them."""
+        try:
+            return sorted(self.capabilities(account_id))
+        except MailboxServiceError:
+            return []
 
     async def call(
         self, account_id: str, operation: Callable[[MailProvider], Awaitable[T]]

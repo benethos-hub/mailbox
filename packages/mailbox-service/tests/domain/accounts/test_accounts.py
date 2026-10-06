@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.data.models import Account, Grant, ProviderType
 from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN, bearer_for
@@ -174,3 +174,22 @@ def test_the_list_pages_by_address(client: TestClient) -> None:
     assert [a["email"] for a in narrowed.json()["items"]] == ["Anna@example.com"]
     assert client.get("/v1/accounts", params={"cursor": "nope"}).status_code == 400
     assert client.get("/v1/accounts", params={"limit": 0}).status_code == 422
+
+
+def test_accounts_name_their_capabilities(client: TestClient, account_id: str) -> None:
+    account = client.get(f"/v1/accounts/{account_id}").json()
+    assert {"flags", "folders", "search"} <= set(account["capabilities"])
+
+
+def test_an_account_without_an_adapter_names_none(
+    client: TestClient, services: Services
+) -> None:
+    """Its adapter cannot be built, e.g. without the OAuth app of its
+    provider: the list still answers."""
+    services.repositories.accounts.add(
+        Account(id="acc_gmail", provider=ProviderType.GMAIL, email="g@example.com")
+    )
+    [listed] = [
+        a for a in client.get("/v1/accounts").json()["items"] if a["id"] == "acc_gmail"
+    ]
+    assert listed["capabilities"] == []

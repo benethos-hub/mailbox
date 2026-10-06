@@ -18,6 +18,7 @@ class DiscoverySourceName(StrEnum):
 
 class ServerProtocol(StrEnum):
     IMAP = "imap"
+    POP3 = "pop3"
     SMTP = "smtp"
 
 

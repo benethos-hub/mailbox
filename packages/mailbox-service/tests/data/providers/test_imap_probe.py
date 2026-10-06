@@ -64,7 +64,7 @@ async def test_probe_refuses_plain_text() -> None:
         )
 
 
-async def test_registry_probes_only_imap() -> None:
+async def test_the_registry_does_not_probe_smtp() -> None:
     with pytest.raises(NotSupportedError):
         await probe_server(
             ServerProtocol.SMTP, "smtp.example.com", 465, Security.TLS, "192.0.2.7"

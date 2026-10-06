@@ -121,7 +121,7 @@ Planned next: threads across folders, Gmail and JMAP. The order is in
 | Proton Mail | IMAP + SMTP through Proton Mail Bridge | Bridge password | IMAP, not tested |
 | Gmail / Google Workspace | Gmail API | OAuth, with your own Google Cloud client | planned |
 | Fastmail, Stalwart, other JMAP servers | JMAP | API token | planned |
-| legacy mailboxes | POP3, reduced functionality | password | planned |
+| legacy mailboxes without IMAP | POP3 + SMTP: the inbox only, no folders, no read state, no search | password | available |
 
 Not supportable: Tuta, which offers no IMAP and no API. Details per
 provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.

@@ -347,6 +347,53 @@ async def test_a_slow_probe_is_unreachable(monkeypatch: pytest.MonkeyPatch) -> N
     assert candidate.servers[0].reachable is False
 
 
+def pop3(host: str, source: DiscoverySourceName) -> Candidate:
+    server = MailServer(
+        protocol=ServerProtocol.POP3, host=host, port=995, security=Security.TLS
+    )
+    return Candidate(
+        provider=ProviderType.POP3,
+        name=host,
+        credential=CredentialKind.PASSWORD,
+        servers=[server],
+        source=source,
+    )
+
+
+async def test_pop3_is_offered_where_no_imap_is() -> None:
+    network = Network()
+    s = service(
+        FakeSource(ISPDB, found(pop3("pop.firma.example", ISPDB))), network=network
+    )
+    [candidate] = (await s.discover(ADMIN, "me@firma.example")).candidates
+    assert candidate.provider is ProviderType.POP3
+    assert candidate.servers[0].reachable is True
+    assert network.probed == ["pop.firma.example"]
+    assert candidate.settings == {
+        "host": "pop.firma.example",
+        "port": 995,
+        "security": "tls",
+        "username": "me@firma.example",
+    }
+    assert discovery_module.connectable([candidate]) == [candidate]
+
+
+async def test_pop3_is_left_out_beside_imap() -> None:
+    s = service(
+        FakeSource(ISPDB, found(pop3("pop.firma.example", ISPDB))),
+        FakeSource(PRESET, found(imap("imap.firma.example", PRESET))),
+    )
+    candidates = (await s.discover(ADMIN, "me@firma.example")).candidates
+    assert [c.provider for c in candidates] == [ProviderType.IMAP]
+
+
+def test_connectable_prefers_imap() -> None:
+    both = [pop3("pop.x.example", ISPDB), imap("imap.x.example", ISPDB)]
+    assert [c.provider for c in discovery_module.connectable(both)] == [
+        ProviderType.IMAP
+    ]
+
+
 async def test_candidates_without_imap_are_kept_without_settings() -> None:
     oauth = Candidate(
         provider=ProviderType.GMAIL,

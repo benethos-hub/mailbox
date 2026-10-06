@@ -143,6 +143,9 @@ class MailboxApiClient:
                     operations=frozenset(a.get("operations", [])),
                     warnings=frozenset(a.get("warnings", [])),
                     sending=tuple(_sending(s) for s in a.get("sending", [])),
+                    capabilities=(
+                        frozenset(a["capabilities"]) if "capabilities" in a else None
+                    ),
                 )
                 for a in found.get("accounts", [])
             ],
