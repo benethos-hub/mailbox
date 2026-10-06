@@ -59,7 +59,7 @@ dependencies = [
     # The settings folder of the operating system (config.py).
     "platformdirs>=4.3",
     # The optional settings file (config.py), read as the service reads its own.
-    "python-dotenv>=1.1",
+    "python-dotenv>=1.2.2",
 ]
 
 [project.urls]
