@@ -80,6 +80,13 @@ Postponed on 2026-09-27, after the password sign-in (CONCEPT 7.5).
 - Or a passkey (WebAuthn), which needs no shared secret.
 - Open: required for users with `users.manage`, or a choice per user.
 
+## The master key from systemd
+
+Left open on 2026-10-06, with the key file (CONCEPT 7.3). A service run
+by systemd could read its key from `$CREDENTIALS_DIRECTORY`, which
+`LoadCredential=` fills. systemd keeps the file apart and readable by the
+service alone, and the operator names no path of its own.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

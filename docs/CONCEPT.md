@@ -1030,6 +1030,17 @@ the data, rather than a readable file.
   | `file` | a file outside the data directory, typically a compose secret at `/run/secrets/master_key`, readable by the service user only | container |
   | `env` | `MAILBOX_SERVICE_MASTER_KEY` | tests, CI. Allowed but warned about at start, since the environment shows up in process listings and `docker inspect` |
 
+  Decided 2026-10-06 for the key file:
+
+  - The keyring stays the default. A file only where there is none, on a
+    server without a desktop or in a container.
+  - A key file never lies in the data folder. A copy or a backup of the
+    folder would carry the key to the credentials with it. A command
+    refuses such a key file.
+  - There is no default path. With `file` and no
+    `MAILBOX_SERVICE_KEY_FILE` a command stops, and `paths` suggests
+    `master.key` in the config folder.
+
   Only 32 bytes go into the keyring, well inside the Windows Credential
   Manager limit of 2560 bytes per entry. A passphrase-derived key was
   considered and left out: it would have to be typed after every start, and
@@ -1080,16 +1091,57 @@ the data, rather than a readable file.
   `auto_vacuum` in its incremental mode, and the pages a removed account
   or a purge freed are given back at once. A database made before that
   is rewritten once when the service opens it, said in the log.
-- **Files:** the database sits in `data/benethos-mailbox-service/` in the
-  working directory, moved with `MAILBOX_SERVICE_DATA_DIR`. A settings file
-  named with `--env-file` or `MAILBOX_SERVICE_ENV_FILE` is the base of
-  relative paths instead. Decided 2026-09-24:
-  one folder per package under `data/` and under `config/`.
-  `data/benethos-mailbox-mcp/` is meant for what the MCP server stores, e.g.
-  downloaded attachments. A missing data folder is created. The database,
-  a backup and a key file are created readable by their owner alone
-  (0600) and never over an existing file. Windows has no such modes: there
-  the folder's own permissions decide who may read them.
+- **Files:** decided 2026-10-06, a service installed without the
+  repository keeps its settings and data in the folders of the operating
+  system. A command takes the first of these that applies:
+
+  1. the settings file named with `--env-file` or
+     `MAILBOX_SERVICE_ENV_FILE`. It must exist. The data go into
+     `data/benethos-mailbox-service/` beside it.
+  2. the repository's layout, where the working directory has
+     `config/benethos-mailbox-service/` or `data/benethos-mailbox-service/`:
+     the `.env` there if it exists, the data in the data folder. A clone
+     of the repository and every installation started so far stay where
+     they are.
+  3. the folders of the operating system for the user (`platformdirs`):
+     the `.env` in the config folder if it exists, the data in the data
+     folder.
+
+  | System | Config folder | Data folder |
+  |---|---|---|
+  | Windows | `%LOCALAPPDATA%\benethos-mailbox-service\config` | `%LOCALAPPDATA%\benethos-mailbox-service\data` |
+  | Linux | `~/.config/benethos-mailbox-service` | `~/.local/share/benethos-mailbox-service` |
+  | macOS | `~/Library/Application Support/benethos-mailbox-service/config` | `~/Library/Application Support/benethos-mailbox-service/data` |
+
+  On Linux the `XDG_*` variables move them. Windows keeps both out of the
+  roaming profile: a settings file can hold an OAuth client secret, and
+  neither it nor a key file should travel to other machines. Where the
+  system has one folder for config and data, as Windows and macOS do,
+  each gets its own below it. `MAILBOX_SERVICE_DATA_DIR` moves the data
+  in every case. A relative path in a settings file counts from that
+  file's folder, in the repository's layout from the working directory.
+  `benethos-mailbox-service paths` names the folders that apply, the
+  database and where the master key is, never a value of the settings.
+
+  Decided 2026-09-24: one folder per package under `data/` and under
+  `config/`. `data/benethos-mailbox-mcp/` is meant for what the MCP
+  server stores, e.g. downloaded attachments. A missing data folder is
+  created. The database, a backup and a key file are created readable
+  by their owner alone (0600) and never over an existing file. Windows
+  has no such modes: there the folder's own permissions decide who may
+  read them. Below `%LOCALAPPDATA%` that is the user, the system and the
+  administrators.
+
+  The MCP server reads an optional `.env` alike, decided 2026-10-06:
+  `--env-file` or `MAILBOX_MCP_ENV_FILE`, else
+  `config/benethos-mailbox-mcp/.env` in the working directory, else
+  `.env` in its config folder of the operating system
+  (`benethos-mailbox-mcp` in place of `benethos-mailbox-service` above).
+  It sets only `MAILBOX_MCP_*` and `MAILBOX_SERVICE_*`. The environment
+  wins over the file and the command line over both, so an MCP client
+  that passes the settings in its own configuration is not affected. The
+  file can hold the API token: it belongs in the config folder, readable
+  by its owner alone.
 - **Credential kinds per provider:** always the one that is not the main
   password. Per provider in the table of 5.3. In short: OAuth for Google
   and Microsoft, an API token for Fastmail, an app password everywhere
