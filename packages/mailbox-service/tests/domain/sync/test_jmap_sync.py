@@ -191,3 +191,19 @@ def test_a_token_account(jmap_services: Services, server: FakeJmap) -> None:
     )
     assert server.requests[-1].headers["authorization"] == f"Bearer {TOKEN}"
     assert [c.field for c in account.credentials] == ["token"]
+
+
+def test_a_replaced_draft_answers_with_its_new_id(
+    client: TestClient, account_id: str
+) -> None:
+    base = f"/v1/accounts/{account_id}/drafts"
+    made = client.post(base, json={"subject": "Plan", "text": "first"}).json()
+    replaced = client.put(
+        f"{base}/{made['id']}", json={"subject": "Plan", "text": "second"}
+    )
+    assert replaced.status_code == 200, replaced.text
+    new = replaced.json()["id"]
+    assert new != made["id"]
+    gone = client.get(f"/v1/accounts/{account_id}/messages/{made['id']}")
+    assert gone.status_code == 404
+    assert [d["id"] for d in client.get(base).json()["items"]] == [new]

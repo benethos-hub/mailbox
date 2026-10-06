@@ -308,10 +308,12 @@ class Outgoing:
         *,
         keep_attachments: list[str] | None = None,
     ) -> MessageSummary:
-        """Replace a draft. It keeps its id, though the provider stores a
-        new message and removes the old one. ``keep_attachments``: ids of
-        attachments of the stored draft that go into the new one, before
-        those the draft brings."""
+        """Replace a draft. The provider stores a new message and removes
+        the old one. The draft as stored, with the id it has from now on:
+        the same where the domain maps ids (IMAP), else the provider's new
+        one (Microsoft, JMAP). ``keep_attachments``: ids of attachments of
+        the stored draft that go into the new one, before those the draft
+        brings."""
         _require(access, "update_draft", account_id, draft)
         # The draft, before anything of it is read: whoever may write
         # drafts may not read other mail this way.

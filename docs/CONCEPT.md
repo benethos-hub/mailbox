@@ -784,7 +784,7 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
 | POST | `{acc}/send` | send. Body: recipients, subject, text / html, attachments, optional `reference: {message_id, action: reply\|reply_all\|forward}`. Header `Idempotency-Key` |
 | GET | `{acc}/drafts` | list |
 | POST | `{acc}/drafts` | create (same body as send) |
-| PUT | `{acc}/drafts/{draft_id}` | replace, `keep_attachments` names stored attachments that stay |
+| PUT | `{acc}/drafts/{draft_id}` | replace, `keep_attachments` names stored attachments that stay. The answer names the draft's id from now on: IMAP keeps it, Microsoft and JMAP store a new message under a new id (decided 2026-10-06) |
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
 | POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
 | GET | `{acc}/sends` | the audit of sends, newest first |

@@ -65,7 +65,8 @@ async def update_draft(
 ) -> dict[str, Any]:
     """Replace a draft as a whole: what is left out is gone afterwards,
     attachments too unless keep_attachments names them. Read it with
-    get_message first to keep parts of it. The id stays."""
+    get_message first to keep parts of it. Use the id it answers with from
+    now on: some providers store the draft under a new one."""
     body = composed(to, cc, bcc, subject, text, html, original_id, action)
     return render.draft(
         await client().update_draft(account_id, draft_id, body, keep_attachments)
