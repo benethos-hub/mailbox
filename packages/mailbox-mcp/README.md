@@ -211,24 +211,18 @@ Inside the container the server binds to `0.0.0.0`. So
 `MAILBOX_MCP_ALLOWED_HOSTS` names the Host values clients use: the port as
 published on the host, or the host name behind a proxy.
 
-### With compose
+### Beside a service in operation
 
 [containers/production/](https://github.com/benethos-hub/mailbox/tree/main/containers/production)
-starts it beside the service with the profile `mcp`, from the published
-images. Do this after the service's first start there:
-
-1. In the UI, a user for the MCP server and a token on its page.
-2. In that folder's `.env`: the token as `MAILBOX_MCP_API_TOKEN`, a
-   long random value as `MAILBOX_MCP_BEARER_TOKEN`
-   (`openssl rand -base64 32`), and `mcp` in `COMPOSE_PROFILES`.
-3. `docker compose up -d`
-
-Clients connect to `http://127.0.0.1:8000/mcp` with
-`Authorization: Bearer <MAILBOX_MCP_BEARER_TOKEN>`. `MAILBOX_MCP_PORT`
-publishes another port, and the allowed Host values follow it. With the
-profile `https`, Caddy serves it at `https://<MAILBOX_DOMAIN>/mcp`, and
-the domain is an allowed Host value. Both tokens are environment
-variables of the container and show in `docker inspect`.
+runs the service alone. The MCP server acts as one user, with that
+user's token, so each client starts one of its own: over stdio as above,
+with `MAILBOX_SERVICE_URL` set to the service's address, for example
+`https://<MAILBOX_DOMAIN>` behind its Caddy. The container above suits a
+client that connects over HTTP, one container per token. For
+development,
+[containers/dev/compose.yaml](https://github.com/benethos-hub/mailbox/blob/main/containers/dev/compose.yaml)
+starts it beside a service built from the repository, with the profile
+`mcp`.
 
 ## Tools
 

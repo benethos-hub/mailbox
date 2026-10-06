@@ -303,10 +303,11 @@ has the credentials. Keep a copy apart from the host.
 
 [containers/production/](https://github.com/benethos-hub/mailbox/tree/main/containers/production)
 runs the published images with compose, without a clone of the
-repository: the service, with the profile `mcp` the MCP server over HTTP,
-and with the profile `https` Caddy in front with a certificate from
-Let's Encrypt. The service and the MCP server listen on `127.0.0.1`
-only. `setup.sh` there does the first start in one run:
+repository: the service, and with the profile `https` Caddy in front
+with a certificate from Let's Encrypt. The service listens on
+`127.0.0.1` only. The MCP server is not part of it: each client starts
+one of its own, with its own token. `setup.sh` there does the first
+start in one run:
 
 ```sh
 sh setup.sh

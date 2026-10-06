@@ -87,6 +87,18 @@ by systemd could read its key from `$CREDENTIALS_DIRECTORY`, which
 `LoadCredential=` fills. systemd keeps the file apart and readable by the
 service alone, and the operator names no path of its own.
 
+## One MCP server for many users
+
+Collected 2026-10-06. Today the MCP server acts as one user, with the
+token it starts with, and each client runs an instance of its own. The
+operator leans towards that. A shared MCP server could instead pass the
+token of each caller through: a client sends its own Mailbox API token
+as bearer token, the MCP server uses it for its REST calls and holds no
+token itself. The service still decides what each may do. It would need
+a REST client and a tool list per session, made from `/v1/me` of that
+token, instead of once at the start. The OAuth of the MCP specification
+could follow. `containers/production/` would then run it for everyone.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

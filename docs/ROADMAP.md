@@ -285,8 +285,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   `.env` alike
 - **Containers in operation (8.1)**, decided 2026-10-06, done:
   `containers/production/` runs the published images with a fixed
-  version, the MCP server and Caddy for HTTPS as profiles, `setup.sh` for
-  the first start. `containers/` holds `images/`, and `dev/`,
+  version, Caddy for HTTPS as a profile, `setup.sh` for the first start.
+  The MCP server runs with each client, an instance per client. `containers/` holds `images/`, and `dev/`,
   `production/` and `test-mail-server/` each with its own `secrets/`
 
 ## Keeping this file current

@@ -6,7 +6,8 @@
 #
 # The service listens on the loopback address of the host (CONCEPT 8.1).
 # Only Caddy, with the profile https, listens on every address, on the
-# ports 80 and 443.
+# ports 80 and 443. The MCP server is not here: each client starts one of
+# its own, with its own token (README.md, "Clients").
 
 # The name of the compose file before, so its volume of data stays.
 name: benethos-mailbox
@@ -54,43 +55,10 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # The MCP server over streamable HTTP, with the profile mcp. It needs
-  # MAILBOX_MCP_API_TOKEN (the API token of the user it acts as) and
-  # MAILBOX_MCP_BEARER_TOKEN (what its own clients must send).
-  mailbox-mcp:
-    profiles: [mcp]
-    image: ghcr.io/benethos-hub/benethos-mailbox-mcp:${MAILBOX_VERSION:?set MAILBOX_VERSION in .env}
-    logging: *logging
-    restart: unless-stopped
-    depends_on:
-      mailbox-service:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:${MAILBOX_MCP_PORT:-8000}:8000"
-    environment:
-      MAILBOX_SERVICE_URL: http://mailbox-service:8080
-      # Plain http inside the compose network.
-      MAILBOX_SERVICE_ALLOW_HTTP: "1"
-      MAILBOX_SERVICE_TOKEN: ${MAILBOX_MCP_API_TOKEN:-}
-      MAILBOX_MCP_BEARER_TOKEN: ${MAILBOX_MCP_BEARER_TOKEN:-}
-      # The Host values clients use: the port on the host, and the domain
-      # behind Caddy.
-      MAILBOX_MCP_ALLOWED_HOSTS: 127.0.0.1:${MAILBOX_MCP_PORT:-8000},localhost:${MAILBOX_MCP_PORT:-8000},${MAILBOX_DOMAIN:-}
-      MAILBOX_MCP_LOG_LEVEL: ${MAILBOX_MCP_LOG_LEVEL:-INFO}
-    networks:
-      - mailbox
-    read_only: true
-    tmpfs:
-      - /tmp
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-
   # HTTPS in front, with the profile https: Caddy gets a certificate for
-  # MAILBOX_DOMAIN from Let's Encrypt and passes the requests on, /mcp to
-  # the MCP server and everything else to the service. Without a domain it
-  # serves localhost with a certificate of its own CA.
+  # MAILBOX_DOMAIN from Let's Encrypt and passes the requests on to the
+  # service. Without a domain it serves localhost with a certificate of its
+  # own CA.
   caddy:
     profiles: [https]
     image: caddy:2
