@@ -9,6 +9,7 @@ from collections.abc import Callable, Iterable, Mapping
 from pydantic import SecretStr
 
 from ...common import redact
+from ...common.hosts import address_problem, is_server
 from ...common.ids import new_id
 from ...data.models import Account, AccountStatus, Page, ProviderType
 from ...data.protocols import HostCheck
@@ -149,6 +150,9 @@ class AccountService:
             )
         )
         with failed:
+            problem = address_problem(email)
+            if problem is not None:
+                raise BadRequestError(problem)
             await self._check_hosts(settings)
             if secrets:
                 self._vault.require_ready()
@@ -329,7 +333,12 @@ class AccountService:
     async def _check_hosts(self, settings: Mapping[str, object]) -> None:
         """Refuse settings that point the service at a host it may not
         connect to, before any adapter is built: ``host``, ``smtp_host`` and
-        any other ``*_host``. Without a check, every host passes."""
+        any other ``*_host``. A host that is no name and no address is
+        refused before it is looked up. Without a check, every other host
+        passes."""
+        for key, host, _ in hosts_in(settings):
+            if not is_server(host):
+                raise BadRequestError(f"{key} is not a host name or an IP address")
         if self._check_host is None:
             return
         for key, host, port in hosts_in(settings):

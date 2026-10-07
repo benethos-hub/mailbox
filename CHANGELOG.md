@@ -213,6 +213,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Connecting an account refuses an address that is none, e.g. without a
+  domain or with a line break, with `400`. A host that is neither a
+  name nor an IP address, e.g. `imap.example.org:993`, is refused with
+  `400` before it is looked up. Before, it ended in `502`.
 - The sync worker forgets a deleted account. It kept a note of each one
   for as long as the service ran.
 - `openapi` and `keys generate` take `--env-file`, before or after the
