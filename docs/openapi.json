@@ -1444,6 +1444,7 @@
           "users"
         ],
         "summary": "Revoke Token",
+        "description": "Ends the token at once. It stays in the user's list with its\n`revoked_at`, so a revoked token can still be told from one that\nnever was.",
         "operationId": "revoke_token",
         "security": [
           {
@@ -1471,15 +1472,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TokenInfo"
-                }
-              }
-            }
+          "204": {
+            "description": "Successful Response"
           },
           "400": {
             "description": "The request is not valid, e.g. a cursor or a right",

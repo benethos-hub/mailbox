@@ -248,9 +248,12 @@ def test_token_lifecycle(client: TestClient, app_client: TestClient) -> None:
     assert "token" not in listed[0]
     assert "token_hash" not in listed[0]
 
-    revoked = client.delete(f"/v1/users/{user['id']}/tokens/{token['id']}").json()
-    assert revoked["revoked_at"] is not None
+    gone = client.delete(f"/v1/users/{user['id']}/tokens/{token['id']}")
+    assert gone.status_code == 204
     assert app_client.get("/v1/me", headers=headers).status_code == 401
+    # The token stays listed, with the time it was revoked.
+    [revoked] = client.get(f"/v1/users/{user['id']}/tokens").json()
+    assert revoked["revoked_at"] is not None
 
 
 def test_token_of_another_user_is_not_found(client: TestClient) -> None:

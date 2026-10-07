@@ -154,12 +154,14 @@ async def create_token(
     return TokenCreated(**info.model_dump(), token=plain)
 
 
-@router.delete("/users/{user_id}/tokens/{token_id}")
+@router.delete("/users/{user_id}/tokens/{token_id}", status_code=204)
 async def revoke_token(
     user_id: str, token_id: str, caller: Caller, tokens: Tokens
-) -> TokenInfo:
-    token = tokens.revoke_token(caller, user_id, token_id)
-    return _info(tokens, token)
+) -> None:
+    """Ends the token at once. It stays in the user's list with its
+    `revoked_at`, so a revoked token can still be told from one that
+    never was."""
+    tokens.revoke_token(caller, user_id, token_id)
 
 
 @router.get("/roles")

@@ -169,6 +169,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   (`POST /v1/oauth/{provider}/device`), the UI in a browser or with a
   code as before. A stored grant naming `start_oauth` keeps its other
   rights.
+- **Breaking:** `DELETE /v1/users/{user_id}/tokens/{token_id}` answers
+  `204` without a body, as every other delete does. It answered `200`
+  with the token's record. The token stays in
+  `GET /v1/users/{user_id}/tokens` with its `revoked_at`.
 - The OpenAPI document names on each operation the errors it can
   answer: `413`, `429` and `500` on every one, `404` and `409` where a
   record is touched, `501` and `502` where a provider is asked. Before,
