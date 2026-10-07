@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import builtins
 import re
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 
 from pydantic import SecretStr
 
@@ -218,52 +218,15 @@ class AccountService:
             _one_line_name(display_name)
         account = self._repository.get(account_id)
         defaults = settings_defaults(account.provider, account.email)
-        # A setting removed falls back to what the provider assumes.
         before = {**defaults, **self._repository.settings(account_id)}
-        merged: dict[str, str | int | bool] = dict(before)
-        for key, value in (settings or {}).items():
-            if value is None:
-                merged.pop(key, None)
-                if key in defaults:
-                    merged[key] = defaults[key]
-            else:
-                merged[key] = value
+        merged = _merged(before, defaults, settings or {})
         changed = merged != before
         secrets = dict(credentials or {})
-        # An OAuth probe may hand back a refresh token to store.
-        if secrets or self.signs_in_with_oauth(account.provider):
-            self._vault.require_ready()
-        if changed:
-            await self._check_hosts(merged)
-        if changed or secrets:
-
-            def read(field: str) -> SecretStr:
-                if field in secrets:
-                    return secrets[field]
-                return self._vault.read(account_id, field)
-
-            await self._probe(account.provider, merged, read, secrets, signed_in)
-        what = []
-        if rename and display_name != account.display_name:
-            what.append("display name")
+        await self._check_update(account, merged, changed, secrets, signed_in)
+        what = _what_changed(account, display_name, rename, changed, secrets)
         if rename:
             account = account.model_copy(update={"display_name": display_name})
-        if changed:
-            what.append("settings")
-        what += sorted(secrets)
-        # The credentials first: a record that names settings the stored
-        # credentials do not match would be a broken account, the reverse
-        # only a credential the next probe confirms again.
-        with self._activity.atomic():
-            for field, secret in secrets.items():
-                self._vault.store(account_id, field, secret)
-            self._repository.update(account, merged)
-            if what:
-                self._activity.record(
-                    said.AccountChanged(
-                        by=Actor.of(access), account=account, changed=tuple(what)
-                    )
-                )
+        self._store_update(access, account, merged, secrets, what)
         if changed or secrets:
             # The live adapter still has the old settings: the next use
             # builds a new one.
@@ -271,6 +234,53 @@ class AccountService:
             self._adapters.set_status(account_id, AccountStatus.CONNECTED)
             self._ready(account_id)
         return self._with_credentials(self._repository.get(account_id))
+
+    async def _check_update(
+        self,
+        account: Account,
+        merged: dict[str, str | int | bool],
+        changed: bool,
+        secrets: dict[str, SecretStr],
+        signed_in: Tokens | None,
+    ) -> None:
+        """Log in with the changed settings and credentials before anything
+        is stored, as on create."""
+        # An OAuth probe may hand back a refresh token to store.
+        if secrets or self.signs_in_with_oauth(account.provider):
+            self._vault.require_ready()
+        if changed:
+            await self._check_hosts(merged)
+        if not changed and not secrets:
+            return
+
+        def read(field: str) -> SecretStr:
+            if field in secrets:
+                return secrets[field]
+            return self._vault.read(account.id, field)
+
+        await self._probe(account.provider, merged, read, secrets, signed_in)
+
+    def _store_update(
+        self,
+        access: Access,
+        account: Account,
+        merged: dict[str, str | int | bool],
+        secrets: dict[str, SecretStr],
+        what: Sequence[str],
+    ) -> None:
+        # The credentials first: a record that names settings the stored
+        # credentials do not match would be a broken account, the reverse
+        # only a credential the next probe confirms again.
+        with self._activity.atomic():
+            for field, secret in secrets.items():
+                self._vault.store(account.id, field, secret)
+            self._repository.update(account, merged)
+            if what:
+                self._activity.record(
+                    said.AccountChanged(
+                        by=Actor.of(access), account=account, changed=tuple(what)
+                    )
+                )
 
     async def verify(self, access: Access, account_id: str) -> Account:
         """Log in afresh, e.g. after the credential was changed at the
@@ -393,6 +403,40 @@ def _one_line_name(name: str | None) -> None:
 # Settings are returned to callers. A secret belongs in the credentials,
 # which never are.
 _SECRET_WORDS = ("password", "secret", "token", "credential", "apikey", "api_key")
+
+
+def _merged(
+    before: dict[str, str | int | bool],
+    defaults: Mapping[str, str | int | bool],
+    settings: Mapping[str, str | int | bool | None],
+) -> dict[str, str | int | bool]:
+    """The settings with the changes. A setting removed falls back to
+    what the provider assumes."""
+    merged = dict(before)
+    for key, value in settings.items():
+        if value is None:
+            merged.pop(key, None)
+            if key in defaults:
+                merged[key] = defaults[key]
+        else:
+            merged[key] = value
+    return merged
+
+
+def _what_changed(
+    account: Account,
+    display_name: str | None,
+    rename: bool,
+    changed: bool,
+    secrets: Mapping[str, SecretStr],
+) -> list[str]:
+    """What an update changes, for the audit: never a secret's value."""
+    what = []
+    if rename and display_name != account.display_name:
+        what.append("display name")
+    if changed:
+        what.append("settings")
+    return what + sorted(secrets)
 
 
 def _no_secrets_in(settings: Mapping[str, object] | None) -> None:
