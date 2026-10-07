@@ -108,6 +108,46 @@ def _default_client(server: Server, timeout: float) -> Any:
 _CHANGED_BATCH = 500
 
 
+def _query(criteria: SearchCriteria) -> list[Any] | None:
+    """The SEARCH keys of ``criteria``, None when nothing can match."""
+    query = _text_keys(criteria)
+    if criteria.since is not None:
+        query += ["SINCE", criteria.since]
+    if criteria.before is not None:
+        query += ["BEFORE", criteria.before]
+    if criteria.unread is not None:
+        query.append("UNSEEN" if criteria.unread else "SEEN")
+    if criteria.flagged is not None:
+        query.append("FLAGGED" if criteria.flagged else "UNFLAGGED")
+    if criteria.mixed is not None:
+        mixed = ["HEADER", "Content-Type", "multipart/mixed"]
+        query += mixed if criteria.mixed else ["NOT", *mixed]
+    if criteria.before_uid is not None:
+        # The server leaves out what an earlier page delivered.
+        if criteria.before_uid <= 1:
+            return None
+        query += ["UID", f"1:{criteria.before_uid - 1}"]
+    return query
+
+
+def _text_keys(criteria: SearchCriteria) -> list[Any]:
+    texts = {
+        "TEXT": criteria.text,
+        "FROM": criteria.sender,
+        "TO": criteria.to,
+        "SUBJECT": criteria.subject,
+    }
+    query: list[Any] = []
+    for key, value in texts.items():
+        if value:
+            if _CONTROL.search(value):
+                # The library quotes but keeps line breaks: they would end
+                # the command and start one of the caller's choosing.
+                raise BadRequestError("search text must not hold control characters")
+            query += [key, value]
+    return query
+
+
 class ImapSession:
     def __init__(
         self,
@@ -356,39 +396,11 @@ class ImapSession:
 
     def search(self, criteria: SearchCriteria) -> list[int]:
         """UIDs in the selected folder, ascending."""
-        query: list[Any] = []
-        texts = {
-            "TEXT": criteria.text,
-            "FROM": criteria.sender,
-            "TO": criteria.to,
-            "SUBJECT": criteria.subject,
-        }
-        for key, value in texts.items():
-            if value:
-                if _CONTROL.search(value):
-                    # The library quotes but keeps line breaks: they would end
-                    # the command and start one of the caller's choosing.
-                    raise BadRequestError(
-                        "search text must not hold control characters"
-                    )
-                query += [key, value]
-        if criteria.since is not None:
-            query += ["SINCE", criteria.since]
-        if criteria.before is not None:
-            query += ["BEFORE", criteria.before]
-        if criteria.unread is not None:
-            query.append("UNSEEN" if criteria.unread else "SEEN")
-        if criteria.flagged is not None:
-            query.append("FLAGGED" if criteria.flagged else "UNFLAGGED")
-        if criteria.mixed is not None:
-            mixed = ["HEADER", "Content-Type", "multipart/mixed"]
-            query += mixed if criteria.mixed else ["NOT", *mixed]
-        if criteria.before_uid is not None:
-            # The server leaves out what an earlier page delivered.
-            if criteria.before_uid <= 1:
-                return []
-            query += ["UID", f"1:{criteria.before_uid - 1}"]
-        wide = any(v and not v.isascii() for v in texts.values())
+        query = _query(criteria)
+        if query is None:
+            return []
+        texts = (criteria.text, criteria.sender, criteria.to, criteria.subject)
+        wide = any(v and not v.isascii() for v in texts)
         with _errors():
             uids = sorted(
                 int(u)
