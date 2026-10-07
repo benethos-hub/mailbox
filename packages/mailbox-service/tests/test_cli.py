@@ -268,6 +268,7 @@ def test_paths_names_the_folders_and_never_a_value(
 ) -> None:
     folder = settings_folder(tmp_path, monkeypatch)
     with (folder / "service.env").open("a", encoding="utf-8") as file:
+        file.write("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID=client-1\n")
         file.write("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET=s3cret-value\n")
     assert main(["paths", "--env-file", str(folder / "service.env")]) == 0
     out = capsys.readouterr().out

@@ -6,11 +6,12 @@ caller's rights (``AccountService``), the live adapter of each
 from __future__ import annotations
 
 from .adapters import Adapters
-from .oauth import OAuthService
+from .oauth import DeviceSignIn, OAuthService
 from .service import AccountService
 
 __all__ = [
     "AccountService",
     "Adapters",
+    "DeviceSignIn",
     "OAuthService",
 ]

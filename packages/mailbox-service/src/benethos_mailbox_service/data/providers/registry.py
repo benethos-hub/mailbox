@@ -23,6 +23,7 @@ from .imap import settings_from as imap_settings
 from .jmap import JmapProvider
 from .jmap import settings_from as jmap_settings
 from .memory import MemoryProvider
+from .microsoft import CLIENT_ID as MICROSOFT_CLIENT_ID
 from .microsoft import MicrosoftProvider
 from .microsoft import endpoints as microsoft_endpoints
 from .pop3 import Pop3Provider
@@ -88,6 +89,8 @@ _SIGNED_IN: dict[
 _SIGN_IN: dict[ProviderType, Callable[[str | None], Endpoints]] = {
     ProviderType.MICROSOFT: microsoft_endpoints,
 }
+# The project's own apps: public clients, shipped with the service.
+_PROJECT_APPS = {ProviderType.MICROSOFT: MICROSOFT_CLIENT_ID}
 
 
 # What an adapter assumes where the settings say nothing, given the
@@ -136,6 +139,13 @@ def sign_in(kind: ProviderType, tenant: str | None = None) -> Endpoints:
         return _SIGN_IN[kind](tenant)
     except KeyError:
         raise NotSupportedError(f"{kind} accounts do not sign in with OAuth") from None
+
+
+def project_client_id(kind: ProviderType) -> str | None:
+    """The client id of the project's own app for ``kind``, a public
+    client a deployment signs in with where it registered none. None
+    where the project has none."""
+    return _PROJECT_APPS.get(kind)
 
 
 def build_provider(

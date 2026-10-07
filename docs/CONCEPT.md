@@ -377,9 +377,8 @@ an app password is the credential to ask for.
   `internetMessageId` answers with immutable ids, so the adapter looks
   search results up that way, in their own folder, twenty to a JSON
   batch. Outlook.com took several minutes to deliver a sent mail.
-- Each deployment registers its own app in Entra ID (delegated
-  `Mail.ReadWrite`, `Mail.Send`, `offline_access`, and `User.Read` for
-  the address that signed in).
+- The app asks for delegated `Mail.ReadWrite`, `Mail.Send`,
+  `offline_access`, and `User.Read` for the address that signed in.
 - **Decided 2026-09-27:** the address of an account comes from Graph
   `/me` (`mail`, else `userPrincipalName`), not from the ID token. Its
   `email` claim is not verified: anyone who manages a work or school
@@ -392,18 +391,37 @@ an app password is the credential to ask for.
   account users. A work tenant may require its administrator's consent
   before its users can sign in. The provider sends the browser back to
   `/ui/oauth/{provider}/callback`, a UI page.
-- **Planned (decided 2026-09-25):** a client id of the project, shipped
-  with the service, as the default, so that people can connect Microsoft
-  accounts without registering an app of their own. It is a public client
+- **Decided 2026-09-25:** a client id of the project, shipped with the
+  service, as the default, so that people can connect Microsoft accounts
+  without registering an app of their own. It is a public client
   (registered for mobile and desktop applications): no secret, PKCE
   alone, since a secret shipped with the software would not be secret.
   Such a client can only be sent back to `localhost`. A service on a
-  server signs in with the device code flow instead (a code entered at
-  Microsoft's device login page). An app of the deployment's own, with a
-  secret as today, stays the option for organisations that want or need
-  one. Work tenants often admit apps of unverified publishers only with
-  their administrator's consent. Publisher verification needs membership
-  in Microsoft's partner programme.
+  server signs in with the device code flow instead (RFC 8628, a code
+  entered at Microsoft's device login page). An app of the deployment's
+  own, with a secret, stays the option for organisations that want or
+  need one. Work tenants often admit apps of unverified publishers only
+  with their administrator's consent. Publisher verification needs
+  membership in Microsoft's partner programme.
+- **Decided 2026-10-06:** one app per deployment. A client id in the
+  settings names the deployment's own app, without one the project's app
+  is used. Refresh tokens belong to the app that issued them, so after a
+  change every Microsoft account signs in again. The UI offers both ways
+  to sign in, in the browser and with a code, and the person chooses.
+  The API offers both as well: `POST /v1/oauth/{provider}/start` and
+  `POST /v1/oauth/{provider}/device`, then polling
+  `POST /v1/oauth/{provider}/device/{sign_in_id}`. A sign-in with a code
+  is bound to the user who started it, like the one in the browser, and
+  the provider is asked no more often than it allows.
+- **Decided 2026-10-07:** where the project's app cannot send the browser
+  back, because the service is not at localhost, the UI offers the
+  sign-in with a code only, and `POST /v1/oauth/{provider}/start`
+  answers `400`.
+- **Decided 2026-10-06:** `MAILBOX_SERVICE_PROVIDERS` names the kinds of
+  account a deployment offers, a JSON list, every kind without it. The
+  UI and the API offer only those: discovery leaves out the others, and
+  connecting one is refused. Accounts connected before keep working and
+  may sign in again.
 - Change-notification subscriptions expire after a few days and are
   renewed by the worker **(unverified: exact lifetime)**.
 

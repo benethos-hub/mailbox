@@ -123,10 +123,14 @@ class Settings(BaseSettings):
     session_idle_hours: float = Field(default=8.0, gt=0)
     # Autodiscovery: lookups a minute per user.
     discovery_per_minute: int = Field(default=10, ge=1)
-    # OAuth for Microsoft accounts: the app the operator registered in
-    # Microsoft Entra ID. Without a client id, Microsoft accounts cannot be
-    # connected. The secret from a file (a container secret) or from the
-    # environment.
+    # The kinds of account that can be connected, a JSON list such as
+    # ["imap","jmap","pop3"]. Empty: every kind. Accounts connected before
+    # keep working and may sign in again.
+    providers: list[str] | None = None
+    # OAuth for Microsoft accounts: an app the operator registered in
+    # Microsoft Entra ID. Without a client id, the project's app: a public
+    # client without a secret (CONCEPT 5.4). The secret from a file (a
+    # container secret) or from the environment.
     oauth_microsoft_client_id: str | None = None
     oauth_microsoft_client_secret: SecretStr | None = None
     oauth_microsoft_client_secret_file: Path | None = None
@@ -140,7 +144,7 @@ class Settings(BaseSettings):
         return value.lower() if isinstance(value, str) else value
 
     @model_validator(mode="after")
-    def _retries(self) -> Self:
+    def _consistent(self) -> Self:
         if self.webhook_longest_retry < self.webhook_first_retry:
             raise ValueError(
                 "webhook_longest_retry must not be shorter than webhook_first_retry"
@@ -149,14 +153,26 @@ class Settings(BaseSettings):
             raise ValueError(
                 "imap_longest_pause must not be shorter than imap_first_pause"
             )
+        secret = self.oauth_microsoft_client_secret
+        if (
+            secret is not None and secret.get_secret_value()
+        ) or self.oauth_microsoft_client_secret_file is not None:
+            if not self.oauth_microsoft_client_id:
+                # The project's app has no secret: this one belongs to another.
+                raise ValueError(
+                    "a Microsoft client secret needs the client id of its app "
+                    "in oauth_microsoft_client_id"
+                )
         return self
 
     def oauth_microsoft_secret(self) -> SecretStr | None:
-        """The client secret, from its file if one is named."""
+        """The client secret, from its file if one is named. None for a
+        public client, which has none."""
         if self.oauth_microsoft_client_secret_file is not None:
             text = self.oauth_microsoft_client_secret_file.read_text(encoding="utf-8")
             return SecretStr(text.strip())
-        return self.oauth_microsoft_client_secret
+        secret = self.oauth_microsoft_client_secret
+        return secret if secret is not None and secret.get_secret_value() else None
 
     @property
     def database_path(self) -> Path:

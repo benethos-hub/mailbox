@@ -16,7 +16,8 @@ from ....domain.rights import Access
 from ....domain.system import StatusService
 from ....errors import MailboxServiceError
 from ...errors import status_of
-from ...services import Accounts, Discoverer, Status, get_oauth
+from ...services import Accounts, Discoverer, Status, get_accounts, get_oauth
+from ...urls import oauth_callback
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
 from ..forms import failing, text_of
@@ -151,8 +152,19 @@ def _connect_page(
         email=email,
         security=SECURITY,
         oauth_providers=_oauth_providers(request),
+        in_browser=_in_browser(request, *get_oauth(request).providers()),
+        offers={p.value for p in ProviderType if get_accounts(request).offers(p)},
         **context,
     )
+
+
+def _in_browser(request: Request, *providers: ProviderType) -> set[str]:
+    """The providers whose sign-in in the browser can come back here. The
+    others sign in with a code only."""
+    oauth = get_oauth(request)
+    return {
+        p.value for p in providers if oauth.in_browser(p, oauth_callback(request, p))
+    }
 
 
 def _oauth_providers(request: Request) -> list[str]:
@@ -248,6 +260,7 @@ def _account_page(
         can_verify=caller.allows("verify_account", account_id),
         can_delete=caller.allows("delete_account", account_id),
         signs_in_with_oauth=accounts.signs_in_with_oauth(found.provider),
+        in_browser=_in_browser(request, found.provider),
         security=SECURITY,
         sync=status.sync_of(caller, account_id),
     )

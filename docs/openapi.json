@@ -3113,7 +3113,7 @@
           "accounts"
         ],
         "summary": "Start Oauth",
-        "description": "Where to send a browser to sign in at the provider: to connect a new\naccount (needs `create_account`) or, with `account_id`, to sign that\naccount in again (needs `update_account`). The provider sends the\nbrowser back to `/ui/oauth/{provider}/callback`, where the person signs\nin to the UI as the same user and the account is connected. Valid for\nten minutes. `501` without an OAuth app for the provider.",
+        "description": "Where to send a browser to sign in at the provider: to connect a new\naccount (needs `create_account`) or, with `account_id`, to sign that\naccount in again (needs `update_account`). The provider sends the\nbrowser back to `/ui/oauth/{provider}/callback`, where the person signs\nin to the UI as the same user and the account is connected. Valid for\nten minutes. `400` with the project's app where this service is not\nat localhost: the provider sends a browser back to localhost only, so\nsign in with a code. `501` without an OAuth app for the provider, or\nwhen connecting a kind of account this deployment does not offer.",
         "operationId": "start_oauth",
         "security": [
           {
@@ -3147,6 +3147,281 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OAuthStarted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "accounts.connect"
+      }
+    },
+    "/v1/oauth/{provider}/device": {
+      "post": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Start Device Oauth",
+        "description": "A code to sign in with at the provider, on any device: to connect a\nnew account (needs `create_account`) or, with `account_id`, to sign\nthat account in again (needs `update_account`). Needs no address the\nprovider sends a browser back to. The person opens\n`verification_uri` and enters `user_code`. Then poll\n`POST /v1/oauth/{provider}/device/{sign_in_id}` every `interval`\nseconds. `501` without an OAuth app for the provider, where it has no\nsign-in with a code, or when connecting a kind of account this\ndeployment does not offer.",
+        "operationId": "start_device_oauth",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceOAuthStart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceOAuthStarted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "accounts.connect"
+      }
+    },
+    "/v1/oauth/{provider}/device/{sign_in_id}": {
+      "post": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Poll Device Oauth",
+        "description": "Whether the person signed in with the code. Then the account is\nconnected, or signed in again, and comes with the answer, also on a\nlater poll. Until then `connected` is false. A poll sooner than\n`interval` does not ask the provider. Only the user who started the\nsign-in can poll it. `400` when it is unknown, expired or was declined:\nstart again.",
+        "operationId": "poll_device_oauth",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProviderType"
+            }
+          },
+          {
+            "name": "sign_in_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sign In Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceOAuthState"
                 }
               }
             }
@@ -8768,6 +9043,88 @@
         ],
         "title": "CredentialKind",
         "description": "What to ask the person for."
+      },
+      "DeviceOAuthStart": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id",
+            "description": "Sign this account in again. Left out: connect."
+          }
+        },
+        "type": "object",
+        "title": "DeviceOAuthStart"
+      },
+      "DeviceOAuthStarted": {
+        "properties": {
+          "sign_in_id": {
+            "type": "string",
+            "title": "Sign In Id",
+            "description": "Names this sign-in when polling it."
+          },
+          "user_code": {
+            "type": "string",
+            "title": "User Code",
+            "description": "What the person enters at the provider."
+          },
+          "verification_uri": {
+            "type": "string",
+            "title": "Verification Uri",
+            "description": "The provider's page where the person enters the code."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "When the code runs out."
+          },
+          "interval": {
+            "type": "integer",
+            "title": "Interval",
+            "description": "Seconds to wait between two polls."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sign_in_id",
+          "user_code",
+          "verification_uri",
+          "expires_at",
+          "interval"
+        ],
+        "title": "DeviceOAuthStarted"
+      },
+      "DeviceOAuthState": {
+        "properties": {
+          "connected": {
+            "type": "boolean",
+            "title": "Connected",
+            "description": "The person signed in, and the account is connected."
+          },
+          "account": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Account"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The account connected or signed in again."
+          }
+        },
+        "type": "object",
+        "required": [
+          "connected"
+        ],
+        "title": "DeviceOAuthState"
       },
       "Discovery": {
         "properties": {

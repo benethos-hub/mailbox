@@ -85,10 +85,13 @@ done. Update the roadmap in the same commit that finishes an item.
   administration.
   How the pages look and behave, and the checklist for a new page:
   `docs/UI.md`.
-- Microsoft accounts: `docs/microsoft.md` sets up the app registration.
+- Microsoft accounts: the service comes with the project's app,
+  `docs/microsoft.md` also sets up an app of your own.
   `uv run python live/microsoft.py --connect` once (a person signs in in
   the browser), then `uv run python live/microsoft.py` checks the adapter
-  against the Microsoft test account in `live/.env`. It sends one mail
+  against the Microsoft test account in `live/.env` with that app. With
+  `--project` both use the project's app: `--connect` prints a code a
+  person enters at Microsoft. It sends one mail
   from it to the first test account and deletes it for good on both sides,
   and checks that the change feed learns of the sent copy through Graph
   delta queries.

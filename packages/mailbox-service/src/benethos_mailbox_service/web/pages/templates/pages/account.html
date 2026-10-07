@@ -60,10 +60,18 @@
 {% if signs_in_with_oauth %}
 <div class="fold toolbar">
   <span class="muted grow">Signed in with {{ account.provider.value | capitalize }}. Sign in again after a password change or when access was revoked.</span>
+  {% set browser = account.provider.value in in_browser %}
+  {% if browser %}
   <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/start">
     {{ csrf_field() }}
     <input type="hidden" name="account_id" value="{{ account.id }}" />
     <button class="{{ 'primary' if account.status.value == 'needs_reauth' else '' }}" type="submit">Sign in again</button>
+  </form>
+  {% endif %}
+  <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/device">
+    {{ csrf_field() }}
+    <input type="hidden" name="account_id" value="{{ account.id }}" />
+    <button class="{{ 'primary' if account.status.value == 'needs_reauth' and not browser else '' }}" type="submit">Sign in again with a code</button>
   </form>
 </div>
 {% endif %}

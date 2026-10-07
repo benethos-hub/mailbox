@@ -387,6 +387,19 @@ async def test_pop3_is_left_out_beside_imap() -> None:
     assert [c.provider for c in candidates] == [ProviderType.IMAP]
 
 
+async def test_kinds_not_offered_are_left_out() -> None:
+    sources = (
+        FakeSource(ISPDB, found(pop3("pop.firma.example", ISPDB))),
+        FakeSource(PRESET, found(imap("imap.firma.example", PRESET))),
+    )
+    s = service(*sources, offered={ProviderType.POP3, ProviderType.JMAP})
+    candidates = (await s.discover(ADMIN, "me@firma.example")).candidates
+    # Without IMAP, POP3 is what there is.
+    assert [c.provider for c in candidates] == [ProviderType.POP3]
+    s = service(*sources, offered={ProviderType.JMAP})
+    assert (await s.discover(ADMIN, "me@firma.example")).candidates == []
+
+
 def test_connectable_prefers_imap() -> None:
     both = [pop3("pop.x.example", ISPDB), imap("imap.x.example", ISPDB)]
     assert [c.provider for c in discovery_module.connectable(both)] == [

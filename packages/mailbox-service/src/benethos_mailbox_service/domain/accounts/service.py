@@ -4,7 +4,7 @@ rights. The live adapter of each is ``adapters``."""
 from __future__ import annotations
 
 import builtins
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 
 from pydantic import SecretStr
 
@@ -21,7 +21,7 @@ from ...data.providers import (
 )
 from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository, IdempotencyRepository
-from ...errors import BadRequestError, MailboxServiceError
+from ...errors import BadRequestError, MailboxServiceError, NotSupportedError
 from .. import paging
 from ..activity import ActivityLog, Actor
 from ..activity import accounts as said
@@ -39,7 +39,9 @@ class AccountService:
     forgets its state there. ``on_connect`` hears of an account connected,
     with the caller and its id: the caller gets ``accounts.manage`` there.
     ``on_ready`` hears of an account connected, changed or verified, with
-    its id: the sync worker takes it up at once."""
+    its id: the sync worker takes it up at once. ``offered`` are the kinds
+    of account that can be connected, None for every kind. Accounts of
+    other kinds connected before keep working."""
 
     def __init__(
         self,
@@ -53,9 +55,11 @@ class AccountService:
         idempotency: IdempotencyRepository | None = None,
         changes: ChangeFeed | None = None,
         activity: ActivityLog | None = None,
+        offered: Iterable[ProviderType] | None = None,
     ) -> None:
         self._repository = repository
         self._activity = activity or ActivityLog()
+        self._offered = frozenset(offered) if offered is not None else None
         self._vault = vault
         self._adapters = adapters
         self._on_delete = on_delete
@@ -129,6 +133,10 @@ class AccountService:
         credential. ``signed_in``: the tokens of an OAuth sign-in, used for
         the check instead of a refresh."""
         access.require("create_account")
+        if not self.offers(provider):
+            raise NotSupportedError(
+                f"{provider} accounts cannot be connected in this deployment"
+            )
         _no_secrets_in(settings)
         settings = {**settings_defaults(provider, email), **(settings or {})}
         secrets = dict(credentials or {})
@@ -283,6 +291,10 @@ class AccountService:
     def _ready(self, account_id: str) -> None:
         if self._on_ready is not None:
             self._on_ready(account_id)
+
+    def offers(self, provider: ProviderType) -> bool:
+        """Whether accounts of this kind can be connected here."""
+        return self._offered is None or provider in self._offered
 
     def signs_in_with_oauth(self, provider: ProviderType) -> bool:
         """Whether accounts of ``provider`` connect through an OAuth app of

@@ -75,7 +75,12 @@ def test_discovery_offers_what_can_be_connected(ui: TestClient) -> None:
     assert "check these servers" in page.text  # not from a trusted source
     assert "App password" in page.text
     assert "Turn on IMAP" in page.text
-    assert "oauth" not in page.text.lower().split("what the sources answered")[0]
+    ways = page.text.split("What the sources answered")[0]
+    # No app for Gmail here. The project's app for Microsoft is offered,
+    # since a custom domain can be at Microsoft.
+    assert "/ui/oauth/gmail" not in ways
+    assert "Sign in with your provider" in ways
+    assert 'action="/ui/oauth/microsoft/device"' in ways
 
 
 def test_connect_an_account(ui: TestClient, services: Services) -> None:

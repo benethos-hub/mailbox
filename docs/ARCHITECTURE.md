@@ -219,8 +219,9 @@ packages/mailbox-service/
       protocols/        # the wire, one library each, in our types:
                         #   imap.py (IMAPClient), smtp.py (smtplib),
                         #   pop3.py (poplib), jmap.py (JMAP over http),
-                        #   oauth.py (OAuth 2.0 with PKCE, refresh, token
-                        #   source), transport.py: the Server, TLS,
+                        #   oauth.py (OAuth 2.0 with PKCE, sign-in
+                        #   with a code, refresh, token source),
+                        #   transport.py: the Server, TLS,
                         #   timeouts, the failures below every library
         http/           # httpx: base.py (the client, the capped read),
                         #   safe.py (hosts users typed, SSRF guard),

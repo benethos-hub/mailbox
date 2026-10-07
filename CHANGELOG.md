@@ -8,6 +8,23 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Microsoft accounts connect without an app of your own: the service
+  comes with the project's app, a public client without a secret, used
+  when `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` is not set. Changing
+  between it and an app of your own asks every Microsoft account to sign
+  in again.
+- Sign in with a code: `POST /v1/oauth/{provider}/device` returns a code
+  to enter at the provider on any device, and
+  `POST /v1/oauth/{provider}/device/{sign_in_id}` answers with the
+  account once the person signed in. It needs no address the provider
+  sends a browser back to, so it works on a server. The UI offers it
+  beside the sign-in in the browser, when connecting and on an account's
+  page. With the project's app away from localhost, it is the only way:
+  `POST /v1/oauth/{provider}/start` then answers `400`.
+- `MAILBOX_SERVICE_PROVIDERS`, a JSON list of the kinds of account a
+  deployment offers, every kind without it. Discovery leaves out the
+  others, and connecting one answers `501`. Accounts connected before
+  keep working.
 - JMAP accounts, `"provider": "jmap"`, for Fastmail, Stalwart, Cyrus and
   any JMAP server. The settings name `host`, `port` and `path` of the
   session (default `/.well-known/jmap`), and `auth`: `password` with
@@ -136,6 +153,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A Microsoft client secret without
+  `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` stops the service: it would
+  belong to no app. An empty secret counts as none.
 - The sync worker takes up an account at once when it is connected, its
   servers or credential change, or it is verified after a rejected login.
   Before, it waited for its next round, 5 minutes by default: a mail that

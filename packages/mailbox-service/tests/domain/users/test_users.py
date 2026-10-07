@@ -626,6 +626,8 @@ def test_the_catalogue_names_the_groups_of_the_service(client: TestClient) -> No
     assert catalogue["groups"]["accounts.connect"] == [
         "discover_account",
         "start_oauth",
+        "start_device_oauth",
+        "poll_device_oauth",
         "create_account",
     ]
 

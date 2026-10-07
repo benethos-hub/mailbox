@@ -41,6 +41,7 @@ from .data.providers import (
     ProviderFactory,
     build_provider,
     probe_server,
+    project_client_id,
     sign_in,
 )
 from .data.secrets import (
@@ -76,6 +77,7 @@ from .domain.sync import SyncService, SyncWorker
 from .domain.system import RecoveryKey, ServiceLog, StatusService
 from .domain.users import UserService
 from .domain.webhooks import Retries, WebhookDispatcher, WebhookService
+from .errors import BadRequestError
 
 
 @dataclass(frozen=True)
@@ -159,6 +161,7 @@ def build_services(
             repos.keys, repos.credentials, keys or key_provider(settings, activity)
         )
         clients = oauth_clients if oauth_clients is not None else build_oauth(settings)
+        offered = offered_providers(settings)
         # One guard for every connection the service makes to a host a user
         # typed: the lookups of autodiscovery and the servers of an account.
         fetcher = SafeFetcher(
@@ -253,6 +256,7 @@ def build_services(
             idempotency=repos.idempotency,
             changes=changes,
             activity=activity,
+            offered=offered,
         )
         webhooks = WebhookService(
             repos.webhooks, vault, changes, clock=clock, activity=activity
@@ -271,7 +275,8 @@ def build_services(
             auth=auth,
             users=users,
             mailbox=mailbox,
-            discovery=discovery or build_discovery(settings, fetcher, activity),
+            discovery=discovery
+            or build_discovery(settings, fetcher, activity, offered=offered),
             sync=sync,
             index=repos.index,
             changes=changes,
@@ -325,23 +330,48 @@ def opened(settings: Settings) -> Iterator[Services]:
 
 
 def build_oauth(settings: Settings) -> dict[ProviderType, OAuthClient]:
-    """The OAuth apps the settings name, one per provider."""
+    """The OAuth apps the settings name, one per provider. Without one,
+    the project's app, a public client (CONCEPT 5.4)."""
     clients: dict[ProviderType, OAuthClient] = {}
-    if settings.oauth_microsoft_client_id:
-        secret = settings.oauth_microsoft_secret()
+    own = settings.oauth_microsoft_client_id
+    client_id = own or project_client_id(ProviderType.MICROSOFT)
+    if client_id:
+        secret = settings.oauth_microsoft_secret() if own else None
         if secret is not None:
             redact.note(secret.get_secret_value())
         app = App(
             endpoints=sign_in(ProviderType.MICROSOFT, settings.oauth_microsoft_tenant),
-            client_id=settings.oauth_microsoft_client_id,
+            client_id=client_id,
             client_secret=secret,
+            loopback_only=not own,
         )
         clients[ProviderType.MICROSOFT] = OAuthClient(app, ApiClient())
     return clients
 
 
+def offered_providers(settings: Settings) -> frozenset[ProviderType] | None:
+    """The kinds of account the settings let be connected, None for every
+    kind."""
+    if not settings.providers:
+        return None
+    offered = set()
+    for name in settings.providers:
+        try:
+            offered.add(ProviderType(name.strip().lower()))
+        except ValueError:
+            known = ", ".join(p.value for p in ProviderType)
+            raise BadRequestError(
+                f"MAILBOX_SERVICE_PROVIDERS names {name!r}, not a kind of "
+                f"account: {known}"
+            ) from None
+    return frozenset(offered)
+
+
 def build_discovery(
-    settings: Settings, fetcher: SafeFetcher, activity: ActivityLog | None = None
+    settings: Settings,
+    fetcher: SafeFetcher,
+    activity: ActivityLog | None = None,
+    offered: frozenset[ProviderType] | None = None,
 ) -> DiscoveryService:
     return DiscoveryService(
         default_sources(fetcher, ispdb=settings.discovery_ispdb),
@@ -350,6 +380,7 @@ def build_discovery(
         trusted_hosts=preset_hosts(),
         per_user=settings.discovery_per_minute,
         activity=activity,
+        offered=offered,
     )
 
 
