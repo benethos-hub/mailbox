@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.3.0] - 2026-10-07
 
+The status is beta: usable with real accounts. A breaking change of
+the API or the configuration is announced here. Stored data is
+carried forward by migrations.
+
 ### Added
 
 - `benethos-mailbox-client`, the Python client of the REST API, as a
@@ -167,8 +171,6 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The project is beta: usable with real accounts, and a breaking
-  change of the API or the configuration is announced here.
 - **Breaking:** `POST /v1/oauth/{provider}/start` is gone, and with it
   the right `start_oauth`. The provider sent the browser back to a page
   of the UI, so an API caller could start the sign-in but never finish
