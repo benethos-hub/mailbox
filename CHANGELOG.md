@@ -213,6 +213,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A line break in a name or an address, such as CR LF or U+2028, no
+  longer starts a line of its own in the log. The log writes it as its
+  escape.
 - Connecting an account refuses an address that is none, e.g. without a
   domain or with a line break, with `400`. A host that is neither a
   name nor an IP address, e.g. `imap.example.org:993`, is refused with

@@ -11,6 +11,7 @@ one.
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
@@ -30,6 +31,18 @@ A = TypeVar("A", bound=Activity)
 
 def logger_of(activity: type[Activity]) -> logging.Logger:
     return logging.getLogger(f"{PACKAGE}.{activity.source()}")
+
+
+# What ends a line to a reader of the log: CR and LF, the other control
+# characters, and the line breaks beyond ASCII that ``str.splitlines``
+# breaks on. A name a caller chose must not start a line of its own.
+_BREAKS = re.compile(r"[\x00-\x08\x0a-\x1f\x7f\x85\u2028\u2029]")
+
+
+def one_line(text: str) -> str:
+    """``text`` as one line: each break written as its escape, such as a
+    line feed as backslash and n."""
+    return _BREAKS.sub(lambda m: m.group().encode("unicode_escape").decode(), text)
 
 
 class ActivityLog:
@@ -57,7 +70,7 @@ class ActivityLog:
         log = logger_of(type(activity))
         # The line is only built when it is written.
         if log.isEnabledFor(level):
-            log.log(level, "%s", activity.line(), exc_info=exc_info)
+            log.log(level, "%s", one_line(activity.line()), exc_info=exc_info)
         if activity.audited and self._audit is not None:
             self._keep(self._audit, activity)
         return activity

@@ -365,6 +365,11 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    console, the log page, the MCP server's log and a time inside a
    message, such as the end of a purge. `log_time` in
    `common/clock.py` writes it. **Decided 2026-09-30.**
+10. **An activity is one line.** A name or an address a caller chose may
+    hold a line break. The recorder writes each break and each other
+    control character as its escape, such as `\n` or ` `, so no
+    value starts a line of its own. A traceback follows its line as
+    before.
 
 ## 7. Where the activities live
 
