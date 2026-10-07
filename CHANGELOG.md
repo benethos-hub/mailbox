@@ -164,6 +164,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   Before, it waited for its next round, 5 minutes by default: a mail that
   arrived in between never reached the change feed, and push started
   late.
+- **Breaking:** `containers/dev/compose.yaml` hands the MCP server its
+  API token as `MAILBOX_SERVICE_TOKEN`, the name the server reads. The
+  variable `MAILBOX_MCP_API_TOKEN` is gone.
 - **Breaking:** `containers/compose.yaml` moved to `containers/dev/` and
   builds from the repository only. `MAILBOX_SERVICE_IMAGE` and
   `MAILBOX_MCP_IMAGE` are gone: the published images run from

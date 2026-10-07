@@ -43,7 +43,7 @@ services:
 
   # The MCP server over streamable HTTP, started with the profile `mcp`:
   #   docker compose --profile mcp up -d
-  # It needs MAILBOX_MCP_API_TOKEN (the API token of the user it acts as) and
+  # It needs MAILBOX_SERVICE_TOKEN (the API token of the user it acts as) and
   # MAILBOX_MCP_BEARER_TOKEN (what its own clients must send).
   mailbox-mcp:
     profiles: [mcp]
@@ -62,7 +62,7 @@ services:
       MAILBOX_SERVICE_URL: http://mailbox-service:8080
       # Plain http inside the compose network, which only the two join.
       MAILBOX_SERVICE_ALLOW_HTTP: "1"
-      MAILBOX_SERVICE_TOKEN: ${MAILBOX_MCP_API_TOKEN:-}
+      MAILBOX_SERVICE_TOKEN: ${MAILBOX_SERVICE_TOKEN:-}
       MAILBOX_MCP_BEARER_TOKEN: ${MAILBOX_MCP_BEARER_TOKEN:-}
       # The Host values clients use: the port as published on the host.
       MAILBOX_MCP_ALLOWED_HOSTS: ${MAILBOX_MCP_ALLOWED_HOSTS:-127.0.0.1:${MAILBOX_MCP_PORT:-8000},localhost:${MAILBOX_MCP_PORT:-8000}}
