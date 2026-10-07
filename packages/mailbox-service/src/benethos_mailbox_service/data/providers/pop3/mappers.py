@@ -60,13 +60,13 @@ def parse_cursor(value: str) -> tuple[str, int]:
     return parts[0], parts[1]
 
 
-def to_summary(msg: parse.ParsedMessage, uid: str) -> MessageSummary:
+def summary(msg: parse.ParsedMessage, uid: str) -> MessageSummary:
     return MessageSummary.model_validate(
         {**convert.summary_fields(msg), **_pop3_fields(uid)}
     )
 
 
-def to_message(msg: parse.ParsedMessage, uid: str) -> Message:
+def message(msg: parse.ParsedMessage, uid: str) -> Message:
     return Message.model_validate(
         {
             **convert.summary_fields(msg),

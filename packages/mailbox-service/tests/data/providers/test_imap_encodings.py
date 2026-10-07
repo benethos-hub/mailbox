@@ -70,7 +70,7 @@ def test_folder_names_are_decoded() -> None:
 
 def test_localised_special_folders_get_their_roles() -> None:
     session, _ = _session(LIST_REPLY)
-    folders = {f.name: f for f in mappers.to_folders(session.list_folders())}
+    folders = {f.name: f for f in mappers.folders(session.list_folders())}
     assert folders["Entwürfe"].role is FolderRole.DRAFTS
     assert folders["Gelöschte Elemente"].role is FolderRole.TRASH
     assert folders["Müller GmbH"].role is None
@@ -87,7 +87,7 @@ def test_selecting_encodes_the_name_again() -> None:
 def test_flags_win_over_names() -> None:
     folders = {
         f.name: f
-        for f in mappers.to_folders(
+        for f in mappers.folders(
             [
                 RawFolder("INBOX", ".", ()),
                 RawFolder("INBOX.Sent Items", ".", ("\\Sent",)),
@@ -104,7 +104,7 @@ def test_flags_win_over_names() -> None:
 
 
 def test_only_the_first_folder_with_a_name_gets_the_role() -> None:
-    folders = mappers.to_folders(
+    folders = mappers.folders(
         [RawFolder("Trash", "/", ()), RawFolder("Papierkorb", "/", ())]
     )
     assert [f.role for f in folders] == [FolderRole.TRASH, None]

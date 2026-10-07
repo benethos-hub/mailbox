@@ -202,9 +202,7 @@ class Pop3Provider:
 
     async def get_message(self, message_id: str) -> Message:
         raw = await self.get_raw(message_id)
-        return mappers.to_message(
-            parse.ParsedMessage(raw), mappers.unique_id(message_id)
-        )
+        return mappers.message(parse.ParsedMessage(raw), mappers.unique_id(message_id))
 
     async def get_attachment(
         self, message_id: str, attachment_id: str
@@ -415,7 +413,7 @@ def _list(
         position = positions[uid] + 1 if uid in positions else at
     page = newest[position : position + limit]
     items = [
-        mappers.to_summary(parse.ParsedMessage(session.headers(number)), uid)
+        mappers.summary(parse.ParsedMessage(session.headers(number)), uid)
         for number, uid in page
     ]
     more = position + limit < len(newest)
@@ -431,7 +429,7 @@ def _summary(session: Pop3Session, uid: str, message_id: str) -> MessageSummary:
     number = _numbers(session).get(uid)
     if number is None:
         raise missing_message(message_id)
-    return mappers.to_summary(parse.ParsedMessage(session.headers(number)), uid)
+    return mappers.summary(parse.ParsedMessage(session.headers(number)), uid)
 
 
 def _message(session: Pop3Session, uid: str, message_id: str) -> bytes:

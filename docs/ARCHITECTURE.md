@@ -573,6 +573,11 @@ imapclient boundary), never by patching deep inside a library.
   pattern it uses (`repository.py`).
 - A function is a verb (`record`, `forget_account`), a value a noun, a
   boolean a question (`is_public_address`).
+- A mapper of an adapter (`mappers.py`) is named for what it makes, the
+  same in every adapter: `folder`, `folders`, `summary`, `message`,
+  `keywords`, `when`. Called as `mappers.message(...)`, it reads as
+  what it answers. The way back to the provider is named for the
+  provider's shape: `imap_flag`, `keyword_patch`, `query_filter`.
 - The name in the API is the name in the code where they meet. A rename
   in the code never moves the OpenAPI document.
 - A docstring says what the module is for and what stays out of it, in
