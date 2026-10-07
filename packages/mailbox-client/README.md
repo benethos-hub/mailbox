@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
+> **Alpha, version 0.3.0.** Usable with real accounts for testing. The
 > API and the configuration may still change. Stored data is carried
 > forward by migrations.
 

@@ -47,7 +47,7 @@ The same by hand, from this folder:
 
 ```sh
 cp .env.example .env && chmod 600 .env          # then edit it
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.2.0
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.3.0
 
 mkdir -p caddy.d secrets/mcp secrets/tls && chmod 700 secrets secrets/mcp
 docker run --rm "$IMAGE" keys generate > secrets/master_key
@@ -251,11 +251,6 @@ After a change: `docker compose up -d`.
 `MAILBOX_SERVICE_PORT` in `.env` is the service's port on the host. The
 same variable in `service.env` would move the port the service listens
 on in its container, which the compose file and Caddy expect at 8080.
-
-The images of 0.2.0, which the compose file pins, do not yet have POP3,
-JMAP accounts, the project's Microsoft app and
-`MAILBOX_SERVICE_PROVIDERS`, which the list already names. They come
-with the next release.
 
 ## Operation
 
