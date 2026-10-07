@@ -62,12 +62,17 @@ async def list_all_sends(
     caller: Caller,
     mailbox: Mailbox,
     matching: SendSearch,
+    accounts: Annotated[
+        list[str] | None,
+        Query(description="Account ids. Without: every account the caller may audit"),
+    ] = None,
     limit: Limit = 50,
     cursor: str | None = None,
 ) -> Page[SendRecord]:
-    """The audit of sends of every account the caller may audit, newest
-    first. An account deleted since stays in it for a caller whose grant
-    names every account. The filter parameters narrow the list together."""
+    """The audit of sends of every account the caller may audit, or of
+    those named in `accounts`, newest first. An account deleted since
+    stays in it for a caller whose grant names every account. The filter
+    parameters narrow the list together."""
     return mailbox.outgoing.list_all_sends(
-        caller, limit=limit, cursor=cursor, matching=matching
+        caller, account_ids=accounts, limit=limit, cursor=cursor, matching=matching
     )

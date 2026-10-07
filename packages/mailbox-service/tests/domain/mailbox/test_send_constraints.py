@@ -293,6 +293,11 @@ def test_the_audit_of_every_account(
         account_id,
         other,
     }
+    # Named accounts narrow the list, as on /v1/messages and /v1/changes.
+    named = client.get("/v1/sends", params={"accounts": [other]}).json()
+    assert [r["account_id"] for r in named["items"]] == [other]
+    nobody = client.get("/v1/sends", params={"accounts": ["acc_none"]}).json()
+    assert nobody["items"] == []
     auditor = bearer_for(services, Grant(accounts=[account_id], allow=["audit"]))
     mine = app_client.get("/v1/sends", headers=auditor).json()["items"]
     assert [r["account_id"] for r in mine] == [account_id]

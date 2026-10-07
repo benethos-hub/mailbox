@@ -154,6 +154,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   password still to be changed.
 - The UI shows a message's keywords in the list and adds or removes them
   on the message. Those starting with `$` stay as they are.
+- `accounts` on `GET /v1/sends`: the audit of the named accounts alone,
+  as `/v1/messages` and `/v1/changes` take it. An account the caller
+  may not audit is left out without a word.
 - `GET /v1/status` (`get_status`, in `accounts.read`): the sync worker
   and the accounts the caller may see the status of, as the UI's status
   page shows them. Per account its status, the last pass, the last error

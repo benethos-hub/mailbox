@@ -4351,7 +4351,7 @@
           "mailbox"
         ],
         "summary": "List All Sends",
-        "description": "The audit of sends of every account the caller may audit, newest\nfirst. An account deleted since stays in it for a caller whose grant\nnames every account. The filter parameters narrow the list together.",
+        "description": "The audit of sends of every account the caller may audit, or of\nthose named in `accounts`, newest first. An account deleted since\nstays in it for a caller whose grant names every account. The filter\nparameters narrow the list together.",
         "operationId": "list_all_sends",
         "security": [
           {
@@ -4359,6 +4359,27 @@
           }
         ],
         "parameters": [
+          {
+            "name": "accounts",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Account ids. Without: every account the caller may audit",
+              "title": "Accounts"
+            },
+            "description": "Account ids. Without: every account the caller may audit"
+          },
           {
             "name": "limit",
             "in": "query",

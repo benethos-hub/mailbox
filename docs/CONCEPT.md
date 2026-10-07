@@ -818,7 +818,7 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
 | POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
 | GET | `{acc}/sends` | the audit of sends, newest first |
-| GET | `/v1/sends` | the audit of sends of every account the caller may audit, newest first |
+| GET | `/v1/sends` | the audit of sends of every account the caller may audit, or of those in `accounts`, newest first |
 
 **Decided 2026-09-24, reply and forward:**
 

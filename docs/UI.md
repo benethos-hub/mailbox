@@ -185,9 +185,9 @@ Mail's filters are the API's query parameters, a test holds them
 together (`test_openapi.py`). Sends, Users, Accounts, Webhooks and Audit
 have their filters at the API as well, by the same list methods of the
 domain and with the same query names, held together by a test too. A
-day in the UI is a time with a zone at the API. Only the UI has the
-account of Sends, where the API has a list per account, and API only of
-Users, which is `ui_sign_in=false` there. Drafts have no filter bar: no
+day in the UI is a time with a zone at the API. The account of Sends is
+`accounts` at the API, and API only of Users is `ui_sign_in=false`
+there. Drafts have no filter bar: no
 provider searches its drafts. The drafts folder in Mail can be searched.
 
 Sends are one list for every account the caller may audit, the account
