@@ -189,8 +189,12 @@ MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID=<application (client) id>
 MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE=config/benethos-mailbox-service/microsoft_client_secret
 ```
 
-- With a settings file named by `--env-file`, a relative secret file
-  counts from that file's folder.
+- The path above fits the repository, where a relative path counts from
+  the repository root. With a settings file elsewhere, named by
+  `--env-file` or in the settings folder of the operating system, a
+  relative path counts from that file's folder. There put the secret
+  file beside it and write
+  `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE=microsoft_client_secret`.
 - `MAILBOX_SERVICE_PUBLIC_URL` is the redirect URI of step 2 without
   `/ui/oauth/microsoft/callback`.
 - The secret may also be given directly as

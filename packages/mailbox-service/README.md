@@ -133,7 +133,7 @@ names the settings file it read and the database at start.
 |---|---|---|
 | `MAILBOX_SERVICE_HOST`, `MAILBOX_SERVICE_PORT` | `127.0.0.1`, `8080` | where the service listens (`serve --host/--port` win) |
 | `MAILBOX_SERVICE_PUBLIC_URL` | from each request | the address people reach the service at, e.g. behind a proxy. The OAuth redirect address is built from it. |
-| `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` | `127.0.0.1` | behind a reverse proxy: its address, whose `X-Forwarded-*` headers give the client address, scheme and host. Without it every visitor counts as the proxy's address. |
+| `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` | | behind a reverse proxy: its address, whose `X-Forwarded-*` headers give the client address, scheme and host. Empty: only a proxy on `127.0.0.1` is believed. Behind a proxy elsewhere that is not named, every visitor counts as the proxy's address. |
 | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` | `120` | requests a minute per API token or UI session, a burst of half as many at once. `0` switches the limit off. |
 | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` | `30` | the same per client address, for requests without a credential |
 | `MAILBOX_SERVICE_LOG_LEVEL` | `INFO` | `critical`, `error`, `warning`, `info`, `debug` or `trace`, see [Logs](#logs) |
@@ -144,9 +144,9 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_MASTER_KEY` | | the recovery key, for `env` |
 | `MAILBOX_SERVICE_SYNC_INTERVAL` | `300` | seconds between two polls of every folder. `0` switches the sync off. |
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | wait for the server to report a change: IMAP IDLE, with a second connection per account, or a JMAP server's event source |
-| `MAILBOX_SERVICE_SYNC_WATCHERS` | `50` | accounts watched at once, each in a thread of its own. Further accounts are polled only. |
+| `MAILBOX_SERVICE_SYNC_WATCHERS` | `50` | accounts watched at once. An IMAP account holds a thread of its own while it waits in IDLE. Further accounts are polled only. |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
-| `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audit of sends keeps a record. `0` keeps every record. |
+| `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audits of sends and of administration keep a record. `0` keeps every record. |
 | `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS` | `8` | tries of a webhook post before its events are dropped |
 | `MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY` | `30` | seconds before the second try, doubled for each further one |
 | `MAILBOX_SERVICE_WEBHOOK_LONGEST_RETRY` | `3600` | the longest pause between two tries, in seconds |
