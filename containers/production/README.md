@@ -83,14 +83,15 @@ Either way, first in the UI: a user with the rights the client should
 have, and a token on that user's page.
 
 The client starts the MCP server with the service's address and that
-token, at the same version as the service:
+token, at the same version as the service, the `MAILBOX_VERSION` of
+`.env`:
 
 ```json
 {
   "mcpServers": {
     "mailbox": {
       "command": "uvx",
-      "args": ["benethos-mailbox-mcp"],
+      "args": ["benethos-mailbox-mcp==<MAILBOX_VERSION>"],
       "env": {
         "MAILBOX_SERVICE_URL": "https://mail.example.org",
         "MAILBOX_SERVICE_TOKEN": "<the user's token>"
@@ -214,9 +215,9 @@ certificate. Take `internal`, or `files` with a certificate of the
 company CA, which its clients trust already. A value other than these
 three stops Caddy with `File to import not found: tls-<value>`.
 
-For `files`, Caddy runs as root without capabilities. It reads the key
-only if root owns it, and `secrets/tls` only if the folder is open to
-it. A run of `setup.sh` sees to both, or by hand after copying the files:
+For `files`, Caddy runs as root with no capability but
+`NET_BIND_SERVICE`. It reads the key only if root owns it, and
+`secrets/tls` only if the folder is open to it. A run of `setup.sh` sees to both, or by hand after copying the files:
 
 ```sh
 chmod 755 secrets/tls && chmod 600 secrets/tls/server.key
@@ -245,6 +246,15 @@ setting of the service, `MAILBOX_SERVICE_*`, goes into `service.env`
 (template `service.env.example`). The list:
 [packages/mailbox-service/README.md](../../packages/mailbox-service/README.md#settings).
 After a change: `docker compose up -d`.
+
+`MAILBOX_SERVICE_PORT` in `.env` is the service's port on the host. The
+same variable in `service.env` would move the port the service listens
+on in its container, which the compose file and Caddy expect at 8080.
+
+The images of 0.2.0, which the compose file pins, do not yet have POP3,
+JMAP accounts, the project's Microsoft app and
+`MAILBOX_SERVICE_PROVIDERS`, which the list already names. They come
+with the next release.
 
 ## Operation
 

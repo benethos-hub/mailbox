@@ -15,16 +15,27 @@ containers/
   production/                    # in operation, the published images:
     compose.yaml                 #   the service, Caddy for HTTPS (profile
                                  #   https)
+    .env.example                 #   template of .env: the version, the
+                                 #   profiles, the port, the domain
+    service.env.example          #   template of service.env: further
+                                 #   settings of the service
+    Caddyfile                    #   HTTPS in front, for the profile https
     mcp.yaml                     #   the template of an MCP server
                                  #   instance, run from
                                  #   compose.override.yaml (profile mcp)
-    caddy.d/                     #   the routes of Caddy to instances
-    setup.sh                     # the first start, see its README.md
+    compose.override.yaml.example
+                                 #   template of compose.override.yaml
+    caddy.d/mcp.caddy.example    #   template of a route of Caddy to an
+                                 #   instance
+    setup.sh                     #   the first start
+    README.md                    #   how to set it up and run it
   dev/                           # for development, built from the repository
     compose.yaml                 # the service, the MCP server with the
                                  #   profile mcp, ports on 127.0.0.1 only
-  test-mail-server/              # Stalwart as a mail server for tests,
-                                 #   set up by setup.sh, see its README.md
+  test-mail-server/              # Stalwart as a mail server for tests
+    compose.yaml                 #   ports on 127.0.0.1 only
+    setup.sh                     #   makes the server anew
+    README.md                    #   how to set it up and use it
 ```
 
 | Folder | For | Images |
@@ -38,6 +49,26 @@ or with compose:
 
 - the service: [packages/mailbox-service/README.md](../packages/mailbox-service/README.md#container)
 - the MCP server: [packages/mailbox-mcp/README.md](../packages/mailbox-mcp/README.md#container)
+
+## For development
+
+`dev/compose.yaml` builds both images from the repository. The first
+start takes the steps of
+[production/README.md](production/README.md#the-first-start), run in
+`dev/` after `docker compose build`. The master key lives in
+`dev/secrets/master_key`. The MCP server starts with
+`docker compose --profile mcp up -d`. Compose reads these variables from
+the environment or from an `.env` beside the file, not versioned:
+
+| Variable | Default | What it is |
+|---|---|---|
+| `MAILBOX_SERVICE_PORT` | `8080` | the service's port on the host, on `127.0.0.1` |
+| `MAILBOX_SERVICE_LOG_LEVEL`, `MAILBOX_SERVICE_SYNC_INTERVAL` | `INFO`, `300` | settings of the service |
+| `MAILBOX_MCP_PORT` | `8000` | the MCP server's port on the host, on `127.0.0.1` |
+| `MAILBOX_MCP_API_TOKEN` | | the API token of the user the MCP server acts as, made in the UI. The server gets it as `MAILBOX_SERVICE_TOKEN`. |
+| `MAILBOX_MCP_BEARER_TOKEN` | | what the MCP server's own clients must send |
+| `MAILBOX_MCP_ALLOWED_HOSTS` | `127.0.0.1:<port>,localhost:<port>` | the Host values its clients use |
+| `MAILBOX_MCP_LOG_LEVEL` | `INFO` | the MCP server's log level |
 
 ## The images
 
@@ -53,8 +84,11 @@ version as the PyPI packages:
 
 - Only the one package goes into each image, installed from `uv.lock`
   without the development tools.
-- They run as user `mailbox` (uid 10001). The compose files add a
-  read-only root file system, no capabilities and `no-new-privileges`.
+- They run as user `mailbox` (uid 10001). The compose files of `dev/`
+  and `production/` add a read-only root file system, no capabilities
+  and `no-new-privileges`, to Caddy as well, which keeps only
+  `NET_BIND_SERVICE` for its ports 80 and 443. The test mail server runs
+  Stalwart without these.
 - Settings come from the environment only.
 - Both have a health check: the service on `GET /health`, the MCP server
   on its port.

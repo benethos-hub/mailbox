@@ -181,6 +181,24 @@ claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
   refused host gets `421`.
 - Beyond your own machine, put a TLS reverse proxy in front.
 
+## Log and timeouts
+
+The server writes its log to stderr only, since over stdio stdout
+carries the MCP messages. An MCP client keeps that log in its own files.
+Each line has the time, the level, where it comes from and the message,
+the time as the service writes it. At start it names the settings file
+it read, the transport, the service's address and the tools it serves,
+and warns where its token may read mail and send it to any address. Over
+HTTP without `MAILBOX_MCP_BEARER_TOKEN` it warns as well. A tool that
+fails writes a warning with the tool's name and the error's code, never
+its arguments. `httpx`, `httpcore` and the MCP library write from
+`warning` on, since a request's URL carries search terms and message ids.
+
+Towards the service it waits 5 seconds for a connection, 30 seconds for
+an answer and 120 seconds for an attachment, which may be large. Past
+that the model reads that the service is not reachable, or that it did
+not answer in time and a narrower request may help.
+
 ## Container
 
 The image `ghcr.io/benethos-hub/benethos-mailbox-mcp` serves over
@@ -239,8 +257,8 @@ the tools that fit:
 | `list_accounts` | – | the accounts, their addresses, what may be done on each, the limits on sending, a warning where the token may read and send anywhere, and what an account cannot do, such as a POP3 mailbox without folders |
 | `list_folders` | `mail.read` | folders with id, name, role and counts |
 | `search_messages` | `mail.read` | find mail by text, sender, recipient, subject, days, flags, attachments, in one account or all |
-| `get_message` | `mail.read` | one mail as plain text, cut to `max_chars` |
-| `get_attachment` | `mail.read` | an attachment: images up to 5 MB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 12 megapixels together), text as text, HTML as the text a reader sees, other types by name only |
+| `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default |
+| `get_attachment` | `mail.read` | an attachment: images up to 5 MiB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 4 megapixels a page and 12 together), text as text, HTML as the text a reader sees, both cut to `max_chars`, 20,000 by default. Other types and larger images by name only. An image, PDF or text above 10 MiB is refused. |
 | `whats_new` | `mail.read` | mail created, updated or deleted since the `state` of an earlier call, ids only, in one account or all |
 | `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), or into the trash |
 | `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
