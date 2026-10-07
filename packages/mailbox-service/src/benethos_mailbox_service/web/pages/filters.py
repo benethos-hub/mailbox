@@ -11,14 +11,23 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, TypeVar
 from urllib.parse import urlencode
 
 from fastapi import Request
+from pydantic import BaseModel
+
+from ...common.clock import parse_day
+from ...domain.rights import Access
+from ..services import get_users
+from .deps import if_allowed
+from .forms import model_of
 
 Kind = Literal["text", "date", "select", "flag", "checks"]
 # Never a filter: the page a pager is on.
 NOT_FILTERS = frozenset({"cursor"})
+
+M = TypeVar("M", bound=BaseModel)
 
 
 @dataclass(frozen=True)
@@ -104,6 +113,34 @@ def filter_bar(
         chips=chips,
         clear=clear,
     )
+
+
+def user_names(request: Request, caller: Access) -> dict[str, str]:
+    """The users a filter "Who" offers, by id: the caller, and every user
+    where the caller may see users."""
+    listed: dict[str, str] = if_allowed(
+        caller,
+        "list_users",
+        lambda: {u.id: u.name for u in get_users(request).list_users(caller)},
+        {},
+    )
+    return {caller.user_id: caller.name, **listed}
+
+
+def records_filter(model: type[M], bar: FilterBar, *fields: str) -> M | None:
+    """What the bar above a list of records asks for: who (``user``), the
+    ``fields`` by their names, and the days ``after`` and ``before``. None
+    when it asks for nothing. Raises ``FormError``, a ``ValueError``, for
+    a value that is no filter."""
+    wanted = {
+        "user_id": bar.value("user") or None,
+        **{name: bar.value(name) or None for name in fields},
+        "after": parse_day(bar.value("after")),
+        "before": parse_day(bar.value("before")),
+    }
+    if not any(value is not None for value in wanted.values()):
+        return None
+    return model_of(model, wanted)
 
 
 def _chip_label(filter_field: Field, value: str) -> str:

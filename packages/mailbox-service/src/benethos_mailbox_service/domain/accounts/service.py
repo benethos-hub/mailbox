@@ -10,7 +10,7 @@ from pydantic import SecretStr
 
 from ...common import redact
 from ...common.hosts import address_problem, is_server
-from ...common.ids import new_id
+from ...common.secret import new_id
 from ...common.text import has_break
 from ...data.models import Account, AccountStatus, Page, ProviderType
 from ...data.protocols import HostCheck

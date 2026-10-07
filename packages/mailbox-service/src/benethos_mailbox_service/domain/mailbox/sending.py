@@ -12,13 +12,12 @@ from __future__ import annotations
 import math
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
-from typing import Any, Literal
+from typing import Literal
 
-from ...common.clock import iso, parse_iso, utc_now
-from ...common.ids import new_id
+from ...common.clock import utc_now
 from ...common.retention import Retention
+from ...common.secret import new_id
 from ...data.models import (
-    Before,
     Page,
     SendFilter,
     SendOutcome,
@@ -226,9 +225,7 @@ class SendControl:
         cursor: str | None,
         matching: SendFilter | None,
     ) -> Page[SendRecord]:
-        before = None
-        if cursor is not None:
-            before = paging.decode_cursor(CURSOR, cursor, _before)
+        before = paging.decode_before(CURSOR, cursor)
         records: list[SendRecord] = []
         for account_id in account_ids:
             records += self._store.list(
@@ -239,11 +236,5 @@ class SendControl:
         next_cursor = None
         if more:
             last = records[-1]
-            next_cursor = paging.encode_cursor(CURSOR, [iso(last.created_at), last.id])
+            next_cursor = paging.encode_before(CURSOR, last.created_at, last.id)
         return Page[SendRecord](items=records, next_cursor=next_cursor)
-
-
-def _before(carried: Any) -> Before:
-    """Where a cursor of the send log continues."""
-    at, record_id = carried
-    return Before(parse_iso(str(at)), str(record_id))

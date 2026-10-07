@@ -5,10 +5,12 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Generic, TypeVar
 
 from ..common import opaque
-from ..data.models import Page
+from ..common.clock import iso, parse_iso
+from ..data.models import Before, Page
 from ..errors import BadRequestError
 
 T = TypeVar("T")
@@ -74,6 +76,24 @@ def decode_cursor(
         return parse(opaque.decode(prefix, value))
     except (ValueError, TypeError, KeyError, AttributeError):
         raise BadRequestError(refusal) from None
+
+
+def encode_before(prefix: str, at: datetime, record_id: str) -> str:
+    """The cursor after a record of a list newest first: its time and id."""
+    return encode_cursor(prefix, [iso(at), record_id])
+
+
+def decode_before(prefix: str, value: str | None) -> Before | None:
+    """Where the cursor ``encode_before`` made continues. None without
+    one, the first page."""
+    if value is None:
+        return None
+    return decode_cursor(prefix, value, _before)
+
+
+def _before(carried: Any) -> Before:
+    at, record_id = carried
+    return Before(parse_iso(str(at)), str(record_id))
 
 
 def split_page(found: list[T], limit: int) -> tuple[list[T], bool]:

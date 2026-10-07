@@ -13,7 +13,6 @@ Tokens are ``SecretStr`` throughout and appear in no error text.
 from __future__ import annotations
 
 import hashlib
-import secrets
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
@@ -26,6 +25,7 @@ from pydantic import Field, RootModel, SecretStr
 from ...common import redact
 from ...common.clock import utc_now
 from ...common.opaque import from_base64, to_base64
+from ...common.secret import token
 from ...errors import (
     BadRequestError,
     NotSupportedError,
@@ -182,7 +182,8 @@ class Pkce:
 
 def new_pkce() -> Pkce:
     """A code verifier and its S256 challenge (RFC 7636)."""
-    verifier = secrets.token_urlsafe(64)
+    # 64 bytes: 86 characters, within the 43 to 128 the RFC allows.
+    verifier = token(64)
     digest = hashlib.sha256(verifier.encode("ascii")).digest()
     return Pkce(verifier, to_base64(digest))
 

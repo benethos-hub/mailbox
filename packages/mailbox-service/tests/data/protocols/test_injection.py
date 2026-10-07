@@ -28,7 +28,7 @@ from ...smtp_fake import FakeSmtpServer
 
 # What ends a line or a command, and what does not.
 ENDS = ["\r\n", "\n", "\r", "\x00"]
-HARMLESS = ['"', "'", "\\", " ", "\x85"]
+HARMLESS = ['"', "'", "\\", "\u2028", "\x85"]
 SERVER = Server("mail.example.com", 993, "tls")
 
 
@@ -84,7 +84,7 @@ def test_a_pop3_login_with_a_line_end_never_connects(end: str) -> None:
     assert factory.calls == 0
 
 
-@pytest.mark.parametrize("bad", [*ENDS, " ", "\t", " ", "\x85"])
+@pytest.mark.parametrize("bad", [*ENDS, " ", "\t", "\u2028", "\x85"])
 def test_an_smtp_address_with_a_break_never_connects(bad: str) -> None:
     fake = FakeSmtpServer()
     session = SmtpSession(SERVER, connection_factory=fake)

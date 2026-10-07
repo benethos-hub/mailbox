@@ -3,6 +3,7 @@ idempotency key."""
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Callable
 
 from benethos_mailbox_mcp import server
@@ -98,3 +99,13 @@ async def test_the_html_field_is_offered() -> None:
     for name in ("send_message", "create_draft", "update_draft"):
         html = tools[name].input_schema["properties"]["html"]
         assert "Inline styles" in html["description"], name
+
+
+def test_the_key_is_written_as_the_service_writes_a_fingerprint() -> None:
+    """Keys sorted, no spaces, ASCII: the same text for the same call,
+    whatever the order of its arguments."""
+    text = '["send_message","acc_1",{"a":[1],"b":"Gr\\u00fc\\u00dfe"}]'
+    expected = "mcp-" + hashlib.sha256(text.encode()).hexdigest()
+    for arguments in ({"b": "Grüße", "a": [1]}, {"a": [1], "b": "Grüße"}):
+        key = sending._idempotency_key("send_message", "acc_1", arguments)
+        assert key == expected

@@ -9,7 +9,6 @@ second click on Send returns the first result instead of sending twice.
 from __future__ import annotations
 
 import base64
-import secrets
 from email.utils import getaddresses
 from typing import Any
 
@@ -18,6 +17,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 from starlette.datastructures import UploadFile
 
+from ...common.secret import SHORT, token
 from ...data.models import (
     Account,
     Address,
@@ -161,7 +161,7 @@ def show(
         error=error,
         # A new key each time the form is shown: a retry of this form, and
         # only that, is the same send.
-        idempotency_key=secrets.token_urlsafe(24),
+        idempotency_key=token(SHORT),
         can_send=caller.allows(
             "send_draft" if draft_id else "send_message", account_id
         ),

@@ -4,18 +4,16 @@ the fingerprint of the request its Idempotency-Key was sent with."""
 
 from __future__ import annotations
 
-import hashlib
-import json
-
 from pydantic import BaseModel
+
+from ...common.canonical import canonical
+from ...common.secret import digest
 
 
 def fingerprint(*values: BaseModel | str | None) -> str:
     """The SHA-256 of the values as JSON, keys sorted, a model as the JSON
     the API reads."""
-    canonical = json.dumps(
-        [v.model_dump(mode="json") if isinstance(v, BaseModel) else v for v in values],
-        sort_keys=True,
-        separators=(",", ":"),
+    text = canonical(
+        [v.model_dump(mode="json") if isinstance(v, BaseModel) else v for v in values]
     )
-    return hashlib.sha256(canonical.encode()).hexdigest()
+    return digest(text)

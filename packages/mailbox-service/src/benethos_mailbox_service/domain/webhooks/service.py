@@ -8,7 +8,6 @@ webhook is created, and kept sealed with the data key.
 
 from __future__ import annotations
 
-import secrets
 from collections.abc import Callable
 from datetime import datetime
 from urllib.parse import urlsplit
@@ -16,7 +15,7 @@ from urllib.parse import urlsplit
 from pydantic import SecretStr
 
 from ...common.clock import utc_now
-from ...common.ids import new_id
+from ...common.secret import new_id, token
 from ...common.urls import host_of
 from ...data.models import (
     CreatedWebhook,
@@ -63,7 +62,7 @@ class WebhookService:
         for account_id in request.accounts or []:
             access.require("list_changes", account_id)
         webhook_id = new_id("whk")
-        secret = SECRET_PREFIX + secrets.token_urlsafe(32)
+        secret = SECRET_PREFIX + token()
         webhook = Webhook(
             id=webhook_id,
             url=request.url,

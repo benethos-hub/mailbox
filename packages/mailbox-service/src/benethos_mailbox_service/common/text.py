@@ -14,7 +14,7 @@ import re
 
 # What ends a line to a reader: every control character, the line breaks
 # beyond ASCII, U+2028 among them.
-_BREAKS = re.compile(r"[\x00-\x1f\x7f\x85  ]")
+_BREAKS = re.compile(r"[\x00-\x1f\x7f\x85\u2028\u2029]")
 _RUNS = re.compile(_BREAKS.pattern + "+")
 # What ends a command or a value of a protocol of lines.
 _LINE_ENDS = re.compile(r"[\r\n\x00]")

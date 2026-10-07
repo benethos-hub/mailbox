@@ -8,14 +8,14 @@ Ids are the server's own. JMAP keeps an email's id when it moves (RFC 8620
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from collections.abc import Mapping
 from datetime import UTC, date, datetime, time
 from typing import Any
 
 from ....common import opaque
+from ....common.canonical import canonical
+from ....common.secret import digest
 from ...mail import convert, parse
 from ...models import (
     Folder,
@@ -203,11 +203,8 @@ def scope(folder_id: str | None, search: MessageFilter | None) -> str:
     16 hex digits, 64 bits, to keep the cursor short. It only tells one
     search of a caller from another, so two that collide cost a cursor
     taken for the other search, never another account's mail."""
-    what = json.dumps(
-        [folder_id, (search or MessageFilter()).model_dump(mode="json")],
-        sort_keys=True,
-    )
-    return hashlib.sha256(what.encode()).hexdigest()[:16]
+    what = canonical([folder_id, (search or MessageFilter()).model_dump(mode="json")])
+    return digest(what)[:16]
 
 
 def cursor(scope_of: str, last_id: str, position: int) -> str:
