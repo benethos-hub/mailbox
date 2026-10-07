@@ -48,12 +48,23 @@ def test_operation_ids_are_unique_snake_case() -> None:
 
 
 def test_protected_routes_declare_bearer_and_errors() -> None:
+    """Every protected route names the errors the web layer and the
+    store can answer. A record answers 404 and 409 as well, a route that
+    asks a provider 501 and 502, and the rest declares neither."""
+    common = {"400", "401", "403", "413", "429", "500", "503"}
     for path, op in _operations():
-        if path.startswith(API_PREFIX):
-            assert op["security"] == [{"bearerAuth": []}], path
-            assert {"400", "401", "403", "404", "409", "502", "503"} <= set(
-                op["responses"]
-            ), path
+        if not path.startswith(API_PREFIX):
+            continue
+        assert op["security"] == [{"bearerAuth": []}], path
+        declared = set(op["responses"])
+        assert common <= declared, path
+        if path in (f"{API_PREFIX}/me", f"{API_PREFIX}/permissions"):
+            assert not declared & {"404", "409", "501", "502"}, path
+        elif path.startswith((f"{API_PREFIX}/users", f"{API_PREFIX}/roles")):
+            assert {"404", "409"} <= declared, path
+            assert not declared & {"501", "502"}, path
+        elif path.startswith(f"{API_PREFIX}/accounts"):
+            assert {"404", "409", "501", "502"} <= declared, path
 
 
 def test_the_search_form_uses_the_query_names_of_the_api() -> None:

@@ -29,8 +29,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   account once the person signed in. It needs no address the provider
   sends a browser back to, so it works on a server. The UI offers it
   beside the sign-in in the browser, when connecting and on an account's
-  page. With the project's app away from localhost, it is the only way:
-  `POST /v1/oauth/{provider}/start` then answers `400`.
+  page. With the project's app away from localhost, it is the only way.
 - `MAILBOX_SERVICE_PROVIDERS`, a JSON list of the kinds of account a
   deployment offers, every kind without it. Discovery leaves out the
   others, and connecting one answers `501`. Accounts connected before
@@ -103,8 +102,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   the service, bound to no account. `accounts.connect`, `users.read`,
   `users.manage`, `webhooks.manage` and `admin` belong there, or single
   operations of them. `/v1/permissions` lists these groups as `service`.
-- `accounts.connect`: `discover_account`, `start_oauth` and
-  `create_account`, which were part of `accounts.manage`.
+- `accounts.connect`: `discover_account` and `create_account`, which
+  were part of `accounts.manage`, and the sign-in with a code.
 - `users.read`: `list_users`, `get_user`, `list_tokens`, `list_roles` and
   `get_role`, to see users and roles without changing them. `users.manage`
   keeps every right it had.
@@ -155,6 +154,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   password still to be changed.
 - The UI shows a message's keywords in the list and adds or removes them
   on the message. Those starting with `$` stay as they are.
+- `accounts` on `GET /v1/sends`: the audit of the named accounts alone,
+  as `/v1/messages` and `/v1/changes` take it. An account the caller
+  may not audit is left out without a word.
 - `GET /v1/status` (`get_status`, in `accounts.read`): the sync worker
   and the accounts the caller may see the status of, as the UI's status
   page shows them. Per account its status, the last pass, the last error
@@ -163,6 +165,21 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** `POST /v1/oauth/{provider}/start` is gone, and with it
+  the right `start_oauth`. The provider sent the browser back to a page
+  of the UI, so an API caller could start the sign-in but never finish
+  it. The API signs an account in with a code
+  (`POST /v1/oauth/{provider}/device`), the UI in a browser or with a
+  code as before. A stored grant naming `start_oauth` keeps its other
+  rights.
+- **Breaking:** `DELETE /v1/users/{user_id}/tokens/{token_id}` answers
+  `204` without a body, as every other delete does. It answered `200`
+  with the token's record. The token stays in
+  `GET /v1/users/{user_id}/tokens` with its `revoked_at`.
+- The OpenAPI document names on each operation the errors it can
+  answer: `413`, `429` and `500` on every one, `404` and `409` where a
+  record is touched, `501` and `502` where a provider is asked. Before,
+  every operation named the same list, without the first three.
 - A webhook's body carries text beyond ASCII as UTF-8, not as `\u`
   escapes. It is the same JSON, and the signature covers the bytes sent.
 - A cursor of a JMAP account's message list from an earlier version
@@ -242,6 +259,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `GET /v1/sends` goes by its own right, `list_all_sends`, as the lists
+  of messages and changes across accounts do. A grant naming that one
+  operation got an empty list, one naming `list_sends` alone got every
+  account's audit. Grants with the group `audit` were not affected.
 - `backup FILE --recovery-key` is refused: the option belongs to
   `backup verify FILE`. Before, it was accepted and ignored, and the
   backup written with the master key the service holds.

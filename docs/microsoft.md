@@ -30,8 +30,8 @@ account**:
   Microsoft has seen the sign-in. This works wherever the service runs,
   also on a server.
 
-Where the service is not at `localhost`, the UI offers the code only,
-and `POST /v1/oauth/microsoft/start` answers `400`. A browser that
+Where the service is not at `localhost`, the UI offers the code only.
+A browser that
 reaches the service through an SSH tunnel at `localhost` can still sign
 in in the browser, as long as `MAILBOX_SERVICE_PUBLIC_URL` does not name
 another address.
@@ -43,9 +43,9 @@ a password change.
 Over the API, `POST /v1/oauth/microsoft/device` returns the code, the
 page to enter it at and a `sign_in_id`. Poll
 `POST /v1/oauth/microsoft/device/{sign_in_id}` every `interval` seconds
-until it answers with the connected account.
-`POST /v1/oauth/microsoft/start` returns the address for the sign-in in
-a browser, which comes back to the UI.
+until it answers with the connected account. The sign-in in a browser
+is the UI's alone: the provider sends the browser back to a page of
+the UI.
 
 The project's publisher is not verified with Microsoft. Work and school
 tenants often admit such apps only with their administrator's consent

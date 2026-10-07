@@ -79,8 +79,8 @@
               }
             }
           },
-          "404": {
-            "description": "Account or resource not found",
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -89,8 +89,8 @@
               }
             }
           },
-          "409": {
-            "description": "The request conflicts with what is stored, e.g. a name taken",
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -99,18 +99,8 @@
               }
             }
           },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -186,8 +176,8 @@
               }
             }
           },
-          "404": {
-            "description": "Account or resource not found",
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -196,8 +186,8 @@
               }
             }
           },
-          "409": {
-            "description": "The request conflicts with what is stored, e.g. a name taken",
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -206,18 +196,8 @@
               }
             }
           },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -399,6 +379,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -411,36 +431,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -524,6 +514,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -536,36 +566,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -652,6 +652,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -664,36 +704,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -788,6 +798,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -800,36 +850,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -907,6 +927,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -919,36 +979,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1046,6 +1076,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -1058,36 +1128,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1178,6 +1218,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -1190,36 +1270,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1314,6 +1364,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -1326,36 +1416,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1384,6 +1444,7 @@
           "users"
         ],
         "summary": "Revoke Token",
+        "description": "Ends the token at once. It stays in the user's list with its\n`revoked_at`, so a revoked token can still be told from one that\nnever was.",
         "operationId": "revoke_token",
         "security": [
           {
@@ -1411,15 +1472,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TokenInfo"
-                }
-              }
-            }
+          "204": {
+            "description": "Successful Response"
           },
           "400": {
             "description": "The request is not valid, e.g. a cursor or a right",
@@ -1451,6 +1505,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -1463,36 +1557,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1567,6 +1631,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -1579,36 +1683,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1682,6 +1756,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -1694,36 +1808,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1815,6 +1899,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -1827,36 +1951,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1951,6 +2045,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -1963,36 +2097,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2070,6 +2174,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -2082,36 +2226,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2268,6 +2382,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -2300,16 +2454,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2393,6 +2537,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -2425,16 +2609,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2521,6 +2695,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -2553,16 +2767,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2658,6 +2862,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -2690,16 +2934,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2777,6 +3011,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -2809,16 +3083,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -2905,6 +3169,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -2937,16 +3241,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3028,48 +3322,8 @@
               }
             }
           },
-          "404": {
-            "description": "Account or resource not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3088,71 +3342,8 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-permission": "accounts.connect"
-      }
-    },
-    "/v1/oauth/{provider}/start": {
-      "post": {
-        "tags": [
-          "accounts"
-        ],
-        "summary": "Start Oauth",
-        "description": "Where to send a browser to sign in at the provider: to connect a new\naccount (needs `create_account`) or, with `account_id`, to sign that\naccount in again (needs `update_account`). The provider sends the\nbrowser back to `/ui/oauth/{provider}/callback`, where the person signs\nin to the UI as the same user and the account is connected. Valid for\nten minutes. `400` with the project's app where this service is not\nat localhost: the provider sends a browser back to localhost only, so\nsign in with a code. `501` without an OAuth app for the provider, or\nwhen connecting a kind of account this deployment does not offer.",
-        "operationId": "start_oauth",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ProviderType"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OAuthStart"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OAuthStarted"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The request is not valid, e.g. a cursor or a right",
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3161,18 +3352,8 @@
               }
             }
           },
-          "401": {
-            "description": "Missing or wrong bearer token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The caller lacks the right for this operation",
+          "503": {
+            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3221,16 +3402,6 @@
               }
             }
           },
-          "503": {
-            "description": "No user exists yet",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -3242,6 +3413,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "x-permission": "accounts.connect"
       }
     },
@@ -3319,6 +3495,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -3351,16 +3567,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3456,6 +3662,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -3488,16 +3734,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3690,10 +3926,10 @@
                   "type": "null"
                 }
               ],
-              "description": "From this day on, e.g. 2026-09-01",
+              "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day",
               "title": "After"
             },
-            "description": "From this day on, e.g. 2026-09-01"
+            "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day"
           },
           {
             "name": "before",
@@ -3709,10 +3945,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Up to this day, not including it",
+              "description": "Up to this day, not including it: a day, YYYY-MM-DD",
               "title": "Before"
             },
-            "description": "Up to this day, not including it"
+            "description": "Up to this day, not including it: a day, YYYY-MM-DD"
           },
           {
             "name": "unread",
@@ -3804,6 +4040,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -3836,16 +4112,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -3975,6 +4241,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -4015,16 +4321,6 @@
               }
             }
           },
-          "503": {
-            "description": "No user exists yet",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "410": {
             "description": "The state is unknown or older than the changes kept (`changes_expired`). Start again without `since`.",
             "content": {
@@ -4055,7 +4351,7 @@
           "mailbox"
         ],
         "summary": "List All Sends",
-        "description": "The audit of sends of every account the caller may audit, newest\nfirst. An account deleted since stays in it for a caller whose grant\nnames every account. The filter parameters narrow the list together.",
+        "description": "The audit of sends of every account the caller may audit, or of\nthose named in `accounts`, newest first. An account deleted since\nstays in it for a caller whose grant names every account. The filter\nparameters narrow the list together.",
         "operationId": "list_all_sends",
         "security": [
           {
@@ -4063,6 +4359,27 @@
           }
         ],
         "parameters": [
+          {
+            "name": "accounts",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Account ids. Without: every account the caller may audit",
+              "title": "Accounts"
+            },
+            "description": "Account ids. Without: every account the caller may audit"
+          },
           {
             "name": "limit",
             "in": "query",
@@ -4162,10 +4479,10 @@
                   "type": "null"
                 }
               ],
-              "description": "At or after this time",
+              "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00",
               "title": "After"
             },
-            "description": "At or after this time"
+            "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00"
           },
           {
             "name": "before",
@@ -4181,10 +4498,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Before this time",
+              "description": "Before this time: ISO 8601 with a zone",
               "title": "Before"
             },
-            "description": "Before this time"
+            "description": "Before this time: ISO 8601 with a zone"
           }
         ],
         "responses": {
@@ -4228,6 +4545,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -4260,16 +4617,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4360,6 +4707,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -4392,16 +4779,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4497,6 +4874,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -4529,16 +4946,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4645,6 +5052,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -4677,16 +5124,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4774,6 +5211,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -4806,16 +5283,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -4997,10 +5464,10 @@
                   "type": "null"
                 }
               ],
-              "description": "From this day on, e.g. 2026-09-01",
+              "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day",
               "title": "After"
             },
-            "description": "From this day on, e.g. 2026-09-01"
+            "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day"
           },
           {
             "name": "before",
@@ -5016,10 +5483,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Up to this day, not including it",
+              "description": "Up to this day, not including it: a day, YYYY-MM-DD",
               "title": "Before"
             },
-            "description": "Up to this day, not including it"
+            "description": "Up to this day, not including it: a day, YYYY-MM-DD"
           },
           {
             "name": "unread",
@@ -5111,6 +5578,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -5143,16 +5650,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5248,6 +5745,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -5280,16 +5817,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5394,6 +5921,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -5426,16 +5993,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5535,6 +6092,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -5567,16 +6164,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -5637,10 +6224,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`.",
+              "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`. Without a key a retried request sends again.",
               "title": "Idempotency-Key"
             },
-            "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`."
+            "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`. Without a key a retried request sends again."
           }
         ],
         "requestBody": {
@@ -5694,6 +6281,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The grant's send limit is reached (`send_limit_reached`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -5726,26 +6353,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The grant's send limit is reached (`send_limit_reached`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -5890,10 +6497,10 @@
                   "type": "null"
                 }
               ],
-              "description": "At or after this time",
+              "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00",
               "title": "After"
             },
-            "description": "At or after this time"
+            "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00"
           },
           {
             "name": "before",
@@ -5909,10 +6516,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Before this time",
+              "description": "Before this time: ISO 8601 with a zone",
               "title": "Before"
             },
-            "description": "Before this time"
+            "description": "Before this time: ISO 8601 with a zone"
           }
         ],
         "responses": {
@@ -5956,6 +6563,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -5988,16 +6635,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -6115,6 +6752,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -6147,16 +6824,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -6282,6 +6949,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -6314,16 +7021,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -6419,6 +7116,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -6451,16 +7188,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -6567,6 +7294,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -6599,16 +7366,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -6696,6 +7453,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -6728,16 +7525,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -6807,10 +7594,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`.",
+              "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`. Without a key a retried request sends again.",
               "title": "Idempotency-Key"
             },
-            "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`."
+            "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`. Without a key a retried request sends again."
           }
         ],
         "responses": {
@@ -6854,6 +7641,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The grant's send limit is reached (`send_limit_reached`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -6886,26 +7713,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The grant's send limit is reached (`send_limit_reached`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -7003,6 +7810,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -7035,16 +7882,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -7136,6 +7973,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -7168,16 +8045,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -7278,6 +8145,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -7310,16 +8217,6 @@
           },
           "502": {
             "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -7456,6 +8353,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -7468,36 +8405,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -7582,6 +8489,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -7594,36 +8541,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -7711,6 +8628,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -7723,36 +8680,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -7830,6 +8757,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -7842,36 +8809,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -7976,10 +8913,10 @@
                   "type": "null"
                 }
               ],
-              "description": "At or after this time",
+              "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00",
               "title": "After"
             },
-            "description": "At or after this time"
+            "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00"
           },
           {
             "name": "before",
@@ -7995,10 +8932,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Before this time",
+              "description": "Before this time: ISO 8601 with a zone",
               "title": "Before"
             },
-            "description": "Before this time"
+            "description": "Before this time: ISO 8601 with a zone"
           },
           {
             "name": "limit",
@@ -8070,6 +9007,46 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Account or resource not found",
             "content": {
@@ -8082,36 +9059,6 @@
           },
           "409": {
             "description": "The request conflicts with what is stored, e.g. a name taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No user exists yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -8183,8 +9130,8 @@
               }
             }
           },
-          "404": {
-            "description": "Account or resource not found",
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -8193,8 +9140,8 @@
               }
             }
           },
-          "409": {
-            "description": "The request conflicts with what is stored, e.g. a name taken",
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -8203,18 +9150,8 @@
               }
             }
           },
-          "501": {
-            "description": "The provider cannot do this",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "The provider failed or rejected the credentials",
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -10402,51 +11339,6 @@
         "type": "object",
         "title": "MessageUpdate",
         "description": "What ``PATCH`` changes on a message. Fields left out stay as they are."
-      },
-      "OAuthStart": {
-        "properties": {
-          "account_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Account Id",
-            "description": "Sign this account in again. Left out: connect."
-          },
-          "login_hint": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 254
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Login Hint",
-            "description": "The address to suggest at the provider's sign-in."
-          }
-        },
-        "type": "object",
-        "title": "OAuthStart"
-      },
-      "OAuthStarted": {
-        "properties": {
-          "url": {
-            "type": "string",
-            "title": "Url",
-            "description": "The provider's sign-in page, for a browser."
-          }
-        },
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "title": "OAuthStarted"
       },
       "OutgoingAttachment": {
         "properties": {

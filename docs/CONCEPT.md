@@ -417,15 +417,17 @@ an app password is the credential to ask for.
   is used. Refresh tokens belong to the app that issued them, so after a
   change every Microsoft account signs in again. The UI offers both ways
   to sign in, in the browser and with a code, and the person chooses.
-  The API offers both as well: `POST /v1/oauth/{provider}/start` and
-  `POST /v1/oauth/{provider}/device`, then polling
-  `POST /v1/oauth/{provider}/device/{sign_in_id}`. A sign-in with a code
-  is bound to the user who started it, like the one in the browser, and
-  the provider is asked no more often than it allows.
+  The API offers the sign-in with a code: `POST
+  /v1/oauth/{provider}/device`, then polling
+  `POST /v1/oauth/{provider}/device/{sign_in_id}`. The sign-in in the
+  browser is the UI's alone, since the provider sends the browser back
+  to a page of the UI (decided 2026-10-07, after a review of the API:
+  an API caller could start it but never finish it). A sign-in with a
+  code is bound to the user who started it, like the one in the
+  browser, and the provider is asked no more often than it allows.
 - **Decided 2026-10-07:** where the project's app cannot send the browser
   back, because the service is not at localhost, the UI offers the
-  sign-in with a code only, and `POST /v1/oauth/{provider}/start`
-  answers `400`.
+  sign-in with a code only.
 - **Decided 2026-10-06:** `MAILBOX_SERVICE_PROVIDERS` names the kinds of
   account a deployment offers, a JSON list, every kind without it. The
   UI and the API offer only those: discovery leaves out the others, and
@@ -726,12 +728,10 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | PATCH | `/v1/accounts/{account_id}` | display name, settings, new password |
 | DELETE | `/v1/accounts/{account_id}` | remove, credentials deleted |
 | POST | `/v1/accounts/{account_id}/verify` | test the connection now |
-| POST | `/v1/oauth/{provider}/start` | start OAuth for Microsoft (later Gmail): the provider's sign-in URL, to connect an account or, with `account_id`, sign it in again |
 | POST | `/v1/oauth/{provider}/device` | sign in with a code (5.4): the code, the page to enter it at and a `sign_in_id`, to connect an account or, with `account_id`, sign it in again |
 | POST | `/v1/oauth/{provider}/device/{sign_in_id}` | poll the sign-in with a code: `connected` false until the person signed in, then the account, no sooner than its `interval` |
-| GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
+| GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back after the UI's sign-in in a browser: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
-| GET | `/v1/providers` | the built-in presets, the same data discovery uses first |
 | GET | `/v1/status` | the sync worker and the accounts the caller may see the status of, as the UI's status page shows them. Nothing is asked of a provider |
 
 **Decided 2026-10-06, the status at the API:** `get_status` in
@@ -768,12 +768,12 @@ Rules of the implementation (phase 2):
 |---|---|---|
 | GET | `/v1/messages` | list and search **across accounts** (6.6) |
 | GET | `{acc}/messages` | list and search in one account (6.6) |
-| GET | `{acc}/messages/{id}` | full message, `?body=text\|html\|both\|none` |
+| GET | `{acc}/messages/{id}` | full message, text and HTML body |
 | PATCH | `{acc}/messages/{id}` | `unread`, `starred`, `keywords`, `folder_ids` (a move is a change of `folder_ids`) |
 | DELETE | `{acc}/messages/{id}` | to trash, `?permanent=true` expunges |
 | GET | `{acc}/messages/{id}/raw` | RFC 822 source (`message/rfc822`) |
-| GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, streamed |
-| POST | `{acc}/messages/batch` | bulk `update` / `move` / `delete` for up to 100 ids, per-id result |
+| GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, with its type and file name |
+| POST | `{acc}/messages/batch` | bulk `update` / `delete` for up to 100 ids, per-id result. A move is an `update` of `folder_ids` |
 | GET | `{acc}/threads` | thread list, **planned** (6.3, ROADMAP) |
 | GET | `{acc}/threads/{thread_id}` | thread with its message summaries, **planned** |
 
@@ -817,7 +817,7 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
 | POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
 | GET | `{acc}/sends` | the audit of sends, newest first |
-| GET | `/v1/sends` | the audit of sends of every account the caller may audit, newest first |
+| GET | `/v1/sends` | the audit of sends of every account the caller may audit, or of those in `accounts`, newest first |
 
 **Decided 2026-09-24, reply and forward:**
 
@@ -957,13 +957,14 @@ not followed.
 | `folder` | folder id, or a role such as `inbox`. Left out: every folder on a Microsoft account, the inbox on IMAP |
 | `q` | free text (subject, addresses, body where the provider can) |
 | `from`, `to`, `subject` | structured filters |
-| `after`, `before` | date range, ISO 8601 |
+| `after`, `before` | days, `YYYY-MM-DD`: `after` includes its day, `before` does not. The audits take a time with a zone instead |
 | `unread`, `starred`, `has_attachments` | booleans |
 | `native` | provider's own syntax, passed through (Gmail search, IMAP SEARCH), capability `native_search` |
 | `limit` | 1–200, default 50 |
 | `cursor` | opaque, from `next_cursor` of the previous page |
 
-Every list answers `{"items": [...], "next_cursor": "..."}`. There is no
+Every paged list answers `{"items": [...], "next_cursor": "..."}`,
+`next_cursor` null on the last page. There is no
 total count, because IMAP and Graph cannot provide one cheaply after a
 filter.
 
@@ -1342,7 +1343,7 @@ with the role
   | `send` | `send_message`, `send_draft` |
   | `audit` | `list_sends`, `list_all_sends` on accounts, `list_activity` in `service` |
   | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, credentials of mail accounts |
-  | `accounts.connect` | `discover_account`, `start_oauth`, `start_device_oauth`, `poll_device_oauth`, `create_account`. Of the service |
+  | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account`. Of the service |
   | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook`. Of the service |
   | `users.read` | users, their tokens, roles, to read. Of the service |
   | `users.manage` | users, their tokens, roles. Of the service |

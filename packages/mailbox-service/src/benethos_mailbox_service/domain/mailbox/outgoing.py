@@ -183,13 +183,19 @@ class Outgoing:
         self,
         access: Access,
         *,
+        account_ids: list[str] | None = None,
         limit: int,
         cursor: str | None = None,
         matching: SendFilter | None = None,
     ) -> Page[SendRecord]:
-        """The sends of every account the caller may audit, newest first."""
+        """The sends of every account the caller may audit, or of those of
+        ``account_ids`` among them, newest first."""
         return self._sends.list_all_sends(
-            access, limit=limit, cursor=cursor, matching=matching
+            access,
+            account_ids=account_ids,
+            limit=limit,
+            cursor=cursor,
+            matching=matching,
         )
 
     # --- composing ------------------------------------------------------------------
