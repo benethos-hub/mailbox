@@ -51,7 +51,7 @@ async with MailboxClient() as mailbox:
 ```
 
 For code without an event loop, `SyncMailboxClient` has the same
-methods and answers the same records:
+methods (`close()` for `aclose()`) and answers the same records:
 
 ```python
 from benethos_mailbox_client import SyncMailboxClient, message_body
@@ -105,8 +105,8 @@ Everything the client raises is a `MailboxError`:
 Each endpoint is described once, in `endpoints.py`: its method, path,
 query, body and how its answer becomes a record. That module sends
 nothing. `MailboxClient` sends those requests with `httpx.AsyncClient`,
-`SyncMailboxClient` with `httpx.Client`, and each method of either is
-one line.
+`SyncMailboxClient` with `httpx.Client`, and a method of either is a
+line or two, `get_attachment`, which streams, a few more.
 
 ## License
 

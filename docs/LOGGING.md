@@ -49,8 +49,9 @@ Three readers, three questions:
   counts: a sync pass of one account, an IDLE renewed, a token refreshed,
   an idempotent send replayed, a discovery lookup. Never the wire
   traffic of a library.
-- **`TRACE`**: the libraries' own debug output, never `imaplib`'s, which
-  echoes the login.
+- **`TRACE`**: below `DEBUG`, for the service's own loggers and
+  uvicorn's. Libraries stay at `WARNING` whatever the level, `imaplib`
+  in particular, which echoes the login.
 
 The service's own loggers follow `MAILBOX_SERVICE_LOG_LEVEL`, libraries
 log from `WARNING` on, as `logs.py` sets it. `INFO` is the default: a day
@@ -297,8 +298,8 @@ the limit engages, not per refused request.
 Its own process, its own log on stderr, its own rules, the same spirit:
 
 - `INFO` at start: transport, the service's URL, which tools were
-  registered, the warning per account that reads mail and sends
-  anywhere.
+  registered, and before it a `WARNING` per account that reads mail
+  and sends anywhere.
 - `WARNING` for a tool that failed, with the tool's name and the code of
   the service's error and its HTTP status, not its message: a message
   may repeat an address or a search term the model sent. A refusal of
@@ -355,9 +356,9 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    secret is masked in message, argument and traceback.
 8. **The CLI prints, the service logs.** A command talks to the person
    at the terminal on stderr, and a command that changes the database
-   (`users`, `keys`, `restore`) writes the same as a log line, so the log
-   page of the next start knows it. Whether that line survives is the
-   host's business.
+   (`users`, `keys`, `restore`) records the same as an activity, so the
+   audit keeps it. A command sets up no log, so its line reaches no
+   handler, and the log page shows the lines of its own process alone.
 9. **One time in every line.** Every line writes the time alike, at
    every place and in every format: ISO 8601, the local time of the
    machine, to the millisecond, with the offset:
@@ -398,7 +399,8 @@ domain/
       sync.py          a pass, a failed sync, IDLE
       changes.py       the change log purged
       webhooks.py      created, removed, a post failed, given up
-      http.py          what the web layer refuses: a body too large
+      http.py          what the web layer refuses: a body too large,
+                         a caller out of requests
 ```
 
 - **`Activity`** is a frozen dataclass. Every activity carries who acted and

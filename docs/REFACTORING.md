@@ -904,7 +904,7 @@ so. Built the same day.
 | 3.6 | #82 | One translation of errors per protocol (`transport.translated`, `http.refused`). The IMAP session in parts. |
 | 3.7 | #83 | Ids, cursors and settings read back into frozen dataclasses with named fields. |
 | 3.8 | #84 | `app.state` and `request.state` read with their types in one place each. |
-| 3.9 | this | The limits below, checked. |
+| 3.9 | #85 | The limits below, checked. |
 
 ### 12.3 The limits
 
@@ -922,3 +922,18 @@ Decided by the user: hard limits, without exceptions and without
 When the limits came in, one module was beyond them:
 `domain/mailbox/outgoing.py`, 504 lines. Its checks of a message went
 to `checks.py`.
+
+### 12.4 After the list
+
+What a review of the code after the list found, built the same day,
+one pull request each:
+
+| Pull request | What came of it |
+| --- | --- |
+| #86 | The packaging tests check the three packages alike. |
+| #87 | `common/text.py`, `common/urls.py` and `common/retention.py`: text on one line, URLs read one way, one retention for the audits and the change log, purged at start as well. |
+| #88 | No `assert` in the code (ruff `S101`), a sign-in with a code that survives an unreachable provider, the MCP server's client made in its lifespan, `from_environment()` in the client, the day filters in local time. |
+| #89 | Shared helpers: cursors, the filters of the list pages, canonical JSON, `common/secret.py`. |
+| #90 | The MCP server's client reaches its tools on every transport. |
+| #91 | A helper of `common/` exists once, checked by the architecture test (ARCHITECTURE 2). |
+| #92 | `trim` and `KeyedLocks` in `common/`, which may import anyio since, the size limits for the tests and `live/` too, `test_code_rules.py` apart from `test_architecture.py`. |

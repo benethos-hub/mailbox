@@ -23,8 +23,9 @@ done. Update the roadmap in the same commit that finishes an item.
    are never logged, never returned in a response and redacted from error
    text. No real address, credential or message content in any versioned file.
 6. **The MCP server is a REST client.** It reaches mail only through the REST
-   API, in its own package that cannot see the service. Anything the MCP server needs
-   that the API lacks is added to the API first.
+   API, with the client package `mailbox-client`, in packages that cannot
+   see the service. Anything the MCP server needs that the API lacks is
+   added to the API first.
 7. **Encapsulate, keep parts replaceable.** Every external library,
    protocol and storage sits behind an interface this project owns, so it
    can be exchanged by rewriting one module. See
@@ -53,10 +54,11 @@ done. Update the roadmap in the same commit that finishes an item.
   `http://127.0.0.1:8080/ui` as `admin`, choose a password, and make a
   token on the user's page for the API (`/docs`).
 - Live checks: `uv run python live/smoke.py [--show]` (read-only) and
-  `uv run python live/changes.py [--keep]` (sends one test mail between the test
-  accounts, moves it, deletes it, and checks the change feed and a
-  webhook on a receiver at 127.0.0.1), test
-  accounts in `live/.env` (not
+  `uv run python live/changes.py [--keep]` (sends one test mail from the
+  second test account to the first, flags and moves it, replies,
+  forwards and sends a draft back to the second, makes and removes a
+  folder, deletes it all for good, and checks the change feed and a
+  webhook on a receiver at 127.0.0.1), test accounts in `live/.env` (not
   versioned, template `live/.env.example`).
   `MAILBOX_SERVICE_TOKEN=... uv run python live/register.py` adds the test
   accounts to a running service over its API and checks them.
@@ -67,8 +69,9 @@ done. Update the roadmap in the same commit that finishes an item.
   accounts, with a service and database of its own. The write tools create
   a folder and star, move and trash a message of the first test account,
   then put everything back. The draft tools write, replace and delete a
-  reply draft there. The send tools send two mails from the first test
-  account to the second and delete them for good. Grants with recipients
+  reply draft there. The send tools send three mails from the first test
+  account to the second, one of them twice with the same call and one
+  from a draft, and delete them for good. Grants with recipients
   and a send limit stop mails, and the audit names each attempt.
   `whats_new` must name the changes of the write tools.
   `uv run python live/mcp_http.py` checks it over streamable HTTP behind
@@ -77,12 +80,14 @@ done. Update the roadmap in the same commit that finishes an item.
   name and a password. The live checks with a service of their own make
   its first user with `users create-admin`, change the one-time password
   in the UI and make a token there, as an operator would.
-  `uv run python live/ui.py` checks it against the test accounts. It sends
-  one mail from the first test account to the second and deletes it for
-  good on both sides. It also opens the status, adds and removes a
-  webhook, shows the recovery key of its own service, reads its log,
-  makes a user with a one-time password and reads the audit of
-  administration.
+  `uv run python live/ui.py` checks it against the test accounts. It
+  connects the second test account through the UI, writes a folder and
+  a draft on the first and removes them, and sends one mail from the
+  first to the second, deleted for good on both sides. It also makes a
+  user, a role and a token and uses the token on the API, opens the
+  status, adds and removes a webhook, shows the recovery key of its own
+  service, reads its log, makes a user with a one-time password and
+  reads the audit of administration.
   How the pages look and behave, and the checklist for a new page:
   `docs/UI.md`.
 - Microsoft accounts: the service comes with the project's app,
@@ -91,10 +96,10 @@ done. Update the roadmap in the same commit that finishes an item.
   the browser), then `uv run python live/microsoft.py` checks the adapter
   against the Microsoft test account in `live/.env` with that app. With
   `--project` both use the project's app: `--connect` prints a code a
-  person enters at Microsoft. It sends one mail
-  from it to the first test account and deletes it for good on both sides,
-  and checks that the change feed learns of the sent copy through Graph
-  delta queries.
+  person enters at Microsoft. It makes and removes a folder and a reply
+  draft there, sends one mail from it to the first test account and
+  deletes it for good on both sides, and checks that the change feed
+  learns of the sent copy through Graph delta queries.
 - A test mail server of our own: `sh containers/test-mail-server/setup.sh`
   makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
   `127.0.0.1:30xxx`, two accounts and a local test CA

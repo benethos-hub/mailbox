@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "benethos-mailbox-mcp"
 version = "0.2.0"
-description = "MCP server that gives AI assistants such as Claude your mailboxes through mailbox-service, limited to what its token may do. Over stdio or HTTP."
+description = "MCP server that gives AI agents your mailboxes through mailbox-service: read, sort, draft and send mail, only within the rights, folders and send limits its token holds. Over stdio or HTTP."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -15,15 +15,17 @@ keywords = [
     "mcp",
     "mcp-server",
     "model-context-protocol",
-    "claude",
-    "ai-assistant",
-    "llm-tools",
+    "ai-agents",
+    "llm",
     "email",
     "imap",
+    "jmap",
+    "pop3",
     "outlook",
     "microsoft-365",
     "multi-account",
     "email-automation",
+    "self-hosted",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

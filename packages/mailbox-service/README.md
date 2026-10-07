@@ -15,9 +15,11 @@ API (OpenAPI 3.1) for several mail
 providers and accounts, with a configuration UI in the browser. It runs
 permanently, holds the connections to the accounts, keeps their
 credentials encrypted and syncs in the background. It keeps a feed of
-what changed in the mailboxes and posts it to webhooks. Scripts, apps and
-the
-MCP server [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp)
+what changed in the mailboxes and posts it to webhooks. Scripts and
+apps, through the Python client
+[`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client),
+and the MCP server
+[`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp)
 reach mail only through it, each with a token of its own.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
@@ -216,7 +218,7 @@ holds is written as `***`, should a message or a traceback carry one.
 |---|---|
 | `serve [--host H] [--port P]` | runs the service |
 | `keys init` | creates the keys, prints the recovery key once |
-| `keys import` | stores the master key from a recovery key read from stdin, e.g. on a new machine |
+| `keys import` | stores the master key from a recovery key, typed at a hidden prompt or piped in, e.g. on a new machine |
 | `keys generate` | prints a new master key for a key file or a container secret, stores nothing |
 | `users create-admin [--name N]` | creates a user with every right and prints a one-time password |
 | `users set-password NAME` | gives the user a new one-time password and prints it, and switches its UI sign-in on |
@@ -231,8 +233,9 @@ credentials, never mail. It is encrypted as a whole and opens only with
 the master key or the recovery key, which are not in it. `restore` keeps
 the previous database beside the restored one. It refuses while a
 service runs on the database: a running service holds the lock file
-`mailbox.db.lock` beside it. With `--recovery-key` it reads the recovery
-key from stdin, for a new machine. When the key provider holds another
+`mailbox.db.lock` beside it. With `--recovery-key` it asks for the
+recovery key, at a hidden prompt or from stdin when piped, for a new
+machine. When the key provider holds another
 master key there, `restore` refuses: the database kept beside the
 restored one opens with that key alone. Note its recovery key, then pass
 `--replace-master-key`.
@@ -274,7 +277,8 @@ is allowed. The format of a post is in
 ## Container
 
 The image `ghcr.io/benethos-hub/benethos-mailbox-service` runs as an
-unprivileged user on a read-only root file system. It takes its settings
+unprivileged user, and the commands below run it on a read-only root
+file system. It takes its settings
 from the environment only and sets `MAILBOX_SERVICE_HOST=0.0.0.0`,
 `MAILBOX_SERVICE_DATA_DIR=/data`, `MAILBOX_SERVICE_KEY_PROVIDER=file` and
 `MAILBOX_SERVICE_KEY_FILE=/run/secrets/master_key`. The database lives in the

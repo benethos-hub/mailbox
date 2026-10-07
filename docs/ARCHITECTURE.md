@@ -184,7 +184,8 @@ packages/mailbox-service/
       urls.py           # URLs read one way: host_of, is_loopback,
                         #   path_and_query
       text.py           # text on one line: escaped for the log, joined
-                        #   for a header, ends_line for the wire, plural
+                        #   for a header, has_break and ends_line for
+                        #   the wire, plural
       retention.py      # Retention: how long records are kept, when the
                         #   old ones are due to go
       bounded.py        # trim: tables in memory with a cap
@@ -244,10 +245,13 @@ packages/mailbox-service/
                         #   what an adapter does not implement
       discovery/        # DiscoveryService: trust, ranking, cache, limits
       mailbox/          # MailboxService, the facade for mail: calls under
-                        #   our ids, lists across accounts (across,
-                        #   merge), replies, sending and drafts
-                        #   (outgoing, its checks), grant limits and the
-                        #   send audit, Idempotency-Key
+                        #   our ids, the folders a grant reaches (reach),
+                        #   lists across accounts (across, merge),
+                        #   replies, sending and drafts (outgoing, its
+                        #   checks), grant limits and the send audit
+                        #   (sending), Idempotency-Key and the
+                        #   fingerprint of a request (idempotency,
+                        #   fingerprint)
       sync/             # SyncService (stable message ids, the sync pass),
                         #   what a pass finds (passes), SyncWorker
                         #   (polling and IDLE)
@@ -258,10 +262,12 @@ packages/mailbox-service/
       system/           # the service at a glance: StatusService, and to
                         #   admin RecoveryKey and ServiceLog
       activity/         # what was done, and by whom: the service log.
-                        #   Activity, ActivityLog, catalogue/ one module
-                        #   per area: activity.<area>.<name>
-                        #   (docs/LOGGING.md 7.2), Audit: those marked
-                        #   audited kept and read (docs/AUDIT.md)
+                        #   Activity (base.py), ActivityLog (recorder.py),
+                        #   catalogue/ one module per area of the domain,
+                        #   and http for what the web layer refuses:
+                        #   activity.<area>.<name> (docs/LOGGING.md 7.2),
+                        #   Audit (audit.py): those marked audited kept
+                        #   and read (docs/AUDIT.md)
       paging.py         # the cursors this service hands out itself, the
                         #   page they continue, encode_before and
                         #   decode_before for a list newest first
@@ -325,8 +331,9 @@ packages/mailbox-service/
                         #   endpoints and the scopes it needs.
                         #   pop3: one inbox, a session per step
       storage/          # own records, one module per subject, table.py
-                        #   for the in-memory ones, sqlite/ the database,
-                        #   sqlite/migrations/ the base, the registry,
+                        #   for the in-memory ones, sqlite/ the database
+                        #   (database.py) and its rows read typed
+                        #   (rows.py), sqlite/migrations/ the base, the registry,
                         #   versions/ one class per schema version,
                         #   repositories.py opens one of them
       secrets/          # envelope encryption, key providers, password
@@ -377,10 +384,12 @@ packages/mailbox-mcp/
     __main__.py         # python -m, calls cli.py
     cli.py              # the command line: options, MAILBOX_MCP_*, the
                         #   log, the start over stdio or HTTP
-    server.py           # MCPServer: the tools the token's rights allow,
-                        #   each logged when it fails
+    server.py           # build_server: the MCP library's server with
+                        #   the tools the token's rights allow, each
+                        #   logged when it fails
     transport.py        # streamable HTTP: bearer guard, host check (uvicorn)
-    tools/              # one module per kind, each with its part of TOOLS
+    tools/              # one module per kind with its part of TOOLS,
+                        #   and what the kinds share
       base.py           # Tool, reads()/changes(), result(): text and
                         #   images, client(): the one of the server the
                         #   tool runs in, made in its lifespan
@@ -532,10 +541,10 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas` for what it can beyond; `Capability`, `capabilities_of`), registry in `data/providers/registry.py`. The domain answers 501 for a missing protocol (`domain/accounts/abilities.py`) | memory, imap, microsoft, pop3, jmap (planned: gmail) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas` for what it can beyond; `Capability` of `data/models/accounts.py`, `capabilities_of`), registry in `data/providers/registry.py`. The domain answers 501 for a missing protocol (`domain/accounts/abilities.py`) | memory, imap, microsoft, pop3, jmap (planned: gmail) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
