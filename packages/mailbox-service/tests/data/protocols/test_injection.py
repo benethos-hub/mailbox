@@ -19,7 +19,7 @@ from benethos_mailbox_service.data.protocols import Server
 from benethos_mailbox_service.data.protocols.imap import ImapSession
 from benethos_mailbox_service.data.protocols.pop3 import Pop3Session
 from benethos_mailbox_service.data.protocols.smtp import SmtpLogin, SmtpSession
-from benethos_mailbox_service.data.protocols.transport import one_line
+from benethos_mailbox_service.data.protocols.transport import refuse_line_ends
 from benethos_mailbox_service.data.providers.jmap import mappers as jmap
 from benethos_mailbox_service.data.providers.microsoft import mappers as graph
 from benethos_mailbox_service.errors import BadRequestError, MailboxServiceError
@@ -46,12 +46,12 @@ class Unreachable:
 @pytest.mark.parametrize("end", ENDS)
 def test_a_line_end_is_refused(end: str) -> None:
     with pytest.raises(BadRequestError, match="the password must not hold"):
-        one_line("me", f"secret{end}A1 DELETE INBOX", what="the password")
+        refuse_line_ends("me", f"secret{end}A1 DELETE INBOX", what="the password")
 
 
 @pytest.mark.parametrize("value", HARMLESS)
 def test_what_ends_no_line_passes(value: str) -> None:
-    one_line(f"a{value}b", what="it")
+    refuse_line_ends(f"a{value}b", what="it")
 
 
 @pytest.mark.parametrize("end", ENDS)

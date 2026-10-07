@@ -24,7 +24,7 @@ import httpx
 from ....errors import ProviderError
 from ..transport import Pick
 from .api import MAX_BYTES, TIMEOUT, Answer
-from .base import host_of, parse_url, pinned_request, read_capped, unreachable
+from .base import parse_url, pinned_request, read_capped, unreachable, wire_host
 
 # A line of an event stream: one event's data is a small JSON object.
 MAX_LINE = 64 * 1024
@@ -126,7 +126,7 @@ class ServerClient:
         target = parse_url(url)
         if target.scheme != "https" or not target.raw_host:
             raise ProviderError("refused to call a server without HTTPS")
-        host = host_of(target)
+        host = wire_host(target)
         port = target.port or 443
         address = (
             await anyio.to_thread.run_sync(self._pick, host, port)

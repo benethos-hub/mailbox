@@ -68,7 +68,7 @@ def parse_url(url: str) -> httpx.URL:
         raise ProviderError(f"not a URL: {exc}") from None
 
 
-def host_of(target: httpx.URL) -> str:
+def wire_host(target: httpx.URL) -> str:
     """The host of ``target`` as it goes on the wire: ASCII, lower case."""
     return target.raw_host.decode("ascii").lower()
 

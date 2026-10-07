@@ -166,8 +166,3 @@ def account(record: Account) -> str:
 def user(record: User) -> str:
     """A user as a line names it: its name and its id."""
     return f"{record.name} ({record.id})"
-
-
-def plural(count: int, word: str) -> str:
-    """``1 webhook``, ``2 webhooks``."""
-    return f"{count} {word}" if count == 1 else f"{count} {word}s"

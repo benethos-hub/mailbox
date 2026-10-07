@@ -13,10 +13,11 @@ feed across accounts mean the same point.
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Iterable
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from ...common.clock import utc_now
+from ...common.retention import Retention
 from ...data.models import FEED_KINDS, Change, ChangePage, ChangeRecord
 from ...data.storage import ChangeLogRepository, LoggedChange
 from ...errors import ChangesExpiredError
@@ -27,8 +28,6 @@ from .catalogue import MailboxChange
 
 STATE = "chs_"
 DEFAULT_DAYS = 7
-# How often at most the log is purged while changes come in.
-PURGE_EVERY = timedelta(hours=1)
 
 
 class ChangeFeed:
@@ -41,10 +40,9 @@ class ChangeFeed:
         activity: ActivityLog | None = None,
     ) -> None:
         self._log = log
-        self._keep = timedelta(days=days)
+        self._retention = Retention(days)
         self._clock = clock
         self._activity = activity or ActivityLog(clock)
-        self._purged_at: datetime | None = None
 
     def record(self, change: MailboxChange) -> None:
         """One record for each id the change names, in this order."""
@@ -62,7 +60,7 @@ class ChangeFeed:
         if not records:
             return
         self._log.append(records)
-        if self._purged_at is None or now - self._purged_at >= PURGE_EVERY:
+        if self._retention.due(now):
             self.purge()
 
     def page(
@@ -122,9 +120,9 @@ class ChangeFeed:
     def purge(self) -> None:
         """Removes the changes older than the days to keep."""
         now = self._clock()
-        before = now - self._keep
+        before = self._retention.cutoff(now)
         purged = self._log.purge(before)
-        self._purged_at = now
+        self._retention.done(now)
         if purged:
             self._activity.record(
                 said.ChangesPurged(by=SERVICE, count=purged, before=before)

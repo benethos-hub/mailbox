@@ -124,6 +124,7 @@ def build_services(
             repositories=repositories,
             activity=records.activity,
             oauth_clients=clients,
+            purges=(records.activity.purge, changes.purge, services.sends.purge),
         )
     except BaseException:
         # A part that cannot be built, such as a client secret file that

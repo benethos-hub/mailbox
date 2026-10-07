@@ -167,6 +167,12 @@ packages/mailbox-service/
       ratelimit.py      # pacing: a token bucket and a backoff
       plaintext.py      # the text of an HTML body, for a mail and a page
       hosts.py          # host names in one form: ASCII, Unicode, syntax
+      urls.py           # URLs read one way: host_of, is_loopback,
+                        #   path_and_query
+      text.py           # text on one line: escaped for the log, joined
+                        #   for a header, ends_line for the wire, plural
+      retention.py      # Retention: how long records are kept, when the
+                        #   old ones are due to go
       sizes.py          # MIB, and a size in megabytes for a message
       chunks.py         # batched: a sequence in slices
     web/                # PRESENTATION: HTTP only, FastAPI lives here

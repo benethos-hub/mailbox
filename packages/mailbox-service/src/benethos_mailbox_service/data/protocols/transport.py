@@ -4,13 +4,13 @@ value beyond ASCII. Translated once, here."""
 
 from __future__ import annotations
 
-import re
 import ssl
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
+from ...common.text import ends_line
 from ...errors import (
     BadRequestError,
     MailboxServiceError,
@@ -30,11 +30,6 @@ Rule = tuple[
 Pick = Callable[[str, int], str]
 
 
-# What ends a command of a protocol of lines, or a string in one: CR, LF
-# and NUL. IMAP, POP3 and SMTP quote a value, if at all, but keep these.
-_LINE_END = re.compile(r"[\r\n\x00]")
-
-
 def text(value: bytes | str) -> str:
     """What a server sent, as text: bytes decoded as UTF-8, anything that
     is not replaced rather than refused."""
@@ -48,11 +43,12 @@ def names(values: Iterable[bytes | str]) -> frozenset[str]:
     return frozenset(text(value).upper() for value in values)
 
 
-def one_line(*values: str, what: str) -> None:
+def refuse_line_ends(*values: str, what: str) -> None:
     """Refuse ``values`` that would end the command they go into and
-    start one of the caller's choosing (command injection). ``what`` names
-    them in the refusal."""
-    if any(_LINE_END.search(value) for value in values):
+    start one of the caller's choosing (command injection). IMAP, POP3
+    and SMTP quote a value, if at all, but keep CR, LF and NUL. ``what``
+    names them in the refusal."""
+    if ends_line(*values):
         raise BadRequestError(f"{what} must not hold a line break")
 
 

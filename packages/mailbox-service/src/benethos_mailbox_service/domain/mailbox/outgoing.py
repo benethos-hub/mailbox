@@ -16,6 +16,7 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from ...common.clock import utc_now
+from ...common.text import joined
 from ...data.mail import compose, convert
 from ...data.models import (
     Account,
@@ -218,7 +219,7 @@ class Outgoing:
             # One stored before names were checked may break a line.
             Recipient.model_construct(
                 email=account.email,
-                name=compose.one_line(account.display_name or "") or None,
+                name=joined(account.display_name or "") or None,
             ),
             self._date(),
             message_id,

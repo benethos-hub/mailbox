@@ -4,7 +4,6 @@ rights. The live adapter of each is ``adapters``."""
 from __future__ import annotations
 
 import builtins
-import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 
 from pydantic import SecretStr
@@ -12,6 +11,7 @@ from pydantic import SecretStr
 from ...common import redact
 from ...common.hosts import address_problem, is_server
 from ...common.ids import new_id
+from ...common.text import has_break
 from ...data.models import Account, AccountStatus, Page, ProviderType
 from ...data.protocols import HostCheck
 from ...data.providers import (
@@ -385,7 +385,6 @@ class AccountService:
 
 # The display name goes into the From of every send, on one line, and
 # into the log. No line break, no other control character.
-_NOT_IN_NAME = re.compile(r"[\x00-\x1f\x7f\x85\u2028\u2029]")
 LONGEST_NAME = 200
 
 
@@ -396,7 +395,7 @@ def _one_line_name(name: str | None) -> None:
         raise BadRequestError(
             f"the display name is longer than {LONGEST_NAME} characters"
         )
-    if _NOT_IN_NAME.search(name):
+    if has_break(name):
         raise BadRequestError(
             "the display name must not hold a line break or a control character"
         )

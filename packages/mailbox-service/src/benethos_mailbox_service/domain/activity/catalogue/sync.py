@@ -6,8 +6,9 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
+from ....common.text import plural
 from ....data.models import Account
-from ..base import Activity, Failure, account, plural
+from ..base import Activity, Failure, account
 
 
 @dataclass(frozen=True, kw_only=True)

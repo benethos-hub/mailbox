@@ -19,6 +19,7 @@ from typing import NamedTuple
 from pydantic import ValidationError
 
 from ...common.plaintext import from_html
+from ...common.text import joined
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
 from .fields import ascii_domain, wire_address
 from .fields import message_id as one_message_id
@@ -114,7 +115,7 @@ def _headers(
         mail[REFERENCE_HEADER] = reference
     if message.reply_to:
         mail["Reply-To"] = ", ".join(_address(r) for r in message.reply_to)
-    mail["Subject"] = one_line(message.subject)
+    mail["Subject"] = joined(message.subject)
     # RFC 5322 requires both. Without Date clients show no date.
     mail["Date"] = format_datetime(date)
     mail["Message-ID"] = message_id
@@ -131,9 +132,9 @@ def _parts(mail: EmailMessage, message: DraftMessage, extras: Extras) -> None:
         mail.add_alternative(message.html, subtype="html")
     files = [(a.filename, a.content_type, a.data) for a in message.attachments]
     for filename, content_type, data in [*extras.attachments, *files]:
-        maintype, _, subtype = one_line(content_type).partition("/")
+        maintype, _, subtype = joined(content_type).partition("/")
         mail.add_attachment(
-            data, maintype=maintype, subtype=subtype, filename=one_line(filename)
+            data, maintype=maintype, subtype=subtype, filename=joined(filename)
         )
     if extras.attached_message is not None:
         original = message_from_bytes(extras.attached_message, policy=default)
@@ -195,16 +196,10 @@ def references(original_raw: bytes) -> tuple[str | None, tuple[str, ...]]:
     return message_id, (*chain, message_id) if message_id else chain
 
 
-def one_line(value: str) -> str:
-    """``value`` on one line: every line break, including the Unicode ones
-    the standard library refuses in a header, becomes a space."""
-    return " ".join(value.splitlines())
-
-
 def prefixed(prefix: str, subject: str | None) -> str:
     """``Re: Subject`` or ``Fwd: Subject``, not ``Re: Re: Subject``. On one
     line, whatever the original's subject carried."""
-    subject = one_line(subject or "").strip()
+    subject = joined(subject or "").strip()
     if subject.lower().startswith(prefix.lower()):
         return subject
     return f"{prefix} {subject}".strip()
@@ -248,7 +243,7 @@ def _who(address: Address | None) -> str:
     """Who wrote the original, for people to read."""
     if address is None:
         return "unknown"
-    name = one_line(address.name or "")
+    name = joined(address.name or "")
     return f"{name} <{address.email}>" if name else address.email
 
 
@@ -278,5 +273,5 @@ def _formatted(name: str | None, email: str) -> str:
     it came from, the domain in punycode."""
     local, _, domain = wire_address(email).rpartition("@")
     return str(
-        HeaderAddress(display_name=one_line(name or ""), username=local, domain=domain)
+        HeaderAddress(display_name=joined(name or ""), username=local, domain=domain)
     )

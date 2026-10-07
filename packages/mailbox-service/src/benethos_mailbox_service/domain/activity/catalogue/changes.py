@@ -8,7 +8,8 @@ from datetime import datetime
 from typing import ClassVar
 
 from ....common.clock import log_time
-from ..base import Activity, plural
+from ....common.text import plural
+from ..base import Activity
 
 
 @dataclass(frozen=True, kw_only=True)

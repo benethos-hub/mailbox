@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 
 from ... import __version__
 from ...common.clock import log_time, utc_now
+from ...common.urls import path_and_query
 from ...data.models import Address
 from .navigation import navigation, own_page
 from .session import PATH, SignInRequiredError, found_for, show_once
@@ -157,7 +158,7 @@ def local_path(value: str | None, fallback: str) -> str:
     inside = parts.path == PATH or parts.path.startswith(PATH + "/")
     if parts.scheme or parts.netloc or not inside:
         return fallback
-    return f"{parts.path}?{parts.query}" if parts.query else parts.path
+    return path_and_query(value or "")
 
 
 def page_links(request: Request, cursor: str | None) -> tuple[str | None, str | None]:

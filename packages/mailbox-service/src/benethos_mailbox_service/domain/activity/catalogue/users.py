@@ -9,8 +9,9 @@ from datetime import datetime
 from typing import ClassVar
 
 from ....common.clock import log_time
+from ....common.text import plural
 from ....data.models import User
-from ..base import Activity, plural, user
+from ..base import Activity, user
 
 
 @dataclass(frozen=True, kw_only=True)

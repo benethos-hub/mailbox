@@ -13,6 +13,7 @@ from urllib.parse import quote, urlsplit
 
 import anyio
 
+from ....common.urls import path_and_query
 from ....errors import (
     BadRequestError,
     MailboxServiceError,
@@ -303,10 +304,9 @@ def _session(body: bytes) -> Session:
 def _own(url: str) -> str:
     """The path and query of a URL the session names, for the server the
     account names (see the module's docstring)."""
-    parts = urlsplit(url)
-    if not parts.path.startswith("/"):
+    if not urlsplit(url).path.startswith("/"):
         raise ProviderError("the JMAP session names a URL without a path")
-    return parts.path + (f"?{parts.query}" if parts.query else "")
+    return path_and_query(url)
 
 
 def _expand(template: str, **values: str) -> str:

@@ -24,7 +24,7 @@ from ...errors import (
 )
 from ..mail import fields
 from . import transport
-from .transport import Server, one_line, text
+from .transport import Server, refuse_line_ends, text
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}
 # What no address in MAIL FROM or RCPT TO may hold: a blank, which ends
@@ -118,7 +118,7 @@ class SmtpSession:
                 if login.auth == "xoauth2":
                     # SASL XOAUTH2: user, bearer token, separated by ^A,
                     # which neither may hold.
-                    one_line(
+                    refuse_line_ends(
                         login.username, login.secret, what="the user name or token"
                     )
                     if "\1" in login.username + login.secret:
