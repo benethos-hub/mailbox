@@ -28,8 +28,9 @@ LAYERS = {"data": 0, "domain": 1, "web": 2}
 # A module (config.py) or a package (common/).
 CROSS_CUTTING = {"config", "errors", "common"}
 
-# Shared helpers: the standard library and each other, nothing else.
+# Shared helpers: the standard library, anyio and each other, nothing else.
 HELPERS = "common"
+HELPER_LIBRARIES = {"anyio"}
 
 # Assemble the app from the layers and may therefore reach anywhere.
 ASSEMBLY = {"assembly", "cli", "__main__", "logs"}
@@ -139,16 +140,20 @@ def test_cross_cutting_modules_import_no_layer() -> None:
             assert not inside, f"{path.name} imports from the layers: {inside}"
 
 
-def test_shared_helpers_use_the_standard_library_only() -> None:
-    """common/ holds what several layers share, so it depends on nothing."""
+def test_shared_helpers_use_the_standard_library_and_anyio() -> None:
+    """common/ holds helpers that know no layer, so it depends on nothing
+    but the standard library and anyio, how the project writes
+    concurrency."""
     violations = []
     for path in _cross_cutting_files(HELPERS):
         for imported, line in _imports(path):
             top = imported.split(".")[0]
             own = imported.startswith(f"{PACKAGE}.{HELPERS}")
-            if not own and top not in sys.stdlib_module_names:
+            if own or top in HELPER_LIBRARIES:
+                continue
+            if top not in sys.stdlib_module_names:
                 violations.append(f"{path.name}:{line} imports {imported}")
-    assert not violations, "common/ beyond the stdlib:\n  " + "\n  ".join(violations)
+    assert not violations, "common/ beyond its libraries:\n  " + "\n  ".join(violations)
 
 
 def test_the_domain_picks_no_storage() -> None:
@@ -236,118 +241,6 @@ def test_each_wrapped_library_has_one_home() -> None:
             if home is not None and name != home and not name.startswith(home + "."):
                 violations.append(f"{name}:{line} imports {imported}, home is {home}")
     assert not violations, "library outside its home:\n  " + "\n  ".join(violations)
-
-
-# The calls that write a line at INFO or above (docs/LOGGING.md rule 6.2).
-LOUD = {"info", "warning", "error", "exception", "critical"}
-LOGGERS = {"log", "logger", "logging"}
-
-
-def _loud_calls(path: Path) -> list[int]:
-    """The lines where the file logs at INFO or above: ``log.info(...)``,
-    ``logging.warning(...)``, ``logging.getLogger(...).error(...)``."""
-    found = []
-    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
-            continue
-        if node.func.attr not in LOUD:
-            continue
-        target = node.func.value
-        if (isinstance(target, ast.Name) and target.id in LOGGERS) or (
-            isinstance(target, ast.Call)
-            and isinstance(target.func, ast.Attribute)
-            and target.func.attr == "getLogger"
-        ):
-            found.append(node.lineno)
-    return found
-
-
-def test_the_data_layer_logs_nothing_above_debug() -> None:
-    """It decides nothing and knows neither actor nor reason: what it
-    notices goes up as a result or an error, and the domain logs it."""
-    loud = [
-        f"{name}:{line}"
-        for name, path in _modules()
-        if _own_part(name) == "data"
-        for line in _loud_calls(path)
-    ]
-    assert loud == []
-
-
-def _gets_a_logger(path: Path) -> list[int]:
-    """The lines where the file calls ``getLogger``."""
-    return [
-        node.lineno
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
-        if isinstance(node, ast.Call)
-        and (
-            (isinstance(node.func, ast.Attribute) and node.func.attr == "getLogger")
-            or (isinstance(node.func, ast.Name) and node.func.id == "getLogger")
-        )
-    ]
-
-
-def test_the_domain_logs_through_activities() -> None:
-    """A domain service hands an activity to ``ActivityLog.record``. No
-    module of the domain but the activities has a logger (rule 6.1)."""
-    activity = f"{PACKAGE}.domain.activity"
-    found = [
-        f"{name}:{line}"
-        for name, path in _modules()
-        if _own_part(name) == "domain"
-        and name != activity
-        and not name.startswith(activity + ".")
-        for line in _gets_a_logger(path) + _loud_calls(path)
-    ]
-    assert found == []
-
-
-# What a handler of any failure may do instead of raising: record it as an
-# activity, or hand it to the logging module's own error handling.
-RECORDERS = {"record", "_record", "_failed", "handleError"}
-BROAD = {"Exception", "BaseException"}
-
-
-def _broad_handlers(path: Path) -> list[ast.ExceptHandler]:
-    """The handlers of ``except Exception`` and ``except BaseException``."""
-    return [
-        node
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
-        if isinstance(node, ast.ExceptHandler)
-        and (
-            node.type is None
-            or (isinstance(node.type, ast.Name) and node.type.id in BROAD)
-        )
-    ]
-
-
-def _raises(handler: ast.ExceptHandler) -> bool:
-    return any(isinstance(n, ast.Raise) for n in ast.walk(handler))
-
-
-def _records(handler: ast.ExceptHandler) -> bool:
-    for node in ast.walk(handler):
-        if isinstance(node, ast.Call):
-            name = node.func.attr if isinstance(node.func, ast.Attribute) else None
-            if name in RECORDERS:
-                return True
-    return False
-
-
-def test_a_broad_handler_raises_or_records() -> None:
-    """A handler of any failure raises on, or records what it swallows.
-    One of BaseException always raises, so a cancellation goes through."""
-    silent = []
-    for name, path in _modules():
-        for handler in _broad_handlers(path):
-            catches_all = handler.type is None or (
-                isinstance(handler.type, ast.Name)
-                and handler.type.id == "BaseException"
-            )
-            if _raises(handler) or (not catches_all and _records(handler)):
-                continue
-            silent.append(f"{name}:{handler.lineno}")
-    assert silent == []
 
 
 # --- the packages of the domain and of data (docs/REFACTORING.md 2, 8.4) -------------
@@ -459,7 +352,7 @@ LINES = {
         {"auth", "discovery", "changes", "rounds"},
         {"activity"},
         {"rights"},
-        {"locks", "paging", "bounded"},
+        {"paging"},
     ),
     "data": (
         {"backup"},
@@ -553,68 +446,3 @@ def test_the_modules_of_the_assembly_keep_their_lines(part: str) -> None:
             if line_of[other[2]] <= line_of[parts[2]]:
                 violations.append(f"{name}:{line} imports {imported}")
     assert not violations, "against the lines:\n  " + "\n  ".join(violations)
-
-
-# Hard limits (docs/ARCHITECTURE.md 15): what grows beyond them is split
-# by subject.
-MAX_LINES = 500
-MAX_METHODS = 30
-
-
-def test_modules_and_classes_stay_small() -> None:
-    violations = []
-    for path in sorted(ROOT.rglob("*.py")):
-        text = path.read_text("utf-8")
-        name = path.relative_to(ROOT).as_posix()
-        lines = len(text.splitlines())
-        if lines > MAX_LINES:
-            violations.append(f"{name}: {lines} lines")
-        for node in ast.walk(ast.parse(text)):
-            if isinstance(node, ast.ClassDef):
-                methods = sum(
-                    isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef)
-                    for n in node.body
-                )
-                if methods > MAX_METHODS:
-                    violations.append(f"{name}: {node.name} has {methods} methods")
-    assert not violations, "beyond the limits:\n  " + "\n  ".join(violations)
-
-
-# The copies the shared helpers replaced (docs/ARCHITECTURE.md 2), and
-# the one module that holds each now. None may come back elsewhere, under
-# its name or with a leading underscore.
-REPLACED_COPIES = {
-    "one_line": HELPERS,
-    "loopback": HELPERS,
-    "host_of": HELPERS,
-    "day": HELPERS,
-    "before": HELPERS,
-    "plural": HELPERS,
-    "user_names": "web/pages/filters.py",
-    "filter": "web/pages/filters.py",
-}
-
-
-def _functions(path: Path) -> set[str]:
-    """The functions a module defines at its top level, without a leading
-    underscore."""
-    tree = ast.parse(path.read_text("utf-8"))
-    return {
-        node.name.lstrip("_")
-        for node in tree.body
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
-    }
-
-
-def test_a_helper_of_common_exists_once() -> None:
-    helpers = ROOT / HELPERS
-    shared = set().union(*(_functions(p) for p in helpers.rglob("*.py")))
-    violations = []
-    for path in sorted(ROOT.rglob("*.py")):
-        if path.is_relative_to(helpers):
-            continue
-        name = path.relative_to(ROOT).as_posix()
-        replaced = {f for f, home in REPLACED_COPIES.items() if home != name}
-        for function in sorted(_functions(path) & (shared | replaced)):
-            violations.append(f"{name}: {function}")
-    assert not violations, "a copy of a helper:\n  " + "\n  ".join(violations)

@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from typing import Literal
 
 from ...common.clock import utc_now
+from ...common.locks import KeyedLocks
 from ...common.retention import Retention
 from ...common.secret import new_id
 from ...data.models import (
@@ -33,7 +34,6 @@ from ...errors import (
 from .. import paging
 from ..activity import SERVICE, ActivityLog, Actor
 from ..activity import mailbox as said
-from ..locks import KeyedLocks
 from ..rights import Access
 
 WINDOW = timedelta(hours=24)

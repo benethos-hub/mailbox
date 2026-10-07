@@ -28,6 +28,7 @@ from dataclasses import dataclass
 
 import anyio
 
+from ...common.bounded import trim
 from ...common.hosts import address_problem, ascii_host, unicode_host
 from ...data.discovery import (
     DiscoverySource,
@@ -53,7 +54,6 @@ from ...data.providers import ServerProbe, settings_from_servers
 from ...errors import BadRequestError, MailboxServiceError, RateLimitedError
 from ..activity import ActivityLog, Actor
 from ..activity import discovery as said
-from ..bounded import trim
 from ..rights import Access
 
 Clock = Callable[[], float]
