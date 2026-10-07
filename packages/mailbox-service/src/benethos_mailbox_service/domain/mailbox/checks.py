@@ -46,7 +46,7 @@ def addressed(recipients: list[str]) -> list[str]:
     return limited(recipients)
 
 
-def same(
+def unchanged(
     stored: convert.StoredDraft, draft: DraftMessage, keep: list[str] | None
 ) -> bool:
     """Whether ``draft`` is the draft as it is stored: the same addresses,

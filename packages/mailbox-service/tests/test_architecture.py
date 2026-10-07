@@ -578,3 +578,43 @@ def test_modules_and_classes_stay_small() -> None:
                 if methods > MAX_METHODS:
                     violations.append(f"{name}: {node.name} has {methods} methods")
     assert not violations, "beyond the limits:\n  " + "\n  ".join(violations)
+
+
+# The copies the shared helpers replaced (docs/ARCHITECTURE.md 2), and
+# the one module that holds each now. None may come back elsewhere, under
+# its name or with a leading underscore.
+REPLACED_COPIES = {
+    "one_line": HELPERS,
+    "loopback": HELPERS,
+    "host_of": HELPERS,
+    "day": HELPERS,
+    "before": HELPERS,
+    "plural": HELPERS,
+    "user_names": "web/pages/filters.py",
+    "filter": "web/pages/filters.py",
+}
+
+
+def _functions(path: Path) -> set[str]:
+    """The functions a module defines at its top level, without a leading
+    underscore."""
+    tree = ast.parse(path.read_text("utf-8"))
+    return {
+        node.name.lstrip("_")
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+    }
+
+
+def test_a_helper_of_common_exists_once() -> None:
+    helpers = ROOT / HELPERS
+    shared = set().union(*(_functions(p) for p in helpers.rglob("*.py")))
+    violations = []
+    for path in sorted(ROOT.rglob("*.py")):
+        if path.is_relative_to(helpers):
+            continue
+        name = path.relative_to(ROOT).as_posix()
+        replaced = {f for f, home in REPLACED_COPIES.items() if home != name}
+        for function in sorted(_functions(path) & (shared | replaced)):
+            violations.append(f"{name}: {function}")
+    assert not violations, "a copy of a helper:\n  " + "\n  ".join(violations)

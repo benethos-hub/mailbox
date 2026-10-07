@@ -75,20 +75,20 @@ def _role(row: sqlite3.Row) -> Role:
 class SqliteTokenRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
-        self._rows = SqliteRows(db, "tokens", "token", _token)
+        self._rows = SqliteRows(db, "tokens", "token", _api_token)
 
     def list_for_user(self, user_id: str) -> list[ApiToken]:
         rows = self._db.query(
             "SELECT * FROM tokens WHERE user_id = ? ORDER BY rowid", (user_id,)
         )
-        return [_token(r) for r in rows]
+        return [_api_token(r) for r in rows]
 
     def get(self, token_id: str) -> ApiToken:
         return self._rows.get(token_id)
 
     def find_by_hash(self, token_hash: str) -> ApiToken | None:
         row = self._db.one("SELECT * FROM tokens WHERE token_hash = ?", (token_hash,))
-        return _token(row) if row is not None else None
+        return _api_token(row) if row is not None else None
 
     def save(self, token: ApiToken) -> None:
         self._db.execute(
@@ -120,7 +120,7 @@ class SqliteTokenRepository:
         self._db.execute("DELETE FROM tokens WHERE user_id = ?", (user_id,))
 
 
-def _token(row: sqlite3.Row) -> ApiToken:
+def _api_token(row: sqlite3.Row) -> ApiToken:
     return ApiToken(
         id=row["id"],
         user_id=row["user_id"],
