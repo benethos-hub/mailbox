@@ -113,10 +113,15 @@ def message_filter(
         Query(pattern=SEARCH_TEXT_PATTERN, description="Part of the subject"),
     ] = None,
     after: Annotated[
-        date | None, Query(description="From this day on, e.g. 2026-09-01")
+        date | None,
+        Query(
+            description="From this day on, including it: a day, YYYY-MM-DD, "
+            "not a time. Mail is searched by day"
+        ),
     ] = None,
     before: Annotated[
-        date | None, Query(description="Up to this day, not including it")
+        date | None,
+        Query(description="Up to this day, not including it: a day, YYYY-MM-DD"),
     ] = None,
     unread: bool | None = None,
     starred: bool | None = None,
@@ -148,10 +153,15 @@ def send_filter(
         Query(description="Part of a recipient's address, regardless of case"),
     ] = None,
     after: Annotated[
-        AwareDatetime | None, Query(description="At or after this time")
+        AwareDatetime | None,
+        Query(
+            description="At or after this time: ISO 8601 with a zone, "
+            "e.g. 2026-09-01T00:00:00+02:00"
+        ),
     ] = None,
     before: Annotated[
-        AwareDatetime | None, Query(description="Before this time")
+        AwareDatetime | None,
+        Query(description="Before this time: ISO 8601 with a zone"),
     ] = None,
 ) -> SendFilter | None:
     """None when nothing narrows the list."""

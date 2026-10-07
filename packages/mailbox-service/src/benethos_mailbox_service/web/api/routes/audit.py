@@ -38,10 +38,15 @@ async def list_activity(
         ),
     ] = None,
     after: Annotated[
-        AwareDatetime | None, Query(description="At or after this time")
+        AwareDatetime | None,
+        Query(
+            description="At or after this time: ISO 8601 with a zone, "
+            "e.g. 2026-09-01T00:00:00+02:00"
+        ),
     ] = None,
     before: Annotated[
-        AwareDatetime | None, Query(description="Before this time")
+        AwareDatetime | None,
+        Query(description="Before this time: ISO 8601 with a zone"),
     ] = None,
     limit: Limit = 50,
     cursor: str | None = None,

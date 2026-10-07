@@ -732,7 +732,6 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | POST | `/v1/oauth/{provider}/device/{sign_in_id}` | poll the sign-in with a code: `connected` false until the person signed in, then the account, no sooner than its `interval` |
 | GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back after the UI's sign-in in a browser: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
-| GET | `/v1/providers` | the built-in presets, the same data discovery uses first |
 | GET | `/v1/status` | the sync worker and the accounts the caller may see the status of, as the UI's status page shows them. Nothing is asked of a provider |
 
 **Decided 2026-10-06, the status at the API:** `get_status` in
@@ -769,12 +768,12 @@ Rules of the implementation (phase 2):
 |---|---|---|
 | GET | `/v1/messages` | list and search **across accounts** (6.6) |
 | GET | `{acc}/messages` | list and search in one account (6.6) |
-| GET | `{acc}/messages/{id}` | full message, `?body=text\|html\|both\|none` |
+| GET | `{acc}/messages/{id}` | full message, text and HTML body |
 | PATCH | `{acc}/messages/{id}` | `unread`, `starred`, `keywords`, `folder_ids` (a move is a change of `folder_ids`) |
 | DELETE | `{acc}/messages/{id}` | to trash, `?permanent=true` expunges |
 | GET | `{acc}/messages/{id}/raw` | RFC 822 source (`message/rfc822`) |
-| GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, streamed |
-| POST | `{acc}/messages/batch` | bulk `update` / `move` / `delete` for up to 100 ids, per-id result |
+| GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, with its type and file name |
+| POST | `{acc}/messages/batch` | bulk `update` / `delete` for up to 100 ids, per-id result. A move is an `update` of `folder_ids` |
 | GET | `{acc}/threads` | thread list, **planned** (6.3, ROADMAP) |
 | GET | `{acc}/threads/{thread_id}` | thread with its message summaries, **planned** |
 
@@ -958,13 +957,14 @@ not followed.
 | `folder` | folder id, or a role such as `inbox`. Left out: every folder on a Microsoft account, the inbox on IMAP |
 | `q` | free text (subject, addresses, body where the provider can) |
 | `from`, `to`, `subject` | structured filters |
-| `after`, `before` | date range, ISO 8601 |
+| `after`, `before` | days, `YYYY-MM-DD`: `after` includes its day, `before` does not. The audits take a time with a zone instead |
 | `unread`, `starred`, `has_attachments` | booleans |
 | `native` | provider's own syntax, passed through (Gmail search, IMAP SEARCH), capability `native_search` |
 | `limit` | 1–200, default 50 |
 | `cursor` | opaque, from `next_cursor` of the previous page |
 
-Every list answers `{"items": [...], "next_cursor": "..."}`. There is no
+Every paged list answers `{"items": [...], "next_cursor": "..."}`,
+`next_cursor` null on the last page. There is no
 total count, because IMAP and Graph cannot provide one cheaply after a
 filter.
 

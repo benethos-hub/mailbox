@@ -3926,10 +3926,10 @@
                   "type": "null"
                 }
               ],
-              "description": "From this day on, e.g. 2026-09-01",
+              "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day",
               "title": "After"
             },
-            "description": "From this day on, e.g. 2026-09-01"
+            "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day"
           },
           {
             "name": "before",
@@ -3945,10 +3945,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Up to this day, not including it",
+              "description": "Up to this day, not including it: a day, YYYY-MM-DD",
               "title": "Before"
             },
-            "description": "Up to this day, not including it"
+            "description": "Up to this day, not including it: a day, YYYY-MM-DD"
           },
           {
             "name": "unread",
@@ -4479,10 +4479,10 @@
                   "type": "null"
                 }
               ],
-              "description": "At or after this time",
+              "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00",
               "title": "After"
             },
-            "description": "At or after this time"
+            "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00"
           },
           {
             "name": "before",
@@ -4498,10 +4498,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Before this time",
+              "description": "Before this time: ISO 8601 with a zone",
               "title": "Before"
             },
-            "description": "Before this time"
+            "description": "Before this time: ISO 8601 with a zone"
           }
         ],
         "responses": {
@@ -5464,10 +5464,10 @@
                   "type": "null"
                 }
               ],
-              "description": "From this day on, e.g. 2026-09-01",
+              "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day",
               "title": "After"
             },
-            "description": "From this day on, e.g. 2026-09-01"
+            "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day"
           },
           {
             "name": "before",
@@ -5483,10 +5483,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Up to this day, not including it",
+              "description": "Up to this day, not including it: a day, YYYY-MM-DD",
               "title": "Before"
             },
-            "description": "Up to this day, not including it"
+            "description": "Up to this day, not including it: a day, YYYY-MM-DD"
           },
           {
             "name": "unread",
@@ -6224,10 +6224,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`.",
+              "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`. Without a key a retried request sends again.",
               "title": "Idempotency-Key"
             },
-            "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`."
+            "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`. Without a key a retried request sends again."
           }
         ],
         "requestBody": {
@@ -6497,10 +6497,10 @@
                   "type": "null"
                 }
               ],
-              "description": "At or after this time",
+              "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00",
               "title": "After"
             },
-            "description": "At or after this time"
+            "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00"
           },
           {
             "name": "before",
@@ -6516,10 +6516,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Before this time",
+              "description": "Before this time: ISO 8601 with a zone",
               "title": "Before"
             },
-            "description": "Before this time"
+            "description": "Before this time: ISO 8601 with a zone"
           }
         ],
         "responses": {
@@ -7594,10 +7594,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`.",
+              "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`. Without a key a retried request sends again.",
               "title": "Idempotency-Key"
             },
-            "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`."
+            "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`. Without a key a retried request sends again."
           }
         ],
         "responses": {
@@ -8913,10 +8913,10 @@
                   "type": "null"
                 }
               ],
-              "description": "At or after this time",
+              "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00",
               "title": "After"
             },
-            "description": "At or after this time"
+            "description": "At or after this time: ISO 8601 with a zone, e.g. 2026-09-01T00:00:00+02:00"
           },
           {
             "name": "before",
@@ -8932,10 +8932,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Before this time",
+              "description": "Before this time: ISO 8601 with a zone",
               "title": "Before"
             },
-            "description": "Before this time"
+            "description": "Before this time: ISO 8601 with a zone"
           },
           {
             "name": "limit",

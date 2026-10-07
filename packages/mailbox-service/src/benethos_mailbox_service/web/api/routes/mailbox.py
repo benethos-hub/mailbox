@@ -140,7 +140,8 @@ IdempotencyKey = Annotated[
         description=(
             "Sent again with the same key within 24 hours, the request "
             "returns the first result instead of sending twice. The same "
-            "key with a different message answers `409`."
+            "key with a different message answers `409`. Without a key a "
+            "retried request sends again."
         ),
     ),
 ]
