@@ -110,7 +110,12 @@ reached through `data/storage/` alone. It also checks that the data
 layer logs nothing above `DEBUG` and the domain nothing but activities,
 and that the packages of the domain and of data are imported through
 their `__init__.py`, export what others import, have no cycle, and keep
-their lines.
+their lines. Nothing below reaches `assembly/` or `cli/`, the assembly
+knows no command, and the modules of both keep their lines: in
+`assembly/` `web`, `lifecycle`, `domain`, then `storage`, `secrets` and
+`providers`, then `services`. In `cli/` each command reaches `common`,
+never another command. The client and the MCP server have an
+architecture test of their own (section 3).
 An import or a line that breaks a rule fails the suite.
 
 ## 3. The code, module by module
