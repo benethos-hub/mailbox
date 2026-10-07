@@ -25,8 +25,9 @@ async def _at_start(connect: Connect) -> set[str]:
     """What the token may do, asked before the server runs. Its client
     belongs to this event loop, which ends here: the server makes its own
     in its lifespan."""
-    async with tools.serving(connect):
-        return await server.allowed_operations()
+    async with connect() as made:
+        with tools.calling(made):
+            return await server.allowed_operations()
 
 
 TRANSPORTS = ("stdio", "streamable-http")
