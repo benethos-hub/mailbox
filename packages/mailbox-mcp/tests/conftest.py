@@ -10,8 +10,8 @@ from typing import Any, NamedTuple
 import httpx
 import pytest
 
+from benethos_mailbox_client import MailboxClient
 from benethos_mailbox_mcp import config, tools
-from benethos_mailbox_mcp.client import MailboxApiClient
 
 Handler = Callable[[httpx.Request], httpx.Response]
 
@@ -31,13 +31,13 @@ def no_configuration_from_this_machine(
 
 
 @pytest.fixture
-def made() -> list[MailboxApiClient]:
+def made() -> list[MailboxClient]:
     """The clients a test made through ``make_client``."""
     return []
 
 
 @pytest.fixture(autouse=True)
-async def no_client_left_behind(made: list[MailboxApiClient]) -> AsyncIterator[None]:
+async def no_client_left_behind(made: list[MailboxClient]) -> AsyncIterator[None]:
     """After each test its clients are closed, the one the tools used
     among them, and the next test's tools make their own."""
     yield
@@ -49,11 +49,11 @@ async def no_client_left_behind(made: list[MailboxApiClient]) -> AsyncIterator[N
 
 
 @pytest.fixture
-def make_client(made: list[MailboxApiClient]) -> Callable[[Handler], MailboxApiClient]:
+def make_client(made: list[MailboxClient]) -> Callable[[Handler], MailboxClient]:
     """Build a client answered by ``handler`` and install it for the tools."""
 
-    def make(handler: Handler) -> MailboxApiClient:
-        client = MailboxApiClient(
+    def make(handler: Handler) -> MailboxClient:
+        client = MailboxClient(
             base_url="https://mail.test",
             token="secret",
             transport=httpx.MockTransport(handler),
@@ -116,7 +116,7 @@ class FakeApi:
 
 @pytest.fixture
 def api(
-    make_client: Callable[[Handler], MailboxApiClient],
+    make_client: Callable[[Handler], MailboxClient],
 ) -> Callable[..., FakeApi]:
     """A FakeApi installed for the tools, with FakeApi's arguments."""
 

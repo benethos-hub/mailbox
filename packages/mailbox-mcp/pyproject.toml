@@ -46,7 +46,8 @@ dependencies = [
     # Plain `mcp`, not `mcp[cli]`: the extra only adds the `mcp` command and
     # its dependencies. It lives in the workspace dev group.
     "mcp>=2.0.0,<3",
-    "httpx>=0.28",
+    # The REST client. Released with this package under the same version.
+    "benethos-mailbox-client==0.2.0",
     # PDF attachments reach the model as page images (pdf.py).
     "pypdfium2>=4.30",
     # The HTTP transport (transport.py); mcp brings it too.

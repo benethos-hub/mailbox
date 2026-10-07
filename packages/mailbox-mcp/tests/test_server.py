@@ -10,10 +10,16 @@ import httpx
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
+from benethos_mailbox_client import MailboxClient
 from benethos_mailbox_mcp import __version__, cli, server
 from benethos_mailbox_mcp import tools as catalogue
-from benethos_mailbox_mcp.client import MailboxApiClient
-from benethos_mailbox_mcp.errors import ApiError, ServiceUnavailableError, ToolError
+from benethos_mailbox_mcp.errors import (
+    ApiError,
+    ConfigurationError,
+    ServiceTimeoutError,
+    ServiceUnavailableError,
+    ToolError,
+)
 from benethos_mailbox_mcp.tools import reading, writing
 
 READ = ["get_message", "list_all_messages", "list_folders", "list_messages"]
@@ -155,7 +161,7 @@ async def test_the_server_refuses_arguments_out_of_bounds(
 def test_client_is_created_once(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
     first = catalogue.client()
-    assert isinstance(first, MailboxApiClient)
+    assert isinstance(first, MailboxClient)
     assert catalogue.client() is first
 
 
@@ -224,7 +230,7 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
     carry connections of a closed loop into the server's."""
 
     monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
-    made: list[MailboxApiClient] = []
+    made: list[MailboxClient] = []
 
     async def operations() -> set[str]:
         made.append(catalogue.client())
@@ -318,18 +324,23 @@ def test_the_start_names_the_service_and_the_tools(
             "recipient_not_allowed (HTTP 403)",
         ),
         (ServiceUnavailableError("gone"), "mailbox-service is not reachable"),
+        (ServiceTimeoutError("slow"), "mailbox-service did not answer in time"),
+        (ConfigurationError("no token"), "the REST client is not configured"),
         (ToolError("not an address: a@x.org"), "the arguments were refused"),
     ],
 )
 async def test_a_failed_tool_is_a_warning_without_its_arguments(
-    caplog: pytest.LogCaptureFixture, error: ToolError, said: str
+    caplog: pytest.LogCaptureFixture, error: Exception, said: str
 ) -> None:
+    """Each error reaches the model as a ToolError with its message."""
+
     async def send_message(account_id: str, to: list[str]) -> str:
         raise error
 
     logged = server._logged(send_message)
-    with pytest.raises(ToolError):
+    with pytest.raises(ToolError) as caught:
         await logged("acc_1", to=["a@x.org"])
+    assert str(caught.value) == str(error)
     [record] = caplog.records
     assert record.levelno == logging.WARNING
     assert record.getMessage() == f"tool send_message failed: {said}"

@@ -256,7 +256,36 @@ packages/mailbox-service/
                         #   sources.py puts them in order
 ```
 
-The MCP server is a package of its own, a client of the REST API. It
+The Python client of the REST API is a package of its own. It cannot
+import the service or the MCP server, and its
+`tests/test_architecture.py` checks that, with the lines below and httpx
+in the modules that make or read a request.
+
+```
+packages/mailbox-client/
+  src/benethos_mailbox_client/
+    __init__.py         # what a caller imports: both clients, the
+                        #   records, the errors, message_body()
+    client.py           # MailboxClient: sends the calls with
+                        #   httpx.AsyncClient, one line per method
+    sync.py             # SyncMailboxClient: the same calls with
+                        #   httpx.Client
+    endpoints.py        # each endpoint once: method, path, query,
+                        #   body, how its answer becomes a record.
+                        #   Sends nothing
+    wire.py             # what both share: address and token, Call,
+                        #   reading an answer, an error or a failure
+    models.py           # the records the clients answer with
+    errors.py           # MailboxError and its subclasses
+```
+
+**An endpoint of the client** is a function in `endpoints.py` that
+answers a `Call`, and a one-line method on each client that sends it.
+Its test is in `tests/test_endpoints.py` and runs for both clients.
+Neither client knows a path or a field: when the two differ in more
+than `await`, the difference belongs in `wire.py` or `endpoints.py`.
+
+The MCP server is a package of its own, built on the client. It
 cannot import the service, and `tests/test_boundary.py` checks that.
 
 ```
@@ -281,9 +310,11 @@ packages/mailbox-mcp/
       sending.py        # send a mail, send a draft
     render.py           # what the model sees of mail, marked as foreign
     pdf.py              # PDF pages as PNG (pypdfium2)
-    client.py           # ALL access to the REST API
-    models.py           # the records the client answers with
-    errors.py           # ToolError subclasses
+    client.py           # the client package's MailboxClient, the
+                        #   one way to the REST API
+    models.py           # the client package's records
+    errors.py           # ToolError, and the client's errors turned
+                        #   into one for the model
     config.py           # the optional .env, put into the environment
                         #   (platformdirs, python-dotenv)
 ```
@@ -296,8 +327,8 @@ one home per library.
 its line in that module's `TOOLS`: its title, the rights it needs, and
 whether it is read-only, destructive or idempotent. The server
 registers it only for a token that holds one of those rights. The
-function is thin: it names what it wants in its own terms, `client.py`
-makes the request, and `render.py` shapes what the model sees, with
+function is thin: it names what it wants in its own terms, the client
+package makes the request, and `render.py` shapes what the model sees, with
 mail content inside the foreign-content marker. A tool never spells
 out a path, a query name or a field of the API, and never speaks HTTP
 itself. Its docstring is the description the model reads. An argument
@@ -323,7 +354,8 @@ names it.
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
 | a command of the CLI | `__main__.py`, which builds the service through `main.py` |
-| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in `client.py`, its answer through `render.py` (section 3) |
+| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer through `render.py` (section 3) |
+| a request of the Python client | `endpoints.py` of the client package, and one line on each client (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |
@@ -406,9 +438,11 @@ noticing. Every change is measured against that.
 2. **Wire it in one place.** Which implementation is used is decided where
    the app is assembled (`create_app`, `build_services`, settings), never
    inside the code that uses it. That is also how tests swap in fakes.
-3. **The contract is the boundary.** Between the two packages there is only
-   the REST API. The MCP package never depends on or imports the service
-   package, and `tests/test_boundary.py` checks both.
+3. **The contract is the boundary.** Between the service and the other
+   two packages there is only the REST API. Neither the client nor the
+   MCP package depends on or imports the service package. The MCP
+   package's `tests/test_boundary.py` and the client's
+   `tests/test_architecture.py` check it.
 
 **The seams, and what sits behind each:**
 
@@ -425,7 +459,7 @@ noticing. Every change is measured against that.
 | Folders for settings and data | `folders()` in `config.py` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token, password for the UI | TOTP, OAuth client credentials |
-| MCP ↔ service | the REST API, `docs/openapi.json` | httpx client in `client.py` | a generated client |
+| Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints.py`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py` and `sync.py` |
 
 **When you add something new**, ask first where its seam is. A new
 provider is a new module behind `MailProvider`, not a branch in a route. A

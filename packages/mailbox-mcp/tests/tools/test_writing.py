@@ -8,7 +8,7 @@ import httpx
 import pytest
 
 from benethos_mailbox_mcp import server
-from benethos_mailbox_mcp.errors import ToolError
+from benethos_mailbox_mcp.errors import ApiError, ToolError
 from benethos_mailbox_mcp.tools import writing
 
 BATCH = "/v1/accounts/acc_1/messages/batch"
@@ -71,7 +71,7 @@ async def test_a_role_the_account_lacks(make_client: Callable) -> None:
         return httpx.Response(404, json={"error": error})
 
     make_client(refuse)
-    with pytest.raises(ToolError, match="has no junk folder"):
+    with pytest.raises(ApiError, match="has no junk folder"):
         await writing.update_messages("acc_1", ["msg_1"], move_to="junk")
 
 

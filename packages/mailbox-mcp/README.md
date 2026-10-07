@@ -19,7 +19,9 @@ sends.
 
 It reaches mail only through the REST API of
 [`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service),
-which has to be running. It holds no mail password and no mail library.
+which has to be running, with the Python client
+[`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client).
+It holds no mail password and no mail library.
 The rights of the user whose token it carries decide what it may do. It
 runs in one of two ways. Over stdio, the MCP client starts it, and it ends
 with the client. Over streamable HTTP, it runs as a server of its own.

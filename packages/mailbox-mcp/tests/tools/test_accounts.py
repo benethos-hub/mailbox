@@ -7,7 +7,7 @@ from collections.abc import Callable
 import httpx
 import pytest
 
-from benethos_mailbox_mcp.errors import ToolError
+from benethos_mailbox_mcp.errors import ApiError
 from benethos_mailbox_mcp.tools import accounts
 
 READ = ["get_message", "list_all_messages", "list_folders", "list_messages"]
@@ -71,13 +71,14 @@ async def test_an_account_that_can_do_everything_names_no_limits(
     assert shown["can"] == ["read", "drafts"] and "unsupported" not in shown
 
 
-async def test_errors_are_tool_errors(make_client: Callable) -> None:
+async def test_an_api_error_keeps_its_message(make_client: Callable) -> None:
+    """The server turns it into a ToolError for the model (test_server)."""
     make_client(
         lambda _: httpx.Response(
             401, json={"error": {"code": "unauthorized", "message": "wrong token"}}
         )
     )
-    with pytest.raises(ToolError, match="wrong token"):
+    with pytest.raises(ApiError, match="wrong token"):
         await accounts.list_accounts()
 
 

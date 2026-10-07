@@ -15,7 +15,7 @@ from pathlib import Path
 import anyio
 
 from . import __version__, config, server, tools, transport
-from .errors import ToolError
+from .errors import MailboxError, ToolError
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +148,7 @@ def main(argv: list[str] | None = None) -> None:
         logger.info("Settings from %s", loaded)
     try:
         operations = anyio.run(_at_start)
-    except ToolError as exc:
+    except (MailboxError, ToolError) as exc:
         sys.exit(f"benethos-mailbox-mcp: {exc}")
     built = server.build_server(operations)
     server.started(operations, args.transport)

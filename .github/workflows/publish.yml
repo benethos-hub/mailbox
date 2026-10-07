@@ -1,10 +1,10 @@
 name: Publish
 
 # Publishes a release when a GitHub release is published:
-#   * both packages to PyPI, via Trusted Publishing (OIDC, no stored token)
+#   * the three packages to PyPI, via Trusted Publishing (OIDC, no stored token)
 #   * both container images to ghcr.io, via the automatic GITHUB_TOKEN
 # Everything carries the same version, and the release tag must name it:
-# v0.2.0 publishes 0.2.0 of each package and image.
+# v0.2.0 publishes 0.2.0 of each package and image. The client has no image.
 #
 # One job per package and per image, so a failure in one does not withhold
 # the others. A version can be uploaded to PyPI only once, so the checks
@@ -15,10 +15,11 @@ name: Publish
 #
 # One-time setup on PyPI: a (pending) publisher per project with this
 # repository's owner and name and the workflow filename publish.yml, with
-# the environment pypi-service for benethos-mailbox-service and pypi-mcp for
-# benethos-mailbox-mcp. PyPI takes a pending publisher (repository,
-# workflow, environment) for one project only, hence one environment each.
-# On GitHub: both environments under Settings, Environments.
+# the environment pypi-service for benethos-mailbox-service, pypi-client for
+# benethos-mailbox-client and pypi-mcp for benethos-mailbox-mcp. PyPI takes
+# a pending publisher (repository, workflow, environment) for one project
+# only, hence one environment each. On GitHub: the three environments under
+# Settings, Environments.
 #
 # One-time setup on ghcr.io, possible only after the first push: a new
 # package is private even when its repository is public. Each image is
@@ -69,6 +70,9 @@ jobs:
           - package: benethos-mailbox-service
             module: benethos_mailbox_service
             environment: pypi-service
+          - package: benethos-mailbox-client
+            module: benethos_mailbox_client
+            environment: pypi-client
           - package: benethos-mailbox-mcp
             module: benethos_mailbox_mcp
             environment: pypi-mcp

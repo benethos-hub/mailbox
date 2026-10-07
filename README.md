@@ -128,22 +128,24 @@ Planned next: threads across folders and Gmail. The order is in
 Not supportable: Tuta, which offers no IMAP and no API. Details per
 provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
 
-## The two packages
+## The three packages
 
 | Package | What it is | Runs | Read more |
 |---|---|---|---|
 | `mailbox-service` | the service: REST API, configuration UI, users and rights, accounts, encrypted credentials, provider adapters, background sync | permanently | [packages/mailbox-service](packages/mailbox-service/README.md) |
-| `mailbox-mcp` | the MCP server, a client of the REST API only | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
+| `mailbox-client` | the Python client of the REST API, async and sync | inside your own code | [packages/mailbox-client](packages/mailbox-client/README.md) |
+| `mailbox-mcp` | the MCP server, on top of `mailbox-client` | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
 
 ```
  AI agent ──────MCP──► mailbox-mcp ──┐
- scripts, apps ──────────────────────┼─REST──► mailbox-service ──► IMAP / Graph / ...
+ scripts, apps ──► mailbox-client ───┼─REST──► mailbox-service ──► IMAP / Graph / ...
  browser ────────────────────── /ui ─┘
 ```
 
-A release publishes both to PyPI and as container images on ghcr.io,
-under the same version, as `benethos-mailbox-service` and
-`benethos-mailbox-mcp`. Each package has its own README. It explains how
+A release publishes all three to PyPI under the same version, as
+`benethos-mailbox-service`, `benethos-mailbox-client` and
+`benethos-mailbox-mcp`, and the service and the MCP server as container
+images on ghcr.io. Each package has its own README. It explains how
 to install, start and configure it, with the container image and the
 compose file.
 
@@ -177,7 +179,7 @@ compose file.
 
 ## Development
 
-One uv workspace, one lockfile, two distributions.
+One uv workspace, one lockfile, three distributions.
 
 ```
 uv sync
@@ -186,7 +188,7 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
 
-The tests run offline. CI runs these checks too. It also installs both
+The tests run offline. CI runs these checks too. It also installs the
 packages on the lowest versions their `pyproject.toml` allows, runs the
 tests there and checks those versions against OSV for known
 vulnerabilities. Manual checks against real test accounts live in
