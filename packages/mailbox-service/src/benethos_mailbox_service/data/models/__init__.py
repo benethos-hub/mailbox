@@ -29,7 +29,6 @@ from .changes import (
     ChangeKind,
     ChangePage,
     ChangeRecord,
-    FeedKind,
 )
 from .discovery import (
     Candidate,
@@ -101,7 +100,6 @@ __all__ = [
     "DiscoverySourceName",
     "DraftMessage",
     "FEED_KINDS",
-    "FeedKind",
     "Folder",
     "FolderCreate",
     "FolderRole",

@@ -24,7 +24,7 @@ from benethos_mailbox_service.errors import (
     RateLimitedError,
 )
 
-from ...conftest import admin_bearer, bearer_for
+from ...conftest import admin_access, admin_bearer, bearer_for
 from .test_discovery import (
     ADMIN,
     AUTOCONFIG,
@@ -79,7 +79,7 @@ async def test_idn_domain_ascii_for_sources_unicode_in_the_answer() -> None:
 async def test_rate_limit_per_user() -> None:
     clock = Clock()
     s = service(FakeSource(ISPDB), clock=clock, per_user=2)
-    other = Access.admin("usr_other", "other")
+    other = admin_access("usr_other", "other")
     await s.discover(ADMIN, "a@firma.example")
     clock.now += 10
     await s.discover(ADMIN, "a@firma.example")

@@ -16,9 +16,6 @@ from __future__ import annotations
 from .answers import error_type, method_error, read, result, set_error
 from .client import (
     CORE,
-    DEFAULT_CALLS,
-    DEFAULT_CONCURRENT,
-    DEFAULT_GET,
     DEFAULT_PATH,
     DEFAULT_PORT,
     MAIL,
@@ -43,9 +40,6 @@ from .shapes import (
 
 __all__ = [
     "CORE",
-    "DEFAULT_CALLS",
-    "DEFAULT_CONCURRENT",
-    "DEFAULT_GET",
     "DEFAULT_PATH",
     "DEFAULT_PORT",
     "MAIL",

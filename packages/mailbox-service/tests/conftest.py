@@ -40,7 +40,7 @@ from benethos_mailbox_service.data.secrets import (
 )
 from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.service import AuthService
-from benethos_mailbox_service.domain.rights import permissions
+from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
 from benethos_mailbox_service.domain.rights.access import Access
 
 PUBLIC = "93.184.215.14"  # what every host resolves to, without DNS
@@ -51,13 +51,24 @@ async def resolve_to_public(host: str, port: int) -> list[str]:
     return [PUBLIC]
 
 
-ADMIN = Access.admin("usr_test_admin", "test admin")
+def admin_access(user_id: str, name: str) -> Access:
+    """A caller with every right, for tests that call the domain."""
+    return Access(user_id, name, [], service=ADMIN_SERVICE)
+
+
+ADMIN = admin_access("usr_test_admin", "test admin")
+
+
+def forget_secrets() -> None:
+    """No secret is noted to be masked: the test reaches inside redact."""
+    with redact._lock:
+        redact._known.clear()
 
 
 @pytest.fixture(autouse=True)
 def no_secret_of_another_test() -> None:
     """Each test starts with no secret noted to be masked."""
-    redact.forget_all()
+    forget_secrets()
 
 
 @pytest.fixture(autouse=True)

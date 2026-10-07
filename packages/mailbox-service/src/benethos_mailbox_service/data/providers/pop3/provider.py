@@ -316,13 +316,6 @@ def _list(
     )
 
 
-def _summary(session: Pop3Session, uid: str, message_id: str) -> MessageSummary:
-    number = _numbers(session).get(uid)
-    if number is None:
-        raise missing_message(message_id)
-    return mappers.summary(parse.ParsedMessage(session.headers(number)), uid)
-
-
 def _message(session: Pop3Session, uid: str, message_id: str) -> bytes:
     number = _numbers(session).get(uid)
     if number is None:

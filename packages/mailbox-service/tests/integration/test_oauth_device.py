@@ -42,7 +42,7 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
-from ..conftest import ADMIN
+from ..conftest import ADMIN, admin_access
 from .test_oauth import (
     Clock,
     TokenEndpoint,
@@ -230,7 +230,7 @@ async def test_a_code_sign_in_belongs_to_who_started_it() -> None:
     services = services_with(TokenEndpoint(code(), signed_in()), clock)
     started = await services.oauth.start_device(ADMIN, MS)
     clock.now += timedelta(seconds=5)
-    other = Access.admin("usr_other", "other admin")
+    other = admin_access("usr_other", "other admin")
     for ask in (
         services.oauth.poll_device(other, MS, started.id),
         services.oauth.poll_device(ADMIN, ProviderType.GMAIL, started.id),

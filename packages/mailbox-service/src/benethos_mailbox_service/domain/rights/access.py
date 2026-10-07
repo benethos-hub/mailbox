@@ -150,10 +150,6 @@ class Access:
             now=now,
         )
 
-    @classmethod
-    def admin(cls, user_id: str, name: str) -> Access:
-        return cls(user_id, name, [], service=ADMIN_SERVICE)
-
     def is_admin(self) -> bool:
         """Whether the caller holds ``admin``: the rights only it gives."""
         return all(self.allows(op) for op in permissions.ADMIN_ONLY)

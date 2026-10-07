@@ -9337,8 +9337,7 @@
         "enum": [
           "connected",
           "needs_reauth",
-          "unreachable",
-          "disabled"
+          "unreachable"
         ],
         "title": "AccountStatus"
       },

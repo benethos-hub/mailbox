@@ -10,7 +10,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .client import MailboxClient
 from .endpoints import message_body
-from .environment import Environment, from_environment, service_url
+from .environment import Environment, from_environment
 from .errors import (
     ApiError,
     ConfigurationError,
@@ -59,5 +59,4 @@ __all__ = [
     "__version__",
     "from_environment",
     "message_body",
-    "service_url",
 ]

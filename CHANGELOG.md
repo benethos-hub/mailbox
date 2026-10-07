@@ -176,6 +176,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `204` without a body, as every other delete does. It answered `200`
   with the token's record. The token stays in
   `GET /v1/users/{user_id}/tokens` with its `revoked_at`.
+- `disabled` is no longer a value of an account's `status`: nothing
+  ever set it. The values are `connected`, `needs_reauth` and
+  `unreachable`.
 - The OpenAPI document names on each operation the errors it can
   answer: `413`, `429` and `500` on every one, `404` and `409` where a
   record is touched, `501` and `502` where a provider is asked. Before,

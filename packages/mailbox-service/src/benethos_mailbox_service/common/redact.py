@@ -46,9 +46,3 @@ def redact(text: str) -> str:
         if secret in text:
             text = text.replace(secret, MASK)
     return text
-
-
-def forget_all() -> None:
-    """For tests: no secret is known."""
-    with _lock:
-        _known.clear()

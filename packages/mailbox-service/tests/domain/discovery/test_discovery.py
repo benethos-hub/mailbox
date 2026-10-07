@@ -25,18 +25,19 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.domain.discovery import service as discovery_module
 from benethos_mailbox_service.domain.discovery.service import DiscoveryService
-from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import (
     ProviderError,
     ProviderUnavailableError,
 )
+
+from ...conftest import admin_access
 
 PRESET = DiscoverySourceName.PRESET
 AUTOCONFIG = DiscoverySourceName.AUTOCONFIG
 ISPDB = DiscoverySourceName.ISPDB
 MX = DiscoverySourceName.MX
 
-ADMIN = Access.admin("usr_admin", "admin")
+ADMIN = admin_access("usr_admin", "admin")
 
 
 def imap(
@@ -331,10 +332,10 @@ async def test_the_callers_counted_are_bounded(
     s = service(FakeSource(ISPDB), clock=clock, per_user=100)
     for user in ("a", "b", "c"):
         clock.now += 1
-        await s.discover(Access.admin(f"usr_{user}", user), "x@firma.example")
+        await s.discover(admin_access(f"usr_{user}", user), "x@firma.example")
     assert set(s._calls) == {"usr_b", "usr_c"}
     clock.now += 60
-    await s.discover(Access.admin("usr_d", "d"), "x@firma.example")
+    await s.discover(admin_access("usr_d", "d"), "x@firma.example")
     assert set(s._calls) == {"usr_d"}
 
 
