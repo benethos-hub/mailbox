@@ -45,7 +45,6 @@ class AccountStatus(StrEnum):
     CONNECTED = "connected"
     NEEDS_REAUTH = "needs_reauth"
     UNREACHABLE = "unreachable"
-    DISABLED = "disabled"
 
 
 class CredentialInfo(BaseModel):
