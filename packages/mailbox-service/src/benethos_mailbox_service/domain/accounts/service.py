@@ -174,24 +174,26 @@ class AccountService:
             email=email,
             display_name=display_name,
         )
-        self._repository.add(account, dict(settings))
-        try:
-            for field, value in secrets.items():
-                self._vault.store(account.id, field, value)
-        except BaseException:
-            self._vault.delete(account.id)
-            self._repository.delete(account.id)
-            raise
         host = settings.get("host")
-        self._activity.record(
-            said.AccountConnected(
-                by=Actor.of(access),
-                account=account,
-                host=host if isinstance(host, str) else None,
+        with self._activity.atomic():
+            self._repository.add(account, dict(settings))
+            try:
+                for field, value in secrets.items():
+                    self._vault.store(account.id, field, value)
+            except BaseException:
+                # A store without transactions keeps no half account either.
+                self._vault.delete(account.id)
+                self._repository.delete(account.id)
+                raise
+            self._activity.record(
+                said.AccountConnected(
+                    by=Actor.of(access),
+                    account=account,
+                    host=host if isinstance(host, str) else None,
+                )
             )
-        )
-        if self._on_connect is not None:
-            self._on_connect(access, account.id)
+            if self._on_connect is not None:
+                self._on_connect(access, account.id)
         self._ready(account.id)
         return self._with_credentials(account)
 
@@ -252,21 +254,22 @@ class AccountService:
         # The credentials first: a record that names settings the stored
         # credentials do not match would be a broken account, the reverse
         # only a credential the next probe confirms again.
-        for field, secret in secrets.items():
-            self._vault.store(account_id, field, secret)
-        self._repository.update(account, merged)
+        with self._activity.atomic():
+            for field, secret in secrets.items():
+                self._vault.store(account_id, field, secret)
+            self._repository.update(account, merged)
+            if what:
+                self._activity.record(
+                    said.AccountChanged(
+                        by=Actor.of(access), account=account, changed=tuple(what)
+                    )
+                )
         if changed or secrets:
             # The live adapter still has the old settings: the next use
             # builds a new one.
             await self._adapters.drop(account_id)
             self._adapters.set_status(account_id, AccountStatus.CONNECTED)
             self._ready(account_id)
-        if what:
-            self._activity.record(
-                said.AccountChanged(
-                    by=Actor.of(access), account=account, changed=tuple(what)
-                )
-            )
         return self._with_credentials(self._repository.get(account_id))
 
     async def verify(self, access: Access, account_id: str) -> Account:
@@ -285,16 +288,19 @@ class AccountService:
     async def delete(self, access: Access, account_id: str) -> None:
         access.require("delete_account", account_id)
         account = self._repository.get(account_id)
-        self._vault.delete(account_id)
-        if self._on_delete is not None:
-            self._on_delete(account_id)
-        if self._idempotency is not None:
-            self._idempotency.forget_account(account_id)
-        if self._changes is not None:
-            self._changes.forget_account(account_id)
-        self._repository.delete(account_id)
+        with self._activity.atomic():
+            self._vault.delete(account_id)
+            if self._on_delete is not None:
+                self._on_delete(account_id)
+            if self._idempotency is not None:
+                self._idempotency.forget_account(account_id)
+            if self._changes is not None:
+                self._changes.forget_account(account_id)
+            self._repository.delete(account_id)
+            self._activity.record(
+                said.AccountRemoved(by=Actor.of(access), account=account)
+            )
         await self._adapters.drop(account_id)
-        self._activity.record(said.AccountRemoved(by=Actor.of(access), account=account))
 
     def _ready(self, account_id: str) -> None:
         if self._on_ready is not None:

@@ -145,9 +145,12 @@ def build_services(
     ``serve`` hands in the one its log writes to."""
     repos = open_repositories(settings.storage, settings.database_path)
     audit = Audit(repos.audit, clock=clock, days=settings.audit_days)
-    activity = ActivityLog(clock, audit)
+    store = repos.store
+    activity = ActivityLog(
+        clock, audit, transaction=store.transaction if store is not None else None
+    )
     try:
-        migrated = repos.store.migrated if repos.store is not None else None
+        migrated = store.migrated if store is not None else None
         if migrated is not None:
             activity.record(
                 said.SchemaMigrated(

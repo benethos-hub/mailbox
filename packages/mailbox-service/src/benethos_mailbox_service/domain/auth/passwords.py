@@ -69,8 +69,20 @@ class Passwords:
     ) -> StoredPassword:
         """Checks the rules, then keeps the hash. The new time stamp ends
         the sessions signed in with the old password."""
+        return self.keep(
+            user_id, await self.hashed(password, name), must_change=must_change
+        )
+
+    async def hashed(self, password: str, name: str) -> str:
+        """The hash of a new password, once it passes the rules. ``keep``
+        stores it: the hashing waits, the storing does not, so it can go
+        into a transaction with what goes with it."""
         check(password, name)
-        hashed = await self._run(self._hasher.hash, password)
+        return await self._run(self._hasher.hash, password)
+
+    def keep(self, user_id: str, hashed: str, *, must_change: bool) -> StoredPassword:
+        """Store a hash made by ``hashed``. The new time stamp ends the
+        sessions signed in with the old password."""
         before = self._repository.get(user_id)
         stored = StoredPassword(
             hashed,

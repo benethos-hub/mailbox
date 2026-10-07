@@ -184,8 +184,9 @@ class UserService:
             service=list(ADMIN_SERVICE),
             ui_sign_in=True,
         )
-        self._users.save(user)
-        self._activity.record(said.UserCreated(by=HOST, user=user))
+        with self._activity.atomic():
+            self._users.save(user)
+            self._activity.record(said.UserCreated(by=HOST, user=user))
         return user, await self._one_time(user)
 
     async def reset_password(self, name: str) -> tuple[User, str]:
@@ -198,8 +199,9 @@ class UserService:
             raise NotFoundError(f"no user is named {name}")
         if not user.ui_sign_in:
             user = user.model_copy(update={"ui_sign_in": True})
-            self._users.save(user)
-            self._activity.record(said.UiSignInAllowed(by=HOST, user=user))
+            with self._activity.atomic():
+                self._users.save(user)
+                self._activity.record(said.UiSignInAllowed(by=HOST, user=user))
         return user, await self._one_time(user)
 
     async def _one_time(self, user: User) -> str:
@@ -211,8 +213,12 @@ class UserService:
         """A password the user must change at its next sign-in: ``new``, or
         without it a random one, which is returned to be shown once."""
         password = secrets.token_urlsafe(ONE_TIME_BYTES) if new is None else new
-        await self._auth.passwords.set(user.id, user.name, password, must_change=True)
-        self._activity.record(said.PasswordSet(by=by, user=user, one_time=new is None))
+        hashed = await self._auth.passwords.hashed(password, user.name)
+        with self._activity.atomic():
+            self._auth.passwords.keep(user.id, hashed, must_change=True)
+            self._activity.record(
+                said.PasswordSet(by=by, user=user, one_time=new is None)
+            )
         return password if new is None else None
 
     # --- users ----------------------------------------------------------------
@@ -284,8 +290,9 @@ class UserService:
             ui_sign_in=ui_sign_in,
         )
         self._check_grantable(access, user)
-        self._users.save(user)
-        self._activity.record(said.UserCreated(by=Actor.of(access), user=user))
+        with self._activity.atomic():
+            self._users.save(user)
+            self._activity.record(said.UserCreated(by=Actor.of(access), user=user))
         return user
 
     def update_user(
@@ -329,17 +336,18 @@ class UserService:
         # right a release renamed, and grants nothing by it.
         self._check_grantable(access, updated, grants or [], service or [])
         self._require_an_administrator(replaced=updated)
-        self._users.save(updated)
         changed = tuple(
             key for key in changes if getattr(user, key) != getattr(updated, key)
         )
-        if changed:
-            self._activity.record(
-                said.UserChanged(by=Actor.of(access), user=updated, changed=changed)
-            )
-        if user.ui_sign_in and not updated.ui_sign_in:
-            self._auth.passwords.delete(user_id)
-            self._activity.record(said.MadeApiUser(by=Actor.of(access), user=user))
+        with self._activity.atomic():
+            self._users.save(updated)
+            if changed:
+                self._activity.record(
+                    said.UserChanged(by=Actor.of(access), user=updated, changed=changed)
+                )
+            if user.ui_sign_in and not updated.ui_sign_in:
+                self._auth.passwords.delete(user_id)
+                self._activity.record(said.MadeApiUser(by=Actor.of(access), user=user))
         return updated
 
     def delete_user(self, access: Access, user_id: str) -> None:
@@ -347,15 +355,16 @@ class UserService:
         if user_id == access.user_id:
             raise ConflictError("a user cannot delete itself")
         self._require_an_administrator(deleted=user_id)
-        self._tokens.delete_for_user(user_id)
-        self._auth.passwords.delete(user_id)
-        # Its webhooks would post by nobody's rights, and nobody could
-        # remove them.
-        removed = self._webhooks.delete_for_user(user_id)
-        self._users.delete(user_id)
-        self._activity.record(
-            said.UserDeleted(by=Actor.of(access), user=user, webhooks=removed)
-        )
+        with self._activity.atomic():
+            self._tokens.delete_for_user(user_id)
+            self._auth.passwords.delete(user_id)
+            # Its webhooks would post by nobody's rights, and nobody could
+            # remove them.
+            removed = self._webhooks.delete_for_user(user_id)
+            self._users.delete(user_id)
+            self._activity.record(
+                said.UserDeleted(by=Actor.of(access), user=user, webhooks=removed)
+            )
 
     def _require_free(self, name: str, user_id: str | None = None) -> None:
         """A person signs in with the name: one user per name, whatever
@@ -380,10 +389,10 @@ class UserService:
             raise BadRequestError("the current password is not right")
         if new == current:
             raise BadRequestError("the new password is the current one")
-        stored = await self._auth.passwords.set(
-            user.id, user.name, new, must_change=False
-        )
-        self._activity.record(said.PasswordChanged(by=Actor.of(access)))
+        hashed = await self._auth.passwords.hashed(new, user.name)
+        with self._activity.atomic():
+            stored = self._auth.passwords.keep(user.id, hashed, must_change=False)
+            self._activity.record(said.PasswordChanged(by=Actor.of(access)))
         return stored.updated_at
 
     async def set_password(
@@ -432,16 +441,17 @@ class UserService:
     ) -> tuple[ApiToken, str]:
         owner = self._managed(access, "create_token", user_id)
         name = _named("a token", name)
-        token, plain = self._auth.issue_token(user_id, name, expires_at)
-        self._activity.record(
-            said.TokenIssued(
-                by=Actor.of(access),
-                token_id=token.id,
-                token_name=token.name,
-                user=owner,
-                expires_at=token.expires_at,
+        with self._activity.atomic():
+            token, plain = self._auth.issue_token(user_id, name, expires_at)
+            self._activity.record(
+                said.TokenIssued(
+                    by=Actor.of(access),
+                    token_id=token.id,
+                    token_name=token.name,
+                    user=owner,
+                    expires_at=token.expires_at,
+                )
             )
-        )
         return token, plain
 
     def revoke_token(self, access: Access, user_id: str, token_id: str) -> ApiToken:
@@ -449,16 +459,17 @@ class UserService:
         before = self._tokens.get(token_id)
         if before.user_id != user_id:
             raise missing("token", token_id)
-        token = self._auth.revoke_token(token_id)
-        if before.revoked_at is None:
-            self._activity.record(
-                said.TokenRevoked(
-                    by=Actor.of(access),
-                    token_id=token.id,
-                    token_name=token.name,
-                    user=owner,
+        with self._activity.atomic():
+            token = self._auth.revoke_token(token_id)
+            if before.revoked_at is None:
+                self._activity.record(
+                    said.TokenRevoked(
+                        by=Actor.of(access),
+                        token_id=token.id,
+                        token_name=token.name,
+                        user=owner,
+                    )
                 )
-            )
         return token
 
     # --- roles ----------------------------------------------------------------
@@ -482,17 +493,18 @@ class UserService:
         role_id = _named("a role", role_id)
         if role_id in {role.id for role in self._roles.list()}:
             raise ConflictError(f"role {role_id} exists")
-        role = self._save_role(
-            access, Role(id=role_id, service=service or [], grants=grants)
-        )
-        self._activity.record(
-            said.RoleCreated(
-                by=Actor.of(access),
-                role_id=role.id,
-                service=tuple(role.service),
-                grants=len(grants),
+        with self._activity.atomic():
+            role = self._save_role(
+                access, Role(id=role_id, service=service or [], grants=grants)
             )
-        )
+            self._activity.record(
+                said.RoleCreated(
+                    by=Actor.of(access),
+                    role_id=role.id,
+                    service=tuple(role.service),
+                    grants=len(grants),
+                )
+            )
         return role
 
     def replace_role(
@@ -511,15 +523,16 @@ class UserService:
             self._require_covers_user(access, holder)
         new = Role(id=role_id, service=service or [], grants=grants)
         self._require_an_administrator(role=new)
-        role = self._save_role(access, new)
-        self._activity.record(
-            said.RoleReplaced(
-                by=Actor.of(access),
-                role_id=role.id,
-                service=tuple(role.service),
-                grants=len(grants),
+        with self._activity.atomic():
+            role = self._save_role(access, new)
+            self._activity.record(
+                said.RoleReplaced(
+                    by=Actor.of(access),
+                    role_id=role.id,
+                    service=tuple(role.service),
+                    grants=len(grants),
+                )
             )
-        )
         return role
 
     def delete_role(self, access: Access, role_id: str) -> None:
@@ -529,8 +542,11 @@ class UserService:
         users = [user.id for user in self._holders(role_id)]
         if users:
             raise ConflictError(f"role {role_id} is used by {', '.join(users)}")
-        self._roles.delete(role_id)
-        self._activity.record(said.RoleDeleted(by=Actor.of(access), role_id=role_id))
+        with self._activity.atomic():
+            self._roles.delete(role_id)
+            self._activity.record(
+                said.RoleDeleted(by=Actor.of(access), role_id=role_id)
+            )
 
     def holders_of(self, access: Access, role_id: str) -> list[User]:
         """The users that hold a role."""
@@ -559,10 +575,11 @@ class UserService:
             return
         grant = Grant(accounts=[account_id], allow=["accounts.manage"])
         updated = user.model_copy(update={"grants": [*user.grants, grant]})
-        self._users.save(updated)
-        self._activity.record(
-            said.UserChanged(by=Actor.of(access), user=updated, changed=("grants",))
-        )
+        with self._activity.atomic():
+            self._users.save(updated)
+            self._activity.record(
+                said.UserChanged(by=Actor.of(access), user=updated, changed=("grants",))
+            )
 
     def _save_role(self, access: Access, role: Role) -> Role:
         _validate(role.grants, role.service)

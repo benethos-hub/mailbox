@@ -153,6 +153,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A change and its record in the audit of administration are stored in
+  one transaction. When the record cannot be written, the change is
+  undone and the request fails with `500`. Before, the
+  change stood and the log said `system.not_audited`. A user's deletion
+  now removes its tokens, password, webhooks and the user in one step as
+  well.
 - `backup` writes format 2: the database is encrypted in blocks of 1 MiB
   from a copy beside the database, and `restore` and `backup verify`
   decrypt it block by block. Before, the database was held in memory

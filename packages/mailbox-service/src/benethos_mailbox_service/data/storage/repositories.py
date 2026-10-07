@@ -60,6 +60,11 @@ class Store(Protocol):
         as a file readable by its owner alone, gone when the block ends."""
         ...
 
+    def transaction(self) -> AbstractContextManager[object]:
+        """One transaction over every repository of the store. Inside
+        another one, a part of it that is undone alone."""
+        ...
+
     def serving(self) -> AbstractContextManager[bool]:
         """Mark the store as used by a running service while the block
         runs. False when another service marked it already."""
