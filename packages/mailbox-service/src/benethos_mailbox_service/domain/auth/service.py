@@ -24,8 +24,9 @@ from ...errors import (
     SetupRequiredError,
     UnauthorizedError,
 )
-from ..activity import ActivityLog, Actor, someone
+from ..activity import SERVICE, ActivityLog, Actor, someone
 from ..activity import auth as said
+from ..activity import users as users_said
 from ..rights import Access
 from .passwords import MAX_LENGTH, Passwords
 from .throttle import SignInThrottle
@@ -107,6 +108,8 @@ class AuthService:
         )
         self.passwords = passwords
         self.activity = activity or ActivityLog(clock)
+        # The unknown rights already logged, per user and names.
+        self._told_unknown: set[tuple[str, frozenset[str]]] = set()
 
     async def sign_in(self, name: str, password: str, *, source: str) -> SignedIn:
         """The user behind a name and a password. A wrong name, a wrong
@@ -326,7 +329,7 @@ class AuthService:
     ) -> Access:
         """What the user may do now, through its grants and its roles."""
         roles = {role.id: role for role in self._roles.list()}
-        return Access.for_user(
+        access = Access.for_user(
             user,
             roles,
             token.id if token is not None else None,
@@ -334,6 +337,16 @@ class AuthService:
             source=source,
             now=self._clock(),
         )
+        told = (user.id, access.unknown)
+        if access.unknown and told not in self._told_unknown:
+            # Once per user and names, not on every request.
+            self._told_unknown.add(told)
+            self.activity.record(
+                users_said.UnknownRights(
+                    by=SERVICE, user=user, names=tuple(sorted(access.unknown))
+                )
+            )
+        return access
 
     def _require_users(self) -> None:
         if self._users.count() == 0:

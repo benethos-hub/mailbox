@@ -153,6 +153,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Rights that do not exist in a stored grant or role, e.g. of an older
+  version, are logged once per user as the activity
+  `users.unknown_rights`, not on every request.
 - A Microsoft client secret without
   `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` stops the service: it would
   belong to no app. An empty secret counts as none.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -34,7 +35,7 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.main import Services
 
-from ...conftest import CHEAP, bearer_for, create_account
+from ...conftest import ADMIN, CHEAP, bearer_for, create_account
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -230,3 +231,30 @@ def test_limited_user_cannot_create_accounts(
         headers=headers,
     )
     assert response.status_code == 403
+
+
+def test_rights_that_do_not_exist_are_logged_once(
+    services: Services, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Of an older version, say: they give nothing, and the log says so
+    once per user, not on every request."""
+    from benethos_mailbox_service.data.models import Grant
+
+    anna = services.users.create_user(
+        ADMIN, "Anna", [], [Grant(accounts=["*"], allow=["mail.read"])]
+    )
+    _, plain = services.users.create_token(ADMIN, anna.id, "laptop")
+    stored = services.repositories.users.get(anna.id)
+    old = Grant(accounts=["*"], allow=["mail.read", "mail.teleport"])
+    services.repositories.users.save(
+        stored.model_copy(update={"grants": [old], "service": ["time.travel"]})
+    )
+    with caplog.at_level(logging.WARNING):
+        for _ in range(3):
+            access = services.auth.authenticate(plain, source="127.0.0.1")
+    assert access.unknown == {"mail.teleport", "time.travel"}
+    assert access.allows("list_messages", "acc_x")
+    lines = [r for r in caplog.records if "do not exist" in r.getMessage()]
+    assert len(lines) == 1
+    assert "Anna" in lines[0].getMessage()
+    assert "mail.teleport, time.travel" in lines[0].getMessage()

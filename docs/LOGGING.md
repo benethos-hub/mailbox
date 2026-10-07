@@ -160,7 +160,7 @@ the sign-in throttle are in 5.9 with the other limits.
 | INFO | X issued token Z (name, expires) for Y | actor, token, user, expiry | new |
 | INFO | X revoked token Z of Y | actor, token, user | new |
 | INFO | X created / replaced / deleted role R | actor, role | new |
-| WARNING | a stored grant names rights that do not exist | names | yes |
+| WARNING | the grants and roles of Y name rights that do not exist, which give nothing: names | user, names | once per user and names, when its access is built |
 | INFO | the host made a one-time password for Y | user | yes |
 
 ### 5.4 Accounts and OAuth
@@ -493,6 +493,7 @@ and that each is listed here.
 | `users.role_created` | a role created |
 | `users.role_replaced` | a role replaced |
 | `users.role_deleted` | a role deleted |
+| `users.unknown_rights` | stored grants or roles name rights that do not exist |
 | `accounts.connected` | an account connected |
 | `accounts.connect_failed` | an account could not be connected |
 | `accounts.changed` | an account changed |
