@@ -14,13 +14,14 @@ is Gmail, Microsoft 365, GMX over IMAP or a POP3 mailbox. On top of the API
 sits an MCP server, so an assistant can read, search, triage and send mail
 across all connected accounts.
 
-Two layers, strictly separated:
+Two layers, strictly separated, and between them the Python client
+`mailbox-client` (8.2), which the MCP server and any script use:
 
 ```
  MCP client (Claude, ...)
         │  MCP (stdio / streamable HTTP)
  ┌──────▼───────────┐
- │  MCP server      │  thin: tools → REST calls, compact output
+ │  MCP server      │  thin: tools → calls of the client, compact output
  └──────┬───────────┘
         │  HTTPS + bearer token        ◄── the OpenAPI document is the contract
  ┌──────▼───────────┐
@@ -41,7 +42,7 @@ REST client can do too.
 
 ```
  web/          PRESENTATION ─ HTTP only
-   routes/       JSON API under /v1  ◄── scripts, apps, the MCP server
+   api/          JSON API under /v1  ◄── scripts, apps, the client, the MCP server
    pages/        configuration UI    ◄── a person in the browser
       │  who is calling (token or session) → the domain
  domain/       BUSINESS LOGIC ─ no HTTP, one package per area
@@ -194,7 +195,7 @@ The decisions that shape every endpoint.
 | **Draft** | a message with the draft role, own routes because providers treat it specially. |
 | **Change** | an entry in the change feed: `{type, id, account_id, at}`. |
 | **Webhook** | callback URL + event list + signing secret. |
-| **Token** | an API token with scopes. |
+| **Token** | an API token of a user. It carries the user's rights, no more (7.5). |
 
 ### 4.1 Message ids
 
@@ -556,9 +557,9 @@ up the result.
 | 3 | **JMAP well-known** | `https://{domain}/.well-known/jmap`, SRV `_jmap._tcp.{domain}` | JMAP servers (5.6) |
 | 4 | **ISPDB** | `https://autoconfig.thunderbird.net/v1.1/{domain}`, Thunderbird's shared database | many smaller providers. Tells Mozilla the domain, so it can be switched off |
 | 5 | **MX lookup** | MX record of the domain, then sources 1 and 4 for the MX host's base domain | custom domains hosted elsewhere: MX at `google.com` means Google Workspace, at `protection.outlook.com` Microsoft 365, at `mx.ionos.de` IONOS |
-| 6 | **Microsoft realm** | Microsoft's user-realm and Autodiscover v2 endpoints for the address | recognises a Microsoft 365 tenant behind any domain **(to verify: exact endpoints and their stability)** |
-| 7 | **SRV records** | RFC 6186: `_imaps._tcp`, `_imap._tcp`, `_submission._tcp`, `_submissions._tcp` | mail servers that publish SRV |
-| 8 | **Guessing** | `imap.{domain}`, `mail.{domain}`, `smtp.{domain}` on 993/143 and 465/587 | last resort, lowest confidence |
+| 6 | **Microsoft realm**, planned | Microsoft's user-realm and Autodiscover v2 endpoints for the address | recognises a Microsoft 365 tenant behind any domain **(to verify: exact endpoints and their stability)** |
+| 7 | **SRV records**, planned | RFC 6186: `_imaps._tcp`, `_imap._tcp`, `_submission._tcp`, `_submissions._tcp` | mail servers that publish SRV |
+| 8 | **Guessing**, planned | `imap.{domain}`, `mail.{domain}`, `smtp.{domain}` on 993/143 and 465/587 | last resort, lowest confidence |
 
 For every IMAP or SMTP candidate the service then reads the server's
 `CAPABILITY`: which auth mechanisms it offers (`AUTH=XOAUTH2`,
@@ -726,6 +727,8 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | DELETE | `/v1/accounts/{account_id}` | remove, credentials deleted |
 | POST | `/v1/accounts/{account_id}/verify` | test the connection now |
 | POST | `/v1/oauth/{provider}/start` | start OAuth for Microsoft (later Gmail): the provider's sign-in URL, to connect an account or, with `account_id`, sign it in again |
+| POST | `/v1/oauth/{provider}/device` | sign in with a code (5.4): the code, the page to enter it at and a `sign_in_id`, to connect an account or, with `account_id`, sign it in again |
+| POST | `/v1/oauth/{provider}/device/{sign_in_id}` | poll the sign-in with a code: `connected` false until the person signed in, then the account, no sooner than its `interval` |
 | GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
 | GET | `/v1/providers` | the built-in presets, the same data discovery uses first |
@@ -1030,11 +1033,13 @@ One envelope for every error the API raises itself:
 |---|---|---|
 | 400 | `bad_request` | semantically invalid input |
 | 401 | `unauthorized` | missing, wrong, expired or revoked credential, or disabled user |
-| 403 | `forbidden` | the user has a grant for the account but not for this operation (7.5) |
+| 403 | `forbidden`, `recipient_not_allowed` | the user has a grant for the account but not for this operation, or no grant allows the recipient (7.5) |
 | 404 | `not_found` | account, folder, message, also an account the user has no grant for |
 | 409 | `conflict`, `idempotency_conflict`, `credential_missing` | the last: the account has no credential of the kind its sign-in needs |
+| 410 | `changes_expired` | a `since` state older than the changes kept (6.5) |
+| 413 | `payload_too_large` | a request body above the limit ([LIMITS.md](LIMITS.md)) |
 | 422 | FastAPI validation format | schema violation |
-| 429 | `rate_limited` | with `Retry-After` |
+| 429 | `rate_limited`, `send_limit_reached` | with `Retry-After` |
 | 501 | `not_supported` | capability missing |
 | 500 | `credential_unreadable`, `storage_error` | a stored credential cannot be decrypted, the service's own database failed |
 | 502 | `provider_error`, `provider_auth_failed`, `provider_unavailable` | upstream failed. An auth failure sets the account to `needs_reauth`, an unreachable server to `unreachable` |
@@ -1137,9 +1142,10 @@ the data, rather than a readable file.
   (the KEK, base32-encoded, like a BitLocker recovery key). Without KEK and
   recovery key the credentials are gone, and every account has to be
   reconnected. The mail itself is not affected.
-- **Rotation:** `benethos-mailbox-service keys rotate` re-wraps the DEK with a new
-  KEK. `keys rotate --data` also re-encrypts every secret with a new DEK.
-  `key_id` on each row lets old and new coexist during that run.
+- **Rotation, planned:** `benethos-mailbox-service keys rotate` re-wraps
+  the DEK with a new KEK. `keys rotate --data` also re-encrypts every
+  secret with a new DEK. `key_id` on each row lets old and new coexist
+  during that run. Today `keys` has `init`, `import` and `generate`.
 
 ### 7.4 Handling rules
 
@@ -1251,7 +1257,7 @@ Terms, since "account" is taken:
 |---|---|---|
 | **Account** | a connected mailbox (GMX, Gmail, ...) | `/v1/accounts` |
 | **User** | someone or something that calls the API: a person, the MCP server, a script | `/v1/users` |
-| **Credential** | how a user authenticates: an API token today, more kinds later | `/v1/users/{id}/tokens` |
+| **Credential** | how a user authenticates: an API token for the API and the MCP server, a password for the UI | `/v1/users/{id}/tokens`, `/v1/users/{id}/password` |
 | **Grant** | a right of a user: which operations on which accounts | part of the user |
 | **Role** | a named, reusable set of grants | `/v1/roles` |
 
@@ -1336,7 +1342,7 @@ with the role
   | `send` | `send_message`, `send_draft` |
   | `audit` | `list_sends`, `list_all_sends` on accounts, `list_activity` in `service` |
   | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, credentials of mail accounts |
-  | `accounts.connect` | `discover_account`, `start_oauth`, `create_account`. Of the service |
+  | `accounts.connect` | `discover_account`, `start_oauth`, `start_device_oauth`, `poll_device_oauth`, `create_account`. Of the service |
   | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook`. Of the service |
   | `users.read` | users, their tokens, roles, to read. Of the service |
   | `users.manage` | users, their tokens, roles. Of the service |
@@ -1825,7 +1831,7 @@ server and the project's own checks need.
 | Python | 3.11–3.14 |
 | Packaging | uv workspace with three distributions (service, client, MCP server), hatchling, `src/` layout |
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
-| Storage | SQLite (stdlib `sqlite3` via a thread, or `aiosqlite`) |
+| Storage | SQLite (stdlib `sqlite3`, in a worker thread) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |
 | Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (Gmail, Graph) |
 | MCP | `mcp` 2.x |
@@ -1877,9 +1883,11 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    service is, and cannot collide with anyone's trademark. "Mail gateway"
    was ruled out because it already names a different kind of product,
    the filtering gateway in front of a mail server. **Decided
-   2026-10-05:** the project is named Mailbox, its packages
-   `mailbox-service` and `mailbox-mcp`. On PyPI and ghcr.io they keep
-   the names `benethos-mailbox-service` and `benethos-mailbox-mcp`.
+   2026-10-05:** the project is named Mailbox, the repository `mailbox`,
+   its packages `mailbox-service`, `mailbox-client` (since 2026-10-07)
+   and `mailbox-mcp`. On PyPI they keep the names
+   `benethos-mailbox-service`, `benethos-mailbox-client` and
+   `benethos-mailbox-mcp`, on ghcr.io the two images as well.
 3. **Gmail priority:** is Gmail needed early, or are GMX / web.de /
    T-Online over IMAP the main use? Microsoft accounts are supported
    already (phase 5).

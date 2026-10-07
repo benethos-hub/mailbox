@@ -318,6 +318,11 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 - **The Python client as a package of its own (8.2)**, decided
   2026-10-07, done: `mailbox-client`, each endpoint described once, an
   async and a sync client over it. The MCP server is built on it
+- **The work list of 2026-10 ([REFACTORING.md](REFACTORING.md) 12)**,
+  done 2026-10-07: `assembly/` and `cli/`, the adapters in parts behind
+  one protocol per ability, JSON from a server read into shapes, named
+  values for ids, cursors and settings, the limits on the size of the
+  code, and every helper of `common/` once
 
 ## Keeping this file current
 

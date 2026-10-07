@@ -3,15 +3,16 @@
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![PyPI mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
 [![PyPI mailbox-mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
+[![PyPI mailbox-client](https://img.shields.io/pypi/v/benethos-mailbox-client?label=PyPI%20mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
 [![Container](https://img.shields.io/badge/ghcr.io-mailbox--service-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-service)
 [![Container](https://img.shields.io/badge/ghcr.io-mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
 [![Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-One REST API for all your mailboxes, whichever provider they are at, and
-an MCP server on top. Scripts, tools and AI agents work with your mail
-through one door you control.
+One REST API for all your mailboxes, whichever provider they are at, a
+Python client for it and an MCP server on top. Scripts, tools and AI
+agents work with your mail through one door you control.
 
 > **Status: alpha, version 0.2.0.** Usable with real accounts for
 > testing. The API and the configuration may still change. Stored data
@@ -25,13 +26,15 @@ info@ address at some hoster, maybe a Gmail account. Each speaks its own
 dialect: IMAP here, Microsoft Graph there. Every tool that wants to work
 with mail has to learn all of them and has to be given the passwords.
 
-Mailbox turns that around. It has two parts. `mailbox-service` runs on
+Mailbox turns that around. It has three parts. `mailbox-service` runs on
 your own machine or server and holds the connections to all accounts.
 Everything else talks to that service only, through one REST API that
-looks the same for every provider. `mailbox-mcp`, the MCP server, builds
-on it and opens it to AI agents. The service decides who may do what. A script, an app
-or an AI agent gets a token of its own. That token opens exactly the
-accounts and operations it was given, nothing more.
+looks the same for every provider. `mailbox-client` is the Python
+client of that API, for scripts and apps. `mailbox-mcp`, the MCP
+server, builds on the client and opens the service to AI agents. The
+service decides who may do what. A script, an app or an AI agent gets
+a token of its own. That token opens exactly the accounts and
+operations it was given, nothing more.
 
 That makes a few things simple that are hard otherwise.
 
@@ -169,6 +172,14 @@ compose file.
   and the rules for new code
 - [docs/LIMITS.md](docs/LIMITS.md): every rate limit and how they work
   together
+- [docs/PERMISSIONS.md](docs/PERMISSIONS.md): users, roles and rights
+- [docs/LOGGING.md](docs/LOGGING.md) and [docs/AUDIT.md](docs/AUDIT.md):
+  the service log and the audit of administration
+- [docs/UI.md](docs/UI.md): how the pages of the configuration UI look
+  and behave
+- [docs/REFACTORING.md](docs/REFACTORING.md): how the layout of the code
+  came to be
+- [docs/IDEAS.md](docs/IDEAS.md): collected, not decided
 - [docs/microsoft.md](docs/microsoft.md): connecting Microsoft accounts
 - [docs/openapi.json](docs/openapi.json): the API contract. A running
   service shows it at `/docs`
