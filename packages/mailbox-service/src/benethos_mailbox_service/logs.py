@@ -6,7 +6,7 @@ service's records then had no handler: below WARNING they were dropped,
 above they came without time or source. Libraries log from WARNING on,
 so a debug level shows the service without the IMAP commands of a
 library. A secret the service holds is masked in every line
-(``data/secrets/redact.py``).
+(``common/redact.py``).
 """
 
 from __future__ import annotations
