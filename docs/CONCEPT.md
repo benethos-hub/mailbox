@@ -234,10 +234,16 @@ Ids are opaque strings to clients. Nothing may parse them.
 
 ## 5. Provider adapters and libraries
 
-Every adapter implements `data.providers.base.MailProvider` and declares a
-set of `Capability` values. The API answers `501 not_supported` for what an
-adapter cannot do, and `GET /v1/accounts/{id}` lists the capabilities so a
-client can tell in advance. `/v1/me` names them per account as well. Since
+Every adapter implements `Reads` of `data.providers.base`, and of the
+protocols beyond it those it can: `Writes` (flags and folders),
+`Deletes`, `Drafts`, `Sends`, `Watches` (push) and `Deltas` (changes
+since a token). One protocol per ability, checked with `isinstance`,
+was **decided 2026-10-07**. It declares only what no
+protocol says: search, labels, stable ids, and sending where it has a
+server to send through. The capabilities follow from both. The API
+answers `501 not_supported` for what an adapter does not implement, the
+domain decides that, and `GET /v1/accounts/{id}` lists the capabilities
+so a client can tell in advance. `/v1/me` names them per account as well. Since
 2026-10-06 they include `flags` (read state, stars, keywords), `folders`
 (more than the inbox: folders, moving, the trash) and `search` (a filtered
 list). Every adapter but `pop3` has all three. The UI offers no action an

@@ -113,15 +113,10 @@ class JmapProvider:
     capabilities = frozenset(
         {
             Capability.SEND,
-            Capability.DRAFTS,
-            Capability.FLAGS,
-            Capability.FOLDERS,
             Capability.SEARCH,
             Capability.SERVER_SEARCH,
             Capability.LABELS,
             Capability.STABLE_IDS,
-            Capability.DELTA,
-            Capability.PUSH,
         }
     )
 

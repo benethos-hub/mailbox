@@ -19,8 +19,8 @@ from benethos_mailbox_service.data.models import (
 from benethos_mailbox_service.data.protocols.imap import ImapSession
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
-    MailProvider,
     ProviderSettings,
+    Reads,
 )
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
@@ -52,7 +52,7 @@ def imap_services(server: FakeMailBox, monkeypatch: pytest.MonkeyPatch) -> Servi
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
-    ) -> MailProvider:
+    ) -> Reads:
         if kind is ProviderType.MEMORY:
             return MemoryProvider()
         return ImapProvider(

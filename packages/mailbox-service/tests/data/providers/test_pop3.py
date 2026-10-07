@@ -15,7 +15,6 @@ from benethos_mailbox_service.data.models import (
     FolderRole,
     MailServer,
     MessageFilter,
-    MessageUpdate,
     ProviderType,
     Security,
     ServerProtocol,
@@ -25,7 +24,15 @@ from benethos_mailbox_service.data.protocols.pop3 import Pop3Session
 from benethos_mailbox_service.data.protocols.smtp import SmtpSession
 from benethos_mailbox_service.data.providers import (
     Capability,
+    Deletes,
+    Deltas,
+    Drafts,
+    Reads,
+    Sends,
+    Watches,
+    Writes,
     build_provider,
+    capabilities_of,
     probe_server,
     settings_from_servers,
 )
@@ -218,14 +225,17 @@ async def test_the_one_folder_is_the_inbox(server: FakePop3Server) -> None:
     assert server.calls == []  # known without asking the server
 
 
-async def test_folders_cannot_be_made(server: FakePop3Server) -> None:
-    adapter = provider(server)
-    with pytest.raises(NotSupportedError, match="one folder"):
-        await adapter.create_folder("Archive", None)
-    with pytest.raises(NotSupportedError):
-        await adapter.update_folder(INBOX, "Other", None)
-    with pytest.raises(NotSupportedError):
-        await adapter.delete_folder(INBOX)
+def test_it_reads_deletes_and_sends_and_nothing_else(
+    server: FakePop3Server,
+) -> None:
+    """No flags, folders, drafts, push or delta: the adapter implements
+    none of those, and the domain answers 501 for them."""
+    adapter = provider(server, smtp=FakeSmtpServer())
+    for protocol in (Reads, Deletes, Sends):
+        assert isinstance(adapter, protocol)
+    for protocol in (Writes, Drafts, Watches, Deltas):
+        assert not isinstance(adapter, protocol)
+    assert capabilities_of(adapter) == {Capability.SEND}
 
 
 # --- listing and reading ----------------------------------------------------------
@@ -357,38 +367,6 @@ async def test_every_step_sees_the_mailbox_as_it_is_now(
 # --- changing messages ------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "changes",
-    [
-        MessageUpdate(unread=False),
-        MessageUpdate(starred=True),
-        MessageUpdate(keywords=["$forwarded"]),
-    ],
-)
-async def test_flags_are_not_supported(
-    server: FakePop3Server, changes: MessageUpdate
-) -> None:
-    with pytest.raises(NotSupportedError, match="read state"):
-        await provider(server).update_messages([mappers.message_id("uid-1")], changes)
-
-
-async def test_a_move_is_not_supported(server: FakePop3Server) -> None:
-    with pytest.raises(NotSupportedError, match="one folder"):
-        await provider(server).update_messages(
-            [mappers.message_id("uid-1")], MessageUpdate(folder_ids=["f_other"])
-        )
-
-
-async def test_a_move_to_the_inbox_changes_nothing(server: FakePop3Server) -> None:
-    found = mappers.message_id("uid-1")
-    gone = mappers.message_id("uid-404")
-    results = await provider(server).update_messages(
-        [found, gone], MessageUpdate(folder_ids=[INBOX])
-    )
-    assert results[found].subject == "Mail 1"  # type: ignore[union-attr]
-    assert isinstance(results[gone], MessageNotFoundError)
-
-
 async def test_no_trash(server: FakePop3Server) -> None:
     with pytest.raises(NotSupportedError, match="no trash"):
         await provider(server).delete_messages(
@@ -432,14 +410,6 @@ def test_a_retried_delete_counts_a_message_gone_as_deleted(
     }
     first = pop3_module._delete(session, wanted, retried=False)
     assert isinstance(first[mappers.message_id("uid-404")], MessageNotFoundError)
-
-
-async def test_no_drafts(server: FakePop3Server) -> None:
-    adapter = provider(server)
-    with pytest.raises(NotSupportedError, match="drafts"):
-        await adapter.list_drafts(limit=10, cursor=None)
-    with pytest.raises(NotSupportedError, match="drafts"):
-        await adapter.save_draft(b"", None)
 
 
 # --- sending ----------------------------------------------------------------------
@@ -498,13 +468,9 @@ async def test_contents_and_headers(
     assert [c[0] for c in server.calls].count("quit") == 3
 
 
-async def test_no_flags_no_push_no_delta(server: FakePop3Server) -> None:
+async def test_no_flags_to_compare(server: FakePop3Server) -> None:
     adapter = provider(server)
     assert await adapter.flag_changes(INBOX, "x", [mappers.message_id("uid-1")]) == []
-    with pytest.raises(NotSupportedError):
-        await adapter.wait_for_change(1.0)
-    with pytest.raises(NotSupportedError):
-        await adapter.folder_changes(INBOX, None)
 
 
 # --- discovered servers -----------------------------------------------------------

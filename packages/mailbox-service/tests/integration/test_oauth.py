@@ -33,8 +33,8 @@ from benethos_mailbox_service.data.protocols.oauth import (
 )
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
-    MailProvider,
     ProviderSettings,
+    Reads,
     TokenSource,
     build_provider,
 )
@@ -386,7 +386,7 @@ def factory(
     /,
     *,
     tokens: TokenSource | None = None,
-) -> MailProvider:
+) -> Reads:
     if kind is ProviderType.MICROSOFT:
         assert tokens is not None
         return SignedInProvider(tokens)

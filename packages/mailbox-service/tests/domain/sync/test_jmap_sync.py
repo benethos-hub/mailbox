@@ -18,8 +18,8 @@ from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.protocols import ServerClient
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
-    MailProvider,
     ProviderSettings,
+    Reads,
 )
 from benethos_mailbox_service.data.providers.jmap import JmapProvider
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
@@ -52,7 +52,7 @@ def services_for(
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
-    ) -> MailProvider:
+    ) -> Reads:
         if kind is ProviderType.MEMORY:
             return MemoryProvider()
         return JmapProvider(

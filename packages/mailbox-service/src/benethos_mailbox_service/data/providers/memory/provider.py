@@ -5,7 +5,6 @@ from __future__ import annotations
 from ....errors import (
     ConflictError,
     MailboxServiceError,
-    NotSupportedError,
     missing,
     missing_message,
 )
@@ -22,16 +21,13 @@ from ...models import (
     SentMessage,
 )
 from .. import rules
-from ..base import Capability, FolderChanges
+from ..base import Capability
 
 
 class MemoryProvider:
     capabilities = frozenset(
         {
             Capability.SEND,
-            Capability.DRAFTS,
-            Capability.FLAGS,
-            Capability.FOLDERS,
             Capability.SEARCH,
             Capability.STABLE_IDS,
         }
@@ -267,12 +263,6 @@ class MemoryProvider:
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
         wanted = set(message_ids)
         return {m.id: m.message_id_header for m in self.messages if m.id in wanted}
-
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
-        raise NotSupportedError("the memory provider reports no folder changes")
-
-    async def wait_for_change(self, timeout: float) -> bool:
-        raise NotSupportedError("the memory provider does not push changes")
 
     async def verify(self) -> None:
         return None

@@ -26,8 +26,8 @@ from benethos_mailbox_service.data.protocols.http import ApiClient
 from benethos_mailbox_service.data.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
-    MailProvider,
     ProviderSettings,
+    Reads,
     TokenSource,
     build_provider,
 )
@@ -409,7 +409,7 @@ def test_connect_read_and_send_through_the_api(
         /,
         *,
         tokens: TokenSource | None = None,
-    ) -> MailProvider:
+    ) -> Reads:
         assert kind is ProviderType.MICROSOFT and tokens is not None
         return MicrosoftProvider(
             tokens, ApiClient(transport=httpx.MockTransport(graph))

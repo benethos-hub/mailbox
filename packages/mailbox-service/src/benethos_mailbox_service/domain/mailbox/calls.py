@@ -20,9 +20,9 @@ from ...data.models import (
     MessageUpdate,
     Page,
 )
-from ...data.providers import MailProvider
+from ...data.providers import Reads
 from ...errors import MailboxServiceError, MessageNotFoundError, missing_message
-from ..accounts import Adapters
+from ..accounts import Adapters, deletes, writes
 from ..changes import MailboxChange, MessagesDeleted, MessagesUpdated
 from ..sync import SyncService
 
@@ -50,7 +50,7 @@ class Calls:
     # --- one call ---------------------------------------------------------------------
 
     async def call(
-        self, account_id: str, operation: Callable[[MailProvider], Awaitable[T]]
+        self, account_id: str, operation: Callable[[Reads], Awaitable[T]]
     ) -> T:
         """Run one provider operation and keep the account's status in step
         with how it went."""
@@ -60,7 +60,7 @@ class Calls:
         self,
         account_id: str,
         message_id: str,
-        operation: Callable[[MailProvider, str], Awaitable[T]],
+        operation: Callable[[Reads, str], Awaitable[T]],
     ) -> T:
         """Run an operation on the message behind one of our ids."""
         return await self._sync.resolve(
@@ -155,7 +155,7 @@ class Calls:
     ) -> dict[str, MessageSummary | MailboxServiceError]:
         """Change messages. Returns the outcome per id."""
         outcomes, natives = await self._on_messages(
-            account_id, ids, lambda p, n: p.update_messages(n, changes)
+            account_id, ids, lambda p, n: writes(p).update_messages(n, changes)
         )
         results: dict[str, MessageSummary | MailboxServiceError] = {}
         folders: dict[str, str] = {}
@@ -183,7 +183,7 @@ class Calls:
     ) -> dict[str, None | MailboxServiceError]:
         """Into the trash, or for good. Returns the outcome per id."""
         outcomes, natives = await self._on_messages(
-            account_id, ids, lambda p, n: p.delete_messages(n, permanent)
+            account_id, ids, lambda p, n: deletes(p).delete_messages(n, permanent)
         )
         results: dict[str, None | MailboxServiceError] = {}
         folders: dict[str, str] = {}
@@ -225,7 +225,7 @@ class Calls:
         self,
         account_id: str,
         ids: list[str],
-        run: Callable[[MailProvider, list[str]], Awaitable[dict[str, Any]]],
+        run: Callable[[Reads, list[str]], Awaitable[dict[str, Any]]],
     ) -> tuple[dict[str, Any], dict[str, str]]:
         """Run a provider operation on the messages behind ``ids``. Those
         the provider does not find where the index says get one sync and a
@@ -256,7 +256,7 @@ class Calls:
         self,
         account_id: str,
         natives: dict[str, str],
-        run: Callable[[MailProvider, list[str]], Awaitable[dict[str, Any]]],
+        run: Callable[[Reads, list[str]], Awaitable[dict[str, Any]]],
     ) -> dict[str, Any]:
         if not natives:
             return {}

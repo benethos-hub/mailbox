@@ -12,7 +12,11 @@ import pytest
 
 from benethos_mailbox_service.data.models import Account, ProviderType
 from benethos_mailbox_service.data.protocols.http import ApiClient
-from benethos_mailbox_service.data.providers import Capability, MailProvider
+from benethos_mailbox_service.data.providers import (
+    Capability,
+    Reads,
+    capabilities_of,
+)
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
 from benethos_mailbox_service.data.storage import (
     InMemoryChangeLogRepository,
@@ -32,14 +36,14 @@ ACC = "acc_ms"
 class OneAdapter:
     """What SyncService needs of Adapters, for one account."""
 
-    def __init__(self, provider: MailProvider) -> None:
+    def __init__(self, provider: Reads) -> None:
         self.provider = provider
 
     def capabilities(self, account_id: str) -> frozenset[Capability]:
-        return self.provider.capabilities
+        return capabilities_of(self.provider)
 
     async def call(
-        self, account_id: str, operation: Callable[[MailProvider], Awaitable[T]]
+        self, account_id: str, operation: Callable[[Reads], Awaitable[T]]
     ) -> T:
         return await operation(self.provider)
 

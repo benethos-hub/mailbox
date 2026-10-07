@@ -158,6 +158,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- What an account cannot do answers `501 not_supported` with the same
+  message for every kind of account, e.g. "this account keeps no
+  drafts". A change of a POP3 message answers `501` even when it would
+  change nothing.
 - A change and its record in the audit of administration are stored in
   one transaction. When the record cannot be written, the change is
   undone and the request fails with `500`. Before, the

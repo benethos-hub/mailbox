@@ -15,7 +15,7 @@ import anyio
 from ...errors import NotSupportedError
 from ..models import CredentialKind, MailServer, ProviderType, Security, ServerProtocol
 from ..protocols import Endpoints, Pick
-from .base import CredentialReader, MailProvider, ProviderSettings, TokenSource
+from .base import CredentialReader, ProviderSettings, Reads, TokenSource
 from .guard import Pace
 from .imap import ImapProvider
 from .imap import probe as probe_imap
@@ -43,7 +43,7 @@ class ProviderFactory(Protocol):
         /,
         *,
         tokens: TokenSource | None = None,
-    ) -> MailProvider: ...
+    ) -> Reads: ...
 
 
 # Protocol, host, port, security and the address just checked for the host.
@@ -61,7 +61,7 @@ _REGISTRY: dict[
             Pace | None,
             anyio.CapacityLimiter | None,
         ],
-        MailProvider,
+        Reads,
     ],
 ] = {
     ProviderType.MEMORY: lambda _s, _c, _pick, _pace, _watchers: MemoryProvider(),
@@ -77,9 +77,7 @@ _REGISTRY: dict[
     ),
 }
 # Providers that sign in with OAuth: they get a token source instead.
-_SIGNED_IN: dict[
-    ProviderType, Callable[[ProviderSettings, TokenSource], MailProvider]
-] = {
+_SIGNED_IN: dict[ProviderType, Callable[[ProviderSettings, TokenSource], Reads]] = {
     ProviderType.MICROSOFT: lambda _settings, tokens: MicrosoftProvider(tokens),
 }
 
@@ -158,7 +156,7 @@ def build_provider(
     pick: Pick | None = None,
     pace: Pace | None = None,
     watchers: anyio.CapacityLimiter | None = None,
-) -> MailProvider:
+) -> Reads:
     """A new adapter for one account. ``pick`` checks the host of each
     connection to a server the settings name. ``pace`` is how fast an
     adapter that paces itself sends requests, ``watchers`` bounds the

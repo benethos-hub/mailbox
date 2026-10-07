@@ -29,7 +29,7 @@ from ...common.ratelimit import backoff
 from ...data.models import Account, AccountStatus
 from ...data.providers import Capability
 from ...errors import NotFoundError, NotSupportedError, ProviderAuthError
-from ..accounts import Adapters
+from ..accounts import Adapters, watches
 from ..activity import WORKER, Activity, ActivityLog
 from ..activity import sync as said
 from ..rounds import rounds
@@ -209,7 +209,7 @@ class SyncWorker:
             while self._wanted(account_id):
                 try:
                     changed = await self._adapters.call(
-                        account_id, lambda p: p.wait_for_change(IDLE_RENEW)
+                        account_id, lambda p: watches(p).wait_for_change(IDLE_RENEW)
                     )
                     failures = 0
                     if changed:

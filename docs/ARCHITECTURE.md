@@ -210,7 +210,8 @@ packages/mailbox-service/
                         #   SignInThrottle
       users/            # UserService: users, roles, tokens
       accounts/         # AccountService, Adapters (the live adapter per
-                        #   account), OAuthService
+                        #   account), OAuthService, abilities: 501 for
+                        #   what an adapter does not implement
       discovery/        # DiscoveryService: trust, ranking, cache, limits
       mailbox/          # MailboxService, the facade for mail: calls under
                         #   our ids, lists across accounts, replies,
@@ -377,7 +378,7 @@ names it.
 | a change clients hear of | a class in `domain/changes/catalogue.py`, recorded through the feed |
 | a type several layers pass around | `data/models/`, one module per subject, pydantic |
 | a record the service keeps | its model, a repository protocol in `data/storage/`, the in-memory one beside it, the SQLite one in `data/storage/sqlite/`, and a migration |
-| a mail provider | a directory in `data/providers/`, behind `MailProvider`, reached through the registry |
+| a mail provider | a directory in `data/providers/`, implementing `Reads` and the protocols of `base.py` it can, reached through the registry |
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
 | a command of the CLI | a module in `cli/` with `add` and `run`, its line in `COMMANDS`. It builds the service through `assembly/` |
@@ -438,7 +439,7 @@ technology says the seam is in the wrong place.
    needed somewhere else, its wrapper is extended, it is not imported a
    second time. The architecture test lists the homes.
 2. **Our interface, not theirs.** Code depends on a protocol this
-   project defines (`MailProvider`, a repository, a key provider), never
+   project defines (`Reads`, a repository, a key provider), never
    on a third-party type. A library's objects, exceptions and quirks do
    not cross its wrapper.
 3. **Translate at the edge.** On the way in, into `data/models/`. On
@@ -475,7 +476,7 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`MailProvider`, `Capability`), registry in `data/providers/registry.py` | memory, imap, microsoft, pop3, jmap (planned: gmail) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas` for what it can beyond; `Capability`, `capabilities_of`), registry in `data/providers/registry.py`. The domain answers 501 for a missing protocol (`domain/accounts/abilities.py`) | memory, imap, microsoft, pop3, jmap (planned: gmail) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`) | in-memory, SQLite | another database |
@@ -489,7 +490,7 @@ noticing. Every change is measured against that.
 | Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints.py`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py` and `sync.py` |
 
 **When you add something new**, ask first where its seam is. A new
-provider is a new module behind `MailProvider`, not a branch in a route. A
+provider is a new module behind `Reads`, not a branch in a route. A
 new library gets a wrapper before it gets a caller. If a change needs edits
 in several layers to swap one technology, the seam is in the wrong place:
 fix that first, and say so.
