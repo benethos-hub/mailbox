@@ -207,6 +207,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The audit of administration names the role of a `users.role_deleted`
+  record. Its `record` was empty.
 - `PUT /v1/accounts/{account_id}/drafts/{draft_id}` said the draft keeps
   its id. That holds for IMAP only: a Microsoft or JMAP draft is stored
   as a new message under a new id, which the answer names. The UI's

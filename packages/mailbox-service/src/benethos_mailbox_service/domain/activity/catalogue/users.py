@@ -213,6 +213,9 @@ class RoleDeleted(Activity):
     def says(self) -> str:
         return f"deleted role {self.role_id}"
 
+    def touched(self) -> str | None:
+        return self.role_id
+
 
 def rights(service: Iterable[str], grants: int) -> str:
     """``1 grant``, or ``service admin, 1 grant`` with rights of the
@@ -220,6 +223,3 @@ def rights(service: Iterable[str], grants: int) -> str:
     names = ", ".join(service)
     counted = plural(grants, "grant")
     return f"service {names}, {counted}" if names else counted
-
-    def touched(self) -> str | None:
-        return self.role_id
