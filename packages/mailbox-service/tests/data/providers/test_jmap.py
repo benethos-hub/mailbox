@@ -577,12 +577,15 @@ async def test_delete_to_the_trash_and_for_good(
 
 async def test_destroy_refused(jmap: JmapProvider, server: FakeJmap) -> None:
     email_id = server.add_email(make_message("One"))
+    draft_id = server.add_email(make_message("Draft"), mailbox="drafts")
     server.Email_set = lambda args, using: [  # type: ignore[method-assign]
-        ("Email/set", {"notDestroyed": {email_id: {"type": "forbidden"}}})
+        (
+            "Email/set",
+            {"notDestroyed": {i: {"type": "forbidden"} for i in args["destroy"]}},
+        )
     ]
     outcome = await jmap.delete_messages([email_id], permanent=True)
     assert isinstance(outcome[email_id], ConflictError)
-    draft_id = server.add_email(make_message("Draft"), mailbox="drafts")
     with pytest.raises(ConflictError):
         await jmap.delete_draft(draft_id)
 
