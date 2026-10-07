@@ -47,7 +47,10 @@ def _parser() -> argparse.ArgumentParser:
     serve = commands.add_parser("serve", help="run the REST API", parents=[option])
     serve.add_argument("--host")
     serve.add_argument("--port", type=int)
-    commands.add_parser("openapi", help="print the OpenAPI document as JSON")
+    # It reads no settings. The option is there as on every command.
+    commands.add_parser(
+        "openapi", help="print the OpenAPI document as JSON", parents=[option]
+    )
     commands.add_parser(
         "paths",
         help="name the settings file, the data folder and where the master key is",
@@ -90,6 +93,7 @@ def _parser() -> argparse.ArgumentParser:
         "generate",
         help="print a new master key for a key file or container secret. "
         "Stores nothing.",
+        parents=[option],
     )
 
     backup = commands.add_parser(

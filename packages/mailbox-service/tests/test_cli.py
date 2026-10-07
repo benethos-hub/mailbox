@@ -166,6 +166,18 @@ def test_openapi_needs_no_key_and_no_oauth_app(
     assert err == ""
 
 
+@pytest.mark.parametrize("command", [["openapi"], ["keys", "generate"]])
+def test_every_command_takes_the_settings_file(
+    command: list[str], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Also the two that read no settings: before or after the command."""
+    settings = tmp_path / "service.env"
+    settings.write_text("", encoding="utf-8")
+    assert main([*command, "--env-file", str(settings)]) == 0
+    assert main(["--env-file", str(settings), *command]) == 0
+    assert capsys.readouterr().out
+
+
 # --- the settings file ----------------------------------------------------------------
 
 

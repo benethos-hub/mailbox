@@ -207,6 +207,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `openapi` and `keys generate` take `--env-file`, before or after the
+  command, like every other command. They stopped with "unrecognized
+  arguments".
 - The audit of administration names the role of a `users.role_deleted`
   record. Its `record` was empty.
 - `PUT /v1/accounts/{account_id}/drafts/{draft_id}` said the draft keeps
