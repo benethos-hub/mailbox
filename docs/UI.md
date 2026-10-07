@@ -242,12 +242,18 @@ next step appears under the last one:
 2. **How to connect.** One card per way, the recommended one first:
    - a provider the deployment signs in with (Microsoft, later Google):
      **Sign in with Microsoft**, the address as the login hint, no
-     password field
+     password field, and beside it **Sign in with a code**. That one
+     opens a page with the code and the provider's link, which asks
+     every few seconds by htmx and goes on to the account once the
+     person signed in. **Check now** asks without script
    - a provider found with servers: the password field, the servers
      folded under **Servers**, with the source and whether it is trusted
    - nothing found: **Set up by hand** open at once, with the server
      fields
-   **Set up by hand** is always there, folded when something was found.
+   **Set up by hand** is always there, folded when something was found,
+   unless the deployment offers neither IMAP nor POP3. The same for
+   **Set up a JMAP server by hand**. A kind of account the deployment
+   does not offer is not shown at all.
    Where no source names a provider the deployment signs in with, its
    **Sign in with** stays offered: a custom domain can be at Microsoft.
 3. **Connect.** The domain tries the servers before storing anything.
@@ -257,8 +263,9 @@ next step appears under the last one:
 
 After connecting, the account page's **Change** card edits the servers,
 the display name and the password, for IMAP accounts. OAuth accounts have
-**Sign in again** instead of a password. Nothing of this needs a new
-domain call: `discover`, `create` and `update` exist.
+**Sign in again** and **Sign in again with a code** instead of a
+password. Nothing of this needs a new domain call: `discover`, `create`
+and `update` exist.
 
 ### 6.2 Creating, changing, removing
 

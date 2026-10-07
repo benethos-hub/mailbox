@@ -65,6 +65,11 @@
     <input type="hidden" name="account_id" value="{{ account.id }}" />
     <button class="{{ 'primary' if account.status.value == 'needs_reauth' else '' }}" type="submit">Sign in again</button>
   </form>
+  <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/device">
+    {{ csrf_field() }}
+    <input type="hidden" name="account_id" value="{{ account.id }}" />
+    <button type="submit">Sign in again with a code</button>
+  </form>
 </div>
 {% endif %}
 {% endcall %}

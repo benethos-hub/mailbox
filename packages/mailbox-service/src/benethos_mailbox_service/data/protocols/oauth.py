@@ -1,6 +1,7 @@
 """OAuth 2.0, the wire protocol of a sign-in: the authorization code flow
-with PKCE, refreshing, and a token source that keeps an adapter's access
-token valid.
+with PKCE, the sign-in with a code on another device (RFC 8628),
+refreshing, and a token source that keeps an adapter's access token
+valid.
 
 Provider-neutral. What differs per provider is an ``Endpoints`` value,
 which each adapter that signs in with OAuth brings, e.g.
@@ -26,11 +27,20 @@ from pydantic import SecretStr
 from ...common import redact
 from ...common.clock import utc_now
 from ...common.opaque import from_base64, to_base64
-from ...errors import ProviderAuthError, ProviderError
+from ...errors import (
+    BadRequestError,
+    NotSupportedError,
+    ProviderAuthError,
+    ProviderError,
+)
 from .http import ApiClient
 
 # An access token counts as spent this long before it runs out.
 MARGIN = timedelta(minutes=1)
+DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
+# What RFC 8628 suggests where the provider names no lifetime or interval.
+DEVICE_LIFETIME = 900
+DEVICE_INTERVAL = 5
 
 
 @dataclass(frozen=True)
@@ -50,13 +60,15 @@ class Profile:
 class Endpoints:
     """Where a provider signs users in and hands out tokens, and what a
     mail adapter asks for. With ``profile``, the address of an account
-    comes from there, else from the ID token."""
+    comes from there, else from the ID token. ``device_url`` hands out
+    codes for a sign-in on another device, None where there is none."""
 
     provider: str
     authorize_url: str
     token_url: str
     scopes: tuple[str, ...]
     profile: Profile | None = None
+    device_url: str | None = None
 
     @property
     def sign_in_scopes(self) -> tuple[str, ...]:
@@ -66,7 +78,9 @@ class Endpoints:
 
 @dataclass(frozen=True)
 class App:
-    """The OAuth client an operator registered for this deployment."""
+    """The OAuth client a deployment signs in with: one the operator
+    registered, or the project's. Without a secret it is a public client,
+    which proves itself by PKCE alone."""
 
     endpoints: Endpoints
     client_id: str
@@ -89,6 +103,35 @@ class Tokens:
     expires_at: datetime
     refresh_token: SecretStr | None
     identity: Identity | None = None
+
+
+@dataclass(frozen=True)
+class DeviceCode:
+    """A sign-in with a code (RFC 8628): the person enters ``user_code`` at
+    ``verification_uri``, on any device. ``device_code`` asks for the
+    tokens and never leaves the service."""
+
+    device_code: SecretStr
+    user_code: str
+    verification_uri: str
+    # Seconds the code is valid, and to wait between two questions for
+    # the tokens.
+    expires_in: int
+    interval: int
+
+
+@dataclass(frozen=True)
+class Waiting:
+    """The person has not signed in yet. ``slow_down``: the provider asks
+    to be asked less often."""
+
+    slow_down: bool = False
+
+
+class _StillWaiting(Exception):
+    def __init__(self, slow_down: bool) -> None:
+        super().__init__("authorization pending")
+        self.slow_down = slow_down
 
 
 @dataclass(frozen=True)
@@ -156,6 +199,73 @@ class OAuthClient:
             },
             self.app.endpoints.sign_in_scopes,
         )
+        return await self._identified(tokens)
+
+    async def device_code(self) -> DeviceCode:
+        """A code for a person to sign in with, on any device."""
+        endpoints = self.app.endpoints
+        if endpoints.device_url is None:
+            raise NotSupportedError(f"{endpoints.provider} has no sign-in with a code")
+        answer = await self._http.request(
+            "POST",
+            endpoints.device_url,
+            form={
+                "client_id": self.app.client_id,
+                "scope": " ".join(endpoints.sign_in_scopes),
+            },
+        )
+        body = _json(answer)
+        error = body.get("error") if isinstance(body, dict) else None
+        if error in ("invalid_client", "unauthorized_client"):
+            # Microsoft: AADSTS70002, the app is no public client.
+            raise ProviderError(
+                f"{endpoints.provider} refuses a sign-in with a code for this "
+                f"service's app ({error}): the app must allow public client flows"
+            )
+        if not answer.ok or not isinstance(body, dict):
+            raise _refused(endpoints.provider, answer.status, body)
+        code = body.get("device_code")
+        user_code = body.get("user_code")
+        # Some providers spell it verification_url.
+        uri = body.get("verification_uri") or body.get("verification_url")
+        if not (
+            isinstance(code, str)
+            and code
+            and isinstance(user_code, str)
+            and user_code
+            and isinstance(uri, str)
+        ):
+            raise ProviderError(f"{endpoints.provider} answered without a code")
+        if not uri.startswith("https://"):
+            raise ProviderError(
+                f"{endpoints.provider} named a sign-in page without HTTPS"
+            )
+        redact.note(code)
+        return DeviceCode(
+            device_code=SecretStr(code),
+            user_code=user_code,
+            verification_uri=uri,
+            expires_in=_seconds(body.get("expires_in"), DEVICE_LIFETIME),
+            interval=_seconds(body.get("interval"), DEVICE_INTERVAL),
+        )
+
+    async def poll_device(self, device_code: SecretStr) -> Tokens | Waiting:
+        """The tokens once the person entered the code and signed in, and
+        who signed in. Until then ``Waiting``."""
+        try:
+            tokens = await self._token(
+                {
+                    "grant_type": DEVICE_GRANT,
+                    "device_code": device_code.get_secret_value(),
+                },
+                None,
+            )
+        except _StillWaiting as waiting:
+            return Waiting(slow_down=waiting.slow_down)
+        return await self._identified(tokens)
+
+    async def _identified(self, tokens: Tokens) -> Tokens:
+        """The tokens with who signed in, as the provider's profile says."""
         profile = self.app.endpoints.profile
         if profile is None:
             return tokens
@@ -201,17 +311,19 @@ class OAuthClient:
             self.app.endpoints.scopes,
         )
 
-    async def _token(self, grant: dict[str, str], scopes: tuple[str, ...]) -> Tokens:
-        form = {**grant, "client_id": self.app.client_id, "scope": " ".join(scopes)}
+    async def _token(
+        self, grant: dict[str, str], scopes: tuple[str, ...] | None
+    ) -> Tokens:
+        """``scopes`` None: the grant carries them already, as a device code."""
+        form = {**grant, "client_id": self.app.client_id}
+        if scopes is not None:
+            form["scope"] = " ".join(scopes)
         if self.app.client_secret is not None:
             form["client_secret"] = self.app.client_secret.get_secret_value()
         answer = await self._http.request(
             "POST", self.app.endpoints.token_url, form=form
         )
-        try:
-            body = answer.json()
-        except ProviderError:
-            body = None  # a gateway's HTML page: the status says enough
+        body = _json(answer)
         if not answer.ok or not isinstance(body, dict):
             raise _refused(self.app.endpoints.provider, answer.status, body)
         return self._tokens(body)
@@ -220,8 +332,7 @@ class OAuthClient:
         access = body.get("access_token")
         if not isinstance(access, str) or not access:
             raise ProviderError("the token endpoint answered without an access token")
-        lifetime = body.get("expires_in")
-        seconds = int(lifetime) if isinstance(lifetime, int | str) else 3600
+        seconds = _seconds(body.get("expires_in"), 3600)
         refresh = body.get("refresh_token")
         id_token = body.get("id_token")
         redact.note(access)
@@ -251,16 +362,42 @@ def identity_of(id_token: str) -> Identity | None:
     )
 
 
+def _json(answer: Any) -> Any:
+    try:
+        return answer.json()
+    except ProviderError:
+        return None  # a gateway's HTML page: the status says enough
+
+
+def _seconds(value: object, default: int) -> int:
+    """A positive number of seconds as a provider wrote it, else ``default``."""
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        seconds = value
+    elif isinstance(value, str) and value.isdigit():
+        seconds = int(value)
+    else:
+        return default
+    return seconds if seconds > 0 else default
+
+
 def _refused(provider: str, status: int, body: Any) -> Exception:
     """The token endpoint's error, without anything that was sent."""
     error = body.get("error") if isinstance(body, dict) else None
+    if error in ("authorization_pending", "slow_down"):
+        return _StillWaiting(slow_down=error == "slow_down")
+    if error == "authorization_declined":
+        return BadRequestError(f"the sign-in at {provider} was declined")
+    if error in ("expired_token", "bad_verification_code"):
+        return BadRequestError(f"the code for {provider} has expired: start again")
     if error in ("invalid_grant", "interaction_required", "consent_required"):
         # The user has to sign in again: revoked, expired, password changed.
         return ProviderAuthError(f"{provider} asks to sign in again ({error})")
     if error in ("invalid_client", "unauthorized_client"):
         return ProviderError(
             f"{provider} refused this service's app ({error}): check the "
-            "client id and secret"
+            "client id, the secret and how the app is registered"
         )
     return ProviderError(f"{provider} refused the token request ({error or status})")
 

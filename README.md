@@ -118,7 +118,7 @@ Planned next: threads across folders and Gmail. The order is in
 | Provider | Connected via | Credential | State |
 |---|---|---|---|
 | GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, own mail servers | IMAP + SMTP | app password | available |
-| Microsoft 365, Outlook.com | Microsoft Graph | OAuth ([setup](docs/microsoft.md)) | available |
+| Microsoft 365, Outlook.com | Microsoft Graph | OAuth, through the project's app or your own ([setup](docs/microsoft.md)) | available |
 | Proton Mail | IMAP + SMTP through Proton Mail Bridge | Bridge password | IMAP, not tested |
 | Gmail / Google Workspace | Gmail API | OAuth, with your own Google Cloud client | planned |
 | Fastmail, Stalwart, other JMAP servers | JMAP | API token or password | available |

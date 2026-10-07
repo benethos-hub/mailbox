@@ -16,7 +16,7 @@ from ....domain.rights import Access
 from ....domain.system import StatusService
 from ....errors import MailboxServiceError
 from ...errors import status_of
-from ...services import Accounts, Discoverer, Status, get_oauth
+from ...services import Accounts, Discoverer, Status, get_accounts, get_oauth
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
 from ..forms import failing, text_of
@@ -151,6 +151,7 @@ def _connect_page(
         email=email,
         security=SECURITY,
         oauth_providers=_oauth_providers(request),
+        offers={p.value for p in ProviderType if get_accounts(request).offers(p)},
         **context,
     )
 

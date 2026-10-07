@@ -3,15 +3,23 @@
     uv run python live/microsoft.py --connect   # once: sign in in a browser
     uv run python live/microsoft.py             # the check, unattended
 
-Needs, in live/.env: the app registration (LIVE_MICROSOFT_CLIENT_ID,
-LIVE_MICROSOFT_CLIENT_SECRET, optional LIVE_MICROSOFT_TENANT) with the
-redirect URI http://localhost:8080/ui/oauth/microsoft/callback, and the
-test account's address in LIVE_MICROSOFT_EMAIL. Listing the address there
-confirms it as a test account (CLAUDE.md, golden rule 1). See
-docs/microsoft.md.
+    uv run python live/microsoft.py --project --connect   # with a code
+    uv run python live/microsoft.py --project             # the check
 
-The service runs with a database of its own in data/live-microsoft/, which
-keeps the encrypted refresh token between runs. The master key, and the
+Needs, in live/.env: the test account's address in LIVE_MICROSOFT_EMAIL.
+Listing the address there confirms it as a test account (CLAUDE.md,
+golden rule 1). Without ``--project``, an app of your own
+(LIVE_MICROSOFT_CLIENT_ID, LIVE_MICROSOFT_CLIENT_SECRET, optional
+LIVE_MICROSOFT_TENANT) with the redirect URI
+http://localhost:8080/ui/oauth/microsoft/callback. With ``--project``,
+the project's app that comes with the service: ``--connect`` then signs
+in over the API with a code, which it prints, entered by a person at
+Microsoft's page. See docs/microsoft.md.
+
+The service runs with a database of its own in data/live-microsoft/, or
+data/live-microsoft-project/ with ``--project``, which keeps the
+encrypted refresh token between runs. A refresh token belongs to the app
+that issued it, so the two never share one. The master key, and the
 password and a token of its user `admin`, live beside it, readable by the
 owner only. The first run makes that user with `users create-admin`.
 
@@ -86,23 +94,29 @@ def _admin(service: dict[str, str]) -> Admin:
     )
 
 
-def microsoft_env(env: dict[str, str]) -> dict[str, str]:
+def microsoft_env(env: dict[str, str], project: bool) -> dict[str, str]:
     """The service on its own database in DATA, reachable under URL, with
-    the app registration of live/.env."""
+    the app registration of live/.env, or with the project's app."""
     master_key = _secret_file("master_key", lambda: encode_recovery(cipher.new_key()))
-    return {
+    service = {
         **service_env(str(DATA), PORT, master_key),
         "MAILBOX_SERVICE_PUBLIC_URL": URL,
-        "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID": env["LIVE_MICROSOFT_CLIENT_ID"],
-        "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET": env.get(
-            "LIVE_MICROSOFT_CLIENT_SECRET", ""
-        ),
         "MAILBOX_SERVICE_OAUTH_MICROSOFT_TENANT": env.get("LIVE_MICROSOFT_TENANT")
         or "common",
         # The change feed learns of the copy in Sent Items from the worker.
         "MAILBOX_SERVICE_SYNC_INTERVAL": str(SYNC_INTERVAL),
         "MAILBOX_SERVICE_SYNC_IDLE": "false",
     }
+    for name in ("ID", "SECRET", "SECRET_FILE"):
+        service.pop(f"MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_{name}", None)
+    if not project:
+        service["MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID"] = env[
+            "LIVE_MICROSOFT_CLIENT_ID"
+        ]
+        service["MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET"] = env.get(
+            "LIVE_MICROSOFT_CLIENT_SECRET", ""
+        )
+    return service
 
 
 def feed_types(
@@ -142,6 +156,35 @@ def connect(client: httpx.Client, email: str) -> int:
             print("connected; run the check without --connect now")
             return 0
         time.sleep(3)
+    print("not connected in time")
+    return 1
+
+
+def connect_with_code(client: httpx.Client, email: str) -> int:
+    """Over the API: a code a person enters at Microsoft, then polling
+    until the test account is connected."""
+    started = client.post("/v1/oauth/microsoft/device", json={})
+    if started.status_code != 200:
+        print(f"no code: {started.status_code} {started.text}")
+        return 1
+    body = started.json()
+    print(f"Open {body['verification_uri']} and enter the code {body['user_code']}.")
+    print(f"Sign in there as the test account {email}. Waiting...")
+    poll = f"/v1/oauth/microsoft/device/{body['sign_in_id']}"
+    deadline = time.monotonic() + WAIT
+    while time.monotonic() < deadline:
+        time.sleep(body["interval"])
+        answer = client.post(poll)
+        if answer.status_code != 200:
+            print(f"the sign-in ended: {answer.json()['error']['message']}")
+            return 1
+        account = answer.json()["account"]
+        if account is not None:
+            if account["email"] != email:
+                print("signed in with another account than the test account")
+                return 1
+            print("connected; run the check without --connect now")
+            return 0
     print("not connected in time")
     return 1
 
@@ -310,21 +353,28 @@ def main() -> int:
     parser.add_argument(
         "--connect", action="store_true", help="connect the test account"
     )
+    parser.add_argument("--project", action="store_true", help="with the project's app")
     options = parser.parse_args()
     env = read_env()
     email = (env.get("LIVE_MICROSOFT_EMAIL") or "").strip().lower()
-    if not env.get("LIVE_MICROSOFT_CLIENT_ID") or not email:
+    if not email or not (options.project or env.get("LIVE_MICROSOFT_CLIENT_ID")):
         print(
-            "not set up: LIVE_MICROSOFT_CLIENT_ID and LIVE_MICROSOFT_EMAIL in live/.env"
+            "not set up: LIVE_MICROSOFT_EMAIL in live/.env, and "
+            "LIVE_MICROSOFT_CLIENT_ID without --project"
         )
         return 2
-    service = microsoft_env(env)
+    if options.project:
+        global DATA
+        DATA = Path("data/live-microsoft-project")
+    service = microsoft_env(env, options.project)
     # The keys are made on the first run; the database keeps them after.
     process = start_service(service, URL, init_keys=not (DATA / "mailbox.db").exists())
     run = Run()
     try:
         with Service(URL, _admin(service)).admin(timeout=120) as client:
             if options.connect:
+                if options.project:
+                    return connect_with_code(client, email)
                 return connect(client, email)
             account = microsoft_account(client, email)
             if not run.check("the test account is connected", account is not None):

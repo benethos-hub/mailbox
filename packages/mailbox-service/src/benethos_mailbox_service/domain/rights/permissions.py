@@ -61,7 +61,13 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "accounts.manage": ("update_account", "delete_account", "verify_account"),
     # Accounts that do not exist yet. Connecting by OAuth needs
     # create_account as well: the domain checks it.
-    "accounts.connect": ("discover_account", "start_oauth", "create_account"),
+    "accounts.connect": (
+        "discover_account",
+        "start_oauth",
+        "start_device_oauth",
+        "poll_device_oauth",
+        "create_account",
+    ),
     # Who exists, never a change. users.manage holds every one of them.
     "users.read": ("list_users", "get_user", "list_tokens", "list_roles", "get_role"),
     "users.manage": (

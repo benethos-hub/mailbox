@@ -206,11 +206,17 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
      drafts, `sendMail`, immutable ids**, done
   4. **a live check against a Microsoft test account**, done with a
      personal Outlook.com account (`live/microsoft.py`, `docs/microsoft.md`)
+  5. **the project's own app as the default, a public client without a
+     secret. Sign-in in the browser or with a code (device code flow),
+     both in the UI and the API. An app of the deployment's own stays the
+     option. `MAILBOX_SERVICE_PROVIDERS` names the kinds of account a
+     deployment offers**, done, checked live with the code
+     (`live/microsoft.py --project`)
   - decided 2026-09-25: tenant `common` by default, the callback at
     `/ui/oauth/{provider}/callback` (CONCEPT 5.4)
-  - planned: the project's own client id as the default, a public client
-    without a secret. Sign-in through `localhost` or the device code flow.
-    An app of the deployment's own stays the option (CONCEPT 5.4)
+  - decided 2026-10-06: one app per deployment, both ways to sign in
+    offered, the kinds of account in `MAILBOX_SERVICE_PROVIDERS`
+    (CONCEPT 5.4)
 - `gmail` adapter with OAuth, own Google Cloud client per deployment (5.5)
 - Gmail history in the worker
 - **`jmap` adapter for Fastmail and JMAP servers (5.6)**, decided

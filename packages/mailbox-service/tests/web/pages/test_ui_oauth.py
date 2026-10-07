@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import replace
+from datetime import timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -28,8 +29,15 @@ from benethos_mailbox_service.data.providers.microsoft import (
 from benethos_mailbox_service.main import Services, build_services, create_app
 
 from ...conftest import CHEAP, admin_bearer, bearer_for, browser_admin
-from ...integration.test_oauth import TokenEndpoint, factory, granted, id_token
-from ...ui_helpers import post, sign_in
+from ...integration.test_oauth import (
+    Clock,
+    TokenEndpoint,
+    factory,
+    granted,
+    id_token,
+)
+from ...integration.test_oauth_device import PENDING, code, signed_in
+from ...ui_helpers import csrf_of, post, sign_in
 
 pytestmark = pytest.mark.usefixtures("master_key")
 
@@ -42,7 +50,9 @@ def endpoint() -> TokenEndpoint:
     )
 
 
-def build(endpoint: TokenEndpoint, **settings: Any) -> tuple[TestClient, Services]:
+def build(
+    endpoint: TokenEndpoint, clock: Clock | None = None, **settings: Any
+) -> tuple[TestClient, Services]:
     config = Settings(storage="memory", **settings)
     app = App(microsoft_endpoints(), "client-1", SecretStr("app-secret"))
     client = OAuthClient(app, ApiClient(transport=httpx.MockTransport(endpoint)))
@@ -51,6 +61,7 @@ def build(endpoint: TokenEndpoint, **settings: Any) -> tuple[TestClient, Service
         provider_factory=factory,
         oauth_clients={ProviderType.MICROSOFT: client},
         password_hasher=CHEAP,
+        **({"clock": clock} if clock is not None else {}),
     )
     services.vault.initialize()
     return TestClient(create_app(config, services)), services
@@ -248,10 +259,15 @@ def test_the_api_starts_a_sign_in(endpoint: TokenEndpoint) -> None:
     )
 
 
-def test_the_api_without_an_app(client: TestClient) -> None:
-    answer = client.post("/v1/oauth/microsoft/start", json={})
-    assert answer.status_code == 501
-    assert answer.json()["error"]["code"] == "not_supported"
+def test_the_api_where_microsoft_is_not_offered(endpoint: TokenEndpoint) -> None:
+    client, services = build(endpoint, providers=["imap", "jmap"])
+    for path in ("start", "device"):
+        answer = client.post(
+            f"/v1/oauth/microsoft/{path}", json={}, headers=admin_bearer(services)
+        )
+        assert answer.status_code == 501
+        assert answer.json()["error"]["code"] == "not_supported"
+        assert "cannot be connected" in answer.json()["error"]["message"]
 
 
 def test_the_api_needs_the_right(endpoint: TokenEndpoint) -> None:
@@ -259,3 +275,157 @@ def test_the_api_needs_the_right(endpoint: TokenEndpoint) -> None:
     headers = bearer_for(services, Grant(accounts=["*"], allow=["mail.read"]))
     answer = client.post("/v1/oauth/microsoft/start", json={}, headers=headers)
     assert answer.status_code == 403
+
+
+def test_the_api_signs_in_with_a_code() -> None:
+    clock = Clock()
+    client, services = build(TokenEndpoint(code(), PENDING, signed_in()), clock)
+    headers = admin_bearer(services)
+    started = client.post("/v1/oauth/microsoft/device", json={}, headers=headers)
+    assert started.status_code == 200, started.text
+    body = started.json()
+    assert body["user_code"] == "ABCD-EFGH" and body["interval"] == 5
+    assert body["verification_uri"] == "https://microsoft.com/devicelogin"
+    assert "dc-secret" not in started.text
+    poll = f"/v1/oauth/microsoft/device/{body['sign_in_id']}"
+    assert client.post(poll, headers=headers).json() == {
+        "connected": False,
+        "account": None,
+    }
+    clock.now += timedelta(seconds=10)
+    assert client.post(poll, headers=headers).json()["connected"] is False
+    clock.now += timedelta(seconds=5)
+    done = client.post(poll, headers=headers).json()
+    assert done["connected"] is True
+    assert done["account"]["email"] == "me@example.org"
+    assert client.post(poll, headers=headers).json() == done
+    gone = client.post(
+        "/v1/oauth/microsoft/device/made-up", headers=admin_bearer(services)
+    )
+    assert gone.status_code == 400
+
+
+# --- signing in with a code in the UI -------------------------------------------------
+
+
+def _with_code(
+    endpoint: TokenEndpoint, **settings: Any
+) -> tuple[TestClient, Services, Clock]:
+    clock = Clock()
+    client, services = build(endpoint, clock, **settings)
+    sign_in(client, *browser_admin(services))
+    return client, services, clock
+
+
+def _check(client: TestClient, url: str, htmx: bool = True) -> httpx.Response:
+    """What the code page asks, by htmx or with Check now."""
+    token = csrf_of(client.get("/ui").text)
+    headers = {"HX-Request": "true", "X-CSRF-Token": token} if htmx else {}
+    return client.post(
+        url,
+        data={"csrf_token": token, "back": "/ui/accounts/new"},
+        headers=headers,
+        follow_redirects=False,
+    )
+
+
+def _code_page(client: TestClient, **fields: str) -> tuple[str, str]:
+    """The page with the code, and where it asks."""
+    page = post(client, "/ui/oauth/microsoft/device", fields)
+    assert page.status_code == 200, page.text
+    found = re.search(r'hx-post="(/ui/oauth/microsoft/device/[^"]+)"', page.text)
+    assert found is not None
+    return page.text, found.group(1)
+
+
+def test_sign_in_with_a_code() -> None:
+    client, services, clock = _with_code(TokenEndpoint(code(), PENDING, signed_in()))
+    page, url = _code_page(client)
+    assert '<code class="secret">ABCD-EFGH</code>' in page
+    assert 'href="https://microsoft.com/devicelogin"' in page
+    assert 'hx-trigger="every 5s"' in page
+    # Nothing yet: htmx swaps nothing and asks again.
+    answer = _check(client, url)
+    assert answer.status_code == 204 and "HX-Redirect" not in answer.headers
+    clock.now += timedelta(seconds=5)
+    assert _check(client, url).status_code == 204
+    clock.now += timedelta(seconds=5)
+    answer = _check(client, url)
+    [account_id] = services.adapters.ids()
+    assert answer.headers["HX-Redirect"] == f"/ui/accounts/{account_id}"
+    landed = client.get(answer.headers["HX-Redirect"]).text
+    assert "me@example.org signed in." in landed
+    assert "Sign in again with a code" in landed
+
+
+def test_check_now_without_script() -> None:
+    client, _, clock = _with_code(TokenEndpoint(code(), signed_in()))
+    _, url = _code_page(client)
+    answer = _check(client, url, htmx=False)
+    assert answer.status_code == 200
+    assert "microsoft has not seen the sign-in yet." in answer.text
+    assert "ABCD-EFGH" in answer.text
+    clock.now += timedelta(seconds=5)
+    answer = _check(client, url, htmx=False)
+    assert answer.status_code == 303
+    assert answer.headers["location"].startswith("/ui/accounts/acc_")
+
+
+def test_a_declined_code_goes_back() -> None:
+    client, _, clock = _with_code(
+        TokenEndpoint(code(), (400, {"error": "authorization_declined"}))
+    )
+    _, url = _code_page(client)
+    clock.now += timedelta(seconds=5)
+    answer = _check(client, url)
+    assert answer.headers["HX-Redirect"] == "/ui/accounts/new"
+    assert "was declined" in client.get("/ui/accounts/new").text
+    answer = _check(client, url, htmx=False)
+    assert answer.status_code == 303
+    assert "unknown or expired" in client.get(answer.headers["location"]).text
+
+
+def test_a_code_for_an_unknown_provider() -> None:
+    client, _, _ = _with_code(TokenEndpoint())
+    answer = post(client, "/ui/oauth/carrier-pigeon/device")
+    assert "Unknown provider" in answer.text
+    answer = _check(client, "/ui/oauth/carrier-pigeon/device/x", htmx=False)
+    assert answer.headers["location"] == "/ui/accounts"
+
+
+def test_a_code_the_provider_refuses_to_hand_out() -> None:
+    client, _, _ = _with_code(TokenEndpoint((400, {"error": "invalid_client"})))
+    answer = post(client, "/ui/oauth/microsoft/device")
+    assert "must allow public client flows" in answer.text
+
+
+@pytest.mark.parametrize(
+    ("offered", "shown", "hidden"),
+    [
+        (["microsoft"], [], ["Set up by hand", "Set up a JMAP server by hand"]),
+        (
+            ["pop3"],
+            ['value="pop3"', "Set up by hand"],
+            ['value="imap"', "JMAP server by hand"],
+        ),
+        (["imap", "jmap"], ['value="imap"', "JMAP server by hand"], ['"pop3"']),
+    ],
+)
+def test_the_connect_page_offers_what_the_deployment_does(
+    offered: list[str], shown: list[str], hidden: list[str]
+) -> None:
+    client, _, _ = _with_code(TokenEndpoint(), providers=offered)
+
+    class NothingFound:
+        async def discover(self, caller: Any, email: str) -> Discovery:
+            return Discovery(email=email, domain="example.org")
+
+    client.app.state.services = replace(  # type: ignore[attr-defined]
+        client.app.state.services, discovery=NothingFound()
+    )
+    page = post(client, "/ui/accounts/discover", {"email": "me@example.org"}).text
+    for text in shown:
+        assert text in page
+    for text in hidden:
+        assert text not in page
+    assert ("Sign in with Microsoft" in page) == ("microsoft" in offered)

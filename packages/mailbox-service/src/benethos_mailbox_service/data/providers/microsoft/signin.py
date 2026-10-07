@@ -1,5 +1,6 @@
 """How a Microsoft account signs in: the Microsoft identity platform v2.0
-endpoints of a tenant, and the permissions this adapter needs of Graph.
+endpoints of a tenant, the permissions this adapter needs of Graph, and
+the project's own app.
 """
 
 from __future__ import annotations
@@ -12,6 +13,13 @@ from ...protocols import Endpoints, Profile
 # Who may sign in. A tenant id or domain names one organisation.
 AUDIENCES = ("common", "consumers", "organizations")
 _TENANT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]{0,254}$")
+
+# The project's app in Microsoft Entra ID, for deployments that register
+# none of their own. A public client, registered for mobile and desktop
+# applications: no secret, since one shipped with the software would not
+# be secret, so PKCE alone. Microsoft sends a browser back to localhost
+# only. Elsewhere a person signs in with a code (CONCEPT 5.4).
+CLIENT_ID = "4fb3db29-5ab2-4654-b28b-7f7fcae4649f"
 
 SCOPES = (
     # A refresh token, so the service keeps access.
@@ -45,4 +53,5 @@ def endpoints(tenant: str | None = None) -> Endpoints:
         token_url=f"{base}/token",
         scopes=SCOPES,
         profile=PROFILE,
+        device_url=f"{base}/devicecode",
     )

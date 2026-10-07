@@ -102,8 +102,12 @@ class DiscoveryService:
         clock: Clock = time.monotonic,
         per_user: int = PER_USER,
         activity: ActivityLog | None = None,
+        offered: Iterable[ProviderType] | None = None,
     ) -> None:
+        """``offered``: the kinds of account that can be connected here,
+        None for every kind. Candidates of other kinds are left out."""
         self._activity = activity or ActivityLog()
+        self._offered = frozenset(offered) if offered is not None else None
         # Per user, the first call of the window whose limit was logged.
         self._told: dict[str, float] = {}
         self._sources = list(sources)
@@ -139,7 +143,8 @@ class DiscoveryService:
                 continue
             hints += [h for h in result.finding.hints if h not in hints]
             for candidate in result.finding.candidates:
-                _merge(candidates, self._judged(candidate, result.finding, query))
+                if self._offered is None or candidate.provider in self._offered:
+                    _merge(candidates, self._judged(candidate, result.finding, query))
         if any(c.provider in _BEFORE_POP3 for c in candidates):
             # POP3 only where no IMAP or JMAP is (CONCEPT 5.2).
             candidates = [c for c in candidates if c.provider is not ProviderType.POP3]

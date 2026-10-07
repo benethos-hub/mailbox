@@ -6,16 +6,55 @@
 
 Outlook.com, Hotmail, Live and Microsoft 365 accounts connect by OAuth.
 The person signs in at Microsoft. The service keeps an encrypted refresh
-token, never a password. For this, each deployment registers an app of
-its own in Microsoft Entra ID. It gives the service the app's client id
-and secret. This guide walks through the steps. The design is in
-[CONCEPT.md](CONCEPT.md), section 5.4.
+token, never a password. The design is in [CONCEPT.md](CONCEPT.md),
+section 5.4.
 
-A client id of the project, shipped with the service, is planned
-(CONCEPT 5.4). Then no one has to register an app. Until then, follow the
-steps below.
+## The project's app
 
-## Overview
+The service comes with an app of the project in Microsoft Entra ID. With
+it, nobody has to register an app. It is used whenever
+`MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` is not set. It is a public
+client: it has no secret, since a secret shipped with the software would
+not be secret. It proves itself by PKCE alone.
+
+There are two ways to sign in, both under **Accounts → Connect an
+account**:
+
+- **Sign in with Microsoft**, in this browser. Microsoft sends the
+  browser back to the service. With the project's app it does that only
+  to `localhost` or `127.0.0.1`, on any port: when the service runs on the
+  computer the browser runs on.
+- **Sign in with a code.** The service shows a code and a link to
+  Microsoft's page. Enter the code there, on any device, and sign in with
+  the account to connect. The service page goes on by itself once
+  Microsoft has seen the sign-in. This works wherever the service runs,
+  also on a server.
+
+An account's page offers both again, as **Sign in again** and **Sign in
+again with a code**, when Microsoft stops accepting the token, e.g. after
+a password change.
+
+Over the API, `POST /v1/oauth/microsoft/device` returns the code, the
+page to enter it at and a `sign_in_id`. Poll
+`POST /v1/oauth/microsoft/device/{sign_in_id}` every `interval` seconds
+until it answers with the connected account.
+`POST /v1/oauth/microsoft/start` returns the address for the sign-in in
+a browser, which comes back to the UI.
+
+The project's publisher is not verified with Microsoft. Work and school
+tenants often admit such apps only with their administrator's consent
+(see "Work and school accounts").
+
+## An app of your own
+
+An organisation may want an app of its own: its name on Microsoft's
+consent page, consent by its own administrator, or the sign-in in the
+browser on a server. The steps below register one. The service then
+uses it instead of the project's app.
+
+Refresh tokens belong to the app that issued them. When a deployment
+changes from the project's app to its own, or back, every Microsoft
+account it connected has to sign in again.
 
 | Step | Where | Result |
 |---|---|---|
@@ -23,7 +62,7 @@ steps below.
 | 2. Register the app | Entra, App registrations | the client id |
 | 3. Permissions | the app, API permissions | Graph mail rights |
 | 4. A client secret | the app, Certificates & secrets | the secret value |
-| 5. Configure the service | `config/benethos-mailbox-service/.env` | "Sign in with Microsoft" in the UI |
+| 5. Configure the service | `config/benethos-mailbox-service/.env` | the service signs in with your app |
 | 6. Connect an account | the UI | a connected Microsoft account |
 
 Everything in steps 1 to 4 is free.
@@ -84,6 +123,8 @@ registrations → New registration**.
   not the same as `127.0.0.1`, so open the UI under the address
   registered here. You can add more addresses later under
   **Authentication**.
+- **Sign in with a code** needs, under **Authentication**, *Allow public
+  client flows* set to *Yes*. Without it, Microsoft refuses the code.
 
 **Register.** The app's **Overview** page shows three ids:
 
@@ -156,15 +197,16 @@ MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE=config/benethos-mailbox-servi
   one organisation only. The value must fit the supported account types
   of step 2.
 
-Restart the service. The UI now offers **Sign in with Microsoft**.
-Without a client id the button does not appear.
+Restart the service. It now signs in with your app instead of the
+project's.
 
 ## 6. Connect an account
 
 Open the UI under the address from step 2, e.g.
-`http://localhost:8080/ui`, and sign in with a token of the service. Then
-**Accounts → Connect an account → Sign in with Microsoft**, or look up an
-Outlook.com address and follow its sign-in.
+`http://localhost:8080/ui`, and sign in. Then **Accounts → Connect an
+account → Sign in with Microsoft**, or look up an Outlook.com address and
+follow its sign-in. **Sign in with a code** works as with the project's
+app.
 
 Microsoft asks the person to sign in and to allow the app the permissions
 of step 3. The browser is signed in to Microsoft with one account at a
@@ -175,14 +217,18 @@ After the sign-in the browser returns to the UI and the account is
 connected. Its page offers **Sign in again** when Microsoft stops
 accepting the token, e.g. after a password change.
 
-Over the API, `POST /v1/oauth/microsoft/start` returns the sign-in URL for
-a browser. The browser comes back to the UI, and the same user finishes
-the sign-in there.
-
 Once connected, the service asks the account's folders every
 `MAILBOX_SERVICE_SYNC_INTERVAL` seconds what changed (Graph delta
 queries), for the change feed and webhooks. That needs no permission
 beyond those of step 3.
+
+## Without Microsoft accounts
+
+`MAILBOX_SERVICE_PROVIDERS` names the kinds of account a deployment
+offers, as a JSON list. `["imap","jmap","pop3"]` leaves Microsoft out:
+the UI offers no sign-in with Microsoft, and the API refuses to connect
+such an account. Accounts connected before keep working and may sign in
+again.
 
 ## Work and school accounts
 
@@ -213,7 +259,10 @@ to the app, not to the secret.
 
 | What you see | Cause | What to do |
 |---|---|---|
-| No "Sign in with Microsoft" in the UI | no client id configured, or the service not restarted | step 5 |
+| No "Sign in with Microsoft" in the UI | `MAILBOX_SERVICE_PROVIDERS` leaves Microsoft out | "Without Microsoft accounts" |
+| Microsoft: the redirect URI does not match, with the project's app | the service is not at `localhost` | **Sign in with a code** |
+| "microsoft refuses a sign-in with a code for this service's app" (`AADSTS70002`) | an app of your own without *Allow public client flows* | step 2 |
+| "the code for microsoft has expired" | the code was not entered in time (about 15 minutes) | start again |
 | Microsoft: the redirect URI does not match (`AADSTS50011`) | the address differs from the one registered, e.g. `127.0.0.1` against `localhost`, another port, `http` against `https` | open the UI under the registered address, or register this one too (step 2), and check `MAILBOX_SERVICE_PUBLIC_URL` |
 | Microsoft: invalid client secret (`AADSTS7000215`) | the Secret ID was used instead of the Value, or the secret expired | a new secret, its Value (step 4) |
 | Signing in to Entra with a personal account fails: no tenant | a personal account has no directory | a free Azure account (step 1) |

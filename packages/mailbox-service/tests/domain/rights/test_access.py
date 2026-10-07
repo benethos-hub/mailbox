@@ -184,6 +184,8 @@ def test_operations_on_an_account() -> None:
         "create_account",
         "discover_account",
         "start_oauth",
+        "start_device_oauth",
+        "poll_device_oauth",
     }
 
 

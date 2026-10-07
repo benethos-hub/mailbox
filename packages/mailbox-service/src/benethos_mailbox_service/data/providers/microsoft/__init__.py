@@ -4,6 +4,6 @@
 from __future__ import annotations
 
 from .provider import MicrosoftProvider
-from .signin import endpoints
+from .signin import CLIENT_ID, endpoints
 
-__all__ = ["MicrosoftProvider", "endpoints"]
+__all__ = ["CLIENT_ID", "MicrosoftProvider", "endpoints"]

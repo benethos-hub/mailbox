@@ -39,11 +39,13 @@ from .imap import (
 )
 from .oauth import (
     App,
+    DeviceCode,
     Endpoints,
     OAuthClient,
     Profile,
     RefreshingTokens,
     Tokens,
+    Waiting,
     authorize_url,
     new_pkce,
 )
@@ -68,6 +70,7 @@ __all__ = [
     "Answered",
     "ApiClient",
     "App",
+    "DeviceCode",
     "Endpoints",
     "Fetched",
     "FetchedMessage",
@@ -91,6 +94,7 @@ __all__ = [
     "SmtpLogin",
     "SmtpSession",
     "Tokens",
+    "Waiting",
     "WebhookPoster",
     "authorize_url",
     "host_addresses",

@@ -19,8 +19,8 @@
     <div class="field">
       <label for="f-provider{{ ids }}">Protocol</label>
       <select id="f-provider{{ ids }}" name="provider">
-        <option value="imap" selected>IMAP</option>
-        <option value="pop3">POP3: the inbox only, no folders, no read state</option>
+        {% if "imap" in offers %}<option value="imap" selected>IMAP</option>{% endif %}
+        {% if "pop3" in offers %}<option value="pop3">POP3: the inbox only, no folders, no read state</option>{% endif %}
       </select>
     </div>
     {% endif %}
@@ -46,13 +46,20 @@
   <div class="form-actions"><button{% if primary %} class="primary"{% endif %} type="submit">Connect</button></div>
 </form>
 {% endmacro %}
+{# Two ways: in this browser, sent back to this service, or with a code
+   entered at the provider on any device. #}
 {% macro sign_in_form(provider, hint="") %}
 <form class="inline" method="post" action="/ui/oauth/{{ provider }}/start">
   {{ csrf_field() }}
   <input type="hidden" name="login_hint" value="{{ hint }}" />
   <button class="primary" type="submit">Sign in with {{ provider | capitalize }}</button>
 </form>
+<form class="inline" method="post" action="/ui/oauth/{{ provider }}/device">
+  {{ csrf_field() }}
+  <button type="submit">Sign in with a code</button>
+</form>
 {% endmacro %}
+{% set ways_hint = "In the browser, the provider sends you back to this service. Where it cannot, such as with the project's app on a server, sign in with a code." %}
 
 <section class="card">
   <header><h2>1. The address</h2></header>
@@ -91,7 +98,7 @@
   </header>
   <div class="body toolbar">
     {{ sign_in_form(candidate.oauth_provider, discovery.email) }}
-    <span class="muted">No password is needed. {{ candidate.oauth_provider | capitalize }} asks you, and this service keeps only a token it can renew.</span>
+    <span class="muted">No password is needed. {{ candidate.oauth_provider | capitalize }} asks you, and this service keeps only a token it can renew. {{ ways_hint }}</span>
   </div>
 </section>
 {% endfor %}
@@ -123,10 +130,12 @@
   <header><h2>Sign in with your provider</h2><span class="meta">if the address is at one of these</span></header>
   <div class="body toolbar">
     {% for provider in oauth_providers %}{{ sign_in_form(provider, discovery.email) }}{% endfor %}
+    <span class="muted">{{ ways_hint }}</span>
   </div>
 </section>
 {% endif %}
 
+{% if "imap" in offers or "pop3" in offers %}
 <details class="card way"{% if not usable and not sign_ins %} open{% endif %}>
   <summary class="card-summary"><h2>Set up by hand</h2></summary>
   <div class="body">
@@ -134,13 +143,16 @@
     {{ connect_form(discovery.email, {}, suffix="hand", folded=False, primary=not usable and not sign_ins) }}
   </div>
 </details>
+{% endif %}
 
+{% if "jmap" in offers %}
 <details class="card way">
   <summary class="card-summary"><h2>Set up a JMAP server by hand</h2></summary>
   <div class="body">
     {{ connect_form(discovery.email, {}, suffix="jmap", provider="jmap", password_label="Password or API token", folded=False, primary=False, hint="Choose below which one it is. Tried against the server first, then stored encrypted.") }}
   </div>
 </details>
+{% endif %}
 
 <details class="card">
   <summary class="card-summary"><h2>What the sources answered</h2></summary>
