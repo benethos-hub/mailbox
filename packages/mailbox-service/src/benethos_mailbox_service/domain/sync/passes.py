@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime
 
-from ...common.clock import parse_iso
+from ...common.clock import iso, parse_iso
 from ...data.storage import IndexChanges, IndexEntry
 
 
@@ -51,9 +51,21 @@ class Counts:
     deleted: int = 0
 
 
-def delta_state(stored: str | None) -> tuple[str, datetime] | None:
-    """The token and time of a folder's stored delta state, None for a
-    state of another kind or none at all."""
+@dataclass(frozen=True)
+class DeltaState:
+    """A folder's state as the index keeps it for a provider that tells
+    what changed: the provider's token, and when it was handed out."""
+
+    token: str
+    at: datetime
+
+    def stored(self) -> str:
+        return json.dumps({"token": self.token, "at": iso(self.at)})
+
+
+def delta_state(stored: str | None) -> DeltaState | None:
+    """A folder's stored delta state, None for a state of another kind or
+    none at all."""
     if stored is None:
         return None
     try:
@@ -61,7 +73,7 @@ def delta_state(stored: str | None) -> tuple[str, datetime] | None:
         at = parse_iso(str(value["at"]))
     except (ValueError, TypeError, KeyError):
         return None
-    return None if at is None else (str(value["token"]), at)
+    return None if at is None else DeltaState(str(value["token"]), at)
 
 
 def moves(

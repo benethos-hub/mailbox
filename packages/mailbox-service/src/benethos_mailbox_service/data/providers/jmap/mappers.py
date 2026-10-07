@@ -213,8 +213,8 @@ def cursor(scope_of: str, last_id: str, position: int) -> str:
     return opaque.encode("c_", [scope_of, last_id, position])
 
 
-def parse_cursor(value: str, scope_of: str) -> tuple[str, int]:
+def parse_cursor(value: str, scope_of: str) -> rules.After:
     parts = opaque.fields("c_", value, str, str, int)
     if parts is None or parts[0] != scope_of or not is_id(parts[1]):
         raise rules.invalid_cursor()
-    return parts[1], parts[2]
+    return rules.After(parts[1], parts[2])

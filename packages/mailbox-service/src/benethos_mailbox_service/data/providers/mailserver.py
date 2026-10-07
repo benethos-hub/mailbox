@@ -21,10 +21,10 @@ import anyio
 from ...common.ratelimit import Clock, Sleep
 from ...errors import BadRequestError, ConflictError
 from ..protocols import Pick, Server, SmtpSession
-from . import rules
 from .base import Capability, CredentialReader, ProviderSettings
 from .guard import Guard, Pace
 from .sender import SmtpFactory, SmtpSender
+from .settings import mail_server, rate_of
 
 T = TypeVar("T")
 A = TypeVar("A")
@@ -55,25 +55,16 @@ class MailServerAdapter:
         """``pick`` checks the host of each connection, to the mail server
         and to SMTP. ``pace`` is how fast steps go, unless the settings
         name a rate."""
-        host = settings.get("host")
-        if not host:
-            raise BadRequestError(f"{self.account} needs settings.host")
-        security = rules.encrypted(settings, "security", self.protocol)
-        username = settings.get("username")
-        if not username:
-            raise BadRequestError(f"{self.account} needs settings.username")
+        login = mail_server(settings, self.account, self.protocol, self.ports)
         self._check_auth(str(settings.get("auth", "password")))
         self._server = Server(
-            host=str(host),
-            port=rules.port_of(settings, "port", self.ports[security]),
-            security=security,
-            pick=pick,
+            host=login.host, port=login.port, security=login.security, pick=pick
         )
-        self._username = str(username)
+        self._username = login.username
         self._credentials = credentials
         pace = pace or Pace()
         self._guard = Guard(
-            rules.rate_of(settings, "max_requests_per_minute", pace.per_minute),
+            rate_of(settings, "max_requests_per_minute", pace.per_minute),
             pace.burst,
             clock=clock,
             sleep=sleep,
@@ -81,7 +72,7 @@ class MailServerAdapter:
             attempts=pace.attempts,
             first_pause=pace.first_pause,
             longest_pause=pace.longest_pause,
-            name=f"requests to {host}",
+            name=f"requests to {login.host}",
         )
         self._smtp = SmtpSender.from_settings(
             settings,

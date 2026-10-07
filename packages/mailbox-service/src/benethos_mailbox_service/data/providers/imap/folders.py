@@ -67,8 +67,7 @@ def full_name(box: Mailbox, raws: list[Any], name: str, parent_id: str | None) -
     if found and found in name:
         raise BadRequestError(f"a folder name cannot contain {found!r}: use parent_id")
     if parent_id is None:
-        prefix, _ = box.session.folders.personal_namespace()
-        return prefix + name
+        return box.session.folders.personal_namespace().prefix + name
     parent = mappers.folder_name(parent_id)
     if parent not in names(raws):
         raise missing("folder", parent_id)
@@ -79,4 +78,4 @@ def full_name(box: Mailbox, raws: list[Any], name: str, parent_id: str | None) -
 
 def delimiter(box: Mailbox, raws: list[Any]) -> str | None:
     found = next((raw.delimiter for raw in raws if raw.delimiter), None)
-    return found or box.session.folders.personal_namespace()[1]
+    return found or box.session.folders.personal_namespace().delimiter

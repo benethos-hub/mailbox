@@ -278,6 +278,9 @@ packages/mailbox-service/
       providers/        # the adapters: base.py, rules.py, registry.py
                         #   (build_provider, sign_in, probe_server)
         guard.py        # pacing, retries, blocked logins, for any adapter
+        settings.py     # an account's settings read once into named
+                        #   values (Login, Host), server_of for
+                        #   discovered servers
         sender.py       # SmtpSender: sending for IMAP, POP3, ...
         mailserver.py   # MailServerAdapter: what IMAP and POP3 share,
                         #   the server, the login, the guard, SMTP
@@ -290,6 +293,7 @@ packages/mailbox-service/
                         #   and its folders), folders, messages, drafts,
                         #   sync, watch (IDLE).
                         #   jmap: over data/protocols/jmap/,
+                        #   connect.py (its settings),
                         #   account.py (one account's calls), folders,
                         #   messages, drafts, sending, changes.
                         #   microsoft: graph.py (Graph over
@@ -537,6 +541,8 @@ imapclient boundary), never by patching deep inside a library.
   input.
 - **Frozen dataclasses** for values inside a layer: an activity, a
   change, a finding of discovery. A value is made once and not changed.
+  What an id, a cursor or an account's settings carry is read back
+  into one with named fields, not a tuple or a dict.
 - **Protocols** for seams: a repository, a provider, a key provider, a
   clock. A fake in a test fulfils the protocol, it patches nothing.
 - **Ids are opaque** to callers: a prefix and hex for records

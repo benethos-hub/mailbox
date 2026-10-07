@@ -93,6 +93,22 @@ async def test_an_answer_that_is_not_json(make_client: Callable) -> None:
         await client.request("GET", "/v1/accounts")
 
 
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"accounts": [{"email": "a@example.org"}]},  # no id
+        {"accounts": "all"},
+        [],
+    ],
+)
+async def test_an_answer_of_another_shape(make_client: Callable, body: object) -> None:
+    client = make_client(lambda _: httpx.Response(200, json=body))
+    with pytest.raises(ApiError) as exc:
+        await client.me()
+    assert exc.value.code == "unexpected_response"
+    assert exc.value.status == 200
+
+
 async def test_an_attachment_is_read_up_to_the_limit(make_client: Callable) -> None:
     client = make_client(
         lambda _: httpx.Response(

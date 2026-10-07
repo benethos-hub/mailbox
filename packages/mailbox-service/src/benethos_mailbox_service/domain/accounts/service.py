@@ -356,18 +356,20 @@ class AccountService:
         any other ``*_host``. A host that is no name and no address is
         refused before it is looked up. Without a check, every other host
         passes."""
-        for key, host, _ in hosts_in(settings):
-            if not is_server(host):
-                raise BadRequestError(f"{key} is not a host name or an IP address")
+        for named in hosts_in(settings):
+            if not is_server(named.host):
+                raise BadRequestError(
+                    f"{named.key} is not a host name or an IP address"
+                )
         if self._check_host is None:
             return
-        for key, host, port in hosts_in(settings):
+        for named in hosts_in(settings):
             try:
-                address = await self._check_host(host, port)
+                address = await self._check_host(named.host, named.port)
             except MailboxServiceError as exc:
                 raise BadRequestError(exc.message) from None
             if address is None:
-                raise BadRequestError(f"{key}: {host} does not resolve")
+                raise BadRequestError(f"{named.key}: {named.host} does not resolve")
 
     def _with_credentials(self, account: Account) -> Account:
         """The account as callers see it: which credentials are stored, and

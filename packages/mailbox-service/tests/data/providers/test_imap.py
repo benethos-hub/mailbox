@@ -638,7 +638,7 @@ def test_ids_round_trip_and_are_opaque() -> None:
     value = mappers.message_id("Entwürfe/2026", 3, 42)
     assert value.startswith("m_")
     assert "/" not in value
-    assert mappers.parse_message_id(value) == ("Entwürfe/2026", 3, 42)
+    assert mappers.parse_message_id(value) == mappers.Place("Entwürfe/2026", 3, 42)
     assert mappers.folder_name(mappers.folder_id("Entwürfe")) == "Entwürfe"
     with pytest.raises(NotFoundError):
         mappers.folder_name(mappers.message_id("x", 1, 1))

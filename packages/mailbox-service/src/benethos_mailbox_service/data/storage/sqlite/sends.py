@@ -8,7 +8,7 @@ import sqlite3
 from datetime import datetime
 
 from ....common.clock import iso, parse_iso
-from ...models import SendFilter, SendOutcome, SendRecord
+from ...models import Before, SendFilter, SendOutcome, SendRecord
 from .database import Database
 
 
@@ -51,14 +51,14 @@ class SqliteSendLogRepository:
         account_id: str,
         *,
         limit: int,
-        before: tuple[datetime, str] | None,
+        before: Before | None,
         matching: SendFilter | None = None,
     ) -> list[SendRecord]:
         where = ["account_id = ?"]
         params: list[object] = [account_id]
         if before is not None:
             where.append("(created_at, id) < (?, ?)")
-            params += [iso(before[0]), before[1]]
+            params += [iso(before.at), before.id]
         if matching is not None:
             for column, value in (
                 ("user_id = ?", matching.user_id),

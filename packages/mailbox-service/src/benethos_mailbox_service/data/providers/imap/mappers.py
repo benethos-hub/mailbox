@@ -7,6 +7,7 @@ attribute (``uid``, ``flags``, ``date``, ...), without any library of its own.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from ....common import opaque
@@ -79,6 +80,25 @@ LOCALISED_NAMES: dict[FolderRole, tuple[str, ...]] = {
 # --- opaque ids ---------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class Place:
+    """Where a message id points: a folder, its UIDVALIDITY and the UID."""
+
+    folder: str
+    uidvalidity: int
+    uid: int
+
+
+@dataclass(frozen=True)
+class Cursor:
+    """Where the next page starts: below ``before_uid`` in a folder, as
+    long as it keeps its UIDVALIDITY."""
+
+    folder: str
+    uidvalidity: int
+    before_uid: int
+
+
 def _encode(prefix: str, *parts: object) -> str:
     return opaque.encode(prefix, parts)
 
@@ -98,31 +118,22 @@ def message_id(folder: str, uidvalidity: int, uid: int) -> str:
     return _encode("m_", folder, uidvalidity, uid)
 
 
-def parse_message_id(value: str) -> tuple[str, int, int]:
-    place = _triple("m_", value)
-    if place is None:
-        raise missing_message(value)
-    return place
-
-
-def _triple(prefix: str, value: str) -> tuple[str, int, int] | None:
-    """A folder, UIDVALIDITY and UID behind ``prefix``, None for anything
-    else: an id and a cursor of this adapter are both made of these."""
-    parts = opaque.fields(prefix, value, str, int, int)
+def parse_message_id(value: str) -> Place:
+    parts = opaque.fields("m_", value, str, int, int)
     if parts is None:
-        return None
-    return parts[0], parts[1], parts[2]
+        raise missing_message(value)
+    return Place(*parts)
 
 
 def cursor(folder: str, uidvalidity: int, before_uid: int) -> str:
     return _encode("c_", folder, uidvalidity, before_uid)
 
 
-def parse_cursor(value: str) -> tuple[str, int, int]:
-    place = _triple("c_", value)
-    if place is None:
+def parse_cursor(value: str) -> Cursor:
+    parts = opaque.fields("c_", value, str, int, int)
+    if parts is None:
         raise rules.invalid_cursor()
-    return place
+    return Cursor(*parts)
 
 
 # --- folders ------------------------------------------------------------------

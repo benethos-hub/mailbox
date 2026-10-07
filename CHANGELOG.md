@@ -12,7 +12,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   package of its own on PyPI: `MailboxClient` for async code and
   `SyncMailboxClient` for code without an event loop, with the same
   methods and records. The MCP server is built on it. Its interface has
-  no stability promise yet.
+  no stability promise yet. Every error is a `MailboxError`. An answer it
+  cannot read, one that is no JSON or lacks a field, is an `ApiError`
+  with the code `unexpected_response`.
 - Microsoft accounts connect without an app of your own: the service
   comes with the project's app, a public client without a secret, used
   when `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` is not set. Changing

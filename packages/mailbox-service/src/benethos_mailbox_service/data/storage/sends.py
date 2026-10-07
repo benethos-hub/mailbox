@@ -7,7 +7,7 @@ import builtins
 from datetime import datetime
 from typing import Protocol
 
-from ..models import SendFilter, SendOutcome, SendRecord
+from ..models import Before, SendFilter, SendOutcome, SendRecord
 from .table import Table
 
 
@@ -26,10 +26,10 @@ class SendLogRepository(Protocol):
         account_id: str,
         *,
         limit: int,
-        before: tuple[datetime, str] | None,
+        before: Before | None,
         matching: SendFilter | None = None,
     ) -> list[SendRecord]:
-        """Newest first, those older than ``before`` (time, id) if given,
+        """Newest first, those older than ``before`` if given,
         and only those ``matching``."""
         ...
 
@@ -66,7 +66,7 @@ class InMemorySendLogRepository:
         account_id: str,
         *,
         limit: int,
-        before: tuple[datetime, str] | None,
+        before: Before | None,
         matching: SendFilter | None = None,
     ) -> list[SendRecord]:
         found = sorted(
@@ -80,7 +80,7 @@ class InMemorySendLogRepository:
             reverse=True,
         )
         if before is not None:
-            found = [r for r in found if (r.created_at, r.id) < before]
+            found = [r for r in found if Before(r.created_at, r.id) < before]
         return found[:limit]
 
     def account_ids(self) -> builtins.list[str]:

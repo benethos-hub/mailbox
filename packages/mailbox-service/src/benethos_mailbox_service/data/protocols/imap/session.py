@@ -23,7 +23,7 @@ from ..transport import Server, one_line, text
 from .folders import Folders
 from .messages import Messages
 from .responses import capabilities, quietly_logout, translated, uidvalidity
-from .values import MAX_MESSAGE_BYTES
+from .values import MAX_MESSAGE_BYTES, Selected
 
 ClientFactory = Callable[..., Any]
 
@@ -148,15 +148,14 @@ class ImapSession:
             answer = self._select_folder(folder, readonly=True)
         return uidvalidity(answer)
 
-    def select_writable(self, folder: str) -> tuple[int, frozenset[str]]:
-        """Select a folder read-write. Returns its UIDVALIDITY and the flags
-        the server keeps (``PERMANENTFLAGS``). ``\\*`` means any keyword."""
+    def select_writable(self, folder: str) -> Selected:
+        """Select a folder read-write."""
         with translated():
             answer = self._select_folder(folder, readonly=False)
         if b"READ-ONLY" in answer:
             raise ProviderError(f"the folder {folder} is read-only on the server")
         permanent = answer.get(b"PERMANENTFLAGS", ())
-        return uidvalidity(answer), frozenset(text(f) for f in permanent)
+        return Selected(uidvalidity(answer), frozenset(text(f) for f in permanent))
 
     def _select_folder(self, folder: str, readonly: bool) -> dict[bytes, Any]:
         """SELECT or EXAMINE. A folder that is gone, e.g. renamed by another

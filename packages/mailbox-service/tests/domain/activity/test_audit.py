@@ -13,7 +13,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.data.models import ActivityFilter, ActivityRecord, Grant
+from benethos_mailbox_service.data.models import (
+    ActivityFilter,
+    ActivityRecord,
+    Before,
+    Grant,
+)
 from benethos_mailbox_service.data.storage import (
     AuditRepository,
     Database,
@@ -419,7 +424,7 @@ def test_a_store_filters_pages_and_purges(store: AuditRepository) -> None:
         "evt_3",
         "evt_2",
     ]
-    older = store.list(limit=2, before=(NOW + timedelta(minutes=3), "evt_3"))
+    older = store.list(limit=2, before=Before(NOW + timedelta(minutes=3), "evt_3"))
     assert [r.id for r in older] == ["evt_2", "evt_1"]
     assert store.purge(NOW + timedelta(minutes=3)) == 2
     assert [r.id for r in store.list(limit=10, before=None)] == ["evt_4", "evt_3"]

@@ -25,6 +25,37 @@ class RawFolder:
     subscribed: bool | None = None  # None: not asked
 
 
+@dataclass(frozen=True)
+class FolderState:
+    """A folder's state, read without selecting it. The first three change
+    whenever a message arrives or leaves, ``highest_modseq`` also when
+    flags change (CONDSTORE, RFC 7162). None where not asked or not
+    reported."""
+
+    uidvalidity: int
+    uidnext: int
+    messages: int
+    highest_modseq: int | None
+
+
+@dataclass(frozen=True)
+class Namespace:
+    """Where top-level folders of the user go (RFC 2342), e.g. ``INBOX.``
+    on servers that keep all folders below the inbox, and its delimiter."""
+
+    prefix: str
+    delimiter: str | None
+
+
+@dataclass(frozen=True)
+class Selected:
+    """A folder selected read-write: its UIDVALIDITY and the flags the
+    server keeps (``PERMANENTFLAGS``). ``\\*`` means any keyword."""
+
+    uidvalidity: int
+    permanent_flags: frozenset[str]
+
+
 class FetchedMessage(parse.ParsedMessage):
     """A fetched message: UID and flags as the server reported them, the
     rest parsed from the fetched bytes."""

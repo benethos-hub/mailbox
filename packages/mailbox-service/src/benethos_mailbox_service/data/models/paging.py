@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel, Field
@@ -16,6 +18,15 @@ class Page(BaseModel, Generic[T]):
 
     items: list[T]
     next_cursor: str | None = None
+
+
+@dataclass(frozen=True, order=True)
+class Before:
+    """Where a list of records, newest first, continues: those older than
+    ``at``, and of the same time those with a smaller ``id``."""
+
+    at: datetime
+    id: str
 
 
 class AccountFailure(BaseModel):

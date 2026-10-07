@@ -39,15 +39,13 @@ def list_messages(
     search: MessageFilter | None = None,
 ) -> Page[MessageSummary]:
     folder = mappers.folder_name(folder_id) if folder_id else mappers.INBOX
-    before: int | None = None
-    expected_validity: int | None = None
-    if cursor:
-        cursor_folder, expected_validity, before = mappers.parse_cursor(cursor)
-        if cursor_folder != folder:
-            raise rules.invalid_cursor()
+    start = mappers.parse_cursor(cursor) if cursor else None
+    if start is not None and start.folder != folder:
+        raise rules.invalid_cursor()
     validity = box.session.select(folder)
-    if expected_validity is not None and expected_validity != validity:
+    if start is not None and start.uidvalidity != validity:
         raise BadRequestError("the folder changed on the server: start again")
+    before = start.before_uid if start is not None else None
     uids = box.session.messages.search(_criteria(search or MessageFilter(), before))
     page = list(reversed(uids[-limit:]))
     messages = {
@@ -65,36 +63,36 @@ def list_messages(
     )
 
 
-def select_message(box: Mailbox, message_id: str) -> tuple[str, int, int]:
-    """Select the message's folder: its folder, UIDVALIDITY and UID."""
-    folder, validity, uid = mappers.parse_message_id(message_id)
-    if box.session.select(folder) != validity:
+def select_message(box: Mailbox, message_id: str) -> mappers.Place:
+    """Select the message's folder. Where the id points."""
+    place = mappers.parse_message_id(message_id)
+    if box.session.select(place.folder) != place.uidvalidity:
         raise missing_message(message_id)
-    return folder, validity, uid
+    return place
 
 
-def _fetch(box: Mailbox, message_id: str) -> tuple[Any, str, int]:
-    folder, validity, uid = select_message(box, message_id)
-    message = box.session.messages.fetch_message(uid)
+def _fetch(box: Mailbox, message_id: str) -> tuple[Any, mappers.Place]:
+    place = select_message(box, message_id)
+    message = box.session.messages.fetch_message(place.uid)
     if message is None:
         raise missing_message(message_id)
-    return message, folder, validity
+    return message, place
 
 
 def get_message(box: Mailbox, message_id: str) -> Message:
-    message, folder, validity = _fetch(box, message_id)
-    return mappers.message(message, folder, validity)
+    message, place = _fetch(box, message_id)
+    return mappers.message(message, place.folder, place.uidvalidity)
 
 
 def get_attachment(
     box: Mailbox, message_id: str, attachment_id: str
 ) -> AttachmentContent:
-    message, _, _ = _fetch(box, message_id)
+    message, _ = _fetch(box, message_id)
     return convert.attachment(message, attachment_id)
 
 
 def get_raw(box: Mailbox, message_id: str) -> bytes:
-    _, _, uid = select_message(box, message_id)
+    uid = select_message(box, message_id).uid
     raw = box.session.messages.fetch_raw(uid)
     if raw is None:
         raise missing_message(message_id)
@@ -208,11 +206,11 @@ def open_writable(
 ) -> tuple[dict[int, Any], frozenset[str]]:
     """Select a folder read-write and fetch the headers of ``uids``.
     None found when the folder was renumbered."""
-    current, permanent = box.session.select_writable(folder)
-    if current != validity:
-        return {}, permanent
+    selected = box.session.select_writable(folder)
+    if selected.uidvalidity != validity:
+        return {}, selected.permanent_flags
     found = {int(m.uid): m for m in box.session.messages.fetch_headers(uids)}
-    return found, permanent
+    return found, selected.permanent_flags
 
 
 def _move(
@@ -265,11 +263,12 @@ def by_folder(
     unknown: dict[str, NotFoundError] = {}
     for message_id in message_ids:
         try:
-            folder, validity, uid = mappers.parse_message_id(message_id)
+            place = mappers.parse_message_id(message_id)
         except NotFoundError as exc:
             unknown[message_id] = exc
             continue
-        folders.setdefault((folder, validity), {})[uid] = message_id
+        at = (place.folder, place.uidvalidity)
+        folders.setdefault(at, {})[place.uid] = message_id
     return folders, unknown
 
 

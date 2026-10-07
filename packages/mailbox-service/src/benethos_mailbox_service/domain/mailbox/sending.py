@@ -16,7 +16,14 @@ from typing import Any, Literal
 
 from ...common.clock import iso, parse_iso, utc_now
 from ...common.ids import new_id
-from ...data.models import Page, SendFilter, SendOutcome, SendRecord, SentMessage
+from ...data.models import (
+    Before,
+    Page,
+    SendFilter,
+    SendOutcome,
+    SendRecord,
+    SentMessage,
+)
 from ...data.storage import SendLogRepository
 from ...errors import (
     MailboxServiceError,
@@ -241,7 +248,7 @@ class SendControl:
         return Page[SendRecord](items=records, next_cursor=next_cursor)
 
 
-def _before(carried: Any) -> tuple[datetime, str]:
-    """The time and the id a cursor of the send log continues before."""
+def _before(carried: Any) -> Before:
+    """Where a cursor of the send log continues."""
     at, record_id = carried
-    return parse_iso(str(at)), str(record_id)
+    return Before(parse_iso(str(at)), str(record_id))
