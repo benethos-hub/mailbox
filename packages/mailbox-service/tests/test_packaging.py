@@ -159,7 +159,7 @@ VERSION_EXAMPLES = [
     ("packages/mailbox-service/README.md", "env"),
     ("docs/CONCEPT.md", "status"),
     ("docs/ROADMAP.md", "status"),
-    ("docs/microsoft.md", "status"),
+    ("docs/MICROSOFT.md", "status"),
     ("packages/mailbox-service/README.md", "status"),
     ("packages/mailbox-service/README.md", "tag"),
     ("packages/mailbox-service/README.md", "image"),

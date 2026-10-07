@@ -205,7 +205,7 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
      search, message, MIME source, attachments, flags, move, delete,
      drafts, `sendMail`, immutable ids**, done
   4. **a live check against a Microsoft test account**, done with a
-     personal Outlook.com account (`live/microsoft.py`, `docs/microsoft.md`)
+     personal Outlook.com account (`live/microsoft.py`, `docs/MICROSOFT.md`)
   5. **the project's own app as the default, a public client without a
      secret. Sign-in in the browser or with a code (device code flow),
      both in the UI and the API. An app of the deployment's own stays the

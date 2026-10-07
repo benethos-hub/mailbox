@@ -122,7 +122,7 @@ Planned next: threads across folders and Gmail. The order is in
 | Provider | Connected via | Credential | State |
 |---|---|---|---|
 | GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, own mail servers | IMAP + SMTP | app password | available |
-| Microsoft 365, Outlook.com | Microsoft Graph | OAuth, through the project's app or your own ([setup](docs/microsoft.md)) | available |
+| Microsoft 365, Outlook.com | Microsoft Graph | OAuth, through the project's app or your own ([setup](docs/MICROSOFT.md)) | available |
 | Proton Mail | IMAP + SMTP through Proton Mail Bridge | Bridge password | IMAP, not tested |
 | Gmail / Google Workspace | Gmail API | OAuth, with your own Google Cloud client | planned |
 | Fastmail, Stalwart, other JMAP servers | JMAP | API token or password | available |
@@ -180,7 +180,7 @@ compose file.
 - [docs/REFACTORING.md](docs/REFACTORING.md): how the layout of the code
   came to be
 - [docs/IDEAS.md](docs/IDEAS.md): collected, not decided
-- [docs/microsoft.md](docs/microsoft.md): connecting Microsoft accounts
+- [docs/MICROSOFT.md](docs/MICROSOFT.md): connecting Microsoft accounts
 - [docs/openapi.json](docs/openapi.json): the API contract. A running
   service shows it at `/docs`
 - [CHANGELOG.md](CHANGELOG.md)

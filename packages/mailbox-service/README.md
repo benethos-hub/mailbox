@@ -78,7 +78,7 @@ mailbox without IMAP, works the same way: the inbox only, without
 folders, read state or search. Microsoft
 accounts sign in with OAuth, in the browser or with a code, through the
 project's app or one of your own:
-[docs/microsoft.md](https://github.com/benethos-hub/mailbox/blob/main/docs/microsoft.md).
+[docs/MICROSOFT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/MICROSOFT.md).
 
 ## Where things live
 
