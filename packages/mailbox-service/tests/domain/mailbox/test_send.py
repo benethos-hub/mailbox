@@ -23,7 +23,7 @@ from benethos_mailbox_service.data.models import (
 from benethos_mailbox_service.data.protocols.imap import ImapSession
 from benethos_mailbox_service.data.protocols.smtp import SmtpSession
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_service.domain.mailbox import outgoing
+from benethos_mailbox_service.domain.mailbox import checks
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ConflictError,
@@ -290,7 +290,7 @@ def test_send_refuses_what_the_service_does_not_carry(
 def test_attachments_have_a_size_limit(
     client: TestClient, account_id: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(outgoing, "MAX_ATTACHMENT_BYTES", 3)
+    monkeypatch.setattr(checks, "MAX_ATTACHMENT_BYTES", 3)
     answer = client.post(f"/v1/accounts/{account_id}/send", json=body())
     assert answer.status_code == 400
     assert "the attachments exceed" in answer.json()["error"]["message"]

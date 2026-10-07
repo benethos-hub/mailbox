@@ -55,11 +55,11 @@ class UiSession:
     once: dict[str, str] = field(default_factory=dict)
 
 
-class SignInRequired(Exception):
+class SignInRequiredError(Exception):
     """No valid session: the page answers with the sign-in page."""
 
 
-class PasswordChangeRequired(Exception):
+class PasswordChangeRequiredError(Exception):
     """The password was set by someone else: it is changed first."""
 
 
@@ -145,13 +145,13 @@ _FOUND = "ui_current"
 
 
 def current(request: Request) -> Current:
-    """The session and who it belongs to, or ``SignInRequired``. While its
-    password must be changed, ``PasswordChangeRequired`` on any other page.
+    """The session and who it belongs to, or ``SignInRequiredError``. While its
+    password must be changed, ``PasswordChangeRequiredError`` on any other page.
     The first call of a request counts it against the session's limit."""
     session_id = request.cookies.get(COOKIE)
     session = store_of(request).get(session_id)
     if session is None:
-        raise SignInRequired
+        raise SignInRequiredError
     auth = get_auth(request)
     try:
         access = auth.session_access(
@@ -160,14 +160,14 @@ def current(request: Request) -> Current:
     except MailboxServiceError:
         # Gone, disabled, or its password changed since the sign-in.
         store_of(request).drop(request.cookies.get(COOKIE))
-        raise SignInRequired from None
+        raise SignInRequiredError from None
     if found_for(request) is None:
         assert session_id is not None
         signed_in(request, f"session:{session_id}", access)
     found = Current(session, access)
     setattr(request.state, _FOUND, found)
     if session.must_change and request.url.path not in _WHILE_CHANGING:
-        raise PasswordChangeRequired
+        raise PasswordChangeRequiredError
     return found
 
 

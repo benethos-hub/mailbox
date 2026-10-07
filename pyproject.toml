@@ -67,7 +67,22 @@ select = [
     "UP",   # pyupgrade
     "B",    # flake8-bugbear
     "W",    # pycodestyle warnings
+    "N",    # pep8-naming
+    "C90",  # mccabe: the complexity of a function
+    "PLR0912",  # too many branches
+    "PLR0915",  # too many statements
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-branches = 12
+max-statements = 50
+
+[tool.ruff.lint.pep8-naming]
+# A method of logging.Formatter: the standard library names it.
+extend-ignore-names = ["formatTime"]
 
 [tool.mypy]
 python_version = "3.11"

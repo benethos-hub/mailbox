@@ -90,18 +90,18 @@ async def test_the_worker_names_how_it_runs(
     imap_services: Services,  # noqa: F811
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    class Stop(Exception):
+    class StopError(Exception):
         pass
 
     async def stop(seconds: float) -> None:
-        raise Stop
+        raise StopError
 
     background = worker(imap_services, push=False)
     background._sleep = stop
     with caplog.at_level(logging.INFO):
         try:
             await background.run()
-        except* Stop:
+        except* StopError:
             pass
     assert "the worker started: it syncs every 300s without push" in lines(caplog)
 

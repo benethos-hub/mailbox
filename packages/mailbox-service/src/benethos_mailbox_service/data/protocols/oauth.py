@@ -167,7 +167,7 @@ class _Claims(wire.Shape):
     name: Annotated[str | None, wire.OrNone] = None
 
 
-class _StillWaiting(Exception):
+class _StillWaitingError(Exception):
     def __init__(self, slow_down: bool) -> None:
         super().__init__("authorization pending")
         self.slow_down = slow_down
@@ -291,7 +291,7 @@ class OAuthClient:
                 },
                 None,
             )
-        except _StillWaiting as waiting:
+        except _StillWaitingError as waiting:
             return Waiting(slow_down=waiting.slow_down)
         return await self._identified(tokens)
 
@@ -396,7 +396,7 @@ def _error(answer: Answer) -> str | None:
 def _refused(provider: str, status: int, error: str | None) -> Exception:
     """The token endpoint's error, without anything that was sent."""
     if error in ("authorization_pending", "slow_down"):
-        return _StillWaiting(slow_down=error == "slow_down")
+        return _StillWaitingError(slow_down=error == "slow_down")
     if error == "authorization_declined":
         return BadRequestError(f"the sign-in at {provider} was declined")
     if error in ("expired_token", "bad_verification_code"):

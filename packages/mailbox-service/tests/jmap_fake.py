@@ -227,7 +227,7 @@ class FakeJmap:
             except LookupError:
                 responses.append(["error", {"type": "invalidResultReference"}, tag])
                 continue
-            handler = getattr(self, name.replace("/", "_"), None)
+            handler = getattr(self, name.replace("/", "_").lower(), None)
             if handler is None:
                 responses.append(["error", {"type": "unknownMethod"}, tag])
                 continue
@@ -261,7 +261,7 @@ class FakeJmap:
             found[key[1:]] = value if isinstance(value, list) else [value]
         return found
 
-    def Mailbox_get(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+    def mailbox_get(self, args: dict[str, Any], using: list[str]) -> list[Any]:
         ids = args.get("ids")
         found = [
             self.mailbox_json(m)
@@ -278,7 +278,7 @@ class FakeJmap:
             "unreadEmails": sum("$seen" not in e["keywords"] for e in inside),
         }
 
-    def Mailbox_set(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+    def mailbox_set(self, args: dict[str, Any], using: list[str]) -> list[Any]:
         answer: dict[str, Any] = {"accountId": ACCOUNT}
         for key, new in (args.get("create") or {}).items():
             mailbox_id = self.add_mailbox(new["name"], parent=new.get("parentId"))
@@ -307,7 +307,7 @@ class FakeJmap:
                 answer.setdefault("destroyed", []).append(mailbox_id)
         return [("Mailbox/set", answer)]
 
-    def Email_query(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+    def email_query(self, args: dict[str, Any], using: list[str]) -> list[Any]:
         assert args["sort"] == [{"property": "receivedAt", "isAscending": False}]
         found = [e for e in self.emails.values() if self.matches(e, args["filter"])]
         found.sort(key=lambda e: e["receivedAt"], reverse=True)
@@ -378,7 +378,7 @@ class FakeJmap:
         }
         return {p: full.get(p) for p in ["id", *properties]}
 
-    def Email_get(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+    def email_get(self, args: dict[str, Any], using: list[str]) -> list[Any]:
         ids = args.get("ids") or []
         assert len(ids) <= 500
         properties = args.get("properties") or ["id"]
@@ -398,7 +398,7 @@ class FakeJmap:
             )
         ]
 
-    def Email_set(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+    def email_set(self, args: dict[str, Any], using: list[str]) -> list[Any]:
         answer: dict[str, Any] = {"accountId": ACCOUNT}
         for email_id, patch in (args.get("update") or {}).items():
             email_id = self.created.get(email_id.lstrip("#"), email_id)
@@ -438,7 +438,7 @@ class FakeJmap:
             answer.setdefault("destroyed", []).append(email_id)
         return [("Email/set", answer)]
 
-    def Email_import(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+    def email_import(self, args: dict[str, Any], using: list[str]) -> list[Any]:
         answer: dict[str, Any] = {"accountId": ACCOUNT}
         for key, new in args["emails"].items():
             if self.refuse_import is not None:
@@ -456,7 +456,7 @@ class FakeJmap:
             answer.setdefault("created", {})[key] = {"id": email_id}
         return [("Email/import", answer)]
 
-    def Email_changes(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+    def email_changes(self, args: dict[str, Any], using: list[str]) -> list[Any]:
         since = args["sinceState"]
         if not since.startswith("s") or int(since[1:]) < self.oldest:
             return [("error", {"type": "cannotCalculateChanges"})]
@@ -485,11 +485,11 @@ class FakeJmap:
             )
         ]
 
-    def Identity_get(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+    def identity_get(self, args: dict[str, Any], using: list[str]) -> list[Any]:
         assert "urn:ietf:params:jmap:submission" in using
         return [("Identity/get", {"accountId": ACCOUNT, "list": self.identities})]
 
-    def EmailSubmission_set(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+    def emailsubmission_set(self, args: dict[str, Any], using: list[str]) -> list[Any]:
         assert "urn:ietf:params:jmap:submission" in using
         answer: dict[str, Any] = {"accountId": ACCOUNT}
         follow: list[Any] = []
@@ -507,7 +507,7 @@ class FakeJmap:
             }
             ref = f"#{key}"
             if ref in (args.get("onSuccessUpdateEmail") or {}):
-                follow += self.Email_set(
+                follow += self.email_set(
                     {
                         "accountId": ACCOUNT,
                         "update": {email_id: args["onSuccessUpdateEmail"][ref]},
@@ -515,7 +515,7 @@ class FakeJmap:
                     using,
                 )
             if ref in (args.get("onSuccessDestroyEmail") or []):
-                follow += self.Email_set(
+                follow += self.email_set(
                     {"accountId": ACCOUNT, "destroy": [email_id]}, using
                 )
         return [("EmailSubmission/set", answer), *follow]

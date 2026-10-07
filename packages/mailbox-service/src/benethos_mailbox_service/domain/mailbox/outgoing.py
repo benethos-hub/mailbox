@@ -16,11 +16,9 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from ...common.clock import utc_now
-from ...common.sizes import MIB, megabytes
 from ...data.mail import compose, convert
 from ...data.models import (
     Account,
-    Address,
     DraftMessage,
     Message,
     MessageReference,
@@ -35,23 +33,19 @@ from ...data.models import (
     SendResult,
     SentMessage,
 )
-from ...errors import BadRequestError, MailboxServiceError, missing_message
+from ...errors import MailboxServiceError, missing_message
 from .. import changes
 from ..accounts import drafts, sends
 from ..activity import ActivityLog, Actor
 from ..activity import mailbox as said
 from ..rights import Access
-from . import replies
+from . import checks, replies
 from .calls import Calls
 from .idempotency import Idempotency
 from .reach import reach_of
 from .sending import Operation, SendControl
 
 M = TypeVar("M", bound=DraftMessage)
-
-# What one message may carry.
-MAX_RECIPIENTS = 100
-MAX_ATTACHMENT_BYTES = 25 * MIB
 
 
 class Outgoing:
@@ -81,7 +75,7 @@ class Outgoing:
         """Send from the account's address, with a fresh Date and
         Message-ID. Its own right: sending cannot be taken back. With an
         ``idempotency_key`` a retry returns the first result."""
-        _require(access, "send_message", account_id, message)
+        checks.require(access, "send_message", account_id, message)
         return await self._idempotency.run(
             account_id,
             idempotency_key,
@@ -99,7 +93,7 @@ class Outgoing:
             access, account_id, message, draft=False
         )
         # Checked once composed: a reply finds its recipients in the original.
-        recipients = _addressed(message.recipients())
+        recipients = checks.addressed(message.recipients())
         account = self._calls.record(account_id)
         result = await self._deliver(
             access, "send_message", account, raw, recipients, message_id
@@ -298,9 +292,9 @@ class Outgoing:
     ) -> MessageSummary:
         """Store a draft in the drafts folder, composed like a message to
         send. A reference is filled in now and remembered for the send."""
-        _require(access, "create_draft", account_id, draft)
+        checks.require(access, "create_draft", account_id, draft)
         raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
-        _limited(composed.recipients())
+        checks.limited(composed.recipients())
         saved = await self._calls.call(
             account_id, lambda p: drafts(p).save_draft(raw, None)
         )
@@ -321,13 +315,13 @@ class Outgoing:
         one (Microsoft, JMAP). ``keep_attachments``: ids of attachments of
         the stored draft that go into the new one, before those the draft
         brings."""
-        _require(access, "update_draft", account_id, draft)
+        checks.require(access, "update_draft", account_id, draft)
         # The draft, before anything of it is read: whoever may write
         # drafts may not read other mail this way.
         raw = await self._calls.on_message(
             account_id, draft_id, lambda p, native: drafts(p).get_draft(native)
         )
-        if _same(convert.stored_draft(raw), draft, keep_attachments):
+        if checks.same(convert.stored_draft(raw), draft, keep_attachments):
             # Stored as it is: the provider is left alone.
             stored = await self._calls.message(account_id, draft_id)
             return await self._calls.published_one(account_id, stored)
@@ -338,7 +332,7 @@ class Outgoing:
             ]
             draft = draft.model_copy(update={"attachments": kept + draft.attachments})
         raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
-        _limited(composed.recipients())
+        checks.limited(composed.recipients())
         saved = await self._calls.on_message(
             account_id, draft_id, lambda p, native: drafts(p).save_draft(raw, native)
         )
@@ -387,7 +381,7 @@ class Outgoing:
         out = compose.outgoing(
             stored, self._date(), compose.new_message_id(account.email)
         )
-        recipients = _addressed(out.recipients)
+        recipients = checks.addressed(out.recipients)
         result = await self._deliver(
             access, "send_draft", account, out.raw, recipients, out.message_id
         )
@@ -437,68 +431,3 @@ class _DraftToSend(BaseModel):
     """What makes two ``send_draft`` requests the same, for Idempotency-Key."""
 
     draft_id: str
-
-
-def _require(
-    access: Access, operation: str, account_id: str, message: DraftMessage
-) -> None:
-    """The operation's right and, with a reference, the right to read: a
-    reply quotes the original and a forward passes it on. Whoever may only
-    send or write drafts must not get at mail this way. Then the size."""
-    access.require(operation, account_id)
-    if message.reference is not None:
-        access.require("get_message", account_id)
-    if sum(len(a.data) for a in message.attachments) > MAX_ATTACHMENT_BYTES:
-        raise BadRequestError(
-            f"the attachments exceed {megabytes(MAX_ATTACHMENT_BYTES)}"
-        )
-
-
-def _limited(recipients: list[str]) -> list[str]:
-    """No more recipients than the service carries. Checked once composed:
-    a reply takes its recipients from the original."""
-    if len(recipients) > MAX_RECIPIENTS:
-        raise BadRequestError(f"at most {MAX_RECIPIENTS} recipients")
-    return recipients
-
-
-def _addressed(recipients: list[str]) -> list[str]:
-    """A message to send needs at least one recipient. A reply finds them
-    in the original, a forward or a plain message brings its own."""
-    if not recipients:
-        raise BadRequestError("a message needs at least one recipient")
-    return _limited(recipients)
-
-
-def _same(
-    stored: convert.StoredDraft, draft: DraftMessage, keep: list[str] | None
-) -> bool:
-    """Whether ``draft`` is the draft as it is stored: the same addresses,
-    subject, bodies and original, every attachment kept and none added.
-    Whitespace counts as one space, as a form sends a text back."""
-    if draft.attachments or sorted(keep or []) != sorted(stored.attachment_ids):
-        return False
-    if draft.reference is not None and draft.reference.quote:
-        return False  # composing adds the quote again
-
-    def people(values: list[Recipient] | list[Address]) -> list[tuple[str, str]]:
-        return [(v.email.lower(), (v.name or "").strip()) for v in values]
-
-    def words(value: str | None) -> str:
-        return " ".join((value or "").split())
-
-    def original(reference: MessageReference | None) -> tuple[str, ...] | None:
-        if reference is None:
-            return None
-        return (reference.message_id, reference.action, reference.forward_as)
-
-    return (
-        people(draft.to) == people(stored.to)
-        and people(draft.cc) == people(stored.cc)
-        and people(draft.bcc) == people(stored.bcc)
-        and people(draft.reply_to) == people(stored.reply_to)
-        and words(draft.subject) == words(stored.subject)
-        and (draft.text is None or words(draft.text) == words(stored.text))
-        and words(draft.html) == words(stored.html)
-        and original(draft.reference) == original(stored.reference)
-    )

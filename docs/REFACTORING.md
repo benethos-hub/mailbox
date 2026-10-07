@@ -9,6 +9,8 @@ the code written twice, merged into helpers once the modules are in
 place. Section 10 is the MCP server, added later the same day: its
 tools in a package, one module per kind. Section 11, a proposal of
 2026-10-05, is the migrations of the schema: one class per step.
+Section 12 is the work list of 2026-10: the client as a package, the
+adapters in parts, and limits on the size of the code.
 Behaviour, the API and the
 OpenAPI document stay as they are
 throughout. The rules that came out of it, in short, are
@@ -869,3 +871,54 @@ One branch from `main`, one pull request, each step passing all checks:
 Then once a database file of 0.2.0, schema 13, opened by the service:
 the log says it migrated to the current schema, and `live/ui.py` runs
 against it. No CHANGELOG entry: the API does not change.
+
+
+## 12. The work list of 2026-10
+
+A list of 2026-10-07, after a review of the code and the documents: the
+packages first (block 2), then the code inside them (block 3). One pull
+request per step, behaviour and the API unchanged unless a step says
+so. Built the same day.
+
+### 12.1 Packages and folders
+
+| Step | Pull request | What came of it |
+| --- | --- | --- |
+| 2.1 | #70 | `packages/mailbox-client`, the client of the REST API as a package of its own: one description per endpoint (`endpoints.py`), `MailboxClient` and `SyncMailboxClient` as thin transports over it. The MCP server is built on it. Decided by the user. |
+| 2.2 | #71 | `live/checks/`: what the live checks share, one module per subject. A check reaches mail through the client. |
+| 2.3 | #72 | `assembly/` builds the service out of `main.py`, `cli/` holds one module per command. |
+| 2.4 | #73 | The schemas of the API split by subject. `openapi.json` unchanged. |
+| 2.5 | #74 | Code the adapters wrote three times in one place each. |
+| 2.6 | #75 | The mappers of every adapter named alike (ARCHITECTURE 14). |
+| 2.7 | #76 | The trees of ARCHITECTURE 3 and CLAUDE.md, the architecture tests for the client, `assembly/` and `cli/`. |
+
+### 12.2 Code
+
+| Step | Pull request | What came of it |
+| --- | --- | --- |
+| 3.1 | #77 | `MailProvider` split by capability into protocols a provider implements as far as it can. The domain answers `501` for the rest. Decided by the user. |
+| 3.2 | #78 | `MailServerAdapter`, the base of IMAP and POP3. The IMAP and JMAP adapters in parts. |
+| 3.3 | #79 | JSON from a server read into a shape at the edge (`data/protocols/wire.py`), a body of another shape a `ProviderError`. Decided by the user. |
+| 3.4 | #80 | The users service as four: users, roles, tokens, passwords, and their rules. |
+| 3.5 | #81 | Long functions in steps. |
+| 3.6 | #82 | One translation of errors per protocol (`transport.translated`, `http.refused`). The IMAP session in parts. |
+| 3.7 | #83 | Ids, cursors and settings read back into frozen dataclasses with named fields. |
+| 3.8 | #84 | `app.state` and `request.state` read with their types in one place each. |
+| 3.9 | this | The limits below, checked. |
+
+### 12.3 The limits
+
+Decided by the user: hard limits, without exceptions and without
+`noqa`. What grows beyond one is split.
+
+- A module at most 500 lines, a class at most 30 methods.
+  `test_architecture.py` of each package checks both.
+- A function at most a complexity of 10 (ruff `C901`), 12 branches
+  (`PLR0912`) and 50 statements (`PLR0915`).
+- Names as pep8-naming has them (ruff `N`): an exception ends in
+  `Error`. `formatTime` keeps its name, which `logging.Formatter`
+  gives it.
+
+When the limits came in, one module was beyond them:
+`domain/mailbox/outgoing.py`, 504 lines. Its checks of a message went
+to `checks.py`.

@@ -26,9 +26,9 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ...errors import MailboxServiceError
 from ..state import app_services, app_settings
-from .deps import CsrfRefused
+from .deps import CsrfRefusedError
 from .errors import error_page
-from .forms import Failed
+from .forms import FormFailedError
 from .routes import (
     accounts,
     audit,
@@ -49,9 +49,9 @@ from .routes import (
 from .session import (
     PASSWORD_PAGE,
     PATH,
-    PasswordChangeRequired,
+    PasswordChangeRequiredError,
     SessionStore,
-    SignInRequired,
+    SignInRequiredError,
 )
 from .templates import STATIC_DIR, back, is_htmx
 
@@ -108,15 +108,15 @@ def install(app: FastAPI) -> None:
     for area in AREAS:
         app.include_router(area.router, prefix=PATH, include_in_schema=False)
 
-    app.exception_handler(SignInRequired)(_sign_in)
-    app.exception_handler(PasswordChangeRequired)(_change_password)
-    app.exception_handler(Failed)(_failed)
-    app.exception_handler(CsrfRefused)(_csrf)
+    app.exception_handler(SignInRequiredError)(_sign_in)
+    app.exception_handler(PasswordChangeRequiredError)(_change_password)
+    app.exception_handler(FormFailedError)(_failed)
+    app.exception_handler(CsrfRefusedError)(_csrf)
     hosts = app_services(app).oauth.sign_in_hosts()
     app.add_middleware(_Security, headers=security_headers(hosts))
 
 
-async def _sign_in(request: Request, _: SignInRequired) -> Response:
+async def _sign_in(request: Request, _: SignInRequiredError) -> Response:
     """To the sign-in page, and after it back to the page asked for, with
     its query. A form that was posted cannot be repeated by a redirect,
     so after a POST the sign-in lands on the start page."""
@@ -131,14 +131,16 @@ async def _sign_in(request: Request, _: SignInRequired) -> Response:
     return RedirectResponse(target, status_code=303)
 
 
-async def _change_password(request: Request, _: PasswordChangeRequired) -> Response:
+async def _change_password(
+    request: Request, _: PasswordChangeRequiredError
+) -> Response:
     """A password someone else set is changed before anything else."""
     if is_htmx(request):
         return Response(status_code=204, headers={"HX-Redirect": PASSWORD_PAGE})
     return RedirectResponse(PASSWORD_PAGE, status_code=303)
 
 
-async def _failed(request: Request, exc: Failed) -> Response:
+async def _failed(request: Request, exc: FormFailedError) -> Response:
     if exc.again is not None:
         try:
             page = exc.again(exc.error)
@@ -148,7 +150,7 @@ async def _failed(request: Request, exc: Failed) -> Response:
     return back(request, exc.path, error=exc.error)
 
 
-async def _csrf(request: Request, _: CsrfRefused) -> HTMLResponse:
+async def _csrf(request: Request, _: CsrfRefusedError) -> HTMLResponse:
     return error_page(
         request,
         403,
