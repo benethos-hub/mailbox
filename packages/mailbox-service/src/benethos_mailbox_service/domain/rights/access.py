@@ -7,7 +7,6 @@ JSON API and the configuration UI share one check.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,8 +15,6 @@ from ...common.clock import utc_now
 from ...data.models import Grant, Role, User
 from ...errors import ForbiddenError, missing
 from . import permissions
-
-log = logging.getLogger(__name__)
 
 ALL_ACCOUNTS = "*"
 ANY_RECIPIENT = "*"
@@ -103,7 +100,16 @@ class Access:
         # The roles whose grants are among ``grants``, to show them.
         self.roles = tuple(roles)
         service = list(service)
+        grants = list(grants)
         self._service = _service_operations(service)
+        # Names in stored grants and service rights that are no right, e.g.
+        # of an older version. They give nothing. Whoever builds the
+        # access from stored records logs them.
+        self.unknown = frozenset(
+            name
+            for names in (service, *(grant.allow for grant in grants))
+            for name in permissions.expand_known(names)[1]
+        )
         # A grant that has expired grants nothing (PERMISSIONS.md 8.4).
         self._now = now or utc_now()
         rules = [
@@ -294,9 +300,7 @@ def _rule(grant: Grant) -> _Rule:
     recipients = None if grant.recipients is None else tuple(grant.recipients)
     if recipients is not None and ANY_RECIPIENT in recipients:
         recipients = None
-    operations, unknown = permissions.expand_known(grant.allow)
-    if unknown:
-        log.warning("a stored grant names rights that do not exist: %s", unknown)
+    operations, _ = permissions.expand_known(grant.allow)
     # A grant gives rights on accounts alone, whatever it names.
     operations &= permissions.ON_AN_ACCOUNT
     return _Rule(
@@ -314,9 +318,7 @@ def _expired(rule: _Rule, now: datetime) -> bool:
 
 def _service_operations(names: Iterable[str]) -> frozenset[str]:
     """The operations of the service that ``names`` give."""
-    operations, unknown = permissions.expand_known(names)
-    if unknown:
-        log.warning("stored service rights name rights that do not exist: %s", unknown)
+    operations, _ = permissions.expand_known(names)
     return operations & permissions.SERVICE
 
 

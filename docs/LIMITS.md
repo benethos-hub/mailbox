@@ -18,20 +18,21 @@ Towards the callers of the service:
 |---|---|---|---|---|
 | Requests with a credential | per API token, per UI session | 120 a minute, 60 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` |
 | Requests without a credential | per client address | 30 a minute, 15 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` |
-| Request body | per request | 40 MB | `413` | fixed |
+| Request body | per request | 40 MiB | `413 payload_too_large` | fixed |
 | Failed sign-ins per address | wrong API tokens and wrong UI passwords alike | 10 in 15 minutes lock the address for 15 minutes | `429 rate_limited` for a wrong credential, the UI names the minutes. A valid token passes. | `MAILBOX_SERVICE_SIGN_IN_FAILURES`, `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` |
 | Failed sign-ins per name | UI password, the password asked again before the recovery key | 10 in 15 minutes, from any address, make the name wait 1 minute | `429 rate_limited` | the same failures, `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` |
 | Password hashes | at once, for the whole service | 2 | the next one waits | `MAILBOX_SERVICE_PASSWORD_HASHES_AT_ONCE` |
 | UI session | per session | ends after 8 hours without a request | sign in again | `MAILBOX_SERVICE_SESSION_IDLE_HOURS` |
 | Discoveries | per user | 10 in any minute, each domain's findings kept a day | `429 rate_limited` | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE`, the day is fixed |
 | Sends | per user and account, under a grant | `max_sends_per_day` in any 24 hours | `429 send_limit_reached` | the grant |
+| Recipients | per send, under a grant | the grant's `recipients` | `403 recipient_not_allowed` | the grant |
 
 Towards the mail servers:
 
 | Limit | Counts | Default | Past it | Set by |
 |---|---|---|---|---|
-| IMAP pace | per account, commands and SMTP sends | 60 a minute, 10 at once | the request waits | `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE`, `MAILBOX_SERVICE_IMAP_BURST`, the account's `max_requests_per_minute` |
-| Unreachable server | per account | 3 attempts with backoff, then a pause of 30 seconds, doubled up to 15 minutes | `502 provider_unavailable`, the account shows `unreachable` | `MAILBOX_SERVICE_IMAP_ATTEMPTS`, `MAILBOX_SERVICE_IMAP_FIRST_PAUSE`, `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE` |
+| IMAP and POP3 pace | per account, commands and SMTP sends | 60 a minute, 10 at once | the request waits | `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE`, `MAILBOX_SERVICE_IMAP_BURST`, the account's `max_requests_per_minute` |
+| Unreachable server | per IMAP or POP3 account, SMTP included | 3 attempts with backoff, then a pause of 30 seconds, doubled up to 15 minutes | `502 provider_unavailable`, the account shows `unreachable` | `MAILBOX_SERVICE_IMAP_ATTEMPTS`, `MAILBOX_SERVICE_IMAP_FIRST_PAUSE`, `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE` |
 | Rejected login | per account | no new attempt until the credential is replaced or the account is verified | `502 provider_auth_failed`, the account shows `needs_reauth` | fixed |
 | Watched accounts | for the whole service | 50 at once, an IMAP one waiting in IDLE in a thread of its own, a JMAP one on its event source | further accounts are polled only | `MAILBOX_SERVICE_SYNC_WATCHERS` |
 | Microsoft Graph | per account | a pause as long as Graph's `Retry-After` | `502 provider_unavailable` | Graph |
@@ -48,7 +49,7 @@ The limits apply in this order. The first that refuses answers.
 1. **Before the app.** A request without a credential counts against its
    client address. A credential is a bearer token on a path under `/v1`
    or a session of the UI the service knows. `/health` is never counted.
-2. **While the body is read.** A body above 40 MB is refused as soon as
+2. **While the body is read.** A body above 40 MiB is refused as soon as
    it grows past the limit.
 3. **The credential.**
    - API without a token: `401`. It counted against its address in
@@ -109,7 +110,8 @@ of every account, which fits into the 60 that pass at once. Past the
 limit the model reads "too many requests, try again in N seconds".
 
 **Sending.** A send passes the limit on requests, then the grants: their
-recipients and their `max_sends_per_day`. A refused or failed attempt
+recipients and their `max_sends_per_day`. A recipient no grant allows
+answers `403 recipient_not_allowed`. A refused or failed attempt
 sent nothing and does not count. A repeated request with the same
 `Idempotency-Key` within 24 hours answers the first result and sends
 nothing again. Its SMTP connection passes the account's pace like any

@@ -80,10 +80,11 @@ some folders, such as the invoices, and end after a week.
 ## What it can do today
 
 - **Accounts:** IMAP with SMTP for sending, set up from the address alone
-  (autodiscovery), JMAP servers such as Fastmail and Stalwart, and
-  Microsoft accounts (Outlook.com, Microsoft 365) over Microsoft Graph
-  with OAuth sign-in. Credentials are encrypted
-  (AES-256-GCM) under a master key kept outside the database.
+  (autodiscovery), JMAP servers such as Fastmail and Stalwart, POP3
+  for mailboxes without IMAP (the inbox only), and Microsoft accounts
+  (Outlook.com, Microsoft 365) over Microsoft Graph with OAuth sign-in.
+  Credentials are encrypted (AES-256-GCM) under a master key kept
+  outside the database.
 - **Reading:** folders, lists and search, one account or all at once,
   messages as text and HTML, attachments, the raw source. Message ids stay
   the same when a message moves, kept by a background sync.
@@ -91,9 +92,9 @@ some folders, such as the invoices, and end after a week.
   reply, reply to all and forward. A retried send is not sent twice
   (`Idempotency-Key`).
 - **Changes:** a change feed names each message created, changed or
-  deleted since a point you keep, in IMAP, JMAP and Microsoft accounts,
-  flags set in other mail clients included where the IMAP server offers
-  CONDSTORE. Webhooks post the same events, signed, to a URL of your
+  deleted since a point you keep, in IMAP, JMAP, POP3 and Microsoft
+  accounts, flags set in other mail clients included where the IMAP
+  server offers CONDSTORE. Webhooks post the same events, signed, to a URL of your
   choice, a host in your local network included.
 - **Users and rights:** users, roles and grants per account and per
   operation, down to folders, grants that expire, API tokens, limits on
@@ -107,8 +108,8 @@ some folders, such as the invoices, and end after a week.
   rights, tokens, reading and writing mail, the send audit, webhooks,
   the status of accounts and sync, the audit of administration, the
   service log.
-- **Operation:** encrypted backup and restore, container images, a
-  compose file.
+- **Operation:** encrypted backup and restore, container images, compose
+  files for operation with HTTPS through Caddy and MCP server instances.
 
 Planned next: threads across folders and Gmail. The order is in
 [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -172,7 +173,7 @@ compose file.
 - [CHANGELOG.md](CHANGELOG.md)
 - [SECURITY.md](SECURITY.md): how to report a vulnerability
 - [containers/](containers/README.md): the Dockerfiles, and compose files
-  for development and a test mail server
+  for operation, for development and for a test mail server
 
 ## Development
 
@@ -185,7 +186,10 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
 
-The tests run offline. Manual checks against real test accounts live in
+The tests run offline. CI runs these checks too. It also installs both
+packages on the lowest versions their `pyproject.toml` allows, runs the
+tests there and checks those versions against OSV for known
+vulnerabilities. Manual checks against real test accounts live in
 `live/` and are described in [CLAUDE.md](CLAUDE.md), which also holds the
 working rules for this repository.
 

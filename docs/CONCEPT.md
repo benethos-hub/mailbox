@@ -26,9 +26,9 @@ Two layers, strictly separated:
  ┌──────▼───────────┐
  │  REST API        │  FastAPI, /v1, OpenAPI 3.1
  │  account store   │  SQLite, credentials encrypted
- │  adapters        │  imap · pop3 · gmail · microsoft
+ │  adapters        │  imap · pop3 · jmap · gmail · microsoft
  └──────┬───────────┘
-        │  IMAP/SMTP · POP3 · Gmail API · Microsoft Graph
+        │  IMAP/SMTP · POP3 · JMAP · Gmail API · Microsoft Graph
     mail providers
 ```
 
@@ -51,9 +51,11 @@ REST client can do too.
  data/         DATA ─ decides nothing, one package per kind
    models/     provider-neutral types, one module per subject
    mail/       messages in RFC 5322: compose, parse, convert
-   protocols/  the wire, one library each: IMAP, SMTP, OAuth, and http/:
+   protocols/  the wire, one library each: IMAP, POP3, SMTP, JMAP, OAuth,
+               and http/:
                the SSRF guard, JSON to known hosts, webhook posts
-   providers/  imap · gmail · microsoft · pop3 · memory, behind a registry
+   providers/  imap · pop3 · jmap · microsoft · memory (gmail planned),
+               behind a registry
    storage/    own records: accounts, users, credentials
    secrets/    envelope encryption, key providers, password hashes
    discovery/  autodiscovery sources
@@ -83,7 +85,7 @@ The data layer the same way (REFACTORING.md section 8):
  backup                           encrypted backups of the database
  secrets                          cipher, keys, password hashes, the vault
  storage · providers · discovery  own records, the adapters, autodiscovery
- protocols                        the wire: IMAP, SMTP, HTTP, OAuth
+ protocols                        the wire: IMAP, POP3, SMTP, JMAP, HTTP, OAuth
  mail · files                     messages in RFC 5322, files for the owner
  models · logbook                 the neutral types, the newest log lines
 ```
@@ -244,11 +246,11 @@ account lacks.
 
 | Adapter | Covers | Library | Licence | Notes |
 |---|---|---|---|---|
-| `imap` | everything without a better API: GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, Zoho, own servers, Proton via Bridge | **IMAPClient** (protocol), the mail parser of **imap-tools** (messages) | BSD-3-Clause, Apache-2.0 | synchronous, run in a worker thread. Auth: password, app password **and XOAUTH2** |
-| `smtp` | sending for `imap`, `jmap`-less and `pop3` accounts | stdlib **smtplib**, for now (decided 2026-09-24) | PSF | synchronous, run in a worker thread like IMAP, also XOAUTH2 |
-| `microsoft` | Microsoft 365, Outlook.com | Microsoft Graph over **httpx** | — | OAuth 2.0, the only sensible route (5.4) |
-| `gmail` | Gmail, Google Workspace | Gmail REST API over **httpx** | — | OAuth 2.0, no Google SDK needed (5.5) |
-| `jmap` | Fastmail, Stalwart, Cyrus, any JMAP server | JMAP (RFC 8620/8621) over **httpx** | — | API token or OAuth. A second generic protocol next to IMAP (5.6) |
+| `imap` | everything without a better API: GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, Zoho, own servers, Proton via Bridge | **IMAPClient** (protocol), the mail parser of **imap-tools** (messages) | BSD-3-Clause, Apache-2.0 | synchronous, run in a worker thread. Auth: password and app password, built. **XOAUTH2** waits for the token refresher (5.1) |
+| `smtp` | sending for `imap` and `pop3` accounts | stdlib **smtplib**, for now (decided 2026-09-24) | PSF | synchronous, run in a worker thread like IMAP, also XOAUTH2, built |
+| `microsoft` | Microsoft 365, Outlook.com | Microsoft Graph over **httpx** | — | OAuth 2.0, the only sensible route (5.4), built |
+| `gmail` | Gmail, Google Workspace | Gmail REST API over **httpx** | — | OAuth 2.0, no Google SDK needed (5.5), planned |
+| `jmap` | Fastmail, Stalwart, Cyrus, any JMAP server | JMAP (RFC 8620/8621) over **httpx** | — | password or API token. A second generic protocol next to IMAP (5.6), built |
 | `pop3` | legacy mailboxes | stdlib **poplib** | PSF | synchronous, worker thread, reduced (5.2), built |
 | `memory` | tests and development | — | — | built |
 
@@ -1609,10 +1611,13 @@ account and re-issuing every token.
 ## 8. MCP server
 
 Its own package, `mailbox-mcp` (`benethos-mailbox-mcp` on PyPI), in the same uv workspace
-as the service (**decided 2026-09-24**). It depends on `mcp` and `httpx`
-only, never on the service package, so `uvx benethos-mailbox-mcp` stays
-small and the REST-only rule is enforced by the dependency list itself. A
-test checks that no module imports the service.
+as the service (**decided 2026-09-24**). It depends on `mcp` and `httpx`,
+`pypdfium2` for PDF pages, `platformdirs` and `python-dotenv` for its
+settings, and `uvicorn`, `starlette`, `anyio` and `pydantic`, which `mcp`
+brings too. It never depends on the service package or a mail library,
+so `uvx benethos-mailbox-mcp` stays small and the REST-only rule is
+enforced by the dependency list itself. A test checks that no module
+imports the service.
 
 It reads `MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN` and calls the REST API with
 httpx. The URL is `https`, or `http` to this machine only, since the token
@@ -1630,7 +1635,7 @@ one or two `operationId`s.
 
 | Tool | Access | REST |
 |---|---|---|
-| `list_accounts` | read | `list_accounts` |
+| `list_accounts` | any token | `get_me` |
 | `list_folders` | read | `list_folders` |
 | `search_messages` | read | `list_all_messages` across accounts, or `list_messages` for one |
 | `get_message` | read | `get_message`, body shortened, `max_chars` param |

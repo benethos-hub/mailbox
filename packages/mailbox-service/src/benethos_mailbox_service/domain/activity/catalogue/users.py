@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
@@ -213,6 +214,24 @@ class RoleDeleted(Activity):
     def says(self) -> str:
         return f"deleted role {self.role_id}"
 
+    def touched(self) -> str | None:
+        return self.role_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class UnknownRights(Activity):
+    name: ClassVar[str] = "unknown_rights"
+    level: ClassVar[int] = logging.WARNING
+
+    user: User
+    names: tuple[str, ...]
+
+    def says(self) -> str:
+        return (
+            f"the grants and roles of {user(self.user)} name rights that do not "
+            f"exist, which give nothing: {', '.join(self.names)}"
+        )
+
 
 def rights(service: Iterable[str], grants: int) -> str:
     """``1 grant``, or ``service admin, 1 grant`` with rights of the
@@ -220,6 +239,3 @@ def rights(service: Iterable[str], grants: int) -> str:
     names = ", ".join(service)
     counted = plural(grants, "grant")
     return f"service {names}, {counted}" if names else counted
-
-    def touched(self) -> str | None:
-        return self.role_id

@@ -379,3 +379,20 @@ def test_a_store_filters_pages_and_purges(store: AuditRepository) -> None:
     assert [r.id for r in older] == ["evt_2", "evt_1"]
     assert store.purge(NOW + timedelta(minutes=3)) == 2
     assert [r.id for r in store.list(limit=10, before=None)] == ["evt_4", "evt_3"]
+
+
+# Fields that name the record an activity is about.
+RECORD_FIELDS = {"account", "user", "role_id", "token_id", "webhook_id"}
+
+
+def test_every_audited_activity_about_a_record_names_it() -> None:
+    import dataclasses
+
+    from benethos_mailbox_service.domain.activity.base import Activity
+
+    for cls in _catalogue():
+        fields = {f.name for f in dataclasses.fields(cls)}
+        if cls.audited and fields & RECORD_FIELDS:
+            assert cls.touched is not Activity.touched, cls.kind()
+    deleted = said.RoleDeleted(by=Actor("Anna", "usr_a"), role_id="rol_1", at=NOW)
+    assert deleted.touched() == "rol_1"

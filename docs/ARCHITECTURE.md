@@ -48,7 +48,7 @@ The three layers and what each may import:
   holds. `redact` is the one module with state of its own, and its
   docstring says why. What one layer needs stays in that layer.
 - **No HTTP in the domain.** Nothing below `web/` raises an HTTP exception or
-  knows a status code. The domain raises `errors`, and `web/api/errors.py` maps
+  knows a status code. The domain raises `errors`, and `web/errors.py` maps
   each class to a status.
 - **No decisions in the data layer.** It reads and writes, it does not judge.
 - **Providers only through the registry.** Outside `data/providers/`,
@@ -150,10 +150,13 @@ packages/mailbox-service/
       urls.py           # this service's public address, OAuth callback
       limits.py         # the size of a request body, the requests a
                         #   minute, for both
+      errors.py         # error class -> status code, for both
+      responses.py      # download: bytes to save as a file, for both
+      search.py         # the search of a message list by its query names
       api/              # the JSON API: /health open, the rest under /v1
         deps.py         # bearer authentication, services per request
         schemas.py      # shapes that exist only at the HTTP boundary
-        errors.py       # error class -> status code, the error envelope
+        errors.py       # the error envelope, the errors routes document
         routes/         # one router per resource
       pages/            # the configuration UI under /ui, not in OpenAPI
         deps.py         # who is signed in, the CSRF check, if_allowed
@@ -166,6 +169,7 @@ packages/mailbox-service/
         forms.py        # form errors, failing: back with the message,
                         #   model_of and text_of: what a form holds
         rights.py       # what the mail pages offer, by the rights on an account
+        effective.py    # a user's effective rights, grouped for reading
         errors.py       # errors as a page
         routes/         # one module per area
         templates/      # base, partials, components (macros), pages
@@ -258,6 +262,7 @@ cannot import the service, and `tests/test_boundary.py` checks that.
 ```
 packages/mailbox-mcp/
   src/benethos_mailbox_mcp/
+    __main__.py         # python -m, calls cli.py
     cli.py              # the command line: options, MAILBOX_MCP_*, the
                         #   log, the start over stdio or HTTP
     server.py           # MCPServer: the tools the token's rights allow,
@@ -295,10 +300,11 @@ function is thin: it names what it wants in its own terms, `client.py`
 makes the request, and `render.py` shapes what the model sees, with
 mail content inside the foreign-content marker. A tool never spells
 out a path, a query name or a field of the API, and never speaks HTTP
-itself. Its docstring is the description the model reads, and each
-argument carries a description and its bounds, which the server checks
-before the tool runs. Its test is in `tests/tools/`, against
-`httpx.MockTransport`, and the README's table names it.
+itself. Its docstring is the description the model reads. An argument
+may carry a description of its own and its bounds, in `Annotated` with
+`Field`. The server checks the bounds before the tool runs. Its test is
+in `tests/tools/`, against `httpx.MockTransport`, and the README's table
+names it.
 
 ## 4. Where does it go?
 
@@ -319,7 +325,7 @@ before the tool runs. Its test is in `tests/tools/`, against
 | a command of the CLI | `__main__.py`, which builds the service through `main.py` |
 | a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in `client.py`, its answer through `render.py` (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
-| an error | `errors.py`, a subclass of `MailboxServiceError`. `web/api/errors.py` gives it a status |
+| an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |
 | a helper two layers need | `common/`, if it is on the standard library, does no I/O and holds no state beyond what a caller holds. Else it is not a helper: it belongs to one layer |
 | a helper one layer needs | that layer, beside its caller |
@@ -448,8 +454,9 @@ imapclient boundary), never by patching deep inside a library.
 
 ## 10. Errors
 
-- The domain raises `errors`. It knows no status code. `web/api/errors.py`
-  maps each class to one, `web/pages/errors.py` to a page.
+- The domain raises `errors`. It knows no status code. `web/errors.py`
+  maps each class to one. `web/api/errors.py` answers it in the error
+  envelope, `web/pages/errors.py` as a page.
 - Raise where the decision is made, catch where something can be done
   about it. A `try` that only re-raises is noise.
 - An error's message is for the caller: plain, without a secret,
