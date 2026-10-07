@@ -651,7 +651,7 @@ def test_ids_round_trip_and_are_opaque() -> None:
 
 
 def test_flat_folder_without_delimiter() -> None:
-    folder = mappers.to_folder(RawFolder("Notes", None, ()))
+    folder = mappers.folder(RawFolder("Notes", None, ()))
     assert folder is not None
     assert folder.parent_id is None
     assert folder.role is None

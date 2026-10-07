@@ -128,26 +128,26 @@ def parse_cursor(value: str) -> tuple[str, int, int]:
 # --- folders ------------------------------------------------------------------
 
 
-def to_folders(raws: list[RawFolder], prefix: str = "") -> list[Folder]:
+def folders(raws: list[RawFolder], prefix: str = "") -> list[Folder]:
     """Every selectable folder, with roles from flags first, then from the
     localised names for roles no flag claimed. ``prefix``: that of the
     user's personal namespace, such as ``INBOX.``."""
-    folders = [f for f in (to_folder(raw, prefix) for raw in raws) if f is not None]
-    claimed = {f.role for f in folders if f.role is not None}
-    names = {f.id: f.name.casefold() for f in folders}
+    found = [f for f in (folder(raw, prefix) for raw in raws) if f is not None]
+    claimed = {f.role for f in found if f.role is not None}
+    names = {f.id: f.name.casefold() for f in found}
     result = []
-    for folder in folders:
-        if folder.role is None:
+    for one in found:
+        if one.role is None:
             for role, candidates in LOCALISED_NAMES.items():
-                if role not in claimed and names[folder.id] in candidates:
-                    folder = folder.model_copy(update={"role": role})
+                if role not in claimed and names[one.id] in candidates:
+                    one = one.model_copy(update={"role": role})
                     claimed.add(role)
                     break
-        result.append(folder)
+        result.append(one)
     return result
 
 
-def to_folder(raw: RawFolder, prefix: str = "") -> Folder | None:
+def folder(raw: RawFolder, prefix: str = "") -> Folder | None:
     """A folder, or ``None`` for one that cannot hold messages. A folder
     right below ``prefix``, the personal namespace, is at the top, as mail
     clients show it: on a server with ``INBOX.`` the folder ``INBOX.Sent``
@@ -182,13 +182,13 @@ def role_of(name: str, flags: set[str]) -> FolderRole | None:
 # --- messages -----------------------------------------------------------------
 
 
-def to_summary(msg: FetchedMessage, folder: str, uidvalidity: int) -> MessageSummary:
+def summary(msg: FetchedMessage, folder: str, uidvalidity: int) -> MessageSummary:
     return MessageSummary.model_validate(
         {**convert.summary_fields(msg), **_imap_fields(msg, folder, uidvalidity)}
     )
 
 
-def to_message(msg: FetchedMessage, folder: str, uidvalidity: int) -> Message:
+def message(msg: FetchedMessage, folder: str, uidvalidity: int) -> Message:
     return Message.model_validate(
         {
             **convert.summary_fields(msg),

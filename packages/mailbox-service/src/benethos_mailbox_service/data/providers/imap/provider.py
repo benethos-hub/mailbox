@@ -385,7 +385,7 @@ class ImapProvider:
     def _list_folders(self, subscriptions: bool = False) -> list[Folder]:
         raws = self._session.list_folders(subscriptions)
         prefix, _ = self._session.personal_namespace()
-        return mappers.to_folders(raws, prefix)
+        return mappers.folders(raws, prefix)
 
     def _list_messages(
         self,
@@ -408,7 +408,7 @@ class ImapProvider:
         page = list(reversed(uids[-limit:]))
         messages = {int(m.uid): m for m in self._session.fetch_headers(page) if m.uid}
         items = [
-            mappers.to_summary(messages[uid], folder, validity)
+            mappers.summary(messages[uid], folder, validity)
             for uid in page
             if uid in messages
         ]
@@ -434,7 +434,7 @@ class ImapProvider:
 
     def _get_message(self, message_id: str) -> Message:
         message, folder, validity = self._fetch(message_id)
-        return mappers.to_message(message, folder, validity)
+        return mappers.message(message, folder, validity)
 
     def _get_attachment(self, message_id: str, attachment_id: str) -> AttachmentContent:
         message, _, _ = self._fetch(message_id)
@@ -468,7 +468,7 @@ class ImapProvider:
             matches = self._session.search_message_id(header) if header else []
             uid = matches[-1] if matches else None
         found = self._session.fetch_headers([uid]) if uid else []
-        return mappers.to_summary(found[0], folder, validity) if found else None
+        return mappers.summary(found[0], folder, validity) if found else None
 
     # --- drafts ---------------------------------------------------------------------
 
@@ -642,16 +642,13 @@ class ImapProvider:
             results.update(_missing(stored, found))
         if target is None:
             results.update(
-                {
-                    uid: mappers.to_summary(m, folder, validity)
-                    for uid, m in found.items()
-                }
+                {uid: mappers.summary(m, folder, validity) for uid, m in found.items()}
             )
             return results
         moved = self._move(found, target)
         for uid, message in found.items():
             # Not found in the target at once: the next sync follows it.
-            results[uid] = moved.get(uid) or mappers.to_summary(
+            results[uid] = moved.get(uid) or mappers.summary(
                 message, folder, validity
             ).model_copy(update={"folder_ids": [mappers.folder_id(target)]})
         return results
@@ -712,7 +709,7 @@ class ImapProvider:
             int(m.uid): m for m in self._session.fetch_headers(list(new_uids.values()))
         }
         return {
-            uid: mappers.to_summary(fetched[new], target, target_validity)
+            uid: mappers.summary(fetched[new], target, target_validity)
             for uid, new in new_uids.items()
             if new in fetched
         }
