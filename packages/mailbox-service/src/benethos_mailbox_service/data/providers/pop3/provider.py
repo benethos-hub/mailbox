@@ -48,8 +48,9 @@ from ...protocols import POP3_PORTS, Pick, Pop3Session, Server, SmtpSession
 from ..base import Capability, CredentialReader, ProviderSettings
 from ..guard import Pace
 from ..mailserver import MailServerAdapter
-from ..rules import server_of
+from ..rules import After
 from ..sender import SmtpFactory, smtp_settings
+from ..settings import server_of
 from . import mappers
 
 T = TypeVar("T")
@@ -290,17 +291,17 @@ def _numbers(session: Pop3Session) -> dict[str, int]:
 
 
 def _list(
-    session: Pop3Session, limit: int, start: tuple[str, int] | None
+    session: Pop3Session, limit: int, start: After | None
 ) -> Page[MessageSummary]:
     """Newest first: the highest message numbers are the latest to arrive."""
     newest = list(reversed(session.unique_ids()))
     position = 0
     if start is not None:
-        uid, at = start
         positions = {u: i for i, (_, u) in enumerate(newest)}
         # After the cursor's message. If it is gone since, the next one has
         # moved up to its place.
-        position = positions[uid] + 1 if uid in positions else at
+        last = positions.get(start.last)
+        position = last + 1 if last is not None else start.position
     page = newest[position : position + limit]
     items = [
         mappers.summary(parse.ParsedMessage(session.headers(number)), uid)

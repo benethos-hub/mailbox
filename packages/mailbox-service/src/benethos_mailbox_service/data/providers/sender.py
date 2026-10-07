@@ -11,10 +11,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from ..models import MailServer, ServerProtocol
-from ..protocols import SMTP_PORTS, Pick, Server, SmtpLogin, SmtpSession
-from . import rules
+from ..protocols import Pick, Server, SmtpLogin, SmtpSession
 from .base import ProviderSettings
 from .guard import Guard
+from .settings import server_of, smtp_server
 
 SmtpFactory = Callable[[Server], SmtpSession]
 
@@ -23,7 +23,7 @@ def smtp_settings(servers: list[MailServer], username: str) -> dict[str, str | i
     """The ``smtp_*`` settings of the SMTP server among the discovered
     ``servers``, empty without one. Its user name only where it differs
     from the account's ``username``."""
-    smtp = rules.server_of(servers, ServerProtocol.SMTP)
+    smtp = server_of(servers, ServerProtocol.SMTP)
     if smtp is None:
         return {}
     found: dict[str, str | int] = {
@@ -65,19 +65,13 @@ class SmtpSender:
         """From ``smtp_host``, ``smtp_port``, ``smtp_security`` and
         ``smtp_username`` (else ``username``). None when the account has no
         SMTP server: it cannot send."""
-        host = settings.get("smtp_host")
-        if not host:
+        login = smtp_server(settings, username)
+        if login is None:
             return None
-        security = rules.encrypted(settings, "smtp_security", "SMTP")
-        port = rules.port_of(settings, "smtp_port", SMTP_PORTS[security])
-        server = Server(host=str(host), port=port, security=security, pick=pick)
-        return cls(
-            factory(server),
-            str(settings.get("smtp_username") or username),
-            auth,
-            secret,
-            guard,
+        server = Server(
+            host=login.host, port=login.port, security=login.security, pick=pick
         )
+        return cls(factory(server), login.username, auth, secret, guard)
 
     def send(self, raw: bytes, sender: str, recipients: list[str]) -> list[str]:
         """Send, blocking. The recipients the server refused."""

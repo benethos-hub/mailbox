@@ -19,13 +19,12 @@ account records nothing, since the messages already there are not new.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
 
-from ...common.clock import iso, utc_now
+from ...common.clock import utc_now
 from ...common.ids import new_id
 from ...common.redact import redact
 from ...data.providers import Capability, FolderChanges
@@ -47,7 +46,7 @@ from ..changes import (
     MessagesUpdated,
 )
 from ..locks import KeyedLocks
-from .passes import Counts, Seen, delta_state, index_changes, moves
+from .passes import Counts, DeltaState, Seen, delta_state, index_changes, moves
 
 T = TypeVar("T")
 
@@ -290,12 +289,12 @@ class SyncService:
             last = delta_state(before.get(folder_id))
             try:
                 found = await self._folder_changes(
-                    account_id, folder_id, last[0] if last else None
+                    account_id, folder_id, last.token if last else None
                 )
             except ChangesExpiredError:
                 last = None
                 found = await self._folder_changes(account_id, folder_id, None)
-            states[folder_id] = json.dumps({"token": found.token, "at": iso(now)})
+            states[folder_id] = DeltaState(found.token, now).stored()
             for message in found.changed:
                 where[message.id] = folder_id
             if last is None:
@@ -303,7 +302,7 @@ class SyncService:
                 continue
             for message in found.changed:
                 seen[message.id] = message.created
-                since[message.id] = last[1]
+                since[message.id] = last.at
             removed |= set(found.removed)
             for message_id in found.removed:
                 was = gone_from.setdefault(message_id, folder_id)

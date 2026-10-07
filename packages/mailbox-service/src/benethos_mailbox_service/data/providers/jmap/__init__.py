@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
-from .provider import JmapProvider, settings_from
+from .connect import settings_from
+from .provider import JmapProvider
 
 __all__ = ["JmapProvider", "settings_from"]

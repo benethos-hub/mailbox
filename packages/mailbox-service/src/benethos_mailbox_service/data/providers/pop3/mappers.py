@@ -53,11 +53,11 @@ def cursor(uid: str, position: int) -> str:
     return opaque.encode("c_", [uid, position])
 
 
-def parse_cursor(value: str) -> tuple[str, int]:
+def parse_cursor(value: str) -> rules.After:
     parts = opaque.fields("c_", value, str, int)
     if parts is None:
         raise rules.invalid_cursor()
-    return parts[0], parts[1]
+    return rules.After(*parts)
 
 
 def summary(msg: parse.ParsedMessage, uid: str) -> MessageSummary:

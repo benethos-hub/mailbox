@@ -17,7 +17,7 @@ from typing import Any
 from ...common.clock import iso, parse_iso, utc_now
 from ...common.ids import new_id
 from ...common.redact import redact
-from ...data.models import ActivityFilter, ActivityRecord, Page
+from ...data.models import ActivityFilter, ActivityRecord, Before, Page
 from ...data.storage import AuditRepository
 from .. import paging
 from ..rights import Access
@@ -129,7 +129,7 @@ def audited() -> list[str]:
     return sorted(found)
 
 
-def _before(carried: Any) -> tuple[datetime, str]:
-    """The time and the id a cursor of the audit continues before."""
+def _before(carried: Any) -> Before:
+    """Where a cursor of the audit continues."""
     at, record_id = carried
-    return parse_iso(str(at)), str(record_id)
+    return Before(parse_iso(str(at)), str(record_id))

@@ -18,46 +18,23 @@ from collections.abc import Callable
 from datetime import datetime
 
 from ....common.clock import utc_now
-from ....errors import BadRequestError, MailboxServiceError, ProviderError
+from ....errors import MailboxServiceError, ProviderError
 from ...models import (
     AttachmentContent,
-    CredentialKind,
     Folder,
-    MailServer,
     Message,
     MessageFilter,
     MessageSummary,
     MessageUpdate,
     Page,
     SentMessage,
-    ServerProtocol,
 )
 from ...protocols import Pick, ServerClient, jmap
-from .. import rules
 from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
 from . import drafts, folders, messages, sending
 from .account import JmapAccount
 from .changes import Changes
-
-
-def settings_from(
-    servers: list[MailServer], credential: CredentialKind, email: str
-) -> dict[str, str | int | bool]:
-    """The settings of a JMAP account from discovered servers, as
-    ``JmapProvider`` reads them. Empty without a JMAP server."""
-    server = rules.server_of(servers, ServerProtocol.JMAP)
-    if server is None or credential is CredentialKind.OAUTH:
-        return {}
-    settings: dict[str, str | int | bool] = {
-        "host": server.host,
-        "port": server.port,
-        "path": server.path or jmap.DEFAULT_PATH,
-    }
-    if credential is CredentialKind.API_TOKEN:
-        settings["auth"] = "token"
-    else:
-        settings["username"] = server.username or email
-    return settings
+from .connect import read_settings
 
 
 class JmapProvider:
@@ -83,31 +60,9 @@ class JmapProvider:
     ) -> None:
         """``pick`` checks the host of each request. ``http`` replaces the
         client, e.g. with a fake server."""
-        host = settings.get("host")
-        if not host:
-            raise BadRequestError("a JMAP account needs settings.host")
-        if str(settings.get("security", "tls")) != "tls":
-            raise BadRequestError(
-                "settings.security must be 'tls': JMAP runs over HTTPS"
-            )
-        path = str(settings.get("path") or jmap.DEFAULT_PATH)
-        if not _is_path(path):
-            raise BadRequestError(
-                "settings.path must be a path such as /.well-known/jmap"
-            )
-        auth = settings.get("auth", "password")
-        if auth not in ("password", "token"):
-            raise BadRequestError("settings.auth must be 'password' or 'token'")
-        username = settings.get("username")
-        if auth == "password" and not username:
-            raise BadRequestError(
-                "a JMAP account with a password needs settings.username"
-            )
+        found = read_settings(settings)
         server = jmap.JmapServer(
-            host=str(host),
-            port=rules.port_of(settings, "port", jmap.DEFAULT_PORT),
-            path=path,
-            pick=pick,
+            host=found.host, port=found.port, path=found.path, pick=pick
         )
         self._account = JmapAccount(
             jmap.JmapClient(
@@ -117,8 +72,8 @@ class JmapProvider:
                 clock=clock,
             ),
             credentials,
-            str(auth),
-            str(username or ""),
+            found.auth,
+            found.username,
         )
         self._changes = Changes(self._account, now)
 
@@ -229,15 +184,3 @@ class JmapProvider:
 
     async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
         return await self._changes.folder_changes(folder_id, token)
-
-
-def _is_path(path: str) -> bool:
-    """A path on the server, with a query perhaps: printable ASCII without
-    spaces, and no fragment."""
-    return (
-        path.startswith("/")
-        and path.isascii()
-        and path.isprintable()
-        and " " not in path
-        and "#" not in path
-    )

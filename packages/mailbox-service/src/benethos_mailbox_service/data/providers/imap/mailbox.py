@@ -26,7 +26,7 @@ class Mailbox:
 
     def list_folders(self, subscriptions: bool = False) -> list[Folder]:
         raws = self.session.folders.list_folders(subscriptions)
-        prefix, _ = self.session.folders.personal_namespace()
+        prefix = self.session.folders.personal_namespace().prefix
         return mappers.folders(raws, prefix)
 
     def listed(self) -> list[Folder]:

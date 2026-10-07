@@ -54,7 +54,7 @@ from .messages import (
     MessageSummary,
     MessageUpdate,
 )
-from .paging import AccountFailure, MessagePage, Page
+from .paging import AccountFailure, Before, MessagePage, Page
 from .sending import (
     DraftMessage,
     MessageReference,
@@ -80,6 +80,7 @@ __all__ = [
     "ActivityRecord",
     "Account",
     "AccountFailure",
+    "Before",
     "AccountStatus",
     "Capability",
     "Address",

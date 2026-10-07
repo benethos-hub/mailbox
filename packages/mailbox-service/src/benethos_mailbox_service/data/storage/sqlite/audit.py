@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime
 
 from ....common.clock import iso, parse_iso
-from ...models import ActivityFilter, ActivityRecord
+from ...models import ActivityFilter, ActivityRecord, Before
 from .database import Database
 
 
@@ -37,14 +37,14 @@ class SqliteAuditRepository:
         self,
         *,
         limit: int,
-        before: tuple[datetime, str] | None,
+        before: Before | None,
         matching: ActivityFilter | None = None,
     ) -> list[ActivityRecord]:
         where = ["1"]
         params: list[object] = []
         if before is not None:
             where.append("(at, id) < (?, ?)")
-            params += [iso(before[0]), before[1]]
+            params += [iso(before.at), before.id]
         if matching is not None:
             for column, value in (
                 ("user_id = ?", matching.user_id),

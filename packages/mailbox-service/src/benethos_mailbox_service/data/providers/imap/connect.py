@@ -11,8 +11,8 @@ from .... import __version__
 from ....errors import BadRequestError
 from ...models import CredentialKind, MailServer, ServerProtocol
 from ...protocols import IMAP_PORTS, ImapSession, Server
-from ..rules import server_of
 from ..sender import smtp_settings
+from ..settings import server_of
 
 SessionFactory = Callable[[Server], ImapSession]
 

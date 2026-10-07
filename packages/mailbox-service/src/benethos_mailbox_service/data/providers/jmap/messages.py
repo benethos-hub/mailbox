@@ -43,15 +43,14 @@ async def list_messages(
         # One more, to tell whether a next page follows.
         "limit": limit + 1,
     }
-    start: tuple[str, int] | None = None
-    if cursor:
-        start = mappers.parse_cursor(cursor, scope)
-        query.update(anchor=start[0], anchorOffset=1)
+    start = mappers.parse_cursor(cursor, scope) if cursor else None
+    if start is not None:
+        query.update(anchor=start.last, anchorOffset=1)
     answers = await _page(account, query)
     if start is not None and jmap.error_type(answers, "q") == "anchorNotFound":
         # Gone since: the next one has moved up to its place.
         del query["anchor"], query["anchorOffset"]
-        answers = await _page(account, {**query, "position": start[1]})
+        answers = await _page(account, {**query, "position": start.position})
     found = jmap.read(answers, "q", jmap.Queried)
     emails = {e.id: e for e in jmap.read(answers, "g", jmap.Got[Email]).items}
     ids = found.ids

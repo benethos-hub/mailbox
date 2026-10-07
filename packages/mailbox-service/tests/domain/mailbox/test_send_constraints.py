@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import (
+    Before,
     Grant,
     SendFilter,
     SendRecord,
@@ -533,7 +534,7 @@ def test_sqlite_send_log(tmp_path: object) -> None:
         records = store.list("acc_1", limit=2, before=None)
         assert [r.recipients for r in records] == [["2@x.org"], ["1@x.org"]]
         older = store.list(
-            "acc_1", limit=5, before=(records[-1].created_at, records[-1].id)
+            "acc_1", limit=5, before=Before(records[-1].created_at, records[-1].id)
         )
         assert [r.recipients for r in older] == [["0@x.org"]]
         assert records[0].credential_id == "tok_1"

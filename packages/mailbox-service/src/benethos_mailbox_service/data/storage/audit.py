@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Protocol
 
-from ..models import ActivityFilter, ActivityRecord
+from ..models import ActivityFilter, ActivityRecord, Before
 from .table import Table
 
 
@@ -17,10 +17,10 @@ class AuditRepository(Protocol):
         self,
         *,
         limit: int,
-        before: tuple[datetime, str] | None,
+        before: Before | None,
         matching: ActivityFilter | None = None,
     ) -> list[ActivityRecord]:
-        """Newest first, those older than ``before`` (time, id) if given,
+        """Newest first, those older than ``before`` if given,
         and only those ``matching``."""
         ...
 
@@ -40,7 +40,7 @@ class InMemoryAuditRepository:
         self,
         *,
         limit: int,
-        before: tuple[datetime, str] | None,
+        before: Before | None,
         matching: ActivityFilter | None = None,
     ) -> list[ActivityRecord]:
         found = sorted(
@@ -48,7 +48,7 @@ class InMemoryAuditRepository:
                 r
                 for r in self._records.list()
                 if (matching is None or matching.matches(r))
-                and (before is None or (r.at, r.id) < before)
+                and (before is None or Before(r.at, r.id) < before)
             ),
             key=lambda r: (r.at, r.id),
             reverse=True,

@@ -25,16 +25,15 @@ def save_draft(
     if old is not None and not retried:
         # A retried step may have removed it already, after it stored
         # the new one, which append then finds by its Message-ID.
-        validity, uid = old
-        found, _ = open_writable(box, drafts, validity, [uid])
-        if uid not in found:
+        found, _ = open_writable(box, drafts, old.uidvalidity, [old.uid])
+        if old.uid not in found:
             raise missing("draft", replaces)
     saved = append(box, drafts, raw, ["\\Draft", "\\Seen"])
     if saved is None:
         raise ProviderError("the draft was stored but cannot be found again")
     if old is not None:
         try:
-            _delete_draft_at(box, drafts, *old)
+            _delete_draft_at(box, old)
         except NotFoundError:
             pass  # gone already: a retried step removed it before the drop
     return saved
@@ -47,28 +46,28 @@ def get_draft(box: Mailbox, draft_id: str) -> bytes:
 
 def delete_draft(box: Mailbox, draft_id: str) -> None:
     drafts = _drafts_folder(box)
-    _delete_draft_at(box, drafts, *_draft_place(draft_id, drafts))
+    _delete_draft_at(box, _draft_place(draft_id, drafts))
 
 
-def _delete_draft_at(box: Mailbox, drafts: str, validity: int, uid: int) -> None:
-    found, _ = open_writable(box, drafts, validity, [uid])
-    if uid not in found:
+def _delete_draft_at(box: Mailbox, place: mappers.Place) -> None:
+    found, _ = open_writable(box, place.folder, place.uidvalidity, [place.uid])
+    if place.uid not in found:
         raise missing("draft")
-    box.session.messages.expunge([uid])
+    box.session.messages.expunge([place.uid])
 
 
 def _drafts_folder(box: Mailbox) -> str:
     return box.required_folder(FolderRole.DRAFTS)
 
 
-def _draft_place(draft_id: str, drafts: str) -> tuple[int, int]:
-    """UIDVALIDITY and UID of a draft id. Not found unless it names a
-    message in the drafts folder."""
+def _draft_place(draft_id: str, drafts: str) -> mappers.Place:
+    """Where a draft id points. Not found unless it names a message in
+    the drafts folder."""
     absent = missing("draft", draft_id)
     try:
-        folder, validity, uid = mappers.parse_message_id(draft_id)
+        place = mappers.parse_message_id(draft_id)
     except NotFoundError:
         raise absent from None
-    if folder != drafts:
+    if place.folder != drafts:
         raise absent
-    return validity, uid
+    return place

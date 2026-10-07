@@ -17,10 +17,11 @@ def folder_states(box: Mailbox) -> dict[str, str]:
     box.session.noop()
     states = {}
     for folder in box.list_folders():
-        validity, uidnext, count, highest = box.session.folders.folder_state(
+        found = box.session.folders.folder_state(
             mappers.folder_name(folder.id), modseq=modseq
         )
-        state = f"{validity}.{uidnext}.{count}"
+        state = f"{found.uidvalidity}.{found.uidnext}.{found.messages}"
+        highest = found.highest_modseq
         states[folder.id] = state if highest is None else f"{state}.{highest}"
     return states
 

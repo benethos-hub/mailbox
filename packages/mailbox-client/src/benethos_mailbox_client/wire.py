@@ -120,6 +120,21 @@ def answer(response: httpx.Response) -> Any:
         ) from None
 
 
+def read(call: Call[T], response: httpx.Response) -> T:
+    """What the caller gets of ``response``. An answer of another shape
+    than the API describes, such as one without a field the call reads, is
+    an ``ApiError`` too, not an error deep inside the reading."""
+    found = answer(response)
+    try:
+        return call.read(found)
+    except (KeyError, TypeError, ValueError, AttributeError):
+        raise ApiError(
+            response.status_code,
+            "unexpected_response",
+            "the answer is not what the API describes",
+        ) from None
+
+
 def api_error(response: httpx.Response) -> ApiError:
     """The error envelope as an ApiError. A validation failure (422) has no
     envelope but a list of what was wrong where, which is what a caller

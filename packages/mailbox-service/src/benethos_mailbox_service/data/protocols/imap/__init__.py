@@ -22,8 +22,11 @@ from .values import (
     MAX_HEADER_BYTES,
     MAX_MESSAGE_BYTES,
     FetchedMessage,
+    FolderState,
+    Namespace,
     RawFolder,
     SearchCriteria,
+    Selected,
 )
 
 __all__ = [
@@ -33,11 +36,14 @@ __all__ = [
     "MAX_MESSAGE_BYTES",
     "ClientFactory",
     "FetchedMessage",
+    "FolderState",
     "Folders",
     "ImapSession",
     "Messages",
+    "Namespace",
     "RawFolder",
     "SearchCriteria",
+    "Selected",
     "Server",
     "default_client",
 ]

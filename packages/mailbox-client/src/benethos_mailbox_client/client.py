@@ -14,11 +14,11 @@ from .models import Attachment, Changes, Folder, Me, Outcome, Page, Sent
 from .wire import (
     Call,
     Collected,
-    answer,
     api_error,
     attachment,
     connection,
     failure,
+    read,
     timeouts,
 )
 
@@ -77,7 +77,7 @@ class MailboxClient:
             )
         except httpx.TransportError as exc:
             raise failure(exc, self.base_url, call.timeout) from None
-        return call.read(answer(response))
+        return read(call, response)
 
     async def request(
         self,
