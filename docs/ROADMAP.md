@@ -309,6 +309,12 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   `mcp.yaml` with the profile `mcp`, reached on `127.0.0.1` or through a
   route of Caddy each. `MAILBOX_TLS` picks Let's Encrypt, Caddy's CA or
   a certificate of your own
+- **Hardening before 0.3.0**, decided 2026-10-07, done: a change and its
+  audit record in one transaction (AUDIT.md 4), backups in blocks of
+  1 MiB as format 2 (7.8), line breaks refused before the IMAP, POP3 and
+  SMTP commands and kept out of the log, the address, hosts and display
+  name of an account checked, the worker's notes of a deleted account
+  dropped, and every broad `except` checked by a test
 
 ## Keeping this file current
 

@@ -268,19 +268,19 @@ def _keys(command: str, env_file: Path | None) -> None:
 
 
 def _backup(target: list[str], recovery_key: bool, env_file: Path | None) -> None:
-    from .data.backup import create_backup, read_backup
+    from .data.backup import create_backup, verify_backup
     from .domain.activity import HOST, system
     from .main import opened
 
     if target[0] == "verify":
         if len(target) != 2:
             raise _UsageError("use `backup verify FILE`")
-        master = (
-            _read_recovery_key()
-            if recovery_key
-            else _master_key(load_settings(env_file))
-        )
-        manifest, _ = read_backup(Path(target[1]), master)
+        settings = load_settings(env_file)
+        master = _read_recovery_key() if recovery_key else _master_key(settings)
+        # Decrypted beside the database, where it is as safe as that is.
+        database = settings.database_path
+        scratch = database.with_name(database.name + ".verifying")
+        manifest = verify_backup(Path(target[1]), master, scratch)
         print(
             f"OK: backup of {manifest.created_at}, service "
             f"{manifest.service_version}, schema {manifest.schema_version}",

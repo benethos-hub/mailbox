@@ -752,6 +752,20 @@ def test_post_discovery_errors(api: tuple[Any, TestClient]) -> None:
     assert denied.status_code == 403
 
 
+@pytest.mark.parametrize(
+    "email",
+    ["a@x:8443", "me@firma\t.example", "me@xn--zz.example", "me@firma.exa mple"],
+)
+def test_a_broken_domain_is_a_bad_request(
+    api: tuple[Any, TestClient], email: str
+) -> None:
+    """A 400 through the API as well, never a 500."""
+    _, client = api
+    response = client.post("/v1/discovery", json={"email": email})
+    assert response.status_code == 400, response.text
+    assert response.json()["error"]["code"] == "bad_request"
+
+
 def test_openapi_names_the_right(api: tuple[Any, TestClient]) -> None:
     _, client = api
     operation = client.get("/openapi.json").json()["paths"]["/v1/discovery"]["post"]

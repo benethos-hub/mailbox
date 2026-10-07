@@ -7,7 +7,6 @@ service.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from datetime import datetime
 from functools import partial
@@ -56,8 +55,6 @@ from .sending import SendControl
 
 # The keyword of a draft, \Draft on IMAP.
 DRAFT_KEYWORD = "$draft"
-
-log = logging.getLogger(__name__)
 
 
 class MailboxService:

@@ -1591,6 +1591,15 @@ account and re-issuing every token.
 - **The whole backup file is encrypted** (AES-256-GCM, key derived from the
   KEK), not only the credentials inside it. A stolen backup reveals not
   even the list of accounts.
+- **In blocks of 1 MiB** (**decided 2026-10-07**, format 2). The
+  snapshot goes to a file beside the database, readable by its owner
+  alone and removed afterwards, and is encrypted block by block. Each
+  block is authenticated with the header, its number and whether it is
+  the last, so none can be altered, moved, dropped or added unnoticed.
+  `restore` and `backup verify` decrypt block by block into a file beside
+  the database as well. No more than one block is in memory, however
+  large the database. Backups of format 1, one ciphertext of the whole
+  database, are still read.
 - **The KEK is deliberately not in the backup.** Restoring needs the KEK on
   the same machine, or the **recovery key** from the first start (7.3).
   Keep backup file and recovery key in different places. Either alone is

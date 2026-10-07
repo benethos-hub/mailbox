@@ -143,10 +143,11 @@ class AuthService:
             raise UnauthorizedError(WRONG)
         self._throttle.succeeded(source)
         self._names.succeeded(key)
-        self.activity.record(
-            said.UiSignIn(by=Actor.signed_in(user.name, user.id, source))
-        )
-        previous = self.passwords.signed_in(user.id)
+        with self.activity.atomic():
+            previous = self.passwords.signed_in(user.id)
+            self.activity.record(
+                said.UiSignIn(by=Actor.signed_in(user.name, user.id, source))
+            )
         return SignedIn(user.id, stored.must_change, stored.updated_at, previous)
 
     async def confirm(self, access: Access, password: str) -> None:

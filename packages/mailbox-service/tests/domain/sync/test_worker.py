@@ -137,6 +137,24 @@ def test_the_cap_comes_from_the_settings() -> None:
     assert services.worker.state().watchers == 3
 
 
+async def test_a_deleted_account_leaves_nothing_in_the_worker() -> None:
+    """What the worker notes of an account goes with it, so its sets do
+    not grow with every account deleted."""
+    from benethos_mailbox_service.main import build_services
+
+    services = build_services(Settings(storage="memory", sync_interval=300))
+    background = services.worker
+    assert background is not None
+    account = await services.accounts.create(
+        ADMIN, ProviderType.MEMORY, "m@example.com"
+    )
+    background._no_push.add(account.id)
+    background._postponed.add(account.id)
+    await services.accounts.delete(ADMIN, account.id)
+    assert account.id not in background._no_push
+    assert account.id not in background._postponed
+
+
 async def test_without_idle_only_polling(
     imap_services: Services,  # noqa: F811
     imap_account_id: str,  # noqa: F811

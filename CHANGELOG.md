@@ -153,6 +153,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A change and its record in the audit of administration are stored in
+  one transaction. When the record cannot be written, the change is
+  undone and the request fails with `500`. Before, the
+  change stood and the log said `system.not_audited`. A user's deletion
+  now removes its tokens, password, webhooks and the user in one step as
+  well.
+- `backup` writes format 2: the database is encrypted in blocks of 1 MiB
+  from a copy beside the database, and `restore` and `backup verify`
+  decrypt it block by block. Before, the database was held in memory
+  twice. Backups of format 1 are still read. A backup of format 2 needs
+  this version or later to be read.
 - Rights that do not exist in a stored grant or role, e.g. of an older
   version, are logged once per user as the activity
   `users.unknown_rights`, not on every request.
@@ -164,6 +175,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   Before, it waited for its next round, 5 minutes by default: a mail that
   arrived in between never reached the change feed, and push started
   late.
+- **Breaking:** `containers/dev/compose.yaml` hands the MCP server its
+  API token as `MAILBOX_SERVICE_TOKEN`, the name the server reads. The
+  variable `MAILBOX_MCP_API_TOKEN` is gone.
 - **Breaking:** `containers/compose.yaml` moved to `containers/dev/` and
   builds from the repository only. `MAILBOX_SERVICE_IMAGE` and
   `MAILBOX_MCP_IMAGE` are gone: the published images run from
@@ -210,6 +224,24 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A line break in a user name, password or token is refused with `400`
+  before the IMAP or POP3 login: it would have ended the command and
+  started another. An SMTP address with a blank or a line break is
+  refused with `400`. Before, it ended in `500`.
+- A quote in a Microsoft search no longer ends its phrase: the rest of
+  the text could pass for search syntax.
+- The display name of an account is one line of at most 200 characters,
+  else `400`. One stored with a line break made every send fail with
+  `500`. It now goes out on one line.
+- A line break in a name or an address, such as CR LF or U+2028, no
+  longer starts a line of its own in the log. The log writes it as its
+  escape.
+- Connecting an account refuses an address that is none, e.g. without a
+  domain or with a line break, with `400`. A host that is neither a
+  name nor an IP address, e.g. `imap.example.org:993`, is refused with
+  `400` before it is looked up. Before, it ended in `502`.
+- The sync worker forgets a deleted account. It kept a note of each one
+  for as long as the service ran.
 - `openapi` and `keys generate` take `--env-file`, before or after the
   command, like every other command. They stopped with "unrecognized
   arguments".

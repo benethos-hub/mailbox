@@ -78,18 +78,19 @@ class WebhookService:
         sealed = self._vault.seal(sealed_label(webhook_id), SecretStr(secret))
         # It hears of what happens from now on.
         delivery = Delivery(cursor=self._changes.last())
-        self._repository.add(WebhookRecord(webhook, sealed, delivery))
-        self._activity.record(
-            said.WebhookCreated(
-                by=Actor.of(access),
-                webhook_id=webhook_id,
-                host=host_of(webhook.url),
-                events=tuple(webhook.events),
-                accounts=len(webhook.accounts)
-                if webhook.accounts is not None
-                else None,
+        with self._activity.atomic():
+            self._repository.add(WebhookRecord(webhook, sealed, delivery))
+            self._activity.record(
+                said.WebhookCreated(
+                    by=Actor.of(access),
+                    webhook_id=webhook_id,
+                    host=host_of(webhook.url),
+                    events=tuple(webhook.events),
+                    accounts=len(webhook.accounts)
+                    if webhook.accounts is not None
+                    else None,
+                )
             )
-        )
         return CreatedWebhook(**webhook.model_dump(), secret=secret)
 
     def list_webhooks(
@@ -136,12 +137,13 @@ class WebhookService:
     def delete_webhook(self, access: Access, webhook_id: str) -> None:
         access.require("delete_webhook")
         hook = self._own(access, webhook_id).webhook
-        self._repository.delete(webhook_id)
-        self._activity.record(
-            said.WebhookRemoved(
-                by=Actor.of(access), webhook_id=webhook_id, host=host_of(hook.url)
+        with self._activity.atomic():
+            self._repository.delete(webhook_id)
+            self._activity.record(
+                said.WebhookRemoved(
+                    by=Actor.of(access), webhook_id=webhook_id, host=host_of(hook.url)
+                )
             )
-        )
 
     def _own(self, access: Access, webhook_id: str) -> WebhookRecord:
         """Another user's webhook answers as if it did not exist."""

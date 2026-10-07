@@ -4,11 +4,13 @@ rights. The live adapter of each is ``adapters``."""
 from __future__ import annotations
 
 import builtins
+import re
 from collections.abc import Callable, Iterable, Mapping
 
 from pydantic import SecretStr
 
 from ...common import redact
+from ...common.hosts import address_problem, is_server
 from ...common.ids import new_id
 from ...data.models import Account, AccountStatus, Page, ProviderType
 from ...data.protocols import HostCheck
@@ -149,6 +151,10 @@ class AccountService:
             )
         )
         with failed:
+            problem = address_problem(email)
+            if problem is not None:
+                raise BadRequestError(problem)
+            _one_line_name(display_name)
             await self._check_hosts(settings)
             if secrets:
                 self._vault.require_ready()
@@ -168,24 +174,26 @@ class AccountService:
             email=email,
             display_name=display_name,
         )
-        self._repository.add(account, dict(settings))
-        try:
-            for field, value in secrets.items():
-                self._vault.store(account.id, field, value)
-        except BaseException:
-            self._vault.delete(account.id)
-            self._repository.delete(account.id)
-            raise
         host = settings.get("host")
-        self._activity.record(
-            said.AccountConnected(
-                by=Actor.of(access),
-                account=account,
-                host=host if isinstance(host, str) else None,
+        with self._activity.atomic():
+            self._repository.add(account, dict(settings))
+            try:
+                for field, value in secrets.items():
+                    self._vault.store(account.id, field, value)
+            except BaseException:
+                # A store without transactions keeps no half account either.
+                self._vault.delete(account.id)
+                self._repository.delete(account.id)
+                raise
+            self._activity.record(
+                said.AccountConnected(
+                    by=Actor.of(access),
+                    account=account,
+                    host=host if isinstance(host, str) else None,
+                )
             )
-        )
-        if self._on_connect is not None:
-            self._on_connect(access, account.id)
+            if self._on_connect is not None:
+                self._on_connect(access, account.id)
         self._ready(account.id)
         return self._with_credentials(account)
 
@@ -206,6 +214,8 @@ class AccountService:
         sent as they are stored change nothing and log in nowhere."""
         access.require("update_account", account_id)
         _no_secrets_in(settings)
+        if rename:
+            _one_line_name(display_name)
         account = self._repository.get(account_id)
         defaults = settings_defaults(account.provider, account.email)
         # A setting removed falls back to what the provider assumes.
@@ -244,21 +254,22 @@ class AccountService:
         # The credentials first: a record that names settings the stored
         # credentials do not match would be a broken account, the reverse
         # only a credential the next probe confirms again.
-        for field, secret in secrets.items():
-            self._vault.store(account_id, field, secret)
-        self._repository.update(account, merged)
+        with self._activity.atomic():
+            for field, secret in secrets.items():
+                self._vault.store(account_id, field, secret)
+            self._repository.update(account, merged)
+            if what:
+                self._activity.record(
+                    said.AccountChanged(
+                        by=Actor.of(access), account=account, changed=tuple(what)
+                    )
+                )
         if changed or secrets:
             # The live adapter still has the old settings: the next use
             # builds a new one.
             await self._adapters.drop(account_id)
             self._adapters.set_status(account_id, AccountStatus.CONNECTED)
             self._ready(account_id)
-        if what:
-            self._activity.record(
-                said.AccountChanged(
-                    by=Actor.of(access), account=account, changed=tuple(what)
-                )
-            )
         return self._with_credentials(self._repository.get(account_id))
 
     async def verify(self, access: Access, account_id: str) -> Account:
@@ -277,16 +288,19 @@ class AccountService:
     async def delete(self, access: Access, account_id: str) -> None:
         access.require("delete_account", account_id)
         account = self._repository.get(account_id)
-        self._vault.delete(account_id)
-        if self._on_delete is not None:
-            self._on_delete(account_id)
-        if self._idempotency is not None:
-            self._idempotency.forget_account(account_id)
-        if self._changes is not None:
-            self._changes.forget_account(account_id)
-        self._repository.delete(account_id)
+        with self._activity.atomic():
+            self._vault.delete(account_id)
+            if self._on_delete is not None:
+                self._on_delete(account_id)
+            if self._idempotency is not None:
+                self._idempotency.forget_account(account_id)
+            if self._changes is not None:
+                self._changes.forget_account(account_id)
+            self._repository.delete(account_id)
+            self._activity.record(
+                said.AccountRemoved(by=Actor.of(access), account=account)
+            )
         await self._adapters.drop(account_id)
-        self._activity.record(said.AccountRemoved(by=Actor.of(access), account=account))
 
     def _ready(self, account_id: str) -> None:
         if self._on_ready is not None:
@@ -329,7 +343,12 @@ class AccountService:
     async def _check_hosts(self, settings: Mapping[str, object]) -> None:
         """Refuse settings that point the service at a host it may not
         connect to, before any adapter is built: ``host``, ``smtp_host`` and
-        any other ``*_host``. Without a check, every host passes."""
+        any other ``*_host``. A host that is no name and no address is
+        refused before it is looked up. Without a check, every other host
+        passes."""
+        for key, host, _ in hosts_in(settings):
+            if not is_server(host):
+                raise BadRequestError(f"{key} is not a host name or an IP address")
         if self._check_host is None:
             return
         for key, host, port in hosts_in(settings):
@@ -349,6 +368,25 @@ class AccountService:
                 "settings": self._repository.settings(account.id),
                 "capabilities": self._adapters.offered(account.id),
             }
+        )
+
+
+# The display name goes into the From of every send, on one line, and
+# into the log. No line break, no other control character.
+_NOT_IN_NAME = re.compile(r"[\x00-\x1f\x7f\x85\u2028\u2029]")
+LONGEST_NAME = 200
+
+
+def _one_line_name(name: str | None) -> None:
+    if name is None:
+        return
+    if len(name) > LONGEST_NAME:
+        raise BadRequestError(
+            f"the display name is longer than {LONGEST_NAME} characters"
+        )
+    if _NOT_IN_NAME.search(name):
+        raise BadRequestError(
+            "the display name must not hold a line break or a control character"
         )
 
 

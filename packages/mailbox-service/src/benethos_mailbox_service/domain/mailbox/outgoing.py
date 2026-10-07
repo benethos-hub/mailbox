@@ -220,7 +220,11 @@ class Outgoing:
         message_id = compose.new_message_id(account.email)
         raw = compose.message(
             message,
-            Recipient(email=account.email, name=account.display_name),
+            # One stored before names were checked may break a line.
+            Recipient.model_construct(
+                email=account.email,
+                name=compose.one_line(account.display_name or "") or None,
+            ),
             self._date(),
             message_id,
             extras,

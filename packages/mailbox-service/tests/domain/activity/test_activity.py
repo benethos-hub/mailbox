@@ -291,3 +291,20 @@ async def test_a_sent_copy_the_adapter_could_not_keep_is_logged_by_the_domain(
         "copy is in the sent folder: the folder is over quota"
     ) in caplog.text
     assert "you@example.com" not in caplog.text
+
+
+@pytest.mark.parametrize("brk", ["\r\n", "\n", "\x0b", "\x1c", "\x85", " ", "\x00"])
+def test_a_name_with_a_line_break_stays_on_one_line(
+    caplog: pytest.LogCaptureFixture, brk: str
+) -> None:
+    """A name a caller chose cannot forge a line of the log."""
+    forged = User(id="usr_2", name=f"Anna{brk}2026-10-07 admin signed in")
+    with caplog.at_level(logging.INFO):
+        ActivityLog().record(
+            said.UserDeleted(by=Actor.of(ADMIN), user=forged, webhooks=0)
+        )
+    [record] = caplog.records
+    message = record.getMessage()
+    assert message.splitlines() == [message]
+    assert "\x00" not in message
+    assert brk.encode("unicode_escape").decode() in message

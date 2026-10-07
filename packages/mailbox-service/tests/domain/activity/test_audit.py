@@ -31,6 +31,7 @@ from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ForbiddenError,
+    StorageError,
     UnauthorizedError,
 )
 from benethos_mailbox_service.main import Services
@@ -240,6 +241,49 @@ def test_a_record_that_cannot_be_kept_is_logged_not_raised(
     )
     # The activity's own line is there as well.
     assert "deleted role r" in caplog.text
+
+
+def test_a_change_whose_record_cannot_be_kept_is_undone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The change and its record go in one transaction (AUDIT.md 4)."""
+    from benethos_mailbox_service.config import Settings
+    from benethos_mailbox_service.main import build_services
+
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
+    services = build_services(Settings(storage="sqlite"))
+    anna = services.users.create_user(ADMIN, "Anna", [], [READER])
+
+    def full(record: ActivityRecord) -> None:
+        raise StorageError("the disk is full")
+
+    monkeypatch.setattr(services.repositories.audit, "add", full)
+    with caplog.at_level(logging.INFO):
+        with pytest.raises(StorageError):
+            services.users.create_user(ADMIN, "Bert", [], [READER])
+        with pytest.raises(StorageError):
+            services.users.delete_user(ADMIN, anna.id)
+    assert services.auth.user_named("Bert") is None
+    assert services.auth.user_named("Anna") is not None
+    # No line says what did not happen.
+    assert "Bert" not in caplog.text and "deleted user" not in caplog.text
+    services.close()
+
+
+def test_the_lines_of_a_block_wait_for_its_end(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    clock = Clock()
+    log = ActivityLog(clock, Audit(InMemoryAuditRepository(), clock))
+    with caplog.at_level(logging.INFO), log.atomic():
+        log.record(said.RoleDeleted(by=Actor("Anna", "usr_a"), role_id="kept"))
+        with pytest.raises(KeyError), log.atomic():
+            log.record(said.RoleDeleted(by=Actor("Anna", "usr_a"), role_id="undone"))
+            raise KeyError("the inner part fails")
+        assert caplog.records == []
+    assert [r.getMessage() for r in caplog.records] == [
+        "Anna (usr_a) deleted role kept"
+    ]
 
 
 def test_a_secret_noted_is_masked_in_the_record() -> None:

@@ -161,3 +161,27 @@ def test_a_host_that_turns_private_later_is_not_connected_to() -> None:
     assert response.status_code == 502, response.text
     assert "non-public" in response.json()["error"]["message"]
     assert world.client.get("/v1/accounts").json()["items"] == []
+
+
+@pytest.mark.parametrize(
+    "host",
+    ["imap.example.org:993", "imap\t.example.org", "imap.example.org\r\n", "[::1]"],
+)
+def test_a_host_that_is_no_name_is_refused_before_a_lookup(
+    world: World, host: str
+) -> None:
+    response = world.create(host=host)
+    assert response.status_code == 400, response.text
+    assert "not a host name" in response.json()["error"]["message"]
+    assert world.lookups == []
+
+
+@pytest.mark.parametrize(
+    "email", ["nope", "", "me\r\n@example.org", "me @example.org", "me@x:8443"]
+)
+def test_an_address_that_is_none_is_refused(world: World, email: str) -> None:
+    response = world.client.post(
+        "/v1/accounts", json={"provider": "memory", "email": email}
+    )
+    assert response.status_code == 400, response.text
+    assert world.client.get("/v1/accounts").json()["items"] == []

@@ -21,7 +21,6 @@ The sources in ``data/discovery`` only look up. Decided here:
 
 from __future__ import annotations
 
-import re
 import time
 from collections import deque
 from collections.abc import Callable, Iterable, Sequence
@@ -29,7 +28,7 @@ from dataclasses import dataclass
 
 import anyio
 
-from ...common.hosts import ascii_host, is_host_name, unicode_host
+from ...common.hosts import address_problem, ascii_host, unicode_host
 from ...data.discovery import (
     DiscoverySource,
     Finding,
@@ -71,8 +70,6 @@ MAX_CACHED = 1000
 MAX_CALLERS = 10_000
 
 
-# Whitespace and control characters, in no address.
-_BLANK = re.compile(r"[\s\x00-\x1f\x7f]")
 # The servers a candidate reads mail from.
 _INCOMING = (ServerProtocol.JMAP, ServerProtocol.IMAP, ServerProtocol.POP3)
 # Those probed before they are offered.
@@ -326,14 +323,14 @@ class DiscoveryService:
 
 def _query(email: str) -> Query:
     email = email.strip()
-    local, at, domain = email.rpartition("@")
-    if not at or not local or not domain or len(email) > 254 or _BLANK.search(email):
-        raise BadRequestError("not a valid email address")
     # The domain goes into URLs and DNS names: a host name, nothing else,
     # so neither a port nor a path can ride along.
+    problem = address_problem(email)
+    if problem is not None:
+        raise BadRequestError(problem)
+    domain = email.rpartition("@")[2]
     ascii_domain = ascii_host(domain)
-    if ascii_domain is None or not is_host_name(ascii_domain, dotted=False):
-        raise BadRequestError("not a valid email domain")
+    assert ascii_domain is not None  # address_problem checked it
     if registrable_domain(ascii_domain) is None:
         raise BadRequestError(f"{domain} is a public suffix, not a mail domain")
     return Query(email=email, domain=ascii_domain)

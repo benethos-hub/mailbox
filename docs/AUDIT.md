@@ -62,9 +62,13 @@ as the send audit does. `user_name` is written for that reason.
 ## 4. Storage, API, UI
 
 - **Table `activity`**, a migration of its own, indexes on `at`, on
-  `(user_id, at)` and on `(record, at)`. Written by the recorder right
-  after the change, as its log line is. A record that cannot be written
-  is logged as `system.not_audited`, and the change stands.
+  `(user_id, at)` and on `(record, at)`. **Decided 2026-10-07:** a stored
+  change and its record go in one transaction, `ActivityLog.atomic`. A
+  record that cannot be written undoes the change, and the caller gets
+  the error. The log line follows once the transaction is committed, and
+  none is written for a change undone. An activity that changes nothing,
+  such as a refused attempt or a page read, keeps its record as before:
+  one that cannot be written is logged as `system.not_audited`.
 - **Retention**: `MAILBOX_SERVICE_AUDIT_DAYS`, 90 by default, purged as
   the change log is purged, on write and at most once an hour. The
   audit of sends keeps its records for the same setting since

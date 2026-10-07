@@ -145,9 +145,12 @@ def build_services(
     ``serve`` hands in the one its log writes to."""
     repos = open_repositories(settings.storage, settings.database_path)
     audit = Audit(repos.audit, clock=clock, days=settings.audit_days)
-    activity = ActivityLog(clock, audit)
+    store = repos.store
+    activity = ActivityLog(
+        clock, audit, transaction=store.transaction if store is not None else None
+    )
     try:
-        migrated = repos.store.migrated if repos.store is not None else None
+        migrated = store.migrated if store is not None else None
         if migrated is not None:
             activity.record(
                 said.SchemaMigrated(
@@ -245,11 +248,17 @@ def build_services(
             if settings.sync_interval
             else None
         )
+
+        def deleted(account_id: str) -> None:
+            sync.forget_account(account_id)
+            if worker is not None:
+                worker.forget(account_id)
+
         accounts = AccountService(
             repos.accounts,
             vault,
             adapters,
-            on_delete=sync.forget_account,
+            on_delete=deleted,
             on_connect=users.connected,
             on_ready=worker.take_up if worker is not None else None,
             check_host=fetcher.checked_address,

@@ -161,8 +161,12 @@ def _day(value: date) -> str:
 
 def _quoted(value: str) -> str:
     """A value for Graph's search syntax, quoted. ``query`` turns the
-    double quotes into single ones inside the whole ``$search`` string."""
-    return '"' + value.replace('"', " ").replace("\\", " ").strip() + '"'
+    double quotes into single ones inside the whole ``$search`` string, so
+    a quote of either kind or a backslash in the value would end the
+    phrase and let the rest pass as KQL: each becomes a space."""
+    for mark in ('"', "'", "\\"):
+        value = value.replace(mark, " ")
+    return '"' + value.strip() + '"'
 
 
 def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter | None]:

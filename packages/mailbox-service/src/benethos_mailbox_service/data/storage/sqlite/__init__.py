@@ -11,7 +11,7 @@ from .database import (
     SCHEMA_VERSION,
     Database,
     Migrated,
-    inspect_snapshot,
+    inspect_file,
     migrate_file,
     service_lock,
 )
@@ -39,7 +39,7 @@ __all__ = [
     "SqliteTokenRepository",
     "SqliteUserRepository",
     "SqliteWebhookRepository",
-    "inspect_snapshot",
+    "inspect_file",
     "migrate_file",
     "service_lock",
 ]

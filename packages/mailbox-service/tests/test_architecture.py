@@ -274,22 +274,80 @@ def test_the_data_layer_logs_nothing_above_debug() -> None:
     assert loud == []
 
 
-# The one line of the domain outside the activities: ``domain/activity``
-# imports ``access``, so ``access`` cannot record.
-PLAIN_LINES = {f"{PACKAGE}.domain.rights.access"}
+def _gets_a_logger(path: Path) -> list[int]:
+    """The lines where the file calls ``getLogger``."""
+    return [
+        node.lineno
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Call)
+        and (
+            (isinstance(node.func, ast.Attribute) and node.func.attr == "getLogger")
+            or (isinstance(node.func, ast.Name) and node.func.id == "getLogger")
+        )
+    ]
 
 
 def test_the_domain_logs_through_activities() -> None:
-    """A domain service hands an activity to ``ActivityLog.record``. Its
-    own logger writes technical lines at DEBUG alone (rule 6.1)."""
-    recorder = f"{PACKAGE}.domain.activity.recorder"
-    loud = [
+    """A domain service hands an activity to ``ActivityLog.record``. No
+    module of the domain but the activities has a logger (rule 6.1)."""
+    activity = f"{PACKAGE}.domain.activity"
+    found = [
         f"{name}:{line}"
         for name, path in _modules()
-        if _own_part(name) == "domain" and name not in PLAIN_LINES | {recorder}
-        for line in _loud_calls(path)
+        if _own_part(name) == "domain"
+        and name != activity
+        and not name.startswith(activity + ".")
+        for line in _gets_a_logger(path) + _loud_calls(path)
     ]
-    assert loud == []
+    assert found == []
+
+
+# What a handler of any failure may do instead of raising: record it as an
+# activity, or hand it to the logging module's own error handling.
+RECORDERS = {"record", "_record", "_failed", "handleError"}
+BROAD = {"Exception", "BaseException"}
+
+
+def _broad_handlers(path: Path) -> list[ast.ExceptHandler]:
+    """The handlers of ``except Exception`` and ``except BaseException``."""
+    return [
+        node
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+        if isinstance(node, ast.ExceptHandler)
+        and (
+            node.type is None
+            or (isinstance(node.type, ast.Name) and node.type.id in BROAD)
+        )
+    ]
+
+
+def _raises(handler: ast.ExceptHandler) -> bool:
+    return any(isinstance(n, ast.Raise) for n in ast.walk(handler))
+
+
+def _records(handler: ast.ExceptHandler) -> bool:
+    for node in ast.walk(handler):
+        if isinstance(node, ast.Call):
+            name = node.func.attr if isinstance(node.func, ast.Attribute) else None
+            if name in RECORDERS:
+                return True
+    return False
+
+
+def test_a_broad_handler_raises_or_records() -> None:
+    """A handler of any failure raises on, or records what it swallows.
+    One of BaseException always raises, so a cancellation goes through."""
+    silent = []
+    for name, path in _modules():
+        for handler in _broad_handlers(path):
+            catches_all = handler.type is None or (
+                isinstance(handler.type, ast.Name)
+                and handler.type.id == "BaseException"
+            )
+            if _raises(handler) or (not catches_all and _records(handler)):
+                continue
+            silent.append(f"{name}:{handler.lineno}")
+    assert silent == []
 
 
 # --- the packages of the domain and of data (docs/REFACTORING.md 2, 8.4) -------------
