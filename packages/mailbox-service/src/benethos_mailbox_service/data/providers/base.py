@@ -1,11 +1,12 @@
-"""The contract every provider adapter fulfils."""
+"""The contract of the provider adapters: ``Reads``, which every adapter
+fulfils, and one protocol for each thing an adapter may do beyond it."""
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from pydantic import SecretStr
 
@@ -70,28 +71,25 @@ class FolderChanges:
     removed: list[str] = field(default_factory=list)
 
 
-class MailProvider(Protocol):
-    """One connected account at one provider.
+@runtime_checkable
+class Reads(Protocol):
+    """What every adapter does: one connected account at one provider,
+    read, and what the sync worker asks of it.
 
     Message ids are the provider's own. Without ``STABLE_IDS`` they name a
-    place, and the domain maps them to ids that survive a move.
+    place, and the domain maps them to ids that survive a move. What an
+    adapter does beyond reading is a protocol of its own below. An adapter
+    implements those it can and no other: the domain answers ``501`` where
+    one is missing, and the capabilities callers see follow from them
+    (``capabilities_of``).
     """
 
+    # What the adapter declares beyond its protocols: SEARCH,
+    # SERVER_SEARCH, LABELS, STABLE_IDS, and SEND where it has a server to
+    # send through.
     capabilities: frozenset[Capability]
 
     async def list_folders(self) -> list[Folder]: ...
-
-    async def create_folder(self, name: str, parent_id: str | None) -> Folder:
-        """A new folder, subscribed where the provider knows subscriptions."""
-        ...
-
-    async def update_folder(
-        self, folder_id: str, name: str, parent_id: str | None
-    ) -> Folder:
-        """Rename or move. The folder's id may change with its name."""
-        ...
-
-    async def delete_folder(self, folder_id: str) -> None: ...
 
     async def list_messages(
         self,
@@ -115,50 +113,6 @@ class MailProvider(Protocol):
 
     async def get_raw(self, message_id: str) -> bytes:
         """The message source as RFC 822 bytes."""
-        ...
-
-    async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
-        """Send a composed message, and keep a copy where the provider does
-        not do that itself. Once the message is out it does not fail: a
-        client would send again."""
-        ...
-
-    # --- drafts, with DRAFTS ----------------------------------------------------
-    # A draft id names a message the provider keeps as a draft, on IMAP one
-    # in the folder with the drafts role. Any other id is not found, so that
-    # the draft operations reach drafts only.
-
-    async def list_drafts(
-        self, *, limit: int, cursor: str | None
-    ) -> Page[MessageSummary]: ...
-
-    async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
-        """Store a composed draft, then remove the draft it ``replaces``.
-        The draft as stored. Its id may differ from ``replaces``."""
-        ...
-
-    async def get_draft(self, draft_id: str) -> bytes:
-        """The draft's source as RFC 822 bytes."""
-        ...
-
-    async def delete_draft(self, draft_id: str) -> None:
-        """Remove a draft for good, as mail clients do once it is sent."""
-        ...
-
-    async def update_messages(
-        self, message_ids: list[str], changes: MessageUpdate
-    ) -> dict[str, MessageSummary | MailboxServiceError]:
-        """Change flags and keywords, or move, of every message. Per id the
-        message as it is now (after a move its id names the new place), or
-        why not. A failed login or connection raises instead."""
-        ...
-
-    async def delete_messages(
-        self, message_ids: list[str], permanent: bool
-    ) -> dict[str, MessageSummary | None | MailboxServiceError]:
-        """Into the trash, or for good. Per id the message in the trash
-        where it is known, None when it is gone or not found there at once,
-        or why not. A failed login or connection raises instead."""
         ...
 
     # --- for the sync worker ---------------------------------------------------
@@ -185,20 +139,129 @@ class MailProvider(Protocol):
         cannot tell."""
         ...
 
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
-        """What changed in the folder since ``token``. Without a token every
-        message counts as changed. Only with ``DELTA``. A token the provider
-        no longer knows raises ``ChangesExpiredError``."""
-        ...
-
-    async def wait_for_change(self, timeout: float) -> bool:
-        """Wait until the server reports a change in the inbox, at most
-        ``timeout`` seconds. True if it did. Only with ``PUSH``."""
-        ...
-
     async def verify(self) -> None:
         """Log in afresh and forget an earlier rejected login. Raises
         ``ProviderAuthError`` if the credential does not work."""
         ...
 
     async def close(self) -> None: ...
+
+
+@runtime_checkable
+class Deletes(Protocol):
+    """Deletes messages: into the trash where the account has one, or for
+    good. A POP3 mailbox does this and nothing else of ``Writes``."""
+
+    async def delete_messages(
+        self, message_ids: list[str], permanent: bool
+    ) -> dict[str, MessageSummary | None | MailboxServiceError]:
+        """Into the trash, or for good. Per id the message in the trash
+        where it is known, None when it is gone or not found there at once,
+        or why not. A failed login or connection raises instead."""
+        ...
+
+
+@runtime_checkable
+class Writes(Deletes, Protocol):
+    """Changes messages and folders: read state, stars, keywords, moves,
+    and the folders themselves. Gives ``FLAGS`` and ``FOLDERS``."""
+
+    async def update_messages(
+        self, message_ids: list[str], changes: MessageUpdate
+    ) -> dict[str, MessageSummary | MailboxServiceError]:
+        """Change flags and keywords, or move, of every message. Per id the
+        message as it is now (after a move its id names the new place), or
+        why not. A failed login or connection raises instead."""
+        ...
+
+    async def create_folder(self, name: str, parent_id: str | None) -> Folder:
+        """A new folder, subscribed where the provider knows subscriptions."""
+        ...
+
+    async def update_folder(
+        self, folder_id: str, name: str, parent_id: str | None
+    ) -> Folder:
+        """Rename or move. The folder's id may change with its name."""
+        ...
+
+    async def delete_folder(self, folder_id: str) -> None: ...
+
+
+@runtime_checkable
+class Drafts(Protocol):
+    """Keeps drafts. Gives ``DRAFTS``.
+
+    A draft id names a message the provider keeps as a draft, on IMAP one
+    in the folder with the drafts role. Any other id is not found, so that
+    the draft operations reach drafts only."""
+
+    async def list_drafts(
+        self, *, limit: int, cursor: str | None
+    ) -> Page[MessageSummary]: ...
+
+    async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
+        """Store a composed draft, then remove the draft it ``replaces``.
+        The draft as stored. Its id may differ from ``replaces``."""
+        ...
+
+    async def get_draft(self, draft_id: str) -> bytes:
+        """The draft's source as RFC 822 bytes."""
+        ...
+
+    async def delete_draft(self, draft_id: str) -> None:
+        """Remove a draft for good, as mail clients do once it is sent."""
+        ...
+
+
+@runtime_checkable
+class Sends(Protocol):
+    """Sends mail. ``SEND`` stays declared by the adapter: IMAP and POP3
+    send only where the account names an SMTP server."""
+
+    async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
+        """Send a composed message, and keep a copy where the provider does
+        not do that itself. Once the message is out it does not fail: a
+        client would send again."""
+        ...
+
+
+@runtime_checkable
+class Watches(Protocol):
+    """Hears of changes as the server reports them, without polling.
+    Gives ``PUSH``."""
+
+    async def wait_for_change(self, timeout: float) -> bool:
+        """Wait until the server reports a change in the inbox, at most
+        ``timeout`` seconds. True if it did."""
+        ...
+
+
+@runtime_checkable
+class Deltas(Protocol):
+    """Tells what changed in a folder since a token, instead of the sync
+    comparing the folder's contents. Gives ``DELTA``."""
+
+    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+        """What changed in the folder since ``token``. Without a token every
+        message counts as changed. A token the provider no longer knows
+        raises ``ChangesExpiredError``."""
+        ...
+
+
+# What each protocol gives callers to see.
+_GIVES: tuple[tuple[type, frozenset[Capability]], ...] = (
+    (Writes, frozenset({Capability.FLAGS, Capability.FOLDERS})),
+    (Drafts, frozenset({Capability.DRAFTS})),
+    (Watches, frozenset({Capability.PUSH})),
+    (Deltas, frozenset({Capability.DELTA})),
+)
+
+
+def capabilities_of(adapter: Reads) -> frozenset[Capability]:
+    """What an adapter can do, as callers see it: what its protocols give,
+    and what it declares beyond them."""
+    found = set(adapter.capabilities)
+    for protocol, gives in _GIVES:
+        if isinstance(adapter, protocol):
+            found |= gives
+    return frozenset(found)

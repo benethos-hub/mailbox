@@ -37,6 +37,7 @@ from ...data.models import (
 )
 from ...errors import BadRequestError, MailboxServiceError, missing_message
 from .. import changes
+from ..accounts import drafts, sends
 from ..activity import ActivityLog, Actor
 from ..activity import mailbox as said
 from ..rights import Access
@@ -126,7 +127,7 @@ class Outgoing:
             account_id,
             recipients,
             lambda: self._calls.call(
-                account_id, lambda p: p.send(raw, account.email, recipients)
+                account_id, lambda p: sends(p).send(raw, account.email, recipients)
             ),
             message_id,
         )
@@ -288,7 +289,7 @@ class Outgoing:
     ) -> Page[MessageSummary]:
         access.require("list_drafts", account_id)
         page = await self._calls.call(
-            account_id, lambda p: p.list_drafts(limit=limit, cursor=cursor)
+            account_id, lambda p: drafts(p).list_drafts(limit=limit, cursor=cursor)
         )
         return await self._calls.published_page(account_id, page)
 
@@ -300,7 +301,9 @@ class Outgoing:
         _require(access, "create_draft", account_id, draft)
         raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
         _limited(composed.recipients())
-        saved = await self._calls.call(account_id, lambda p: p.save_draft(raw, None))
+        saved = await self._calls.call(
+            account_id, lambda p: drafts(p).save_draft(raw, None)
+        )
         return await self._calls.published_one(account_id, saved)
 
     async def update_draft(
@@ -322,7 +325,7 @@ class Outgoing:
         # The draft, before anything of it is read: whoever may write
         # drafts may not read other mail this way.
         raw = await self._calls.on_message(
-            account_id, draft_id, lambda p, native: p.get_draft(native)
+            account_id, draft_id, lambda p, native: drafts(p).get_draft(native)
         )
         if _same(convert.stored_draft(raw), draft, keep_attachments):
             # Stored as it is: the provider is left alone.
@@ -337,7 +340,7 @@ class Outgoing:
         raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
         _limited(composed.recipients())
         saved = await self._calls.on_message(
-            account_id, draft_id, lambda p, native: p.save_draft(raw, native)
+            account_id, draft_id, lambda p, native: drafts(p).save_draft(raw, native)
         )
         self._calls.relocate(account_id, draft_id, saved)
         return await self._calls.published_one(account_id, saved)
@@ -379,7 +382,7 @@ class Outgoing:
     ) -> SendResult:
         account = self._calls.record(account_id)
         stored = await self._calls.on_message(
-            account_id, draft_id, lambda p, native: p.get_draft(native)
+            account_id, draft_id, lambda p, native: drafts(p).get_draft(native)
         )
         out = compose.outgoing(
             stored, self._date(), compose.new_message_id(account.email)
@@ -425,7 +428,7 @@ class Outgoing:
 
     async def _delete_draft(self, account_id: str, draft_id: str) -> None:
         await self._calls.on_message(
-            account_id, draft_id, lambda p, native: p.delete_draft(native)
+            account_id, draft_id, lambda p, native: drafts(p).delete_draft(native)
         )
         self._calls.forget(account_id, draft_id)
 

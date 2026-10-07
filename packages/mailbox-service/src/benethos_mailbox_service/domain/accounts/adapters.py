@@ -18,14 +18,15 @@ from ...data.models import Account, AccountStatus, ProviderType
 from ...data.providers import (
     Capability,
     CredentialReader,
-    MailProvider,
     OAuthClient,
     ProviderFactory,
     ProviderSettings,
+    Reads,
     RefreshingTokens,
     Tokens,
     TokenSource,
     build_provider,
+    capabilities_of,
 )
 from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository
@@ -59,7 +60,7 @@ class Adapters:
         # The OAuth app of each provider that signs in with OAuth, where the
         # operator registered one.
         self._oauth = dict(oauth or {})
-        self._providers: dict[str, MailProvider] = {}
+        self._providers: dict[str, Reads] = {}
         # The status as last read or written, so a call does not read the
         # record again to see whether it changed.
         self._status: dict[str, AccountStatus] = {}
@@ -108,7 +109,7 @@ class Adapters:
 
     # --- the adapters ---------------------------------------------------------------
 
-    def get(self, account_id: str) -> MailProvider:
+    def get(self, account_id: str) -> Reads:
         """The adapter of an account, built on first use after a restart."""
         adapter = self._providers.get(account_id)
         if adapter is None:
@@ -126,7 +127,8 @@ class Adapters:
         return adapter
 
     def capabilities(self, account_id: str) -> frozenset[Capability]:
-        return self.get(account_id).capabilities
+        """What the account's adapter can do, as its protocols say."""
+        return capabilities_of(self.get(account_id))
 
     def offered(self, account_id: str) -> list[Capability]:
         """The capabilities as callers see them, sorted. None where the
@@ -138,7 +140,7 @@ class Adapters:
             return []
 
     async def call(
-        self, account_id: str, operation: Callable[[MailProvider], Awaitable[T]]
+        self, account_id: str, operation: Callable[[Reads], Awaitable[T]]
     ) -> T:
         """Run one operation on the account's adapter and record what it
         says about the account: a rejected login needs a new credential, an
@@ -162,7 +164,7 @@ class Adapters:
         store_refresh: Callable[[SecretStr], None],
         signed_in: Tokens | None = None,
         on_refresh: Callable[[], object] | None = None,
-    ) -> MailProvider:
+    ) -> Reads:
         """An adapter. For an OAuth provider it comes with a token source that
         keeps its access token valid and stores a new refresh token.
         ``signed_in``: the tokens of a sign-in just made, used before the

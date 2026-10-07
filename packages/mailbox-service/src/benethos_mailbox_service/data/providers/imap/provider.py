@@ -56,7 +56,7 @@ from ...protocols import (
     SmtpSession,
 )
 from .. import rules
-from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
+from ..base import Capability, CredentialReader, ProviderSettings
 from ..guard import Guard, Pace
 from ..rules import server_of
 from ..sender import SmtpFactory, SmtpSender, smtp_settings
@@ -126,12 +126,8 @@ class ImapProvider:
     # PUSH needs IDLE, which wait_for_change finds out after the login.
     capabilities = frozenset(
         {
-            Capability.FLAGS,
-            Capability.FOLDERS,
             Capability.SEARCH,
             Capability.SERVER_SEARCH,
-            Capability.PUSH,
-            Capability.DRAFTS,
         }
     )
 
@@ -213,7 +209,7 @@ class ImapProvider:
         self._idle_lock = threading.Lock()
         self._closing = threading.Event()
 
-    # --- MailProvider ---------------------------------------------------------
+    # --- Reads, Writes, Drafts, Sends, Watches --------------------------------
 
     async def list_folders(self) -> list[Folder]:
         return await self._run(lambda: self._list_folders(subscriptions=True))
@@ -359,9 +355,6 @@ class ImapProvider:
                     )
                 )
         return found
-
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
-        raise NotSupportedError("IMAP folders are compared by their state")
 
     async def wait_for_change(self, timeout: float) -> bool:
         # A wait holds its thread for up to ``timeout``: never one of the

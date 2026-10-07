@@ -28,7 +28,7 @@ from typing import TypeVar
 from ...common.clock import iso, parse_iso, utc_now
 from ...common.ids import new_id
 from ...common.redact import redact
-from ...data.providers import Capability, FolderChanges, MailProvider
+from ...data.providers import Capability, FolderChanges, Reads
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import (
     ChangesExpiredError,
@@ -36,7 +36,7 @@ from ...errors import (
     MessageNotFoundError,
     missing_message,
 )
-from ..accounts import Adapters
+from ..accounts import Adapters, deltas
 from ..activity import SERVICE, ActivityLog
 from ..activity import sync as said
 from ..changes import (
@@ -329,11 +329,11 @@ class SyncService:
         self, account_id: str, folder_id: str, token: str | None
     ) -> FolderChanges:
         return await self._adapters.call(
-            account_id, lambda p: p.folder_changes(folder_id, token)
+            account_id, lambda p: deltas(p).folder_changes(folder_id, token)
         )
 
     async def _sync(self, account_id: str) -> _Counts:
-        async def call(operation: Callable[[MailProvider], Awaitable[T]]) -> T:
+        async def call(operation: Callable[[Reads], Awaitable[T]]) -> T:
             return await self._adapters.call(account_id, operation)
 
         states = await call(lambda p: p.folder_states())

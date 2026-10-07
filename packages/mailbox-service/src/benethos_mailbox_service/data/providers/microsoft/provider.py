@@ -32,7 +32,6 @@ from ....errors import (
     ConflictError,
     MailboxServiceError,
     NotFoundError,
-    NotSupportedError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
@@ -73,13 +72,9 @@ class MicrosoftProvider:
     capabilities = frozenset(
         {
             Capability.SEND,
-            Capability.DRAFTS,
-            Capability.FLAGS,
-            Capability.FOLDERS,
             Capability.SEARCH,
             Capability.SERVER_SEARCH,
             Capability.STABLE_IDS,
-            Capability.DELTA,
         }
     )
 
@@ -537,11 +532,6 @@ class MicrosoftProvider:
         if not delta:
             raise ProviderError("microsoft answered a delta query without a link")
         return FolderChanges(_own_path(delta), changed, removed)
-
-    async def wait_for_change(self, timeout: float) -> bool:
-        """No push yet: Graph's change notifications need a public endpoint
-        (CONCEPT 5.4)."""
-        raise NotSupportedError("Microsoft accounts are polled, not pushed")
 
     async def verify(self) -> None:
         self._roles = None

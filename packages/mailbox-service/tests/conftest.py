@@ -27,8 +27,8 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
-    MailProvider,
     ProviderSettings,
+    Reads,
     build_provider,
 )
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
@@ -148,7 +148,7 @@ def services(settings: Settings, messages: list[Message]) -> Services:
         kind: ProviderType,
         provider_settings: ProviderSettings,
         credentials: CredentialReader,
-    ) -> MailProvider:
+    ) -> Reads:
         if kind is ProviderType.MEMORY:
             return MemoryProvider(messages=messages)
         return build_provider(kind, provider_settings, credentials)

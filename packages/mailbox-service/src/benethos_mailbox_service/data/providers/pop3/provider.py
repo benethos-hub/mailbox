@@ -43,14 +43,13 @@ from ...models import (
     Message,
     MessageFilter,
     MessageSummary,
-    MessageUpdate,
     Page,
     SentMessage,
     ServerProtocol,
 )
 from ...protocols import POP3_PORTS, Pick, Pop3Session, Server, SmtpSession
 from .. import rules
-from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
+from ..base import Capability, CredentialReader, ProviderSettings
 from ..guard import Guard, Pace
 from ..rules import server_of
 from ..sender import SmtpFactory, SmtpSender, smtp_settings
@@ -107,9 +106,13 @@ async def probe(
 
 
 class Pop3Provider:
-    # No flags, folders or search. Without STABLE_IDS the sync polls the
-    # mailbox and compares its unique ids, as for IMAP without IDLE. The ids
-    # never move, so the mapping the domain keeps stays as it was.
+    """Reads, deletes for good and, with an SMTP server, sends. No
+    flags, folders, drafts or search: it implements neither ``Writes`` nor
+    ``Drafts``, and the domain answers those with 501."""
+
+    # Without STABLE_IDS the sync polls the mailbox and compares its unique
+    # ids, as for IMAP without IDLE. The ids never move, so the mapping the
+    # domain keeps stays as it was.
     capabilities: frozenset[Capability] = frozenset()
 
     def __init__(
@@ -170,21 +173,10 @@ class Pop3Provider:
         self._session = session_factory(self._server)
         self._lock = threading.Lock()
 
-    # --- MailProvider ---------------------------------------------------------
+    # --- Reads, Deletes, Sends ------------------------------------------------
 
     async def list_folders(self) -> list[Folder]:
         return [mappers.inbox()]
-
-    async def create_folder(self, name: str, parent_id: str | None) -> Folder:
-        raise _no_folders()
-
-    async def update_folder(
-        self, folder_id: str, name: str, parent_id: str | None
-    ) -> Folder:
-        raise _no_folders()
-
-    async def delete_folder(self, folder_id: str) -> None:
-        raise _no_folders()
 
     async def list_messages(
         self,
@@ -224,37 +216,6 @@ class Pop3Provider:
         )
         # POP3 has no folder to keep a copy in.
         return SentMessage(refused=refused)
-
-    async def list_drafts(
-        self, *, limit: int, cursor: str | None
-    ) -> Page[MessageSummary]:
-        raise _no_drafts()
-
-    async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
-        raise _no_drafts()
-
-    async def get_draft(self, draft_id: str) -> bytes:
-        raise _no_drafts()
-
-    async def delete_draft(self, draft_id: str) -> None:
-        raise _no_drafts()
-
-    async def update_messages(
-        self, message_ids: list[str], changes: MessageUpdate
-    ) -> dict[str, MessageSummary | MailboxServiceError]:
-        if (
-            changes.unread is not None
-            or changes.starred is not None
-            or changes.keywords is not None
-        ):
-            raise NotSupportedError(
-                "a POP3 mailbox keeps no read state, stars or keywords"
-            )
-        target = rules.move_target(changes, self.capabilities)
-        if target is not None and target != mappers.folder_id():
-            raise _no_folders()
-        # Nothing changes: each message as it is, or why not.
-        return await rules.per_id(message_ids, self._summary)
 
     async def delete_messages(
         self, message_ids: list[str], permanent: bool
@@ -309,12 +270,6 @@ class Pop3Provider:
         self, folder_id: str, since: str, message_ids: list[str]
     ) -> list[str]:
         return []  # POP3 has no flags
-
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
-        raise NotSupportedError("POP3 mailboxes are compared by their state")
-
-    async def wait_for_change(self, timeout: float) -> bool:
-        raise NotSupportedError("POP3 has no push: the mailbox is polled")
 
     async def verify(self) -> None:
         await anyio.to_thread.run_sync(self._verify)
@@ -464,11 +419,3 @@ def _delete(
         session.delete(number)
         results[message_id] = None
     return results
-
-
-def _no_folders() -> NotSupportedError:
-    return NotSupportedError("a POP3 mailbox has one folder, the inbox")
-
-
-def _no_drafts() -> NotSupportedError:
-    return NotSupportedError("a POP3 mailbox keeps no drafts")

@@ -41,7 +41,7 @@ from ...errors import (
     missing,
     missing_message,
 )
-from ..accounts import Adapters
+from ..accounts import Adapters, writes
 from ..activity import ActivityLog
 from ..rights import Access
 from ..sync import SyncService
@@ -96,7 +96,7 @@ class MailboxService:
                 raise _outside("create_folder", "at the top")
             _require_folder(reach, parent)
         return await self._calls.call(
-            account_id, lambda p: p.create_folder(new.name, parent)
+            account_id, lambda p: writes(p).create_folder(new.name, parent)
         )
 
     async def update_folder(
@@ -122,7 +122,7 @@ class MailboxService:
             if not reach.holds(folder_id, parent):
                 raise _outside("update_folder", "into the folders of another grant")
         updated = await self._calls.call(
-            account_id, lambda p: p.update_folder(folder_id, name, parent)
+            account_id, lambda p: writes(p).update_folder(folder_id, name, parent)
         )
         if updated.id != folder_id:
             try:
@@ -151,7 +151,7 @@ class MailboxService:
                 f"the folder {folder.name} holds {len(contents)} messages: "
                 "move or delete them first"
             )
-        await self._calls.call(account_id, lambda p: p.delete_folder(folder_id))
+        await self._calls.call(account_id, lambda p: writes(p).delete_folder(folder_id))
 
     async def _folders(self, account_id: str) -> list[Folder]:
         return await self._calls.call(account_id, lambda p: p.list_folders())

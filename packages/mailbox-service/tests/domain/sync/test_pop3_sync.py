@@ -14,8 +14,8 @@ from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.protocols.pop3 import Pop3Session
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
-    MailProvider,
     ProviderSettings,
+    Reads,
 )
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.providers.pop3 import Pop3Provider
@@ -42,7 +42,7 @@ def pop3_services(
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
-    ) -> MailProvider:
+    ) -> Reads:
         if kind is ProviderType.MEMORY:
             return MemoryProvider()
         return Pop3Provider(
