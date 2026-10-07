@@ -274,22 +274,32 @@ def test_the_data_layer_logs_nothing_above_debug() -> None:
     assert loud == []
 
 
-# The one line of the domain outside the activities: ``domain/activity``
-# imports ``access``, so ``access`` cannot record.
-PLAIN_LINES = {f"{PACKAGE}.domain.rights.access"}
+def _gets_a_logger(path: Path) -> list[int]:
+    """The lines where the file calls ``getLogger``."""
+    return [
+        node.lineno
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Call)
+        and (
+            (isinstance(node.func, ast.Attribute) and node.func.attr == "getLogger")
+            or (isinstance(node.func, ast.Name) and node.func.id == "getLogger")
+        )
+    ]
 
 
 def test_the_domain_logs_through_activities() -> None:
-    """A domain service hands an activity to ``ActivityLog.record``. Its
-    own logger writes technical lines at DEBUG alone (rule 6.1)."""
-    recorder = f"{PACKAGE}.domain.activity.recorder"
-    loud = [
+    """A domain service hands an activity to ``ActivityLog.record``. No
+    module of the domain but the activities has a logger (rule 6.1)."""
+    activity = f"{PACKAGE}.domain.activity"
+    found = [
         f"{name}:{line}"
         for name, path in _modules()
-        if _own_part(name) == "domain" and name not in PLAIN_LINES | {recorder}
-        for line in _loud_calls(path)
+        if _own_part(name) == "domain"
+        and name != activity
+        and not name.startswith(activity + ".")
+        for line in _gets_a_logger(path) + _loud_calls(path)
     ]
-    assert loud == []
+    assert found == []
 
 
 # --- the packages of the domain and of data (docs/REFACTORING.md 2, 8.4) -------------

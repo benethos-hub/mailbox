@@ -314,8 +314,10 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 1. **Activities go through `ActivityLog.record`**, every line of
    section 5. A domain service builds the activity and hands it over,
    it writes no line of its own. The recorder logs under the logger of
-   the activity, `activity.<area>.<name>`. A technical line outside section 5 keeps one
-   logger per module, `log = logging.getLogger(__name__)`.
+   the activity, `activity.<area>.<name>`. No module of the domain but
+   those of `domain/activity` has a logger of its own, and
+   `test_architecture.py` checks it. A technical line outside the
+   domain keeps one logger per module, `log = logging.getLogger(__name__)`.
 2. **The domain logs activities, the layers around it do not.** A route
    knows the request, the domain knows what happened and who did it.
    The client address reaches the domain on `Access`: `Access.source`,
