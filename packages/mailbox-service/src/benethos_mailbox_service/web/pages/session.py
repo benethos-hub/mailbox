@@ -12,8 +12,6 @@ changes something. The cookie is ``HttpOnly`` and ``SameSite=Strict`` too.
 
 from __future__ import annotations
 
-import hmac
-import secrets
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -21,6 +19,7 @@ from datetime import datetime, timedelta
 from fastapi import Request
 
 from ...common.clock import utc_now
+from ...common.secret import same, token
 from ...domain.auth import SignedIn
 from ...domain.rights import Access
 from ...errors import MailboxServiceError
@@ -85,12 +84,12 @@ class SessionStore:
         idle = self._idle
         for stale in [s for s, v in self._sessions.items() if now - v.last_seen > idle]:
             del self._sessions[stale]
-        session_id = secrets.token_urlsafe(32)
+        session_id = token()
         self._sessions[session_id] = UiSession(
             user_id=signed.user_id,
             stamp=signed.stamp,
             must_change=signed.must_change,
-            csrf=secrets.token_urlsafe(32),
+            csrf=token(),
             last_seen=now,
             previous_sign_in=signed.previous,
         )
@@ -193,6 +192,4 @@ def session_of(request: Request) -> UiSession:
 
 
 def csrf_ok(session: UiSession, presented: str | None) -> bool:
-    return presented is not None and hmac.compare_digest(
-        presented.encode(), session.csrf.encode()
-    )
+    return presented is not None and same(presented, session.csrf)

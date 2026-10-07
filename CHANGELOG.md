@@ -163,6 +163,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A webhook's body carries text beyond ASCII as UTF-8, not as `\u`
+  escapes. It is the same JSON, and the signature covers the bytes sent.
+- A cursor of a JMAP account's message list from an earlier version
+  answers `400 invalid cursor`: start the list again.
 - What an account cannot do answers `501 not_supported` with the same
   message for every kind of account, e.g. "this account keeps no
   drafts". A change of a POP3 message answers `501` even when it would

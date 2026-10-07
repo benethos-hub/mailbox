@@ -4,9 +4,9 @@ password made by the service."""
 
 from __future__ import annotations
 
-import secrets
 from datetime import datetime
 
+from ...common.secret import token
 from ...data.models import User
 from ...data.storage import UserRepository
 from ...errors import BadRequestError, ConflictError, NotFoundError
@@ -91,7 +91,7 @@ class PasswordService:
     async def _force(self, user: User, new: str | None, by: Actor) -> str:
         """A password the user must change at its next sign-in: ``new``, or
         without it a random one, to be shown once. Returns the one set."""
-        password = secrets.token_urlsafe(ONE_TIME_BYTES) if new is None else new
+        password = token(ONE_TIME_BYTES) if new is None else new
         hashed = await self._auth.passwords.hashed(password, user.name)
         with self._activity.atomic():
             self._auth.passwords.keep(user.id, hashed, must_change=True)

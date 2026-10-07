@@ -13,6 +13,8 @@ import base64
 import json
 from typing import Any
 
+from .canonical import compact
+
 _URL_SAFE = b"-_"
 
 
@@ -30,7 +32,7 @@ def from_base64(text: str, *, url: bool = True) -> bytes:
 
 
 def encode(prefix: str, value: object) -> str:
-    raw = json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode()
+    raw = compact(value).encode()
     return prefix + to_base64(raw)
 
 

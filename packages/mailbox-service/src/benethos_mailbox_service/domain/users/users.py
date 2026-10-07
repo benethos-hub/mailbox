@@ -4,7 +4,7 @@ and what each may do in effect. The rules every change keeps are in
 
 from __future__ import annotations
 
-from ...common.ids import new_id
+from ...common.secret import new_id
 from ...data.models import Grant, Page, User
 from ...data.storage import (
     RoleRepository,

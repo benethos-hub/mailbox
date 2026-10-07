@@ -15,9 +15,6 @@ webhook notes why, and the next post starts after them.
 
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
@@ -26,9 +23,10 @@ from typing import Protocol
 import anyio
 
 from ... import __version__
+from ...common.canonical import compact
 from ...common.clock import utc_now
-from ...common.ids import new_id
 from ...common.ratelimit import backoff
+from ...common.secret import hmac_hex, new_id
 from ...data.models import ChangeRecord
 from ...data.secrets import CredentialVault
 from ...data.storage import (
@@ -95,8 +93,7 @@ def _of_the_account(record: ChangeRecord) -> bool:
 def signature(secret: str, timestamp: int, body: bytes) -> str:
     """The value of ``X-Mailbox-Signature`` for a body."""
     signed = f"{timestamp}.".encode() + body
-    digest = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
-    return f"t={timestamp},v1={digest}"
+    return f"t={timestamp},v1={hmac_hex(secret, signed)}"
 
 
 @dataclass(frozen=True)
@@ -236,14 +233,13 @@ class WebhookDispatcher:
         """One post of ``batch``, kept in the delivery log. None when the
         receiver took it, else why not."""
         delivery_id = new_id("dlv")
-        body = json.dumps(
+        body = compact(
             {
                 "webhook_id": record.webhook.id,
                 "delivery_id": delivery_id,
                 "events": [e.record.model_dump(mode="json") for e in batch],
                 "more": more,
-            },
-            separators=(",", ":"),
+            }
         ).encode()
         status, error = await self._post(record, body, now)
         self._repository.add_attempt(

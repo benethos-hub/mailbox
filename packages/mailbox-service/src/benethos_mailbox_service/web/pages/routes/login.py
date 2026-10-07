@@ -3,14 +3,13 @@ the own password."""
 
 from __future__ import annotations
 
-import hmac
-import secrets
 from typing import Annotated
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from ....common.secret import SHORT, same, token
 from ....errors import RateLimitedError, SetupRequiredError, UnauthorizedError
 from ...services import Passwords, get_auth
 from ...urls import client_address
@@ -59,7 +58,7 @@ async def login_page(
         return RedirectResponse(local_path(next, PATH), status_code=303)
     except SignInRequiredError:
         pass
-    nonce = secrets.token_urlsafe(24)
+    nonce = token(SHORT)
     response = render(
         request,
         "pages/login.html",
@@ -82,7 +81,7 @@ async def login(
     next: Annotated[str, Form()] = PATH,
 ) -> Response:
     expected = request.cookies.get(LOGIN_COOKIE) or ""
-    if not expected or not hmac.compare_digest(nonce.encode(), expected.encode()):
+    if not expected or not same(nonce, expected):
         return _to_login("expired")
     try:
         signed = await get_auth(request).sign_in(

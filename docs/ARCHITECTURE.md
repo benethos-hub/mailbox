@@ -156,7 +156,11 @@ packages/mailbox-service/
     errors.py           # cross-cutting: MailboxServiceError hierarchy, no HTTP
     common/             # cross-cutting: helpers several layers share,
                         #   standard library only
-      ids.py            # ids of own records: acc_, usr_, msg_, ... + 64 hex
+      secret.py         # random values and their digests: new_id (acc_,
+                        #   usr_, ... + 64 hex), token, digest, hmac_hex,
+                        #   same. Every length with its reason
+      canonical.py      # JSON one way: compact to send, canonical to
+                        #   hash
       opaque.py         # opaque ids and cursors: prefix + base64 JSON,
                         #   and base64 without padding, for passwords and
                         #   OAuth too
@@ -197,7 +201,9 @@ packages/mailbox-service/
       pages/            # the configuration UI under /ui, not in OpenAPI
         deps.py         # who is signed in, the CSRF check, if_allowed
         navigation.py   # the sidebar entries a caller may open, breadcrumbs
-        filters.py      # the filter bar of a list: its fields and chips
+        filters.py      # the filter bar of a list: its fields and chips,
+                        #   user_names and records_filter for the lists
+                        #   of records
         session.py      # sign-in with a password, server-side sessions
         templates.py    # Jinja2: filters, render, Post/Redirect/Get
         grants.py       # the grant editor's rows, read back into grants
@@ -248,7 +254,8 @@ packages/mailbox-service/
                         #   audited kept and read (docs/AUDIT.md)
       locks.py          # KeyedLocks: one lock per key, for the services
       paging.py         # the cursors this service hands out itself, the
-                        #   page they continue
+                        #   page they continue, encode_before and
+                        #   decode_before for a list newest first
       bounded.py        # trim: tables in memory with a cap
       rounds.py         # rounds: the background loops of the services
     data/               # DATA: reads and writes, decides nothing. A
@@ -557,7 +564,7 @@ imapclient boundary), never by patching deep inside a library.
 - **Protocols** for seams: a repository, a provider, a key provider, a
   clock. A fake in a test fulfils the protocol, it patches nothing.
 - **Ids are opaque** to callers: a prefix and hex for records
-  (`common/ids.py`), a prefix and encoded JSON for cursors
+  (`common/secret.py`), a prefix and encoded JSON for cursors
   (`common/opaque.py`). No caller takes one apart.
 - **`SecretStr` for every secret** the moment it is read, so it cannot
   be printed by accident. A secret in plain text is noted with

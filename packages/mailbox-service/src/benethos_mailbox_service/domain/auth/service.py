@@ -6,7 +6,6 @@ whether it is valid and whose rights it carries.
 
 from __future__ import annotations
 
-import hashlib
 import secrets
 import string
 from collections.abc import Callable
@@ -15,7 +14,7 @@ from datetime import datetime, timedelta
 from typing import Literal
 
 from ...common.clock import utc_now
-from ...common.ids import new_id
+from ...common.secret import digest, new_id
 from ...data.models import ApiToken, User
 from ...data.storage import RoleRepository, TokenRepository, UserRepository
 from ...errors import (
@@ -75,7 +74,7 @@ class SignedIn:
 
 
 def hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode()).hexdigest()
+    return digest(token)
 
 
 def new_token() -> str:

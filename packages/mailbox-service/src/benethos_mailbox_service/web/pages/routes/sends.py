@@ -7,13 +7,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from ....common.clock import parse_day
 from ....data.models import SendFilter
-from ....domain.rights import Access
-from ...services import Accounts, Mailbox, get_users
-from ..deps import Viewer, emails_of, if_allowed
-from ..filters import Field, FilterBar, filter_bar
-from ..forms import model_of
+from ...services import Accounts, Mailbox
+from ..deps import Viewer, emails_of
+from ..filters import Field, filter_bar, records_filter, user_names
 from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
@@ -21,38 +18,12 @@ router = APIRouter()
 OUTCOMES = [("sent", "sent"), ("denied", "denied"), ("failed", "failed")]
 
 
-def _user_names(request: Request, caller: Access) -> dict[str, str]:
-    """Names of the users who sent, where the caller may see users."""
-    listed: dict[str, str] = if_allowed(
-        caller,
-        "list_users",
-        lambda: {u.id: u.name for u in get_users(request).list_users(caller)},
-        {},
-    )
-    return {caller.user_id: caller.name, **listed}
-
-
-def _filter(bar: FilterBar) -> SendFilter | None:
-    """What the bar asks for. Raises ``FormError``, a ``ValueError``, for
-    a value that is no filter."""
-    wanted = {
-        "user_id": bar.value("user") or None,
-        "outcome": bar.value("outcome") or None,
-        "recipient": bar.value("recipient") or None,
-        "after": parse_day(bar.value("after")),
-        "before": parse_day(bar.value("before")),
-    }
-    if not any(value is not None for value in wanted.values()):
-        return None
-    return model_of(SendFilter, wanted)
-
-
 @router.get("/sends")
 async def sends(
     request: Request, caller: Viewer, mailbox: Mailbox, accounts: Accounts
 ) -> HTMLResponse:
     audited = accounts.list(caller, may="list_sends")
-    names = _user_names(request, caller)
+    names = user_names(request, caller)
     bar = filter_bar(
         request,
         (
@@ -66,7 +37,7 @@ async def sends(
     )
     problem = ""
     try:
-        matching = _filter(bar)
+        matching = records_filter(SendFilter, bar, "outcome", "recipient")
     except ValueError as exc:
         matching, problem = None, f"Filter: {exc}"
     account_id = bar.value("account")

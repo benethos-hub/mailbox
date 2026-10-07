@@ -26,13 +26,13 @@ Rules:
 
 from __future__ import annotations
 
-import secrets
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from urllib.parse import urlsplit
 
 from ...common.clock import utc_now
+from ...common.secret import token
 from ...common.urls import is_loopback
 from ...data.models import Account, ProviderType
 from ...data.providers import (
@@ -153,7 +153,7 @@ class OAuthService:
         if account is not None:
             login_hint = login_hint or account.email
         self._forget_old(access.user_id)
-        state = secrets.token_urlsafe(32)
+        state = token()
         pkce = new_pkce()
         self._pending[state] = _Pending(
             provider=provider,
@@ -219,7 +219,7 @@ class OAuthService:
         code = await client.device_code()
         now = self._clock()
         interval = timedelta(seconds=code.interval)
-        sign_in_id = secrets.token_urlsafe(32)
+        sign_in_id = token()
         expires_at = now + min(timedelta(seconds=code.expires_in), DEVICE_VALID_FOR)
         shown = DeviceSignIn(
             id=sign_in_id,

@@ -12,7 +12,6 @@ A server-sent event stream is read line by line, each line up to a limit.
 
 from __future__ import annotations
 
-import json
 import ssl
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
@@ -21,6 +20,7 @@ from typing import Any
 import anyio
 import httpx
 
+from ....common.canonical import compact
 from ....errors import ProviderError
 from ..transport import Pick
 from .api import MAX_BYTES, TIMEOUT, Answer
@@ -134,7 +134,7 @@ class ServerClient:
             else host
         )
         if json_body is not None:
-            content = json.dumps(json_body, separators=(",", ":")).encode()
+            content = compact(json_body).encode()
             headers = {**(headers or {}), "Content-Type": "application/json"}
         request = pinned_request(
             self._client,

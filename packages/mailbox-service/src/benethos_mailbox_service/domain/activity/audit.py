@@ -12,13 +12,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
 
-from ...common.clock import iso, parse_iso, utc_now
-from ...common.ids import new_id
+from ...common.clock import utc_now
 from ...common.redact import redact
 from ...common.retention import Retention
-from ...data.models import ActivityFilter, ActivityRecord, Before, Page
+from ...common.secret import new_id
+from ...data.models import ActivityFilter, ActivityRecord, Page
 from ...data.storage import AuditRepository
 from .. import paging
 from ..rights import Access
@@ -98,15 +97,13 @@ class Audit:
     ) -> Page[ActivityRecord]:
         """The audit, newest first."""
         access.require("list_activity")
-        before = None
-        if cursor is not None:
-            before = paging.decode_cursor(CURSOR, cursor, _before)
+        before = paging.decode_before(CURSOR, cursor)
         found = self._store.list(limit=limit + 1, before=before, matching=matching)
         records, more = paging.split_page(found, limit)
         next_cursor = None
         if more:
             last = records[-1]
-            next_cursor = paging.encode_cursor(CURSOR, [iso(last.at), last.id])
+            next_cursor = paging.encode_before(CURSOR, last.at, last.id)
         return Page[ActivityRecord](items=records, next_cursor=next_cursor)
 
 
@@ -120,9 +117,3 @@ def audited() -> list[str]:
             if cls.audited and cls.name:
                 found.add(cls.kind())
     return sorted(found)
-
-
-def _before(carried: Any) -> Before:
-    """Where a cursor of the audit continues."""
-    at, record_id = carried
-    return Before(parse_iso(str(at)), str(record_id))

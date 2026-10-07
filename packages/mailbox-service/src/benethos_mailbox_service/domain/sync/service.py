@@ -25,8 +25,8 @@ from datetime import datetime
 from typing import TypeVar
 
 from ...common.clock import utc_now
-from ...common.ids import new_id
 from ...common.redact import redact
+from ...common.secret import new_id
 from ...data.providers import Capability, FolderChanges
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import (

@@ -15,7 +15,6 @@ paces the steps as for IMAP (CONCEPT 5.9).
 
 from __future__ import annotations
 
-import hashlib
 import time
 from collections.abc import Callable
 from functools import partial
@@ -25,6 +24,7 @@ import anyio
 
 from ....common.chunks import batched
 from ....common.ratelimit import Clock, Sleep
+from ....common.secret import digest
 from ....errors import (
     BadRequestError,
     MailboxServiceError,
@@ -207,8 +207,8 @@ class Pop3Provider(MailServerAdapter):
 
     async def folder_states(self) -> dict[str, str]:
         uids = await self._run(_unique_ids)
-        digest = hashlib.sha256("\n".join(uids).encode()).hexdigest()[:32]
-        return {mappers.folder_id(): f"{len(uids)}.{digest}"}
+        uids_digest = digest("\n".join(uids))[:32]
+        return {mappers.folder_id(): f"{len(uids)}.{uids_digest}"}
 
     async def folder_contents(self, folder_id: str) -> list[str]:
         mappers.check_folder(folder_id)

@@ -13,7 +13,7 @@ from benethos_mailbox_service.common.text import (
 )
 
 # Every character ``str.splitlines`` breaks on, and the other controls.
-READER_BREAKS = ["\n", "\r", "\x0b", "\x0c", "\x1c", "\x85", " ", " "]
+READER_BREAKS = ["\n", "\r", "\x0b", "\x0c", "\x1c", "\x85", "\u2028", "\u2029"]
 CONTROLS = ["\x00", "\x01", "\x1b", "\x7f", "\t"]
 
 
@@ -40,7 +40,7 @@ def test_the_wire_ends_a_line_at_cr_lf_and_nul(value: str) -> None:
     assert ends_line("fine", f"a{value}b")
 
 
-@pytest.mark.parametrize("value", ["\x85", " ", "\t", "\x01", '"'])
+@pytest.mark.parametrize("value", ["\x85", "\u2028", "\t", "\x01", '"'])
 def test_the_wire_carries_the_rest_as_data(value: str) -> None:
     assert not ends_line(f"a{value}b")
 

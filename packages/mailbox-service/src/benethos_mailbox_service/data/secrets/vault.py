@@ -14,7 +14,7 @@ from pydantic import SecretStr
 
 from ...common import redact
 from ...common.clock import utc_now
-from ...common.ids import new_id
+from ...common.secret import new_id
 from ...errors import (
     ConflictError,
     CredentialError,
