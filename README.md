@@ -14,9 +14,9 @@ One REST API for all your mailboxes, whichever provider they are at, a
 Python client for it and an MCP server on top. Scripts, tools and AI
 agents work with your mail through one door you control.
 
-> **Status: alpha, version 0.3.0.** Usable with real accounts for
-> testing. The API and the configuration may still change. Stored data
-> is carried forward by migrations.
+> **Status: beta, version 0.3.0.** Usable with real accounts. A breaking
+> change of the API or the configuration is announced in the changelog.
+> Stored data is carried forward by migrations.
 
 ## What it is for
 

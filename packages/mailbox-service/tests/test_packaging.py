@@ -273,8 +273,8 @@ def test_the_changelog_names_the_version_as_its_newest_release() -> None:
 
 
 def test_the_status_follows_the_classifier() -> None:
-    """``Development Status :: 3 - Alpha`` in every package, and "alpha"
-    in every status line of the documentation."""
+    """One ``Development Status`` classifier in every package, and its
+    word, such as "beta", in every status line of the documentation."""
     statuses = set()
     for package in PACKAGES:
         classifiers = _project(package)["classifiers"]

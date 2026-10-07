@@ -1,8 +1,8 @@
 # Containers
 
-> **Alpha, version 0.3.0.** Usable with real accounts for testing. The
-> API and the configuration may still change. Stored data is carried
-> forward by migrations.
+> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> of the API or the configuration is announced in the changelog. Stored
+> data is carried forward by migrations.
 
 The images, and the places they run in, each in a folder of its own.
 Each place keeps its secrets in its own `secrets/`, never versioned.

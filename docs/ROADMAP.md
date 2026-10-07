@@ -1,8 +1,8 @@
 # Roadmap
 
-> **Alpha, version 0.3.0.** Usable with real accounts for testing. The
-> API and the configuration may still change. Stored data is carried
-> forward by migrations.
+> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> of the API or the configuration is announced in the changelog. Stored
+> data is carried forward by migrations.
 
 The phases in which Mailbox is built. What each item means is designed
 in [CONCEPT.md](CONCEPT.md). The section numbers below point there.

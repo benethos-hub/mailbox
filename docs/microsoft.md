@@ -1,8 +1,8 @@
 # Connecting Microsoft accounts
 
-> **Alpha, version 0.3.0.** Usable with real accounts for testing. The
-> API and the configuration may still change. Stored data is carried
-> forward by migrations.
+> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> of the API or the configuration is announced in the changelog. Stored
+> data is carried forward by migrations.
 
 Outlook.com, Hotmail, Live and Microsoft 365 accounts connect by OAuth.
 The person signs in at Microsoft. The service keeps an encrypted refresh
