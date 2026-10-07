@@ -118,9 +118,11 @@ data/                     # one folder per package, created when missing,
 live/                     # manual checks against the test accounts,
                           #   what they share in _common.py
 containers/               # images/ (one folder per image), and one folder
-                          #   per place they run: dev/ (built from the
-                          #   repository), test-mail-server/ (Stalwart
-                          #   for tests). Each keeps its secrets/ local
+                          #   per place they run: production/ (the
+                          #   published images, Caddy, MCP instances),
+                          #   dev/ (built from the repository),
+                          #   test-mail-server/ (Stalwart for tests).
+                          #   Each keeps its secrets/ local
 .github/workflows/        # ci.yml: checks, fresh install, lowest
                           #   versions, images,
                           #   publish.yml: on a release both packages to
@@ -129,6 +131,12 @@ docs/
   CONCEPT.md              # design
   ARCHITECTURE.md         # layers, modules, seams, rules for new code
   LIMITS.md               # every rate limit and how they work together
+  PERMISSIONS.md          # users, roles and rights
+  LOGGING.md              # what the service log holds, at which level
+  AUDIT.md                # the audit of administration
+  UI.md                   # how the pages look and behave, new page checklist
+  REFACTORING.md          # how the layout came to be
+  microsoft.md            # connecting Microsoft accounts, an app of your own
   ROADMAP.md              # phases and their state
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test
