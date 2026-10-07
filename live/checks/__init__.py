@@ -15,6 +15,11 @@ with ``uv run python live/<name>.py``:
 - ``mail``: finding a test mail through the API, and deleting it for good.
 - ``imap``: a plain IMAP connection, standing in for another mail client.
 - ``receiver``: a webhook receiver on 127.0.0.1.
+- ``changes_trip`` and ``changes_stages``: one run of ``changes.py``, and
+  its stages that change the test mail.
+- ``ui_users`` and ``ui_mail``: the users and the mail of ``ui.py``.
+- ``mcp_session`` and ``mcp_sending``: the MCP server over stdio as a
+  session, and the sending checks of ``mcp_stdio.py``.
 
 What a check does with mail on the way, it does through the Python
 client, ``benethos_mailbox_client``. What a check asks of the API itself,

@@ -43,10 +43,13 @@ The three layers and what each may import:
 - `config.py`, `errors.py` and `common/` are cross-cutting: read by every
   layer, they import none. `assembly/`, `cli/`, `__main__.py` and
   `logs.py` only assemble.
-- **`common/` is not a drawer.** Only what more than one layer needs, on
-  the standard library, with no I/O and no state beyond what a caller
-  holds. `redact` is the one module with state of its own, and its
-  docstring says why. What one layer needs stays in that layer.
+- **`common/` is not a drawer.** A guide, not a rule: it holds helpers
+  that know nothing of the domain, the data or the web, with no I/O and
+  no state beyond what a caller holds. Mostly what more than one layer
+  needs, but a helper of that kind may live there when one layer needs
+  it, such as `trim` and `KeyedLocks`. It imports the standard library
+  and anyio, nothing else. `redact` is the one module with state of its
+  own, and its docstring says why.
 - **A helper exists once.** No module outside `common/` defines a
   function of a name `common/` holds, with or without a leading
   underscore. The architecture test also names the copies a shared
@@ -85,7 +88,7 @@ The three layers and what each may import:
    auth · discovery · changes · rounds
    activity
    rights
-   locks · paging · bounded
+   paging
   ```
 
 - **The data layer is in packages by kind**, in the same way: imported
@@ -108,7 +111,7 @@ The three layers and what each may import:
   a result or an error.
 
 `tests/test_architecture.py` checks the direction, the cross-cutting
-modules, that `common/` stays on the standard library, that FastAPI stays in
+modules, that `common/` stays on the standard library and anyio, that FastAPI stays in
 `web/` (and `assembly/`), that providers are reached through the registry,
 that the domain picks no storage implementation, and that SQLite is
 reached through `data/storage/` alone. It also checks that the data
@@ -160,7 +163,7 @@ packages/mailbox-service/
                         #   the repository's, the system's (platformdirs)
     errors.py           # cross-cutting: MailboxServiceError hierarchy, no HTTP
     common/             # cross-cutting: helpers several layers share,
-                        #   standard library only
+                        #   standard library and anyio only
       secret.py         # random values and their digests: new_id (acc_,
                         #   usr_, ... + 64 hex), token, digest, hmac_hex,
                         #   same. Every length with its reason
@@ -184,6 +187,8 @@ packages/mailbox-service/
                         #   for a header, ends_line for the wire, plural
       retention.py      # Retention: how long records are kept, when the
                         #   old ones are due to go
+      bounded.py        # trim: tables in memory with a cap
+      locks.py          # KeyedLocks: one lock per key, for the services
       sizes.py          # MIB, and a size in megabytes for a message
       chunks.py         # batched: a sequence in slices
     web/                # PRESENTATION: HTTP only, FastAPI lives here
@@ -257,11 +262,9 @@ packages/mailbox-service/
                         #   per area: activity.<area>.<name>
                         #   (docs/LOGGING.md 7.2), Audit: those marked
                         #   audited kept and read (docs/AUDIT.md)
-      locks.py          # KeyedLocks: one lock per key, for the services
       paging.py         # the cursors this service hands out itself, the
                         #   page they continue, encode_before and
                         #   decode_before for a list newest first
-      bounded.py        # trim: tables in memory with a cap
       rounds.py         # rounds: the background loops of the services
     data/               # DATA: reads and writes, decides nothing. A
                         #   package is imported through its __init__.py
@@ -440,7 +443,7 @@ names it.
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |
-| a helper two layers need | `common/`, if it is on the standard library, does no I/O and holds no state beyond what a caller holds. Else it is not a helper: it belongs to one layer |
+| a helper that knows no layer | `common/`, if it is on the standard library and anyio, does no I/O and holds no state beyond what a caller holds. Else it is not a helper: it belongs to one layer |
 | a helper one layer needs | that layer, beside its caller |
 
 When none of these fits, the seam is missing. Add the seam first, then
@@ -630,10 +633,11 @@ imapclient boundary), never by patching deep inside a library.
   script does with mail on the way goes through the Python client. What
   it asks of the API itself, a status code or an error code, it asks
   with httpx.
-- A rule on the layout has a check in `test_architecture.py`, or it is
-  not a rule yet: the layers, the lines, the imports through
-  `__init__.py`, the homes of the libraries, who logs what. Naming,
-  size and style (sections 14 and 15) are for the review.
+- A rule on the layout has a check in `test_architecture.py` or, for the
+  code itself, `test_code_rules.py`, or it is not a rule yet: the
+  layers, the lines, the imports through `__init__.py`, the homes of the
+  libraries, who logs what, the sizes of section 15. Naming and style
+  (section 14) are for the review.
 
 ## 14. Naming
 
@@ -658,8 +662,11 @@ imapclient boundary), never by patching deep inside a library.
 ## 15. Size
 
 - A module holds one subject, at most 500 lines, a class at most 30
-  methods. `test_architecture.py` of each package checks both. Past
-  that, the subject has parts, and each part is a module.
+  methods. The same holds for the tests and the live checks in `live/`.
+  `test_architecture.py` of the client and the MCP server checks both
+  for its package and its tests, `test_code_rules.py` of the service
+  for the service, its tests and `live/`. Past that, the subject has
+  parts, and each part is a module.
 - A package holds a handful of modules. Past that, it holds areas, and
   each area is a package.
 - A function decides or does, and says which in its name. One that does

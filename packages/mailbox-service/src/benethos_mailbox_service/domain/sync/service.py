@@ -25,6 +25,7 @@ from datetime import datetime
 from typing import TypeVar
 
 from ...common.clock import utc_now
+from ...common.locks import KeyedLocks
 from ...common.redact import redact
 from ...common.secret import new_id
 from ...data.providers import Capability, FolderChanges
@@ -45,7 +46,6 @@ from ..changes import (
     MessagesDeleted,
     MessagesUpdated,
 )
-from ..locks import KeyedLocks
 from .passes import Counts, DeltaState, Seen, delta_state, index_changes, moves
 
 T = TypeVar("T")

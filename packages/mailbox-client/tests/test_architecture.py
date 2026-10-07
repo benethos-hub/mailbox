@@ -104,10 +104,12 @@ MAX_METHODS = 30
 
 
 def test_modules_and_classes_stay_small() -> None:
+    """The package and its tests."""
+    tests = Path(__file__).resolve().parent
     violations = []
-    for path in sorted(ROOT.rglob("*.py")):
+    for path in sorted([*ROOT.rglob("*.py"), *tests.rglob("*.py")]):
         text = path.read_text("utf-8")
-        name = path.relative_to(ROOT).as_posix()
+        name = path.relative_to(tests.parent).as_posix()
         lines = len(text.splitlines())
         if lines > MAX_LINES:
             violations.append(f"{name}: {lines} lines")

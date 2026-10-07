@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from benethos_mailbox_service.domain.bounded import trim
+from benethos_mailbox_service.common.bounded import trim
 
 
 def test_what_no_longer_counts_goes_first_then_the_oldest() -> None:

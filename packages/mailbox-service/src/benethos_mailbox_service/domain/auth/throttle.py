@@ -26,9 +26,9 @@ from collections import OrderedDict, deque
 from collections.abc import Callable
 from datetime import datetime, timedelta
 
+from ...common.bounded import trim
 from ...common.clock import utc_now
 from ...errors import RateLimitedError
-from ..bounded import trim
 
 LIMIT = 10
 WINDOW = timedelta(minutes=15)
