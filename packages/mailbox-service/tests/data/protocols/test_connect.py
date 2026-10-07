@@ -10,9 +10,10 @@ from typing import Any
 import pytest
 
 from benethos_mailbox_service.common.hosts import ascii_host
-from benethos_mailbox_service.data.protocols import imap, smtp
+from benethos_mailbox_service.data.protocols import smtp
 from benethos_mailbox_service.data.protocols.http import SafeFetcher
 from benethos_mailbox_service.data.protocols.imap import ImapSession, Server
+from benethos_mailbox_service.data.protocols.imap import session as imap
 from benethos_mailbox_service.data.protocols.transport import tls_context
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 
@@ -62,7 +63,7 @@ def test_the_context_verifies_the_host_name_on_any_address() -> None:
 @pytest.mark.parametrize("security", ["tls", "starttls"])
 def test_imap_connects_to_the_picked_address(security: str) -> None:
     server = Server("imap.example.org", 993, security, pick=pick)
-    imap._default_client(server, 5.0)
+    imap.default_client(server, 5.0)
     host, port, _ = Library.made[0]
     assert (host, port) == (ADDRESS, 993)
     context = Library.made[-1][2]
@@ -80,7 +81,7 @@ def test_smtp_connects_to_the_picked_address(security: str) -> None:
 
 
 def test_without_a_pick_the_name_is_used() -> None:
-    imap._default_client(Server("imap.example.org", 993, "tls"), 5.0)
+    imap.default_client(Server("imap.example.org", 993, "tls"), 5.0)
     assert Library.made[0][0] == "imap.example.org"
 
 

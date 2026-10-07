@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from benethos_mailbox_service.data.models import MessageUpdate
-from benethos_mailbox_service.data.protocols.imap import _new_uids, _uid_set
+from benethos_mailbox_service.data.protocols.imap.responses import new_uids, uid_set
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import (
     BadRequestError,
@@ -24,8 +24,8 @@ MESSAGE = mappers.message_id("INBOX", 7, 3)
 
 
 def test_uid_sets() -> None:
-    assert _uid_set("3:5,9") == [3, 4, 5, 9]
-    assert _uid_set("7") == [7]
+    assert uid_set("3:5,9") == [3, 4, 5, 9]
+    assert uid_set("7") == [7]
 
 
 @pytest.mark.parametrize(
@@ -33,11 +33,11 @@ def test_uid_sets() -> None:
     [[b"1 3 12"], [b"[COPYUID 1 2:4 11:13] Copy completed"], [b"1 4,3 13,12"]],
 )
 def test_new_uid_from_copyuid(reported: list[bytes]) -> None:
-    assert _new_uids(reported)[3] == 12
+    assert new_uids(reported)[3] == 12
 
 
 def test_no_copyuid() -> None:
-    assert _new_uids([b"Move completed"]) == {}
+    assert new_uids([b"Move completed"]) == {}
 
 
 # --- the IMAP adapter ---------------------------------------------------------

@@ -660,7 +660,7 @@ def test_logout_without_connection_is_harmless() -> None:
     session = ImapSession(Server("h", 993, "tls"))
     session.logout()
     with pytest.raises(ProviderError, match="not connected"):
-        session.list_folders()
+        session.folders.list_folders()
 
 
 async def test_a_wait_in_idle_takes_no_thread_of_the_pool(

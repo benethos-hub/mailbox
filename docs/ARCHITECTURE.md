@@ -256,13 +256,17 @@ packages/mailbox-service/
         fields.py       # one header field: a Message-ID as one token,
                         #   an address in Unicode
       protocols/        # the wire, one library each, in our types:
-                        #   imap.py (IMAPClient), smtp.py (smtplib),
+                        #   imap/ (IMAPClient: session.py, its parts
+                        #   folders.py and messages.py, responses.py,
+                        #   values.py), smtp.py (smtplib),
                         #   pop3.py (poplib), jmap/ (JMAP over http:
                         #   client.py, shapes.py, answers.py),
                         #   oauth.py (OAuth 2.0 with PKCE, sign-in
                         #   with a code, refresh, token source),
                         #   transport.py: the Server, TLS,
-                        #   timeouts, the failures below every library,
+                        #   timeouts, translated(): a library's errors
+                        #   as this project's, the failures below
+                        #   every library,
                         #   wire.py: JSON a server sends read into
                         #   shapes (pydantic)
         http/           # httpx: base.py (the client, the capped read),
@@ -456,7 +460,7 @@ technology says the seam is in the wrong place.
 
 1. **One library, one home.** Each third-party library is imported in
    exactly one module, or one package for a framework: IMAPClient only
-   in `data/protocols/imap.py`, `cryptography` only in
+   in `data/protocols/imap/`, `cryptography` only in
    `data/secrets/cipher.py`, FastAPI only under `web/`. When it is
    needed somewhere else, its wrapper is extended, it is not imported a
    second time. The architecture test lists the homes.
