@@ -58,8 +58,8 @@ def test_the_activities_kept_are_those_audit_md_names() -> None:
 
 def test_what_a_person_did_is_kept_with_who_how_and_what(services: Services) -> None:
     anna = services.users.create_user(ADMIN, "Anna", [], [READER])
-    token, plain = services.users.create_token(ADMIN, anna.id, "laptop")
-    services.users.revoke_token(ADMIN, anna.id, token.id)
+    token, plain = services.tokens.create_token(ADMIN, anna.id, "laptop")
+    services.tokens.revoke_token(ADMIN, anna.id, token.id)
     records = kept(services)
     assert [r.activity for r in records] == [
         "users.token_revoked",
@@ -94,7 +94,7 @@ def test_a_token_and_the_host_are_named_as_the_credential(
         credential_name="laptop",
         source="10.0.0.7",
     )
-    services.users.create_role(access, "readers", [READER])
+    services.roles.create_role(access, "readers", [READER])
     by_token = kept(services, activity="users.role_created")[0]
     assert (by_token.credential, by_token.source) == ("token:tok_1", "10.0.0.7")
 
@@ -138,7 +138,7 @@ def test_what_the_service_does_alone_is_not_kept(services: Services) -> None:
 
 def test_the_filters_and_the_pages(services: Services) -> None:
     anna = services.users.create_user(ADMIN, "Anna", [], [READER])
-    services.users.create_role(ADMIN, "readers", [READER])
+    services.roles.create_role(ADMIN, "readers", [READER])
     bea_access = Access("usr_bea", "Bea", [], service=["admin"])
     services.users.update_user(bea_access, anna.id, name="Anna B")
     assert [r.activity for r in kept(services, activity="users.role_created")] == [

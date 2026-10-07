@@ -43,7 +43,7 @@ def run(args: argparse.Namespace) -> None:
             done = f"Created user {user.id} ({user.name}) with every right"
         else:
             before = services.auth.user_named(args.name)
-            user, password = anyio.run(services.users.reset_password, args.name)
+            user, password = anyio.run(services.passwords.reset_password, args.name)
             done = f"Gave {user.name} ({user.id}) a new password"
             if before is not None and not before.ui_sign_in:
                 done += ", and its UI sign-in, which was off,"

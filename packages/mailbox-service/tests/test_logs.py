@@ -31,7 +31,9 @@ async def test_a_sign_in_reaches_the_log(
     user = services.users.create_user(
         ADMIN, "Anna", [], [Grant(accounts=["*"], allow=["mail.read"])], ui_sign_in=True
     )
-    await services.users.set_password(ADMIN, user.id, "correct horse battery staple")
+    await services.passwords.set_password(
+        ADMIN, user.id, "correct horse battery staple"
+    )
     await services.auth.sign_in(
         "Anna", "correct horse battery staple", source="10.0.0.1"
     )

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from ....errors import RateLimitedError, SetupRequiredError, UnauthorizedError
-from ...services import Users, get_auth
+from ...services import Passwords, get_auth
 from ...urls import client_address
 from ..deps import Actor, Viewer
 from ..forms import failing
@@ -148,7 +148,7 @@ async def password_page(request: Request, _: Viewer) -> HTMLResponse:
 async def change_password(
     request: Request,
     caller: Actor,
-    users: Users,
+    passwords: Passwords,
     current_password: Annotated[str, Form()] = "",
     new_password: Annotated[str, Form()] = "",
     repeat_password: Annotated[str, Form()] = "",
@@ -156,7 +156,7 @@ async def change_password(
     if new_password != repeat_password:
         return back(request, PASSWORD_PAGE, error="The two new passwords differ.")
     with failing(PASSWORD_PAGE):
-        stamp = await users.change_password(caller, current_password, new_password)
+        stamp = await passwords.change_password(caller, current_password, new_password)
     # This session carries on with the new password. Every other session
     # of the user ends at its next request. Taken from the request, since
     # checking it again with the old stamp would end it too.

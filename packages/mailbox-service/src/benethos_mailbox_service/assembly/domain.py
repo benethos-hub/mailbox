@@ -23,7 +23,14 @@ from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import Idempotency, MailboxService, SendControl
 from ..domain.sync import SyncService, SyncWorker
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
-from ..domain.users import UserService
+from ..domain.users import (
+    Effective,
+    PasswordService,
+    RoleService,
+    TokenService,
+    UserRules,
+    UserService,
+)
 from ..domain.webhooks import Retries, WebhookDispatcher, WebhookService
 from . import providers, secrets
 from .services import Services
@@ -83,6 +90,9 @@ def build_services(
             adapters=adapters,
             auth=services.auth,
             users=services.users,
+            roles=services.roles,
+            tokens=services.tokens,
+            passwords=services.passwords,
             mailbox=services.mailbox,
             discovery=discovery
             or providers.build_discovery(
@@ -161,15 +171,20 @@ class _Domain:
         self.sends = SendControl(
             repositories.sends, clock=clock, activity=activity, days=settings.audit_days
         )
+        rules = UserRules(repositories.users, repositories.roles)
+        self.passwords = PasswordService(repositories.users, self.auth, rules, activity)
+        self.tokens = TokenService(repositories.tokens, self.auth, rules, activity)
+        self.roles = RoleService(repositories.roles, rules, activity)
         self.users = UserService(
             repositories.users,
             repositories.roles,
             repositories.tokens,
-            adapters,
-            self.auth,
             repositories.webhooks,
-            activity=activity,
-            sent=self.sends.sent_recently,
+            self.auth,
+            self.passwords,
+            Effective(adapters, sent=self.sends.sent_recently),
+            rules,
+            activity,
         )
         self.worker = _worker(base, adapters, self.sync)
         self.accounts = self._account_service(offered)

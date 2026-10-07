@@ -40,7 +40,7 @@ def test_the_filter_bar_narrows_the_list(
 ) -> None:
     sign_in(app_client, *browser_admin(services))
     anna = services.users.create_user(ADMIN, "Anna", [], [READER])
-    services.users.create_role(ADMIN, "readers", [READER])
+    services.roles.create_role(ADMIN, "readers", [READER])
 
     def rows(**params: str) -> set[str]:
         page = app_client.get("/ui/audit", params=params).text
@@ -80,7 +80,7 @@ def test_an_auditor_sees_the_page(app_client: TestClient, services: Services) ->
 def test_the_card_on_a_users_page(app_client: TestClient, services: Services) -> None:
     sign_in(app_client, *browser_admin(services))
     anna = services.users.create_user(ADMIN, "Anna", [], [READER], service=["admin"])
-    services.users.create_role(services.auth.access_of(anna.id), "readers", [READER])
+    services.roles.create_role(services.auth.access_of(anna.id), "readers", [READER])
     page = app_client.get(f"/ui/users/{anna.id}").text
     assert "Recent activity" in page
     assert "users.role_created" in page

@@ -540,7 +540,7 @@ def test_a_second_ui_administrator_may_go(
 def test_a_role_cannot_take_admin_from_the_last_ui_administrator(
     client: TestClient, services: Services
 ) -> None:
-    services.users.create_role(ADMIN, "admins", [], list(ADMIN_SERVICE))
+    services.roles.create_role(ADMIN, "admins", [], list(ADMIN_SERVICE))
     _ui_admin(services, role="admins")
     refused = client.put(
         "/v1/roles/admins",

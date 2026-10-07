@@ -22,7 +22,17 @@ from ...data.models import (
 )
 from ...domain.rights import Access
 from ..limits import signed_in
-from ..services import Accounts, Auth, Discoverer, Mailbox, Users, Webhooks
+from ..services import (
+    Accounts,
+    Auth,
+    Discoverer,
+    Mailbox,
+    Passwords,
+    Roles,
+    Tokens,
+    Users,
+    Webhooks,
+)
 from ..urls import client_address
 
 __all__ = [
@@ -31,9 +41,12 @@ __all__ = [
     "Discoverer",
     "Limit",
     "Mailbox",
+    "Passwords",
+    "Roles",
     "Search",
     "SendSearch",
     "Since",
+    "Tokens",
     "Users",
     "Webhooks",
     "authenticate",

@@ -192,6 +192,7 @@ packages/mailbox-service/
         session.py      # sign-in with a password, server-side sessions
         templates.py    # Jinja2: filters, render, Post/Redirect/Get
         grants.py       # the grant editor's rows, read back into grants
+        editor.py       # the editor of rights on a user's or a role's page
         mailform.py     # the mail form: fields to a message, shown again
         forms.py        # form errors, failing: back with the message,
                         #   model_of and text_of: what a form holds
@@ -203,12 +204,16 @@ packages/mailbox-service/
         static/         # app.css, app.js, vendored htmx
     domain/             # BUSINESS LOGIC: decides, knows no HTTP
                         # one package per area (docs/REFACTORING.md),
-                        #   the service of a package in service.py
+                        #   the service of a package in service.py,
+                        #   several services in one module each
       rights/           # who may do what: permissions (the catalogue of
                         #   rights and groups), Access (one caller)
       auth/             # proving who calls: AuthService, Passwords,
                         #   SignInThrottle
-      users/            # UserService: users, roles, tokens
+      users/            # UserService, RoleService, TokenService,
+                        #   PasswordService, one module each, the
+                        #   rules they share in rules.py, effective
+                        #   rights in effective.py
       accounts/         # AccountService, Adapters (the live adapter per
                         #   account), OAuthService, abilities: 501 for
                         #   what an adapter does not implement

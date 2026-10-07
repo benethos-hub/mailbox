@@ -17,7 +17,7 @@ from ..domain.auth import AuthService
 from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
-from ..domain.users import UserService
+from ..domain.users import PasswordService, RoleService, TokenService, UserService
 from ..domain.webhooks import WebhookService
 
 
@@ -27,6 +27,9 @@ class Services(Protocol):
     accounts: AccountService
     auth: AuthService
     users: UserService
+    roles: RoleService
+    tokens: TokenService
+    passwords: PasswordService
     mailbox: MailboxService
     discovery: DiscoveryService
     oauth: OAuthService
@@ -56,6 +59,18 @@ def get_discovery(request: Request) -> DiscoveryService:
 
 def get_users(request: Request) -> UserService:
     return services_of(request).users
+
+
+def get_roles(request: Request) -> RoleService:
+    return services_of(request).roles
+
+
+def get_tokens(request: Request) -> TokenService:
+    return services_of(request).tokens
+
+
+def get_passwords(request: Request) -> PasswordService:
+    return services_of(request).passwords
 
 
 def get_oauth(request: Request) -> OAuthService:
@@ -91,6 +106,9 @@ Auth = Annotated[AuthService, Depends(get_auth)]
 Discoverer = Annotated[DiscoveryService, Depends(get_discovery)]
 Mailbox = Annotated[MailboxService, Depends(get_mailbox)]
 Users = Annotated[UserService, Depends(get_users)]
+Roles = Annotated[RoleService, Depends(get_roles)]
+Tokens = Annotated[TokenService, Depends(get_tokens)]
+Passwords = Annotated[PasswordService, Depends(get_passwords)]
 OAuth = Annotated[OAuthService, Depends(get_oauth)]
 Webhooks = Annotated[WebhookService, Depends(get_webhooks)]
 Status = Annotated[StatusService, Depends(get_status)]
