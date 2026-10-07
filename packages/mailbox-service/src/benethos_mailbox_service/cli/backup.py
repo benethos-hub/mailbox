@@ -37,6 +37,9 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
 def run(args: argparse.Namespace) -> None:
     if args.target[0] == "verify":
         _verify(args.target, args.recovery_key, args.env_file)
+    elif args.recovery_key:
+        # A backup is written with the master key the service holds.
+        raise UsageError("--recovery-key goes with `backup verify FILE`")
     else:
         _write(args.target, args.env_file)
 

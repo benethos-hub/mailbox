@@ -266,6 +266,11 @@ def test_backup_verify_restore_commands(
     monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
     assert main(["backup", "verify", str(target), "--recovery-key"]) == 0
 
+    # Writing a backup takes the master key the service holds: the option
+    # belongs to verify alone, and is refused rather than ignored.
+    assert main(["backup", str(target), "--recovery-key"]) == 1
+    assert "goes with `backup verify FILE`" in capsys.readouterr().err
+
 
 def test_a_restore_keeps_another_master_key_unless_told(
     machine: Path,
