@@ -1,7 +1,7 @@
 # mailbox-client
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
-[![PyPI mailbox-client](https://img.shields.io/pypi/v/benethos-mailbox-client?label=PyPI%20mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
+[![PyPI benethos-mailbox-client](https://img.shields.io/pypi/v/benethos-mailbox-client?label=PyPI%20benethos-mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
