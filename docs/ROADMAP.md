@@ -323,6 +323,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   one protocol per ability, JSON from a server read into shapes, named
   values for ids, cursors and settings, the limits on the size of the
   code, and every helper of `common/` once
+- **The client package in parts ([REFACTORING.md](REFACTORING.md)
+  13)**, done 2026-10-07: `endpoints/` one module per resource, what
+  both clients share in a module per subject, the tests in files like
+  the modules
 
 ## Keeping this file current
 

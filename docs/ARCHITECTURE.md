@@ -347,33 +347,62 @@ packages/mailbox-service/
 
 The Python client of the REST API is a package of its own. It cannot
 import the service or the MCP server, and its
-`tests/test_architecture.py` checks that, with the lines below and httpx
-in the modules that make or read a request.
+`tests/test_architecture.py` checks that, with the lines below, a
+package counting as one, httpx only in the modules that make or read
+a request or check an address, and the endpoints reached through
+their package alone.
 
 ```
 packages/mailbox-client/
   src/benethos_mailbox_client/
     __init__.py         # what a caller imports: both clients, the
-                        #   records, the errors, message_body()
+                        #   records, the errors, message_body(),
+                        #   from_environment()
     client.py           # MailboxClient: sends the calls with
                         #   httpx.AsyncClient, one line per method
     sync.py             # SyncMailboxClient: the same calls with
                         #   httpx.Client
-    endpoints.py        # each endpoint once: method, path, query,
-                        #   body, how its answer becomes a record.
-                        #   Sends nothing
-    wire.py             # what both share: address and token, read
-                        #   from the environment in from_environment,
-                        #   Call, reading an answer, an error or a failure
+    endpoints/          # each endpoint once, one module per resource
+                        #   of the API, with the readings of its
+                        #   records. Sends nothing
+      accounts.py       # me(): the caller and its accounts
+      folders.py        # the folders of an account
+      messages.py       # lists and search, changes, a message, an
+                        #   attachment, flags and moves, deleting;
+                        #   the page the drafts read too
+      drafts.py         # list, write, replace, delete drafts
+      sending.py        # send a message, send a draft
+      compose.py        # message_body: what drafts and sending share
+      generic.py        # request(): any route, its JSON as it comes
+    answers.py          # an answer read: its JSON, the error envelope
+                        #   as ApiError, a failure on the way
+    attachments.py      # an attachment's bytes in chunks, up to a
+                        #   limit, what its headers say
+    environment.py      # the address and the token: from the
+                        #   environment (from_environment) or given,
+                        #   checked before a client is made
+    calls.py            # Call: the request an endpoint describes,
+                        #   its path below /v1, the timeouts
     models.py           # the records the clients answer with
     errors.py           # MailboxError and its subclasses
 ```
 
-**An endpoint of the client** is a function in `endpoints.py` that
-answers a `Call`, and a one-line method on each client that sends it.
-Its test is in `tests/test_endpoints.py` and runs for both clients.
-Neither client knows a path or a field: when the two differ in more
-than `await`, the difference belongs in `wire.py` or `endpoints.py`.
+The modules stand in lines, each importing only lines below:
+
+```
+ client · sync
+ endpoints
+ answers · attachments · environment
+ calls
+ models · errors
+```
+
+**An endpoint of the client** is a function in the module of its
+resource in `endpoints/` that answers a `Call`, and a one-line method
+on each client that sends it. Its test is in `tests/endpoints/`, in
+the file of that module, and runs for both clients. Neither client
+knows a path or a field: when the two differ in more than `await`,
+the difference belongs in `endpoints/`, `calls.py` or `answers.py`.
 
 The MCP server is a package of its own, built on the client. It
 cannot import the service, and `tests/test_boundary.py` checks that.
@@ -448,7 +477,7 @@ names it.
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
 | a command of the CLI | a module in `cli/` with `add` and `run`, its line in `COMMANDS`. It builds the service through `assembly/` |
 | a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer through `render.py` (section 3) |
-| a request of the Python client | `endpoints.py` of the client package, and one line on each client (section 3) |
+| a request of the Python client | the module of its resource in `endpoints/` of the client package, and one line on each client (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |
@@ -552,7 +581,7 @@ noticing. Every change is measured against that.
 | Folders for settings and data | `folders()` in `config.py` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
 | Authentication | credential kinds of a user (CONCEPT 7.5) | API token, password for the UI | TOTP, OAuth client credentials |
-| Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints.py`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py` and `sync.py` |
+| Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints/`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py`, `sync.py` and the modules that read an answer |
 
 **When you add something new**, ask first where its seam is. A new
 provider is a new module behind `Reads`, not a branch in a route. A

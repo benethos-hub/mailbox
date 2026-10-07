@@ -102,11 +102,15 @@ Everything the client raises is a `MailboxError`:
 
 ## Inside
 
-Each endpoint is described once, in `endpoints.py`: its method, path,
-query, body and how its answer becomes a record. That module sends
-nothing. `MailboxClient` sends those requests with `httpx.AsyncClient`,
-`SyncMailboxClient` with `httpx.Client`, and a method of either is a
-line or two, `get_attachment`, which streams, a few more.
+Each endpoint is described once, in `endpoints/`, one module per
+resource of the API: its method, path, query, body and how its answer
+becomes a record. That package sends nothing. `MailboxClient` sends
+those requests with `httpx.AsyncClient`, `SyncMailboxClient` with
+`httpx.Client`, and a method of either is a line or two,
+`get_attachment`, which streams, a few more. What both share stands
+beside them: the address and the token (`environment.py`), the shape
+of a request (`calls.py`), how an answer or a failure is read
+(`answers.py`) and an attachment read in chunks (`attachments.py`).
 
 ## License
 
