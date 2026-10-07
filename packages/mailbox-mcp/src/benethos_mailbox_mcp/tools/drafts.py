@@ -89,7 +89,7 @@ TOOLS = (
         destructive=False,
         idempotent=False,
     ),
-    # Replaces the draft as a whole, under the same id.
+    # Replaces the draft as a whole. It may come back under a new id.
     changes(
         update_draft,
         "Replace a draft",
