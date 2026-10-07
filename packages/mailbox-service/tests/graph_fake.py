@@ -176,41 +176,15 @@ class FakeGraph:
         request: httpx.Request,
     ) -> httpx.Response:
         if not path or path == [""]:
-            if method == "GET":
-                return _list(
-                    self._folder_json(f)
-                    for f in self.folders.values()
-                    if f["parentFolderId"] == self.root
-                )
-            name = json.loads(request.content)["displayName"]
-            return _json(
-                201, self._folder_json(self.folders[self.new_folder(name, self.root)])
-            )
+            return self._children(method, self.root, request)
         folder = self._folder(path[0])
         if folder is None:
             return _error(404, "ErrorItemNotFound", "folder not found")
         rest = path[1:]
         if not rest:
-            if method == "GET":
-                return _json(200, self._folder_json(folder))
-            if method == "PATCH":
-                folder["displayName"] = json.loads(request.content)["displayName"]
-                return _json(200, self._folder_json(folder))
-            if method == "DELETE":
-                del self.folders[folder["id"]]
-                return httpx.Response(204)
+            return self._one_folder(method, folder, request)
         if rest == ["childFolders"]:
-            if method == "GET":
-                return _list(
-                    self._folder_json(f)
-                    for f in self.folders.values()
-                    if f["parentFolderId"] == folder["id"]
-                )
-            name = json.loads(request.content)["displayName"]
-            return _json(
-                201,
-                self._folder_json(self.folders[self.new_folder(name, folder["id"])]),
-            )
+            return self._children(method, folder["id"], request)
         if rest == ["move"]:
             target = self._folder(json.loads(request.content)["destinationId"])
             assert target is not None
@@ -225,6 +199,33 @@ class FakeGraph:
             return self._page(
                 found, query, f"/v1.0/me/mailFolders/{folder['id']}/messages"
             )
+        return _error(400, "BadRequest", "unknown folder call")
+
+    def _children(
+        self, method: str, parent_id: str, request: httpx.Request
+    ) -> httpx.Response:
+        """The folders below ``parent_id``, or a new one there."""
+        if method == "GET":
+            return _list(
+                self._folder_json(f)
+                for f in self.folders.values()
+                if f["parentFolderId"] == parent_id
+            )
+        name = json.loads(request.content)["displayName"]
+        made = self.folders[self.new_folder(name, parent_id)]
+        return _json(201, self._folder_json(made))
+
+    def _one_folder(
+        self, method: str, folder: dict[str, Any], request: httpx.Request
+    ) -> httpx.Response:
+        if method == "GET":
+            return _json(200, self._folder_json(folder))
+        if method == "PATCH":
+            folder["displayName"] = json.loads(request.content)["displayName"]
+            return _json(200, self._folder_json(folder))
+        if method == "DELETE":
+            del self.folders[folder["id"]]
+            return httpx.Response(204)
         return _error(400, "BadRequest", "unknown folder call")
 
     # --- delta queries --------------------------------------------------------------
@@ -322,22 +323,7 @@ class FakeGraph:
             )
         rest = path[1:]
         if not rest:
-            if method == "GET":
-                return _json(200, message)
-            if method == "PATCH":
-                message.update(json.loads(request.content))
-                self.touch(message["id"])
-                return _json(200, message)
-            if method == "DELETE":
-                # As Graph does: outside the trash, a delete moves the
-                # message there. Deleted from the trash, it is gone.
-                trash = self.well_known["deleteditems"]
-                if message["parentFolderId"] != trash:
-                    message["parentFolderId"] = trash
-                    self.touch(message["id"])
-                else:
-                    del self.messages[message["id"]]
-                return httpx.Response(204)
+            return self._one_message(method, message, request)
         if rest == ["$value"]:
             return httpx.Response(200, content=self.raws[message["id"]])
         if rest == ["move"]:
@@ -348,16 +334,41 @@ class FakeGraph:
             self.touch(message["id"])
             return _json(201, message)
         if rest[0] == "attachments":
-            items = self.attachments.get(message["id"], [])
-            if len(rest) == 1:
-                return _list(
-                    {k: v for k, v in a.items() if k != "contentBytes"} for a in items
-                )
-            match = next((a for a in items if a["id"] == rest[1]), None)
-            if match is None:
-                return _error(404, "ErrorItemNotFound", "attachment not found")
-            return _json(200, match)
+            return self._attachments(message["id"], rest[1:])
         return _error(400, "BadRequest", "unknown message call")
+
+    def _one_message(
+        self, method: str, message: dict[str, Any], request: httpx.Request
+    ) -> httpx.Response:
+        if method == "GET":
+            return _json(200, message)
+        if method == "PATCH":
+            message.update(json.loads(request.content))
+            self.touch(message["id"])
+            return _json(200, message)
+        if method == "DELETE":
+            # As Graph does: outside the trash, a delete moves the message
+            # there. Deleted from the trash, it is gone.
+            trash = self.well_known["deleteditems"]
+            if message["parentFolderId"] != trash:
+                message["parentFolderId"] = trash
+                self.touch(message["id"])
+            else:
+                del self.messages[message["id"]]
+            return httpx.Response(204)
+        return _error(400, "BadRequest", "unknown message call")
+
+    def _attachments(self, message_id: str, rest: list[str]) -> httpx.Response:
+        """The attachments of a message without their content, or one with."""
+        items = self.attachments.get(message_id, [])
+        if not rest:
+            return _list(
+                {k: v for k, v in a.items() if k != "contentBytes"} for a in items
+            )
+        match = next((a for a in items if a["id"] == rest[0]), None)
+        if match is None:
+            return _error(404, "ErrorItemNotFound", "attachment not found")
+        return _json(200, match)
 
     def _draft(self, raw: bytes) -> httpx.Response:
         parsed = message_from_bytes(raw, policy=default)
