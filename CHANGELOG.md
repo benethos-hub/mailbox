@@ -213,6 +213,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A line break in a user name, password or token is refused with `400`
+  before the IMAP or POP3 login: it would have ended the command and
+  started another. An SMTP address with a blank or a line break is
+  refused with `400`. Before, it ended in `500`.
+- A quote in a Microsoft search no longer ends its phrase: the rest of
+  the text could pass for search syntax.
+- The display name of an account is one line of at most 200 characters,
+  else `400`. One stored with a line break made every send fail with
+  `500`. It now goes out on one line.
 - A line break in a name or an address, such as CR LF or U+2028, no
   longer starts a line of its own in the log. The log writes it as its
   escape.

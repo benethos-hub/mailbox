@@ -193,3 +193,21 @@ def test_an_account_without_an_adapter_names_none(
         a for a in client.get("/v1/accounts").json()["items"] if a["id"] == "acc_gmail"
     ]
     assert listed["capabilities"] == []
+
+
+@pytest.mark.parametrize(
+    "name", ["Me\r\nBcc: x@example.org", "Me\nYou", "Me You", "Me\x00", "M" * 201]
+)
+def test_a_display_name_is_one_line(client: TestClient, name: str) -> None:
+    """It goes into the From of every send."""
+    created = client.post(
+        "/v1/accounts",
+        json={"provider": "memory", "email": "me@example.com", "display_name": name},
+    )
+    assert created.status_code == 400, created.text
+    account = client.post(
+        "/v1/accounts", json={"provider": "memory", "email": "me@example.com"}
+    ).json()
+    changed = client.patch(f"/v1/accounts/{account['id']}", json={"display_name": name})
+    assert changed.status_code == 400, changed.text
+    assert client.get(f"/v1/accounts/{account['id']}").json()["display_name"] is None

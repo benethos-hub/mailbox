@@ -4,6 +4,7 @@ rights. The live adapter of each is ``adapters``."""
 from __future__ import annotations
 
 import builtins
+import re
 from collections.abc import Callable, Iterable, Mapping
 
 from pydantic import SecretStr
@@ -153,6 +154,7 @@ class AccountService:
             problem = address_problem(email)
             if problem is not None:
                 raise BadRequestError(problem)
+            _one_line_name(display_name)
             await self._check_hosts(settings)
             if secrets:
                 self._vault.require_ready()
@@ -210,6 +212,8 @@ class AccountService:
         sent as they are stored change nothing and log in nowhere."""
         access.require("update_account", account_id)
         _no_secrets_in(settings)
+        if rename:
+            _one_line_name(display_name)
         account = self._repository.get(account_id)
         defaults = settings_defaults(account.provider, account.email)
         # A setting removed falls back to what the provider assumes.
@@ -358,6 +362,25 @@ class AccountService:
                 "settings": self._repository.settings(account.id),
                 "capabilities": self._adapters.offered(account.id),
             }
+        )
+
+
+# The display name goes into the From of every send, on one line, and
+# into the log. No line break, no other control character.
+_NOT_IN_NAME = re.compile(r"[\x00-\x1f\x7f\x85\u2028\u2029]")
+LONGEST_NAME = 200
+
+
+def _one_line_name(name: str | None) -> None:
+    if name is None:
+        return
+    if len(name) > LONGEST_NAME:
+        raise BadRequestError(
+            f"the display name is longer than {LONGEST_NAME} characters"
+        )
+    if _NOT_IN_NAME.search(name):
+        raise BadRequestError(
+            "the display name must not hold a line break or a control character"
         )
 
 

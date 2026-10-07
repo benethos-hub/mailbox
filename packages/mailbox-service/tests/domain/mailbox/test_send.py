@@ -238,6 +238,23 @@ def test_send(client: TestClient, services: Services, account_id: str) -> None:
     assert "Bcc" not in mail
 
 
+def test_a_display_name_stored_with_a_line_break_sends_on_one_line(
+    client: TestClient, services: Services, account_id: str
+) -> None:
+    """One stored before names were checked."""
+    stored = services.repositories.accounts
+    account = stored.get(account_id)
+    broken = account.model_copy(update={"display_name": "Me\r\nBcc: x@example.org"})
+    stored.update(broken, stored.settings(account_id))
+    answer = client.post(f"/v1/accounts/{account_id}/send", json=body())
+    assert answer.status_code == 200, answer.text
+    [(_, recipients, raw)] = memory_of(services, account_id).outbox
+    assert "x@example.org" not in recipients
+    mail = message_from_bytes(raw, policy=default)
+    assert mail["From"] == '"Me Bcc: x@example.org" <me@example.com>'
+    assert "Bcc" not in mail
+
+
 @pytest.mark.parametrize(
     "change",
     [

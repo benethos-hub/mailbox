@@ -8,6 +8,7 @@ kept open between sends. Every library error leaves this module as a
 
 from __future__ import annotations
 
+import re
 import smtplib
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -21,9 +22,12 @@ from ...errors import (
     ProviderUnavailableError,
 )
 from ..mail import fields
-from .transport import Server, transport_errors
+from .transport import Server, one_line, transport_errors
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}
+# What no address in MAIL FROM or RCPT TO may hold: a blank, which ends
+# the path, or a control character. smtplib raises a ValueError for CR LF.
+_NOT_IN_ADDRESS = re.compile(r"[\s\x00-\x1f\x7f]")
 
 ConnectionFactory = Callable[[Server, float], Any]
 
@@ -73,6 +77,11 @@ class SmtpSession:
 
         Domains go in punycode. A local part beyond ASCII needs SMTPUTF8
         of the server, else the message is refused before it is sent."""
+        for address in (sender, *recipients):
+            if _NOT_IN_ADDRESS.search(address):
+                raise BadRequestError(
+                    f"{address!r} is no address the mail server can take"
+                )
         envelope = [fields.wire_address(a) for a in (sender, *recipients)]
         options = ["SMTPUTF8"] if any(not a.isascii() for a in envelope) else []
         with self._connected(login) as connection, _errors():
@@ -105,7 +114,15 @@ class SmtpSession:
         try:
             with _errors():
                 if login.auth == "xoauth2":
-                    # SASL XOAUTH2: user, bearer token, separated by ^A.
+                    # SASL XOAUTH2: user, bearer token, separated by ^A,
+                    # which neither may hold.
+                    one_line(
+                        login.username, login.secret, what="the user name or token"
+                    )
+                    if "\1" in login.username + login.secret:
+                        raise BadRequestError(
+                            "the user name or token holds a control character"
+                        )
                     answer = f"user={login.username}\1auth=Bearer {login.secret}\1\1"
                     connection.ehlo_or_helo_if_needed()
                     # A server that refuses the token sends a challenge with

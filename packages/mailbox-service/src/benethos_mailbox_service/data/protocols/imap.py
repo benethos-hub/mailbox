@@ -34,7 +34,7 @@ from ...errors import (
     missing,
 )
 from ..mail import fields, parse
-from .transport import Server, transport_errors
+from .transport import Server, one_line, transport_errors
 
 ClientFactory = Callable[..., Any]
 
@@ -132,6 +132,7 @@ class ImapSession:
         return self._client is not None
 
     def login(self, username: str, password: str) -> None:
+        one_line(username, password, what="the user name or password")
         if (username + password).isascii():
             self._log_in(lambda c: c.login(username, password), "login")
         else:
@@ -139,6 +140,7 @@ class ImapSession:
             self._log_in(lambda c: _plain_login(c, username, password), "login")
 
     def login_oauth(self, username: str, access_token: str) -> None:
+        one_line(username, access_token, what="the user name or token")
         self._log_in(lambda c: c.oauth2_login(username, access_token), "token")
 
     def _log_in(self, authenticate: Callable[[Any], Any], what: str) -> None:

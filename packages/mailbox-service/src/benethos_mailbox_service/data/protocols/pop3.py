@@ -26,7 +26,7 @@ from ...errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from .transport import Server, transport_errors
+from .transport import Server, one_line, transport_errors
 
 ConnectionFactory = Callable[[Server, float], Any]
 
@@ -82,6 +82,7 @@ class Pop3Session:
     def login(self, username: str, password: str) -> None:
         """USER and PASS. Raises ``ProviderAuthError`` if the server rejects
         the credential."""
+        one_line(username, password, what="the user name or password")
         with _errors():
             connection = self._factory(self._server, self._timeout)
             try:

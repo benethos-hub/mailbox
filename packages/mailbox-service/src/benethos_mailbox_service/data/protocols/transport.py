@@ -4,6 +4,7 @@ value beyond ASCII. Translated once, here."""
 
 from __future__ import annotations
 
+import re
 import ssl
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -15,6 +16,19 @@ from ...errors import BadRequestError, ProviderError, ProviderUnavailableError
 # The address a connection to a host goes to, checked when it is made.
 # Raises when the host may not be connected to.
 Pick = Callable[[str, int], str]
+
+
+# What ends a command of a protocol of lines, or a string in one: CR, LF
+# and NUL. IMAP, POP3 and SMTP quote a value, if at all, but keep these.
+_LINE_END = re.compile(r"[\r\n\x00]")
+
+
+def one_line(*values: str, what: str) -> None:
+    """Refuse ``values`` that would end the command they go into and
+    start one of the caller's choosing (command injection). ``what`` names
+    them in the refusal."""
+    if any(_LINE_END.search(value) for value in values):
+        raise BadRequestError(f"{what} must not hold a line break")
 
 
 class _NamedContext(ssl.SSLContext):
