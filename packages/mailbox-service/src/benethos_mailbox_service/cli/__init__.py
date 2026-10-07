@@ -5,13 +5,12 @@ parser, and ``run``. ``common`` holds what they share."""
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 from types import ModuleType
 
 from .. import __version__
 from . import backup, keys, openapi, paths, restore, serve, users
-from .common import ENV_FILE_HELP, expected, message
+from .common import ENV_FILE_HELP, expected, message, say
 
 # In the order the help names them.
 COMMANDS: dict[str, ModuleType] = {
@@ -30,7 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         COMMANDS[args.command].run(args)
     except expected() as exc:
-        print(f"error: {message(exc)}", file=sys.stderr)
+        say(f"error: {message(exc)}")
         return 1
     return 0
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 
 from ..config import KEY_FILE_NAME, folders, load_settings
-from .common import Commands
+from .common import Commands, emit
 
 _ORIGINS = {
     "named": "the file named on purpose",
@@ -38,11 +38,11 @@ def run(args: argparse.Namespace) -> None:
     else:
         suggested = (where.config / KEY_FILE_NAME).resolve()
         key = f"a file, not set yet. Suggested: {suggested}"
-    print(f"From:          {_ORIGINS[where.origin]}")
-    print(
+    emit(f"From:          {_ORIGINS[where.origin]}")
+    emit(
         f"Settings file: {where.env_file.resolve()}"
         + ("" if found else " (not there, the defaults apply)")
     )
-    print(f"Data folder:   {settings.data_dir.resolve()}")
-    print(f"Database:      {settings.database_path}")
-    print(f"Master key:    {key}")
+    emit(f"Data folder:   {settings.data_dir.resolve()}")
+    emit(f"Database:      {settings.database_path}")
+    emit(f"Master key:    {key}")

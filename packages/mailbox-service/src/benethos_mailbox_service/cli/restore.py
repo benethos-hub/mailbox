@@ -4,11 +4,10 @@ one kept beside it."""
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 from ..config import load_settings
-from .common import Commands, UsageError, master_key, read_recovery_key
+from .common import Commands, UsageError, master_key, read_recovery_key, say
 
 
 def add(commands: Commands, option: argparse.ArgumentParser) -> None:
@@ -62,9 +61,8 @@ def run(args: argparse.Namespace) -> None:
             made=str(manifest.created_at),
         )
     )
-    print(
+    say(
         f"Restored the backup of {manifest.created_at}. The previous database "
         "was kept beside it. Accounts whose OAuth tokens changed since then "
-        "need reconnecting.",
-        file=sys.stderr,
+        "need reconnecting."
     )

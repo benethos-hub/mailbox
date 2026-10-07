@@ -4,11 +4,10 @@ by the filter bar."""
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from ....common.clock import parse_day
 from ....data.models import ActivityFilter
 from ....domain.activity import audited
 from ....domain.rights import Access
@@ -41,11 +40,6 @@ def activity_choices() -> list[tuple[str, str]]:
     return [(area, f"{area}, every one") for area in areas] + [(n, n) for n in names]
 
 
-def _day(value: str) -> datetime | None:
-    """The start of a day, in UTC."""
-    return datetime.combine(date.fromisoformat(value), time(), UTC) if value else None
-
-
 def _filter(bar: FilterBar) -> ActivityFilter | None:
     """What the bar asks for. Raises ``FormError``, a ``ValueError``, for
     a value that is no filter."""
@@ -53,8 +47,8 @@ def _filter(bar: FilterBar) -> ActivityFilter | None:
         "user_id": bar.value("user") or None,
         "activity": bar.value("activity") or None,
         "record": bar.value("record") or None,
-        "after": _day(bar.value("after")),
-        "before": _day(bar.value("before")),
+        "after": parse_day(bar.value("after")),
+        "before": parse_day(bar.value("before")),
     }
     if not any(value is not None for value in wanted.values()):
         return None

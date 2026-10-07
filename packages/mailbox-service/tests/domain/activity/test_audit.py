@@ -3,6 +3,7 @@ what a record says, who reads it, and how long it keeps it."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from collections.abc import Iterator
@@ -230,6 +231,29 @@ def test_zero_days_keeps_every_record() -> None:
 class Broken(InMemoryAuditRepository):
     def add(self, record: ActivityRecord) -> None:
         raise OSError("the disk is full")
+
+
+class Cancelled(InMemoryAuditRepository):
+    def add(self, record: ActivityRecord) -> None:
+        raise asyncio.CancelledError
+
+
+def test_a_cancelled_request_is_no_failure_to_keep_a_record(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A cancellation is a BaseException: the recorder lets it through
+    instead of logging that a record was not kept."""
+    clock = Clock()
+    log = ActivityLog(clock, Audit(Cancelled(), clock))
+    with pytest.raises(asyncio.CancelledError):
+        log.record(created(clock))
+    with (
+        pytest.raises(asyncio.CancelledError),
+        log.fail_quietly(lambda exc: created(clock)),
+    ):
+        raise asyncio.CancelledError
+    assert "not kept in the audit" not in caplog.text
+    assert not caplog.records
 
 
 def test_a_record_that_cannot_be_kept_is_logged_not_raised(

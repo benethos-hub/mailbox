@@ -61,13 +61,13 @@ class PasswordService:
         one-time password and returns it, to be shown once. Either must be
         changed at the next sign-in."""
         user = self._settable(access, user_id)
-        return await self._force(user, new, Actor.of(access))
+        password = await self._force(user, new, Actor.of(access))
+        return password if new is None else None
 
     async def one_time_password(self, access: Access, user_id: str) -> str:
         """``set_password`` without a password: the one the service made."""
-        password = await self.set_password(access, user_id)
-        assert password is not None
-        return password
+        user = self._settable(access, user_id)
+        return await self._force(user, None, Actor.of(access))
 
     async def reset_password(self, name: str) -> tuple[User, str]:
         """A new one-time password for the user of this name, to be changed
@@ -86,13 +86,11 @@ class PasswordService:
 
     async def one_time(self, user: User) -> str:
         """A one-time password the host set, e.g. for a new administrator."""
-        password = await self._force(user, None, HOST)
-        assert password is not None
-        return password
+        return await self._force(user, None, HOST)
 
-    async def _force(self, user: User, new: str | None, by: Actor) -> str | None:
+    async def _force(self, user: User, new: str | None, by: Actor) -> str:
         """A password the user must change at its next sign-in: ``new``, or
-        without it a random one, which is returned to be shown once."""
+        without it a random one, to be shown once. Returns the one set."""
         password = secrets.token_urlsafe(ONE_TIME_BYTES) if new is None else new
         hashed = await self._auth.passwords.hashed(password, user.name)
         with self._activity.atomic():
@@ -100,7 +98,7 @@ class PasswordService:
             self._activity.record(
                 said.PasswordSet(by=by, user=user, one_time=new is None)
             )
-        return password if new is None else None
+        return password
 
     def _settable(self, access: Access, user_id: str) -> User:
         """The user whose password the caller may set."""

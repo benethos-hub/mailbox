@@ -4,10 +4,9 @@ and the data key."""
 from __future__ import annotations
 
 import argparse
-import sys
 
 from ..config import load_settings
-from .common import Commands, read_recovery_key, stored
+from .common import Commands, emit, read_recovery_key, say, stored
 
 
 def add(commands: Commands, option: argparse.ArgumentParser) -> None:
@@ -37,7 +36,7 @@ def run(args: argparse.Namespace) -> None:
     if args.keys_command == "generate":
         from ..data.secrets import cipher, encode_recovery
 
-        print(encode_recovery(cipher.new_key()))
+        emit(encode_recovery(cipher.new_key()))
         return
     from ..assembly import opened
     from ..domain.activity import HOST, system
@@ -46,14 +45,13 @@ def run(args: argparse.Namespace) -> None:
         if args.keys_command == "init":
             recovery = services.vault.initialize()
             services.activity.record(system.KeysCreated(by=HOST))
-            print(
+            say(
                 "Keys created. The recovery key below is shown this once. Keep it "
                 "apart from any backup: without it, a backup cannot be restored "
-                "on another machine.",
-                file=sys.stderr,
+                "on another machine."
             )
-            print(recovery)
+            emit(recovery)
         else:
             services.vault.import_master_key(read_recovery_key())
             services.activity.record(system.MasterKeyStored(by=HOST))
-            print("Master key stored.", file=sys.stderr)
+            say("Master key stored.")

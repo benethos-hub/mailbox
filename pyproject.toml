@@ -71,7 +71,13 @@ select = [
     "C90",  # mccabe: the complexity of a function
     "PLR0912",  # too many branches
     "PLR0915",  # too many statements
+    "S101",  # assert: gone under python -O, so never a check of the code
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# A test and a live check say what they expect with assert.
+"packages/*/tests/**" = ["S101"]
+"live/**" = ["S101"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

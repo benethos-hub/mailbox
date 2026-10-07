@@ -3,7 +3,7 @@ parameter with this as the default, so tests can set the time."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time
 from typing import overload
 
 
@@ -16,6 +16,19 @@ def log_time(value: datetime) -> str:
     ISO 8601, the local time of this machine, to the millisecond, with the
     offset. ``2026-09-28T10:12:22.123+02:00``."""
     return value.astimezone().isoformat(timespec="milliseconds")
+
+
+def start_of_day(day: date) -> datetime:
+    """Midnight at the start of ``day`` in the local time of this machine,
+    the time the UI shows."""
+    return datetime.combine(day, time()).astimezone()
+
+
+def parse_day(value: str) -> datetime | None:
+    """The start of the day ``value`` names, such as ``2026-10-07``, as
+    ``start_of_day``. None for no value. Raises ``ValueError`` for text
+    that names no day."""
+    return start_of_day(date.fromisoformat(value)) if value else None
 
 
 @overload

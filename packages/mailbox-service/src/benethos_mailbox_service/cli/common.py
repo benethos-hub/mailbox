@@ -81,3 +81,16 @@ def expected() -> tuple[type[BaseException], ...]:
 def message(exc: BaseException) -> str:
     found = getattr(exc, "message", None)
     return str(found or exc)
+
+
+def say(text: str) -> None:
+    """A message for the person at the terminal, on stderr. A script that
+    reads the command's output never gets it."""
+    print(text, file=sys.stderr)
+
+
+def emit(text: str) -> None:
+    """The command's result, on stdout, alone: what a script reads, such as
+    a recovery key, a one-time password or the paths. The only way a
+    secret leaves a command."""
+    print(text)

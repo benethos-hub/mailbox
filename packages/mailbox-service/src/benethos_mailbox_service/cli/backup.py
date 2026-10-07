@@ -4,12 +4,18 @@ checks one."""
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 from .. import __version__
 from ..config import load_settings
-from .common import Commands, UsageError, master_key, read_recovery_key, stored
+from .common import (
+    Commands,
+    UsageError,
+    master_key,
+    read_recovery_key,
+    say,
+    stored,
+)
 
 
 def add(commands: Commands, option: argparse.ArgumentParser) -> None:
@@ -45,10 +51,9 @@ def _verify(target: list[str], recovery_key: bool, env_file: Path | None) -> Non
     database = settings.database_path
     scratch = database.with_name(database.name + ".verifying")
     manifest = verify_backup(Path(target[1]), master, scratch)
-    print(
+    say(
         f"OK: backup of {manifest.created_at}, service "
-        f"{manifest.service_version}, schema {manifest.schema_version}",
-        file=sys.stderr,
+        f"{manifest.service_version}, schema {manifest.schema_version}"
     )
 
 
@@ -61,7 +66,8 @@ def _write(target: list[str], env_file: Path | None) -> None:
         raise UsageError("use `backup FILE` or `backup verify FILE`")
     settings = stored(load_settings(env_file), "backups")
     with opened(settings) as services:
-        assert services.store is not None
+        if services.store is None:
+            raise UsageError("backups need MAILBOX_SERVICE_STORAGE=sqlite")
         manifest = create_backup(
             services.store,
             services.vault.master_key(),
@@ -73,8 +79,7 @@ def _write(target: list[str], env_file: Path | None) -> None:
                 by=HOST, file=target[0], schema=manifest.schema_version
             )
         )
-    print(
+    say(
         f"Backup written: schema {manifest.schema_version}, {manifest.created_at}. "
-        "It opens only with this master key or the recovery key.",
-        file=sys.stderr,
+        "It opens only with this master key or the recovery key."
     )

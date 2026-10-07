@@ -158,11 +158,33 @@ async def test_the_server_refuses_arguments_out_of_bounds(
 # --- the command line ------------------------------------------------------------
 
 
-def test_client_is_created_once(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
-    first = catalogue.client()
-    assert isinstance(first, MailboxClient)
-    assert catalogue.client() is first
+def _client() -> MailboxClient:
+    return MailboxClient("https://mail.test", "tok")
+
+
+def test_a_tool_outside_a_server_has_no_client() -> None:
+    with pytest.raises(RuntimeError, match="no REST client"):
+        catalogue.client()
+
+
+async def test_each_server_has_a_client_of_its_own() -> None:
+    """Two servers in one process, such as in tests or behind a reload,
+    share no client. Each closes its own when it stops."""
+    first, second = (
+        server.build_server(READ, _client),
+        server.build_server(READ, _client),
+    )
+    assert first.settings.lifespan is not None
+    assert second.settings.lifespan is not None
+    async with first.settings.lifespan(first):
+        outer = catalogue.client()
+        async with second.settings.lifespan(second):
+            inner = catalogue.client()
+            assert inner is not outer
+        assert catalogue.client() is outer
+    with pytest.raises(RuntimeError):
+        catalogue.client()
+    assert outer._http.is_closed and inner._http.is_closed
 
 
 def test_use_client_hands_back_the_one_before(make_client: Callable) -> None:
@@ -180,6 +202,8 @@ def test_version(capsys: pytest.CaptureFixture[str]) -> None:
 def test_main_runs_stdio_with_the_allowed_tools(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
+
     async def operations() -> set[str]:
         return set(READ)
 
@@ -193,7 +217,9 @@ def test_main_runs_stdio_with_the_allowed_tools(
             runs.append((self.allowed, transport))
 
     monkeypatch.setattr(server, "allowed_operations", operations)
-    monkeypatch.setattr(server, "build_server", lambda ops: Recorded(set(ops)))
+    monkeypatch.setattr(
+        server, "build_server", lambda ops, connect=None: Recorded(set(ops))
+    )
     cli.main([])
     assert runs == [(set(READ), "stdio")]
 
@@ -211,6 +237,7 @@ def test_the_log_names_no_request_url(
 
 
 def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
 
     async def unreachable() -> set[str]:
         raise ToolError("mailbox-service is not reachable")
@@ -227,23 +254,29 @@ def test_main_without_a_token() -> None:
 
 def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> None:
     """The start runs in an event loop of its own. A client made there would
-    carry connections of a closed loop into the server's."""
+    carry connections of a closed loop into the server's. The server gets
+    the environment as it was read at the start."""
 
     monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
     made: list[MailboxClient] = []
+    built: list[Callable[[], MailboxClient]] = []
 
     async def operations() -> set[str]:
         made.append(catalogue.client())
         return set(READ)
 
+    def build(ops: set[str], connect: Callable[[], MailboxClient]) -> object:
+        built.append(connect)
+        return type("S", (), {"run": lambda self, transport: None})()
+
     monkeypatch.setattr(server, "allowed_operations", operations)
-    monkeypatch.setattr(
-        server,
-        "build_server",
-        lambda ops: type("S", (), {"run": lambda self, transport: None})(),
-    )
+    monkeypatch.setattr(server, "build_server", build)
     cli.main([])
-    assert catalogue.client() is not made[0]
+    assert made[0]._http.is_closed
+    with pytest.raises(RuntimeError):
+        catalogue.client()
+    monkeypatch.delenv("MAILBOX_SERVICE_TOKEN")
+    assert built[0]().base_url == "http://127.0.0.1:8080"
 
 
 # title, read-only, destructive, idempotent, open world
@@ -302,11 +335,14 @@ def test_the_start_names_the_service_and_the_tools(
         return {"list_accounts"}
 
     monkeypatch.setenv("MAILBOX_SERVICE_URL", "http://127.0.0.1:8080")
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
     monkeypatch.setattr(server, "allowed_operations", operations)
     monkeypatch.setattr(
         server,
         "build_server",
-        lambda ops: type("S", (), {"run": lambda self, transport: None})(),
+        lambda ops, connect=None: type(
+            "S", (), {"run": lambda self, transport: None}
+        )(),
     )
     with caplog.at_level(logging.INFO):
         cli.main([])

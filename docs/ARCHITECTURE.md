@@ -162,7 +162,9 @@ packages/mailbox-service/
                         #   OAuth too
       clock.py          # utc_now, the default clock of the services,
                         #   log_time: the time of every log line,
-                        #   iso and parse_iso: a time as text, in UTC
+                        #   iso and parse_iso: a time as text, in UTC,
+                        #   start_of_day and parse_day: a day as the
+                        #   UI shows it, local
       redact.py         # secrets noted once, masked in every text
       ratelimit.py      # pacing: a token bucket and a backoff
       plaintext.py      # the text of an HTML body, for a mail and a page
@@ -338,8 +340,9 @@ packages/mailbox-client/
     endpoints.py        # each endpoint once: method, path, query,
                         #   body, how its answer becomes a record.
                         #   Sends nothing
-    wire.py             # what both share: address and token, Call,
-                        #   reading an answer, an error or a failure
+    wire.py             # what both share: address and token, read
+                        #   from the environment in from_environment,
+                        #   Call, reading an answer, an error or a failure
     models.py           # the records the clients answer with
     errors.py           # MailboxError and its subclasses
 ```
@@ -363,8 +366,9 @@ packages/mailbox-mcp/
                         #   each logged when it fails
     transport.py        # streamable HTTP: bearer guard, host check (uvicorn)
     tools/              # one module per kind, each with its part of TOOLS
-      base.py           # Tool, reads()/changes(), the shared client,
-                        #   result(): text and images
+      base.py           # Tool, reads()/changes(), result(): text and
+                        #   images, client(): the one of the server the
+                        #   tool runs in, made in its lifespan
       compose.py        # what drafts and sending share: addresses, the
                         #   message a tool's arguments describe
       accounts.py       # list_accounts, which reports the kinds

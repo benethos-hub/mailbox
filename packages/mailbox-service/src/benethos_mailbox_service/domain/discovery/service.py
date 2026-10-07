@@ -330,7 +330,8 @@ def _query(email: str) -> Query:
         raise BadRequestError(problem)
     domain = email.rpartition("@")[2]
     ascii_domain = ascii_host(domain)
-    assert ascii_domain is not None  # address_problem checked it
+    if ascii_domain is None:
+        raise BadRequestError(f"{domain} is no host name")
     if registrable_domain(ascii_domain) is None:
         raise BadRequestError(f"{domain} is a public suffix, not a mail domain")
     return Query(email=email, domain=ascii_domain)

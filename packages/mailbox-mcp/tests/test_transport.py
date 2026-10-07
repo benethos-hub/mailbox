@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from starlette.testclient import TestClient
 
+from benethos_mailbox_client import MailboxClient
 from benethos_mailbox_mcp import cli, server, transport
 
 TOKEN = "s3cret-token"
@@ -146,9 +147,13 @@ INITIALIZE = {
 MCP_HEADERS = {"Accept": "application/json, text/event-stream"}
 
 
+def _client() -> MailboxClient:
+    return MailboxClient("https://mail.test", "tok")
+
+
 def test_the_app_speaks_mcp_behind_the_guard() -> None:
     app = transport.http_app(
-        server.build_server([]),
+        server.build_server([], _client),
         path="/mcp",
         host="127.0.0.1",
         security=transport.transport_security("127.0.0.1", [], []),
@@ -168,7 +173,7 @@ def test_the_app_speaks_mcp_behind_the_guard() -> None:
 
 def test_a_foreign_host_is_refused() -> None:
     app = transport.http_app(
-        server.build_server([]),
+        server.build_server([], _client),
         path="/mcp",
         host="127.0.0.1",
         security=transport.transport_security("127.0.0.1", [], []),
@@ -185,6 +190,7 @@ def test_a_foreign_host_is_refused() -> None:
 @pytest.fixture
 def started(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """``main`` without the service and without binding a port."""
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
     seen: dict[str, Any] = {}
 
     async def operations() -> set[str]:
@@ -208,7 +214,9 @@ def started(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(
         server,
         "build_server",
-        lambda ops: Stdio() if seen.get("want_stdio") else real_build(ops),
+        lambda ops, connect=None: (
+            Stdio() if seen.get("want_stdio") else real_build(ops)
+        ),
     )
     for name in (
         "TRANSPORT",

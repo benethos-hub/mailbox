@@ -43,7 +43,11 @@ from ...data.providers import (
     authorize_url,
     new_pkce,
 )
-from ...errors import BadRequestError, NotSupportedError
+from ...errors import (
+    BadRequestError,
+    NotSupportedError,
+    ProviderUnavailableError,
+)
 from ..activity import ActivityLog, Actor
 from ..activity import accounts as said
 from ..rights import Access
@@ -297,6 +301,12 @@ class OAuthService:
                 account, again = await self._connect(
                     access, provider, answer, device.account_id
                 )
+        except ProviderUnavailableError:
+            # The provider was not reached. The code still stands: ask
+            # again, more slowly.
+            device.interval += SLOWER
+            device.next_at = self._clock() + device.interval
+            raise
         except Exception:
             # Declined, expired, or the account refused: start again.
             self._devices.pop(sign_in_id, None)

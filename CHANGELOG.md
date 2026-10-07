@@ -14,7 +14,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   methods and records. The MCP server is built on it. Its interface has
   no stability promise yet. Every error is a `MailboxError`. An answer it
   cannot read, one that is no JSON or lacks a field, is an `ApiError`
-  with the code `unexpected_response`.
+  with the code `unexpected_response`. `from_environment()` reads
+  `MAILBOX_SERVICE_URL`, `MAILBOX_SERVICE_TOKEN` and
+  `MAILBOX_SERVICE_ALLOW_HTTP` once, for a program that makes clients
+  for a long time.
 - Microsoft accounts connect without an app of your own: the service
   comes with the project's app, a public client without a secret, used
   when `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` is not set. Changing
@@ -235,6 +238,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The days of the filter on the pages Audit and Sends start at midnight
+  in the local time of the service's machine, the time the pages show.
+  Before, they started at midnight UTC.
+- A sign-in with a code survives a provider that is not reached for a
+  moment: the poll answers `503 provider_unavailable`, the code stands,
+  and the next poll waits longer. A token endpoint that answers `5xx` or
+  `temporarily_unavailable` is `503 provider_unavailable` everywhere,
+  not `502 provider_error`.
+- The MCP server makes its REST client in its lifespan, one per server.
+  It reads the service's address and token once, when it starts.
 - Old records of the audit, the change feed and the audit of sends go
   when the service starts. Before, they waited for the first new record
   of their kind.
@@ -520,12 +533,6 @@ migrations.
 
 ### Fixed
 
-- Old records of the audit, the change feed and the audit of sends go
-  when the service starts. Before, they waited for the first new record
-  of their kind.
-- A subject, a display name or a file name of an attachment that holds
-  a control character is sent with a space in its place, as one with a
-  line break already was.
 - A watched account no longer holds a thread of the pool that answers
   requests while it waits in IDLE. With many IMAP accounts, requests and
   pages of the UI had to wait for a free thread.
@@ -790,12 +797,6 @@ the configuration may change without notice.
 
 ### Fixed
 
-- Old records of the audit, the change feed and the audit of sends go
-  when the service starts. Before, they waited for the first new record
-  of their kind.
-- A subject, a display name or a file name of an attachment that holds
-  a control character is sent with a space in its place, as one with a
-  line break already was.
 - `PATCH /v1/accounts/{account_id}/folders/{folder_id}` takes a role
   such as `archive` as the new `parent_id`, as creating a folder does.
 - The start page of the configuration UI shows a right that covers only
