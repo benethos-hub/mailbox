@@ -442,6 +442,15 @@ def check_writing(
     deleted for good on both sides afterwards."""
     csrf = csrf_of(browser.get("/ui").text)
     base = f"/ui/accounts/{sender_id}"
+    token = f"mailbox-service UI live check {secrets.token_hex(4)}"
+    check_folders(run, browser, csrf, base)
+    check_draft(run, browser, csrf, base, receiver_email, token)
+    check_reply_draft(run, browser, csrf, base)
+    check_sent_mail(run, browser, csrf, (sender_id, receiver_id), receiver_email, token)
+
+
+def check_folders(run: Run, browser: httpx.Client, csrf: str, base: str) -> None:
+    """A folder made, renamed and deleted."""
     created = browser.post(
         f"{base}/folders", data={"csrf_token": csrf, "name": "ui-live-check"}
     )
@@ -458,7 +467,16 @@ def check_writing(
     )
     run.check("delete it", "Folder deleted." in deleted.text)
 
-    token = f"mailbox-service UI live check {secrets.token_hex(4)}"
+
+def check_draft(
+    run: Run,
+    browser: httpx.Client,
+    csrf: str,
+    base: str,
+    receiver_email: str,
+    token: str,
+) -> None:
+    """A draft saved, changed and deleted, never sent."""
     draft = browser.post(
         f"{base}/compose",
         data={
@@ -484,6 +502,10 @@ def check_writing(
     gone = browser.post(str(draft.url.path), data={"csrf_token": csrf, "do": "delete"})
     run.check("delete it", "Draft deleted." in gone.text)
 
+
+def check_reply_draft(run: Run, browser: httpx.Client, csrf: str, base: str) -> None:
+    """A reply draft to a message in the inbox: linked, changed as a
+    whole, quoted once, deleted."""
     inbox = browser.get(f"{base}/mail").text
     original = re.search(rf'href="{base}/mail/(msg_[0-9a-f]+)"', inbox)
     if run.check("a message to answer", original is not None):
@@ -531,6 +553,19 @@ def check_writing(
         )
         run.check("delete it", "Draft deleted." in gone.text)
 
+
+def check_sent_mail(
+    run: Run,
+    browser: httpx.Client,
+    csrf: str,
+    ids: tuple[str, str],
+    receiver_email: str,
+    token: str,
+) -> None:
+    """One mail from the first test account to the second: starred, read,
+    with a keyword and without, deleted for good on both sides."""
+    sender_id, receiver_id = ids
+    base = f"/ui/accounts/{sender_id}"
     form = browser.get(f"{base}/compose").text
     key = re.search(r'name="idempotency_key" value="([^"]+)"', form)
     sent = browser.post(
