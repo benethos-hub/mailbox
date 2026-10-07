@@ -179,14 +179,3 @@
   </div>
 </section>
 {% endmacro %}
-
-{# A native dialog for a form loaded into #modal. #}
-{% macro modal(title) %}
-<dialog class="modal">
-  <header>
-    <h2>{{ title }}</h2>
-    <button class="ghost small" type="button" data-close aria-label="Close">✕</button>
-  </header>
-  <div class="body">{{ caller() }}</div>
-</dialog>
-{% endmacro %}

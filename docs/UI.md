@@ -387,7 +387,9 @@ receiver reports nothing. Built last, if at all.
   or a filter bar. The rework adds `filter_bar`, `chips`, `facts`,
   `related` and `breadcrumb` and makes the pages use them.
 - **No inline style or script**: the content security policy stays.
-  htmx for confirmations, the modal and partial refreshes of a list.
+  htmx only where a page asks the service again by itself, the
+  sign-in with a code. Every other form is a plain post, and a
+  destructive one asks first through `data-confirm`.
 
 ## 8. Rules for building and extending
 

@@ -437,27 +437,6 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 .chip:hover { text-decoration: none; filter: brightness(.97); }
 a.btn.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
 
-/* --- the window a form opens in -------------------------------------------- */
-
-.modal {
-  width: min(720px, calc(100vw - 2 * var(--pad)));
-  padding: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text);
-  max-height: 88vh;
-}
-.modal[open] { display: flex; flex-direction: column; }
-.modal::backdrop { background: rgba(15, 18, 24, .5); }
-.modal > header {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--gap);
-  padding: 12px var(--gap);
-  border-bottom: 1px solid var(--border);
-}
-.modal > header h2 { margin: 0; font-size: 16px; }
-.modal > .body { padding: var(--gap); overflow: auto; }
-
 /* Shows that htmx is loading, without letting the page jump. */
 .htmx-request { opacity: .55; transition: opacity .12s; }
 
