@@ -38,6 +38,7 @@ import argparse
 import imaplib
 import sys
 import uuid
+from dataclasses import dataclass, field
 from typing import Any
 
 import anyio
@@ -218,6 +219,491 @@ def clean_up(
     )
 
 
+@dataclass
+class Trip:
+    """One run of the check: the test accounts, the test mail, the service
+    and what the stages learn on the way."""
+
+    env: dict[str, str]
+    receiver: dict[str, str]
+    sender: dict[str, str]
+    keep: bool
+    services: Any
+    client: TestClient
+    mailbox: SyncMailboxClient
+    run: Run
+    token: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
+    other: OtherClient | None = None
+    account_id: str = ""
+    sender_id: str = ""
+    since: str = ""
+    hooked: Receiver | None = None
+    hook: dict[str, Any] = field(default_factory=dict)
+    message_id: str = ""
+    inbox_folder: str = ""
+    sent_copy_id: str | None = None
+    folder: str = ""
+    test_folder: str = "?"
+
+    @property
+    def subject(self) -> str:
+        return f"mailbox-service live check {self.token}"
+
+    @property
+    def base(self) -> str:
+        return f"mailbox-service-live-{self.token}"
+
+    @property
+    def message_url(self) -> str:
+        return f"/v1/accounts/{self.account_id}/messages/{self.message_id}"
+
+    @property
+    def folders_url(self) -> str:
+        return f"/v1/accounts/{self.account_id}/folders"
+
+    def seen_by_other(self) -> OtherClient:
+        """The receiver's mailbox as another mail client sees it."""
+        if self.other is None:
+            self.other = OtherClient(self.env, self.receiver)
+        return self.other
+
+
+def connect(trip: Trip) -> bool:
+    """Both test accounts, the change feed's start, a webhook."""
+    client, run = trip.client, trip.run
+    account_id, _ = register(trip.mailbox, trip.env, trip.receiver)
+    sender_id, _ = register(trip.mailbox, trip.env, trip.sender)
+    if not run.check(
+        "connect both test accounts, the sender with SMTP",
+        account_id is not None and sender_id is not None,
+    ):
+        return False
+    assert account_id is not None and sender_id is not None
+    trip.account_id, trip.sender_id = account_id, sender_id
+    anyio.run(trip.services.sync.sync_account, account_id)
+    trip.since = client.get(f"/v1/accounts/{account_id}/changes").json()["state"]
+    trip.hooked = Receiver()
+    trip.hook = client.post(
+        "/v1/webhooks",
+        json={"url": trip.hooked.url, "accounts": [account_id, sender_id]},
+    ).json()
+    return True
+
+
+def send_under_idle(trip: Trip) -> bool:
+    """Send from account 2 while IDLE watches account 1, once more with
+    the same key, and look for the read copy in the sender's sent folder."""
+    client, run = trip.client, trip.run
+    provider = trip.services.adapters.get(trip.account_id)
+    answer: dict[str, Any] = {}
+    send_url = f"/v1/accounts/{trip.sender_id}/send"
+    # Only ever to the other test account.
+    outgoing = {
+        "to": [{"email": trip.receiver["email"]}],
+        "subject": trip.subject,
+        "text": KEPT_TEXT if trip.keep else TEXT,
+    }
+    once = {"Idempotency-Key": f"live-{trip.token}"}
+
+    def send() -> None:
+        response = client.post(send_url, json=outgoing, headers=once)
+        answer["status"], answer["body"] = response.status_code, response.json()
+
+    try:
+        changed = anyio.run(idle_while_sending, provider, send)
+        run.check("IDLE reports the new mail", changed)
+    except MailboxServiceError as exc:
+        run.check("IDLE reports the new mail", False, f"{exc.code}: {exc.message}")
+    body = answer.get("body", {})
+    run.check(
+        "POST send: the server accepted it",
+        answer.get("status") == 200 and body.get("refused") == [],
+        f"{answer.get('status')} {body.get('error', '')}",
+    )
+    retry = client.post(send_url, json=outgoing, headers=once)
+    run.check(
+        "a retry with the same Idempotency-Key returns the first result",
+        retry.status_code == 200 and retry.json() == body,
+        str(retry.status_code),
+    )
+    trip.sent_copy_id = body.get("sent_copy_id")
+    check_sent_copy(trip)
+    return True
+
+
+def check_sent_copy(trip: Trip) -> None:
+    outbox = OtherClient(trip.env, trip.sender)
+    try:
+        sent_folder = outbox.sent_folder()
+        trip.run.check(
+            "a read copy in the sender's sent folder",
+            bool(trip.sent_copy_id)
+            and sent_folder is not None
+            and outbox.flags(sent_folder, trip.subject) == ["\\Seen"],
+            str(sent_folder),
+        )
+    finally:
+        outbox.close()
+
+
+def listed(trip: Trip) -> bool:
+    """The API lists the mail, with a date, and the feed names it."""
+    run = trip.run
+    found = find_by_subject(trip.mailbox, trip.account_id, trip.subject)
+    if not run.check("the API lists it", found is not None):
+        return False
+    assert found is not None
+    run.check("it has a date", found.get("date") is not None, str(found.get("date")))
+    trip.message_id = found["id"]
+    trip.inbox_folder = found["folder_ids"][0]
+    types = feed_types(trip.mailbox, trip.account_id, trip.since, trip.message_id)
+    run.check(
+        "the change feed names it as created",
+        types == ["message.created"],
+        " ".join(types),
+    )
+    return True
+
+
+def flags(trip: Trip) -> bool:
+    """Read, starred, with a keyword through the API, as another client
+    sees it, and back."""
+    client, run, other, subject = (
+        trip.client,
+        trip.run,
+        trip.seen_by_other(),
+        trip.subject,
+    )
+    patched = client.patch(
+        trip.message_url,
+        json={"unread": False, "starred": True, "keywords": [LIVE_KEYWORD]},
+    )
+    run.check(
+        "PATCH marks it read, starred, with a keyword",
+        patched.status_code == 200
+        and patched.json().get("id") == trip.message_id
+        and patched.json().get("keywords") == [LIVE_KEYWORD],
+        str(patched.status_code),
+    )
+    seen = other.flags("INBOX", subject)
+    run.check(
+        "another client sees the flags",
+        {"\\Seen", "\\Flagged", LIVE_KEYWORD} <= set(seen),
+        " ".join(seen),
+    )
+    client.patch(
+        trip.message_url, json={"unread": True, "starred": False, "keywords": []}
+    )
+    run.check(
+        "and back to unread, no star, no keyword",
+        other.flags("INBOX", subject) == [],
+        " ".join(other.flags("INBOX", subject)),
+    )
+    return True
+
+
+def into_a_folder(trip: Trip) -> bool:
+    """A new folder through the API, the mail moved into it: the id stays."""
+    client, run, other = trip.client, trip.run, trip.seen_by_other()
+    created = client.post(trip.folders_url, json={"name": trip.base})
+    trip.folder = other.folder_name(trip.base)
+    run.check(
+        "POST creates a folder, subscribed, in the personal namespace",
+        created.status_code == 201
+        and created.json().get("subscribed") is True
+        and trip.folder in other.subscribed_folders(),
+        f"{created.status_code}, {trip.folder}",
+    )
+    names = {f["name"]: f["id"] for f in client.get(trip.folders_url).json()}
+    trip.test_folder = names.get(trip.base, "?")
+    moved = client.patch(trip.message_url, json={"folder_ids": [trip.test_folder]})
+    run.check(
+        "PATCH moves it, and the id stays",
+        moved.status_code == 200
+        and moved.json().get("id") == trip.message_id
+        and moved.json().get("folder_ids") == [names.get(trip.base)],
+        str(moved.status_code),
+    )
+    run.check(
+        "another client finds it there, not in the inbox",
+        len(other.uids(trip.folder, trip.subject)) == 1
+        and not other.uids("INBOX", trip.subject),
+    )
+    return True
+
+
+def moved_back_by_another(trip: Trip) -> bool:
+    """Another client moves the mail back: the same id finds it."""
+    client, run, other = trip.client, trip.run, trip.seen_by_other()
+    uids = other.uids(trip.folder, trip.subject)
+    if not run.check("another client moves it back", len(uids) == 1):
+        return False
+    other.move(uids[0], "INBOX")
+    back = client.get(trip.message_url)
+    run.check(
+        "the same id finds it in the inbox again",
+        back.status_code == 200
+        and back.json().get("folder_ids") == [trip.inbox_folder],
+        str(back.status_code),
+    )
+    run.check(
+        "the subject matches",
+        back.status_code == 200 and back.json().get("subject") == trip.subject,
+    )
+    return True
+
+
+def condstore(trip: Trip) -> bool:
+    """A flag another client sets reaches the change feed, where the
+    server offers CONDSTORE."""
+    other = trip.seen_by_other()
+    if "CONDSTORE" not in other.capabilities():
+        print("SKIP  the server offers no CONDSTORE")
+        return True
+    sync = trip.services.sync.sync_account
+    anyio.run(sync, trip.account_id)
+    changes = f"/v1/accounts/{trip.account_id}/changes"
+    mark = trip.client.get(changes).json()["state"]
+    other.set_flag("INBOX", trip.subject, FLAGGED, on=True)
+    anyio.run(sync, trip.account_id)
+    types = feed_types(trip.mailbox, trip.account_id, mark, trip.message_id)
+    trip.run.check(
+        "the change feed names a flag another client set (CONDSTORE)",
+        types == ["message.updated"],
+        " ".join(types),
+    )
+    other.set_flag("INBOX", trip.subject, FLAGGED, on=False)
+    return True
+
+
+def reply_and_forward(trip: Trip) -> bool:
+    """Answered by account 1, so both go back to account 2 only."""
+    client, run, other, subject = (
+        trip.client,
+        trip.run,
+        trip.seen_by_other(),
+        trip.subject,
+    )
+    send_url = f"/v1/accounts/{trip.account_id}/send"
+    replied = client.post(
+        send_url,
+        json={
+            "reference": {"message_id": trip.message_id, "action": "reply"},
+            "text": "Automatic reply of live/changes.py.",
+        },
+    )
+    reply = find_by_subject(trip.mailbox, trip.sender_id, f"Re: {subject}")
+    run.check(
+        "a reply goes back to the sender, as a reply",
+        replied.status_code == 200 and reply is not None,
+        str(replied.status_code),
+    )
+    run.check(
+        "the original is marked answered",
+        "\\Answered" in other.flags("INBOX", subject),
+        " ".join(other.flags("INBOX", subject)),
+    )
+    forwarded = client.post(
+        send_url,
+        json={
+            "reference": {
+                "message_id": trip.message_id,
+                "action": "forward",
+                "forward_as": "attachment",
+            },
+            "to": [{"email": trip.sender["email"]}],
+            "text": "Automatic forward of live/changes.py.",
+        },
+    )
+    forward = find_by_subject(trip.mailbox, trip.sender_id, f"Fwd: {subject}")
+    run.check(
+        "a forward as attachment arrives",
+        forwarded.status_code == 200 and forward is not None,
+        str(forwarded.status_code),
+    )
+    run.check(
+        "the original is marked forwarded",
+        "$Forwarded" in other.flags("INBOX", subject),
+        " ".join(other.flags("INBOX", subject)),
+    )
+    return True
+
+
+def batch(trip: Trip) -> bool:
+    """A batch answers per id, the feed names the changes, then the drafts."""
+    client, run, other = trip.client, trip.run, trip.seen_by_other()
+    answered = client.post(
+        f"/v1/accounts/{trip.account_id}/messages/batch",
+        json={
+            "action": "update",
+            "ids": [trip.message_id, "msg_does_not_exist"],
+            "changes": {"starred": True},
+        },
+    )
+    outcomes = [r["ok"] for r in answered.json().get("results", [])]
+    run.check(
+        "a batch answers per id",
+        answered.status_code == 200
+        and outcomes == [True, False]
+        and "\\Flagged" in other.flags("INBOX", trip.subject),
+        f"{answered.status_code} {outcomes}",
+    )
+    types = feed_types(trip.mailbox, trip.account_id, trip.since, trip.message_id)
+    run.check(
+        "the change feed names its changes as updated",
+        "message.updated" in types,
+        " ".join(types),
+    )
+    check_drafts(
+        run,
+        client,
+        trip.mailbox,
+        other,
+        trip.account_id,
+        trip.message_id,
+        trip.subject,
+        trip.sender_id,
+        trip.sender["email"],
+    )
+    return True
+
+
+def folder_renamed_and_deleted(trip: Trip) -> bool:
+    client, run, other = trip.client, trip.run, trip.seen_by_other()
+    renamed = client.patch(
+        f"{trip.folders_url}/{trip.test_folder}", json={"name": trip.base + "-renamed"}
+    )
+    new_name = other.folder_name(trip.base + "-renamed")
+    run.check(
+        "PATCH renames the folder, the subscription goes along",
+        renamed.status_code == 200
+        and new_name in other.subscribed_folders()
+        and trip.folder not in other.subscribed_folders(),
+        str(renamed.status_code),
+    )
+    removed = client.delete(f"{trip.folders_url}/{renamed.json().get('id', '?')}")
+    run.check(
+        "DELETE removes the empty folder",
+        removed.status_code == 204 and new_name not in other.all_folders(),
+        str(removed.status_code),
+    )
+    return True
+
+
+def deleted(trip: Trip) -> bool:
+    """Into the trash, then for good, and the sender's copy: not with
+    ``--keep``."""
+    if trip.keep:
+        return True
+    client, run, other, url = (
+        trip.client,
+        trip.run,
+        trip.seen_by_other(),
+        trip.message_url,
+    )
+    trash = other.trash_folder()
+    first = client.delete(url)
+    run.check(
+        "DELETE moves it into the trash",
+        first.status_code == 204
+        and trash is not None
+        and len(other.uids(trash, trip.subject)) == 1
+        and not other.uids("INBOX", trip.subject),
+        f"{first.status_code}, {trash}",
+    )
+    again = client.delete(url)
+    run.check(
+        "from the trash only with permanent=true",
+        again.status_code == 409,
+        str(again.status_code),
+    )
+    gone = client.delete(url, params={"permanent": True})
+    run.check(
+        "DELETE permanent=true removes it for good",
+        gone.status_code == 204
+        and trash is not None
+        and not other.uids(trash, trip.subject)
+        and client.get(url).status_code == 404,
+        str(gone.status_code),
+    )
+    types = feed_types(trip.mailbox, trip.account_id, trip.since, trip.message_id)
+    run.check(
+        "the change feed names it as deleted, last",
+        types[-1:] == ["message.deleted"],
+        " ".join(types),
+    )
+    if trip.sent_copy_id:
+        copy_gone = client.delete(
+            f"/v1/accounts/{trip.sender_id}/messages/{trip.sent_copy_id}",
+            params={"permanent": True},
+        )
+        run.check(
+            "and the sender's copy too",
+            copy_gone.status_code == 204,
+            str(copy_gone.status_code),
+        )
+    return True
+
+
+def webhook(trip: Trip) -> bool:
+    """The webhook at 127.0.0.1 heard the same, signed, and the send."""
+    assert trip.hooked is not None
+    anyio.run(trip.services.deliveries.deliver_due)
+    heard = trip.hooked.events()
+    mail = [e["type"] for e in heard if e["id"] == trip.message_id]
+    trip.run.check(
+        "a webhook at 127.0.0.1 hears of it, signed",
+        trip.hooked.signed(trip.hook.get("secret", ""))
+        and mail[:1] == ["message.created"]
+        and "message.updated" in mail,
+        f"{len(trip.hooked.posts)} posts, " + " ".join(dict.fromkeys(mail)),
+    )
+    trip.run.check(
+        "and of the send",
+        any(
+            e["type"] == "message.sent" and e["account_id"] == trip.sender_id
+            for e in heard
+        ),
+    )
+    trip.hooked.close()
+    return True
+
+
+# In order: one that answers False ends the run, with what failed named.
+STAGES = (
+    connect,
+    send_under_idle,
+    listed,
+    flags,
+    into_a_folder,
+    moved_back_by_another,
+    condstore,
+    reply_and_forward,
+    batch,
+    folder_renamed_and_deleted,
+    deleted,
+    webhook,
+)
+
+
+def finish(trip: Trip) -> None:
+    """Without ``--keep`` the test mail and the folder go, wherever they
+    are. With it, the folder goes and the mail stays."""
+    if trip.keep:
+        if trip.other is not None:
+            trip.other.delete_folder(trip.other.folder_name(trip.base))
+            trip.other.close()
+        print(
+            f"\n== kept: '{trip.subject}' in the inbox of {trip.receiver['email']} "
+            "and in the Sent folder of the sender: delete them by hand"
+        )
+    else:
+        clean_up(
+            trip.env, trip.receiver, trip.sender, trip.other, trip.base, trip.subject
+        )
+    anyio.run(trip.services.aclose)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -228,356 +714,28 @@ def main() -> int:
     )
     keep = parser.parse_args().keep
     env = read_env()
-    listed = accounts(env)
-    if len(listed) < 2 or "LIVE_IMAP_HOST" not in env:
+    listed_accounts = accounts(env)
+    if len(listed_accounts) < 2 or "LIVE_IMAP_HOST" not in env:
         sys.exit("needs two test accounts and LIVE_IMAP_HOST")
-    receiver, sender = listed[0], listed[1]
-    token = uuid.uuid4().hex[:12]
-    subject = f"mailbox-service live check {token}"
-    base = f"mailbox-service-live-{token}"
-    folder = base
-
     services, client = in_process_service()
-    mailbox = mailbox_of(client)
-    run = Run()
-    other: OtherClient | None = None
-    print(f"== {receiver['email']} receives from {sender['email']}")
+    trip = Trip(
+        env,
+        receiver=listed_accounts[0],
+        sender=listed_accounts[1],
+        keep=keep,
+        services=services,
+        client=client,
+        mailbox=mailbox_of(client),
+        run=Run(),
+    )
+    print(f"== {trip.receiver['email']} receives from {trip.sender['email']}")
     try:
-        account_id, _ = register(mailbox, env, receiver)
-        sender_id, _ = register(mailbox, env, sender)
-        if not run.check(
-            "connect both test accounts, the sender with SMTP",
-            account_id is not None and sender_id is not None,
-        ):
-            return 1
-        assert account_id is not None and sender_id is not None
-        anyio.run(services.sync.sync_account, account_id)
-        since = client.get(f"/v1/accounts/{account_id}/changes").json()["state"]
-        hooked = Receiver()
-        hook = client.post(
-            "/v1/webhooks",
-            json={"url": hooked.url, "accounts": [account_id, sender_id]},
-        ).json()
-
-        provider = services.adapters.get(account_id)
-        answer: dict[str, Any] = {}
-
-        send_url = f"/v1/accounts/{sender_id}/send"
-        # Only ever to the other test account.
-        outgoing = {
-            "to": [{"email": receiver["email"]}],
-            "subject": subject,
-            "text": KEPT_TEXT if keep else TEXT,
-        }
-        once = {"Idempotency-Key": f"live-{token}"}
-
-        def send() -> None:
-            response = client.post(send_url, json=outgoing, headers=once)
-            answer["status"], answer["body"] = response.status_code, response.json()
-
-        try:
-            changed = anyio.run(idle_while_sending, provider, send)
-            run.check("IDLE reports the new mail", changed)
-        except MailboxServiceError as exc:
-            run.check("IDLE reports the new mail", False, f"{exc.code}: {exc.message}")
-        body = answer.get("body", {})
-        run.check(
-            "POST send: the server accepted it",
-            answer.get("status") == 200 and body.get("refused") == [],
-            f"{answer.get('status')} {body.get('error', '')}",
-        )
-        retry = client.post(send_url, json=outgoing, headers=once)
-        run.check(
-            "a retry with the same Idempotency-Key returns the first result",
-            retry.status_code == 200 and retry.json() == body,
-            str(retry.status_code),
-        )
-        sent_copy_id = body.get("sent_copy_id")
-        outbox = OtherClient(env, sender)
-        try:
-            sent_folder = outbox.sent_folder()
-            run.check(
-                "a read copy in the sender's sent folder",
-                bool(sent_copy_id)
-                and sent_folder is not None
-                and outbox.flags(sent_folder, subject) == ["\\Seen"],
-                str(sent_folder),
-            )
-        finally:
-            outbox.close()
-
-        found = find_by_subject(mailbox, account_id, subject)
-        if not run.check("the API lists it", found is not None):
-            return 1
-        assert found is not None
-        run.check(
-            "it has a date", found.get("date") is not None, str(found.get("date"))
-        )
-        message_id = found["id"]
-        inbox_folder = found["folder_ids"][0]
-        run.check(
-            "the change feed names it as created",
-            feed_types(mailbox, account_id, since, message_id) == ["message.created"],
-            " ".join(feed_types(mailbox, account_id, since, message_id)),
-        )
-
-        other = OtherClient(env, receiver)
-        patched = client.patch(
-            f"/v1/accounts/{account_id}/messages/{message_id}",
-            json={"unread": False, "starred": True, "keywords": [LIVE_KEYWORD]},
-        )
-        run.check(
-            "PATCH marks it read, starred, with a keyword",
-            patched.status_code == 200
-            and patched.json().get("id") == message_id
-            and patched.json().get("keywords") == [LIVE_KEYWORD],
-            str(patched.status_code),
-        )
-        seen = other.flags("INBOX", subject)
-        run.check(
-            "another client sees the flags",
-            {"\\Seen", "\\Flagged", LIVE_KEYWORD} <= set(seen),
-            " ".join(seen),
-        )
-        client.patch(
-            f"/v1/accounts/{account_id}/messages/{message_id}",
-            json={"unread": True, "starred": False, "keywords": []},
-        )
-        run.check(
-            "and back to unread, no star, no keyword",
-            other.flags("INBOX", subject) == [],
-            " ".join(other.flags("INBOX", subject)),
-        )
-        folders_url = f"/v1/accounts/{account_id}/folders"
-        created = client.post(folders_url, json={"name": base})
-        folder = other.folder_name(base)
-        run.check(
-            "POST creates a folder, subscribed, in the personal namespace",
-            created.status_code == 201
-            and created.json().get("subscribed") is True
-            and folder in other.subscribed_folders(),
-            f"{created.status_code}, {folder}",
-        )
-        names = {f["name"]: f["id"] for f in client.get(folders_url).json()}
-        moved = client.patch(
-            f"/v1/accounts/{account_id}/messages/{message_id}",
-            json={"folder_ids": [names.get(base, "?")]},
-        )
-        run.check(
-            "PATCH moves it, and the id stays",
-            moved.status_code == 200
-            and moved.json().get("id") == message_id
-            and moved.json().get("folder_ids") == [names.get(base)],
-            str(moved.status_code),
-        )
-        run.check(
-            "another client finds it there, not in the inbox",
-            len(other.uids(folder, subject)) == 1 and not other.uids("INBOX", subject),
-        )
-
-        uids = other.uids(folder, subject)
-        if not run.check("another client moves it back", len(uids) == 1):
-            return 1
-        other.move(uids[0], "INBOX")
-        back = client.get(f"/v1/accounts/{account_id}/messages/{message_id}")
-        run.check(
-            "the same id finds it in the inbox again",
-            back.status_code == 200 and back.json().get("folder_ids") == [inbox_folder],
-            str(back.status_code),
-        )
-        run.check(
-            "the subject matches",
-            back.status_code == 200 and back.json().get("subject") == subject,
-        )
-
-        if "CONDSTORE" in other.capabilities():
-            anyio.run(services.sync.sync_account, account_id)
-            mark = client.get(f"/v1/accounts/{account_id}/changes").json()["state"]
-            other.set_flag("INBOX", subject, FLAGGED, on=True)
-            anyio.run(services.sync.sync_account, account_id)
-            types = feed_types(mailbox, account_id, mark, message_id)
-            run.check(
-                "the change feed names a flag another client set (CONDSTORE)",
-                types == ["message.updated"],
-                " ".join(types),
-            )
-            other.set_flag("INBOX", subject, FLAGGED, on=False)
-        else:
-            print("SKIP  the server offers no CONDSTORE")
-
-        # Answered by account 1, so it goes back to account 2 only.
-        replied = client.post(
-            f"/v1/accounts/{account_id}/send",
-            json={
-                "reference": {"message_id": message_id, "action": "reply"},
-                "text": "Automatic reply of live/changes.py.",
-            },
-        )
-        reply = find_by_subject(mailbox, sender_id, f"Re: {subject}")
-        run.check(
-            "a reply goes back to the sender, as a reply",
-            replied.status_code == 200 and reply is not None,
-            str(replied.status_code),
-        )
-        run.check(
-            "the original is marked answered",
-            "\\Answered" in other.flags("INBOX", subject),
-            " ".join(other.flags("INBOX", subject)),
-        )
-        forwarded = client.post(
-            f"/v1/accounts/{account_id}/send",
-            json={
-                "reference": {
-                    "message_id": message_id,
-                    "action": "forward",
-                    "forward_as": "attachment",
-                },
-                "to": [{"email": sender["email"]}],
-                "text": "Automatic forward of live/changes.py.",
-            },
-        )
-        forward = find_by_subject(mailbox, sender_id, f"Fwd: {subject}")
-        run.check(
-            "a forward as attachment arrives",
-            forwarded.status_code == 200 and forward is not None,
-            str(forwarded.status_code),
-        )
-        run.check(
-            "the original is marked forwarded",
-            "$Forwarded" in other.flags("INBOX", subject),
-            " ".join(other.flags("INBOX", subject)),
-        )
-
-        batch = client.post(
-            f"/v1/accounts/{account_id}/messages/batch",
-            json={
-                "action": "update",
-                "ids": [message_id, "msg_does_not_exist"],
-                "changes": {"starred": True},
-            },
-        )
-        outcomes = [r["ok"] for r in batch.json().get("results", [])]
-        run.check(
-            "a batch answers per id",
-            batch.status_code == 200
-            and outcomes == [True, False]
-            and "\\Flagged" in other.flags("INBOX", subject),
-            f"{batch.status_code} {outcomes}",
-        )
-
-        types = feed_types(mailbox, account_id, since, message_id)
-        run.check(
-            "the change feed names its changes as updated",
-            "message.updated" in types,
-            " ".join(types),
-        )
-
-        check_drafts(
-            run,
-            client,
-            mailbox,
-            other,
-            account_id,
-            message_id,
-            subject,
-            sender_id,
-            sender["email"],
-        )
-
-        test_folder = names.get(base, "?")
-        renamed = client.patch(
-            f"{folders_url}/{test_folder}", json={"name": base + "-renamed"}
-        )
-        new_name = other.folder_name(base + "-renamed")
-        run.check(
-            "PATCH renames the folder, the subscription goes along",
-            renamed.status_code == 200
-            and new_name in other.subscribed_folders()
-            and folder not in other.subscribed_folders(),
-            str(renamed.status_code),
-        )
-        removed = client.delete(f"{folders_url}/{renamed.json().get('id', '?')}")
-        run.check(
-            "DELETE removes the empty folder",
-            removed.status_code == 204 and new_name not in other.all_folders(),
-            str(removed.status_code),
-        )
-
-        if not keep:
-            url = f"/v1/accounts/{account_id}/messages/{message_id}"
-            trash = other.trash_folder()
-            deleted = client.delete(url)
-            run.check(
-                "DELETE moves it into the trash",
-                deleted.status_code == 204
-                and trash is not None
-                and len(other.uids(trash, subject)) == 1
-                and not other.uids("INBOX", subject),
-                f"{deleted.status_code}, {trash}",
-            )
-            again = client.delete(url)
-            run.check(
-                "from the trash only with permanent=true",
-                again.status_code == 409,
-                str(again.status_code),
-            )
-            gone = client.delete(url, params={"permanent": True})
-            run.check(
-                "DELETE permanent=true removes it for good",
-                gone.status_code == 204
-                and trash is not None
-                and not other.uids(trash, subject)
-                and client.get(url).status_code == 404,
-                str(gone.status_code),
-            )
-            types = feed_types(mailbox, account_id, since, message_id)
-            run.check(
-                "the change feed names it as deleted, last",
-                types[-1:] == ["message.deleted"],
-                " ".join(types),
-            )
-            if sent_copy_id:
-                copy_gone = client.delete(
-                    f"/v1/accounts/{sender_id}/messages/{sent_copy_id}",
-                    params={"permanent": True},
-                )
-                run.check(
-                    "and the sender's copy too",
-                    copy_gone.status_code == 204,
-                    str(copy_gone.status_code),
-                )
-        anyio.run(services.deliveries.deliver_due)
-        heard = hooked.events()
-        mail = [e["type"] for e in heard if e["id"] == message_id]
-        run.check(
-            "a webhook at 127.0.0.1 hears of it, signed",
-            hooked.signed(hook.get("secret", ""))
-            and mail[:1] == ["message.created"]
-            and "message.updated" in mail,
-            f"{len(hooked.posts)} posts, " + " ".join(dict.fromkeys(mail)),
-        )
-        run.check(
-            "and of the send",
-            any(
-                e["type"] == "message.sent" and e["account_id"] == sender_id
-                for e in heard
-            ),
-        )
-        hooked.close()
+        for stage in STAGES:
+            if not stage(trip):
+                return 1
     finally:
-        if keep:
-            if other is not None:
-                other.delete_folder(other.folder_name(base))
-                other.close()
-            print(
-                f"\n== kept: '{subject}' in the inbox of {receiver['email']} and "
-                "in the Sent folder of the sender: delete them by hand"
-            )
-        else:
-            clean_up(env, receiver, sender, other, base, subject)
-        anyio.run(services.aclose)
-
-    return run.finish()
+        finish(trip)
+    return trip.run.finish()
 
 
 if __name__ == "__main__":
