@@ -16,34 +16,27 @@ from __future__ import annotations
 from ..transport import Server
 from .folders import Folders
 from .messages import Messages
-from .session import IDLE_STEP, ClientFactory, ImapSession, default_client
+from .session import IDLE_STEP, ImapSession, default_client
 from .values import (
     DEFAULT_PORTS,
-    MAX_HEADER_BYTES,
     MAX_MESSAGE_BYTES,
     FetchedMessage,
-    FolderState,
     Namespace,
     RawFolder,
     SearchCriteria,
-    Selected,
 )
 
 __all__ = [
     "DEFAULT_PORTS",
     "IDLE_STEP",
-    "MAX_HEADER_BYTES",
     "MAX_MESSAGE_BYTES",
-    "ClientFactory",
     "FetchedMessage",
-    "FolderState",
     "Folders",
     "ImapSession",
     "Messages",
     "Namespace",
     "RawFolder",
     "SearchCriteria",
-    "Selected",
     "Server",
     "default_client",
 ]

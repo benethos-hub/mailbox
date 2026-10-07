@@ -19,14 +19,13 @@ from __future__ import annotations
 
 from .domain import build_services
 from .lifecycle import opened
-from .providers import build_discovery, build_oauth, offered_providers
+from .providers import build_oauth, offered_providers
 from .secrets import key_provider
 from .services import Services
 from .web import create_app, openapi_json
 
 __all__ = [
     "Services",
-    "build_discovery",
     "build_oauth",
     "build_services",
     "create_app",

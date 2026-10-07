@@ -24,7 +24,6 @@ from ..protocols import (
 )
 from .base import (
     Capability,
-    ChangedMessage,
     CredentialReader,
     Deletes,
     Deltas,
@@ -54,7 +53,6 @@ from .settings import hosts_in
 __all__ = [
     "App",
     "Capability",
-    "ChangedMessage",
     "CredentialReader",
     "DeviceCode",
     "FolderChanges",

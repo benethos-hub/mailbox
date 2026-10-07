@@ -13,7 +13,6 @@ from .api import Answer, ApiClient, refused
 from .post import WebhookPoster, is_receiver_address
 from .safe import (
     Answered,
-    Fetched,
     HostCheck,
     Lookup,
     Resolve,
@@ -28,7 +27,6 @@ __all__ = [
     "Answer",
     "Answered",
     "ApiClient",
-    "Fetched",
     "HostCheck",
     "Lookup",
     "Resolve",
