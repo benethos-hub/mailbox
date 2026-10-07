@@ -99,6 +99,29 @@ def signature(secret: str, timestamp: int, body: bytes) -> str:
     return f"t={timestamp},v1={digest}"
 
 
+@dataclass(frozen=True)
+class _Pending:
+    """What a webhook has to post: where it stands, the note it keeps, the
+    newest event of the log, its creator's rights, and the next batch."""
+
+    delivery: Delivery
+    note: str | None
+    last: int
+    access: Access | None
+    window: list[LoggedChange]
+    more: bool
+
+    @property
+    def end(self) -> int:
+        return self.window[-1].seq
+
+    def moved(self, record: WebhookRecord) -> bool:
+        """Whether there is anything to save without a post."""
+        return (
+            self.delivery.cursor != self.last or self.note != record.webhook.last_error
+        )
+
+
 class WebhookDispatcher:
     def __init__(
         self,
@@ -159,9 +182,32 @@ class WebhookDispatcher:
         except MailboxServiceError:
             return False  # removed meanwhile
         now = self._clock()
-        delivery = record.delivery
-        if delivery.next_attempt_at is not None and delivery.next_attempt_at > now:
+        due = record.delivery.next_attempt_at
+        if due is not None and due > now:
             return False
+        pending = self._pending(record)
+        if not pending.window:
+            if pending.moved(record):
+                self._save(
+                    record, replace(pending.delivery, cursor=pending.last), pending.note
+                )
+            return False
+        batch = await self._heard(pending.access, pending.window)
+        if not batch:
+            # Nothing the creator may hear of: past it, without a post.
+            self._save(
+                record, replace(pending.delivery, cursor=pending.end), pending.note
+            )
+            return pending.more
+        error = await self._attempt(record, batch, pending.more, now)
+        if error is None:
+            self._delivered(record, pending, now)
+            return pending.more
+        return self._failed(record, pending, len(batch), error, now)
+
+    def _pending(self, record: WebhookRecord) -> _Pending:
+        """The events the webhook has not posted yet, up to a batch."""
+        delivery = record.delivery
         note = record.webhook.last_error
         # Read first: an event logged meanwhile is posted now or next time.
         last = self._changes.last()
@@ -170,24 +216,25 @@ class WebhookDispatcher:
             delivery = replace(delivery, cursor=horizon)
             note = "events were purged before they could be posted"
         access = self._access_of(record.webhook.user_id)
-        accounts = self._accounts(record, access)
         found = self._changes.after(
-            accounts,
+            self._accounts(record, access),
             delivery.cursor,
             limit=BATCH + 1,
             types=frozenset(record.webhook.events),
         )
-        if not found:
-            if delivery.cursor != last or note != record.webhook.last_error:
-                self._save(record, replace(delivery, cursor=last), note)
-            return False
-        more = len(found) > BATCH
-        window = found[:BATCH]
-        batch = await self._heard(access, window)
-        if not batch:
-            # Nothing the creator may hear of: past it, without a post.
-            self._save(record, replace(delivery, cursor=window[-1].seq), note)
-            return more
+        return _Pending(
+            delivery, note, last, access, found[:BATCH], more=len(found) > BATCH
+        )
+
+    async def _attempt(
+        self,
+        record: WebhookRecord,
+        batch: list[LoggedChange],
+        more: bool,
+        now: datetime,
+    ) -> str | None:
+        """One post of ``batch``, kept in the delivery log. None when the
+        receiver took it, else why not."""
         delivery_id = new_id("dlv")
         body = json.dumps(
             {
@@ -203,36 +250,49 @@ class WebhookDispatcher:
             Attempt(record.webhook.id, delivery_id, now, len(batch), status, error),
             keep=LOGGED,
         )
-        end = window[-1].seq
-        if error is None:
-            if delivery.attempts or record.webhook.last_error is not None:
-                self._activity.record(
-                    said.DeliversAgain(by=DISPATCHER, webhook_id=record.webhook.id)
-                )
-            self._save(
-                record,
-                Delivery(cursor=end),
-                note if note != record.webhook.last_error else None,
-                delivered_at=now,
+        return error
+
+    def _delivered(
+        self, record: WebhookRecord, pending: _Pending, now: datetime
+    ) -> None:
+        if pending.delivery.attempts or record.webhook.last_error is not None:
+            self._activity.record(
+                said.DeliversAgain(by=DISPATCHER, webhook_id=record.webhook.id)
             )
-            return more
-        failed = delivery.attempts + 1
+        self._save(
+            record,
+            Delivery(cursor=pending.end),
+            pending.note if pending.note != record.webhook.last_error else None,
+            delivered_at=now,
+        )
+
+    def _failed(
+        self,
+        record: WebhookRecord,
+        pending: _Pending,
+        events: int,
+        error: str,
+        now: datetime,
+    ) -> bool:
+        """After a post the receiver did not take: another try later, or
+        after the last one its events dropped. True when more events wait."""
+        failed = pending.delivery.attempts + 1
         if failed >= self._retries.attempts:
             self._activity.record(
                 said.GaveUp(
                     by=DISPATCHER,
                     webhook_id=record.webhook.id,
-                    changes=len(batch),
+                    changes=events,
                     attempts=failed,
                     reason=error,
                 )
             )
             self._save(
                 record,
-                Delivery(cursor=end),
-                f"{error}. {len(batch)} events were dropped after {failed} attempts",
+                Delivery(cursor=pending.end),
+                f"{error}. {events} events were dropped after {failed} attempts",
             )
-            return more
+            return pending.more
         self._activity.record(
             said.PostFailed(
                 by=DISPATCHER,
@@ -245,7 +305,7 @@ class WebhookDispatcher:
         self._save(
             record,
             replace(
-                delivery,
+                pending.delivery,
                 attempts=failed,
                 next_attempt_at=now + self._retries.pause(failed),
             ),
