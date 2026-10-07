@@ -11,7 +11,19 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
-from ...errors import BadRequestError, ProviderError, ProviderUnavailableError
+from ...errors import (
+    BadRequestError,
+    MailboxServiceError,
+    ProviderError,
+    ProviderUnavailableError,
+)
+
+# How a library's exception becomes this project's error: the kinds it
+# covers, and what it becomes.
+Rule = tuple[
+    type[BaseException] | tuple[type[BaseException], ...],
+    Callable[[Any], MailboxServiceError],
+]
 
 # The address a connection to a host goes to, checked when it is made.
 # Raises when the host may not be connected to.
@@ -84,6 +96,23 @@ class Server:
         """The address to connect to, checked now, and the TLS context
         that verifies the certificate of the host."""
         return connect_to(self.host, self.port, self.pick), tls_context(self.host)
+
+
+@contextmanager
+def translated(*rules: Rule) -> Iterator[None]:
+    """Everything that leaves the block as this project's error. Its own
+    pass as they are, a library's become what the first rule that covers
+    it makes, and the failures below every library are the transport's."""
+    with transport_errors():
+        try:
+            yield
+        except MailboxServiceError:
+            raise
+        except Exception as exc:
+            for kinds, make in rules:
+                if isinstance(exc, kinds):
+                    raise make(exc) from None
+            raise
 
 
 @contextmanager

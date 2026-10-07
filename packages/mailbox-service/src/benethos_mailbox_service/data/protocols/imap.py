@@ -11,8 +11,8 @@ from __future__ import annotations
 import imaplib
 import re
 import time
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from datetime import date
 from email.parser import BytesHeaderParser
@@ -26,7 +26,6 @@ from ...common.clock import utc_now
 from ...common.sizes import MIB
 from ...errors import (
     BadRequestError,
-    NotFoundError,
     NotSupportedError,
     ProviderAuthError,
     ProviderError,
@@ -34,7 +33,8 @@ from ...errors import (
     missing,
 )
 from ..mail import fields, parse
-from .transport import Server, names, one_line, text, transport_errors
+from . import transport
+from .transport import Server, names, one_line, text
 
 ClientFactory = Callable[..., Any]
 
@@ -184,7 +184,7 @@ class ImapSession:
         self._log_in(lambda c: c.oauth2_login(username, access_token), "token")
 
     def _log_in(self, authenticate: Callable[[Any], Any], what: str) -> None:
-        with _errors():
+        with translated():
             client = self._connect()
             try:
                 authenticate(client)
@@ -226,7 +226,7 @@ class ImapSession:
     def read_capabilities(self) -> frozenset[str]:
         """Connect without logging in and return what the server announces
         after TLS or STARTTLS. Sends no credential."""
-        with _errors():
+        with translated():
             client = self._factory(self._server, self._timeout)
             try:
                 return _capabilities(client)
@@ -235,7 +235,7 @@ class ImapSession:
 
     def server_capabilities(self) -> frozenset[str]:
         """What the server announces now, after the login."""
-        with _errors():
+        with translated():
             return _capabilities(self._require())
 
     def logout(self) -> None:
@@ -246,7 +246,7 @@ class ImapSession:
     def list_folders(self, subscriptions: bool = False) -> list[RawFolder]:
         """Every folder. With ``subscriptions`` also whether each one is
         subscribed, which costs one more command (LSUB)."""
-        with _errors():
+        with translated():
             client = self._require()
             subscribed = (
                 {str(name) for _, _, name in client.list_sub_folders()}
@@ -265,14 +265,14 @@ class ImapSession:
 
     def select(self, folder: str) -> int:
         """Select a folder read-only, return its UIDVALIDITY."""
-        with _errors():
+        with translated():
             answer = self._select_folder(folder, readonly=True)
         return _uidvalidity(answer)
 
     def select_writable(self, folder: str) -> tuple[int, frozenset[str]]:
         """Select a folder read-write. Returns its UIDVALIDITY and the flags
         the server keeps (``PERMANENTFLAGS``). ``\\*`` means any keyword."""
-        with _errors():
+        with translated():
             answer = self._select_folder(folder, readonly=False)
         if b"READ-ONLY" in answer:
             raise ProviderError(f"the folder {folder} is read-only on the server")
@@ -281,7 +281,7 @@ class ImapSession:
 
     def store_flags(self, uids: list[int], add: list[str], remove: list[str]) -> None:
         """Set and clear the same flags on messages of the selected folder."""
-        with _errors():
+        with translated():
             client = self._require()
             if add:
                 client.add_flags(uids, add, silent=True)
@@ -293,7 +293,7 @@ class ImapSession:
         command. Returns their UIDs there, as far as the server reports them
         (``COPYUID``, RFC 4315). Needs ``MOVE``, or ``UIDPLUS`` to copy and
         expunge just these."""
-        with _errors():
+        with translated():
             client = self._require()
             announced = _capabilities(client)
             if "MOVE" in announced:
@@ -320,7 +320,7 @@ class ImapSession:
         """Delete messages of the selected folder for good. Needs
         ``UIDPLUS``: a plain EXPUNGE would take every message marked
         deleted with it, other clients' too."""
-        with _errors():
+        with translated():
             client = self._require()
             if "UIDPLUS" not in _capabilities(client):
                 raise NotSupportedError(
@@ -333,7 +333,7 @@ class ImapSession:
     def append(self, folder: str, raw: bytes, flags: list[str]) -> int | None:
         """Store a message in ``folder``. Returns its UID where the server
         reports it (``APPENDUID``, RFC 4315)."""
-        with _errors():
+        with translated():
             client = self._require()
             reported = _with_code(
                 client,
@@ -348,7 +348,7 @@ class ImapSession:
 
     def search_message_id(self, header: str) -> list[int]:
         """UIDs in the selected folder with this ``Message-ID``."""
-        with _errors():
+        with translated():
             return sorted(
                 int(u) for u in self._require().search(["HEADER", "Message-ID", header])
             )
@@ -363,7 +363,7 @@ class ImapSession:
         items = ["UIDVALIDITY", "UIDNEXT", "MESSAGES"]
         if modseq:
             items.append("HIGHESTMODSEQ")
-        with _errors():
+        with translated():
             status = self._require().folder_status(folder, items)
         highest = status.get(b"HIGHESTMODSEQ")
         return (
@@ -377,7 +377,7 @@ class ImapSession:
         """Lets the server catch up the selected folder. Until then STATUS
         on that folder may answer the state from when it was selected
         (RFC 3501), and a change another client made goes unseen."""
-        with _errors():
+        with translated():
             self._require().noop()
 
     def changed_since(self, uids: list[int], modseq: int) -> list[int]:
@@ -385,7 +385,7 @@ class ImapSession:
         ``modseq`` (CONDSTORE, RFC 7162). Reads flags only, in batches, so
         a command line stays short."""
         changed: list[int] = []
-        with _errors():
+        with translated():
             client = self._require()
             for batch in batched(uids, _CHANGED_BATCH):
                 found = client.fetch(
@@ -401,7 +401,7 @@ class ImapSession:
             return []
         texts = (criteria.text, criteria.sender, criteria.to, criteria.subject)
         wide = any(v and not v.isascii() for v in texts)
-        with _errors():
+        with translated():
             uids = sorted(
                 int(u)
                 for u in self._require().search(
@@ -448,7 +448,7 @@ class ImapSession:
     def _fetch(self, uids: list[int], items: list[str]) -> dict[int, dict[bytes, Any]]:
         if not uids:
             return {}
-        with _errors():
+        with translated():
             found = self._require().fetch(uids, items)
         return {int(uid): data for uid, data in found.items()}
 
@@ -462,7 +462,7 @@ class ImapSession:
         """IDLE in the selected folder until the server reports a change,
         ``timeout`` passes or ``stopped`` says so. Looks at ``stopped`` every
         ``step`` seconds, which costs no traffic. True on a change."""
-        with _errors():
+        with translated():
             client = self._require()
             client.idle()
             try:
@@ -505,7 +505,7 @@ class ImapSession:
         """Where top-level folders of the user go (RFC 2342), e.g.
         ``("INBOX.", ".")`` on servers that keep all folders below the inbox,
         and its delimiter. Asked once per connection."""
-        with _errors():
+        with translated():
             client = self._require()
             if self._namespace is not None and self._namespace[0] is client:
                 return self._namespace[1]
@@ -521,14 +521,14 @@ class ImapSession:
     def create_folder(self, name: str) -> None:
         """Create and subscribe: mail clients such as Outlook list only
         subscribed folders."""
-        with _errors():
+        with translated():
             client = self._require()
             client.create_folder(name)
             client.subscribe_folder(name)
 
     def rename_folder(self, old: str, new: str) -> None:
         """Rename, and move the subscription along."""
-        with _errors():
+        with translated():
             client = self._require()
             client.rename_folder(old, new)
             client.subscribe_folder(new)
@@ -536,7 +536,7 @@ class ImapSession:
 
     def delete_folder(self, name: str) -> None:
         """Delete, and drop the subscription, which would otherwise stay."""
-        with _errors():
+        with translated():
             client = self._require()
             _quietly(lambda: client.unsubscribe_folder(name))
             client.delete_folder(name)
@@ -660,18 +660,17 @@ def _quietly_logout(client: Any) -> None:
         pass
 
 
-@contextmanager
-def _errors() -> Iterator[None]:
-    with transport_errors():
-        try:
-            yield
-        except (ProviderAuthError, ProviderError, NotSupportedError, NotFoundError):
-            raise
-        except imaplib.IMAP4.abort as exc:
-            raise ProviderUnavailableError(
+def translated() -> AbstractContextManager[None]:
+    """IMAP's errors as this project's."""
+    return transport.translated(
+        (
+            imaplib.IMAP4.abort,
+            lambda exc: ProviderUnavailableError(
                 f"the mail server dropped the connection: {exc}"
-            ) from None
-        except imaplib.IMAP4.error as exc:
-            raise ProviderError(
-                f"the mail server answered with an error: {exc}"
-            ) from None
+            ),
+        ),
+        (
+            imaplib.IMAP4.error,
+            lambda exc: ProviderError(f"the mail server answered with an error: {exc}"),
+        ),
+    )
