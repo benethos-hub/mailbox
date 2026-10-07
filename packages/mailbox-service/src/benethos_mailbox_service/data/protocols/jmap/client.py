@@ -23,7 +23,7 @@ from ....errors import (
     ProviderUnavailableError,
 )
 from .. import wire
-from ..http import Answer, ServerClient
+from ..http import Answer, ServerClient, refused
 from ..transport import Pick
 from .shapes import (
     AccountShape,
@@ -268,7 +268,7 @@ class JmapClient:
             **kwargs,
         )
         if answer.status in (429, 503):
-            self._rest_until = self._clock() + _retry_after(answer)
+            self._rest_until = self._clock() + answer.retry_after
         return answer
 
     def _headers(self) -> dict[str, str]:
@@ -337,28 +337,21 @@ async def _state_changes(
             data.append(line[5:].removeprefix(" "))
 
 
-def _retry_after(answer: Answer) -> float:
-    value = answer.headers.get("retry-after", "")
-    return float(value) if value.isdigit() else 0.0
-
-
 def _failure(answer: Answer, what: str) -> MailboxServiceError:
     """A request the server refused as a whole, as this project's error."""
     problem = wire.read(Problem, answer.body) or Problem()
     detail = problem.detail or problem.type
     text = f"jmap {what}: {detail or 'refused'} ({answer.status})"
-    if answer.status == 401:
-        return ProviderAuthError("the JMAP server refused the credential")
-    if answer.status == 403:
-        return ProviderAuthError(f"the JMAP server refused access ({what})")
-    if answer.status == 404:
-        return NotFoundError(text)
-    if answer.status == 413:
-        return BadRequestError(text)
-    if answer.status in (429, 502, 503, 504):
-        wait = _retry_after(answer)
-        later = f", retry after {wait:.0f}s" if wait else ""
-        return ProviderUnavailableError(
-            f"the JMAP server is busy{later} ({answer.status})"
-        )
-    return ProviderError(text)
+    return refused(
+        answer,
+        "the JMAP server",
+        text,
+        {
+            401: lambda _: ProviderAuthError("the JMAP server refused the credential"),
+            403: lambda _: ProviderAuthError(
+                f"the JMAP server refused access ({what})"
+            ),
+            404: NotFoundError,
+            413: BadRequestError,
+        },
+    )

@@ -9,7 +9,7 @@ server.
 
 from __future__ import annotations
 
-from .api import Answer, ApiClient
+from .api import Answer, ApiClient, refused
 from .post import WebhookPoster, is_receiver_address
 from .safe import (
     Answered,
@@ -39,4 +39,5 @@ __all__ = [
     "host_addresses_now",
     "is_receiver_address",
     "is_public_address",
+    "refused",
 ]

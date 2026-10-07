@@ -28,6 +28,7 @@ from .http import (
     host_addresses_now,
     is_public_address,
     is_receiver_address,
+    refused,
 )
 from .imap import (
     DEFAULT_PORTS as IMAP_PORTS,
@@ -104,5 +105,6 @@ __all__ = [
     "is_receiver_address",
     "jmap",
     "new_pkce",
+    "refused",
     "wire",
 ]

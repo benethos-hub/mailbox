@@ -21,11 +21,9 @@ from ....errors import (
     MailboxServiceError,
     NotFoundError,
     ProviderAuthError,
-    ProviderError,
-    ProviderUnavailableError,
 )
 from ...models import FolderRole
-from ...protocols import Answer, ApiClient, wire
+from ...protocols import Answer, ApiClient, refused, wire
 from .. import rules
 from ..base import TokenSource
 from . import mappers
@@ -99,7 +97,7 @@ class Graph:
                 self.tokens.reject()
                 continue
             if not answer.ok:
-                rest = _retry_after(answer) if answer.status in (429, 503) else 0.0
+                rest = answer.retry_after if answer.status in (429, 503) else 0.0
                 self._rest_until = self._clock() + rest
                 if rest > 0:
                     log.debug("microsoft asked to wait %.0fs", rest)
@@ -226,31 +224,25 @@ def own_path(link: str) -> str:
     return f"{rest}?{parts.query}" if parts.query else rest
 
 
-def _retry_after(answer: Answer) -> float:
-    """The seconds Graph asks to wait, 0 when it asks nothing."""
-    value = answer.headers.get("retry-after", "")
-    return float(value) if value.isdigit() else 0.0
-
-
 def _failure(answer: Answer) -> MailboxServiceError:
     """Graph's error as this project's, with Graph's code and message."""
     found = wire.read(Failure, answer.body)
     error = (found.error if found else None) or ErrorDetail()
     code = error.code or answer.status
     text = f"microsoft: {error.message or 'request failed'} ({code})"
-    if answer.status == 401:
-        return ProviderAuthError("microsoft refused the access token: sign in again")
-    if answer.status == 404:
-        return NotFoundError(text)
-    if answer.status == 409:
-        return ConflictError(text)
-    if answer.status == 410:
-        # A delta token Graph no longer keeps.
-        return ChangesExpiredError(text)
-    if answer.status == 400:
-        return BadRequestError(text)
-    if answer.status in (429, 502, 503, 504):
-        wait = _retry_after(answer)
-        later = f", retry after {wait:.0f}s" if wait else ""
-        return ProviderUnavailableError(f"microsoft is busy{later} ({code})")
-    return ProviderError(text)
+    return refused(
+        answer,
+        "microsoft",
+        text,
+        {
+            401: lambda _: ProviderAuthError(
+                "microsoft refused the access token: sign in again"
+            ),
+            400: BadRequestError,
+            404: NotFoundError,
+            409: ConflictError,
+            # A delta token Graph no longer keeps.
+            410: ChangesExpiredError,
+        },
+        code,
+    )

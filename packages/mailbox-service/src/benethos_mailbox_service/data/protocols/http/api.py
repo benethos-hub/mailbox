@@ -12,19 +12,25 @@ the caller, which knows what the provider means by it.
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
 
 from ....common.sizes import MIB
-from ....errors import ProviderError
+from ....errors import (
+    MailboxServiceError,
+    ProviderError,
+    ProviderUnavailableError,
+)
 from .base import new_client, parse_url, read_capped, unreachable
 
 TIMEOUT = 30.0
 # Enough for a message with its attachments (25 MB) in base64.
 MAX_BYTES = 40 * MIB
+# A server that asks to be asked again later, or a gateway before it.
+BUSY = frozenset({429, 502, 503, 504})
 
 
 @dataclass(frozen=True)
@@ -37,12 +43,41 @@ class Answer:
     def ok(self) -> bool:
         return 200 <= self.status < 300
 
+    @property
+    def retry_after(self) -> float:
+        """The seconds the server asks to wait, 0 when it asks nothing."""
+        value = self.headers.get("retry-after", "")
+        return float(value) if value.isdigit() else 0.0
+
     def json(self) -> Any:
         """The body as JSON, or ``ProviderError`` when it is none."""
         try:
             return json.loads(self.body) if self.body else None
         except ValueError:
             raise ProviderError("the provider answered with no valid JSON") from None
+
+
+def refused(
+    answer: Answer,
+    who: str,
+    text: str,
+    errors: Mapping[int, Callable[[str], MailboxServiceError]],
+    code: object = None,
+) -> MailboxServiceError:
+    """A request the server refused, as this project's error: what
+    ``errors`` makes of its status with ``text``, else for a busy server
+    when to ask again, else a ``ProviderError``. ``who`` names the server,
+    ``code`` what it called the error, the status without one."""
+    make = errors.get(answer.status)
+    if make is not None:
+        return make(text)
+    if answer.status in BUSY:
+        wait = answer.retry_after
+        later = f", retry after {wait:.0f}s" if wait else ""
+        return ProviderUnavailableError(
+            f"{who} is busy{later} ({code or answer.status})"
+        )
+    return ProviderError(text)
 
 
 class ApiClient:
