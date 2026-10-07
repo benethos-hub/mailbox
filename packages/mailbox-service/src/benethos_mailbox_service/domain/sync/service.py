@@ -25,10 +25,10 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
 
-from ...common.clock import iso, parse_iso, utc_now
+from ...common.clock import iso, utc_now
 from ...common.ids import new_id
 from ...common.redact import redact
-from ...data.providers import Capability, FolderChanges, Reads
+from ...data.providers import Capability, FolderChanges
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import (
     ChangesExpiredError,
@@ -47,6 +47,7 @@ from ..changes import (
     MessagesUpdated,
 )
 from ..locks import KeyedLocks
+from .passes import Counts, Seen, delta_state, index_changes, moves
 
 T = TypeVar("T")
 
@@ -268,7 +269,7 @@ class SyncService:
         """How the passes of the account went since the start."""
         return self._states.get(account_id, SyncState())
 
-    async def _sync_delta(self, account_id: str) -> _Counts:
+    async def _sync_delta(self, account_id: str) -> Counts:
         """Ask every folder what changed since its last token. A folder asked
         for the first time only hands out its token. The stored state of a
         folder is its token and when the pass that got it began."""
@@ -286,7 +287,7 @@ class SyncService:
         arrived_new: set[str] = set()  # in folders asked for the first time
         since: dict[str, datetime] = {}
         for folder_id in folders:
-            last = _delta_state(before.get(folder_id))
+            last = delta_state(before.get(folder_id))
             try:
                 found = await self._folder_changes(
                     account_id, folder_id, last[0] if last else None
@@ -310,7 +311,7 @@ class SyncService:
                     gone_from[message_id] = ""
         self._index.apply(account_id, IndexChanges(states=states))
         if not before:
-            return _Counts(len(folders))
+            return Counts(len(folders))
         # Deleted: removed and seen nowhere. Moved: removed here, seen there.
         created = [
             i
@@ -323,7 +324,7 @@ class SyncService:
         self.changed(MessagesCreated(account_id, created, where))
         self.changed(MessagesUpdated(account_id, updated, where))
         self.changed(MessagesDeleted(account_id, deleted, gone_from))
-        return _Counts(len(folders), len(created), len(updated), len(deleted))
+        return Counts(len(folders), len(created), len(updated), len(deleted))
 
     async def _folder_changes(
         self, account_id: str, folder_id: str, token: str | None
@@ -332,35 +333,56 @@ class SyncService:
             account_id, lambda p: deltas(p).folder_changes(folder_id, token)
         )
 
-    async def _sync(self, account_id: str) -> _Counts:
-        async def call(operation: Callable[[Reads], Awaitable[T]]) -> T:
-            return await self._adapters.call(account_id, operation)
-
-        states = await call(lambda p: p.folder_states())
+    async def _sync(self, account_id: str) -> Counts:
+        """Compare the folders whose state changed with the index: what
+        arrived, left, moved, or changed its flags."""
+        states = await self._adapters.call(account_id, lambda p: p.folder_states())
         before = self._index.folder_states(account_id)
         changed = [f for f, state in states.items() if before.get(f) != state]
         vanished = [f for f in before if f not in states]
         if not changed and not vanished:
-            return _Counts(len(states))
+            return Counts(len(states))
+        seen = await self._seen(account_id, changed, vanished)
+        flagged = await self._flagged(account_id, changed, before, seen)
+        moved = moves(seen.left, seen.arrived, seen.headers)
+        changes = index_changes(states, seen, moved, self._new_id)
+        self._index.apply(account_id, changes)
+        if not before:
+            return Counts(len(states))
+        return self._report(account_id, seen, moved, changes, flagged, len(states))
 
+    async def _seen(
+        self, account_id: str, changed: list[str], vanished: list[str]
+    ) -> Seen:
+        """What is in the changed folders now, against the index entries of
+        those and of the folders that vanished, with the Message-IDs of
+        what arrived and of what the index has none for."""
         present: dict[str, str] = {}  # provider id -> folder
         for folder_id in changed:
             for native in await self._contents(account_id, folder_id):
                 present[native] = folder_id
         entries = self._index.in_folders(account_id, changed + vanished)
-        indexed = {e.native_id for e in entries}
-        arrived = [n for n in present if n not in indexed]
-        left = [e for e in entries if e.native_id not in present]
-        unread_headers = [
+        seen = Seen(entries, present, {})
+        wanted = seen.arrived + [
             e.native_id for e in entries if e.header is None and e.native_id in present
         ]
-        wanted = arrived + unread_headers
-        headers = await call(lambda p: p.message_headers(wanted)) if wanted else {}
-        # Messages that stayed but whose flags changed, where the provider
-        # can tell (IMAP with CONDSTORE).
-        stayed = {
-            e.native_id: e for e in entries if present.get(e.native_id) == e.folder_id
-        }
+        if not wanted:
+            return seen
+        headers = await self._adapters.call(
+            account_id, lambda p: p.message_headers(wanted)
+        )
+        return replace(seen, headers=headers)
+
+    async def _flagged(
+        self,
+        account_id: str,
+        changed: list[str],
+        before: dict[str, str],
+        seen: Seen,
+    ) -> list[str]:
+        """Messages that stayed but whose flags changed, where the provider
+        can tell (IMAP with CONDSTORE)."""
+        stayed = seen.stayed
         flagged: list[str] = []
         for folder_id in changed:
             known = [n for n, e in stayed.items() if e.folder_id == folder_id]
@@ -369,28 +391,19 @@ class SyncService:
                     account_id, folder_id, before[folder_id], known
                 )
                 flagged += [stayed[n].id for n in natives if n in stayed]
+        return flagged
 
-        changes = IndexChanges(states=states)
-        for entry in entries:
-            header = headers.get(entry.native_id)
-            if entry.native_id in present and entry.header is None and header:
-                changes.updated.append(replace(entry, header=header))
-
-        moved = _moves(left, arrived, headers)
-        for old, native in moved.items():
-            changes.updated.append(
-                IndexEntry(old.id, native, present[native], old.header)
-            )
-        taken = set(moved.values())
-        changes.removed = [e.id for e in left if e not in moved]
-        changes.added = [
-            IndexEntry(self._new_id(), n, present[n], headers.get(n))
-            for n in arrived
-            if n not in taken
-        ]
-        self._index.apply(account_id, changes)
-        if not before:
-            return _Counts(len(states))
+    def _report(
+        self,
+        account_id: str,
+        seen: Seen,
+        moved: dict[IndexEntry, str],
+        changes: IndexChanges,
+        flagged: list[str],
+        folders: int,
+    ) -> Counts:
+        """The changes of a pass in the change feed."""
+        present = seen.present
         self.changed(
             MessagesCreated(
                 account_id,
@@ -402,62 +415,18 @@ class SyncService:
         # change for the caller. One that went to another folder did.
         elsewhere = [e.id for e, n in moved.items() if present[n] != e.folder_id]
         now_in = {e.id: present[n] for e, n in moved.items()}
-        now_in.update((e.id, e.folder_id) for e in stayed.values())
+        now_in.update((e.id, e.folder_id) for e in seen.stayed.values())
         self.changed(MessagesUpdated(account_id, elsewhere + flagged, now_in))
         self.changed(
             MessagesDeleted(
                 account_id,
                 changes.removed,
-                {e.id: e.folder_id for e in left if e not in moved},
+                {e.id: e.folder_id for e in seen.left if e not in moved},
             )
         )
-        return _Counts(
-            len(states),
+        return Counts(
+            folders,
             len(changes.added),
             len(elsewhere + flagged),
             len(changes.removed),
         )
-
-
-@dataclass(frozen=True)
-class _Counts:
-    """What one pass found, for the log."""
-
-    folders: int
-    created: int = 0
-    updated: int = 0
-    deleted: int = 0
-
-
-def _delta_state(stored: str | None) -> tuple[str, datetime] | None:
-    """The token and time of a folder's stored delta state, None for a
-    state of another kind or none at all."""
-    if stored is None:
-        return None
-    try:
-        value = json.loads(stored)
-        at = parse_iso(str(value["at"]))
-    except (ValueError, TypeError, KeyError):
-        return None
-    return None if at is None else (str(value["token"]), at)
-
-
-def _moves(
-    left: list[IndexEntry], arrived: list[str], headers: dict[str, str | None]
-) -> dict[IndexEntry, str]:
-    """Which message that left is which one that arrived: same
-    ``Message-ID``, and exactly one on each side."""
-    gone: dict[str, list[IndexEntry]] = {}
-    for entry in left:
-        if entry.header:
-            gone.setdefault(entry.header, []).append(entry)
-    came: dict[str, list[str]] = {}
-    for native in arrived:
-        header = headers.get(native)
-        if header:
-            came.setdefault(header, []).append(native)
-    return {
-        olds[0]: came[header][0]
-        for header, olds in gone.items()
-        if len(olds) == 1 and len(came.get(header, [])) == 1
-    }
