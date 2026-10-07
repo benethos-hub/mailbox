@@ -16,8 +16,6 @@ paces the steps as for IMAP (CONCEPT 5.9).
 from __future__ import annotations
 
 import hashlib
-import itertools
-import threading
 import time
 from collections.abc import Callable
 from functools import partial
@@ -29,7 +27,6 @@ from ....common.chunks import batched
 from ....common.ratelimit import Clock, Sleep
 from ....errors import (
     BadRequestError,
-    ConflictError,
     MailboxServiceError,
     NotSupportedError,
     missing_message,
@@ -48,11 +45,11 @@ from ...models import (
     ServerProtocol,
 )
 from ...protocols import POP3_PORTS, Pick, Pop3Session, Server, SmtpSession
-from .. import rules
 from ..base import Capability, CredentialReader, ProviderSettings
-from ..guard import Guard, Pace
+from ..guard import Pace
+from ..mailserver import MailServerAdapter
 from ..rules import server_of
-from ..sender import SmtpFactory, SmtpSender, smtp_settings
+from ..sender import SmtpFactory, smtp_settings
 from . import mappers
 
 T = TypeVar("T")
@@ -105,11 +102,14 @@ async def probe(
     return await anyio.to_thread.run_sync(session.read_capabilities)
 
 
-class Pop3Provider:
+class Pop3Provider(MailServerAdapter):
     """Reads, deletes for good and, with an SMTP server, sends. No
     flags, folders, drafts or search: it implements neither ``Writes`` nor
     ``Drafts``, and the domain answers those with 501."""
 
+    protocol = "POP3"
+    account = "a POP3 account"
+    ports = POP3_PORTS
     # Without STABLE_IDS the sync polls the mailbox and compares its unique
     # ids, as for IMAP without IDLE. The ids never move, so the mapping the
     # domain keeps stays as it was.
@@ -129,49 +129,17 @@ class Pop3Provider:
     ) -> None:
         """``pick`` checks the host of each connection, POP3 and SMTP.
         ``pace`` is how fast steps go, unless the settings name a rate."""
-        host = settings.get("host")
-        if not host:
-            raise BadRequestError("a POP3 account needs settings.host")
-        security = rules.encrypted(settings, "security", "POP3")
-        username = settings.get("username")
-        if not username:
-            raise BadRequestError("a POP3 account needs settings.username")
-        if settings.get("auth", "password") != "password":
-            raise BadRequestError("settings.auth must be 'password'")
-        self._server = Server(
-            host=str(host),
-            port=rules.port_of(settings, "port", POP3_PORTS[security]),
-            security=security,
-            pick=pick,
-        )
-        self._username = str(username)
-        self._credentials = credentials
-        pace = pace or Pace()
-        per_minute = rules.rate_of(settings, "max_requests_per_minute", pace.per_minute)
-        self._guard = Guard(
-            per_minute,
-            pace.burst,
+        super().__init__(
+            settings,
+            credentials,
             clock=clock,
             sleep=sleep,
             jitter=jitter,
-            attempts=pace.attempts,
-            first_pause=pace.first_pause,
-            longest_pause=pace.longest_pause,
-            name=f"requests to {host}",
+            smtp_factory=smtp_factory,
+            pick=pick,
+            pace=pace,
         )
-        self._smtp = SmtpSender.from_settings(
-            settings,
-            self._username,
-            "password",
-            self._secret,
-            self._guard,
-            smtp_factory,
-            pick,
-        )
-        if self._smtp is not None:
-            self.capabilities = self.capabilities | {Capability.SEND}
         self._session = session_factory(self._server)
-        self._lock = threading.Lock()
 
     # --- Reads, Deletes, Sends ------------------------------------------------
 
@@ -207,13 +175,7 @@ class Pop3Provider:
         return await self._run(lambda session: _message(session, uid, message_id))
 
     async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
-        if self._smtp is None:
-            raise ConflictError(
-                "the account has no SMTP server: its settings name no smtp_host"
-            )
-        refused = await anyio.to_thread.run_sync(
-            self._smtp.send, raw, sender, recipients
-        )
+        refused = await self._send_smtp(raw, sender, recipients)
         # POP3 has no folder to keep a copy in.
         return SentMessage(refused=refused)
 
@@ -272,16 +234,12 @@ class Pop3Provider:
         return []  # POP3 has no flags
 
     async def verify(self) -> None:
-        await anyio.to_thread.run_sync(self._verify)
+        await self._in_thread(lambda: self._verified(self._session, self._check))
 
     async def close(self) -> None:
-        await anyio.to_thread.run_sync(self._close)
+        await self._in_thread(lambda: self._closed(self._session))
 
     # --- plumbing ---------------------------------------------------------------
-
-    async def _summary(self, message_id: str) -> MessageSummary:
-        uid = mappers.unique_id(message_id)
-        return await self._run(lambda session: _summary(session, uid, message_id))
 
     async def _run(self, operation: Callable[[Pop3Session], T]) -> T:
         return await self._retrying(lambda session, _retried: operation(session))
@@ -293,53 +251,30 @@ class Pop3Provider:
         server is unreachable. ``operation`` learns whether this is a retry,
         so that finding its work done counts as done. With ``commit`` the
         session ends with QUIT, which makes deletions take effect."""
-        attempts = itertools.count()
-        return await anyio.to_thread.run_sync(
-            self._locked, lambda session: operation(session, next(attempts) > 0), commit
-        )
+        step = partial(self._step, self._counting(operation), commit)
+        return await self._in_thread(lambda: self._attempted(self._session, step))
 
-    def _locked(self, operation: Callable[[Pop3Session], T], commit: bool) -> T:
+    def _step(self, operation: Callable[[Pop3Session], T], commit: bool) -> T:
         session = self._session
-
-        def step() -> T:
-            # A session sees the mailbox as at its login: never an old one.
+        # A session sees the mailbox as at its login: never an old one.
+        session.logout()
+        self._login(session)
+        try:
+            result = operation(session)
+            if commit:
+                session.commit()
+        finally:
             session.logout()
-            self._login(session)
-            try:
-                result = operation(session)
-                if commit:
-                    session.commit()
-            finally:
-                session.logout()
-            return result
+        return result
 
-        with self._lock:
-            return self._guard.attempts(step, drop=session.logout)
-
-    def _verify(self) -> None:
-        with self._lock:
-            self._guard.reset()
+    def _check(self) -> None:
+        """The login, and the unique ids: a server without UIDL is refused
+        here, at the start."""
+        self._login(self._session)
+        try:
+            _unique_ids(self._session)
+        finally:
             self._session.logout()
-            with self._guard.refused_logins():
-                self._login(self._session)
-                try:
-                    # A server without UIDL is refused here, at the start.
-                    _unique_ids(self._session)
-                finally:
-                    self._session.logout()
-                if self._smtp is not None:
-                    self._smtp.verify()
-
-    def _close(self) -> None:
-        with self._lock:
-            self._session.logout()
-
-    def _secret(self) -> str:
-        """The credential for the login, decrypted for this one use."""
-        return self._credentials("password").get_secret_value()
-
-    def _login(self, session: Pop3Session) -> None:
-        session.login(self._username, self._secret())
 
 
 # --- the steps, each in one session ------------------------------------------

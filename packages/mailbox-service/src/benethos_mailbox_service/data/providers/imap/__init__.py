@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
-from .provider import ImapProvider, probe, settings_from
+from .connect import probe, settings_from
+from .provider import ImapProvider
 
 __all__ = ["ImapProvider", "probe", "settings_from"]

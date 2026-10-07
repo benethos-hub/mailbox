@@ -17,8 +17,7 @@ from benethos_mailbox_service.data.protocols.imap import (
     Server,
 )
 from benethos_mailbox_service.data.providers.guard import Guard, Pace
-from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
-from benethos_mailbox_service.data.providers.imap import provider as imap_module
+from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers, watch
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
@@ -685,7 +684,7 @@ async def test_a_wait_in_idle_takes_no_thread_of_the_pool(
     server.idle_script = [[(5, b"EXISTS")]]
     imap = provider(server)
     assert await imap.wait_for_change(5) is True
-    assert limiters[-1] is imap_module.WATCHERS
+    assert limiters[-1] is watch.WATCHERS
     # Everything else takes the default limiter.
     await imap.list_folders()
     assert limiters[-1] is None

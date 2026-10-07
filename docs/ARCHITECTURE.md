@@ -265,11 +265,21 @@ packages/mailbox-service/
                         #   (build_provider, sign_in, probe_server)
         guard.py        # pacing, retries, blocked logins, for any adapter
         sender.py       # SmtpSender: sending for IMAP, POP3, ...
-        imap/, memory/, # one directory per provider (adapter)
-        microsoft/,     #   microsoft: Graph over data/protocols/http,
-        pop3/, jmap/    #   signin.py its endpoints and the scopes it
-                        #   needs. pop3: one inbox, a session per step.
-                        #   jmap: over data/protocols/jmap.py
+        mailserver.py   # MailServerAdapter: what IMAP and POP3 share,
+                        #   the server, the login, the guard, SMTP
+        imap/, memory/, # one directory per provider (adapter),
+        microsoft/,     #   provider.py the adapter, mappers.py the
+        pop3/, jmap/    #   translation, the rest one module per subject.
+                        #   imap: connect.py, mailbox.py (one session
+                        #   and its folders), folders, messages, drafts,
+                        #   sync, watch (IDLE).
+                        #   jmap: over data/protocols/jmap.py,
+                        #   account.py (one account's calls), folders,
+                        #   messages, drafts, sending, changes.
+                        #   microsoft: graph.py (Graph over
+                        #   data/protocols/http), signin.py its
+                        #   endpoints and the scopes it needs.
+                        #   pop3: one inbox, a session per step
       storage/          # own records, one module per subject, table.py
                         #   for the in-memory ones, sqlite/ the database,
                         #   sqlite/migrations/ the base, the registry,

@@ -577,13 +577,17 @@ async def test_delete_to_the_trash_and_for_good(
 
 async def test_destroy_refused(jmap: JmapProvider, server: FakeJmap) -> None:
     email_id = server.add_email(make_message("One"))
+    draft_id = server.add_email(make_message("Draft"), mailbox="drafts")
     server.Email_set = lambda args, using: [  # type: ignore[method-assign]
-        ("Email/set", {"notDestroyed": {email_id: {"type": "forbidden"}}})
+        (
+            "Email/set",
+            {"notDestroyed": {i: {"type": "forbidden"} for i in args["destroy"]}},
+        )
     ]
     outcome = await jmap.delete_messages([email_id], permanent=True)
     assert isinstance(outcome[email_id], ConflictError)
     with pytest.raises(ConflictError):
-        await jmap._destroy(email_id, "draft")
+        await jmap.delete_draft(draft_id)
 
 
 async def test_without_a_trash(jmap: JmapProvider, server: FakeJmap) -> None:
@@ -611,9 +615,9 @@ async def test_folder_states_and_contents(jmap: JmapProvider, server: FakeJmap) 
 async def test_contents_in_pages(
     jmap: JmapProvider, server: FakeJmap, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from benethos_mailbox_service.data.providers.jmap import provider
+    from benethos_mailbox_service.data.providers.jmap import changes
 
-    monkeypatch.setattr(provider, "QUERY_PAGE", 2)
+    monkeypatch.setattr(changes, "QUERY_PAGE", 2)
     ids = [server.add_email(make_message(f"M{n}")) for n in range(5)]
     assert sorted(await jmap.folder_contents("inbox")) == sorted(ids)
     server.query_cap = 1
@@ -647,9 +651,9 @@ async def test_changes_since_a_state(jmap: JmapProvider, server: FakeJmap) -> No
 async def test_changes_in_several_answers(
     jmap: JmapProvider, server: FakeJmap, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from benethos_mailbox_service.data.providers.jmap import provider
+    from benethos_mailbox_service.data.providers.jmap import changes
 
-    monkeypatch.setattr(provider, "MAX_CHANGES", 1)
+    monkeypatch.setattr(changes, "MAX_CHANGES", 1)
     start = (await jmap.folder_changes("inbox", None)).token
     one = server.add_email(make_message("One"))
     two = server.add_email(make_message("Two"))
