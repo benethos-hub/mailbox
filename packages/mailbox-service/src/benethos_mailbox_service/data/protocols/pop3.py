@@ -38,6 +38,8 @@ MAX_MESSAGE_BYTES = 40 * MIB
 # poplib refuses a line longer than 2048 bytes. Mail breaks that limit of
 # RFC 5322 often enough, e.g. HTML in one line, and IMAP reads it. A
 # message is held to MAX_MESSAGE_BYTES as a whole before it is read.
+# The limit is a private name of poplib, which typeshed leaves out: the
+# ignore below stays.
 _LONGEST_LINE = max(getattr(poplib, "_MAXLINE", 2048), MAX_MESSAGE_BYTES)
 poplib._MAXLINE = _LONGEST_LINE  # type: ignore[attr-defined]
 

@@ -31,6 +31,7 @@ from ...errors import (
     NotSupportedError,
     ProviderAuthError,
     ProviderError,
+    ProviderUnavailableError,
 )
 from . import wire
 from .http import Answer, ApiClient
@@ -404,6 +405,10 @@ def _refused(provider: str, status: int, error: str | None) -> Exception:
     if error in ("invalid_grant", "interaction_required", "consent_required"):
         # The user has to sign in again: revoked, expired, password changed.
         return ProviderAuthError(f"{provider} asks to sign in again ({error})")
+    if status >= 500 or error == "temporarily_unavailable":
+        return ProviderUnavailableError(
+            f"{provider} could not answer the token request ({error or status})"
+        )
     if error in ("invalid_client", "unauthorized_client"):
         return ProviderError(
             f"{provider} refused this service's app ({error}): check the "

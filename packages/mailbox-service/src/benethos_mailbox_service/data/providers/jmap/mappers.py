@@ -199,7 +199,10 @@ SORT = [{"property": "receivedAt", "isAscending": False}]
 
 
 def scope(folder_id: str | None, search: MessageFilter | None) -> str:
-    """What a cursor belongs to: the folder and the search."""
+    """What a cursor belongs to: the folder and the search. Shortened to
+    16 hex digits, 64 bits, to keep the cursor short. It only tells one
+    search of a caller from another, so two that collide cost a cursor
+    taken for the other search, never another account's mail."""
     what = json.dumps(
         [folder_id, (search or MessageFilter()).model_dump(mode="json")],
         sort_keys=True,

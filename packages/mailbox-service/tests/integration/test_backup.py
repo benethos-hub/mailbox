@@ -427,6 +427,9 @@ def test_a_restore_keeps_another_master_key_unless_told(
     other_key_file = machine / "other-secret" / "master.key"
     monkeypatch.setenv("MAILBOX_SERVICE_KEY_FILE", str(other_key_file))
     assert main(["keys", "init"]) == 0
+    out, err = capsys.readouterr()
+    assert "Keys created" in err
+    assert len(out.split()) == 1, "stdout holds the recovery key alone"
     own = FileKeyProvider(other_key_file).load()
     before = Settings().database_path.read_bytes()
     capsys.readouterr()

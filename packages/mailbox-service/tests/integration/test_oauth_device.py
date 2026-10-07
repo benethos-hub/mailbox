@@ -39,6 +39,7 @@ from benethos_mailbox_service.errors import (
     ForbiddenError,
     NotSupportedError,
     ProviderError,
+    ProviderUnavailableError,
 )
 
 from ..conftest import ADMIN
@@ -116,7 +117,7 @@ async def test_a_code_with_what_the_provider_left_out() -> None:
         (code(verification_uri="http://example.org/device"), "without HTTPS"),
         ((401, {"error": "invalid_client"}), "must allow public client flows"),
         ((400, {"error": "invalid_scope"}), "refused the token request"),
-        ((502, {}), "refused the token request"),
+        ((502, {}), "could not answer the token request"),
     ],
 )
 async def test_codes_that_cannot_be_used(answer: Any, message: str) -> None:
@@ -195,6 +196,28 @@ async def test_a_provider_that_asks_to_slow_down() -> None:
     started = await services.oauth.start_device(ADMIN, MS)
     clock.now += timedelta(seconds=5)
     assert await services.oauth.poll_device(ADMIN, MS, started.id) is None
+    clock.now += timedelta(seconds=5)
+    assert await services.oauth.poll_device(ADMIN, MS, started.id) is None
+    assert len(endpoint.forms) == 2, "asked after ten seconds, not five"
+    clock.now += timedelta(seconds=5)
+    assert await services.oauth.poll_device(ADMIN, MS, started.id) is not None
+
+
+@pytest.mark.parametrize(
+    "failure", [(503, {}), (400, {"error": "temporarily_unavailable"})]
+)
+async def test_a_provider_not_reached_keeps_the_code(
+    failure: tuple[int, dict[str, Any]],
+) -> None:
+    """A poll that does not reach the provider ends nothing: the person
+    may be entering the code. The next poll waits longer."""
+    clock = Clock()
+    endpoint = TokenEndpoint(code(), failure, signed_in())
+    services = services_with(endpoint, clock)
+    started = await services.oauth.start_device(ADMIN, MS)
+    clock.now += timedelta(seconds=5)
+    with pytest.raises(ProviderUnavailableError):
+        await services.oauth.poll_device(ADMIN, MS, started.id)
     clock.now += timedelta(seconds=5)
     assert await services.oauth.poll_device(ADMIN, MS, started.id) is None
     assert len(endpoint.forms) == 2, "asked after ten seconds, not five"

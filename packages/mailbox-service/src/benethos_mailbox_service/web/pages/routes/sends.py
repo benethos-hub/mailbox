@@ -4,11 +4,10 @@ bar, an account among its filters."""
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from ....common.clock import parse_day
 from ....data.models import SendFilter
 from ....domain.rights import Access
 from ...services import Accounts, Mailbox, get_users
@@ -33,11 +32,6 @@ def _user_names(request: Request, caller: Access) -> dict[str, str]:
     return {caller.user_id: caller.name, **listed}
 
 
-def _day(value: str) -> datetime | None:
-    """The start of a day, in UTC."""
-    return datetime.combine(date.fromisoformat(value), time(), UTC) if value else None
-
-
 def _filter(bar: FilterBar) -> SendFilter | None:
     """What the bar asks for. Raises ``FormError``, a ``ValueError``, for
     a value that is no filter."""
@@ -45,8 +39,8 @@ def _filter(bar: FilterBar) -> SendFilter | None:
         "user_id": bar.value("user") or None,
         "outcome": bar.value("outcome") or None,
         "recipient": bar.value("recipient") or None,
-        "after": _day(bar.value("after")),
-        "before": _day(bar.value("before")),
+        "after": parse_day(bar.value("after")),
+        "before": parse_day(bar.value("before")),
     }
     if not any(value is not None for value in wanted.values()):
         return None

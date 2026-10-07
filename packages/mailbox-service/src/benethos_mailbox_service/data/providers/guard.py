@@ -140,7 +140,8 @@ class Guard:
                 self._failures = 0
             return result
         self._pause()
-        assert last is not None
+        if last is None:
+            raise RuntimeError("the guard made no attempt: attempts must be 1 or more")
         raise last
 
     def _check_login(self) -> None:

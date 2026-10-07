@@ -150,7 +150,7 @@ def current(request: Request) -> Current:
     The first call of a request counts it against the session's limit."""
     session_id = request.cookies.get(COOKIE)
     session = store_of(request).get(session_id)
-    if session is None:
+    if session_id is None or session is None:
         raise SignInRequiredError
     auth = get_auth(request)
     try:
@@ -162,7 +162,6 @@ def current(request: Request) -> Current:
         store_of(request).drop(request.cookies.get(COOKIE))
         raise SignInRequiredError from None
     if found_for(request) is None:
-        assert session_id is not None
         signed_in(request, f"session:{session_id}", access)
     found = Current(session, access)
     setattr(request.state, _FOUND, found)

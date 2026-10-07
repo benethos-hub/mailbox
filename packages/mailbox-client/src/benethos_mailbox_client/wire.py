@@ -69,6 +69,30 @@ def service_url() -> str:
 
 
 @dataclass(frozen=True)
+class Environment:
+    """What the environment says about the service, read at one moment:
+    its address, the token, and whether http may go to another machine.
+    Unchecked: a client checks it when it is made."""
+
+    url: str
+    token: str
+    allow_http: bool
+
+
+def from_environment() -> Environment:
+    """``MAILBOX_SERVICE_URL``, ``MAILBOX_SERVICE_TOKEN`` and
+    ``MAILBOX_SERVICE_ALLOW_HTTP`` as they are now. A client made without
+    them reads them here. A program that makes clients for a long time,
+    such as the MCP server, reads them once."""
+    allowed = os.environ.get(ALLOW_HTTP_ENV, "").strip().lower()
+    return Environment(
+        url=service_url(),
+        token=os.environ.get(TOKEN_ENV, ""),
+        allow_http=allowed in ("1", "true", "yes"),
+    )
+
+
+@dataclass(frozen=True)
 class Connection:
     """Where the service is and the token that opens it, checked."""
 
@@ -82,11 +106,12 @@ def connection(
     """Raises without a token, and when the URL would carry the token
     unencrypted to another machine, unless ``allow_http`` (else
     ``MAILBOX_SERVICE_ALLOW_HTTP``) says so."""
-    url = (base_url or service_url()).rstrip("/")
+    found = from_environment()
+    url = (base_url or found.url).rstrip("/")
     if allow_http is None:
-        allow_http = os.environ.get(ALLOW_HTTP_ENV, "") in ("1", "true", "yes")
+        allow_http = found.allow_http
     _check_url(url, allow_http)
-    token = token if token is not None else os.environ.get(TOKEN_ENV, "")
+    token = token if token is not None else found.token
     if not token:
         raise ConfigurationError(
             f"{TOKEN_ENV} is not set. Make a token on your user's page in "

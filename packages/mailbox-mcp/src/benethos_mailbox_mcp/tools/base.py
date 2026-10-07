@@ -5,13 +5,15 @@ images. The one module of ``tools`` that imports the MCP library."""
 from __future__ import annotations
 
 import base64
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
 from mcp.types import CallToolResult, ImageContent, TextContent
 
-from ..client import MailboxClient
+from ..client import Connect, MailboxClient
 
 # What a tool answers when it hands over more than text.
 ToolResult = CallToolResult
@@ -19,24 +21,38 @@ ToolResult = CallToolResult
 MAX_LIMIT = 50
 
 
-_client: MailboxClient | None = None
+# The client of the server whose tools run in this context. Each server
+# makes its own in its lifespan, so two servers in one process share none.
+_serving: ContextVar[MailboxClient | None] = ContextVar("serving", default=None)
+# The client of a test that calls a tool without a server's lifespan.
+_for_tests: MailboxClient | None = None
+
+
+@asynccontextmanager
+async def serving(connect: Connect) -> AsyncIterator[MailboxClient]:
+    """A client of its own for the tools inside, closed afterwards."""
+    async with connect() as made:
+        token = _serving.set(made)
+        try:
+            yield made
+        finally:
+            _serving.reset(token)
 
 
 def use_client(client: MailboxClient | None) -> MailboxClient | None:
-    """The client the tools call from now on: one made for a test, or
-    ``None`` so the next call makes one from the environment. Returns the
-    one before, for its owner to close."""
-    global _client
-    before, _client = _client, client
+    """For tests: the client the tools call outside a server's lifespan.
+    Returns the one before, for its owner to close."""
+    global _for_tests
+    before, _for_tests = _for_tests, client
     return before
 
 
 def client() -> MailboxClient:
-    """The shared REST client, created on first use."""
-    global _client
-    if _client is None:
-        _client = MailboxClient()
-    return _client
+    """The REST client of the server the tool runs in."""
+    found = _serving.get() or _for_tests
+    if found is None:
+        raise RuntimeError("no REST client: a tool runs inside a server's lifespan")
+    return found
 
 
 @dataclass(frozen=True)

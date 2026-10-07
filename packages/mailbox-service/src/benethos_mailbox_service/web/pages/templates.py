@@ -52,10 +52,11 @@ def past(value: datetime | None) -> bool:
 def size(value: int | None) -> str:
     if value is None:
         return MISSING
+    number = float(value)
     for unit in ("B", "KB", "MB"):
-        if value < 1024 or unit == "MB":
-            return f"{value:.0f} {unit}" if unit == "B" else f"{value:.1f} {unit}"
-        value = value / 1024  # type: ignore[assignment]
+        if number < 1024 or unit == "MB":
+            return f"{number:.0f} {unit}" if unit == "B" else f"{number:.1f} {unit}"
+        number /= 1024
     return MISSING  # pragma: no cover
 
 

@@ -30,7 +30,7 @@ from .models import (
     Sent,
 )
 from .sync import SyncMailboxClient
-from .wire import service_url
+from .wire import Environment, from_environment, service_url
 
 try:
     __version__ = version("benethos-mailbox-client")
@@ -42,6 +42,7 @@ __all__ = [
     "Attachment",
     "Changes",
     "ConfigurationError",
+    "Environment",
     "Folder",
     "MailboxClient",
     "MailboxError",
@@ -56,6 +57,7 @@ __all__ = [
     "ServiceUnavailableError",
     "SyncMailboxClient",
     "__version__",
+    "from_environment",
     "message_body",
     "service_url",
 ]

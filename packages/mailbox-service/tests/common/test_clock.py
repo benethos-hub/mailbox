@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 
 import pytest
 
 from benethos_mailbox_service.common.clock import (
     iso,
     log_time,
+    parse_day,
     parse_iso,
+    start_of_day,
     utc_now,
 )
 
@@ -37,3 +39,19 @@ def test_a_time_as_text_is_in_utc_and_read_back() -> None:
 def test_a_time_without_a_zone_is_refused() -> None:
     with pytest.raises(ValueError, match="without a zone"):
         iso(datetime(2026, 9, 28, 12, 0))
+
+
+def test_a_day_starts_at_local_midnight() -> None:
+    """The UI shows times local to this machine, so a day it filters by
+    starts there too, not at midnight UTC."""
+    start = start_of_day(date(2026, 10, 7))
+    local = start.astimezone()
+    assert (local.year, local.month, local.day, local.hour) == (2026, 10, 7, 0)
+    assert start.utcoffset() == local.utcoffset()
+
+
+def test_a_day_from_a_form() -> None:
+    assert parse_day("2026-10-07") == start_of_day(date(2026, 10, 7))
+    assert parse_day("") is None
+    with pytest.raises(ValueError):
+        parse_day("someday")

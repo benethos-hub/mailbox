@@ -11,11 +11,13 @@ import pytest
 from benethos_mailbox_client import (
     ApiError,
     ConfigurationError,
+    Environment,
     MailboxClient,
     MailboxError,
     ServiceTimeoutError,
     ServiceUnavailableError,
     SyncMailboxClient,
+    from_environment,
 )
 from benethos_mailbox_client.wire import DEFAULT_URL
 
@@ -292,3 +294,18 @@ async def test_defaults_without_environment() -> None:
 def test_no_token_names_the_variable(kind: type, token: str | None) -> None:
     with pytest.raises(ConfigurationError, match="MAILBOX_SERVICE_TOKEN is not set"):
         kind(token=token)
+
+
+def test_the_environment_is_read_at_one_moment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A program that makes clients for a long time reads it once: what
+    changes later reaches none of them."""
+    monkeypatch.setenv("MAILBOX_SERVICE_URL", "http://mailbox-service:8080/")
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
+    monkeypatch.setenv("MAILBOX_SERVICE_ALLOW_HTTP", " True ")
+    found = from_environment()
+    assert found == Environment("http://mailbox-service:8080", "tok", True)
+    monkeypatch.delenv("MAILBOX_SERVICE_ALLOW_HTTP")
+    client = MailboxClient(found.url, found.token, allow_http=found.allow_http)
+    assert client.base_url == "http://mailbox-service:8080"

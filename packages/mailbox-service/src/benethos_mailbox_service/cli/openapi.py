@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import argparse
-import sys
 
-from .common import Commands
+from .common import Commands, emit
 
 
 def add(commands: Commands, option: argparse.ArgumentParser) -> None:
@@ -18,4 +17,5 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
 def run(args: argparse.Namespace) -> None:
     from ..assembly import openapi_json
 
-    sys.stdout.write(openapi_json())
+    # emit ends the document with its line break.
+    emit(openapi_json().removesuffix("\n"))

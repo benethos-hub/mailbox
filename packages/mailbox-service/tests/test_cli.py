@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 
@@ -379,3 +380,28 @@ def test_a_command_that_changes_the_database_logs_it_too(
         line.startswith("the host wrote a backup to copy.backup, schema ")
         for line in said
     )
+
+
+def test_only_common_writes_to_the_terminal() -> None:
+    """A message goes to stderr through ``say``, a result to stdout through
+    ``emit``: one place decides which stream may carry a secret."""
+    from benethos_mailbox_service import cli
+
+    found = []
+    for path in Path(cli.__file__).parent.glob("*.py"):
+        if path.name == "common.py":
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Name) and node.id == "print":
+                found.append(f"{path.name}:{node.lineno} print")
+            if isinstance(node, ast.Attribute) and node.attr in ("stdout", "stderr"):
+                found.append(f"{path.name}:{node.lineno} sys.{node.attr}")
+    assert found == []
+
+
+def test_say_to_stderr_emit_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
+    from benethos_mailbox_service.cli.common import emit, say
+
+    say("Keys created.")
+    emit("the-secret")
+    assert capsys.readouterr() == ("the-secret\n", "Keys created.\n")

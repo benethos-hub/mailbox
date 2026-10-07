@@ -78,6 +78,17 @@ machine. To another machine it needs https, or
 `MAILBOX_SERVICE_ALLOW_HTTP=1` (`allow_http=True`) for a network you
 trust, such as between containers.
 
+A client made without an address or a token reads the environment when
+it is made. A program that makes clients for a long time can read it
+once, with `from_environment()`:
+
+```python
+from benethos_mailbox_client import MailboxClient, from_environment
+
+found = from_environment()
+client = MailboxClient(found.url, found.token, allow_http=found.allow_http)
+```
+
 ## Errors
 
 Everything the client raises is a `MailboxError`:

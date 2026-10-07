@@ -15,21 +15,18 @@ from pathlib import Path
 import anyio
 
 from . import __version__, config, server, tools, transport
+from .client import Connect, connector, from_environment
 from .errors import MailboxError, ToolError
 
 logger = logging.getLogger(__name__)
 
 
-async def _at_start() -> set[str]:
-    """What the token may do, asked before the server runs. Its connections
-    belong to this event loop, which ends here: the server's own loop gets a
-    fresh client."""
-    try:
+async def _at_start(connect: Connect) -> set[str]:
+    """What the token may do, asked before the server runs. Its client
+    belongs to this event loop, which ends here: the server makes its own
+    in its lifespan."""
+    async with tools.serving(connect):
         return await server.allowed_operations()
-    finally:
-        left = tools.use_client(None)
-        if left is not None:
-            await left.aclose()
 
 
 TRANSPORTS = ("stdio", "streamable-http")
@@ -146,12 +143,14 @@ def main(argv: list[str] | None = None) -> None:
     configure_logging(args.log_level)
     if loaded is not None:
         logger.info("Settings from %s", loaded)
+    environment = from_environment()
+    connect = connector(environment)
     try:
-        operations = anyio.run(_at_start)
+        operations = anyio.run(_at_start, connect)
     except (MailboxError, ToolError) as exc:
         sys.exit(f"benethos-mailbox-mcp: {exc}")
-    built = server.build_server(operations)
-    server.started(operations, args.transport)
+    built = server.build_server(operations, connect)
+    server.started(operations, args.transport, environment.url)
     if args.transport == "stdio":
         transport.serve_stdio(built)
         return

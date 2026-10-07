@@ -33,6 +33,7 @@ from ...data.models import (
     Page,
 )
 from ...errors import (
+    BadRequestError,
     ConflictError,
     ForbiddenError,
     MailboxServiceError,
@@ -319,7 +320,8 @@ class MailboxService:
         outcomes: dict[str, Any]
         if batch.action == "update":
             access.require("update_message", account_id)
-            assert batch.changes is not None
+            if batch.changes is None:
+                raise BadRequestError("an update needs changes")
             changes = await self._folders_by_role(account_id, batch.changes)
             outcomes = dict(
                 await self._outside(

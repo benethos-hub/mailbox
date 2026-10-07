@@ -4,10 +4,9 @@ for a user, made on the host."""
 from __future__ import annotations
 
 import argparse
-import sys
 
 from ..config import load_settings
-from .common import Commands, stored
+from .common import Commands, emit, say, stored
 
 
 def add(commands: Commands, option: argparse.ArgumentParser) -> None:
@@ -47,10 +46,9 @@ def run(args: argparse.Namespace) -> None:
             done = f"Gave {user.name} ({user.id}) a new password"
             if before is not None and not before.ui_sign_in:
                 done += ", and its UI sign-in, which was off,"
-    print(
+    say(
         f"{done} in {settings.database_path}. Sign in to the UI with this "
         "one-time password, shown this once. The UI then asks for one of "
-        "your own:",
-        file=sys.stderr,
+        "your own:"
     )
-    print(password)
+    emit(password)
