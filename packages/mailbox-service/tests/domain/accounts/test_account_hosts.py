@@ -9,8 +9,8 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import build_services, create_app
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.main import build_services, create_app
 
 from ...conftest import PUBLIC, admin_bearer
 

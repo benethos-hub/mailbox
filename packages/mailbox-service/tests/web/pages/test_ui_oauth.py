@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
     Candidate,
@@ -26,7 +27,6 @@ from benethos_mailbox_service.data.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.data.providers.microsoft import (
     endpoints as microsoft_endpoints,
 )
-from benethos_mailbox_service.main import Services, build_services, create_app
 
 from ...conftest import CHEAP, admin_bearer, bearer_for, browser_admin
 from ...integration.test_oauth import (

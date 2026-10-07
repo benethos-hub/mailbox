@@ -16,6 +16,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service import logs
+from benethos_mailbox_service.assembly import Services
+from benethos_mailbox_service.assembly.lifecycle import _loop
 from benethos_mailbox_service.data.models import (
     Grant,
     OutgoingMessage,
@@ -34,7 +36,6 @@ from benethos_mailbox_service.domain.activity import (
 from benethos_mailbox_service.domain.activity.catalogue import users as said
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import StorageError
-from benethos_mailbox_service.main import Services, _loop
 
 from ...conftest import ADMIN, admin_bearer, memory_of
 from ...ui_helpers import post

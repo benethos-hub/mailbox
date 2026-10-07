@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import (
     ChangeRecord,
     Folder,
@@ -19,7 +20,6 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.domain.mailbox.reach import Reach
 from benethos_mailbox_service.domain.rights.access import Access
-from benethos_mailbox_service.main import Services
 
 from ...conftest import bearer_for, memory_of
 

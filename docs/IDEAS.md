@@ -99,6 +99,15 @@ a REST client and a tool list per session, made from `/v1/me` of that
 token, instead of once at the start. The OAuth of the MCP specification
 could follow. `containers/production/` would then run it for everyone.
 
+## A framework for the assembly
+
+Collected 2026-10-07, when `main.py` became `assembly/`. The services are
+wired by hand in `assembly/domain.py`, and that is enough while each
+lives as long as the service. A container of services such as `svcs`
+would pay off once one of these comes: services that live for one
+request, plugins found through entry points, or wiring chosen by the
+settings rather than in code.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

@@ -6,11 +6,11 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Account, Grant, ProviderType
 from benethos_mailbox_service.domain.sync import SyncState
 from benethos_mailbox_service.domain.sync.worker import WorkerState
 from benethos_mailbox_service.domain.system import AccountHealth, ServiceStatus
-from benethos_mailbox_service.main import Services
 from benethos_mailbox_service.web.api.schemas import ServiceStatus as Answer
 
 from ...conftest import bearer_for, create_account

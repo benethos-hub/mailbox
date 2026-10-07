@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 from fastapi import APIRouter, FastAPI
 
+from benethos_mailbox_service.assembly import create_app
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import BadRequestError
-from benethos_mailbox_service.main import create_app
 from benethos_mailbox_service.web import api
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 

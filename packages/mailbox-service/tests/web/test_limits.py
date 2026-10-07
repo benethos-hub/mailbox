@@ -8,8 +8,8 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.main import Services, create_app
 from benethos_mailbox_service.web import limits
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 from benethos_mailbox_service.web.limits import Buckets, RequestLimits

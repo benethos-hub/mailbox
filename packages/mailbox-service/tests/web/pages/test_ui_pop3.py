@@ -9,9 +9,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Candidate, Discovery, ProviderType
-from benethos_mailbox_service.main import Services, create_app
 
 from ...conftest import browser_admin
 from ...domain.sync.test_pop3_sync import pop3_account_id, pop3_server, pop3_services

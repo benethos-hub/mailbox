@@ -9,6 +9,7 @@ import anyio
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.discovery import (
     Finding,
@@ -37,7 +38,6 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
     RateLimitedError,
 )
-from benethos_mailbox_service.main import build_services, create_app
 
 from ...conftest import admin_bearer, bearer_for
 

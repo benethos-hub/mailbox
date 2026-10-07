@@ -8,10 +8,10 @@ from email.policy import default
 
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.mail import compose
 from benethos_mailbox_service.data.models import OutgoingMessage, Recipient
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
-from benethos_mailbox_service.main import Services
 
 
 def parts(raw: bytes) -> tuple[str, str]:

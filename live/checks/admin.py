@@ -13,9 +13,9 @@ from typing import Any
 import httpx
 
 from benethos_mailbox_client import SyncMailboxClient
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import Access
-from benethos_mailbox_service.main import Services
 
 from .processes import program, run_dir
 

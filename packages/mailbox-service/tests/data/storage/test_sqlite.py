@@ -15,7 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_service.__main__ import main
+from benethos_mailbox_service.assembly import build_services
+from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.common.clock import iso
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ApiToken, ProviderType, User
@@ -39,7 +40,6 @@ from benethos_mailbox_service.errors import (
     StorageError,
     UnauthorizedError,
 )
-from benethos_mailbox_service.main import build_services
 
 from ...conftest import CHEAP, create_account
 

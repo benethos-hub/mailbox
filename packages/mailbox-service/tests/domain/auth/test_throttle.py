@@ -9,10 +9,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.domain.auth.throttle import SignInThrottle
 from benethos_mailbox_service.errors import RateLimitedError, UnauthorizedError
-from benethos_mailbox_service.main import Services, build_services, create_app
 
 from ...conftest import CHEAP, admin_bearer, browser_admin
 from ...ui_helpers import try_sign_in

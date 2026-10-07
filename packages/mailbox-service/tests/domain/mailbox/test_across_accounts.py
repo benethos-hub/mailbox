@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
     Folder,
@@ -16,7 +17,6 @@ from benethos_mailbox_service.data.models import (
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.errors import ProviderUnavailableError
-from benethos_mailbox_service.main import Services, build_services, create_app
 
 from ...conftest import admin_bearer, bearer_for, create_account
 

@@ -9,9 +9,9 @@ from email import message_from_bytes
 
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Folder, FolderRole, Grant
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
-from benethos_mailbox_service.main import Services
 
 from ...conftest import browser_user, memory_of
 from ...ui_helpers import csrf_of, post, sign_in

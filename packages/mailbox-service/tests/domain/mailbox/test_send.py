@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.mail import compose
 from benethos_mailbox_service.data.models import (
     Grant,
@@ -28,7 +29,6 @@ from benethos_mailbox_service.errors import (
     ConflictError,
     ProviderAuthError,
 )
-from benethos_mailbox_service.main import Services
 
 from ...conftest import bearer_for, memory_of
 from ...imap_fake import FakeFolder, FakeMailBox

@@ -21,7 +21,7 @@ Three layers, and imports point down only:
 
 Beside them, read by every layer and importing none: `config.py`,
 `errors.py` and `common/`. Above them, allowed to reach anywhere because
-they assemble the service: `main.py`, `__main__.py`, `logs.py`.
+they assemble the service: `assembly/`, `cli/`, `__main__.py`, `logs.py`.
 
 Inside a layer, packages by area (`domain/accounts/`) or by kind
 (`data/storage/`). Packages stand in lines, and a package imports only
@@ -41,8 +41,8 @@ The three layers and what each may import:
 | Data | `data/` | own records and foreign mail sources | neither |
 
 - `config.py`, `errors.py` and `common/` are cross-cutting: read by every
-  layer, they import none. `main.py`, `__main__.py` and `logs.py` only
-  assemble.
+  layer, they import none. `assembly/`, `cli/`, `__main__.py` and
+  `logs.py` only assemble.
 - **`common/` is not a drawer.** Only what more than one layer needs, on
   the standard library, with no I/O and no state beyond what a caller
   holds. `redact` is the one module with state of its own, and its
@@ -104,7 +104,7 @@ The three layers and what each may import:
 
 `tests/test_architecture.py` checks the direction, the cross-cutting
 modules, that `common/` stays on the standard library, that FastAPI stays in
-`web/` (and `main.py`), that providers are reached through the registry,
+`web/` (and `assembly/`), that providers are reached through the registry,
 that the domain picks no storage implementation, and that SQLite is
 reached through `data/storage/` alone. It also checks that the data
 layer logs nothing above `DEBUG` and the domain nothing but activities,
@@ -121,9 +121,29 @@ its line here in the same commit.
 ```
 packages/mailbox-service/
   src/benethos_mailbox_service/
-    __main__.py         # CLI: serve, openapi, paths, users, keys, backup,
-                        #   restore
-    main.py             # assembly only: create_app, picks implementations
+    __main__.py         # python -m, calls cli/
+    cli/                # the command line, one module per command
+      __init__.py       # main(), the parser built from the commands
+      common.py         # --env-file, the errors a command reports, the
+                        #   master key from the key provider or a
+                        #   recovery key
+      serve.py          # the REST API and the UI, the log first
+      openapi.py        # the OpenAPI document on stdout
+      paths.py          # where the settings and the data are
+      users.py          # create-admin, set-password
+      keys.py           # init, import, generate
+      backup.py         # write a backup, verify one
+      restore.py        # replace the database with a backup
+    assembly/           # builds the service, picks implementations,
+                        #   decides nothing else
+      storage.py        # the repositories, the audit, the activity log
+      secrets.py        # the key provider, the vault
+      providers.py      # the guard of every connection, the adapters'
+                        #   factory, OAuth apps, kinds offered, discovery
+      domain.py         # build_services: the domain services wired
+      services.py       # Services, as web/ and cli/ reach them
+      lifecycle.py      # opened() for a command, serving() for the app
+      web.py            # create_app, openapi_json
     logs.py             # assembly: the log of serve, format, level, masking
     config.py           # cross-cutting: Settings (MAILBOX_SERVICE_* env and
                         #   the .env), the folders that apply: named,
@@ -353,7 +373,7 @@ names it.
 | a mail provider | a directory in `data/providers/`, behind `MailProvider`, reached through the registry |
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
-| a command of the CLI | `__main__.py`, which builds the service through `main.py` |
+| a command of the CLI | a module in `cli/` with `add` and `run`, its line in `COMMANDS`. It builds the service through `assembly/` |
 | a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer through `render.py` (section 3) |
 | a request of the Python client | `endpoints.py` of the client package, and one line on each client (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |

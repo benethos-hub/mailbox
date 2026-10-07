@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant, ProviderType, Webhook
 from benethos_mailbox_service.data.storage import (
     Attempt,
@@ -23,7 +24,6 @@ from benethos_mailbox_service.data.storage import (
 )
 from benethos_mailbox_service.domain.webhooks.service import sealed_label
 from benethos_mailbox_service.errors import ConflictError, NotFoundError
-from benethos_mailbox_service.main import Services
 
 from ...conftest import bearer_for, create_account
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Attachment
-from benethos_mailbox_service.main import Services
 
 
 def test_folders(client: TestClient, account_id: str) -> None:

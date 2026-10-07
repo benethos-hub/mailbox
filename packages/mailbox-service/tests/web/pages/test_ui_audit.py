@@ -7,8 +7,8 @@ import re
 
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant
-from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN, browser_admin, browser_user
 from ...ui_helpers import sign_in

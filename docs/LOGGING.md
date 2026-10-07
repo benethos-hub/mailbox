@@ -329,7 +329,7 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    it notices goes up as a result or an error, and the domain logs it.
    The two lines that were under `data/` moved that way: the IMAP adapter
    reports a missing sent copy in `SentMessage`, and `outgoing` logs it.
-   The migrations return their notes, and `main` logs them at start.
+   The migrations return their notes, and `assembly` logs them at start.
    `DEBUG` stays allowed under `data/` for the technical steps the
    domain cannot see: a reconnect, a retry, a token refresh, a pause a
    provider asked for. `test_architecture.py` checks that no module

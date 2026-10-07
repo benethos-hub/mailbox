@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import (
     Grant,
     SendFilter,
@@ -34,7 +35,6 @@ from benethos_mailbox_service.errors import (
     SendLimitError,
     StorageError,
 )
-from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN, bearer_for
 
@@ -646,8 +646,8 @@ def test_zero_keeps_every_record() -> None:
 
 
 def test_the_days_come_from_the_settings() -> None:
+    from benethos_mailbox_service.assembly import build_services
     from benethos_mailbox_service.config import Settings
-    from benethos_mailbox_service.main import build_services
 
     services = build_services(Settings(storage="memory", audit_days=30))
     assert services.mailbox.outgoing._sends.days == 30
