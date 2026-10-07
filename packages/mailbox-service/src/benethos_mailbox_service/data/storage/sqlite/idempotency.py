@@ -47,11 +47,7 @@ class SqliteIdempotencyRepository:
         )
 
     def purge(self, before: datetime) -> None:
-        removed = self._db.execute(
-            "DELETE FROM idempotency WHERE created_at < ?", (iso(before),)
-        )
-        if removed:
-            self._db.shrink()
+        self._db.purge("idempotency", "created_at", before)
 
     def forget_account(self, account_id: str) -> None:
         # ON DELETE CASCADE does this as well. Said here, so both stores agree.

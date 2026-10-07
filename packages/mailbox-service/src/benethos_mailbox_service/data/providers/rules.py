@@ -21,7 +21,7 @@ from ...errors import (
     ProviderAuthError,
     ProviderUnavailableError,
 )
-from ..models import Folder, FolderRole, MessageUpdate
+from ..models import Folder, FolderRole, MailServer, MessageUpdate, ServerProtocol
 from .base import Capability, ProviderSettings
 
 R = TypeVar("R")
@@ -124,6 +124,11 @@ def _number(
     if number is None or not valid(number):
         raise BadRequestError(f"settings.{key} must be {must_be}")
     return number
+
+
+def server_of(servers: list[MailServer], protocol: ServerProtocol) -> MailServer | None:
+    """The first of the discovered ``servers`` that speaks ``protocol``."""
+    return next((s for s in servers if s.protocol is protocol), None)
 
 
 def hosts_in(settings: Mapping[str, object]) -> list[tuple[str, str, int]]:

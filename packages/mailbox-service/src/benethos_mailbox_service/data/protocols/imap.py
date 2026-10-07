@@ -34,7 +34,7 @@ from ...errors import (
     missing,
 )
 from ..mail import fields, parse
-from .transport import Server, one_line, transport_errors
+from .transport import Server, names, one_line, text, transport_errors
 
 ClientFactory = Callable[..., Any]
 
@@ -216,8 +216,8 @@ class ImapSession:
             return [
                 RawFolder(
                     str(name),
-                    _text(delimiter) if delimiter else None,
-                    tuple(_text(flag) for flag in flags),
+                    text(delimiter) if delimiter else None,
+                    tuple(text(flag) for flag in flags),
                     None if subscribed is None else str(name) in subscribed,
                 )
                 for flags, delimiter, name in client.list_folders()
@@ -237,7 +237,7 @@ class ImapSession:
         if b"READ-ONLY" in answer:
             raise ProviderError(f"the folder {folder} is read-only on the server")
         permanent = answer.get(b"PERMANENTFLAGS", ())
-        return _uidvalidity(answer), frozenset(_text(f) for f in permanent)
+        return _uidvalidity(answer), frozenset(text(f) for f in permanent)
 
     def store_flags(self, uids: list[int], add: list[str], remove: list[str]) -> None:
         """Set and clear the same flags on messages of the selected folder."""
@@ -301,7 +301,7 @@ class ImapSession:
                 lambda: client.append(folder, raw, flags=flags, msg_time=utc_now()),
             )
         for item in reported:
-            match = re.search(r"(?:APPENDUID )?\d+ (\d+)", _text(item) if item else "")
+            match = re.search(r"(?:APPENDUID )?\d+ (\d+)", text(item) if item else "")
             if match:
                 return int(match.group(1))
         return None
@@ -502,7 +502,7 @@ class ImapSession:
                 personal = client.namespace().personal
                 if personal:
                     prefix, delimiter = personal[0]
-                    found = (_text(prefix), _text(delimiter) if delimiter else None)
+                    found = (text(prefix), text(delimiter) if delimiter else None)
         self._namespace = (client, found)
         return found
 
@@ -535,16 +535,12 @@ class ImapSession:
         return self._client
 
 
-def _text(value: bytes | str) -> str:
-    return value.decode(errors="replace") if isinstance(value, bytes) else value
-
-
 def _capabilities(client: Any) -> frozenset[str]:
-    return frozenset(_text(c).upper() for c in client.capabilities())
+    return names(client.capabilities())
 
 
 def _flags(data: dict[bytes, Any]) -> tuple[str, ...]:
-    return tuple(_text(flag) for flag in data.get(b"FLAGS", ()))
+    return tuple(text(flag) for flag in data.get(b"FLAGS", ()))
 
 
 def _part(data: dict[bytes, Any], key: bytes) -> bytes:
@@ -560,8 +556,8 @@ def _new_uids(reported: list[Any]) -> dict[int, int]:
     """Old UID to new, from ``COPYUID <validity> <old set> <new set>``."""
     found: dict[int, int] = {}
     for item in reported:
-        text = _text(item) if isinstance(item, bytes | str) else ""
-        match = re.search(r"(?:COPYUID )?\d+ ([\d:,]+) ([\d:,]+)", text)
+        said = text(item) if isinstance(item, bytes | str) else ""
+        match = re.search(r"(?:COPYUID )?\d+ ([\d:,]+) ([\d:,]+)", said)
         if match is None:
             continue
         old, new = _uid_set(match.group(1)), _uid_set(match.group(2))

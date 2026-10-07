@@ -26,7 +26,7 @@ from ...errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from .transport import Server, one_line, transport_errors
+from .transport import Server, names, one_line, text, transport_errors
 
 ConnectionFactory = Callable[[Server, float], Any]
 
@@ -195,17 +195,16 @@ def _capabilities(connection: Any) -> frozenset[str]:
     """The names of what CAPA lists, upper case. Empty for a server without
     CAPA."""
     try:
-        return frozenset(name.upper() for name in connection.capa())
+        return names(connection.capa())
     except poplib.error_proto:
         return frozenset()
 
 
 def _text(value: Any) -> str:
+    """A line of the server, or the one a refusal carries, as text."""
     if isinstance(value, poplib.error_proto):
         value = value.args[0] if value.args else ""
-    if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
-    return str(value)
+    return text(value) if isinstance(value, bytes | str) else str(value)
 
 
 # RFC 2449 and RFC 3206 response codes. [AUTH] says the credential is wrong,

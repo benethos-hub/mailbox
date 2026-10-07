@@ -41,13 +41,10 @@ def message_id(uid: str) -> str:
 
 def unique_id(value: str) -> str:
     """The server's unique id behind a message id of this adapter."""
-    try:
-        parts = opaque.decode("m_", value)
-    except ValueError:
-        raise missing_message(value) from None
-    if not isinstance(parts, list) or len(parts) != 1 or not isinstance(parts[0], str):
+    parts = opaque.fields("m_", value, str)
+    if parts is None:
         raise missing_message(value)
-    return parts[0]
+    return str(parts[0])
 
 
 def cursor(uid: str, position: int) -> str:
@@ -57,18 +54,8 @@ def cursor(uid: str, position: int) -> str:
 
 
 def parse_cursor(value: str) -> tuple[str, int]:
-    try:
-        parts = opaque.decode("c_", value)
-    except ValueError:
-        raise rules.invalid_cursor() from None
-    if (
-        not isinstance(parts, list)
-        or len(parts) != 2
-        or not isinstance(parts[0], str)
-        or not isinstance(parts[1], int)
-        or isinstance(parts[1], bool)
-        or parts[1] < 0
-    ):
+    parts = opaque.fields("c_", value, str, int)
+    if parts is None:
         raise rules.invalid_cursor()
     return parts[0], parts[1]
 

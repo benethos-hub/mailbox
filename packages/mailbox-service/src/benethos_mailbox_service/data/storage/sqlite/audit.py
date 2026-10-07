@@ -65,16 +65,13 @@ class SqliteAuditRepository:
             " ORDER BY at DESC, id DESC LIMIT ?",
             (*params, limit),
         )
-        return [_record(row) for row in rows]
+        return [_activity(row) for row in rows]
 
     def purge(self, before: datetime) -> int:
-        removed = self._db.execute("DELETE FROM activity WHERE at < ?", (iso(before),))
-        if removed:
-            self._db.shrink()
-        return removed
+        return self._db.purge("activity", "at", before)
 
 
-def _record(row: sqlite3.Row) -> ActivityRecord:
+def _activity(row: sqlite3.Row) -> ActivityRecord:
     return ActivityRecord(
         id=row["id"],
         at=parse_iso(row["at"]),

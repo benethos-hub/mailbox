@@ -17,10 +17,12 @@ import threading
 from collections.abc import Iterable, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from ....common.chunks import batched
+from ....common.clock import iso
 from ....errors import ConflictError, StorageError, missing
 from ...files import LockedError, create_private, exclusive_lock
 from .migrations import MIGRATIONS, SCHEMA_VERSION
@@ -95,6 +97,17 @@ class Database:
                 return False
             self._connection.execute("VACUUM")
             return True
+
+    def purge(self, table: str, column: str, before: datetime) -> int:
+        """The rows of ``table`` whose time in ``column`` lies before
+        ``before``, deleted, and the file shrunk after. Answers how many.
+        ``table`` and ``column`` are names in code, never a caller's."""
+        removed = self.execute(
+            f"DELETE FROM {table} WHERE {column} < ?", (iso(before),)
+        )
+        if removed:
+            self.shrink()
+        return removed
 
     def shrink(self) -> None:
         """Give the pages a deletion freed back to the file system, so the

@@ -18,7 +18,7 @@ class SqliteWebhookRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
         self._rows = SqliteRows(
-            db, "webhooks", "webhook", _record, order="created_at, id"
+            db, "webhooks", "webhook", _webhook, order="created_at, id"
         )
 
     def add(self, record: WebhookRecord) -> None:
@@ -121,7 +121,7 @@ class SqliteWebhookRepository:
         ]
 
 
-def _record(row: sqlite3.Row) -> WebhookRecord:
+def _webhook(row: sqlite3.Row) -> WebhookRecord:
     accounts = row["accounts"]
     return WebhookRecord(
         webhook=Webhook(
