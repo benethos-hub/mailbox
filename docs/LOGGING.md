@@ -6,9 +6,9 @@ goes into a line. It builds on what exists since the log page: one
 stream on stderr with time, level and source, secrets masked, the newest
 lines on a page for the admin ([CONCEPT 7.4](CONCEPT.md#74-handling-rules),
 [UI.md 6.5](UI.md)). The second step, an audit of administration in the
-database, is [AUDIT.md](AUDIT.md) and comes later: it takes the activities
-named here and stores those someone caused. What the user decides is
-marked as decided, everything else is the proposal.
+database, is [AUDIT.md](AUDIT.md): it takes the activities named here and
+stores those someone caused. Both steps are built. What the user decides
+is marked as decided, everything else is the proposal.
 
 ## 1. What the log is for
 
@@ -103,8 +103,8 @@ searches text and a person reads it.
 4. **Search terms** and filter values a person typed: the API's `q`,
    `from`, `subject`, the UI's search, the discovery address's local
    part. A discovery lookup names the domain only. The access log of
-   uvicorn writes a request's query today, and with it these terms: it
-   writes the path alone from step 2 of section 8 on.
+   uvicorn writes the path of a request alone, without its query, which
+   holds these terms.
 5. **Webhook URLs beyond the host**: a URL may carry a key in its query.
    A webhook is its id and the host it posts to.
 6. **Request bodies and library traffic**: never at any level of the
@@ -119,122 +119,124 @@ defence, not the first: a line is written as if there were no masking.
 
 ## 5. The activities
 
-One table per area: the level, the line, its fields, and whether it
-exists today. Fields in brackets are absent when unknown. Which of
-these activities become audit records later is AUDIT.md's list.
+One table per area: the level, the line, its fields, and a note where
+one helps. Fields in brackets are absent when unknown. The activities
+the audit keeps as well are listed in [AUDIT.md](AUDIT.md) section 2.
 
 ### 5.1 Lifecycle
 
-| Level | Line | Fields | Today |
+| Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | the service started: settings from X, database Y, schema N | env file, database path, schema version | printed, not logged |
-| INFO | schema migrated from N to M, notes | versions, the migrations' notes | per step as warning in `database.py`, moves to `main` |
-| INFO | the service stopped | | new |
-| ERROR | a background loop ended | which, traceback | worker and dispatcher log per round |
-| ERROR | a round of a background loop failed, the next one runs | which, traceback | yes |
-| WARNING | the master key comes from the environment | | yes |
-| WARNING | another service uses this database | | yes |
+| INFO | the service started: settings from X, database Y, schema N | env file, database path, schema version | "storage in memory" without a database |
+| INFO | the database schema was migrated from N to M, notes | versions, the migrations' notes | "created the database" for a new one |
+| INFO | the service stopped | | |
+| ERROR | a background loop ended | which, traceback | |
+| ERROR | a round of a background loop failed, the next one runs | which, traceback | |
+| WARNING | the master key comes from the environment | | |
+| WARNING | another service uses this database | | |
 
 ### 5.2 Sign-in and sessions
 
-| Level | Line | Fields | Today |
+| Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | signed in to the UI | user, source | yes |
-| WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | yes |
-| INFO | signed out | user | new |
-| WARNING | a token was presented that is revoked or expired, or whose user is disabled | token id, source | new, `authenticate` knows it |
-| WARNING | a wrong password to confirm a step | user | yes |
+| INFO | signed in to the UI | user, source | |
+| WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | |
+| INFO | signed out | user | |
+| WARNING | someone presented token T of U: reason | token name and id, user id, source, reason: revoked, expired or its user disabled | a token the service does not know counts against the sign-in throttle alone |
+| WARNING | a wrong password to confirm a step | user | |
 
 Sessions ending by idleness or restart are not logged. The lockouts of
 the sign-in throttle are in 5.9 with the other limits.
 
 ### 5.3 Users, passwords, tokens, roles
 
-| Level | Line | Fields | Today |
+| Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | X created user Y (roles, N grants, ui_sign_in) | actor, user, counts | new |
-| INFO | X changed user Y: name, roles, grants, disabled, ui_sign_in | actor, user, the fields that changed | partly (API user switch) |
-| INFO | X deleted user Y and its N webhooks | actor, user, count | yes |
-| INFO | X changed its password | user | yes |
-| INFO | X set the password of Y / a one-time password for Y | actor, user | yes |
-| INFO | X issued token Z (name, expires) for Y | actor, token, user, expiry | new |
-| INFO | X revoked token Z of Y | actor, token, user | new |
-| INFO | X created / replaced / deleted role R | actor, role | new |
+| INFO | X created user Y: roles, rights, where it signs in | actor, user, roles, counts, ui_sign_in | |
+| INFO | X changed user Y: name, roles, grants, disabled, ui_sign_in | actor, user, the fields that changed | |
+| INFO | X made Y an API user: its password is deleted | actor, user | when its UI sign-in is taken |
+| INFO | the host let Y sign in to the UI again | user | `users set-password` for an API user |
+| INFO | X deleted user Y and its N webhooks | actor, user, count | |
+| INFO | X changed its password | user | |
+| INFO | X set the password of Y / a one-time password for Y | actor, user | |
+| INFO | X issued token Z for Y, with its expiry | actor, token name and id, user, expiry | |
+| INFO | X revoked token Z of Y | actor, token name and id, user | |
+| INFO | X created / replaced / deleted role R | actor, role, [its rights] | |
 | WARNING | the grants and roles of Y name rights that do not exist, which give nothing: names | user, names | once per user and names, when its access is built |
-| INFO | the host made a one-time password for Y | user | yes |
+| INFO | the host made a one-time password for Y | user | the line of a set password above, from `users create-admin` and `users set-password` |
 
 ### 5.4 Accounts and OAuth
 
-| Level | Line | Fields | Today |
+| Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | X connected account A (provider, host) | actor, account, provider, host | new |
-| INFO | X changed account A: settings, display name, password | actor, account, what changed | new |
-| INFO | X verified account A | actor, account | new |
-| INFO | X removed account A | actor, account | new |
-| WARNING | connecting A failed: reason | address, reason | new |
-| INFO | account A is connected again | account | new, on status change |
-| WARNING | account A needs a new sign-in: reason | account, reason | new, where `NEEDS_REAUTH` is set |
-| WARNING | account A is unreachable: reason | account, reason | new, once per change, not per round |
-| INFO | X started a sign-in with P for A | actor, provider, [account] | new |
-| INFO | X finished the sign-in with P: A connected / signed in again | actor, provider, account | new |
-| WARNING | a sign-in with P failed: reason | provider, reason, no `state` | new |
-| DEBUG | the token of A was refreshed | account | new |
-| WARNING | the refresh for A was refused: reason | account, reason | the line "A needs a new sign-in: reason" above |
+| INFO | X connected account A: provider [at host] | actor, account, provider, [host] | |
+| INFO | X changed account A: what changed | actor, account, the display name, settings, the names of credentials | |
+| INFO | X verified account A | actor, account | |
+| INFO | X removed account A | actor, account | |
+| WARNING | X could not connect the address (provider): reason | the address as typed, provider, reason | the account was not stored |
+| INFO | the service reached account A again | account | on a change of status, after it needed a sign-in or could not be reached |
+| WARNING | account A needs a new sign-in: reason | account, reason | a login or a token refresh was refused. On a change of status |
+| WARNING | account A could not be reached: reason | account, reason | on a change of status, not per round |
+| INFO | X started a sign-in with P for A | actor, provider, [account] | without an account to connect a new one |
+| INFO | X finished the sign-in with P: A connected / signed in again | actor, provider, account | |
+| WARNING | a sign-in with P failed: reason | provider, reason, no `state` | |
+| DEBUG | the token of A was refreshed | account | |
 
 A status that flips every round (unreachable, reachable) is logged on
-the change, not on every round: the worker keeps the last status and
-compares.
+the change, not on every round: the service keeps the last status of
+each account and compares.
 
 ### 5.5 Sync and the worker
 
-| Level | Line | Fields | Today |
+| Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | the worker started: interval, push | settings | new |
-| DEBUG | synced A: N folders, +a −r ~u | account, counts | new |
-| WARNING | sync of A failed: reason | account, reason | yes |
-| ERROR | sync of A failed | account, traceback | yes |
-| INFO | watching A / A cannot push changes: polling only | account | partly |
+| INFO | the worker started: interval, push | settings | |
+| DEBUG | synced A: N folders, +a −r ~u | account, counts | added, removed, updated |
+| WARNING | sync of A failed: reason | account, reason | |
+| ERROR | sync of A failed | account, traceback | the same activity, for a failure that is not a `MailboxServiceError` (rule 6.5) |
+| INFO | watching A / A cannot push changes: polling only | account | |
 | INFO | polls A only: all N watchers are in use | account, cap | once per account while the cap holds, `MAILBOX_SERVICE_SYNC_WATCHERS` |
-| WARNING | watching A failed, next try in Ns: reason | account, pause, reason | yes |
-| DEBUG | IDLE on A renewed | account | new |
-| INFO | the change log was purged of N entries older than D | counts | new, once per purge. `INFO`, not `WARNING`: a purge is the normal course, at most once an hour |
+| WARNING | watching A failed, next try in Ns: reason | account, pause, reason | |
+| DEBUG | IDLE on A renewed | account | |
+| INFO | the change log was purged of N entries older than D | counts | once per purge. `INFO`, not `WARNING`: a purge is the normal course, at most once an hour |
 
 ### 5.6 Sending, drafts, idempotency
 
-| Level | Line | Fields | Today |
+| Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | X sent a message from A to N recipients | actor, account, count, `msg_` id | new |
-| WARNING | X was refused to send from A: reason | actor, account, the error's code | new. The code, as in the audit of sends: the message of a refusal or of a mail server may name a recipient |
-| WARNING | X could not send from A: reason | actor, account, the error's code | new |
-| WARNING | sent, but …: reason | account, what failed | yes, one of them in the adapter, moves to `outgoing` |
-| ERROR | sent, but not recorded in the audit | traceback | yes |
-| DEBUG | an Idempotency-Key was replayed | account, operation | new |
+| INFO | X sent a message from A to N recipients | actor, account, count, the `msg_` id of the sent copy, else its Message-ID | |
+| WARNING | X was refused to send from A: reason | actor, account id, the error's code | The code, as in the audit of sends: the message of a refusal or of a mail server may name a recipient |
+| WARNING | X could not send from A: reason | actor, account id, the error's code | the provider did not take the message |
+| WARNING | X sent a message from A, but …: reason | actor, account, what failed | the send stands |
+| ERROR | sent, but not recorded in the audit of sends | account id, traceback | |
+| DEBUG | an Idempotency-Key was replayed | account id, operation | |
+| ERROR | did the operation on A, but could not keep its result for the Idempotency-Key | account id, operation, traceback | a retry with the same key would do it again |
 | INFO | purged N records older than D from the audit of sends | count, before | once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` |
 
 Drafts are mail content and change nothing others see: not logged.
 
 ### 5.7 Webhooks
 
-| Level | Line | Fields | Today |
+| Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | X created webhook W to host H for N events | actor, webhook id, host, events, accounts or "every" | new |
-| INFO | X removed webhook W | actor, webhook | new |
-| WARNING | webhook W: post failed, attempt N of M: reason | webhook, attempt, reason | partly |
-| WARNING | webhook W gave up on event E after M attempts | webhook, seq | new |
-| INFO | webhook W delivers again | webhook | new, on recovery |
-| ERROR | a round of webhook posts failed | traceback | yes |
+| INFO | X created webhook W to host H for its events of N accounts | actor, webhook id, host, events, accounts or "every account" | |
+| INFO | X removed webhook W to host H | actor, webhook, host | |
+| WARNING | could not post for webhook W, attempt N of M: reason | webhook, attempt, attempts, reason | the post is tried again |
+| WARNING | gave up on N changes for webhook W after M attempts: reason | webhook, count of changes, attempts, reason | |
+| INFO | posted for webhook W again | webhook | the first post that went through after failures |
+| ERROR | could not post for webhook W | webhook, traceback | a failure in the round of one webhook, a `WARNING` for a `MailboxServiceError`. The other webhooks go on |
 
-### 5.8 Discovery, throttle, the rest
+### 5.8 Discovery and the rest
 
-| Level | Line | Fields | Today |
+| Level | Line | Fields | Note |
 |---|---|---|---|
-| DEBUG | discovery for domain D: N candidates from sources | domain, counts, no address | new |
-| WARNING | X reached the discovery limit | user | new |
-| INFO | the recovery key was shown to X | user | yes |
-| INFO | X read the service log | user | new, once per visit or search, not for every further page |
-| INFO | the host created the keys, stored the master key | | printed, add the line |
+| DEBUG | looked up the servers of D: N candidates from M sources | domain, counts, no address | |
+| INFO | the recovery key was shown to X | user | |
+| INFO | X read the service log | user | once per visit or search, not for every further page |
+| INFO | the host created the master key and the data key | | `keys init` |
+| INFO | the host stored the master key from a recovery key | | `keys import` |
 | INFO | opened the database with schema N; the file was rewritten once: from now on it shrinks after deletions | schema, notes | `system.migrated`, once for a database made by an earlier version |
-| INFO | backup written / restored (from the host) | file, schema, time | printed, add the line |
+| INFO | the host wrote a backup / restored the backup of time T | file, schema, [time] | |
 | INFO | purged N records older than D from the audit | count, before | once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` ([AUDIT.md](AUDIT.md)) |
 | ERROR | an activity could not be kept in the audit | the activity, traceback | its line is in the log |
 
@@ -246,18 +248,18 @@ and the log page is where a locked-out person's report is checked. The
 limits themselves, and how they work together, are in
 [LIMITS.md](LIMITS.md).
 
-| Level | Line | Fields | Today |
+| Level | Line | Fields | Note |
 |---|---|---|---|
-| WARNING | too many failed sign-ins from S: locked out for N minutes | source, minutes | new (`SignInThrottle`, 10 in 15 min by default) |
-| WARNING | too many failed sign-ins as X: waiting N seconds | name as typed, seconds | new (the brake per name) |
+| WARNING | too many failed sign-ins from S: locked out for N minutes | source, minutes | `SignInThrottle`, 10 in 15 min by default |
+| WARNING | too many failed sign-ins as X: the name waits N seconds | the user when the name is a user's, else "an unknown name", seconds | the brake per name, from any address |
 | INFO | the lockout of S ended | source | at the next attempt after it ran out: any sign-in in the UI, a wrong token on the API |
-| WARNING | X reached the discovery limit (N in a minute) | user, count | new (`DiscoveryService`, 10 per user by default) |
-| WARNING | X reached the send limit on A: N in 24 hours, the grants allow M | actor, account, counts, `retry_after` | new, in the send audit as `denied` |
-| WARNING | a request from S was refused: body of N bytes, the limit is M | source, path, sizes | new (`web/limits.py`, 413) |
+| WARNING | X reached the discovery limit of N in a minute | user, limit | `DiscoveryService`, 10 per user by default |
+| WARNING | X reached the send limit on A: reason, the next in N seconds | actor, account id, reason, `retry_after` | in the audit of sends as `denied` |
+| WARNING | a request from S to P larger than N MB: refused | source, path, limit | `web/limits.py`, 413 |
 | WARNING | X sent too many requests, the last to P: limited to N a minute, refused for M seconds | token, session or source, path, rate, seconds | `web/limits.py`, 429 |
-| DEBUG | paced requests to H: waited N ms | host, wait | the token bucket, in the data layer, which knows the server but not the account |
-| DEBUG | microsoft asked to wait N seconds (Retry-After) | seconds | new, in the data layer |
-| WARNING | account A could not be reached: the provider's reason | account, reason | the status line of 5.4: a pause or a refusal for rate reaches the domain as an error, and the account's status changes once |
+| DEBUG | paced requests to H: waited N ms | host, wait | no activity: a technical line of the token bucket in front of a provider, which knows the server but not the account |
+| DEBUG | microsoft asked to wait N seconds (Retry-After) | seconds | no activity: a technical line of the Microsoft adapter |
+| WARNING | account A could not be reached: the provider's reason | account, reason | the status line of 5.4, no activity of its own: a pause or a refusal for rate reaches the domain as an error, and the account's status changes once |
 
 A limit that keeps being hit is logged once per lockout or pause, not
 per refused request: the throttle logs when it locks, the provider
@@ -319,13 +321,13 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    The client address reaches the domain on `Access`: `Access.source`,
    set where the caller is established (bearer for the API, session for
    the UI), absent for the worker and the host. The audit of AUDIT.md
-   needs it there as well. The data layer writes no line at `INFO` or
+   takes it from there as well. The data layer writes no line at `INFO` or
    above: it
    decides nothing, and it knows neither the actor nor the reason. What
    it notices goes up as a result or an error, and the domain logs it.
-   The two lines under `data/` today move that way: the IMAP adapter
-   reports a missing sent copy in `SentMessage`, and `outgoing` logs it;
-   the migrations return their notes, and `main` logs them at start.
+   The two lines that were under `data/` moved that way: the IMAP adapter
+   reports a missing sent copy in `SentMessage`, and `outgoing` logs it.
+   The migrations return their notes, and `main` logs them at start.
    `DEBUG` stays allowed under `data/` for the technical steps the
    domain cannot see: a reconnect, a retry, a token refresh, a pause a
    provider asked for. `test_architecture.py` checks that no module
@@ -404,7 +406,7 @@ domain/
   line. An activity that failed carries the error, and the recorder logs
   a traceback for what is not a `MailboxServiceError` (rule 6.5).
 - **`ActivityLog`** is a service like the others: `build_services` makes it
-  with the clock and, from AUDIT.md on, the repository. The domain
+  with the clock and the audit of AUDIT.md. The domain
   services that record get it in their constructor. `record()` logs the
   line under `activity.<area>.<name>`, at the activity's level, and
   returns the activity, for tests.
@@ -441,8 +443,8 @@ are part of the API. The code's names around them are `ChangeKind` and
   enforces them: the lockouts in `auth`, the send limit in `mailbox`.
 - **The name is set in the class, not taken from it**: `name =
   "token_revoked"`. A class renamed in the code keeps its name in the
-  log, in the filters of an operator and, from AUDIT.md on, in the
-  audit, which keeps it as the kind of a record.
+  log, in the filters of an operator and in the audit, which keeps it
+  as the kind of a record.
 - **A name says what happened**, in the past tense or as a state,
   lowercase with underscores. It is unique within its area. The area is
   not repeated: `activity.users.created`, not
@@ -554,8 +556,8 @@ and that each is listed here.
    its settings, tests, a CHANGELOG entry and its line.
 
 Steps 2 to 5 were one branch, one commit per step, and step 6 a pull
-request of its own: all six are done. AUDIT.md follows when the user
-asks for it.
+request of its own: all six are done. The audit of AUDIT.md was built
+after them, in the order of work of its section 6.
 
 ## 9. Questions answered
 
