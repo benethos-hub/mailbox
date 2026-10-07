@@ -169,6 +169,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   (`POST /v1/oauth/{provider}/device`), the UI in a browser or with a
   code as before. A stored grant naming `start_oauth` keeps its other
   rights.
+- The OpenAPI document names on each operation the errors it can
+  answer: `413`, `429` and `500` on every one, `404` and `409` where a
+  record is touched, `501` and `502` where a provider is asked. Before,
+  every operation named the same list, without the first three.
 - A webhook's body carries text beyond ASCII as UTF-8, not as `\u`
   escapes. It is the same JSON, and the signature covers the bytes sent.
 - A cursor of a JMAP account's message list from an earlier version

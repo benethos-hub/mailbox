@@ -25,15 +25,18 @@ from ..schemas import (
     UserUpdate,
 )
 
+# The caller itself and the catalogue of rights: every token may ask.
+caller_router = APIRouter(tags=["users"])
+# Users, their tokens and passwords, roles.
 router = APIRouter(tags=["users"])
 
 
-@router.get("/me")
+@caller_router.get("/me")
 async def get_me(caller: Caller, users: Users) -> Me:
     return Me.model_validate(users.me(caller), from_attributes=True)
 
 
-@router.get("/permissions")
+@caller_router.get("/permissions")
 async def list_permissions(caller: Caller) -> PermissionCatalogue:
     return PermissionCatalogue(
         groups={group: list(ops) for group, ops in permissions.GROUPS.items()},

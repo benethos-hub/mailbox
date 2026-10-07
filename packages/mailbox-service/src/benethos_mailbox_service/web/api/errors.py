@@ -16,20 +16,41 @@ from ...errors import MailboxServiceError, RateLimitedError
 from ..errors import status_of
 from .schemas import ErrorResponse
 
-# Documented on every protected route, so generated clients know the shape.
-DOCUMENTED_ERRORS: dict[int | str, dict[str, Any]] = {
-    status: {"model": ErrorResponse, "description": text}
-    for status, text in {
-        400: "The request is not valid, e.g. a cursor or a right",
-        401: "Missing or wrong bearer token",
-        403: "The caller lacks the right for this operation",
-        404: "Account or resource not found",
-        409: "The request conflicts with what is stored, e.g. a name taken",
-        501: "The provider cannot do this",
-        502: "The provider failed or rejected the credentials",
-        503: "No user exists yet",
-    }.items()
+# What each status means, documented so generated clients know the shape.
+_MEANINGS = {
+    400: "The request is not valid, e.g. a cursor or a right",
+    401: "Missing or wrong bearer token",
+    403: "The caller lacks the right for this operation",
+    404: "Account or resource not found",
+    409: "The request conflicts with what is stored, e.g. a name taken",
+    413: "The request body is larger than the service takes (`payload_too_large`)",
+    429: "Too many requests from this token, session or address "
+    "(`rate_limited`), see Retry-After",
+    500: "A stored credential cannot be read, or the service's own database "
+    "failed (`credential_unreadable`, `storage_error`)",
+    501: "The provider cannot do this",
+    502: "The provider failed or rejected the credentials",
+    503: "No user exists yet",
 }
+
+
+def documented(*statuses: int) -> dict[int | str, dict[str, Any]]:
+    """The responses a router declares, each with the error envelope."""
+    return {
+        status: {"model": ErrorResponse, "description": _MEANINGS[status]}
+        for status in statuses
+    }
+
+
+# Every protected route can answer these: the web layer refuses a
+# request before the resource is looked at, and the store may fail.
+COMMON = (400, 401, 403, 413, 429, 500, 503)
+# The caller itself and the catalogue: no record, no provider.
+CALLER_ERRORS = documented(*COMMON)
+# Records the service keeps: users, roles, tokens, webhooks, the audit.
+RECORD_ERRORS = documented(*COMMON, 404, 409)
+# Accounts and their mail: a provider is asked.
+ACCOUNT_ERRORS = documented(*COMMON, 404, 409, 501, 502)
 
 
 # The change feed answers 410 for a point it no longer knows.
