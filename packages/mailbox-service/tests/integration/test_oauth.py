@@ -43,7 +43,7 @@ from benethos_mailbox_service.errors import (
     ProviderAuthError,
 )
 
-from ..conftest import ADMIN
+from ..conftest import ADMIN, admin_access
 
 # The vault needs a key to store refresh tokens.
 pytestmark = pytest.mark.usefixtures("master_key")
@@ -211,7 +211,7 @@ async def test_a_state_expires() -> None:
 async def test_only_the_starter_cancels_a_sign_in() -> None:
     services = services_with(TokenEndpoint(granted(id_token=id_token(email="a@b.c"))))
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
-    services.oauth.cancel(Access.admin("usr_other", "other admin"), state)
+    services.oauth.cancel(admin_access("usr_other", "other admin"), state)
     await services.oauth.finish(ADMIN, ProviderType.MICROSOFT, state, "c")
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
     services.oauth.cancel(ADMIN, state)
@@ -222,7 +222,7 @@ async def test_only_the_starter_cancels_a_sign_in() -> None:
 async def test_a_sign_in_belongs_to_who_started_it() -> None:
     services = services_with(TokenEndpoint(granted(id_token=id_token(email="a@b.c"))))
     state = state_of(services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT))
-    other = Access.admin("usr_other", "other admin")
+    other = admin_access("usr_other", "other admin")
     # Answered as an unknown one, so nobody learns it exists.
     with pytest.raises(BadRequestError, match="unknown or expired"):
         await services.oauth.finish(other, ProviderType.MICROSOFT, state, "c")

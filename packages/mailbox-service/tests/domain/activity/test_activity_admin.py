@@ -14,7 +14,6 @@ from benethos_mailbox_service.assembly import Services, build_services
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
-from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ProviderAuthError,
@@ -22,7 +21,7 @@ from benethos_mailbox_service.errors import (
     UnauthorizedError,
 )
 
-from ...conftest import ADMIN, create_account
+from ...conftest import ADMIN, admin_access, create_account
 from ...integration.test_oauth import (
     REDIRECT,
     TokenEndpoint,
@@ -227,7 +226,7 @@ async def test_an_oauth_sign_in_that_fails(caplog: pytest.LogCaptureFixture) -> 
     url = services.oauth.start(ADMIN, ProviderType.MICROSOFT, REDIRECT)
     with pytest.raises(BadRequestError):
         await services.oauth.finish(
-            Access.admin("usr_other", "other"), ProviderType.MICROSOFT, "x", "c"
+            admin_access("usr_other", "other"), ProviderType.MICROSOFT, "x", "c"
         )
     services.oauth.cancel(ADMIN, state_of(url), "the user said no")
     assert lines(caplog) == [

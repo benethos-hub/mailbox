@@ -22,6 +22,8 @@ from benethos_mailbox_service.errors import ProviderError
 from benethos_mailbox_service.web.api.errors import api_error
 from benethos_mailbox_service.web.pages.forms import FormFailedError, failing
 
+from ..conftest import forget_secrets
+
 PASSWORD = "hunter2-but-longer"
 
 
@@ -47,7 +49,7 @@ async def test_the_vault_notes_what_it_decrypts(
 ) -> None:
     services.vault.initialize()
     services.vault.store("acc_1", "password", SecretStr(PASSWORD))
-    redact.forget_all()
+    forget_secrets()
     assert services.vault.read("acc_1", "password").get_secret_value() == PASSWORD
     assert redact.redact(PASSWORD) == "***"
 

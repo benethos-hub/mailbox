@@ -8,6 +8,8 @@ from benethos_mailbox_service.data.models import Grant, Role, User
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import ForbiddenError, NotFoundError
 
+from ...conftest import admin_access
+
 
 def access(*grants: Grant, service: tuple[str, ...] = ()) -> Access:
     return Access("usr_1", "test", grants, service=service)
@@ -77,7 +79,7 @@ def test_users_read_reads_and_changes_nothing() -> None:
 
 
 def test_admin_allows_everything() -> None:
-    a = Access.admin("usr_admin", "admin")
+    a = admin_access("usr_admin", "admin")
     assert a.allows("delete_account", "acc_x")
     assert a.allows("create_account")
 
@@ -151,7 +153,7 @@ def test_covers_what_the_caller_holds_on_named_accounts() -> None:
 def test_covers_star_needs_star() -> None:
     a = access(Grant(accounts=["*"], allow=["mail.read"]))
     assert a.covers([Grant(accounts=["*"], allow=["list_messages"])])
-    assert Access.admin("x", "x").covers([], ["admin"])
+    assert admin_access("x", "x").covers([], ["admin"])
 
 
 def test_covers_the_service_rights_the_caller_holds() -> None:
