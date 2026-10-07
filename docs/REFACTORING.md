@@ -10,7 +10,8 @@ place. Section 10 is the MCP server, added later the same day: its
 tools in a package, one module per kind. Section 11, a proposal of
 2026-10-05, is the migrations of the schema: one class per step.
 Section 12 is the work list of 2026-10: the client as a package, the
-adapters in parts, and limits on the size of the code.
+adapters in parts, and limits on the size of the code. Section 13 is
+the client package in parts, of 2026-10-07.
 Behaviour, the API and the
 OpenAPI document stay as they are
 throughout. The rules that came out of it, in short, are
@@ -937,3 +938,73 @@ one pull request each:
 | #90 | The MCP server's client reaches its tools on every transport. |
 | #91 | A helper of `common/` exists once, checked by the architecture test (ARCHITECTURE 2). |
 | #92 | `trim` and `KeyedLocks` in `common/`, which may import anyio since, the size limits for the tests and `live/` too, `test_code_rules.py` apart from `test_architecture.py`. |
+
+## 13. The client in parts
+
+Concept of 2026-10-07, built the same day on one branch, a commit per
+step. The package `mailbox-client` came out of step 2.1 with seven
+modules side by side. Its interface, the names its `__init__.py`
+exports, and what the MCP server and the live checks import stay as
+they are. Behaviour and the API stay as they are.
+
+### 13.1 Why
+
+- **`wire.py` held four subjects.** The address and the token with
+  their check, the shape of a request and its path, the reading of an
+  answer or a failure, and an attachment read in chunks: 288 lines, a
+  reader who looks for the URL check finds it beside the charset of
+  an attachment. ARCHITECTURE 15: a module holds one subject.
+- **`endpoints.py` held every resource.** The caller, folders,
+  messages, drafts and sending, and the readings of all their records,
+  in one module of 379 lines. The next endpoints the MCP server or a
+  script needs, threads, the status, users, take it past 500. The MCP
+  server's tools are one module per kind already (section 10), and
+  the client that serves them should be cut the same way.
+- **The tests followed the modules**, two files for seven modules.
+
+### 13.2 Target
+
+The tree of ARCHITECTURE 3. `endpoints/` becomes a package, one module
+per resource of the API as the MCP server's tools are: `accounts`,
+`folders`, `messages`, `drafts`, `sending`, `compose` for what drafts
+and sending share, `generic` for any route. Each module keeps the
+readings of its records, as an adapter keeps its mappers. The page of
+summaries is read in `messages` and used by `drafts`. `wire.py` becomes
+four modules: `environment` (the address and the token, read or given,
+checked), `calls` (the `Call`, its path, the timeouts, the readings
+every endpoint may use), `answers` (an answer or a failure read) and
+`attachments` (bytes in chunks, what the headers say).
+
+The lines, each importing only lines below, a package as one unit:
+
+```
+ client · sync
+ endpoints
+ answers · attachments · environment
+ calls
+ models · errors
+```
+
+httpx stays where a request is made or read, where an attachment's
+headers are read, and where an address is parsed to be checked:
+`client`, `sync`, `calls`, `answers`, `attachments`, `environment`.
+The endpoints, the records and the errors know no HTTP library. A
+module of `endpoints/` is reached from outside through the package
+alone, so the package can split or merge its modules.
+
+The tests mirror the modules: `test_environment.py`, `test_calls.py`,
+`test_answers.py`, `test_attachments.py`, and `tests/endpoints/` with
+one file per module. `fake_api.py` at the top holds the fake API and
+the answers the endpoint tests share.
+
+### 13.3 Order of work
+
+1. The new modules, the clients pointed at them, the old two removed,
+   the architecture test taught what a package is and that the
+   endpoints are reached through theirs. Every test as before.
+2. The tests moved into files that mirror the modules, each test as
+   it was.
+3. The documents: ARCHITECTURE 3, this section, the client's README,
+   the roadmap.
+
+Built 2026-10-07, in that order.

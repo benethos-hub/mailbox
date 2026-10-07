@@ -160,7 +160,8 @@ packages/
                           #   sync, no image
     src/benethos_mailbox_client/    # modules: docs/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport, each
-                          #   test for both clients
+                          #   test for both clients, in files like
+                          #   the modules, endpoints/ for the package
   mailbox-mcp/            # the MCP server, on top of mailbox-client
     src/benethos_mailbox_mcp/       # modules: docs/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport

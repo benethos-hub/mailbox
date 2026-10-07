@@ -10,6 +10,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .client import MailboxClient
 from .endpoints import message_body
+from .environment import Environment, from_environment, service_url
 from .errors import (
     ApiError,
     ConfigurationError,
@@ -30,7 +31,6 @@ from .models import (
     Sent,
 )
 from .sync import SyncMailboxClient
-from .wire import Environment, from_environment, service_url
 
 try:
     __version__ = version("benethos-mailbox-client")

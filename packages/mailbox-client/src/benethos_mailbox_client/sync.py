@@ -11,17 +11,11 @@ from typing import Any, TypeVar
 import httpx
 
 from . import endpoints
+from .answers import api_error, failure, read
+from .attachments import Collected, attachment
+from .calls import Call, timeouts
+from .environment import connection
 from .models import Attachment, Changes, Folder, Me, Outcome, Page, Sent
-from .wire import (
-    Call,
-    Collected,
-    api_error,
-    attachment,
-    connection,
-    failure,
-    read,
-    timeouts,
-)
 
 T = TypeVar("T")
 
