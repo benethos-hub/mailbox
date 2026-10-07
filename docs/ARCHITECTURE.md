@@ -219,11 +219,13 @@ packages/mailbox-service/
                         #   what an adapter does not implement
       discovery/        # DiscoveryService: trust, ranking, cache, limits
       mailbox/          # MailboxService, the facade for mail: calls under
-                        #   our ids, lists across accounts, replies,
-                        #   sending and drafts (outgoing), grant limits
-                        #   and the send audit, Idempotency-Key
+                        #   our ids, lists across accounts (across,
+                        #   merge), replies, sending and drafts
+                        #   (outgoing), grant limits and the send audit,
+                        #   Idempotency-Key
       sync/             # SyncService (stable message ids, the sync pass),
-                        #   SyncWorker (polling and IDLE)
+                        #   what a pass finds (passes), SyncWorker
+                        #   (polling and IDLE)
       changes/          # what changed in a mailbox, for clients:
                         #   MailboxChange, one class per kind, ChangeFeed
       webhooks/         # WebhookService, WebhookDispatcher (signed posts,
