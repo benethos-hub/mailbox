@@ -19,7 +19,7 @@ from benethos_mailbox_client import (
     SyncMailboxClient,
     from_environment,
 )
-from benethos_mailbox_client.wire import DEFAULT_URL
+from benethos_mailbox_client.environment import DEFAULT_URL
 
 ACCOUNT = {"id": "acc_1", "provider": "imap", "email": "me@example.com"}
 NAMED = "attachment; filename*=UTF-8''gr%C3%BC%C3%9Fe.txt"

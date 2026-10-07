@@ -11,7 +11,7 @@ import httpx
 import pytest
 
 from benethos_mailbox_client import MailboxClient, SyncMailboxClient
-from benethos_mailbox_client.wire import ALLOW_HTTP_ENV, TOKEN_ENV, URL_ENV
+from benethos_mailbox_client.environment import ALLOW_HTTP_ENV, TOKEN_ENV, URL_ENV
 
 Handler = Callable[[httpx.Request], httpx.Response]
 
