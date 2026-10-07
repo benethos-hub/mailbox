@@ -15,9 +15,9 @@ name: Publish
 #
 # One-time setup on PyPI: a (pending) publisher per project with this
 # repository's owner and name and the workflow filename publish.yml, with
-# the environment pypi-service for benethos-mailbox-service, pypi-client for
-# benethos-mailbox-client and pypi-mcp for benethos-mailbox-mcp. PyPI takes
-# a pending publisher (repository, workflow, environment) for one project
+# an environment named pypi- and the package: pypi-benethos-mailbox-service,
+# pypi-benethos-mailbox-client and pypi-benethos-mailbox-mcp. PyPI takes a
+# pending publisher (repository, workflow, environment) for one project
 # only, hence one environment each. On GitHub: the three environments under
 # Settings, Environments.
 #
@@ -69,15 +69,12 @@ jobs:
         include:
           - package: benethos-mailbox-service
             module: benethos_mailbox_service
-            environment: pypi-service
           - package: benethos-mailbox-client
             module: benethos_mailbox_client
-            environment: pypi-client
           - package: benethos-mailbox-mcp
             module: benethos_mailbox_mcp
-            environment: pypi-mcp
     environment:
-      name: ${{ matrix.environment }}
+      name: pypi-${{ matrix.package }}
       url: https://pypi.org/p/${{ matrix.package }}
     permissions:
       id-token: write # required for Trusted Publishing (OIDC)
