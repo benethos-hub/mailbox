@@ -14,8 +14,9 @@ from datetime import datetime
 from typing import ClassVar
 
 from ....common.clock import log_time
+from ....common.text import plural
 from ....data.models import Account
-from ..base import Activity, Failure, account, plural
+from ..base import Activity, Failure, account
 
 
 @dataclass(frozen=True, kw_only=True)

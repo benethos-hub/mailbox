@@ -8,7 +8,8 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ..base import Activity, Failure, plural
+from ....common.text import plural
+from ..base import Activity, Failure
 
 
 @dataclass(frozen=True, kw_only=True)

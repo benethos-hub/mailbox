@@ -19,7 +19,7 @@ from ....errors import (
     ProviderUnavailableError,
     missing,
 )
-from ..transport import Server, one_line, text
+from ..transport import Server, refuse_line_ends, text
 from .folders import Folders
 from .messages import Messages
 from .responses import capabilities, quietly_logout, translated, uidvalidity
@@ -83,7 +83,7 @@ class ImapSession:
     # --- the connection -------------------------------------------------------------
 
     def login(self, username: str, password: str) -> None:
-        one_line(username, password, what="the user name or password")
+        refuse_line_ends(username, password, what="the user name or password")
         if (username + password).isascii():
             self._log_in(lambda c: c.login(username, password), "login")
         else:
@@ -91,7 +91,7 @@ class ImapSession:
             self._log_in(lambda c: _plain_login(c, username, password), "login")
 
     def login_oauth(self, username: str, access_token: str) -> None:
-        one_line(username, access_token, what="the user name or token")
+        refuse_line_ends(username, access_token, what="the user name or token")
         self._log_in(lambda c: c.oauth2_login(username, access_token), "token")
 
     def _log_in(self, authenticate: Callable[[Any], Any], what: str) -> None:

@@ -18,7 +18,7 @@ from collections.abc import Mapping
 import httpx
 
 from ....errors import ProviderError, ProviderUnavailableError
-from .base import host_of, new_client, parse_url, pinned_request, unreachable
+from .base import new_client, parse_url, pinned_request, unreachable, wire_host
 from .safe import Resolve, host_addresses, unwrapped
 
 TIMEOUT = 10.0
@@ -61,7 +61,7 @@ class WebhookPoster:
         target = parse_url(url)
         if target.scheme not in ("http", "https") or not target.raw_host:
             raise ProviderError("a webhook url must be http or https, with a host")
-        host = host_of(target)
+        host = wire_host(target)
         port = target.port or (443 if target.scheme == "https" else 80)
         addresses = await self._resolve(host, port)
         if not addresses:

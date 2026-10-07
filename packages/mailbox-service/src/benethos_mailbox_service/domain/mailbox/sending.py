@@ -16,6 +16,7 @@ from typing import Any, Literal
 
 from ...common.clock import iso, parse_iso, utc_now
 from ...common.ids import new_id
+from ...common.retention import Retention
 from ...data.models import (
     Before,
     Page,
@@ -40,8 +41,6 @@ WINDOW = timedelta(hours=24)
 # Days the audit keeps a record, unless the settings say otherwise. 0
 # keeps every record.
 KEEP_DAYS = 90
-# How often at most old records are purged while sends come in.
-PURGE_EVERY = timedelta(hours=1)
 CURSOR = "s_"
 
 Operation = Literal["send_message", "send_draft"]
@@ -60,8 +59,7 @@ class SendControl:
         self._store = store
         self._clock = clock
         self._activity = activity or ActivityLog(clock)
-        self._days = days
-        self._purged_at: datetime | None = None
+        self._retention = Retention(days)
         # One send at a time per user and account, so two cannot both pass
         # the limit.
         self._locks: KeyedLocks[tuple[str, str]] = KeyedLocks()
@@ -80,7 +78,8 @@ class SendControl:
         async with self._locks.get((access.user_id, account_id)):
 
             def record(outcome: SendOutcome, **fields: object) -> None:
-                self._purge_when_due()
+                if self._retention.due(self._clock()):
+                    self.purge()
                 self._store.add(
                     SendRecord.model_validate(
                         {
@@ -142,24 +141,20 @@ class SendControl:
     @property
     def days(self) -> int:
         """How long a record is kept, 0 for ever."""
-        return self._days
+        return self._retention.days
 
     def purge(self) -> None:
         """Removes the records older than the days to keep."""
-        if not self._days:
+        if not self._retention.days:
             return
         now = self._clock()
-        before = now - timedelta(days=self._days)
+        before = self._retention.cutoff(now)
         purged = self._store.purge(before)
-        self._purged_at = now
+        self._retention.done(now)
         if purged:
             self._activity.record(
                 said.SendsPurged(by=SERVICE, count=purged, before=before)
             )
-
-    def _purge_when_due(self) -> None:
-        if self._purged_at is None or self._clock() - self._purged_at >= PURGE_EVERY:
-            self.purge()
 
     def _allow(
         self,

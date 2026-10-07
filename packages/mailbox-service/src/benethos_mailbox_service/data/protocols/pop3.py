@@ -26,7 +26,7 @@ from ...errors import (
     ProviderUnavailableError,
 )
 from . import transport
-from .transport import Server, names, one_line, text
+from .transport import Server, names, refuse_line_ends, text
 
 ConnectionFactory = Callable[[Server, float], Any]
 
@@ -82,7 +82,7 @@ class Pop3Session:
     def login(self, username: str, password: str) -> None:
         """USER and PASS. Raises ``ProviderAuthError`` if the server rejects
         the credential."""
-        one_line(username, password, what="the user name or password")
+        refuse_line_ends(username, password, what="the user name or password")
         with translated():
             connection = self._factory(self._server, self._timeout)
             try:

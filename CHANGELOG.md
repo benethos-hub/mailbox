@@ -235,6 +235,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Old records of the audit, the change feed and the audit of sends go
+  when the service starts. Before, they waited for the first new record
+  of their kind.
+- A subject, a display name or a file name of an attachment that holds
+  a control character is sent with a space in its place, as one with a
+  line break already was.
 - A line break in a user name, password or token is refused with `400`
   before the IMAP or POP3 login: it would have ended the command and
   started another. An SMTP address with a blank or a line break is
@@ -514,6 +520,12 @@ migrations.
 
 ### Fixed
 
+- Old records of the audit, the change feed and the audit of sends go
+  when the service starts. Before, they waited for the first new record
+  of their kind.
+- A subject, a display name or a file name of an attachment that holds
+  a control character is sent with a space in its place, as one with a
+  line break already was.
 - A watched account no longer holds a thread of the pool that answers
   requests while it waits in IDLE. With many IMAP accounts, requests and
   pages of the UI had to wait for a free thread.
@@ -778,6 +790,12 @@ the configuration may change without notice.
 
 ### Fixed
 
+- Old records of the audit, the change feed and the audit of sends go
+  when the service starts. Before, they waited for the first new record
+  of their kind.
+- A subject, a display name or a file name of an attachment that holds
+  a control character is sent with a space in its place, as one with a
+  line break already was.
 - `PATCH /v1/accounts/{account_id}/folders/{folder_id}` takes a role
   such as `archive` as the new `parent_id`, as creating a folder does.
 - The start page of the configuration UI shows a right that covers only

@@ -44,11 +44,19 @@ async def serving(
                 schema=store.schema_version() if store else None,
             )
         )
+        _purge(services)
         try:
             async with _running(services):
                 yield
         finally:
             services.activity.record(said.ServiceStopped(by=SERVICE))
+
+
+def _purge(services: Services) -> None:
+    """The records older than the days to keep, removed when the service
+    starts. Else they wait for the first new record of their kind."""
+    for purge in services.purges:
+        purge()
 
 
 @asynccontextmanager

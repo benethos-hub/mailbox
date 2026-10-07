@@ -3,7 +3,7 @@ command line reach them."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
 from ..data.models import ProviderType
@@ -50,6 +50,10 @@ class Services:
     activity: ActivityLog = field(default_factory=ActivityLog)
     worker: SyncWorker | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
+    # What removes records older than the days to keep: the audit, the
+    # change feed, the audit of sends. Each runs once when the service
+    # starts, then as new records come in.
+    purges: tuple[Callable[[], None], ...] = ()
 
     @property
     def store(self) -> Store | None:

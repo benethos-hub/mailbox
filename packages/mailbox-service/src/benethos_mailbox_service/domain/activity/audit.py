@@ -11,12 +11,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from ...common.clock import iso, parse_iso, utc_now
 from ...common.ids import new_id
 from ...common.redact import redact
+from ...common.retention import Retention
 from ...data.models import ActivityFilter, ActivityRecord, Before, Page
 from ...data.storage import AuditRepository
 from .. import paging
@@ -26,8 +27,6 @@ from .base import Activity
 # Days a record is kept, unless the settings say otherwise. 0 keeps
 # every record.
 KEEP_DAYS = 90
-# How often at most old records are purged while activities come in.
-PURGE_EVERY = timedelta(hours=1)
 CURSOR = "a_"
 
 
@@ -49,18 +48,17 @@ class Audit:
         """``days`` is how long a record is kept, 0 for ever."""
         self._store = store
         self._clock = clock
-        self._days = days
-        self._purged_at: datetime | None = None
+        self._retention = Retention(days)
 
     @property
     def days(self) -> int:
         """How long a record is kept, 0 for ever."""
-        return self._days
+        return self._retention.days
 
     def keep(self, activity: Activity) -> Purged | None:
         """Store the activity. Old records go first when a purge is due:
         what it removed, if anything."""
-        purged = self._purge_when_due()
+        purged = self.purge() if self._retention.due(self._clock()) else None
         by = activity.by
         self._store.add(
             ActivityRecord(
@@ -82,18 +80,13 @@ class Audit:
 
     def purge(self) -> Purged | None:
         """Remove the records older than the days to keep."""
-        if not self._days:
+        if not self._retention.days:
             return None
         now = self._clock()
-        before = now - timedelta(days=self._days)
+        before = self._retention.cutoff(now)
         count = self._store.purge(before)
-        self._purged_at = now
+        self._retention.done(now)
         return Purged(count, before) if count else None
-
-    def _purge_when_due(self) -> Purged | None:
-        if self._purged_at is None or self._clock() - self._purged_at >= PURGE_EVERY:
-            return self.purge()
-        return None
 
     def list_activity(
         self,

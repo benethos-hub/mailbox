@@ -17,6 +17,7 @@ from pydantic import SecretStr
 
 from ...common.clock import utc_now
 from ...common.ids import new_id
+from ...common.urls import host_of
 from ...data.models import (
     CreatedWebhook,
     Webhook,
@@ -84,7 +85,7 @@ class WebhookService:
                 said.WebhookCreated(
                     by=Actor.of(access),
                     webhook_id=webhook_id,
-                    host=host_of(webhook.url),
+                    host=_host(webhook.url),
                     events=tuple(webhook.events),
                     accounts=len(webhook.accounts)
                     if webhook.accounts is not None
@@ -141,7 +142,7 @@ class WebhookService:
             self._repository.delete(webhook_id)
             self._activity.record(
                 said.WebhookRemoved(
-                    by=Actor.of(access), webhook_id=webhook_id, host=host_of(hook.url)
+                    by=Actor.of(access), webhook_id=webhook_id, host=_host(hook.url)
                 )
             )
 
@@ -153,13 +154,10 @@ class WebhookService:
         return record
 
 
-def host_of(url: str) -> str:
+def _host(url: str) -> str:
     """The host a webhook posts to, for the log: never the whole URL,
     which may carry a key."""
-    try:
-        return urlsplit(url).hostname or "an unknown host"
-    except ValueError:
-        return "an unknown host"
+    return host_of(url) or "an unknown host"
 
 
 def _check_url(url: str) -> None:

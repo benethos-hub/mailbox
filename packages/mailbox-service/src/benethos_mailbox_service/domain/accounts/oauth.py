@@ -30,10 +30,10 @@ import secrets
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from ipaddress import ip_address
 from urllib.parse import urlsplit
 
 from ...common.clock import utc_now
+from ...common.urls import is_loopback
 from ...data.models import Account, ProviderType
 from ...data.providers import (
     DeviceCode,
@@ -388,7 +388,7 @@ class OAuthService:
         client = self._clients.get(provider)
         if client is None:
             return False
-        return not client.app.loopback_only or _loopback(redirect_uri)
+        return not client.app.loopback_only or is_loopback(redirect_uri)
 
     def sign_in_hosts(self) -> list[str]:
         """The hosts a browser is sent to for a sign-in."""
@@ -443,14 +443,3 @@ class OAuthService:
             )
             for _, key in mine[: max(0, len(mine) - OPEN_PER_USER + 1)]:
                 del open_[key]
-
-
-def _loopback(url: str) -> bool:
-    """Whether ``url`` names this computer: localhost or a loopback address."""
-    host = urlsplit(url).hostname or ""
-    if host == "localhost":
-        return True
-    try:
-        return ip_address(host).is_loopback
-    except ValueError:
-        return False
