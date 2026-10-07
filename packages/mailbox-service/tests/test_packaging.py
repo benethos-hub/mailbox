@@ -129,16 +129,13 @@ def test_the_packages_describe_themselves_alike() -> None:
 
 def test_every_package_is_published() -> None:
     """publish.yml uploads each package to PyPI: its name, its module for
-    the check of the wheel, and an environment of its own, since PyPI
-    takes a pending publisher for one project only."""
+    the check of the wheel, and an environment of its own, named after
+    the package, since PyPI takes a pending publisher for one project
+    only."""
     text = (ROOT / ".github" / "workflows" / "publish.yml").read_text("utf-8")
-    jobs = re.findall(
-        r"- package: (\S+)\n\s+module: (\S+)\n\s+environment: (\S+)", text
-    )
-    published = {(name, module) for name, module, _ in jobs}
-    assert published == {(str(_project(p)["name"]), _module(p)) for p in PACKAGES}
-    environments = [environment for _, _, environment in jobs]
-    assert len(set(environments)) == len(environments), environments
+    jobs = re.findall(r"- package: (\S+)\n\s+module: (\S+)\n", text)
+    assert set(jobs) == {(str(_project(p)["name"]), _module(p)) for p in PACKAGES}
+    assert "name: pypi-${{ matrix.package }}" in text
 
 
 # Every place the documentation names the current version, as a file and a
