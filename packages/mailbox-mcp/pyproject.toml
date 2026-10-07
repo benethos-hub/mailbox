@@ -37,6 +37,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Communications :: Email",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 # Deliberately small: no service package, no mail libraries. Everything this
 # server knows about mail it learns from the REST API.
