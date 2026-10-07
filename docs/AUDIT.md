@@ -1,6 +1,6 @@
 # The audit of administration
 
-Proposal of 2026-09-28, the second of two steps, for later. The first
+Proposal of 2026-09-28, the second of two steps. The first
 step, [LOGGING.md](LOGGING.md), names every activity the service logs. This
 step stores those a person caused, so "who changed what, when" can be
 answered after the log is gone. It is the design of
@@ -30,7 +30,7 @@ record changes hands, and every sign-in. By area:
 | Area | Activities (LOGGING.md) | Names |
 |---|---|---|
 | Sign-in (5.2) | signed in, failed sign-in, revoked or expired token presented, wrong password to confirm a step | `auth.signed_in`, `auth.sign_in_failed`, `auth.token_refused`, `auth.confirm_failed` |
-| Users, passwords, tokens, roles (5.3) | user created, changed, deleted; password changed, set, one-time made; token issued, revoked; role created, replaced, deleted | `users.created`, `users.changed`, `users.deleted`, `users.made_api_user`, `users.sign_in_allowed`, `users.password_changed`, `users.password_set`, `users.token_issued`, `users.token_revoked`, `users.role_created`, `users.role_replaced`, `users.role_deleted` |
+| Users, passwords, tokens, roles (5.3) | user created, changed, deleted; UI sign-in taken, given back; password changed, set, one-time made; token issued, revoked; role created, replaced, deleted | `users.created`, `users.changed`, `users.deleted`, `users.made_api_user`, `users.sign_in_allowed`, `users.password_changed`, `users.password_set`, `users.token_issued`, `users.token_revoked`, `users.role_created`, `users.role_replaced`, `users.role_deleted` |
 | Accounts and OAuth (5.4) | account connected, changed, verified, removed; connecting failed; sign-in with a provider started, finished, failed | `accounts.connected`, `accounts.changed`, `accounts.verified`, `accounts.removed`, `accounts.connect_failed`, `accounts.oauth_started`, `accounts.oauth_finished`, `accounts.oauth_failed` |
 | Webhooks (5.7) | webhook created, removed | `webhooks.created`, `webhooks.removed` |
 | Rate limits (5.9) | address locked out, name waiting, token or address limited | `auth.locked_out`, `auth.name_braked`, `http.rate_limited` |
@@ -105,6 +105,8 @@ with `host` as the credential.
 5. Retention and the purge.
 
 Each step a commit on one branch, a CHANGELOG entry for the API.
+
+Step 1 was LOGGING.md, steps 2 to 5 were one branch: all five are done.
 
 ## 7. Questions answered
 

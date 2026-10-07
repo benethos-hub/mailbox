@@ -6,8 +6,9 @@ shown, and what should change.
 [CONCEPT 7.5](CONCEPT.md#75-users-permissions-and-authentication) keeps
 the record of decisions and the details of credentials. [UI.md](UI.md)
 says how the pages look. This file says how the rights work, as they are
-today (sections 1 to 7) and as they should be (section 8). What the user
-decides is marked as decided, everything else is the proposal.
+today (sections 1 to 7), and the changes of section 8, which are built
+but `identities` of 8.5. What the user decides is marked as decided,
+everything else is the proposal.
 
 ## 1. Principles
 
@@ -64,7 +65,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `audit` | `list_sends`, `list_all_sends` | an account |
 | `audit` | `list_activity`, the audit of administration (8.6) | the service |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account` | an account |
-| `accounts.connect` | `discover_account`, `start_oauth`, `create_account` | the service |
+| `accounts.connect` | `discover_account`, `start_oauth`, `start_device_oauth`, `poll_device_oauth`, `create_account` | the service |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |
 | `users.read` | `list_users`, `get_user`, `list_tokens`, `list_roles`, `get_role` | the service |
 | `users.manage` | `users.read` and changes to users, tokens, passwords, roles: fourteen rights | the service |
@@ -76,9 +77,11 @@ Two kinds of right, kept in two lists of a user or a role (8.1):
   `allow`, and names the accounts, `*` for every account, also those
   added later.
 - **Rights of the service** act on no account: `accounts.connect`,
-  `users.read`, `users.manage`, `webhooks.manage` and `admin`, or single
-  operations of them. They are named in `service`. A name in the wrong
-  list answers `400`.
+  `users.read`, `users.manage`, `webhooks.manage`, `audit` and `admin`,
+  or single operations of them. They are named in `service`. A name in
+  the wrong list answers `400`.
+- `audit` is in both lists. In a grant it reads the sends of the
+  accounts, in `service` the audit of administration (8.6).
 - Whoever connects an account gets `accounts.manage` on it, unless it
   holds that there already.
 
@@ -170,16 +173,18 @@ from becoming a way up:
   an account where the token may read mail and send it anywhere, since a
   mail with injected instructions could carry data out through it.
 - **Audit**: sends in the database (`/v1/accounts/{id}/sends`,
-  `/v1/sends`, UI Sends).
-  Sign-ins, failed sign-ins, password changes and rights changes in the
+  `/v1/sends`, UI Sends). Sign-ins and changes to users, roles, tokens,
+  passwords, accounts and webhooks in the audit of administration
+  (`/v1/audit`, UI Audit and the card Recent activity, 8.6), and in the
   service log.
 
 ## 8. What should change
 
 Eight changes. The first two change the model, the rest add to it.
 None removes a right anyone holds. **Decided 2026-10-05:** 8.1 to 8.5,
-8.7 and 8.8 as below, with the answers of section 10. 8.6 follows on its
-own. Of 8.5 only `folders` is built now.
+8.7 and 8.8 as below, with the answers of section 10. 8.6 followed on
+its own, with the answers of AUDIT.md section 7. All of it is built but
+`identities` of 8.5.
 
 ### 8.1 Service rights leave the grant
 
@@ -201,17 +206,18 @@ that do not apply. The proposal: a user (and a role) has two lists.
 ```
 
 - `service` names service rights: `users.read` and `users.manage` (8.2),
-  `webhooks.manage`, `accounts.connect` and `admin`. No accounts, no
-  constraints.
+  `webhooks.manage`, `accounts.connect`, `audit` (8.6) and `admin`. No
+  accounts, no constraints.
 - `grants` names account-bound rights, as today. `accounts.manage` keeps
   `update_account`, `delete_account`, `verify_account` and signing in
   again, all about one account.
 - `accounts.connect` is a new group of `discover_account`,
-  `create_account` and `start_oauth`. Whoever connects an account holds
-  its password for a moment and needs a grant on it afterwards: the
-  creator gets `accounts.manage` on the new account, and nothing else, so
-  it can verify and remove what it connected. Mail rights on it are given
-  as on any account. **Decided 2026-10-05.**
+  `create_account` and `start_oauth`, and for sign-in with a code
+  `start_device_oauth` and `poll_device_oauth`. Whoever connects an
+  account holds its password for a moment and needs a grant on it
+  afterwards: the creator gets `accounts.manage` on the new account, and
+  nothing else, so it can verify and remove what it connected. Mail
+  rights on it are given as on any account. **Decided 2026-10-05.**
 - `admin` in `service` means every right, as today. `admin` in a grant's
   `allow` is no longer accepted. **Decided 2026-10-05:** a request that
   names a service right or `admin` in a grant's `allow` answers `400`
@@ -283,7 +289,7 @@ that allows it accepts everything about the call.
 Sends have an audit in the database. Sign-ins and changes to users,
 roles, tokens, passwords, accounts and webhooks have only the service
 log, which a container may drop. The proposal: one table `activity` with
-time, user, credential, operation, the record touched, the client
+time, user, credential, activity, the record touched, the client
 address and the outcome. Never a secret, never content. Written by the
 domain services where the log lines are written today. The design in
 full, which activities, which fields, storage, API and page, is
@@ -292,7 +298,8 @@ full, which activities, which fields, storage, API and page, is
 
 - `GET /v1/audit`, right `audit` on the service (a service right, so
   `audit` appears in both lists), paged newest first, filters by user,
-  operation and day.
+  activity (a name or its area), record, and time with `after` and
+  `before`.
 - UI: a card **Recent activity** on the user's page with its own
   activities, and a page **Audit** under Service, both for `audit`
   in `service`.
@@ -340,6 +347,10 @@ Every step keeps the existing tests green, adds its own and, where a
 page changes, a walk in `live/ui.py`. **Decided 2026-10-05:** steps 2,
 3, 4, 6 and 7 on one branch, a commit per step, one pull request. Step 5
 follows on its own branch.
+
+Steps 2, 3, 4, 6 and 7 were one pull request and step 5 one of its own:
+all seven are done but `identities` of step 7, which waits for
+identities in the account model.
 
 ## 10. Questions answered
 
