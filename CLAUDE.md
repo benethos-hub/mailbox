@@ -116,7 +116,8 @@ config/                   # one folder per package: .env.example versioned,
 data/                     # one folder per package, created when missing,
                           #   only .gitkeep is versioned
 live/                     # manual checks against the test accounts,
-                          #   what they share in _common.py
+                          #   what they share in live/checks/, one module
+                          #   per subject
 containers/               # images/ (one folder per image), and one folder
                           #   per place they run: production/ (the
                           #   published images, Caddy, MCP instances),

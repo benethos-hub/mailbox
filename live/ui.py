@@ -26,18 +26,10 @@ import sys
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
-from _common import (
-    Admin,
-    Run,
-    accounts,
-    csrf_of,
-    imap_settings,
-    polled,
-    read_env,
-    register,
-    throwaway_service,
-    ui_sign_in,
-)
+from checks.accounts import accounts, imap_settings, read_env, register
+from checks.admin import Admin, csrf_of, ui_sign_in
+from checks.run import Run, polled
+from checks.service import throwaway_service
 
 
 def check_sign_in(run: Run, browser: httpx.Client, admin: Admin) -> bool:
@@ -674,8 +666,8 @@ def main() -> int:
     run = Run()
     with throwaway_service("mailbox-ui-live-") as service:
         url, admin = service.url, service.admin_user
-        with service.admin() as client:
-            account_id, outcome = register(client, env, test_accounts[0])
+        with service.mailbox() as mailbox:
+            account_id, outcome = register(mailbox, env, test_accounts[0])
             if not run.check(
                 "account 1 in the service", account_id is not None, outcome
             ):
