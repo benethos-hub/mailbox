@@ -532,7 +532,11 @@ imapclient boundary), never by patching deep inside a library.
   a fake `IMAPClient` at the imapclient boundary. Nothing is patched
   deep inside a library.
 - No test reaches a mail server, and none skips itself without
-  credentials. What needs a server is a script in `live/`.
+  credentials. What needs a server is a script in `live/`. What the
+  scripts share is in `live/checks/`, one module per subject. What a
+  script does with mail on the way goes through the Python client. What
+  it asks of the API itself, a status code or an error code, it asks
+  with httpx.
 - A rule on the layout has a check in `test_architecture.py`, or it is
   not a rule yet: the layers, the lines, the imports through
   `__init__.py`, the homes of the libraries, who logs what. Naming,

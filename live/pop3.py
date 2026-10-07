@@ -22,7 +22,10 @@ import sys
 from typing import Any
 
 import anyio
-from _common import Run, admin_token, polled, read_env, test_server_accounts
+from checks.accounts import read_env, test_server_accounts
+from checks.admin import admin_token
+from checks.run import Run, polled
+from checks.service import mailbox_of
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -69,6 +72,7 @@ def main() -> int:
         create_app(service_settings, services),
         headers={"Authorization": f"Bearer {admin_token(services)}"},
     )
+    mailbox = mailbox_of(client)
 
     ids = []
     for account in (sender, receiver):
@@ -92,12 +96,12 @@ def main() -> int:
     base = f"/v1/accounts/{receiver_id}"
 
     def mine() -> list[dict[str, Any]]:
-        items = client.get(f"{base}/messages", params={"limit": 50}).json()["items"]
+        items = mailbox.list_messages(receiver_id, limit=50).items
         return [m for m in items if (m.get("subject") or "").startswith(TITLE)]
 
     leftovers = mine()
     for old in leftovers:
-        client.delete(f"{base}/messages/{old['id']}", params={"permanent": "true"})
+        mailbox.delete_message(receiver_id, old["id"], permanent=True)
     if leftovers:
         print(f"      deleted {len(leftovers)} mail(s) of an earlier run")
 

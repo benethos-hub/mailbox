@@ -17,7 +17,10 @@ import os
 import sys
 
 import httpx
-from _common import Run, accounts, read_env, register
+from checks.accounts import accounts, read_env, register
+from checks.run import Run
+
+from benethos_mailbox_client import SyncMailboxClient
 
 DEFAULT_URL = "http://127.0.0.1:8080"
 
@@ -35,14 +38,17 @@ def main() -> int:
         )
     env = read_env()
     run = Run()
-    with httpx.Client(
-        base_url=options.url,
-        headers={"Authorization": f"Bearer {token}"},
-        timeout=60.0,
-    ) as client:
+    with (
+        httpx.Client(
+            base_url=options.url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=60.0,
+        ) as client,
+        SyncMailboxClient(options.url, token) as mailbox,
+    ):
         for account in accounts(env)[: options.count]:
             print(f"\n== {account['email']}")
-            account_id, outcome = register(client, env, account)
+            account_id, outcome = register(mailbox, env, account)
             if not run.check("in the service", account_id is not None, outcome):
                 continue
             base = f"/v1/accounts/{account_id}"

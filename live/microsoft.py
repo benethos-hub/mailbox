@@ -46,20 +46,14 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from _common import (
-    Admin,
-    Run,
-    Service,
-    accounts,
-    bootstrap,
-    messages_with_subject,
-    read_env,
-    register,
-    service_env,
-    start_service,
-    stop,
-)
+from checks.accounts import accounts, read_env, register
+from checks.admin import Admin, bootstrap
+from checks.mail import delete_for_good, feed_types, messages_with_subject
+from checks.processes import service_env, start_service, stop
+from checks.run import Run
+from checks.service import Service
 
+from benethos_mailbox_client import SyncMailboxClient
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
 SYNC_INTERVAL = 20
@@ -119,24 +113,6 @@ def microsoft_env(env: dict[str, str], project: bool) -> dict[str, str]:
     return service
 
 
-def feed_types(
-    client: httpx.Client, account_id: str, since: str, message_id: str, wait: float
-) -> list[str]:
-    """The types the change feed names for a message since ``since``,
-    asked until it names one or ``wait`` seconds have passed."""
-    deadline = time.monotonic() + wait
-    while True:
-        answer = client.get(
-            f"/v1/accounts/{account_id}/changes", params={"since": since, "limit": 200}
-        )
-        types = [
-            c["type"] for c in answer.json().get("changes", []) if c["id"] == message_id
-        ]
-        if types or time.monotonic() > deadline:
-            return types
-        time.sleep(5)
-
-
 def microsoft_account(client: httpx.Client, email: str) -> dict[str, Any] | None:
     found = client.get("/v1/accounts", params={"address": email}).json()
     for account in found["items"]:
@@ -190,22 +166,35 @@ def connect_with_code(client: httpx.Client, email: str) -> int:
 
 
 def _find(
-    client: httpx.Client, account_id: str, folder: str, subject: str, tries: int
+    mailbox: SyncMailboxClient, account_id: str, folder: str, subject: str, tries: int
 ) -> str | None:
     """The id of the message with ``subject`` in the folder, once it is there."""
     found = messages_with_subject(
-        client, account_id, subject, folder=folder, tries=tries, pause=5
+        mailbox, account_id, subject, folder=folder, tries=tries, pause=5
     )
     return str(found[0]["id"]) if found else None
 
 
 def check(
-    run: Run, client: httpx.Client, ms_id: str, bot: dict[str, str], bot_id: str
+    run: Run,
+    client: httpx.Client,
+    mailbox: SyncMailboxClient,
+    ms_id: str,
+    bot: dict[str, str],
+    bot_id: str,
 ) -> None:
+    """What the API answers is checked with ``client``. ``mailbox``, the
+    Python client, finds and deletes the test mail."""
     base = f"/v1/accounts/{ms_id}"
     print("\n== reading")
     verified = client.post(f"{base}/verify")
-    run.check("the token works", verified.status_code == 200, str(verified.status_code))
+    if not run.check(
+        "the token works",
+        verified.status_code == 200,
+        f"{verified.status_code} {verified.json().get('error', {}).get('code', '')}",
+    ):
+        print("connect the account again with --connect, then run this again")
+        return
     folders = client.get(f"{base}/folders").json()
     roles = {f.get("role") for f in folders}
     run.check("folders with their roles", {"inbox", "sent", "drafts", "trash"} <= roles)
@@ -266,27 +255,17 @@ def check(
     since = client.get(f"{base}/changes").json()["state"]
     subject = f"{SUBJECT} {secrets.token_hex(4)}"
     try:
-        _send_and_check(run, client, ms_id, bot, bot_id, since, subject)
+        _send_and_check(run, client, mailbox, ms_id, bot, bot_id, since, subject)
     finally:
-        _sweep(client, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")])
+        _sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")])
 
 
-def _sweep(client: httpx.Client, places: list[tuple[str, str]]) -> None:
+def _sweep(mailbox: SyncMailboxClient, places: list[tuple[str, str | None]]) -> None:
     """What this check left of its mails, deleted for good: a mail that
     arrived after the check gave up, or one of an earlier run."""
-    removed = 0
-    for account_id, folder in places:
-        page = client.get(
-            f"/v1/accounts/{account_id}/messages",
-            params={"folder": folder, "subject": SUBJECT, "limit": 20},
-        ).json()
-        for message in page.get("items", []):
-            if str(message.get("subject") or "").startswith(SUBJECT):
-                gone = client.delete(
-                    f"/v1/accounts/{account_id}/messages/{message['id']}",
-                    params={"permanent": "true"},
-                )
-                removed += gone.status_code == 204
+    removed = delete_for_good(
+        mailbox, places, SUBJECT, matches=lambda found: found.startswith(SUBJECT)
+    )
     if removed:
         print(f"      cleanup: {removed} mail(s) of the check deleted for good")
 
@@ -294,6 +273,7 @@ def _sweep(client: httpx.Client, places: list[tuple[str, str]]) -> None:
 def _send_and_check(
     run: Run,
     client: httpx.Client,
+    mailbox: SyncMailboxClient,
     ms_id: str,
     bot: dict[str, str],
     bot_id: str,
@@ -312,14 +292,13 @@ def _send_and_check(
     if not run.check("send", sent.status_code == 200, str(sent.status_code)):
         return
     # Outlook.com may take minutes to deliver, seen live.
-    arrived = _find(client, bot_id, "inbox", subject, tries=60)
+    arrived = _find(mailbox, bot_id, "inbox", subject, tries=60)
     if run.check("it arrives", arrived is not None):
-        client.delete(
-            f"/v1/accounts/{bot_id}/messages/{arrived}", params={"permanent": "true"}
-        )
-    copy = _find(client, ms_id, "sent", subject, tries=6)
+        assert arrived is not None
+        mailbox.delete_message(bot_id, arrived, permanent=True)
+    copy = _find(mailbox, ms_id, "sent", subject, tries=6)
     if copy is not None:
-        types = feed_types(client, ms_id, since, copy, wait=4 * SYNC_INTERVAL)
+        types = feed_types(mailbox, ms_id, since, copy, wait=4 * SYNC_INTERVAL)
         run.check(
             "the change feed names the copy in Sent Items (Graph delta)",
             "message.created" in types,
@@ -344,7 +323,7 @@ def _send_and_check(
         )
         run.check(
             "and not in the trash",
-            _find(client, ms_id, "trash", subject, tries=1) is None,
+            _find(mailbox, ms_id, "trash", subject, tries=1) is None,
         )
 
 
@@ -371,7 +350,8 @@ def main() -> int:
     process = start_service(service, URL, init_keys=not (DATA / "mailbox.db").exists())
     run = Run()
     try:
-        with Service(URL, _admin(service)).admin(timeout=120) as client:
+        running = Service(URL, _admin(service))
+        with running.admin(timeout=120) as client, running.mailbox() as mailbox:
             if options.connect:
                 if options.project:
                     return connect_with_code(client, email)
@@ -382,13 +362,13 @@ def main() -> int:
                 return 1
             assert account is not None
             bot = accounts(env)[0]
-            bot_id, outcome = register(client, env, bot)
+            bot_id, outcome = register(mailbox, env, bot)
             if not run.check(
                 "the first test account in the service", bot_id is not None, outcome
             ):
                 return 1
             assert bot_id is not None
-            check(run, client, account["id"], bot, bot_id)
+            check(run, client, mailbox, account["id"], bot, bot_id)
     finally:
         stop(process)
     return run.finish()

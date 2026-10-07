@@ -251,3 +251,15 @@ async def test_send_draft(make_client: Callable) -> None:
     assert api.call() == ("POST", path, {}, None)
     assert api.seen[0].headers["idempotency-key"] == "key-2"
     assert found == Sent(None, [])
+
+
+@pytest.mark.parametrize(
+    ("permanent", "query"), [(False, {}), (True, {"permanent": "true"})]
+)
+async def test_delete_message(
+    make_client: Callable, permanent: bool, query: dict[str, str]
+) -> None:
+    api = FakeApi(None)
+    client = make_client(api)
+    assert await client.delete_message("acc_1", "msg_1", permanent=permanent) is None
+    assert api.call() == ("DELETE", "/v1/accounts/acc_1/messages/msg_1", query, None)

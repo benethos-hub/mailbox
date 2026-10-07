@@ -26,7 +26,9 @@ import sys
 from typing import Any
 
 import anyio
-from _common import Run, accounts, imap_settings, in_process_service, read_env
+from checks.accounts import accounts, imap_settings, read_env
+from checks.run import Run
+from checks.service import in_process_service
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.errors import MailboxServiceError

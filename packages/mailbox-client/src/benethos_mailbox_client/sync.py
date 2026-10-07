@@ -197,6 +197,11 @@ class SyncMailboxClient:
             )
         )
 
+    def delete_message(
+        self, account_id: str, message_id: str, *, permanent: bool = False
+    ) -> None:
+        self.send(endpoints.delete_message(account_id, message_id, permanent=permanent))
+
     def trash_messages(self, account_id: str, message_ids: list[str]) -> Outcome:
         return self.send(endpoints.trash_messages(account_id, message_ids))
 

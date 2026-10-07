@@ -164,6 +164,18 @@ def update_messages(
     )
 
 
+def delete_message(
+    account_id: str, message_id: str, *, permanent: bool = False
+) -> Call[None]:
+    """Into the trash, or with ``permanent`` for good."""
+    return Call(
+        "DELETE",
+        path("accounts", account_id, "messages", message_id),
+        _nothing,
+        params=given({"permanent": permanent or None}),
+    )
+
+
 def trash_messages(account_id: str, message_ids: list[str]) -> Call[Outcome]:
     return _batch(account_id, {"ids": message_ids, "action": "delete"})
 

@@ -35,29 +35,21 @@ memory storage and a throwaway master key. Credentials are never printed.
 from __future__ import annotations
 
 import argparse
-import hashlib
-import hmac
 import imaplib
-import json
-import re
-import ssl
 import sys
-import threading
 import uuid
-from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 import anyio
-from _common import (
-    Run,
-    accounts,
-    in_process_service,
-    messages_with_subject,
-    read_env,
-    register,
-)
+from checks.accounts import accounts, read_env, register
+from checks.imap import OtherClient
+from checks.mail import feed_types, messages_with_subject
+from checks.receiver import Receiver
+from checks.run import Run
+from checks.service import in_process_service, mailbox_of
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_client import SyncMailboxClient
 from benethos_mailbox_service.errors import MailboxServiceError
 
 IDLE_WAIT = 90.0
@@ -75,131 +67,6 @@ KEPT_TEXT = (
     "Automatic test mail of live/changes.py in the mailbox-service repository.\n"
     "It was kept for inspection (--keep): delete it by hand.\n"
 )
-
-
-class OtherClient:
-    """A plain imaplib connection, standing in for another mail client."""
-
-    def __init__(self, env: dict[str, str], account: dict[str, str]) -> None:
-        host = env["LIVE_IMAP_HOST"]
-        port = int(env.get("LIVE_IMAP_PORT", "993"))
-        context = ssl.create_default_context()
-        if env.get("LIVE_IMAP_SECURITY", "tls") == "tls":
-            self.conn: imaplib.IMAP4 = imaplib.IMAP4_SSL(
-                host, port, ssl_context=context
-            )
-        else:
-            self.conn = imaplib.IMAP4(host, port)
-            self.conn.starttls(ssl_context=context)
-        self.conn.login(account["username"], account["password"])
-
-    def folder_name(self, name: str) -> str:
-        """``name`` inside the personal namespace, e.g. ``INBOX.name`` on
-        servers that keep every folder below the inbox."""
-        status, data = self.conn.namespace()
-        match = re.match(rb'\(\("([^"]*)" (?:"([^"]*)"|NIL)\)', data[0] or b"")
-        if status != "OK" or match is None:
-            return name
-        return match.group(1).decode() + name
-
-    def create_folder(self, folder: str, subscribe: bool = False) -> None:
-        """``subscribe`` makes mail clients such as Outlook show it: they list
-        only subscribed folders."""
-        status, data = self.conn.create(_quoted(folder))
-        if status != "OK":
-            raise RuntimeError(f"CREATE failed: {data!r}")
-        if subscribe:
-            self.conn.subscribe(_quoted(folder))
-
-    def all_folders(self) -> set[str]:
-        return self._names(self.conn.list())
-
-    def subscribed_folders(self) -> set[str]:
-        return self._names(self.conn.lsub())
-
-    def _names(self, answer: tuple[str, list[Any]]) -> set[str]:
-        status, data = answer
-        names = set()
-        for line in data if status == "OK" else []:
-            if isinstance(line, bytes):
-                match = re.match(rb'\([^)]*\) (?:"[^"]*"|NIL) (.+)$', line)
-                if match:
-                    names.add(match.group(1).decode().strip('"'))
-        return names
-
-    def sent_folder(self) -> str | None:
-        return self._special_folder(b"\\sent")
-
-    def trash_folder(self) -> str | None:
-        return self._special_folder(b"\\trash")
-
-    def drafts_folder(self) -> str | None:
-        return self._special_folder(b"\\drafts")
-
-    def _special_folder(self, flag: bytes) -> str | None:
-        """The folder with this special-use flag (RFC 6154)."""
-        status, data = self.conn.list()
-        for line in data if status == "OK" else []:
-            if not isinstance(line, bytes):
-                continue
-            match = re.match(rb'\(([^)]*)\) (?:"[^"]*"|NIL) (.+)$', line)
-            if match and flag in match.group(1).lower():
-                return match.group(2).decode().strip('"')
-        return None
-
-    def delete_folder(self, folder: str) -> bool:
-        self.conn.unsubscribe(_quoted(folder))
-        self.conn.select("INBOX")
-        status, _ = self.conn.delete(_quoted(folder))
-        return status == "OK"
-
-    def flags(self, folder: str, subject: str) -> list[str]:
-        """The flags of the one test mail, as the server keeps them."""
-        found = self.uids(folder, subject)
-        if len(found) != 1:
-            return [f"({len(found)} mails)"]
-        _, data = self.conn.uid("FETCH", found[0].decode(), "(FLAGS)")
-        match = re.search(rb"FLAGS \(([^)]*)\)", data[0] if data and data[0] else b"")
-        flags = match.group(1).decode().split() if match else []
-        return sorted(f for f in flags if f != "\\Recent")
-
-    def uids(self, folder: str, subject: str) -> list[bytes]:
-        status, _ = self.conn.select(_quoted(folder))
-        if status != "OK":
-            return []
-        _, data = self.conn.uid("SEARCH", "SUBJECT", _quoted(subject))
-        return data[0].split() if data and data[0] else []
-
-    def move(self, uid: bytes, target: str) -> None:
-        status, data = self.conn.uid("MOVE", uid.decode(), _quoted(target))
-        if status != "OK":
-            raise RuntimeError(f"MOVE failed: {data!r}")
-
-    def capabilities(self) -> set[str]:
-        return {c.upper() for c in self.conn.capabilities}
-
-    def set_flag(self, folder: str, subject: str, flag: str, on: bool) -> None:
-        for uid in self.uids(folder, subject):
-            sign = "+FLAGS.SILENT" if on else "-FLAGS.SILENT"
-            self.conn.uid("STORE", uid.decode(), sign, f"({flag})")
-
-    def delete_mail(self, folder: str, subject: str) -> int:
-        found = self.uids(folder, subject)
-        for uid in found:
-            self.conn.uid("STORE", uid.decode(), "+FLAGS.SILENT", r"(\Deleted)")
-        if found:
-            self.conn.uid("EXPUNGE", b",".join(found).decode())
-        return len(found)
-
-    def close(self) -> None:
-        try:
-            self.conn.logout()
-        except (imaplib.IMAP4.error, OSError):
-            pass
-
-
-def _quoted(value: str) -> str:
-    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 async def idle_while_sending(provider: Any, send: Any) -> bool:
@@ -221,6 +88,7 @@ async def idle_while_sending(provider: Any, send: Any) -> bool:
 def check_drafts(
     run: Run,
     client: TestClient,
+    mailbox: SyncMailboxClient,
     other: OtherClient,
     account_id: str,
     message_id: str,
@@ -286,7 +154,7 @@ def check_drafts(
     )
     send_id = to_send.json().get("id", "?")
     sent = client.post(f"{url}/{send_id}/send")
-    arrived = find_by_subject(client, sender_id, title)
+    arrived = find_by_subject(mailbox, sender_id, title)
     run.check(
         "POST drafts/{id}/send sends it, it arrives, the draft is gone",
         sent.status_code == 200
@@ -297,64 +165,11 @@ def check_drafts(
     )
 
 
-class Receiver:
-    """A webhook receiver on 127.0.0.1 that keeps each post it takes."""
-
-    def __init__(self) -> None:
-        posts: list[tuple[bytes, str]] = []
-
-        class Handler(BaseHTTPRequestHandler):
-            def do_POST(self) -> None:  # noqa: N802
-                length = int(self.headers.get("Content-Length", "0"))
-                posts.append(
-                    (self.rfile.read(length), self.headers["X-Mailbox-Signature"])
-                )
-                self.send_response(204)
-                self.end_headers()
-
-            def log_message(self, *args: Any) -> None:
-                pass
-
-        self.posts = posts
-        self.server = HTTPServer(("127.0.0.1", 0), Handler)
-        self.url = f"http://127.0.0.1:{self.server.server_port}/hook"
-        threading.Thread(target=self.server.serve_forever, daemon=True).start()
-
-    def signed(self, secret: str) -> bool:
-        """Whether every post carries a valid signature."""
-        for body, header in self.posts:
-            stamp, digest = (part.split("=", 1)[1] for part in header.split(","))
-            expected = hmac.new(
-                secret.encode(), f"{stamp}.".encode() + body, hashlib.sha256
-            ).hexdigest()
-            if not hmac.compare_digest(digest, expected):
-                return False
-        return bool(self.posts)
-
-    def events(self) -> list[dict[str, Any]]:
-        return [e for body, _ in self.posts for e in json.loads(body)["events"]]
-
-    def close(self) -> None:
-        self.server.shutdown()
-
-
-def feed_types(
-    client: TestClient, account_id: str, since: str, message_id: str
-) -> list[str]:
-    """The types the change feed names for one message since ``since``."""
-    answer = client.get(
-        f"/v1/accounts/{account_id}/changes", params={"since": since, "limit": 200}
-    )
-    if answer.status_code != 200:
-        return [f"status {answer.status_code}"]
-    return [c["type"] for c in answer.json()["changes"] if c["id"] == message_id]
-
-
 def find_by_subject(
-    client: TestClient, account_id: str, subject: str
+    mailbox: SyncMailboxClient, account_id: str, subject: str
 ) -> dict[str, Any] | None:
     found = messages_with_subject(
-        client, account_id, subject, tries=DELIVERY_TRIES, pause=DELIVERY_PAUSE
+        mailbox, account_id, subject, tries=DELIVERY_TRIES, pause=DELIVERY_PAUSE
     )
     return found[0] if found else None
 
@@ -423,12 +238,13 @@ def main() -> int:
     folder = base
 
     services, client = in_process_service()
+    mailbox = mailbox_of(client)
     run = Run()
     other: OtherClient | None = None
     print(f"== {receiver['email']} receives from {sender['email']}")
     try:
-        account_id, _ = register(client, env, receiver)
-        sender_id, _ = register(client, env, sender)
+        account_id, _ = register(mailbox, env, receiver)
+        sender_id, _ = register(mailbox, env, sender)
         if not run.check(
             "connect both test accounts, the sender with SMTP",
             account_id is not None and sender_id is not None,
@@ -490,7 +306,7 @@ def main() -> int:
         finally:
             outbox.close()
 
-        found = find_by_subject(client, account_id, subject)
+        found = find_by_subject(mailbox, account_id, subject)
         if not run.check("the API lists it", found is not None):
             return 1
         assert found is not None
@@ -501,8 +317,8 @@ def main() -> int:
         inbox_folder = found["folder_ids"][0]
         run.check(
             "the change feed names it as created",
-            feed_types(client, account_id, since, message_id) == ["message.created"],
-            " ".join(feed_types(client, account_id, since, message_id)),
+            feed_types(mailbox, account_id, since, message_id) == ["message.created"],
+            " ".join(feed_types(mailbox, account_id, since, message_id)),
         )
 
         other = OtherClient(env, receiver)
@@ -579,7 +395,7 @@ def main() -> int:
             mark = client.get(f"/v1/accounts/{account_id}/changes").json()["state"]
             other.set_flag("INBOX", subject, FLAGGED, on=True)
             anyio.run(services.sync.sync_account, account_id)
-            types = feed_types(client, account_id, mark, message_id)
+            types = feed_types(mailbox, account_id, mark, message_id)
             run.check(
                 "the change feed names a flag another client set (CONDSTORE)",
                 types == ["message.updated"],
@@ -597,7 +413,7 @@ def main() -> int:
                 "text": "Automatic reply of live/changes.py.",
             },
         )
-        reply = find_by_subject(client, sender_id, f"Re: {subject}")
+        reply = find_by_subject(mailbox, sender_id, f"Re: {subject}")
         run.check(
             "a reply goes back to the sender, as a reply",
             replied.status_code == 200 and reply is not None,
@@ -620,7 +436,7 @@ def main() -> int:
                 "text": "Automatic forward of live/changes.py.",
             },
         )
-        forward = find_by_subject(client, sender_id, f"Fwd: {subject}")
+        forward = find_by_subject(mailbox, sender_id, f"Fwd: {subject}")
         run.check(
             "a forward as attachment arrives",
             forwarded.status_code == 200 and forward is not None,
@@ -649,7 +465,7 @@ def main() -> int:
             f"{batch.status_code} {outcomes}",
         )
 
-        types = feed_types(client, account_id, since, message_id)
+        types = feed_types(mailbox, account_id, since, message_id)
         run.check(
             "the change feed names its changes as updated",
             "message.updated" in types,
@@ -659,6 +475,7 @@ def main() -> int:
         check_drafts(
             run,
             client,
+            mailbox,
             other,
             account_id,
             message_id,
@@ -713,7 +530,7 @@ def main() -> int:
                 and client.get(url).status_code == 404,
                 str(gone.status_code),
             )
-            types = feed_types(client, account_id, since, message_id)
+            types = feed_types(mailbox, account_id, since, message_id)
             run.check(
                 "the change feed names it as deleted, last",
                 types[-1:] == ["message.deleted"],

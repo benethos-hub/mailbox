@@ -29,19 +29,16 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import anyio
-import httpx
-from _common import (
-    Run,
-    accounts,
-    messages_with_subject,
-    program,
-    read_env,
-    register_all,
-    throwaway_service,
-    user_token,
-)
+from checks.accounts import accounts, read_env, register_all
+from checks.admin import user_token
+from checks.mail import delete_for_good, messages_with_subject
+from checks.processes import program
+from checks.run import Run
+from checks.service import throwaway_service
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
+
+from benethos_mailbox_client import ApiError, SyncMailboxClient
 
 READ_TOOLS = {
     "list_accounts",
@@ -193,20 +190,15 @@ async def check_pdf(run: Run, session: ClientSession) -> None:
 
 
 async def check_writing(
-    run: Run, url: str, token: str, admin: httpx.Client, account_id: str
+    run: Run, url: str, token: str, admin: SyncMailboxClient, account_id: str
 ) -> None:
     """Folder, star, move and trash through the tools, then all put back."""
-    folders_url = f"/v1/accounts/{account_id}/folders"
-    inbox = next(f for f in admin.get(folders_url).json() if f.get("role") == "inbox")
-    newest = admin.get(
-        f"/v1/accounts/{account_id}/messages",
-        params={"folder": inbox["id"], "limit": 1},
-    ).json()["items"]
+    inbox = next(f for f in admin.list_folders(account_id) if f.role == "inbox")
+    newest = admin.list_messages(account_id, folder=inbox.id, limit=1).items
     if not newest:
         print("SKIP  no message in the inbox of the first test account")
         return
     message = newest[0]
-    message_url = f"/v1/accounts/{account_id}/messages/{message['id']}"
     folder_id = None
     try:
         async with mcp_session(url, token) as session:
@@ -243,7 +235,7 @@ async def check_writing(
             run.check("create_folder", not created.is_error and bool(folder_id))
 
             starred = await update(starred=not message["starred"])
-            now = admin.get(message_url).json()
+            now = admin.get_message(account_id, message["id"])
             run.check(
                 "update_messages stars",
                 starred.get("done") == [message["id"]]
@@ -254,7 +246,7 @@ async def check_writing(
 
             if folder_id:
                 moved = await update(move_to=folder_id)
-                now = admin.get(message_url).json()
+                now = admin.get_message(account_id, message["id"])
                 run.check(
                     "update_messages moves into the new folder, the id stays",
                     moved.get("done") == [message["id"]]
@@ -263,24 +255,24 @@ async def check_writing(
                 )
 
             trashed = await update(trash=True)
-            now = admin.get(message_url).json()
+            now = admin.get_message(account_id, message["id"])
             trash = next(
-                (f for f in admin.get(folders_url).json() if f.get("role") == "trash"),
-                {},
+                (f.id for f in admin.list_folders(account_id) if f.role == "trash"),
+                None,
             )
             run.check(
                 "update_messages trashes",
                 trashed.get("done") == [message["id"]]
-                and now.get("folder_ids") == [trash.get("id")],
+                and now.get("folder_ids") == [trash],
                 str(trashed.get("error", "")),
             )
 
             back = await update(move_to="inbox")
-            now = admin.get(message_url).json()
+            now = admin.get_message(account_id, message["id"])
             run.check(
                 "update_messages moves back by role",
                 back.get("done") == [message["id"]]
-                and now.get("folder_ids") == [inbox["id"]],
+                and now.get("folder_ids") == [inbox.id],
                 str(back.get("error", "")),
             )
 
@@ -299,27 +291,32 @@ async def check_writing(
             )
     finally:
         # Whatever failed above: the message back in the inbox as it was.
-        admin.patch(
-            message_url,
+        admin.request(
+            "PATCH",
+            f"/v1/accounts/{account_id}/messages/{message['id']}",
             json={
-                "folder_ids": [inbox["id"]],
+                "folder_ids": [inbox.id],
                 "starred": message["starred"],
                 "unread": message["unread"],
             },
         )
         if folder_id:
-            removed = admin.delete(f"{folders_url}/{folder_id}")
-            run.check("the test folder removed again", removed.status_code == 204)
+            try:
+                admin.request(
+                    "DELETE", f"/v1/accounts/{account_id}/folders/{folder_id}"
+                )
+                removed = ""
+            except ApiError as exc:
+                removed = str(exc)
+            run.check("the test folder removed again", not removed, removed)
 
 
 async def check_drafts(
-    run: Run, url: str, token: str, admin: httpx.Client, account_id: str, to: str
+    run: Run, url: str, token: str, admin: SyncMailboxClient, account_id: str, to: str
 ) -> None:
     """A reply draft written, listed, replaced, read and deleted. Nothing is
     sent."""
-    newest = admin.get(
-        f"/v1/accounts/{account_id}/messages", params={"folder": "inbox", "limit": 1}
-    ).json()["items"]
+    newest = admin.list_messages(account_id, folder="inbox", limit=1).items
     if not newest:
         print("SKIP  no message in the inbox of the first test account")
         return
@@ -392,10 +389,12 @@ async def check_drafts(
                 draft_id = None
     finally:
         if draft_id:
-            admin.delete(f"/v1/accounts/{account_id}/drafts/{draft_id}")
+            admin.delete_draft(account_id, draft_id)
 
 
-def arrived(admin: httpx.Client, account_id: str, subject: str) -> list[dict[str, Any]]:
+def arrived(
+    admin: SyncMailboxClient, account_id: str, subject: str
+) -> list[dict[str, Any]]:
     """The messages with ``subject`` in the account, once one is there."""
     return messages_with_subject(admin, account_id, subject, tries=20)
 
@@ -404,7 +403,7 @@ async def check_sending(
     run: Run,
     url: str,
     token: str,
-    admin: httpx.Client,
+    admin: SyncMailboxClient,
     ids: list[str],
     to: str,
 ) -> None:
@@ -442,7 +441,7 @@ async def check_sending(
             )
             run.check(
                 "send_draft sends the draft",
-                not sent.is_error and (sent.structured_content or {}).get("sent"),
+                not sent.is_error and bool((sent.structured_content or {}).get("sent")),
                 text_of(sent) if sent.is_error else "",
             )
             html = await session.call_tool(
@@ -461,11 +460,7 @@ async def check_sending(
         )
         run.check("the sent draft arrived", bool(arrived(admin, receiver, subjects[1])))
         found = arrived(admin, receiver, subjects[2])
-        body = (
-            admin.get(f"/v1/accounts/{receiver}/messages/{found[0]['id']}").json()
-            if found
-            else {}
-        )
+        body = admin.get_message(receiver, found[0]["id"]) if found else {}
         run.check(
             "the HTML mail arrived with both parts, the text made from the HTML",
             "<b" in (body.get("html_body") or "")
@@ -475,31 +470,21 @@ async def check_sending(
         delete_test_mails(admin, ids, subjects)
 
 
-def delete_test_mails(admin: httpx.Client, ids: list[str], subjects: list[str]) -> None:
+def delete_test_mails(
+    admin: SyncMailboxClient, ids: list[str], subjects: list[str]
+) -> None:
     """The mails with these subjects, for good: in the second test account's
     inbox and the first one's sent folder."""
     sender, receiver = ids
-    removed = 0
-    for account_id, folder in ((receiver, "inbox"), (sender, "sent")):
-        for title in subjects:
-            page = admin.get(
-                f"/v1/accounts/{account_id}/messages",
-                params={"folder": folder, "q": title, "limit": 10},
-            ).json()
-            for message in page.get("items", []):
-                if message.get("subject") == title:
-                    admin.delete(
-                        f"/v1/accounts/{account_id}/messages/{message['id']}",
-                        params={"permanent": True},
-                    )
-                    removed += 1
+    places = [(receiver, "inbox"), (sender, "sent")]
+    removed = sum(delete_for_good(admin, places, title) for title in subjects)
     print(f"      cleanup: {removed} test mail(s) deleted for good")
 
 
 async def check_constraints(
     run: Run,
     url: str,
-    admin: httpx.Client,
+    admin: SyncMailboxClient,
     ids: list[str],
     emails: list[str],
 ) -> None:
@@ -550,7 +535,9 @@ async def check_constraints(
                 and "send_limit_reached" in text_of(second),
                 "stopped" if second.is_error else "sent",
             )
-        audit = admin.get(f"/v1/accounts/{sender}/sends", params={"limit": 3}).json()
+        audit = admin.request(
+            "GET", f"/v1/accounts/{sender}/sends", params={"limit": 3}
+        )
         outcomes = [record["outcome"] for record in audit.get("items", [])]
         run.check(
             "the audit names every attempt, newest first",
@@ -565,7 +552,10 @@ def main() -> int:
     env = read_env()
     test_accounts = accounts(env)[:2]
     run = Run()
-    with throwaway_service("mailbox-mcp-live-") as service, service.admin() as client:
+    with (
+        throwaway_service("mailbox-mcp-live-") as service,
+        service.mailbox() as client,
+    ):
         url = service.url
         ids = register_all(run, client, env, test_accounts)
         if len(ids) != len(test_accounts):

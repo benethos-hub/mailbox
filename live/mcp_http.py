@@ -20,18 +20,11 @@ import sys
 
 import anyio
 import httpx
-from _common import (
-    Run,
-    accounts,
-    free_port,
-    program,
-    read_env,
-    register_all,
-    started,
-    stop,
-    throwaway_service,
-    user_token,
-)
+from checks.accounts import accounts, read_env, register_all
+from checks.admin import user_token
+from checks.processes import free_port, program, started, stop
+from checks.run import Run
+from checks.service import throwaway_service
 from mcp import ClientSession
 from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
 from mcp_stdio import READ_TOOLS
@@ -116,7 +109,7 @@ def main() -> int:
     bearer = secrets.token_urlsafe(32)
     mcp_port = free_port()
     with throwaway_service("mailbox-mcp-http-") as service:
-        with service.admin() as client:
+        with service.mailbox() as client:
             ids = register_all(run, client, env, test_accounts)
             if len(ids) != len(test_accounts):
                 return 1

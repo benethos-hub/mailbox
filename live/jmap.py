@@ -35,18 +35,13 @@ import tempfile
 from typing import Any
 
 import httpx
-from _common import (
-    Run,
-    bootstrap,
-    free_port,
-    messages_with_subject,
-    polled,
-    read_env,
-    service_env,
-    start_service,
-    stop,
-    test_server_accounts,
-)
+from checks.accounts import read_env, test_server_accounts
+from checks.admin import bootstrap
+from checks.mail import delete_for_good, messages_with_subject
+from checks.processes import free_port, service_env, start_service, stop
+from checks.run import Run, polled
+
+from benethos_mailbox_client import SyncMailboxClient
 
 HOST = "127.0.0.1"
 JMAP_PORT = 30443
@@ -90,10 +85,13 @@ def main() -> int:
     try:
         admin = bootstrap(service, url)
         headers = {"Authorization": f"Bearer {admin.token}"}
-        with httpx.Client(base_url=url, headers=headers, timeout=60) as client:
+        with (
+            httpx.Client(base_url=url, headers=headers, timeout=60) as client,
+            SyncMailboxClient(url, admin.token) as mailbox,
+        ):
             ids = connect(run, client, sender, receiver)
             if ids is not None:
-                checks(run, client, ids, receiver)
+                checks(run, client, mailbox, ids, receiver)
     finally:
         stop(process)
         shutil.rmtree(data_dir, ignore_errors=True)
@@ -126,8 +124,14 @@ def connect(
 
 
 def checks(
-    run: Run, client: httpx.Client, ids: tuple[str, str], receiver: dict[str, str]
+    run: Run,
+    client: httpx.Client,
+    mailbox: SyncMailboxClient,
+    ids: tuple[str, str],
+    receiver: dict[str, str],
 ) -> None:
+    """What the API answers is checked with ``client``. ``mailbox``, the
+    Python client, finds and deletes the test mail."""
     sender_id, receiver_id = ids
     base = f"/v1/accounts/{receiver_id}"
     offered = set(client.get(base).json()["capabilities"])
@@ -138,7 +142,7 @@ def checks(
     )
 
     for account_id in ids:
-        clean_up(client, account_id)
+        clean_up(mailbox, account_id)
 
     def ready() -> bool:
         accounts = {a["id"]: a for a in client.get("/v1/status").json()["accounts"]}
@@ -162,14 +166,14 @@ def checks(
         },
     )
     run.check("the first account sends through JMAP", sent.status_code == 200)
-    copies = messages_with_subject(client, sender_id, title, folder="sent")
+    copies = messages_with_subject(mailbox, sender_id, title, folder="sent")
     run.check(
         "a read copy is in its sent folder",
         len(copies) == 1 and not copies[0]["unread"],
         str(len(copies)),
     )
 
-    arrived = messages_with_subject(client, receiver_id, title, folder="inbox")
+    arrived = messages_with_subject(mailbox, receiver_id, title, folder="inbox")
     if not run.check("the mail arrives in the second account", bool(arrived)):
         return
     message_id = arrived[0]["id"]
@@ -269,30 +273,25 @@ def checks(
         bool(polled(lambda: named("message.deleted", mark), tries=30, pause=1.0)),
     )
     for copy in copies:
-        client.delete(
-            f"/v1/accounts/{sender_id}/messages/{copy['id']}",
-            params={"permanent": True},
-        )
+        mailbox.delete_message(sender_id, copy["id"], permanent=True)
 
 
-def clean_up(client: httpx.Client, account_id: str) -> None:
+def clean_up(mailbox: SyncMailboxClient, account_id: str) -> None:
     """Mails and drafts of an earlier run, in any folder, deleted for good,
     and its folders where they are empty."""
-    base = f"/v1/accounts/{account_id}"
-    page = client.get(f"{base}/messages", params={"subject": TITLE, "limit": 50}).json()
-    old = [m for m in page.get("items", []) if TITLE in (m.get("subject") or "")]
-    for message in old:
-        client.delete(f"{base}/messages/{message['id']}", params={"permanent": True})
+    old = delete_for_good(
+        mailbox, [(account_id, None)], TITLE, matches=lambda found: TITLE in found
+    )
     folders = [
         f
-        for f in client.get(f"{base}/folders").json()
-        if f["name"].startswith(TITLE) and not f.get("total")
+        for f in mailbox.list_folders(account_id)
+        if f.name.startswith(TITLE) and not f.total
     ]
     for folder in folders:
-        client.delete(f"{base}/folders/{folder['id']}")
+        mailbox.request("DELETE", f"/v1/accounts/{account_id}/folders/{folder.id}")
     if old or folders:
         print(
-            f"      deleted {len(old)} mail(s) and {len(folders)} folder(s) "
+            f"      deleted {old} mail(s) and {len(folders)} folder(s) "
             "of an earlier run"
         )
 
