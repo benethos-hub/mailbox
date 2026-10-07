@@ -832,6 +832,12 @@ The fingerprint covers the statements, not the Python of `before`,
 today as after. A hash over source breaks on a comment. That a shipped
 step's Python is not touched stays a rule for review, as it is now.
 
+**Superseded 2026-10-07:** the fingerprint is a hash of the step's
+whole module, statements, the Python of `before`, its helpers and
+comments alike. Migration 15 has no statements, so its fingerprint
+of the statements froze nothing. That a shipped step breaks on a
+comment is the point: it is never changed.
+
 ### 11.3 A registry, not reflection
 
 The list in `__init__.py` stays, written by hand. A scan of the
