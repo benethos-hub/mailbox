@@ -431,14 +431,16 @@ def test_connect_read_and_send_through_the_api(
     client = TestClient(create_app(config, services), headers=headers)
     from urllib.parse import parse_qs, urlsplit
 
-    started = client.post("/v1/oauth/microsoft/start", json={}).json()["url"]
-    state = parse_qs(urlsplit(started).query)["state"][0]
     import anyio
 
-    # The one who started the sign-in finishes it.
+    # The one who started the sign-in, in the UI, finishes it.
     caller = services.auth.authenticate(
         headers["Authorization"].removeprefix("Bearer ")
     )
+    started = services.oauth.start(
+        caller, ProviderType.MICROSOFT, "http://testserver/ui/oauth/microsoft/callback"
+    )
+    state = parse_qs(urlsplit(started).query)["state"][0]
     account = anyio.run(
         lambda: services.oauth.finish(caller, ProviderType.MICROSOFT, state, "code")
     )

@@ -65,7 +65,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `audit` | `list_sends`, `list_all_sends` | an account |
 | `audit` | `list_activity`, the audit of administration (8.6) | the service |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account` | an account |
-| `accounts.connect` | `discover_account`, `start_oauth`, `start_device_oauth`, `poll_device_oauth`, `create_account` | the service |
+| `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account` | the service |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |
 | `users.read` | `list_users`, `get_user`, `list_tokens`, `list_roles`, `get_role` | the service |
 | `users.manage` | `users.read` and changes to users, tokens, passwords, roles: fourteen rights | the service |
@@ -213,7 +213,9 @@ that do not apply. The proposal: a user (and a role) has two lists.
   again, all about one account.
 - `accounts.connect` is a new group of `discover_account`,
   `create_account` and `start_oauth`, and for sign-in with a code
-  `start_device_oauth` and `poll_device_oauth`. Whoever connects an
+  `start_device_oauth` and `poll_device_oauth` (`start_oauth` went with
+  its route on 2026-10-07: the sign-in in a browser is the UI's, and a
+  sign-in needs `create_account` or `update_account`). Whoever connects an
   account holds its password for a moment and needs a grant on it
   afterwards: the creator gets `accounts.manage` on the new account, and
   nothing else, so it can verify and remove what it connected. Mail

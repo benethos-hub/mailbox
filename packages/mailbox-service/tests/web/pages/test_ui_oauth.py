@@ -246,37 +246,30 @@ def test_discovery_offers_the_sign_in(browser: tuple[TestClient, Services]) -> N
 # --- the API --------------------------------------------------------------------------
 
 
-def test_the_api_starts_a_sign_in(endpoint: TokenEndpoint) -> None:
+def test_the_api_has_no_sign_in_in_a_browser(endpoint: TokenEndpoint) -> None:
+    """The provider sends the browser back to the UI, which an API caller
+    never sees: the API signs in with a code."""
     client, services = build(endpoint)
     answer = client.post(
-        "/v1/oauth/microsoft/start",
-        json={"login_hint": "me@example.org"},
-        headers=admin_bearer(services),
+        "/v1/oauth/microsoft/start", json={}, headers=admin_bearer(services)
     )
-    assert answer.status_code == 200, answer.text
-    url = answer.json()["url"]
-    assert url.startswith("https://login.microsoftonline.com/common/oauth2/v2.0/")
-    assert (
-        "redirect_uri=http%3A%2F%2Ftestserver%2Fui%2Foauth%2Fmicrosoft%2Fcallback"
-        in url
-    )
+    assert answer.status_code == 404
 
 
 def test_the_api_where_microsoft_is_not_offered(endpoint: TokenEndpoint) -> None:
     client, services = build(endpoint, providers=["imap", "jmap"])
-    for path in ("start", "device"):
-        answer = client.post(
-            f"/v1/oauth/microsoft/{path}", json={}, headers=admin_bearer(services)
-        )
-        assert answer.status_code == 501
-        assert answer.json()["error"]["code"] == "not_supported"
-        assert "cannot be connected" in answer.json()["error"]["message"]
+    answer = client.post(
+        "/v1/oauth/microsoft/device", json={}, headers=admin_bearer(services)
+    )
+    assert answer.status_code == 501
+    assert answer.json()["error"]["code"] == "not_supported"
+    assert "cannot be connected" in answer.json()["error"]["message"]
 
 
 def test_the_api_needs_the_right(endpoint: TokenEndpoint) -> None:
     client, services = build(endpoint)
     headers = bearer_for(services, Grant(accounts=["*"], allow=["mail.read"]))
-    answer = client.post("/v1/oauth/microsoft/start", json={}, headers=headers)
+    answer = client.post("/v1/oauth/microsoft/device", json={}, headers=headers)
     assert answer.status_code == 403
 
 

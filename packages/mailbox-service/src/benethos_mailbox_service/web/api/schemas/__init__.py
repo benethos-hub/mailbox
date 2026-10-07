@@ -14,8 +14,6 @@ from .oauth import (
     DeviceOAuthStart,
     DeviceOAuthStarted,
     DeviceOAuthState,
-    OAuthStart,
-    OAuthStarted,
 )
 from .status import AccountSync, ServiceStatus, WorkerStatus
 from .tokens import TokenCreate, TokenCreated, TokenInfo
@@ -47,8 +45,6 @@ __all__ = [
     "Me",
     "MeAccount",
     "MeSending",
-    "OAuthStart",
-    "OAuthStarted",
     "PasswordSet",
     "PasswordSetResult",
     "PermissionCatalogue",

@@ -29,8 +29,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   account once the person signed in. It needs no address the provider
   sends a browser back to, so it works on a server. The UI offers it
   beside the sign-in in the browser, when connecting and on an account's
-  page. With the project's app away from localhost, it is the only way:
-  `POST /v1/oauth/{provider}/start` then answers `400`.
+  page. With the project's app away from localhost, it is the only way.
 - `MAILBOX_SERVICE_PROVIDERS`, a JSON list of the kinds of account a
   deployment offers, every kind without it. Discovery leaves out the
   others, and connecting one answers `501`. Accounts connected before
@@ -103,8 +102,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   the service, bound to no account. `accounts.connect`, `users.read`,
   `users.manage`, `webhooks.manage` and `admin` belong there, or single
   operations of them. `/v1/permissions` lists these groups as `service`.
-- `accounts.connect`: `discover_account`, `start_oauth` and
-  `create_account`, which were part of `accounts.manage`.
+- `accounts.connect`: `discover_account` and `create_account`, which
+  were part of `accounts.manage`, and the sign-in with a code.
 - `users.read`: `list_users`, `get_user`, `list_tokens`, `list_roles` and
   `get_role`, to see users and roles without changing them. `users.manage`
   keeps every right it had.
@@ -163,6 +162,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** `POST /v1/oauth/{provider}/start` is gone, and with it
+  the right `start_oauth`. The provider sent the browser back to a page
+  of the UI, so an API caller could start the sign-in but never finish
+  it. The API signs an account in with a code
+  (`POST /v1/oauth/{provider}/device`), the UI in a browser or with a
+  code as before. A stored grant naming `start_oauth` keeps its other
+  rights.
 - A webhook's body carries text beyond ASCII as UTF-8, not as `\u`
   escapes. It is the same JSON, and the signature covers the bytes sent.
 - A cursor of a JMAP account's message list from an earlier version

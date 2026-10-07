@@ -63,7 +63,6 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # create_account as well: the domain checks it.
     "accounts.connect": (
         "discover_account",
-        "start_oauth",
         "start_device_oauth",
         "poll_device_oauth",
         "create_account",
