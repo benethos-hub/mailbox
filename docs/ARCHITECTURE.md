@@ -175,7 +175,9 @@ packages/mailbox-service/
       search.py         # the search of a message list by its query names
       api/              # the JSON API: /health open, the rest under /v1
         deps.py         # bearer authentication, services per request
-        schemas.py      # shapes that exist only at the HTTP boundary
+        schemas/        # shapes that exist only at the HTTP boundary,
+                        #   one module per subject: accounts, oauth,
+                        #   mail, users, tokens, status, errors
         errors.py       # the error envelope, the errors routes document
         routes/         # one router per resource
       pages/            # the configuration UI under /ui, not in OpenAPI
