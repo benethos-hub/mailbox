@@ -153,6 +153,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `backup` writes format 2: the database is encrypted in blocks of 1 MiB
+  from a copy beside the database, and `restore` and `backup verify`
+  decrypt it block by block. Before, the database was held in memory
+  twice. Backups of format 1 are still read. A backup of format 2 needs
+  this version or later to be read.
 - Rights that do not exist in a stored grant or role, e.g. of an older
   version, are logged once per user as the activity
   `users.unknown_rights`, not on every request.

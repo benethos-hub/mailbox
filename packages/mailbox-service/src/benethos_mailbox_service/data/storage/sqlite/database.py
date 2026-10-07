@@ -9,8 +9,10 @@ constraint as ConflictError, anything else as StorageError.
 from __future__ import annotations
 
 import os
+import shutil
 import sqlite3
 import stat
+import tempfile
 import threading
 from collections.abc import Iterable, Iterator
 from contextlib import ExitStack, contextmanager
@@ -226,15 +228,37 @@ class Database:
         with self._lock:
             self._connection.close()
 
-    def snapshot(self) -> bytes:
-        """A consistent copy of the whole database, taken while it is in use."""
-        with self._lock, translated():
-            copy = sqlite3.connect(":memory:")
-            try:
-                self._connection.backup(copy)
-                return copy.serialize()
-            finally:
-                copy.close()
+    @contextmanager
+    def snapshot_file(self) -> Iterator[Path]:
+        """A consistent copy of the whole database, taken while it is in
+        use, as a file beside it, readable by its owner alone. It is gone
+        when the block ends. A copy left by a crash is replaced. Another
+        process making one at the same time is refused."""
+        if self._path is None:
+            folder = Path(tempfile.mkdtemp())
+            path = folder / "snapshot.db"
+        else:
+            folder = None
+            path = self._path.with_name(self._path.name + ".snapshot")
+        try:
+            with exclusive_lock(path.with_name(path.name + ".lock")):
+                _remove_copy(path)
+                create_private(path)
+                try:
+                    with self._lock, translated():
+                        copy = sqlite3.connect(str(path))
+                        try:
+                            self._connection.backup(copy)
+                        finally:
+                            copy.close()
+                    yield path
+                finally:
+                    _remove_copy(path)
+        except LockedError:
+            raise StorageError("another backup of this database is running") from None
+        finally:
+            if folder is not None:
+                shutil.rmtree(folder, ignore_errors=True)
 
     def _migrate(self, rewritten: bool = False) -> None:
         """``rewritten``: the file was rewritten to shrink from now on,
@@ -296,11 +320,19 @@ def _owner_only(path: Path) -> None:
         path.chmod(0o600)
 
 
-def inspect_snapshot(data: bytes) -> int:
-    """Check a snapshot's integrity and return its schema version."""
-    copy = sqlite3.connect(":memory:")
+def _remove_copy(path: Path) -> None:
+    for leftover in (path, path.with_name(path.name + "-journal")):
+        leftover.unlink(missing_ok=True)
+
+
+def inspect_file(path: Path) -> int:
+    """Check the integrity of the database file at ``path``, opened to
+    read only, and return its schema version."""
     try:
-        copy.deserialize(data)
+        copy = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
+    except sqlite3.Error as exc:
+        raise ValueError(f"not a database: {exc}") from None
+    try:
         result = copy.execute("PRAGMA integrity_check").fetchone()[0]
         if result != "ok":
             raise ValueError(f"database integrity check failed: {result}")

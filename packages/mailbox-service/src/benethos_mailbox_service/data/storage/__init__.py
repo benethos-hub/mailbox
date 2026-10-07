@@ -49,7 +49,7 @@ from .sqlite import (
     SqliteTokenRepository,
     SqliteUserRepository,
     SqliteWebhookRepository,
-    inspect_snapshot,
+    inspect_file,
     migrate_file,
     service_lock,
 )
@@ -126,7 +126,7 @@ __all__ = [
     "WebhookRecord",
     "WebhookRepository",
     "WrappedKey",
-    "inspect_snapshot",
+    "inspect_file",
     "migrate_file",
     "open_repositories",
     "service_lock",

@@ -55,8 +55,9 @@ class Store(Protocol):
     """What holds the records of all repositories: an image of it for a
     backup, the mark of a running service, and closing."""
 
-    def snapshot(self) -> bytes:
-        """A consistent image of every record, taken while it is in use."""
+    def snapshot_file(self) -> AbstractContextManager[Path]:
+        """A consistent image of every record, taken while it is in use,
+        as a file readable by its owner alone, gone when the block ends."""
         ...
 
     def serving(self) -> AbstractContextManager[bool]:
