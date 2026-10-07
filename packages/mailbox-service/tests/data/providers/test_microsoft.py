@@ -47,7 +47,7 @@ from benethos_mailbox_service.errors import (
 
 from ...conftest import admin_bearer
 from ...graph_fake import TOKEN, FakeGraph
-from ...integration.test_oauth import TokenEndpoint, granted, id_token
+from ...integration.test_oauth import TokenEndpoint, granted, id_token, state_of
 
 
 class Tokens:
@@ -429,18 +429,14 @@ def test_connect_read_and_send_through_the_api(
     services.vault.initialize()
     headers = admin_bearer(services)
     client = TestClient(create_app(config, services), headers=headers)
-    from urllib.parse import parse_qs, urlsplit
-
     import anyio
 
     # The one who started the sign-in, in the UI, finishes it.
     caller = services.auth.authenticate(
         headers["Authorization"].removeprefix("Bearer ")
     )
-    started = services.oauth.start(
-        caller, ProviderType.MICROSOFT, "http://testserver/ui/oauth/microsoft/callback"
-    )
-    state = parse_qs(urlsplit(started).query)["state"][0]
+    callback = "http://testserver/ui/oauth/microsoft/callback"
+    state = state_of(services.oauth.start(caller, ProviderType.MICROSOFT, callback))
     account = anyio.run(
         lambda: services.oauth.finish(caller, ProviderType.MICROSOFT, state, "code")
     )
