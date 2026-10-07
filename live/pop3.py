@@ -19,6 +19,7 @@ from __future__ import annotations
 import os
 import secrets
 import sys
+from collections.abc import Callable
 from typing import Any
 
 import anyio
@@ -29,6 +30,7 @@ from checks.service import mailbox_of
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_client import SyncMailboxClient
 from benethos_mailbox_service.assembly import build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
@@ -52,13 +54,8 @@ def settings(account: dict[str, str]) -> dict[str, Any]:
     }
 
 
-def main() -> int:
-    env = read_env()
-    folder, test_accounts = test_server_accounts(env)
-    sender, receiver = test_accounts[:2]
-    os.environ["SSL_CERT_FILE"] = str(folder / "tls" / "ca.pem")
-    run = Run()
-
+def start_service() -> tuple[Any, TestClient]:
+    """A service of its own in memory, and a client with an admin's token."""
     service_settings = Settings(
         storage="memory",
         key_provider="env",
@@ -72,10 +69,16 @@ def main() -> int:
         create_app(service_settings, services),
         headers={"Authorization": f"Bearer {admin_token(services)}"},
     )
-    mailbox = mailbox_of(client)
+    return services, client
 
+
+def connect(
+    run: Run, client: TestClient, accounts: tuple[dict[str, str], ...]
+) -> list[str] | None:
+    """Each account connected over POP3 with TLS, its id. None when one
+    does not connect."""
     ids = []
-    for account in (sender, receiver):
+    for account in accounts:
         created = client.post(
             "/v1/accounts",
             json={
@@ -90,21 +93,26 @@ def main() -> int:
             created.status_code == 201,
             str(created.status_code),
         ):
-            return run.finish()
+            return None
         ids.append(created.json()["id"])
-    sender_id, receiver_id = ids
-    base = f"/v1/accounts/{receiver_id}"
+    return ids
 
-    def mine() -> list[dict[str, Any]]:
-        items = mailbox.list_messages(receiver_id, limit=50).items
-        return [m for m in items if (m.get("subject") or "").startswith(TITLE)]
 
-    leftovers = mine()
+def mine(mailbox: SyncMailboxClient, account_id: str) -> list[dict[str, Any]]:
+    """The mails of this check in the account."""
+    items = mailbox.list_messages(account_id, limit=50).items
+    return [m for m in items if (m.get("subject") or "").startswith(TITLE)]
+
+
+def check_inbox(run: Run, client: TestClient, receiver_id: str) -> None:
+    """Mails of an earlier run deleted, then what the account can do."""
+    mailbox = mailbox_of(client)
+    leftovers = mine(mailbox, receiver_id)
     for old in leftovers:
         mailbox.delete_message(receiver_id, old["id"], permanent=True)
     if leftovers:
         print(f"      deleted {len(leftovers)} mail(s) of an earlier run")
-
+    base = f"/v1/accounts/{receiver_id}"
     account = client.get(base).json()
     run.check(
         "the account names what it can do",
@@ -116,12 +124,13 @@ def main() -> int:
         [f["role"] for f in client.get(f"{base}/folders").json()] == ["inbox"],
     )
 
-    async def first_sync() -> None:
-        await services.sync.sync_account(receiver_id)
 
-    anyio.run(first_sync)
-    since = client.get(f"{base}/changes").json()["state"]
-
+def send_one(
+    run: Run, client: TestClient, ids: list[str], receiver: dict[str, str]
+) -> str | None:
+    """One mail from the first account to the second, its id there once
+    it arrived."""
+    sender_id, receiver_id = ids
     title = f"{TITLE} {secrets.token_hex(4)}"
     sent = client.post(
         f"/v1/accounts/{sender_id}/send",
@@ -136,56 +145,66 @@ def main() -> int:
         sent.status_code == 200,
         str(sent.status_code),
     )
-
+    mailbox = mailbox_of(client)
     arrived = polled(
-        lambda: [m for m in mine() if m["subject"] == title], tries=10, pause=2.0
+        lambda: [m for m in mine(mailbox, receiver_id) if m["subject"] == title],
+        tries=10,
+        pause=2.0,
     )
     if not run.check("the mail arrives in the second account", bool(arrived)):
-        return run.finish()
-    message_id = arrived[0]["id"]  # type: ignore[index]
+        return None
+    return str(arrived[0]["id"])  # type: ignore[index]
 
-    message = client.get(f"{base}/messages/{message_id}").json()
+
+def check_handling(
+    run: Run,
+    sync: Callable[[], None],
+    client: TestClient,
+    base: str,
+    message_id: str,
+    since: str,
+) -> None:
+    """Read, reported, refused where POP3 cannot, deleted for good and
+    reported deleted."""
+    url = f"{base}/messages/{message_id}"
+    message = client.get(url).json()
     run.check(
         "it reads the whole mail",
         "live/pop3.py" in (message.get("text_body") or ""),
     )
-
-    anyio.run(first_sync)
+    sync()
     changes = client.get(f"{base}/changes", params={"since": since}).json()
     run.check(
         "the sync reports it in the change feed",
         ("message.created", message_id)
         in [(c["type"], c["id"]) for c in changes["changes"]],
     )
-
     for name, answer in [
-        (
-            "starring",
-            client.patch(f"{base}/messages/{message_id}", json={"starred": True}),
-        ),
-        ("the trash", client.delete(f"{base}/messages/{message_id}")),
+        ("starring", client.patch(url, json={"starred": True})),
+        ("the trash", client.delete(url)),
         ("a search", client.get(f"{base}/messages", params={"unread": "true"})),
         ("a new folder", client.post(f"{base}/folders", json={"name": "Archive"})),
     ]:
         run.check(
             f"{name} answers 501", answer.status_code == 501, str(answer.status_code)
         )
-
-    gone = client.delete(f"{base}/messages/{message_id}", params={"permanent": "true"})
+    gone = client.delete(url, params={"permanent": "true"})
     run.check("deleting for good works", gone.status_code == 204, str(gone.status_code))
+    receiver_id = base.rsplit("/", 1)[1]
     run.check(
-        "it is gone from the mailbox", not [m for m in mine() if m["id"] == message_id]
+        "it is gone from the mailbox",
+        not [m for m in mine(mailbox_of(client), receiver_id) if m["id"] == message_id],
     )
-
-    since = changes["state"]
-    anyio.run(first_sync)
-    later = client.get(f"{base}/changes", params={"since": since}).json()
+    sync()
+    later = client.get(f"{base}/changes", params={"since": changes["state"]}).json()
     run.check(
         "the change feed reports it deleted",
         ("message.deleted", message_id)
         in [(c["type"], c["id"]) for c in later["changes"]],
     )
 
+
+def check_starttls(run: Run, receiver: dict[str, str]) -> None:
     async def starttls() -> None:
         adapter = build_provider(
             ProviderType.POP3,
@@ -201,6 +220,42 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001  any failure is the answer
         run.check("STARTTLS on 30110 logs in too", False, type(exc).__name__)
 
+
+def check(
+    run: Run,
+    services: Any,
+    client: TestClient,
+    ids: list[str],
+    receiver: dict[str, str],
+) -> bool:
+    """The test mail through the receiver's account. False when it did not
+    arrive."""
+    receiver_id = ids[1]
+    base = f"/v1/accounts/{receiver_id}"
+    check_inbox(run, client, receiver_id)
+
+    def sync() -> None:
+        anyio.run(services.sync.sync_account, receiver_id)
+
+    sync()
+    since = client.get(f"{base}/changes").json()["state"]
+    message_id = send_one(run, client, ids, receiver)
+    if message_id is None:
+        return False
+    check_handling(run, sync, client, base, message_id, since)
+    return True
+
+
+def main() -> int:
+    env = read_env()
+    folder, test_accounts = test_server_accounts(env)
+    sender, receiver = test_accounts[:2]
+    os.environ["SSL_CERT_FILE"] = str(folder / "tls" / "ca.pem")
+    run = Run()
+    services, client = start_service()
+    ids = connect(run, client, (sender, receiver))
+    if ids is not None and check(run, services, client, ids, receiver):
+        check_starttls(run, receiver)
     services.close()
     return run.finish()
 

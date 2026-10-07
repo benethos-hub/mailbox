@@ -174,6 +174,14 @@ def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter |
     state, star and the absence of attachments are then checked here.
     """
     search = search or MessageFilter()
+    texts = _texts(search)
+    if texts:
+        return _searched(search, texts)
+    return _filtered(search), None
+
+
+def _texts(search: MessageFilter) -> list[str]:
+    """The parts of a search Graph finds with ``$search``."""
     texts = []
     if search.text:
         texts.append(_quoted(search.text))
@@ -183,22 +191,32 @@ def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter |
         texts.append(f"to:{_quoted(search.to)}")
     if search.subject:
         texts.append(f"subject:{_quoted(search.subject)}")
-    if texts:
-        if search.has_attachments:
-            texts.append("hasAttachments:true")
-        if search.after:
-            texts.append(f"received>={search.after.isoformat()}")
-        if search.before:
-            texts.append(f"received<{search.before.isoformat()}")
-        # KQL finds messages with attachments, not those without.
-        without = False if search.has_attachments is False else None
-        left = MessageFilter(
-            unread=search.unread, starred=search.starred, has_attachments=without
-        )
-        rest = left if left != MessageFilter() else None
-        return {
-            "$search": '"' + " ".join(t.replace('"', "'") for t in texts) + '"'
-        }, rest
+    return texts
+
+
+def _searched(
+    search: MessageFilter, texts: list[str]
+) -> tuple[dict[str, str], MessageFilter | None]:
+    """``$search`` with the rest of the search that KQL can say, and what
+    is left to check on each result."""
+    texts = list(texts)
+    if search.has_attachments:
+        texts.append("hasAttachments:true")
+    if search.after:
+        texts.append(f"received>={search.after.isoformat()}")
+    if search.before:
+        texts.append(f"received<{search.before.isoformat()}")
+    # KQL finds messages with attachments, not those without.
+    without = False if search.has_attachments is False else None
+    left = MessageFilter(
+        unread=search.unread, starred=search.starred, has_attachments=without
+    )
+    rest = left if left != MessageFilter() else None
+    return {"$search": '"' + " ".join(t.replace('"', "'") for t in texts) + '"'}, rest
+
+
+def _filtered(search: MessageFilter) -> dict[str, str]:
+    """``$filter`` and ``$orderby``, newest first."""
     filters = ["receivedDateTime ge 1900-01-01T00:00:00Z"]
     if search.after:
         filters.append(f"receivedDateTime ge {_day(search.after)}")
@@ -211,7 +229,7 @@ def query(search: MessageFilter | None) -> tuple[dict[str, str], MessageFilter |
         filters.append(f"flag/flagStatus {flag} 'flagged'")
     if search.has_attachments is not None:
         filters.append(f"hasAttachments eq {str(search.has_attachments).lower()}")
-    return {"$filter": " and ".join(filters), "$orderby": "receivedDateTime desc"}, None
+    return {"$filter": " and ".join(filters), "$orderby": "receivedDateTime desc"}
 
 
 def keeps(item: MessageSummary, rest: MessageFilter | None) -> bool:

@@ -85,6 +85,21 @@ def message(
     everyone = [sender, *message.to, *message.cc, *message.bcc, *message.reply_to]
     utf8 = any(not wire_address(r.email).isascii() for r in everyone)
     mail = EmailMessage(policy=SMTP.clone(cte_type="7bit", utf8=utf8))
+    _headers(mail, message, sender, date, message_id, extras, draft, reference)
+    _parts(mail, message, extras)
+    return mail.as_bytes()
+
+
+def _headers(
+    mail: EmailMessage,
+    message: DraftMessage,
+    sender: Recipient,
+    date: datetime,
+    message_id: str,
+    extras: Extras,
+    draft: bool,
+    reference: str | None,
+) -> None:
     mail["From"] = _address(sender)
     # Values that came out of another message, the original of a reply or a
     # forward, are folded onto one line here. What a caller wrote was checked
@@ -108,6 +123,9 @@ def message(
     if extras.references:
         mail["References"] = " ".join(extras.references)
 
+
+def _parts(mail: EmailMessage, message: DraftMessage, extras: Extras) -> None:
+    """The text, the HTML, the attachments, the original of a forward."""
     mail.set_content(body_text(message))
     if message.html is not None:
         mail.add_alternative(message.html, subtype="html")
@@ -120,7 +138,6 @@ def message(
     if extras.attached_message is not None:
         original = message_from_bytes(extras.attached_message, policy=default)
         mail.add_attachment(original, filename="forwarded.eml")
-    return mail.as_bytes()
 
 
 def body_text(message: DraftMessage) -> str:

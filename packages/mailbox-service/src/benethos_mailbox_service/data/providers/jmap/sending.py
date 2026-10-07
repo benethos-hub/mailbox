@@ -38,24 +38,8 @@ async def send(
         raise ConflictError("the account has no drafts or sent folder to send from")
     identity = await _identity(account, sender)
     blob = await account.upload(raw)
-    keywords = {mappers.SEEN: True}
-    if holder is drafts:
-        keywords[mappers.DRAFT] = True
     answers = await account.call(
-        (
-            "Email/import",
-            {
-                "accountId": session.account_id,
-                "emails": {
-                    "m": {
-                        "blobId": blob,
-                        "mailboxIds": {holder.id: True},
-                        "keywords": keywords,
-                    }
-                },
-            },
-            "i",
-        ),
+        _imported(session.account_id, blob, holder, draft=holder is drafts),
         (
             "EmailSubmission/set",
             _submission(session.account_id, identity, sender, recipients, holder, sent),
@@ -63,6 +47,27 @@ async def send(
         ),
         using=WITH_SUBMISSION,
     )
+    email_id = _stored(answers)
+    failed = _submission_failure(answers)
+    if failed is not None:
+        await _forget(account, email_id)
+        raise failed
+    # Sent: from here on nothing may fail, or a client would send again.
+    return await _sent_copy(account, email_id, sent)
+
+
+def _imported(owner: str, blob: str, holder: Folder, draft: bool) -> jmap.Invocation:
+    """The ``Email/import`` of the message to send, as ``#m``, into the
+    folder that holds it until it is sent."""
+    keywords = {mappers.SEEN: True}
+    if draft:
+        keywords[mappers.DRAFT] = True
+    email = {"blobId": blob, "mailboxIds": {holder.id: True}, "keywords": keywords}
+    return ("Email/import", {"accountId": owner, "emails": {"m": email}}, "i")
+
+
+def _stored(answers: list[jmap.Invocation]) -> str:
+    """The id of the message the server stored to send."""
     imported = jmap.read(answers, "i", jmap.SetResult)
     refused = imported.not_created.get("m")
     if refused is not None:
@@ -70,12 +75,14 @@ async def send(
     stored = imported.created.get("m")
     if stored is None:
         raise ProviderError("the JMAP server did not store the message to send")
-    email_id = stored.id
-    failed = _submission_failure(answers)
-    if failed is not None:
-        await _forget(account, email_id)
-        raise failed
-    # Sent: from here on nothing may fail, or a client would send again.
+    return stored.id
+
+
+async def _sent_copy(
+    account: JmapAccount, email_id: str, sent: Folder | None
+) -> SentMessage:
+    """The copy in the sent folder. A failure to read it is noted, never
+    raised: the message is sent."""
     if sent is None:
         return SentMessage()
     try:

@@ -227,6 +227,30 @@ def checks(
         bool(polled(lambda: named("message.updated", mark), tries=30, pause=1.0)),
     )
 
+    check_draft(run, client, base, message_id)
+
+    mark = client.get(f"{base}/changes").json()["state"]
+    trashed = client.delete(url)
+    again = client.delete(url)
+    gone = client.delete(url, params={"permanent": True})
+    run.check(
+        "into the trash, once, then for good",
+        trashed.status_code in (200, 204)
+        and again.status_code == 409
+        and gone.status_code == 204
+        and client.get(url).status_code == 404,
+        f"{trashed.status_code} {again.status_code} {gone.status_code}",
+    )
+    run.check(
+        "the change feed names it deleted",
+        bool(polled(lambda: named("message.deleted", mark), tries=30, pause=1.0)),
+    )
+    for copy in copies:
+        mailbox.delete_message(sender_id, copy["id"], permanent=True)
+
+
+def check_draft(run: Run, client: httpx.Client, base: str, message_id: str) -> None:
+    """A reply draft: stored, replaced, listed and deleted, never sent."""
     drafts = f"{base}/drafts"
     draft = client.post(
         drafts,
@@ -255,25 +279,6 @@ def checks(
         and deleted.status_code == 204,
         f"{draft.status_code} {replaced.status_code} {deleted.status_code}",
     )
-
-    mark = client.get(f"{base}/changes").json()["state"]
-    trashed = client.delete(url)
-    again = client.delete(url)
-    gone = client.delete(url, params={"permanent": True})
-    run.check(
-        "into the trash, once, then for good",
-        trashed.status_code in (200, 204)
-        and again.status_code == 409
-        and gone.status_code == 204
-        and client.get(url).status_code == 404,
-        f"{trashed.status_code} {again.status_code} {gone.status_code}",
-    )
-    run.check(
-        "the change feed names it deleted",
-        bool(polled(lambda: named("message.deleted", mark), tries=30, pause=1.0)),
-    )
-    for copy in copies:
-        mailbox.delete_message(sender_id, copy["id"], permanent=True)
 
 
 def clean_up(mailbox: SyncMailboxClient, account_id: str) -> None:

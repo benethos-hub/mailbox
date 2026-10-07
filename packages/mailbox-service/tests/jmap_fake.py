@@ -11,7 +11,7 @@ from __future__ import annotations
 import base64
 import itertools
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from email import message_from_bytes
 from email.policy import default
 from email.utils import getaddresses, parsedate_to_datetime
@@ -329,27 +329,11 @@ class FakeJmap:
             assert condition["operator"] == "AND"
             return all(self.matches(email, c) for c in condition["conditions"])
         parsed = self.parsed(email)
-        for key, value in condition.items():
-            if key == "inMailbox" and value not in email["mailboxIds"]:
-                return False
-            if key == "text" and value.lower() not in parsed["text"].lower():
-                return False
-            if (
-                key in ("from", "to", "subject")
-                and value.lower() not in str(parsed[key]).lower()
-            ):
-                return False
-            if key == "after" and email["receivedAt"] < value:
-                return False
-            if key == "before" and email["receivedAt"] >= value:
-                return False
-            if key == "hasKeyword" and value not in email["keywords"]:
-                return False
-            if key == "notKeyword" and value in email["keywords"]:
-                return False
-            if key == "hasAttachment" and value != parsed["attached"]:
-                return False
-        return True
+        return all(
+            _CONDITIONS[key](email, parsed, value)
+            for key, value in condition.items()
+            if key in _CONDITIONS
+        )
 
     def parsed(self, email: dict[str, Any]) -> dict[str, Any]:
         msg = message_from_bytes(self.blobs.get(email["blobId"], b""), policy=default)
@@ -535,3 +519,23 @@ class FakeJmap:
                     {"accountId": ACCOUNT, "destroy": [email_id]}, using
                 )
         return [("EmailSubmission/set", answer), *follow]
+
+
+def _contains(field: str) -> Callable[[dict[str, Any], dict[str, Any], Any], bool]:
+    return lambda email, parsed, value: value.lower() in str(parsed[field]).lower()
+
+
+# The conditions of a FilterCondition the fake knows: whether an email,
+# with what its source says, meets each.
+_CONDITIONS: dict[str, Callable[[dict[str, Any], dict[str, Any], Any], bool]] = {
+    "inMailbox": lambda email, parsed, value: value in email["mailboxIds"],
+    "text": _contains("text"),
+    "from": _contains("from"),
+    "to": _contains("to"),
+    "subject": _contains("subject"),
+    "after": lambda email, parsed, value: email["receivedAt"] >= value,
+    "before": lambda email, parsed, value: email["receivedAt"] < value,
+    "hasKeyword": lambda email, parsed, value: value in email["keywords"],
+    "notKeyword": lambda email, parsed, value: value not in email["keywords"],
+    "hasAttachment": lambda email, parsed, value: value == parsed["attached"],
+}
