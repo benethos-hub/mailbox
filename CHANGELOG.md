@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-07
+
+The status is beta: usable with real accounts. A breaking change of
+the API or the configuration is announced here. Stored data is
+carried forward by migrations.
+
 ### Added
 
 - `benethos-mailbox-client`, the Python client of the REST API, as a
@@ -100,8 +106,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - `service` on users and roles, in `POST`, `PATCH` and `PUT`: rights of
   the service, bound to no account. `accounts.connect`, `users.read`,
-  `users.manage`, `webhooks.manage` and `admin` belong there, or single
-  operations of them. `/v1/permissions` lists these groups as `service`.
+  `users.manage`, `webhooks.manage`, `audit` (below) and `admin` belong
+  there, or single operations of them. `/v1/permissions` lists these
+  groups as `service`.
 - `accounts.connect`: `discover_account` and `create_account`, which
   were part of `accounts.manage`, and the sign-in with a code.
 - `users.read`: `list_users`, `get_user`, `list_tokens`, `list_roles` and
@@ -239,10 +246,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   jinja2 3.1.6, dnspython 2.6.1. `benethos-mailbox-mcp`: starlette 1.3.1,
   anyio 4.14.2. An install from the lockfile, as the images do, had them
   already.
-- The project is named Mailbox, its packages `mailbox-service` and
-  `mailbox-mcp`. The OpenAPI document's title is `mailbox-service`, the
-  MCP server's `mailbox-mcp`. On PyPI and ghcr.io the names stay
-  `benethos-mailbox-service` and `benethos-mailbox-mcp`.
+- The project is named Mailbox, its packages `mailbox-service`,
+  `mailbox-client` and `mailbox-mcp`. The OpenAPI document's title is
+  `mailbox-service`, the MCP server's `mailbox-mcp`. On PyPI and
+  ghcr.io the names stay `benethos-mailbox-service`,
+  `benethos-mailbox-client` and `benethos-mailbox-mcp`.
 - A right of the service or `admin` in a grant's `allow` answers `400`,
   and a right on accounts in `service` as well. Stored rights move at the
   first start: what a grant named of the service goes to `service`, a
@@ -1285,6 +1293,7 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/benethos-hub/mailbox/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/benethos-hub/mailbox/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/benethos-hub/mailbox/releases/tag/v0.1.0

@@ -1,14 +1,14 @@
 # mailbox-service
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
-[![PyPI mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
+[![PyPI benethos-mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
 [![Container](https://img.shields.io/badge/ghcr.io-mailbox--service-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-service)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
-> API and the configuration may still change. Stored data is carried
-> forward by migrations.
+> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> of the API or the configuration is announced in the changelog. Stored
+> data is carried forward by migrations.
 
 The service of Mailbox, on PyPI as `benethos-mailbox-service`: one REST
 API (OpenAPI 3.1) for several mail
@@ -77,8 +77,10 @@ token or a password and sends through JMAP. A POP3 account, for a
 mailbox without IMAP, works the same way: the inbox only, without
 folders, read state or search. Microsoft
 accounts sign in with OAuth, in the browser or with a code, through the
-project's app or one of your own:
-[docs/microsoft.md](https://github.com/benethos-hub/mailbox/blob/main/docs/microsoft.md).
+project's app or one of your own. Away from `localhost` the project's
+app signs in with a code only. For the browser there, register an app
+of your own:
+[docs/MICROSOFT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/MICROSOFT.md).
 
 ## Where things live
 
@@ -153,7 +155,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY` | `30` | seconds before the second try, doubled for each further one |
 | `MAILBOX_SERVICE_WEBHOOK_LONGEST_RETRY` | `3600` | the longest pause between two tries, in seconds |
 | `MAILBOX_SERVICE_WEBHOOK_TIMEOUT` | `10` | seconds a webhook receiver may take to answer |
-| `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE` | `60` | requests a minute to one account's IMAP server. An account's `max_requests_per_minute` wins. |
+| `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE` | `60` | requests a minute to one account's IMAP or POP3 server, and its SMTP server. An account's `max_requests_per_minute` wins. |
 | `MAILBOX_SERVICE_IMAP_BURST` | `10` | how many of them pass at once |
 | `MAILBOX_SERVICE_IMAP_ATTEMPTS` | `3` | attempts at a server that does not answer, within one request |
 | `MAILBOX_SERVICE_IMAP_FIRST_PAUSE` | `30` | seconds the server then rests, doubled after each further failure |
@@ -166,7 +168,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE` | `10` | autodiscovery lookups a minute per user |
 | `MAILBOX_SERVICE_DISCOVERY_ISPDB` | `true` | whether autodiscovery asks Thunderbird's ISPDB (tells Mozilla the domain) |
 | `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` | `[]` | JSON list of hosts that may resolve to private addresses, e.g. an internal mail server. Autodiscovery may look them up and accounts may use them. |
-| `MAILBOX_SERVICE_PROVIDERS` | | JSON list of the kinds of account that can be connected, e.g. `["imap","jmap","pop3"]`. Empty: every kind. Accounts connected before keep working. |
+| `MAILBOX_SERVICE_PROVIDERS` | | JSON list of the kinds of account that can be connected, of `imap`, `jmap`, `pop3` and `microsoft`, e.g. `["imap","jmap","pop3"]`. Empty: every kind. Accounts connected before keep working. |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` | | an Entra app of your own for Microsoft accounts. Without it, the project's app. |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET` | | its client secret, if it has one, or better: |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE` | | a file holding it |
@@ -184,7 +186,7 @@ local time of the machine, to the millisecond, with its offset from UTC.
 
 ```
 2026-09-28T10:14:03.412+02:00 INFO     benethos_mailbox_service.activity.auth.signed_in: admin (usr_...) signed in to the UI from 127.0.0.1
-2026-09-28T10:14:03.418+02:00 INFO     uvicorn.access: 127.0.0.1:52344 - "POST /ui/sign-in HTTP/1.1" 303
+2026-09-28T10:14:03.418+02:00 INFO     uvicorn.access: 127.0.0.1:52344 - "POST /ui/login HTTP/1.1" 303
 ```
 
 At a terminal the lines are shorter and in colour: the time dim, the
@@ -193,7 +195,7 @@ access log), and a request as method, path and status with its name:
 
 ```
 2026-09-28T10:14:03.412+02:00 INFO     activity.auth.signed_in          admin (usr_...) signed in to the UI from 127.0.0.1
-2026-09-28T10:14:03.418+02:00 INFO     http                             POST /ui/sign-in 303 See Other 127.0.0.1:52344
+2026-09-28T10:14:03.418+02:00 INFO     http                             POST /ui/login 303 See Other 127.0.0.1:52344
 ```
 
 `NO_COLOR` set to any value keeps the plain lines at a terminal too.
@@ -283,13 +285,13 @@ from the environment only and sets `MAILBOX_SERVICE_HOST=0.0.0.0`,
 `MAILBOX_SERVICE_DATA_DIR=/data`, `MAILBOX_SERVICE_KEY_PROVIDER=file` and
 `MAILBOX_SERVICE_KEY_FILE=/run/secrets/master_key`. The database lives in the
 volume at `/data`. The master key is a file mounted at
-`/run/secrets/master_key`. Tags: the version (`0.2.0`), the minor version
-(`0.2`) and `latest`.
+`/run/secrets/master_key`. Tags: the version (`0.3.0`), the minor version
+(`0.3`) and `latest`.
 
 ### With docker run
 
 ```sh
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.2.0
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.3.0
 
 # once: a master key file, the keys in the database, the first user
 docker run --rm "$IMAGE" keys generate > master_key
@@ -324,7 +326,7 @@ does the first start in one run:
 sh setup.sh
 ```
 
-The version runs as named in its `.env`, `MAILBOX_VERSION=0.2.0`. Its
+The version runs as named in its `.env`, `MAILBOX_VERSION=0.3.0`. Its
 [README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md)
 has the same steps by hand, the update, backup and restore, HTTPS
 with Caddy or a proxy of your own, and the MCP server instances.

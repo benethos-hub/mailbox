@@ -1,8 +1,8 @@
 # Roadmap
 
-> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
-> API and the configuration may still change. Stored data is carried
-> forward by migrations.
+> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> of the API or the configuration is announced in the changelog. Stored
+> data is carried forward by migrations.
 
 The phases in which Mailbox is built. What each item means is designed
 in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
@@ -137,7 +137,7 @@ Everything real mail will depend on, before any real mailbox is connected.
   Microsoft accounts (5.4, 6.5)**, done, live-checked in `live/microsoft.py`
 - **Webhooks: register, sign with HMAC-SHA256, deliver with retries
   (6.5)**, done, live-checked in `live/changes.py` against a receiver at
-  127.0.0.1. Their pages in the UI come with phase 4b.
+  127.0.0.1. Their pages in the UI came with phase 4b.
 - decided 2026-09-25: IMAP and Microsoft in this phase, CONDSTORE, 7 days
   by default (CONCEPT 6.5)
 
@@ -199,16 +199,17 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
      `state` bound to the user, refresh token in the vault, access token in
      memory, rotation, `invalid_grant` to `needs_reauth`, client id, tenant
      and secret per deployment**, done
-  2. **the OAuth round trip in the API and the UI: sign in with Microsoft
-     when connecting, sign in again on the account page**, done
+  2. **the OAuth round trip in the UI, the sign-in with a code in the API
+     and the UI: sign in with Microsoft when connecting, sign in again on
+     the account page**, done
   3. **the `microsoft` adapter behind `MailProvider`: folders, list and
      search, message, MIME source, attachments, flags, move, delete,
      drafts, `sendMail`, immutable ids**, done
   4. **a live check against a Microsoft test account**, done with a
-     personal Outlook.com account (`live/microsoft.py`, `docs/microsoft.md`)
+     personal Outlook.com account (`live/microsoft.py`, `docs/MICROSOFT.md`)
   5. **the project's own app as the default, a public client without a
-     secret. Sign-in in the browser or with a code (device code flow),
-     both in the UI and the API. An app of the deployment's own stays the
+     secret. Sign-in in the browser (UI) or with a code (device code
+     flow, UI and API). An app of the deployment's own stays the
      option. `MAILBOX_SERVICE_PROVIDERS` names the kinds of account a
      deployment offers**, done, checked live with the code
      (`live/microsoft.py --project`)
@@ -253,7 +254,6 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
     2026-10-05 (PERMISSIONS.md 8.6), done: the table `activity`,
     `GET /v1/audit` with `audit` in `service`, the Audit page and the
     Recent activity card
-  - with the new providers: the OAuth round trip
   - recovery key, status: moved to phase 4b
 - Threads (6.3): for IMAP built across folders from the id mapping,
   which then also keeps `In-Reply-To` and `References`

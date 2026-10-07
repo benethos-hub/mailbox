@@ -53,7 +53,8 @@ done. Update the roadmap in the same commit that finishes an item.
   password), then `uv run benethos-mailbox-service serve`. Sign in at
   `http://127.0.0.1:8080/ui` as `admin`, choose a password, and make a
   token on the user's page for the API (`/docs`).
-- Live checks: `uv run python live/smoke.py [--show]` (read-only) and
+- Live checks: `uv run python live/smoke.py [--show] [--wrong-password]`
+  (read-only) and
   `uv run python live/changes.py [--keep]` (sends one test mail from the
   second test account to the first, flags and moves it, replies,
   forwards and sends a draft back to the second, makes and removes a
@@ -91,7 +92,7 @@ done. Update the roadmap in the same commit that finishes an item.
   How the pages look and behave, and the checklist for a new page:
   `docs/UI.md`.
 - Microsoft accounts: the service comes with the project's app,
-  `docs/microsoft.md` also sets up an app of your own.
+  `docs/MICROSOFT.md` also sets up an app of your own.
   `uv run python live/microsoft.py --connect` once (a person signs in in
   the browser), then `uv run python live/microsoft.py` checks the adapter
   against the Microsoft test account in `live/.env` with that app. With
@@ -142,7 +143,7 @@ docs/
   AUDIT.md                # the audit of administration
   UI.md                   # how the pages look and behave, new page checklist
   REFACTORING.md          # how the layout came to be
-  microsoft.md            # connecting Microsoft accounts, an app of your own
+  MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   ROADMAP.md              # phases and their state
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test

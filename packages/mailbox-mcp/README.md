@@ -1,14 +1,14 @@
 # mailbox-mcp
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
-[![PyPI mailbox-mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
+[![PyPI benethos-mailbox-mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20benethos-mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
 [![Container](https://img.shields.io/badge/ghcr.io-mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
-> API and the configuration may still change. Stored data is carried
-> forward by migrations.
+> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> of the API or the configuration is announced in the changelog. Stored
+> data is carried forward by migrations.
 
 The MCP server of Mailbox, on PyPI as `benethos-mailbox-mcp`. It gives
 Claude and other AI
@@ -207,7 +207,7 @@ The image `ghcr.io/benethos-hub/benethos-mailbox-mcp` serves over
 streamable HTTP on port 8000, as an unprivileged user, and the command
 below runs it on a read-only root file system. A client that starts
 the server over stdio needs no image.
-Tags: the version (`0.2.0`), the minor version (`0.2`) and `latest`.
+Tags: the version (`0.3.0`), the minor version (`0.3`) and `latest`.
 
 ### With docker run
 
@@ -225,7 +225,7 @@ docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
   -e MAILBOX_SERVICE_TOKEN=<token> \
   -e MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   -e MAILBOX_MCP_ALLOWED_HOSTS=127.0.0.1:8000,localhost:8000 \
-  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.2.0
+  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.3.0
 ```
 
 Inside the container the server binds to `0.0.0.0`. So

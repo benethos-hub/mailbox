@@ -208,7 +208,8 @@ So the packages stand in lines, each importing only lines below
 
 `activity` is imported by every package that records. `rights`
 records none, since `activity` imports it: its one warning, a stored
-grant that names unknown rights, stays a plain log line.
+grant that names unknown rights, stayed a plain log line. Since 0.3.0
+it is the activity `users.unknown_rights`, recorded by `auth`.
 
 **Decided 2026-09-28:** `Sleep` is the type of a sleep function, two
 lines in `worker.py`, and the only thing `delivery.py` takes from
@@ -274,8 +275,9 @@ once at the end, since nothing they see changes.
   `service/` would stand beside the `service.py` of most packages. The
   activities it records follow it, from `activity.service.*` to
   `activity.system.*` (LOGGING.md 7.2). No release has the old names.
-  An area has at most seven letters, so that the longest name,
-  `activity.system.backup_restored`, fits the source column of 32.
+  A name has at most 32 characters, so that the longest,
+  `activity.mailbox.result_not_kept`, fits the source column
+  (LOGGING.md 7.2).
 - **The tests mirror the packages,** in the same branch, after the
   domain has moved (step 5 of section 6). They move and change their
   imports, nothing else.
@@ -829,6 +831,12 @@ what is run once and never changes.
 The fingerprint covers the statements, not the Python of `before`,
 today as after. A hash over source breaks on a comment. That a shipped
 step's Python is not touched stays a rule for review, as it is now.
+
+**Superseded 2026-10-07:** the fingerprint is a hash of the step's
+whole module, statements, the Python of `before`, its helpers and
+comments alike. Migration 15 has no statements, so its fingerprint
+of the statements froze nothing. That a shipped step breaks on a
+comment is the point: it is never changed.
 
 ### 11.3 A registry, not reflection
 

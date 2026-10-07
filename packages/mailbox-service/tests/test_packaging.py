@@ -154,12 +154,13 @@ PATTERNS = {
 VERSION_EXAMPLES = [
     ("README.md", "status"),
     ("containers/README.md", "status"),
+    ("containers/production/README.md", "status"),
     ("containers/production/.env.example", "env"),
     ("containers/production/README.md", "image"),
     ("packages/mailbox-service/README.md", "env"),
     ("docs/CONCEPT.md", "status"),
     ("docs/ROADMAP.md", "status"),
-    ("docs/microsoft.md", "status"),
+    ("docs/MICROSOFT.md", "status"),
     ("packages/mailbox-service/README.md", "status"),
     ("packages/mailbox-service/README.md", "tag"),
     ("packages/mailbox-service/README.md", "image"),
@@ -273,8 +274,9 @@ def test_the_changelog_names_the_version_as_its_newest_release() -> None:
 
 
 def test_the_status_follows_the_classifier() -> None:
-    """``Development Status :: 3 - Alpha`` in every package, and "alpha"
-    in every status line of the documentation."""
+    """One ``Development Status`` classifier in every package, and its
+    word, such as "beta", in every status line of the documentation
+    and in SECURITY.md."""
     statuses = set()
     for package in PACKAGES:
         classifiers = _project(package)["classifiers"]
@@ -294,3 +296,26 @@ def test_the_status_follows_the_classifier() -> None:
         words = re.findall(r"([\w-]+), version \d+\.\d+\.\d+\.", text)
         wrong += [f"{relative}: {w}" for w in words if w.lower() != status]
     assert not wrong, f"not {status!r}:\n  " + "\n  ".join(wrong)
+    assert f"The project is {status}." in (ROOT / "SECURITY.md").read_text("utf-8")
+
+
+def _badges(relative: str) -> set[str]:
+    """The PyPI packages the badges of a README name, each with the
+    package name as its label."""
+    text = (ROOT / relative).read_text("utf-8")
+    badges = re.findall(
+        r"\[!\[PyPI (\S+)\]\(https://img\.shields\.io/pypi/v/(\S+)\?label=PyPI%20(\S+)\)\]",
+        text,
+    )
+    assert all(alt == name == label for alt, name, label in badges), badges
+    return {name for _, name, _ in badges}
+
+
+def test_the_badges_name_the_packages() -> None:
+    """The repository README shows a PyPI badge per package, each
+    package README the badge of its own, labelled with the package name."""
+    names = {str(_project(package)["name"]) for package in PACKAGES}
+    assert _badges("README.md") == names
+    for package in PACKAGES:
+        name = str(_project(package)["name"])
+        assert _badges(f"packages/{package.name}/README.md") == {name}

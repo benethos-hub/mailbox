@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import inspect
 import json
 import pkgutil
 import re
 import sqlite3
+import sys
 from pathlib import Path
 
 import pytest
@@ -202,7 +204,9 @@ def test_a_migration_runs_before_then_its_statements() -> None:
         "before",
         "statement",
     ]
-    assert Step.fingerprint() == hashlib.sha256(Step.statements[0].encode()).hexdigest()
+    # The fingerprint is the module's source, here this test module.
+    source = inspect.getsource(sys.modules[__name__])
+    assert Step.fingerprint() == hashlib.sha256(source.encode()).hexdigest()
 
 
 class _One(Migration):
@@ -280,22 +284,28 @@ def test_each_migration_module_is_in_the_list_at_its_number() -> None:
 
 # What each migration of a release runs, as a hash: a database of that
 # release has run it, so it is never changed. A release adds its own.
+# The fingerprint covers the step's whole module, comments included.
 RELEASED = {
     # 0.1.0
-    1: "e594d44acc853b6512efb56194296ce71115cacd449810f322e534b8c96894d6",
-    2: "ff9d8f7ab7ee21a8e02a38482cd91fbbfe56ccc0978acb914a7a918ef886aa82",
-    3: "fb834a11999de1b5ba3132b5bd5fec13738e274c25eff37f16a510cbf93dac08",
-    4: "674023cf6bf2157755d570dd84051c99bd77bac24894dd37150bb3ae2bfe69d0",
-    5: "4c4d5e7aed016f92070516b411d10cc0645e66cc5bb04def7954d051c4509bbd",
+    1: "6ea8ac6ebf74df7e1e29aead2cfdfca2bf369ddef7deec29effc6f10f3975c94",
+    2: "22a23f705f4d3bbd14e76b9ed79050b9a41e96f7b78e7a9dbfbc1d93e655c323",
+    3: "72dd59eb4771097f370cc87404db40d6eb246d50fb7007714591d85d8ba0bf7f",
+    4: "3a01a598fddfd80d9127407ee275cdceedb6cf085c52ca2fcec506fb0d7914cf",
+    5: "6cfed31ca15f31302232151e3b852b5d0d41dce03996a9b443b30076a5411bf5",
     # 0.2.0
-    6: "0c4e68c00bd82772730b5844123451cdacb101286383bbf60c1729272f885005",
-    7: "54a76e991ba8e00a1c6508c0637187ce9a810addf0d8c2d568fe2ec726fcb18a",
-    8: "8773d36545f9da81f9eb411425a0bf349a8cd75754544f3eaacce1da8b3f0367",
-    9: "d123d9b3cec3ccba6a64a0b9973c63a8c6b4fa7d3ef71cc0bca52fe36b5d244a",
-    10: "18652e9e4ef141551585ccc2c97dba5bea6f7340ca13d0599c3c61c3b7864c12",
-    11: "f005a2af75feda5475c5fc1ee5cc3237b1f09a190c8ca1989e49b735f8d77fc1",
-    12: "0fd10042b5d31d2f030e1252ca9081663e3e90a8546fcc65551bcae431f92a9c",
-    13: "978aaa816ec32bd46004ef472690ead0e09078982f888c429736014ffecd2186",
+    6: "b4315a0864a2a007b3ea3c11a37bd2bdc704b2d40cdaaa0741691def36f8df37",
+    7: "790836401a7e247542752d920ed47fec64409e91031aa98f0c6617f49691276c",
+    8: "df52d1587a3143ca007c822e21ce39712764feb8edee92f41a11a4f6caed6c73",
+    9: "04a4fb35e6ed0203681fc25ad1dbaf7e862a181e96b6eee0800c31fd341879eb",
+    10: "4baea0530d806e9f3790c5fa133562bf24f07f1d5a989d1f5f0193c2d31ff14d",
+    11: "b2c91e737177cb76a533f4dc887a4693680bbc3dd29720f552883dc10793f4db",
+    12: "e70816d3214e6bbd7999ab140e2f76315d9d7be6021e772e7c046918fd1e24b6",
+    13: "421cb3d2c1160f80f725f8a5e7b257aeef151bf9b2dee31d0f9af07a852f9815",
+    # 0.3.0
+    14: "56b87a7bf8e46d262a5d12ff9ee705884a7d617e2b8bbe5503cd37fb5a052ac9",
+    15: "e9cabbbe617caa9b981b0a05ec57c9e23417be65beb9860fe8be9980d717a1b2",
+    16: "a8f3d386a6e41430c6c47beb0a0a9381633fc7cc32b1f3ec7902012d9dac353e",
+    17: "bb72d83529bc4279e4531b1ea4145d9a0c20367d46ae05115a5450769c42e068",
 }
 
 

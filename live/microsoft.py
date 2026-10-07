@@ -14,7 +14,7 @@ LIVE_MICROSOFT_TENANT) with the redirect URI
 http://localhost:8080/ui/oauth/microsoft/callback. With ``--project``,
 the project's app that comes with the service: ``--connect`` then signs
 in over the API with a code, which it prints, entered by a person at
-Microsoft's page. See docs/microsoft.md.
+Microsoft's page. See docs/MICROSOFT.md.
 
 The service runs with a database of its own in data/live-microsoft/, or
 data/live-microsoft-project/ with ``--project``, which keeps the

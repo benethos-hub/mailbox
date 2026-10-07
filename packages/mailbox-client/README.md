@@ -1,13 +1,13 @@
 # mailbox-client
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
-[![PyPI mailbox-client](https://img.shields.io/pypi/v/benethos-mailbox-client?label=PyPI%20mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
+[![PyPI benethos-mailbox-client](https://img.shields.io/pypi/v/benethos-mailbox-client?label=PyPI%20benethos-mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Alpha, version 0.2.0.** Usable with real accounts for testing. The
-> API and the configuration may still change. Stored data is carried
-> forward by migrations.
+> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> of the API or the configuration is announced in the changelog. Stored
+> data is carried forward by migrations.
 
 The Python client of the REST API of
 [`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service),
@@ -18,9 +18,9 @@ allows. The MCP server of the project,
 is built on it.
 
 It knows the service through its REST API alone, and needs nothing but
-[httpx](https://www.python-httpx.org/). Its interface has no stability
-promise yet: it follows what the MCP server and the project's own checks
-need.
+[httpx](https://www.python-httpx.org/). The REST API follows the status
+above. This package's Python interface has no stability promise yet: it
+follows what the MCP server and the project's own checks need.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 

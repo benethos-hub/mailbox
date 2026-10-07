@@ -22,7 +22,7 @@ name you, if you like.
 
 ## Versions
 
-The project is alpha. Fixes go into the latest release and `main`
+The project is beta. Fixes go into the latest release and `main`
 only. Older versions do not get them.
 
 ## What counts

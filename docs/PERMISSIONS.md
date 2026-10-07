@@ -164,7 +164,8 @@ from becoming a way up:
 - **UI**: the editor with the service rights as tick boxes and single
   rights in a text field, and a row per grant: accounts as tick boxes,
   groups as tick boxes with their rights as a hint, single rights in a
-  text field, recipients and the daily limit. The user's page shows the
+  text field, recipients, the daily limit, the folders and "Valid
+  until". The user's page shows the
   effective rights per account, the sending limits and the warning
   "reads and sends anywhere". Pages and buttons appear only for those
   with the right.

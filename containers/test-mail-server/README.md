@@ -54,7 +54,7 @@ named as internal:
 
 ```
 export SSL_CERT_FILE=containers/test-mail-server/secrets/tls/ca.pem
-export MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS='["localhost"]'
+export MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS='["localhost","127.0.0.1"]'
 ```
 
 `SSL_CERT_FILE` replaces the default file of OpenSSL. On Linux the

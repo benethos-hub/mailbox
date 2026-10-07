@@ -19,7 +19,7 @@ the audit answers "who changed what, when", per record, in the database,
 for as long as the deployment keeps it. The log may be dropped by the
 host, the audit may not.
 
-Three readers, three questions:
+Four readers, four questions:
 
 | Reader | Question | Level |
 |---|---|---|
@@ -199,7 +199,7 @@ each account and compares.
 | INFO | polls A only: all N watchers are in use | account, cap | once per account while the cap holds, `MAILBOX_SERVICE_SYNC_WATCHERS` |
 | WARNING | watching A failed, next try in Ns: reason | account, pause, reason | |
 | DEBUG | IDLE on A renewed | account | |
-| INFO | the change log was purged of N entries older than D | counts | once per purge. `INFO`, not `WARNING`: a purge is the normal course, at most once an hour |
+| INFO | the change log was purged of N entries older than D | counts | once per purge. `INFO`, not `WARNING`: a purge is the normal course, at start and at most once an hour |
 
 ### 5.6 Sending, drafts, idempotency
 
@@ -212,7 +212,7 @@ each account and compares.
 | ERROR | sent, but not recorded in the audit of sends | account id, traceback | |
 | DEBUG | an Idempotency-Key was replayed | account id, operation | |
 | ERROR | did the operation on A, but could not keep its result for the Idempotency-Key | account id, operation, traceback | a retry with the same key would do it again |
-| INFO | purged N records older than D from the audit of sends | count, before | once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` |
+| INFO | purged N records older than D from the audit of sends | count, before | at start and once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` |
 
 Drafts are mail content and change nothing others see: not logged.
 
@@ -238,7 +238,7 @@ Drafts are mail content and change nothing others see: not logged.
 | INFO | the host stored the master key from a recovery key | | `keys import` |
 | INFO | opened the database with schema N; the file was rewritten once: from now on it shrinks after deletions | schema, notes | `system.migrated`, once for a database made by an earlier version |
 | INFO | the host wrote a backup / restored the backup of time T | file, schema, [time] | |
-| INFO | purged N records older than D from the audit | count, before | once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` ([AUDIT.md](AUDIT.md)) |
+| INFO | purged N records older than D from the audit | count, before | at start and once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` ([AUDIT.md](AUDIT.md)) |
 | ERROR | an activity could not be kept in the audit | the activity, traceback | its line is in the log |
 
 ### 5.9 Rate limits
@@ -317,7 +317,7 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    it writes no line of its own. The recorder logs under the logger of
    the activity, `activity.<area>.<name>`. No module of the domain but
    those of `domain/activity` has a logger of its own, and
-   `test_architecture.py` checks it. A technical line outside the
+   `test_code_rules.py` checks it. A technical line outside the
    domain keeps one logger per module, `log = logging.getLogger(__name__)`.
 2. **The domain logs activities, the layers around it do not.** A route
    knows the request, the domain knows what happened and who did it.
@@ -333,7 +333,7 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    The migrations return their notes, and `assembly` logs them at start.
    `DEBUG` stays allowed under `data/` for the technical steps the
    domain cannot see: a reconnect, a retry, a token refresh, a pause a
-   provider asked for. `test_architecture.py` checks that no module
+   provider asked for. `test_code_rules.py` checks that no module
    under `data/` calls `log.info`, `log.warning`, `log.error` or
    `log.exception`. The web layer logs nothing but what it refuses
    before the domain sees the request, the body limit and the limit on
@@ -368,7 +368,7 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    `common/clock.py` writes it. **Decided 2026-09-30.**
 10. **An activity is one line.** A name or an address a caller chose may
     hold a line break. The recorder writes each break and each other
-    control character as its escape, such as `\n` or ` `, so no
+    control character as its escape, such as `\n` or `\u2028`, so no
     value starts a line of its own. A traceback follows its line as
     before.
 
@@ -409,7 +409,7 @@ domain/
   its `level` and whether the audit keeps it (`audited`, AUDIT.md
   section 2). `line()` writes the sentence of section 3.
 - **An activity is one class** in the module of its area, named for what
-  happened: `SignedIn`, `TokenRevoked`, `AccountNeedsSignIn`. Its fields
+  happened: `UiSignIn`, `TokenRevoked`, `AccountNeedsSignIn`. Its fields
   are typed: a `User`, an `Account`, a count. There is no field for a
   password, a token's value or the words of a mail, so none can reach a
   line. An activity that failed carries the error, and the recorder logs

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "benethos-mailbox-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "MCP server that gives AI agents your mailboxes through mailbox-service: read, sort, draft and send mail, only within the rights, folders and send limits its token holds. Over stdio or HTTP."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,7 +28,7 @@ keywords = [
     "self-hosted",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
@@ -50,7 +50,7 @@ dependencies = [
     # its dependencies. It lives in the workspace dev group.
     "mcp>=2.0.0,<3",
     # The REST client. Released with this package under the same version.
-    "benethos-mailbox-client==0.2.0",
+    "benethos-mailbox-client==0.3.0",
     # PDF attachments reach the model as page images (pdf.py).
     "pypdfium2>=4.30",
     # The HTTP transport (transport.py); mcp brings it too.
