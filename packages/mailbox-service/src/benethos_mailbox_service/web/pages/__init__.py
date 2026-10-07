@@ -25,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ...errors import MailboxServiceError
+from ..state import app_services, app_settings
 from .deps import CsrfRefused
 from .errors import error_page
 from .forms import Failed
@@ -101,7 +102,7 @@ def owns(request: Request) -> bool:
 
 def install(app: FastAPI) -> None:
     app.state.ui_sessions = SessionStore(
-        idle=timedelta(hours=app.state.settings.session_idle_hours)
+        idle=timedelta(hours=app_settings(app).session_idle_hours)
     )
     app.mount(STATIC, StaticFiles(directory=STATIC_DIR), name="ui-static")
     for area in AREAS:
@@ -111,7 +112,7 @@ def install(app: FastAPI) -> None:
     app.exception_handler(PasswordChangeRequired)(_change_password)
     app.exception_handler(Failed)(_failed)
     app.exception_handler(CsrfRefused)(_csrf)
-    hosts = app.state.services.oauth.sign_in_hosts()
+    hosts = app_services(app).oauth.sign_in_hosts()
     app.add_middleware(_Security, headers=security_headers(hosts))
 
 

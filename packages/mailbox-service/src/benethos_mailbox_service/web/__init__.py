@@ -26,12 +26,13 @@ from .errors import status_of
 from .limits import BodyLimit, RequestLimit, RequestLimits
 from .pages.errors import error_page
 from .pages.session import carries_session
+from .state import app_settings
 
 
 def install(app: FastAPI) -> None:
     api.install(app)
     pages.install(app)
-    app.state.request_limits = RequestLimits.of(app.state.settings)
+    app.state.request_limits = RequestLimits.of(app_settings(app))
     app.add_middleware(BodyLimit)
     # Added last, so it runs first: a refused request is not read.
     app.add_middleware(RequestLimit, credential=_credential, refuse=_answer)

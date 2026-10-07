@@ -13,6 +13,7 @@ from ...services import Status, Users
 from ..deps import Viewer
 from ..effective import AccountRow, view_of
 from ..navigation import mail_url
+from ..session import session_of
 from ..templates import render
 
 router = APIRouter()
@@ -61,7 +62,7 @@ async def home(
         view=view,
         rows=rows,
         anywhere=any(row.view.warnings for row in rows),
-        previous_sign_in=request.state.ui_session.previous_sign_in,
+        previous_sign_in=session_of(request).previous_sign_in,
         can_recover=caller.allows("show_recovery_key"),
         service=status.status(caller) if caller.sees_status() else None,
     )

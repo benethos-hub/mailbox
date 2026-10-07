@@ -34,6 +34,7 @@ from ..domain.activity import ActivityLog, Actor, someone
 from ..domain.activity import http as said
 from ..domain.rights import Access
 from ..errors import RateLimitedError
+from .state import app_limits, app_services
 
 # The largest mail the service sends carries 25 MB of attachments, which
 # base64 in a JSON body makes about 34 MB.
@@ -179,8 +180,7 @@ def signed_in(request: Request, caller: str, access: Access) -> None:
     """Count a request of a signed-in caller: ``caller`` names its API
     token or UI session. Raises ``RateLimitedError`` when none is left."""
     limits = _limits(request.scope)
-    if limits is not None:
-        _take(request.scope, limits.signed_in, caller, Actor.of(access))
+    _take(request.scope, limits.signed_in, caller, Actor.of(access))
 
 
 class RequestLimit:
@@ -200,10 +200,10 @@ class RequestLimit:
         self._refuse = refuse
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        limits = _limits(scope)
-        if scope["type"] != "http" or limits is None or scope["path"] in UNLIMITED:
+        if scope["type"] != "http" or scope["path"] in UNLIMITED:
             await self._app(scope, receive, send)
             return
+        limits = _limits(scope)
         request = Request(scope)
         if not self._credential(request):
             address = request.client.host if request.client else "unknown"
@@ -234,17 +234,9 @@ def _take(scope: Scope, buckets: Buckets, caller: str, by: Actor) -> None:
     )
 
 
-def _state(scope: Scope) -> object:
-    return getattr(scope.get("app"), "state", None)
-
-
-def _limits(scope: Scope) -> RequestLimits | None:
-    found = getattr(_state(scope), "request_limits", None)
-    return found if isinstance(found, RequestLimits) else None
+def _limits(scope: Scope) -> RequestLimits:
+    return app_limits(scope["app"])
 
 
 def _activity(scope: Scope) -> ActivityLog:
-    """The service's activity log, where the app has one."""
-    services = getattr(_state(scope), "services", None)
-    found = getattr(services, "activity", None)
-    return found if isinstance(found, ActivityLog) else ActivityLog()
+    return app_services(scope["app"]).activity

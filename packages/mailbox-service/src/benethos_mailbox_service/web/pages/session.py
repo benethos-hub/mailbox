@@ -26,6 +26,7 @@ from ...domain.rights import Access
 from ...errors import MailboxServiceError
 from ..limits import signed_in
 from ..services import get_auth
+from ..state import app_sessions
 from ..urls import client_address
 
 COOKIE = "mailbox_ui_session"
@@ -123,8 +124,7 @@ class SessionStore:
 
 
 def store_of(request: Request) -> SessionStore:
-    store: SessionStore = request.app.state.ui_sessions
-    return store
+    return app_sessions(request.app)
 
 
 def carries_session(request: Request) -> bool:
@@ -132,7 +132,19 @@ def carries_session(request: Request) -> bool:
     return store_of(request).known(request.cookies.get(COOKIE))
 
 
-def current(request: Request) -> tuple[UiSession, Access]:
+@dataclass(frozen=True)
+class Current:
+    """A page request's session and who it belongs to."""
+
+    session: UiSession
+    access: Access
+
+
+# Where ``current`` keeps what it found, for the rest of the request.
+_FOUND = "ui_current"
+
+
+def current(request: Request) -> Current:
     """The session and who it belongs to, or ``SignInRequired``. While its
     password must be changed, ``PasswordChangeRequired`` on any other page.
     The first call of a request counts it against the session's limit."""
@@ -149,30 +161,36 @@ def current(request: Request) -> tuple[UiSession, Access]:
         # Gone, disabled, or its password changed since the sign-in.
         store_of(request).drop(request.cookies.get(COOKIE))
         raise SignInRequired from None
-    if getattr(request.state, "ui_session", None) is None:
+    if found_for(request) is None:
         assert session_id is not None
         signed_in(request, f"session:{session_id}", access)
-    request.state.ui_session = session
-    request.state.access = access
+    found = Current(session, access)
+    setattr(request.state, _FOUND, found)
     if session.must_change and request.url.path not in _WHILE_CHANGING:
         raise PasswordChangeRequired
-    return session, access
+    return found
+
+
+def found_for(request: Request) -> Current | None:
+    """What ``current`` found for this request. None before it ran, or
+    when the request has no session."""
+    found = getattr(request.state, _FOUND, None)
+    return found if isinstance(found, Current) else None
 
 
 def show_once(request: Request, key: str, value: str) -> None:
     """Keep ``value`` for the next page that asks for ``key``."""
-    _session(request).once[key] = value
+    session_of(request).once[key] = value
 
 
 def take_once(request: Request, key: str) -> str | None:
     """What ``show_once`` kept under ``key``, once."""
-    return _session(request).once.pop(key, None)
+    return session_of(request).once.pop(key, None)
 
 
-def _session(request: Request) -> UiSession:
+def session_of(request: Request) -> UiSession:
     """The session ``current`` found for this request, else looked up."""
-    found: UiSession | None = getattr(request.state, "ui_session", None)
-    return found if found is not None else current(request)[0]
+    return (found_for(request) or current(request)).session
 
 
 def csrf_ok(session: UiSession, presented: str | None) -> bool:
