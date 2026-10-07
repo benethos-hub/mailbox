@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
     FolderRole,
@@ -43,7 +44,6 @@ from benethos_mailbox_service.errors import (
     ProviderAuthError,
     ProviderUnavailableError,
 )
-from benethos_mailbox_service.main import build_services, create_app
 
 from ...conftest import admin_bearer
 from ...graph_fake import TOKEN, FakeGraph

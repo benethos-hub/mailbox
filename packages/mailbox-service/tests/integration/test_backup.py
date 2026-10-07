@@ -11,7 +11,8 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from benethos_mailbox_service.__main__ import main
+from benethos_mailbox_service.assembly import Services, build_services, create_app
+from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data import backup
 from benethos_mailbox_service.data.backup import (
@@ -36,7 +37,6 @@ from benethos_mailbox_service.data.storage import (
     Repositories,
     inspect_file,
 )
-from benethos_mailbox_service.main import Services, build_services, create_app
 
 from ..conftest import create_account
 

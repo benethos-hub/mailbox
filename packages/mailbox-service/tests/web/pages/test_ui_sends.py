@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant
-from benethos_mailbox_service.main import Services
 
 from ...conftest import browser_user, create_account
 from ...ui_helpers import post, sign_in

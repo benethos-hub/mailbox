@@ -5,10 +5,10 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant, MessageUpdate
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import MailboxServiceError, NotFoundError
-from benethos_mailbox_service.main import Services
 
 from ...conftest import bearer_for
 from ...data.providers.test_imap import (  # noqa: F401 - the fixture

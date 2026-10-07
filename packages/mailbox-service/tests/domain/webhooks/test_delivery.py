@@ -14,6 +14,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Folder, Grant, ProviderType
 from benethos_mailbox_service.data.protocols.http import (
     WebhookPoster,
@@ -22,7 +23,6 @@ from benethos_mailbox_service.data.protocols.http import (
 from benethos_mailbox_service.domain.changes import MessagesUpdated
 from benethos_mailbox_service.domain.webhooks.delivery import BATCH, Retries, signature
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
-from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN, bearer_for, memory_of
 

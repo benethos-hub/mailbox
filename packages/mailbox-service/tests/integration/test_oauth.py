@@ -16,6 +16,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import Services, build_services
 from benethos_mailbox_service.common.clock import utc_now
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, ProviderType
@@ -51,7 +52,6 @@ from benethos_mailbox_service.errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from benethos_mailbox_service.main import Services, build_services
 
 from ..conftest import ADMIN
 

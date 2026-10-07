@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.protocols.imap import ImapSession
@@ -26,7 +27,6 @@ from benethos_mailbox_service.errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from benethos_mailbox_service.main import build_services, create_app
 
 from ...conftest import admin_bearer
 from ...imap_fake import FakeMailBox

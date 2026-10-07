@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import ActivityFilter, ActivityRecord, Grant
 from benethos_mailbox_service.data.storage import (
     AuditRepository,
@@ -34,7 +35,6 @@ from benethos_mailbox_service.errors import (
     StorageError,
     UnauthorizedError,
 )
-from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN, bearer_for
 from .test_activity import _catalogue
@@ -247,8 +247,8 @@ def test_a_change_whose_record_cannot_be_kept_is_undone(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """The change and its record go in one transaction (AUDIT.md 4)."""
+    from benethos_mailbox_service.assembly import build_services
     from benethos_mailbox_service.config import Settings
-    from benethos_mailbox_service.main import build_services
 
     monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
     services = build_services(Settings(storage="sqlite"))

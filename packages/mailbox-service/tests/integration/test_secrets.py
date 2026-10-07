@@ -8,7 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from benethos_mailbox_service.__main__ import main
+from benethos_mailbox_service.assembly import build_services, key_provider
+from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.secrets import (
@@ -32,7 +33,6 @@ from benethos_mailbox_service.errors import (
     CredentialMissingError,
     SetupRequiredError,
 )
-from benethos_mailbox_service.main import build_services, key_provider
 
 from ..conftest import create_account
 

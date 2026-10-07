@@ -8,8 +8,8 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Attachment, Folder, Grant
-from benethos_mailbox_service.main import Services
 
 from ...conftest import browser_user
 from ...ui_helpers import sign_in

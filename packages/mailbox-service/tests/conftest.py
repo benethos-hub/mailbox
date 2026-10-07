@@ -13,7 +13,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service import config, main
+from benethos_mailbox_service import config
+from benethos_mailbox_service.assembly import Services, build_services, create_app
+from benethos_mailbox_service.assembly import providers as assembly
 from benethos_mailbox_service.common import redact
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
@@ -40,7 +42,6 @@ from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.service import AuthService
 from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import Access
-from benethos_mailbox_service.main import Services, build_services, create_app
 
 PUBLIC = "93.184.215.14"  # what every host resolves to, without DNS
 METHODS = {"get", "post", "put", "patch", "delete"}  # of the OpenAPI document
@@ -110,7 +111,7 @@ def no_configuration_from_this_machine(
     # No DNS: every host name in a test resolves to one public address, so
     # the host check of accounts and discovery passes without the network.
     # Tests of the check itself hand ``build_services`` a table.
-    monkeypatch.setattr(main, "host_addresses", resolve_to_public)
+    monkeypatch.setattr(assembly, "host_addresses", resolve_to_public)
 
 
 @pytest.fixture

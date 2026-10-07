@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from benethos_mailbox_service.assembly import Services, build_services
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, User
 from benethos_mailbox_service.data.secrets import PasswordHasher, Scrypt
@@ -27,7 +28,6 @@ from benethos_mailbox_service.errors import (
     SetupRequiredError,
     UnauthorizedError,
 )
-from benethos_mailbox_service.main import Services, build_services
 
 from ...conftest import ADMIN, CHEAP
 

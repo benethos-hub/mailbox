@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from benethos_mailbox_service import __version__, config
-from benethos_mailbox_service.__main__ import _parser, main
+from benethos_mailbox_service.cli import main, parser
 from benethos_mailbox_service.config import Settings, load_settings
 
 # The real one: conftest.py puts the system's folders into a test's own.
@@ -41,8 +41,8 @@ def test_the_start_names_the_settings_and_the_database(
 ) -> None:
     from fastapi.testclient import TestClient
 
+    from benethos_mailbox_service.assembly import create_app
     from benethos_mailbox_service.data.storage import SCHEMA_VERSION
-    from benethos_mailbox_service.main import create_app
 
     settings = Settings(storage="sqlite", data_dir=tmp_path, sync_interval=0)
     named = tmp_path / "service.env"
@@ -62,7 +62,7 @@ def test_the_start_in_memory_names_no_database(
 ) -> None:
     from fastapi.testclient import TestClient
 
-    from benethos_mailbox_service.main import create_app
+    from benethos_mailbox_service.assembly import create_app
 
     settings = Settings(storage="memory", sync_interval=0)
     with caplog.at_level("INFO"), TestClient(create_app(settings)):
@@ -317,7 +317,7 @@ def test_every_command_refuses_a_named_file_that_is_not_there(
 
 
 def test_the_option_goes_before_or_after_the_command() -> None:
-    parse = _parser().parse_args
+    parse = parser().parse_args
     assert parse(["--env-file", "a.env", "users", "create-admin"]).env_file == Path(
         "a.env"
     )
@@ -351,7 +351,7 @@ def test_serve_names_the_settings_file(
 ) -> None:
     import uvicorn
 
-    from benethos_mailbox_service import main as assembly
+    from benethos_mailbox_service import assembly
 
     made: list[dict[str, object]] = []
     monkeypatch.setattr(uvicorn, "run", lambda app, **kw: None)

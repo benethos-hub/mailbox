@@ -8,9 +8,9 @@ from datetime import UTC, datetime
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.storage import Attempt
-from benethos_mailbox_service.main import Services
 
 from ...conftest import browser_user
 from ...ui_helpers import post, sign_in

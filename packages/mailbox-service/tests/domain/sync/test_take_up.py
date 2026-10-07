@@ -10,9 +10,9 @@ import anyio
 import pytest
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import AccountStatus, ProviderType
 from benethos_mailbox_service.domain.sync.worker import SyncWorker
-from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN
 from ...imap_fake import make_message

@@ -11,6 +11,11 @@ from typing import Any
 import pytest
 from pydantic import SecretStr, ValidationError
 
+from benethos_mailbox_service.assembly import (
+    build_oauth,
+    build_services,
+    offered_providers,
+)
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.data.protocols.http import ApiClient
@@ -34,11 +39,6 @@ from benethos_mailbox_service.errors import (
     ForbiddenError,
     NotSupportedError,
     ProviderError,
-)
-from benethos_mailbox_service.main import (
-    build_oauth,
-    build_services,
-    offered_providers,
 )
 
 from ..conftest import ADMIN
@@ -395,7 +395,7 @@ async def test_a_code_for_an_account_of_another_kind() -> None:
 def test_the_project_app_comes_back_to_localhost_only() -> None:
     import httpx
 
-    from benethos_mailbox_service.main import build_services
+    from benethos_mailbox_service.assembly import build_services
 
     app = App(microsoft_endpoints(), CLIENT_ID, loopback_only=True)
     client = OAuthClient(app, ApiClient(transport=httpx.MockTransport(TokenEndpoint())))

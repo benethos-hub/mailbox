@@ -6,8 +6,8 @@ from email import message_from_bytes
 
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import MessageReference
-from benethos_mailbox_service.main import Services
 
 from ...conftest import memory_of
 

@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.common.clock import utc_now
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import ADMIN_SERVICE, Access
-from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN, bearer_for, browser_user, create_account
 from ...ui_helpers import sign_in

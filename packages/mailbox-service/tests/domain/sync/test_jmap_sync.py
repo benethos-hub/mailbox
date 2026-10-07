@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.protocols import ServerClient
@@ -23,7 +24,6 @@ from benethos_mailbox_service.data.providers import (
 from benethos_mailbox_service.data.providers.jmap import JmapProvider
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
-from benethos_mailbox_service.main import Services, build_services, create_app
 
 from ...conftest import admin_bearer, create_account
 from ...imap_fake import make_message

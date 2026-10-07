@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import (
     ApiToken,
     Grant,
@@ -33,7 +34,6 @@ from benethos_mailbox_service.errors import (
     SetupRequiredError,
     UnauthorizedError,
 )
-from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN, CHEAP, bearer_for, create_account
 

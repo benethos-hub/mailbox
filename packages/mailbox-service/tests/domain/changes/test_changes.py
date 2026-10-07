@@ -8,6 +8,7 @@ from typing import get_args
 
 import pytest
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import (
     FEED_KINDS,
     ChangeKind,
@@ -26,7 +27,6 @@ from benethos_mailbox_service.domain.changes import (
     MessageSent,
     MessagesUpdated,
 )
-from benethos_mailbox_service.main import Services
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeFolder, FakeMailBox, make_message

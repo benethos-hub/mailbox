@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import Services, build_services
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.mail import compose
 from benethos_mailbox_service.data.models import (
@@ -30,7 +31,6 @@ from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import ConflictError, NotFoundError
-from benethos_mailbox_service.main import Services, build_services
 
 from ...conftest import ADMIN, bearer_for, create_account, memory_of
 from ...data.providers.test_imap import provider

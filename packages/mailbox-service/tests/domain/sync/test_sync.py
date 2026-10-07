@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import Services, build_services
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
     FolderUpdate,
@@ -25,7 +26,6 @@ from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import NotFoundError, ProviderUnavailableError
-from benethos_mailbox_service.main import Services, build_services
 
 from ...conftest import ADMIN, create_account
 from ...imap_fake import FakeFolder, FakeMailBox, make_message

@@ -9,9 +9,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.__main__ import main
+from benethos_mailbox_service.assembly import create_app, openapi_json
+from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.data.models import MessageFilter
-from benethos_mailbox_service.main import create_app, openapi_json
 from benethos_mailbox_service.web import search
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 

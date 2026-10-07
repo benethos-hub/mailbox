@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.datastructures import FormData
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import (
     Candidate,
     Discovery,
@@ -18,7 +19,6 @@ from benethos_mailbox_service.data.models import (
     Hint,
     ProviderType,
 )
-from benethos_mailbox_service.main import Services
 
 from ...conftest import browser_user
 from ...ui_helpers import post, sign_in

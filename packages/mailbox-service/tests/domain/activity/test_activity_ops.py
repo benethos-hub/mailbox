@@ -10,6 +10,7 @@ import anyio
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.common.clock import log_time
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
@@ -30,7 +31,6 @@ from benethos_mailbox_service.errors import (
     SendLimitError,
     UnauthorizedError,
 )
-from benethos_mailbox_service.main import Services, build_services, create_app
 from benethos_mailbox_service.web import limits
 
 from ...conftest import ADMIN, CHEAP

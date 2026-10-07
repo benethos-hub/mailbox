@@ -84,7 +84,7 @@ Issues = "https://github.com/benethos-hub/mailbox/issues"
 Changelog = "https://github.com/benethos-hub/mailbox/blob/main/CHANGELOG.md"
 
 [project.scripts]
-benethos-mailbox-service = "benethos_mailbox_service.__main__:main"
+benethos-mailbox-service = "benethos_mailbox_service.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/benethos_mailbox_service"]

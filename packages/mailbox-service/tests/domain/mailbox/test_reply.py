@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr, ValidationError
 
+from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.mail import compose
 from benethos_mailbox_service.data.models import (
@@ -30,7 +31,6 @@ from benethos_mailbox_service.data.protocols.smtp import SmtpSession
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
 from benethos_mailbox_service.data.providers.imap import ImapProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
-from benethos_mailbox_service.main import Services, build_services, create_app
 
 from ...conftest import ADMIN, bearer_for, create_account
 from ...imap_fake import FakeFolder, FakeMailBox, make_message

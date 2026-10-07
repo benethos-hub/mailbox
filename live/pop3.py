@@ -29,11 +29,11 @@ from checks.service import mailbox_of
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_service.assembly import build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.providers import build_provider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
-from benethos_mailbox_service.main import build_services, create_app
 
 HOST = "127.0.0.1"
 POP3_TLS, POP3_STARTTLS, SMTP_TLS = 30995, 30110, 30465

@@ -9,6 +9,7 @@ import anyio
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import AccountStatus, ProviderType
 from benethos_mailbox_service.domain.rights.access import Access
@@ -20,7 +21,6 @@ from benethos_mailbox_service.errors import (
     NotFoundError,
     ProviderAuthError,
 )
-from benethos_mailbox_service.main import Services, create_app
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeMailBox, make_message
@@ -129,7 +129,7 @@ async def test_past_the_cap_an_account_is_polled_only(
 
 
 def test_the_cap_comes_from_the_settings() -> None:
-    from benethos_mailbox_service.main import build_services
+    from benethos_mailbox_service.assembly import build_services
 
     settings = Settings(storage="memory", sync_interval=300, sync_watchers=3)
     services = build_services(settings)
@@ -140,7 +140,7 @@ def test_the_cap_comes_from_the_settings() -> None:
 async def test_a_deleted_account_leaves_nothing_in_the_worker() -> None:
     """What the worker notes of an account goes with it, so its sets do
     not grow with every account deleted."""
-    from benethos_mailbox_service.main import build_services
+    from benethos_mailbox_service.assembly import build_services
 
     services = build_services(Settings(storage="memory", sync_interval=300))
     background = services.worker

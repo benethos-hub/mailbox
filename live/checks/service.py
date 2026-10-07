@@ -15,9 +15,9 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_client import SyncMailboxClient
+from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
-from benethos_mailbox_service.main import Services, build_services, create_app
 
 from .admin import Admin, admin_token, bootstrap
 from .processes import free_port, service_env, start_service, stop
