@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from ..config import Settings
 from ..data.models import ProviderType
+from .state import app_settings
 
 
 def public_base(request: Request) -> str:
     """``MAILBOX_SERVICE_PUBLIC_URL``, else the address the request came to."""
-    settings: Settings = request.app.state.settings
-    base = settings.public_url or str(request.base_url)
+    base = app_settings(request.app).public_url or str(request.base_url)
     return base.rstrip("/")
 
 

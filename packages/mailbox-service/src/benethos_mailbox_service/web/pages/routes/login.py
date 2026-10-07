@@ -21,8 +21,8 @@ from ..session import (
     PASSWORD_PAGE,
     PATH,
     SignInRequired,
-    UiSession,
     current,
+    session_of,
     store_of,
 )
 from ..templates import back, local_path, render
@@ -138,7 +138,7 @@ async def logout(request: Request, caller: Actor) -> Response:
 
 @router.get("/password")
 async def password_page(request: Request, _: Viewer) -> HTMLResponse:
-    session, _access = current(request)
+    session = current(request).session
     return render(
         request, "pages/password.html", page="password", must_change=session.must_change
     )
@@ -160,7 +160,7 @@ async def change_password(
     # This session carries on with the new password. Every other session
     # of the user ends at its next request. Taken from the request, since
     # checking it again with the old stamp would end it too.
-    session: UiSession = request.state.ui_session
+    session = session_of(request)
     session.stamp = stamp
     session.must_change = False
     return back(request, PATH, "Password changed. Other sessions are signed out.")

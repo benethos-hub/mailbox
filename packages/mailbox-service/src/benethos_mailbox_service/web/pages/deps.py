@@ -33,21 +33,21 @@ class CsrfRefused(Exception):
 
 async def signed_in(request: Request) -> Access:
     """The caller of a page that only shows."""
-    return current(request)[1]
+    return current(request).access
 
 
 async def changing(request: Request) -> Access:
     """The caller of a request that changes something: signed in, and the
     form or the htmx header carries the session's CSRF token."""
-    session, access = current(request)
+    found = current(request)
     presented = request.headers.get(CSRF_HEADER)
     if presented is None:
         form = await request.form()
         value = form.get(CSRF_FIELD)
         presented = value if isinstance(value, str) else None
-    if not csrf_ok(session, presented):
+    if not csrf_ok(found.session, presented):
         raise CsrfRefused
-    return access
+    return found.access
 
 
 def account_of(request: Request, caller: Access, account_id: str) -> Account:

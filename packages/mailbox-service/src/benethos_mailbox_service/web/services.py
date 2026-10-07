@@ -1,6 +1,6 @@
 """The domain services, for both front ends.
 
-``main.create_app`` puts them on ``app.state.services``, one object with
+``assembly.web`` puts them on ``app.state.services``, one object with
 one attribute per service. A route or page gets a service here, as a
 FastAPI dependency or, in a helper, from the request.
 """
@@ -12,13 +12,14 @@ from typing import Annotated, Protocol
 from fastapi import Depends, Request
 
 from ..domain.accounts import AccountService, OAuthService
-from ..domain.activity import Audit
+from ..domain.activity import ActivityLog, Audit
 from ..domain.auth import AuthService
 from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import PasswordService, RoleService, TokenService, UserService
 from ..domain.webhooks import WebhookService
+from .state import app_services
 
 
 class Services(Protocol):
@@ -38,11 +39,11 @@ class Services(Protocol):
     recovery: RecoveryKey
     log: ServiceLog
     audit: Audit
+    activity: ActivityLog
 
 
 def services_of(request: Request) -> Services:
-    services: Services = request.app.state.services
-    return services
+    return app_services(request.app)
 
 
 def get_accounts(request: Request) -> AccountService:

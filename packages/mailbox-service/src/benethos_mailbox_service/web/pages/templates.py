@@ -22,7 +22,7 @@ from ... import __version__
 from ...common.clock import log_time, utc_now
 from ...data.models import Address
 from .navigation import navigation, own_page
-from .session import PATH, SignInRequired, show_once
+from .session import PATH, SignInRequired, found_for, show_once
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE_DIR = HERE / "templates"
@@ -109,8 +109,9 @@ def render(
     """A page, with what the layout needs: the active navigation entry and
     the entries the caller may open, the session's CSRF token, who is
     signed in, and the message the form before left in the session."""
-    session = getattr(request.state, "ui_session", None)
-    access = getattr(request.state, "access", None)
+    found = found_for(request)
+    session = found.session if found is not None else None
+    access = found.access if found is not None else None
     context.update(
         page=page,
         csrf=session.csrf if session is not None else "",

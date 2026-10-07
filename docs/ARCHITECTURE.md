@@ -172,6 +172,7 @@ packages/mailbox-service/
     web/                # PRESENTATION: HTTP only, FastAPI lives here
       __init__.py       # install: both front ends, errors to the right one
       services.py       # the domain services as dependencies, for both
+      state.py          # what the app keeps on app.state, read typed
       urls.py           # this service's public address, OAuth callback
       limits.py         # the size of a request body, the requests a
                         #   minute, for both
@@ -570,6 +571,10 @@ imapclient boundary), never by patching deep inside a library.
 
 - A service holds its state in the instance. Module-level state is
   avoided: `redact` is the one exception, process-wide by design.
+- What the web layer keeps on `app.state` is read with its type in
+  `web/state.py`, and nowhere else. What a page request keeps on
+  `request.state` is put and read by `current` and `found_for` in
+  `web/pages/session.py`.
 - Time and sleep are handed in (`clock`, `sleep`), so a test runs in no
   time. In the domain the defaults are `utc_now` and `anyio.sleep`.
 - A lock is per key (`KeyedLocks`), never global, and held for the
