@@ -39,6 +39,7 @@ from .routes import (
     mail,
     messages,
     oauth,
+    roles,
     sends,
     status,
     users,
@@ -67,6 +68,7 @@ AREAS = (
     status,
     audit,
     users,
+    roles,
     webhooks,
 )
 

@@ -278,7 +278,7 @@ def test_a_new_token_is_shown_once_and_never_in_the_url(
     assert shown is not None
     plain = shown.group(1)
     assert services.auth.authenticate(plain).user_id == user.id
-    [token] = services.users.list_tokens(ADMIN, user.id)
+    [token] = services.tokens.list_tokens(ADMIN, user.id)
     assert token.name == "laptop" and token.expires_at is not None
     again = ui.get(url).text
     assert plain not in again and "shown this once" not in again
@@ -305,14 +305,14 @@ def test_token_days_must_be_a_number(ui: TestClient, services: Services) -> None
         {"name": "t", "days": "soon"},
     )
     assert "Days valid" in answer.text
-    assert services.users.list_tokens(ADMIN, user.id) == []
+    assert services.tokens.list_tokens(ADMIN, user.id) == []
     answer = post(
         ui,
         f"/ui/users/{user.id}/tokens",
         {"name": "t", "days": "99999999999"},
     )
     assert "from 1 to 3650" in answer.text
-    assert services.users.list_tokens(ADMIN, user.id) == []
+    assert services.tokens.list_tokens(ADMIN, user.id) == []
 
 
 # --- roles ----------------------------------------------------------------------------
@@ -325,7 +325,7 @@ def test_create_change_and_delete_a_role(ui: TestClient, services: Services) -> 
         {"id": "reader", "grants": "1", "g0_accounts": "*", "g0_allow": "mail.read"},
     )
     assert "Role reader created." in created.text
-    assert services.users.get_role(ADMIN, "reader").grants == [
+    assert services.roles.get_role(ADMIN, "reader").grants == [
         Grant(accounts=["*"], allow=["mail.read"])
     ]
     post(
@@ -333,7 +333,7 @@ def test_create_change_and_delete_a_role(ui: TestClient, services: Services) -> 
         "/ui/roles/reader",
         {"grants": "1", "g0_accounts": "*", "g0_allow": ["mail.read", "audit"]},
     )
-    assert services.users.get_role(ADMIN, "reader").grants[0].allow == [
+    assert services.roles.get_role(ADMIN, "reader").grants[0].allow == [
         "mail.read",
         "audit",
     ]
@@ -351,7 +351,7 @@ def test_create_change_and_delete_a_role(ui: TestClient, services: Services) -> 
 def test_a_user_keeps_roles_the_editor_cannot_list(
     app_client: TestClient, services: Services
 ) -> None:
-    services.users.create_role(ADMIN, "hidden", [])
+    services.roles.create_role(ADMIN, "hidden", [])
     target = services.users.create_user(ADMIN, "target", ["hidden"], [])
     sign_in(
         app_client,
@@ -371,7 +371,7 @@ def test_a_user_keeps_roles_the_editor_cannot_list(
 
 
 def test_a_role_name_is_quoted_in_links(ui: TestClient, services: Services) -> None:
-    services.users.create_role(ADMIN, "team a&b", [])
+    services.roles.create_role(ADMIN, "team a&b", [])
     listed = ui.get("/ui/roles").text
     assert 'href="/ui/roles/team%20a%26b"' in listed
     assert "Role team a&amp;b" in ui.get("/ui/roles/team%20a%26b").text
@@ -394,7 +394,7 @@ def test_summarize_names_whole_groups_and_the_rest() -> None:
 
 
 def test_rights_of_joins_roles_and_grants(services: Services, account_id: str) -> None:
-    services.users.create_role(
+    services.roles.create_role(
         ADMIN, "reader", [Grant(accounts=["*"], allow=["mail.read"])]
     )
     user = services.users.create_user(
@@ -433,7 +433,7 @@ def test_rights_of_lists_only_accounts_the_caller_sees(
 def test_the_user_page_shows_the_effective_rights(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
-    services.users.create_role(
+    services.roles.create_role(
         ADMIN, "reader", [Grant(accounts=["*"], allow=["mail.read"])]
     )
     user = services.users.create_user(
@@ -539,7 +539,7 @@ def test_a_new_role_has_its_editor(
 def test_users_filter_by_name_role_and_state(
     ui: TestClient, services: Services
 ) -> None:
-    services.users.create_role(ADMIN, "readers", [])
+    services.roles.create_role(ADMIN, "readers", [])
     services.users.create_user(ADMIN, "Anna", ["readers"], [])
     bert = services.users.create_user(ADMIN, "Bert", [], [])
     services.users.update_user(ADMIN, bert.id, disabled=True)
@@ -576,7 +576,7 @@ def test_a_new_user_is_an_api_user_by_default(
 def test_a_refused_new_user_keeps_what_was_typed(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
-    services.users.create_role(ADMIN, "readers", [])
+    services.roles.create_role(ADMIN, "readers", [])
     services.users.create_user(ADMIN, "taken", [], [])
     refused = post(
         ui,
@@ -639,7 +639,7 @@ def test_a_refused_token_keeps_its_name(
     assert "Days valid must be a whole number from 1 to 3650" in refused.text
     assert 'name="name" value="laptop"' in refused.text
     assert f'name="days" value="{days}"' in refused.text
-    assert services.users.list_tokens(ADMIN, user.id) == []
+    assert services.tokens.list_tokens(ADMIN, user.id) == []
 
 
 def test_a_refused_role_keeps_its_rows(ui: TestClient, services: Services) -> None:
@@ -648,11 +648,11 @@ def test_a_refused_role_keeps_its_rows(ui: TestClient, services: Services) -> No
     assert refused.status_code == 400
     assert 'name="id" value="helpers"' in refused.text
     assert 'name="g0_max" inputmode="numeric" value="x"' in refused.text
-    services.users.create_role(ADMIN, "readers", [])
+    services.roles.create_role(ADMIN, "readers", [])
     changed = post(ui, "/ui/roles/readers", {**fields, "g0_more": "no_such_right"})
     assert changed.status_code == 400
     assert 'value="no_such_right"' in changed.text
-    assert services.users.get_role(ADMIN, "readers").grants == []
+    assert services.roles.get_role(ADMIN, "readers").grants == []
 
 
 def test_a_page_looks_its_session_up_once(
@@ -805,7 +805,7 @@ def test_the_sender_template_wants_recipients(
     assert 'name="template" value="sender"' in refused.text
     made = post(ui, "/ui/roles", {**form, "g0_recipients": "*@example.org"})
     assert "Role sender created." in made.text
-    [grant] = services.users.get_role(ADMIN, "sender").grants
+    [grant] = services.roles.get_role(ADMIN, "sender").grants
     assert grant.recipients == ["*@example.org"] and grant.max_sends_per_day == 10
 
 

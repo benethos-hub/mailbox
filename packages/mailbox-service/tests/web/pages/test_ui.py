@@ -171,7 +171,7 @@ def test_an_admin_is_warned(ui: TestClient, account_id: str) -> None:
 def test_the_overview_starts_with_the_user(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
-    services.users.create_role(ADMIN, "readers", [])
+    services.roles.create_role(ADMIN, "readers", [])
     name, password = browser_user(
         services, Grant(accounts=[account_id], allow=["mail.read"]), roles=["readers"]
     )

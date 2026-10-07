@@ -55,9 +55,9 @@ def test_a_user_its_changes_and_its_tokens(
     with caplog.at_level(logging.INFO):
         anna = services.users.create_user(ADMIN, "Anna", [], [READER])
         services.users.update_user(ADMIN, anna.id, name="Anna B", disabled=False)
-        token, plain = services.users.create_token(ADMIN, anna.id, "laptop")
-        services.users.revoke_token(ADMIN, anna.id, token.id)
-        services.users.revoke_token(ADMIN, anna.id, token.id)
+        token, plain = services.tokens.create_token(ADMIN, anna.id, "laptop")
+        services.tokens.revoke_token(ADMIN, anna.id, token.id)
+        services.tokens.revoke_token(ADMIN, anna.id, token.id)
     assert lines(caplog) == [
         f"{WHO} created user Anna ({anna.id}): roles none, 1 grant, signs in to "
         "the API",
@@ -72,11 +72,11 @@ def test_a_user_its_changes_and_its_tokens(
 
 def test_roles(services: Services, caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.INFO):
-        services.users.create_role(ADMIN, "readers", [READER])
-        services.users.replace_role(
+        services.roles.create_role(ADMIN, "readers", [READER])
+        services.roles.replace_role(
             ADMIN, "readers", [READER, READER], service=["users.read"]
         )
-        services.users.delete_role(ADMIN, "readers")
+        services.roles.delete_role(ADMIN, "readers")
         bea = services.users.create_user(
             ADMIN, "Bea", [], [READER], service=["webhooks.manage"]
         )
@@ -93,11 +93,11 @@ def test_a_token_that_is_revoked_or_of_a_disabled_user(
     services: Services, caplog: pytest.LogCaptureFixture
 ) -> None:
     anna = services.users.create_user(ADMIN, "Anna", [], [READER])
-    token, plain = services.users.create_token(ADMIN, anna.id, "laptop")
+    token, plain = services.tokens.create_token(ADMIN, anna.id, "laptop")
     services.users.update_user(ADMIN, anna.id, disabled=True)
     with pytest.raises(UnauthorizedError):
         services.auth.authenticate(plain, source="10.0.0.7")
-    services.users.revoke_token(ADMIN, anna.id, token.id)
+    services.tokens.revoke_token(ADMIN, anna.id, token.id)
     with pytest.raises(UnauthorizedError):
         services.auth.authenticate(plain, source="10.0.0.7")
     with pytest.raises(UnauthorizedError):

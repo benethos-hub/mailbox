@@ -243,7 +243,7 @@ def test_rights_that_do_not_exist_are_logged_once(
     anna = services.users.create_user(
         ADMIN, "Anna", [], [Grant(accounts=["*"], allow=["mail.read"])]
     )
-    _, plain = services.users.create_token(ADMIN, anna.id, "laptop")
+    _, plain = services.tokens.create_token(ADMIN, anna.id, "laptop")
     stored = services.repositories.users.get(anna.id)
     old = Grant(accounts=["*"], allow=["mail.read", "mail.teleport"])
     services.repositories.users.save(
