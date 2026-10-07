@@ -7,6 +7,7 @@ import argparse
 from pathlib import Path
 
 from .. import __version__
+from ..common.clock import log_time, parse_iso
 from ..config import load_settings
 from .common import (
     Commands,
@@ -36,6 +37,9 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
 def run(args: argparse.Namespace) -> None:
     if args.target[0] == "verify":
         _verify(args.target, args.recovery_key, args.env_file)
+    elif args.recovery_key:
+        # A backup is written with the master key the service holds.
+        raise UsageError("--recovery-key goes with `backup verify FILE`")
     else:
         _write(args.target, args.env_file)
 
@@ -52,7 +56,7 @@ def _verify(target: list[str], recovery_key: bool, env_file: Path | None) -> Non
     scratch = database.with_name(database.name + ".verifying")
     manifest = verify_backup(Path(target[1]), master, scratch)
     say(
-        f"OK: backup of {manifest.created_at}, service "
+        f"OK: backup of {log_time(parse_iso(manifest.created_at))}, service "
         f"{manifest.service_version}, schema {manifest.schema_version}"
     )
 
@@ -80,6 +84,7 @@ def _write(target: list[str], env_file: Path | None) -> None:
             )
         )
     say(
-        f"Backup written: schema {manifest.schema_version}, {manifest.created_at}. "
+        f"Backup written: schema {manifest.schema_version}, "
+        f"{log_time(parse_iso(manifest.created_at))}. "
         "It opens only with this master key or the recovery key."
     )

@@ -116,8 +116,8 @@ def test_a_terminal_gets_short_lines_in_colour(
     # One column for the source, wide enough for every activity.
     signed = "activity.auth.signed_in".ljust(logs.SOURCE_WIDTH)
     main = "main".ljust(logs.SOURCE_WIDTH)
-    assert f"\033[32mINFO    \033[0m\033[36m{signed}\033[0m anna signed in" in err
-    assert f"\033[33mWARNING \033[0m\033[36m{main}\033[0m a warning" in err
+    assert f"\033[32mINFO    \033[0m \033[36m{signed}\033[0m anna signed in" in err
+    assert f"\033[33mWARNING \033[0m \033[36m{main}\033[0m a warning" in err
     assert re.search(
         r"\033\[2m\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d\033\[0m ", err
     )

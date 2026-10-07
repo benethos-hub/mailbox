@@ -242,6 +242,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `backup FILE --recovery-key` is refused: the option belongs to
+  `backup verify FILE`. Before, it was accepted and ignored, and the
+  backup written with the master key the service holds.
 - The days of the filter on the pages Audit and Sends start at midnight
   in the local time of the service's machine, the time the pages show.
   Before, they started at midnight UTC.

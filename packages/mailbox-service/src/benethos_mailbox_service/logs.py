@@ -75,7 +75,7 @@ class Console(Redacting):
         colour = _LEVEL_COLOURS.get(record.levelno, "")
         head = (
             f"{_DIM}{self.formatTime(record)}{_RESET} "
-            f"{colour}{record.levelname:<8}{_RESET}"
+            f"{colour}{record.levelname:<8}{_RESET} "
             f"{_SOURCE}{short_source(record.name):<{SOURCE_WIDTH}}{_RESET} "
         )
         text = _access(record) or record.getMessage()

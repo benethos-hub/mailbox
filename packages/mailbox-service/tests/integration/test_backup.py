@@ -4,6 +4,7 @@ the commands."""
 from __future__ import annotations
 
 import io
+import re
 import sqlite3
 from pathlib import Path
 
@@ -252,6 +253,11 @@ def test_backup_verify_restore_commands(
 
     monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
     assert main(["restore", str(target), "--recovery-key"]) == 0
+    # The time of the backup as every line writes a time (LOGGING.md 6.9).
+    assert re.search(
+        r"Restored the backup of \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d\.",
+        capsys.readouterr().err,
+    )
     assert FileKeyProvider(new_key_file).load() == decode_recovery(recovery)
     services = _services()
     assert services.vault.read(account_id, "password").get_secret_value() == "hunter2"
@@ -259,6 +265,11 @@ def test_backup_verify_restore_commands(
 
     monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
     assert main(["backup", "verify", str(target), "--recovery-key"]) == 0
+
+    # Writing a backup takes the master key the service holds: the option
+    # belongs to verify alone, and is refused rather than ignored.
+    assert main(["backup", str(target), "--recovery-key"]) == 1
+    assert "goes with `backup verify FILE`" in capsys.readouterr().err
 
 
 def test_a_restore_keeps_another_master_key_unless_told(
