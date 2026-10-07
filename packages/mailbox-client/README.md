@@ -18,9 +18,9 @@ allows. The MCP server of the project,
 is built on it.
 
 It knows the service through its REST API alone, and needs nothing but
-[httpx](https://www.python-httpx.org/). Its interface has no stability
-promise yet: it follows what the MCP server and the project's own checks
-need.
+[httpx](https://www.python-httpx.org/). The REST API follows the status
+above. This package's Python interface has no stability promise yet: it
+follows what the MCP server and the project's own checks need.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 

@@ -270,7 +270,6 @@ to the app, not to the secret.
 | What you see | Cause | What to do |
 |---|---|---|
 | No "Sign in with Microsoft" in the UI | `MAILBOX_SERVICE_PROVIDERS` leaves Microsoft out | "Without Microsoft accounts" |
-| Microsoft: the redirect URI does not match, with the project's app | the service is not at `localhost` | **Sign in with a code** |
 | "microsoft refuses a sign-in with a code for this service's app" (`AADSTS70002`) | an app of your own without *Allow public client flows* | step 2 |
 | "the code for microsoft has expired" | the code was not entered in time (about 15 minutes) | start again |
 | Microsoft: the redirect URI does not match (`AADSTS50011`) | the address differs from the one registered, e.g. `127.0.0.1` against `localhost`, another port, `http` against `https` | open the UI under the registered address, or register this one too (step 2), and check `MAILBOX_SERVICE_PUBLIC_URL` |

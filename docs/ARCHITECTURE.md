@@ -114,9 +114,10 @@ The three layers and what each may import:
 modules, that `common/` stays on the standard library and anyio, that FastAPI stays in
 `web/` (and `assembly/`), that providers are reached through the registry,
 that the domain picks no storage implementation, and that SQLite is
-reached through `data/storage/` alone. It also checks that the data
-layer logs nothing above `DEBUG` and the domain nothing but activities,
-and that the packages of the domain and of data are imported through
+reached through `data/storage/` alone. `tests/test_code_rules.py`
+checks that the data layer logs nothing above `DEBUG` and the domain
+nothing but activities. The architecture test also checks that the
+packages of the domain and of data are imported through
 their `__init__.py`, export what others import, have no cycle, and keep
 their lines. Nothing below reaches `assembly/` or `cli/`, the assembly
 knows no command, and the modules of both keep their lines: in
@@ -441,9 +442,18 @@ packages/mailbox-mcp/
                         #   (platformdirs, python-dotenv)
 ```
 
+The modules stand in lines, each importing only lines below:
+
+```
+ cli
+ server · transport
+ tools
+ client · render · pdf
+ models · errors · config
+```
+
 `tests/test_architecture.py` of the MCP package keeps the modules in
-the lines of REFACTORING.md 10.2, the tools behind their package, and
-one home per library.
+these lines, the tools behind their package, and one home per library.
 
 **A tool of the MCP server** is a function in `tools/<kind>.py` with
 its line in that module's `TOOLS`: its title, the rights it needs, and
@@ -501,7 +511,7 @@ technology says the seam is in the wrong place.
    inside, since they test the inside.
 4. **A package that offers modules as namespaces says so** in
    `__all__`: `activity` offers its areas, `data.mail` its formats.
-   The caller then writes `said.SignedIn(...)` or `compose.build(...)`.
+   The caller then writes `said.UiSignIn(...)` or `compose.build(...)`.
 5. **No cycle between packages.** What two packages both need goes to a
    package below both, or is handed in where the services are wired
    (`build_services`), as `AccountService` gets `on_delete`.
@@ -652,8 +662,9 @@ imapclient boundary), never by patching deep inside a library.
   `log.info` in the domain.
 - The data layer logs at `DEBUG` at most. What it notices goes up as a
   result or an error.
-- The web layer records one activity of its own, a refused request
-  body, since the domain never sees that request. It logs nothing else.
+- The web layer records two activities of its own, a refused request
+  body and a caller out of requests, since the domain never sees those
+  requests. It logs nothing else.
 - Never in a line: a secret, the words of a mail, a recipient, a search
   term, a body.
 
@@ -741,4 +752,5 @@ imapclient boundary), never by patching deep inside a library.
 ## 17. Questions answered
 
 **Decided 2026-09-28:** the architecture test counts no lines. Section
-15 is a rule for the review.
+15 is a rule for the review. Superseded by REFACTORING.md 12.3: the
+tests count lines, as section 15 says.

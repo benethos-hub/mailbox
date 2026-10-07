@@ -106,8 +106,9 @@ carried forward by migrations.
 
 - `service` on users and roles, in `POST`, `PATCH` and `PUT`: rights of
   the service, bound to no account. `accounts.connect`, `users.read`,
-  `users.manage`, `webhooks.manage` and `admin` belong there, or single
-  operations of them. `/v1/permissions` lists these groups as `service`.
+  `users.manage`, `webhooks.manage`, `audit` (below) and `admin` belong
+  there, or single operations of them. `/v1/permissions` lists these
+  groups as `service`.
 - `accounts.connect`: `discover_account` and `create_account`, which
   were part of `accounts.manage`, and the sign-in with a code.
 - `users.read`: `list_users`, `get_user`, `list_tokens`, `list_roles` and
@@ -245,10 +246,11 @@ carried forward by migrations.
   jinja2 3.1.6, dnspython 2.6.1. `benethos-mailbox-mcp`: starlette 1.3.1,
   anyio 4.14.2. An install from the lockfile, as the images do, had them
   already.
-- The project is named Mailbox, its packages `mailbox-service` and
-  `mailbox-mcp`. The OpenAPI document's title is `mailbox-service`, the
-  MCP server's `mailbox-mcp`. On PyPI and ghcr.io the names stay
-  `benethos-mailbox-service` and `benethos-mailbox-mcp`.
+- The project is named Mailbox, its packages `mailbox-service`,
+  `mailbox-client` and `mailbox-mcp`. The OpenAPI document's title is
+  `mailbox-service`, the MCP server's `mailbox-mcp`. On PyPI and
+  ghcr.io the names stay `benethos-mailbox-service`,
+  `benethos-mailbox-client` and `benethos-mailbox-mcp`.
 - A right of the service or `admin` in a grant's `allow` answers `400`,
   and a right on accounts in `service` as well. Stored rights move at the
   first start: what a grant named of the service goes to `service`, a

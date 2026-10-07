@@ -141,9 +141,10 @@ Detail pages: Account, User, Role, Webhook, Message, Draft.
 ### 4.3 Editor
 
 A page of one form that creates a record needing more than a line:
-Connect an account, New user, New role, Compose. It has **Create** (or
+Connect an account, New user, New role, New webhook, Compose. It has
+**Create** (or
 **Send**) as the primary button and **Cancel** back to the list. A record
-that needs one or two fields (a token, a folder, a webhook) is created
+that needs one or two fields (a token, a folder) is created
 from the card it belongs to, not from an editor page.
 
 ### 4.4 Reader

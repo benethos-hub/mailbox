@@ -97,12 +97,12 @@ The data layer the same way (REFACTORING.md section 8):
   skips the network hop, but it goes through the same domain, and so through
   the same checks.
 - **Rights are enforced in the domain.** The web layer only establishes who
-  is calling: a bearer token on the API, a session after password or passkey
-  login in the UI (7.5). What that user may do is decided once, in the
+  is calling: a bearer token on the API, a session after password login in
+  the UI (7.5). What that user may do is decided once, in the
   domain, for both front ends.
 - **The configuration UI** covers what a person has to do by hand:
   connecting accounts and entering app passwords, the OAuth round trip for
-  Gmail and Microsoft, users, roles and tokens, webhooks, the recovery
+  Microsoft (Gmail planned), users, roles and tokens, webhooks, the recovery
   key, the service log, and a status view of accounts and sync.
   Server-rendered pages, not in the OpenAPI document, under `/ui`. Forms
   carry CSRF protection, since a session cookie authenticates them.
@@ -433,8 +433,9 @@ an app password is the credential to ask for.
   UI and the API offer only those: discovery leaves out the others, and
   connecting one is refused. Accounts connected before keep working and
   may sign in again.
-- Change-notification subscriptions expire after a few days and are
-  renewed by the worker **(unverified: exact lifetime)**.
+- Planned, with push: change-notification subscriptions expire after a
+  few days and are renewed by the worker **(unverified: exact
+  lifetime)**. Today the worker asks delta queries.
 
 ### 5.5 Google: the verification question
 
@@ -520,7 +521,7 @@ an API token. POP3 is offered only where neither IMAP nor JMAP is.
 | **end of 2026-12** | Exchange Online: SMTP AUTH basic auth off by default | send through Graph |
 | **2027-04-01** | Exchange Online: EWS removed | — |
 | recurring, 7 days | Gmail `users.watch` expires | the worker renews it |
-| recurring, days | Graph subscriptions expire | the worker renews them |
+| recurring, days | Graph subscriptions expire (planned, with push) | the worker renews them |
 
 ### 5.8 Autodiscovery
 
@@ -918,7 +919,7 @@ again through CONDSTORE. A client treats a repeated entry as harmless.
 **Webhooks, decided 2026-09-26:** a webhook may point into the local
 network, e.g. to an automation server, since it is registered on purpose.
 How often and how long a failed post is repeated has defaults and is
-configurable. Webhooks get their pages in the UI with the rework of
+configurable. Webhooks got their pages in the UI with the rework of
 phase 4b.
 
 A webhook belongs to the user who creates it, and each user sees and
@@ -959,7 +960,7 @@ not followed.
 | `from`, `to`, `subject` | structured filters |
 | `after`, `before` | days, `YYYY-MM-DD`: `after` includes its day, `before` does not. The audits take a time with a zone instead |
 | `unread`, `starred`, `has_attachments` | booleans |
-| `native` | provider's own syntax, passed through (Gmail search, IMAP SEARCH), capability `native_search` |
+| `native` | provider's own syntax, passed through (Gmail search, IMAP SEARCH), not built yet |
 | `limit` | 1–200, default 50 |
 | `cursor` | opaque, from `next_cursor` of the previous page |
 
@@ -1042,7 +1043,7 @@ One envelope for every error the API raises itself:
 | 422 | FastAPI validation format | schema violation |
 | 429 | `rate_limited`, `send_limit_reached` | with `Retry-After` |
 | 501 | `not_supported` | capability missing |
-| 500 | `credential_unreadable`, `storage_error` | a stored credential cannot be decrypted, the service's own database failed |
+| 500 | `credential_unreadable`, `storage_error`, `internal_error` | a stored credential cannot be decrypted, the service's own database failed, an unexpected failure |
 | 502 | `provider_error`, `provider_auth_failed`, `provider_unavailable` | upstream failed. An auth failure sets the account to `needs_reauth`, an unreachable server to `unreachable` |
 | 503 | `setup_required` | no user exists yet: run `users create-admin` |
 
@@ -1260,7 +1261,7 @@ Terms, since "account" is taken:
 | **User** | someone or something that calls the API: a person, the MCP server, a script | `/v1/users` |
 | **Credential** | how a user authenticates: an API token for the API and the MCP server, a password for the UI | `/v1/users/{id}/tokens`, `/v1/users/{id}/password` |
 | **Grant** | a right of a user: which operations on which accounts | part of the user |
-| **Role** | a named, reusable set of grants | `/v1/roles` |
+| **Role** | a named, reusable set of grants and service rights | `/v1/roles` |
 
 ```
  User "Claude Desktop"
@@ -1497,7 +1498,8 @@ account, operation, recipients, outcome (`sent`, `denied` by a grant,
 `failed`), error code, refused recipients and the Message-ID. It keeps no
 reference to account or user, so it outlives both. A record is kept for
 `MAILBOX_SERVICE_AUDIT_DAYS` days, 90 by default, `0` keeps every
-record. Old ones are purged as a send comes in, once an hour at most.
+record. Old ones are purged at start and as a send comes in, once an
+hour at most.
 `GET /v1/accounts/{account_id}/sends` reads it, newest first, with the
 right `list_sends` (group `audit`). `GET /v1/sends` (`list_all_sends`)
 reads it across the accounts the caller may audit, deleted ones
@@ -1537,7 +1539,8 @@ included for a grant on every account. `user`, `outcome`, `recipient`
 
 - **Transport:** binds to `127.0.0.1` by default. Exposure beyond localhost
   only behind a TLS reverse proxy.
-- **Logging:** no message bodies. Addresses and subjects only at `DEBUG`.
+- **Logging:** never content, subjects or the addresses of people, at any
+  level (LOGGING.md 4).
 - **Sending is the dangerous verb:** separate right, idempotency key, and
   in the MCP server offered only to a user with the `send` group
   (section 8, 7.7).
@@ -1834,7 +1837,7 @@ server and the project's own checks need.
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
 | Storage | SQLite (stdlib `sqlite3`) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |
-| Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (Gmail, Graph) |
+| Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (JMAP, Graph) |
 | MCP | `mcp` 2.x |
 | Quality | pytest, pytest-asyncio, pytest-cov (≥ 80 %), ruff, mypy, GitHub Actions |
 | Container | non-root image, compose file bound to the loopback address |

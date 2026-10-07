@@ -16,7 +16,8 @@ containers/
     compose.yaml                 #   the service, Caddy for HTTPS (profile
                                  #   https)
     .env.example                 #   template of .env: the version, the
-                                 #   profiles, the port, the domain
+                                 #   profiles, the port, the domain, the
+                                 #   certificate
     service.env.example          #   template of service.env: further
                                  #   settings of the service
     Caddyfile                    #   HTTPS in front, for the profile https
@@ -53,10 +54,20 @@ or with compose:
 ## For development
 
 `dev/compose.yaml` builds both images from the repository. The first
-start takes the steps of
-[production/README.md](production/README.md#the-first-start), run in
-`dev/` after `docker compose build`. The master key lives in
-`dev/secrets/master_key`. The MCP server starts with
+start, in `dev/`:
+
+```sh
+docker compose build
+mkdir -p secrets && chmod 700 secrets
+docker run --rm benethos-mailbox-service:local keys generate > secrets/master_key
+chmod 400 secrets/master_key
+sudo chown 10001 secrets/master_key             # Linux: the container user reads it
+docker compose run --rm mailbox-service keys init
+docker compose run --rm mailbox-service users create-admin
+docker compose up -d
+```
+
+The master key lives in `dev/secrets/master_key`. The MCP server starts with
 `docker compose --profile mcp up -d`. Compose reads these variables from
 the environment or from an `.env` beside the file, not versioned:
 

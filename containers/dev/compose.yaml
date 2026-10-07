@@ -1,9 +1,8 @@
 # For development: the service, and the MCP server with the profile mcp,
 # built from this repository and bound to the loopback address of the host
 # (CONCEPT 8.1). To run the published images instead: ../production/.
-# The first start takes the steps of ../production/README.md, run in this
-# folder after `docker compose build`. The master key lives in
-# secrets/master_key here, not versioned.
+# The first start: ../README.md, "For development". The master key lives
+# in secrets/master_key here, not versioned.
 
 name: mailbox-dev
 

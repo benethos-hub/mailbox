@@ -149,8 +149,8 @@ A release publishes all three to PyPI under the same version, as
 `benethos-mailbox-service`, `benethos-mailbox-client` and
 `benethos-mailbox-mcp`, and the service and the MCP server as container
 images on ghcr.io. Each package has its own README. It explains how
-to install, start and configure it, with the container image and the
-compose file.
+to install, start and configure it, for the service and the MCP server
+with the container image and the compose file.
 
 ## Getting started
 
