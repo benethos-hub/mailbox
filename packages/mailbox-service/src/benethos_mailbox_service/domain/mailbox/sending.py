@@ -202,7 +202,7 @@ class SendControl:
         """The audit of every account the caller may audit, merged newest
         first. The audit outlives an account: a deleted one is still in it,
         for a caller whose grant names every account."""
-        audited = access.filter("list_sends", self._store.account_ids())
+        audited = access.filter("list_all_sends", self._store.account_ids())
         return self._page(audited, limit, cursor, matching)
 
     def list_sends(

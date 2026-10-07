@@ -298,6 +298,18 @@ def test_the_audit_of_every_account(
     assert [r["account_id"] for r in mine] == [account_id]
     sender_only = sender(services, account_id)
     assert app_client.get("/v1/sends", headers=sender_only).json()["items"] == []
+    # Each list goes by its own right, as the lists of messages and
+    # changes do: a grant naming the one operation opens the one list.
+    across = bearer_for(
+        services, Grant(accounts=[account_id], allow=["list_all_sends"])
+    )
+    found = app_client.get("/v1/sends", headers=across).json()["items"]
+    assert [r["account_id"] for r in found] == [account_id]
+    one = f"/v1/accounts/{account_id}/sends"
+    assert app_client.get(one, headers=across).status_code == 403
+    single = bearer_for(services, Grant(accounts=[account_id], allow=["list_sends"]))
+    assert app_client.get("/v1/sends", headers=single).json()["items"] == []
+    assert app_client.get(one, headers=single).status_code == 200
 
 
 def test_the_audit_filters(

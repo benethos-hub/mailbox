@@ -248,6 +248,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `GET /v1/sends` goes by its own right, `list_all_sends`, as the lists
+  of messages and changes across accounts do. A grant naming that one
+  operation got an empty list, one naming `list_sends` alone got every
+  account's audit. Grants with the group `audit` were not affected.
 - `backup FILE --recovery-key` is refused: the option belongs to
   `backup verify FILE`. Before, it was accepted and ignored, and the
   backup written with the master key the service holds.
