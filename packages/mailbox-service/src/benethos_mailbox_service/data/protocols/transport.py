@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 import ssl
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
@@ -21,6 +21,19 @@ Pick = Callable[[str, int], str]
 # What ends a command of a protocol of lines, or a string in one: CR, LF
 # and NUL. IMAP, POP3 and SMTP quote a value, if at all, but keep these.
 _LINE_END = re.compile(r"[\r\n\x00]")
+
+
+def text(value: bytes | str) -> str:
+    """What a server sent, as text: bytes decoded as UTF-8, anything that
+    is not replaced rather than refused."""
+    return (
+        value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value
+    )
+
+
+def names(values: Iterable[bytes | str]) -> frozenset[str]:
+    """Capabilities a server lists, upper case, to be compared as such."""
+    return frozenset(text(value).upper() for value in values)
 
 
 def one_line(*values: str, what: str) -> None:

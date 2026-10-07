@@ -82,7 +82,7 @@ def settings_from(
 ) -> dict[str, str | int | bool]:
     """The settings of a JMAP account from discovered servers, as
     ``JmapProvider`` reads them. Empty without a JMAP server."""
-    server = next((s for s in servers if s.protocol is ServerProtocol.JMAP), None)
+    server = rules.server_of(servers, ServerProtocol.JMAP)
     if server is None or credential is CredentialKind.OAUTH:
         return {}
     settings: dict[str, str | int | bool] = {

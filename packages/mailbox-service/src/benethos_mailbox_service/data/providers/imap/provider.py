@@ -58,7 +58,8 @@ from ...protocols import (
 from .. import rules
 from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
 from ..guard import Guard, Pace
-from ..sender import SmtpFactory, SmtpSender
+from ..rules import server_of
+from ..sender import SmtpFactory, SmtpSender, smtp_settings
 from . import mappers
 
 T = TypeVar("T")
@@ -85,24 +86,18 @@ def settings_from(
 ) -> dict[str, str | int | bool]:
     """The settings of an IMAP account from discovered servers, as
     ``ImapProvider`` reads them. Empty without an IMAP server."""
-    imap = next((s for s in servers if s.protocol is ServerProtocol.IMAP), None)
+    imap = server_of(servers, ServerProtocol.IMAP)
     if imap is None:
         return {}
-    settings: dict[str, str | int | bool] = {
+    username = imap.username or email
+    return {
         "host": imap.host,
         "port": imap.port,
         "security": str(imap.security),
-        "username": imap.username or email,
+        "username": username,
         "auth": "xoauth2" if credential is CredentialKind.OAUTH else "password",
+        **smtp_settings(servers, username),
     }
-    smtp = next((s for s in servers if s.protocol is ServerProtocol.SMTP), None)
-    if smtp is not None:
-        settings["smtp_host"] = smtp.host
-        settings["smtp_port"] = smtp.port
-        settings["smtp_security"] = str(smtp.security)
-        if smtp.username and smtp.username != settings["username"]:
-            settings["smtp_username"] = smtp.username
-    return settings
 
 
 def probe_session(server: Server) -> ImapSession:

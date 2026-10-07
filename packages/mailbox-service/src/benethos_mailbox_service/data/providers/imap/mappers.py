@@ -83,25 +83,15 @@ def _encode(prefix: str, *parts: object) -> str:
     return opaque.encode(prefix, parts)
 
 
-def _decode(prefix: str, value: str, what: str) -> list[Any]:
-    try:
-        parts = opaque.decode(prefix, value)
-    except ValueError:
-        raise missing(what, value) from None
-    if not isinstance(parts, list):
-        raise missing(what, value)
-    return parts
-
-
 def folder_id(name: str) -> str:
     return _encode("f_", name)
 
 
 def folder_name(value: str) -> str:
-    parts = _decode("f_", value, "folder")
-    if len(parts) != 1 or not isinstance(parts[0], str):
+    parts = opaque.fields("f_", value, str)
+    if parts is None:
         raise missing("folder", value)
-    return parts[0]
+    return str(parts[0])
 
 
 def message_id(folder: str, uidvalidity: int, uid: int) -> str:
@@ -118,16 +108,8 @@ def parse_message_id(value: str) -> tuple[str, int, int]:
 def _triple(prefix: str, value: str) -> tuple[str, int, int] | None:
     """A folder, UIDVALIDITY and UID behind ``prefix``, None for anything
     else: an id and a cursor of this adapter are both made of these."""
-    try:
-        parts = opaque.decode(prefix, value)
-    except ValueError:
-        return None
-    if (
-        not isinstance(parts, list)
-        or len(parts) != 3
-        or not isinstance(parts[0], str)
-        or not all(isinstance(p, int) for p in parts[1:])
-    ):
+    parts = opaque.fields(prefix, value, str, int, int)
+    if parts is None:
         return None
     return parts[0], parts[1], parts[2]
 

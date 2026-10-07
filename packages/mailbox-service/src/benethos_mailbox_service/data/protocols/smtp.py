@@ -22,7 +22,7 @@ from ...errors import (
     ProviderUnavailableError,
 )
 from ..mail import fields
-from .transport import Server, one_line, transport_errors
+from .transport import Server, one_line, text, transport_errors
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}
 # What no address in MAIL FROM or RCPT TO may hold: a blank, which ends
@@ -168,13 +168,13 @@ def _errors() -> Iterator[None]:
                 f"the mail server dropped the connection: {exc}"
             ) from None
         except (smtplib.SMTPDataError, smtplib.SMTPResponseException) as exc:
-            text = (
-                exc.smtp_error.decode(errors="replace")
+            said = (
+                text(exc.smtp_error)
                 if isinstance(exc.smtp_error, bytes)
                 else str(exc.smtp_error)
             )
             raise ProviderError(
-                f"the mail server answered {exc.smtp_code}: {text}"
+                f"the mail server answered {exc.smtp_code}: {said}"
             ) from None
         except smtplib.SMTPException as exc:
             raise ProviderError(f"the mail server failed: {exc}") from None

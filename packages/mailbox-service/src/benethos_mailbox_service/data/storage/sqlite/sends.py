@@ -82,22 +82,17 @@ class SqliteSendLogRepository:
             " ORDER BY created_at DESC, id DESC LIMIT ?",
             (*params, limit),
         )
-        return [_record(row) for row in rows]
+        return [_send(row) for row in rows]
 
     def account_ids(self) -> builtins.list[str]:
         rows = self._db.query("SELECT DISTINCT account_id FROM sends ORDER BY 1")
         return [row[0] for row in rows]
 
     def purge(self, before: datetime) -> int:
-        removed = self._db.execute(
-            "DELETE FROM sends WHERE created_at < ?", (iso(before),)
-        )
-        if removed:
-            self._db.shrink()
-        return removed
+        return self._db.purge("sends", "created_at", before)
 
 
-def _record(row: sqlite3.Row) -> SendRecord:
+def _send(row: sqlite3.Row) -> SendRecord:
     return SendRecord(
         id=row["id"],
         created_at=parse_iso(row["created_at"]),

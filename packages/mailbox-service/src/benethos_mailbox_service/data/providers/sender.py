@@ -10,12 +10,30 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from ..models import MailServer, ServerProtocol
 from ..protocols import SMTP_PORTS, Pick, Server, SmtpLogin, SmtpSession
 from . import rules
 from .base import ProviderSettings
 from .guard import Guard
 
 SmtpFactory = Callable[[Server], SmtpSession]
+
+
+def smtp_settings(servers: list[MailServer], username: str) -> dict[str, str | int]:
+    """The ``smtp_*`` settings of the SMTP server among the discovered
+    ``servers``, empty without one. Its user name only where it differs
+    from the account's ``username``."""
+    smtp = rules.server_of(servers, ServerProtocol.SMTP)
+    if smtp is None:
+        return {}
+    found: dict[str, str | int] = {
+        "smtp_host": smtp.host,
+        "smtp_port": smtp.port,
+        "smtp_security": str(smtp.security),
+    }
+    if smtp.username and smtp.username != username:
+        found["smtp_username"] = smtp.username
+    return found
 
 
 class SmtpSender:

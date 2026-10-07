@@ -52,7 +52,8 @@ from ...protocols import POP3_PORTS, Pick, Pop3Session, Server, SmtpSession
 from .. import rules
 from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
 from ..guard import Guard, Pace
-from ..sender import SmtpFactory, SmtpSender
+from ..rules import server_of
+from ..sender import SmtpFactory, SmtpSender, smtp_settings
 from . import mappers
 
 T = TypeVar("T")
@@ -70,23 +71,17 @@ def settings_from(
 ) -> dict[str, str | int | bool]:
     """The settings of a POP3 account from discovered servers, as
     ``Pop3Provider`` reads them. Empty without a POP3 server."""
-    pop3 = next((s for s in servers if s.protocol is ServerProtocol.POP3), None)
+    pop3 = server_of(servers, ServerProtocol.POP3)
     if pop3 is None or credential is CredentialKind.OAUTH:
         return {}
-    settings: dict[str, str | int | bool] = {
+    username = pop3.username or email
+    return {
         "host": pop3.host,
         "port": pop3.port,
         "security": str(pop3.security),
-        "username": pop3.username or email,
+        "username": username,
+        **smtp_settings(servers, username),
     }
-    smtp = next((s for s in servers if s.protocol is ServerProtocol.SMTP), None)
-    if smtp is not None:
-        settings["smtp_host"] = smtp.host
-        settings["smtp_port"] = smtp.port
-        settings["smtp_security"] = str(smtp.security)
-        if smtp.username and smtp.username != settings["username"]:
-            settings["smtp_username"] = smtp.username
-    return settings
 
 
 def probe_session(server: Server) -> Pop3Session:

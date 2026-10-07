@@ -220,19 +220,7 @@ def cursor(scope_of: str, last_id: str, position: int) -> str:
 
 
 def parse_cursor(value: str, scope_of: str) -> tuple[str, int]:
-    try:
-        parts = opaque.decode("c_", value)
-    except ValueError:
-        raise rules.invalid_cursor() from None
-    if (
-        not isinstance(parts, list)
-        or len(parts) != 3
-        or parts[0] != scope_of
-        or not isinstance(parts[1], str)
-        or not is_id(parts[1])
-        or not isinstance(parts[2], int)
-        or isinstance(parts[2], bool)
-        or parts[2] < 0
-    ):
+    parts = opaque.fields("c_", value, str, str, int)
+    if parts is None or parts[0] != scope_of or not is_id(parts[1]):
         raise rules.invalid_cursor()
     return parts[1], parts[2]
