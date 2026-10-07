@@ -246,9 +246,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   in the local time of the service's machine, the time the pages show.
   Before, they started at midnight UTC.
 - A sign-in with a code survives a provider that is not reached for a
-  moment: the poll answers `503 provider_unavailable`, the code stands,
+  moment: the poll answers `502 provider_unavailable`, the code stands,
   and the next poll waits longer. A token endpoint that answers `5xx` or
-  `temporarily_unavailable` is `503 provider_unavailable` everywhere,
+  `temporarily_unavailable` is `502 provider_unavailable` everywhere,
   not `502 provider_error`.
 - The MCP server makes its REST client in its lifespan, one per server.
   It reads the service's address and token once, when it starts.

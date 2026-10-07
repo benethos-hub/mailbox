@@ -68,7 +68,7 @@ The sidebar keeps its three groups, renamed by what a person looks for:
 | Group | Pages | Who sees it |
 |---|---|---|
 | (top) | Overview, Mail | everyone |
-| Mailboxes | Accounts, Sends, Webhooks | with a right on at least one account, Webhooks with `webhooks.manage` |
+| Mailboxes | Accounts, Sends, Webhooks | Accounts with a right on at least one account or with `accounts.connect`, Sends with `audit` on at least one account, Webhooks with `webhooks.manage` |
 | Service | Users, Roles, Status, Audit, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Audit with `audit` in `service`, Log and Recovery key for the admin |
 
 The foot of the sidebar names the signed-in user and links to their own
@@ -116,7 +116,8 @@ opens its detail page by its name. A row carries no delete button and no
 form. The one exception is the tick box for a batch on mail lists, whose
 actions sit in one toolbar above the table.
 
-Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Changes, Audit, Log.
+Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Audit,
+Log, and Changes if it is built (6.6).
 
 ### 4.2 Detail
 
@@ -176,7 +177,7 @@ The options per list, with the same names where the field is the same:
 | Users | name | role, disabled, API only |
 | Accounts | address | provider, status |
 | Webhooks | url | account, failing |
-| Changes | – | account, event, from day |
+| Changes, if built | – | account, event, from day |
 | Log | text in the message or source | the least level |
 | Audit | record id | who, activity (an area or a name), from day, before day |
 
@@ -359,7 +360,7 @@ receiver reports nothing. Built last, if at all.
 
   The tokens of `app.css`. Every text colour keeps 4.5:1 (WCAG AA for
   small text) against every background it is used on, in both modes.
-  `test_ui.py` computes it from the stylesheet.
+  `test_ui_frame.py` computes it from the stylesheet.
 
   | Token | Light | Dark |
   |---|---|---|
@@ -380,7 +381,8 @@ receiver reports nothing. Built last, if at all.
   Collapses to a top bar under 860 px as today.
 - **Components**: everything a page uses is a macro in
   `components/ui.html`, the grant editor in `components/grants.html`, the
-  connection fields in `components/connection.html`. A page has no
+  connection fields in `components/connection.html`, the rows of the
+  audit in `components/audit.html`. A page has no
   markup of its own for a button, a tag, a field, a card header, a pager
   or a filter bar. The rework adds `filter_bar`, `chips`, `facts`,
   `related` and `breadcrumb` and makes the pages use them.
