@@ -8,6 +8,7 @@ places, and those examples must follow it.
 
 from __future__ import annotations
 
+import importlib
 import json
 import re
 import tomllib
@@ -31,6 +32,20 @@ def _project(package: Path) -> dict[str, object]:
 
 def _version() -> str:
     return str(_project(PACKAGES[0])["version"])
+
+
+def _module(package: Path) -> str:
+    return str(_project(package)["name"]).replace("-", "_")
+
+
+def test_every_package_of_the_workspace_is_checked() -> None:
+    """A package added under packages/ is in every test here."""
+    found = {
+        path
+        for path in (ROOT / "packages").iterdir()
+        if (path / "pyproject.toml").is_file()
+    }
+    assert found == set(PACKAGES)
 
 
 @pytest.mark.parametrize("package", PACKAGES, ids=lambda p: p.name)
@@ -61,13 +76,69 @@ def test_the_installed_version_is_the_projects(package: Path) -> None:
 
 
 @pytest.mark.parametrize("package", PACKAGES, ids=lambda p: p.name)
+def test_the_module_reports_the_projects_version(package: Path) -> None:
+    """``__version__``, which ``--version`` and a caller of the client
+    read."""
+    module = importlib.import_module(_module(package))
+    assert module.__version__ == _project(package)["version"]
+
+
+@pytest.mark.parametrize("package", PACKAGES, ids=lambda p: p.name)
 def test_the_type_marker_ships_empty(package: Path) -> None:
     """Without ``py.typed`` a type checker treats the installed package as
     untyped (PEP 561). The file is a marker and has no content."""
-    module = str(_project(package)["name"]).replace("-", "_")
-    marker = package / "src" / module / "py.typed"
+    marker = package / "src" / _module(package) / "py.typed"
     assert marker.is_file(), f"{marker} is missing"
     assert marker.read_bytes() == b""
+
+
+# Classifiers every package carries alike. The others, such as a
+# framework or a topic, are the package's own.
+SHARED_CLASSIFIERS = (
+    "Development Status",
+    "Intended Audience",
+    "Operating System",
+    "Programming Language",
+    "Typing",
+)
+
+
+def test_the_packages_describe_themselves_alike() -> None:
+    """The same Python versions, author, status and links, so that PyPI
+    shows the three as one release. Each points to its own README."""
+    projects = [_project(package) for package in PACKAGES]
+    for key in ("requires-python", "authors"):
+        values = {json.dumps(project[key]) for project in projects}
+        assert len(values) == 1, f"{key} differs: {sorted(values)}"
+    shared = set()
+    for project in projects:
+        classifiers = project["classifiers"]
+        assert isinstance(classifiers, list)
+        shared.add(tuple(c for c in classifiers if c.startswith(SHARED_CLASSIFIERS)))
+    assert len(shared) == 1, f"the classifiers differ: {sorted(shared)}"
+    links = set()
+    for package, project in zip(PACKAGES, projects, strict=True):
+        urls = project["urls"]
+        assert isinstance(urls, dict)
+        home = f"/tree/main/packages/{package.name}#readme"
+        assert str(urls.pop("Homepage")).endswith(home)
+        links.add(json.dumps(urls, sort_keys=True))
+        assert (package / str(project["readme"])).is_file()
+    assert len(links) == 1, f"the links differ: {sorted(links)}"
+
+
+def test_every_package_is_published() -> None:
+    """publish.yml uploads each package to PyPI: its name, its module for
+    the check of the wheel, and an environment of its own, since PyPI
+    takes a pending publisher for one project only."""
+    text = (ROOT / ".github" / "workflows" / "publish.yml").read_text("utf-8")
+    jobs = re.findall(
+        r"- package: (\S+)\n\s+module: (\S+)\n\s+environment: (\S+)", text
+    )
+    published = {(name, module) for name, module, _ in jobs}
+    assert published == {(str(_project(p)["name"]), _module(p)) for p in PACKAGES}
+    environments = [environment for _, _, environment in jobs]
+    assert len(set(environments)) == len(environments), environments
 
 
 # Every place the documentation names the current version, as a file and a
