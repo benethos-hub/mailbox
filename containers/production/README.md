@@ -217,7 +217,8 @@ three stops Caddy with `File to import not found: tls-<value>`.
 
 For `files`, Caddy runs as root with no capability but
 `NET_BIND_SERVICE`. It reads the key only if root owns it, and
-`secrets/tls` only if the folder is open to it. A run of `setup.sh` sees to both, or by hand after copying the files:
+`secrets/tls` only if the folder is open to it. A run of `setup.sh`
+after the files are copied in sees to both, or by hand:
 
 ```sh
 chmod 755 secrets/tls && chmod 600 secrets/tls/server.key

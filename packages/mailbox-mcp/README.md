@@ -148,8 +148,8 @@ token, so keep it readable by its owner alone. Template:
 [config/benethos-mailbox-mcp/.env.example](https://github.com/benethos-hub/mailbox/blob/main/config/benethos-mailbox-mcp/.env.example).
 
 `MAILBOX_SERVICE_URL` takes `https` anywhere and `http` to this machine
-only (`localhost`, `127.0.0.1`, `::1`), since the token goes with every
-request. For `http` to another host, e.g. a container beside it, set
+only (`localhost` or a loopback address such as `127.0.0.1` or `::1`),
+since the token goes with every request. For `http` to another host, e.g. a container beside it, set
 `MAILBOX_SERVICE_ALLOW_HTTP=1`. Without it the server does not start.
 
 ## Over HTTP
@@ -180,7 +180,7 @@ claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
   and `[::1]`. With `--allowed-hosts` it admits exactly those, and
   `--allowed-origins` alone admits the hosts of those origins. A bind such
   as `0.0.0.0` without a list checks nothing, so set the list there. A
-  refused host gets `421`.
+  refused host gets `421`, a refused origin `403`.
 - Beyond your own machine, put a TLS reverse proxy in front.
 
 ## Log and timeouts
@@ -204,8 +204,9 @@ not answer in time and a narrower request may help.
 ## Container
 
 The image `ghcr.io/benethos-hub/benethos-mailbox-mcp` serves over
-streamable HTTP on port 8000, as an unprivileged user on a read-only root
-file system. A client that starts the server over stdio needs no image.
+streamable HTTP on port 8000, as an unprivileged user, and the command
+below runs it on a read-only root file system. A client that starts
+the server over stdio needs no image.
 Tags: the version (`0.2.0`), the minor version (`0.2`) and `latest`.
 
 ### With docker run

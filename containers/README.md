@@ -82,8 +82,9 @@ version as the PyPI packages:
 | release `v1.2.3` | `1.2.3`, `1.2`, `latest` |
 | started by hand (Actions, Publish, Run workflow) | `edge` |
 
-- Only the one package goes into each image, installed from `uv.lock`
-  without the development tools.
+- The service image holds the service package, the MCP image the MCP
+  server and the client, each installed from `uv.lock` without the
+  development tools.
 - They run as user `mailbox` (uid 10001). The compose files of `dev/`
   and `production/` add a read-only root file system, no capabilities
   and `no-new-privileges`, to Caddy as well, which keeps only
@@ -92,8 +93,10 @@ version as the PyPI packages:
 - Settings come from the environment only.
 - Both have a health check: the service on `GET /health`, the MCP server
   on its port.
-- The compose files cap the log Docker keeps of each container at 5
-  files of 10 MB, the oldest dropped first (`x-logging`). To keep more,
+- The compose files of `dev/` and `production/` cap the log Docker
+  keeps of each container at 5 files of 10 MB, the oldest dropped first
+  (`x-logging`, and in `mcp.yaml` on the service itself). The test mail
+  server keeps Docker's default. To keep more,
   raise `max-size` or `max-file`. To keep the log elsewhere, replace the
   driver, for example with `journald`, and read it with `journalctl
   CONTAINER_NAME=<name>`.
@@ -118,4 +121,5 @@ for arm64 as well. It checks that the
 compose files in `dev/` and `production/` keep every port on the loopback
 address, all but Caddy's 80 and 443, production with the instances of
 its example override file. It also starts the
-service until its health check reports healthy.
+service until its health check reports healthy, and the MCP server's
+image once, for its version.
