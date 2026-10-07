@@ -322,7 +322,7 @@ class Outgoing:
         raw = await self._calls.on_message(
             account_id, draft_id, lambda p, native: drafts(p).get_draft(native)
         )
-        if checks.same(convert.stored_draft(raw), draft, keep_attachments):
+        if checks.unchanged(convert.stored_draft(raw), draft, keep_attachments):
             # Stored as it is: the provider is left alone.
             stored = await self._calls.message(account_id, draft_id)
             return await self._calls.published_one(account_id, stored)

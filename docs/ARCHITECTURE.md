@@ -47,6 +47,11 @@ The three layers and what each may import:
   the standard library, with no I/O and no state beyond what a caller
   holds. `redact` is the one module with state of its own, and its
   docstring says why. What one layer needs stays in that layer.
+- **A helper exists once.** No module outside `common/` defines a
+  function of a name `common/` holds, with or without a leading
+  underscore. The architecture test also names the copies a shared
+  helper replaced, with the one module that holds it now, so none comes
+  back.
 - **No HTTP in the domain.** Nothing below `web/` raises an HTTP exception or
   knows a status code. The domain raises `errors`, and `web/errors.py` maps
   each class to a status.

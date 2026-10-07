@@ -99,12 +99,8 @@ class Cursor:
     before_uid: int
 
 
-def _encode(prefix: str, *parts: object) -> str:
-    return opaque.encode(prefix, parts)
-
-
 def folder_id(name: str) -> str:
-    return _encode("f_", name)
+    return opaque.encode("f_", [name])
 
 
 def folder_name(value: str) -> str:
@@ -115,7 +111,7 @@ def folder_name(value: str) -> str:
 
 
 def message_id(folder: str, uidvalidity: int, uid: int) -> str:
-    return _encode("m_", folder, uidvalidity, uid)
+    return opaque.encode("m_", [folder, uidvalidity, uid])
 
 
 def parse_message_id(value: str) -> Place:
@@ -126,7 +122,7 @@ def parse_message_id(value: str) -> Place:
 
 
 def cursor(folder: str, uidvalidity: int, before_uid: int) -> str:
-    return _encode("c_", folder, uidvalidity, before_uid)
+    return opaque.encode("c_", [folder, uidvalidity, before_uid])
 
 
 def parse_cursor(value: str) -> Cursor:

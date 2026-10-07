@@ -50,7 +50,7 @@ class ServiceLog:
             self._activity.record(said.LogRead(by=Actor.of(access)))
         least = LEVELS.get(level or "", 0)
         wanted = text.casefold() if text else None
-        before = _before(cursor)
+        before = _older_than(cursor)
         found = [
             entry
             for entry in self._book.newest_first()
@@ -69,7 +69,7 @@ class ServiceLog:
         )
 
 
-def _before(cursor: str | None) -> int:
+def _older_than(cursor: str | None) -> int:
     if cursor is None:
         return 2**63
     return paging.decode_cursor(CURSOR, cursor, int)

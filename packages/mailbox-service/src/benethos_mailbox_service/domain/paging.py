@@ -88,10 +88,10 @@ def decode_before(prefix: str, value: str | None) -> Before | None:
     one, the first page."""
     if value is None:
         return None
-    return decode_cursor(prefix, value, _before)
+    return decode_cursor(prefix, value, _before_of)
 
 
-def _before(carried: Any) -> Before:
+def _before_of(carried: Any) -> Before:
     at, record_id = carried
     return Before(parse_iso(str(at)), str(record_id))
 

@@ -149,7 +149,7 @@ def changes(
     return body
 
 
-def _day(value: date) -> str:
+def _graph_day(value: date) -> str:
     return datetime.combine(value, time.min).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -219,9 +219,9 @@ def _filtered(search: MessageFilter) -> dict[str, str]:
     """``$filter`` and ``$orderby``, newest first."""
     filters = ["receivedDateTime ge 1900-01-01T00:00:00Z"]
     if search.after:
-        filters.append(f"receivedDateTime ge {_day(search.after)}")
+        filters.append(f"receivedDateTime ge {_graph_day(search.after)}")
     if search.before:
-        filters.append(f"receivedDateTime lt {_day(search.before)}")
+        filters.append(f"receivedDateTime lt {_graph_day(search.before)}")
     if search.unread is not None:
         filters.append(f"isRead eq {'false' if search.unread else 'true'}")
     if search.starred is not None:
