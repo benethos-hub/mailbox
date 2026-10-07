@@ -19,7 +19,7 @@ from mcp.types import ToolAnnotations
 from . import __version__, render
 from .client import Connect, MailboxClient
 from .errors import MailboxError, ToolError, for_the_model, reason
-from .tools import TOOLS, Tool, client, serving
+from .tools import TOOLS, Tool, calling, client
 
 logger = logging.getLogger(__name__)
 
@@ -36,11 +36,16 @@ def build_server(
     """A server with the tools ``operations`` allow. While it runs, its
     tools call a client of its own that ``connect`` makes."""
     allowed = set(operations)
+    held = _Held()
 
     @asynccontextmanager
     async def lifespan(_: MCPServer) -> AsyncIterator[None]:
-        async with serving(connect):
-            yield
+        async with connect() as made:
+            held.client = made
+            try:
+                yield
+            finally:
+                held.client = None
 
     server = MCPServer(
         name="benethos-mailbox-mcp",
@@ -51,7 +56,7 @@ def build_server(
     )
     for tool in _chosen(allowed):
         server.add_tool(
-            _logged(tool.fn),
+            _logged(tool.fn, held),
             title=tool.title,
             annotations=ToolAnnotations(
                 title=tool.title,
@@ -69,16 +74,24 @@ def _chosen(allowed: set[str]) -> list[Tool]:
     return [tool for tool in TOOLS if not tool.needs or tool.needs & allowed]
 
 
-def _logged(fn: Callable[..., Any]) -> Callable[..., Any]:
-    """The tool, with a warning in the log when it fails. The log names
-    the tool and the error's code, never its arguments: the message of an
-    error may repeat an address or a search term the model sent. An error
-    of the REST client reaches the model as a ToolError with its message."""
+class _Held:
+    """The REST client of one server while it runs."""
+
+    client: MailboxClient | None = None
+
+
+def _logged(fn: Callable[..., Any], held: _Held) -> Callable[..., Any]:
+    """The tool, calling the client its server ``held``, with a warning in
+    the log when it fails. The log names the tool and the error's code,
+    never its arguments: the message of an error may repeat an address or
+    a search term the model sent. An error of the REST client reaches the
+    model as a ToolError with its message."""
 
     @functools.wraps(fn)
     async def run(*args: Any, **kwargs: Any) -> Any:
         try:
-            return await fn(*args, **kwargs)
+            with calling(held.client):
+                return await fn(*args, **kwargs)
         except MailboxError as exc:
             logger.warning("tool %s failed: %s", fn.__name__, reason(exc))
             raise for_the_model(exc) from None

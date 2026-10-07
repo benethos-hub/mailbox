@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextvars
 import json
 import logging
 import re
@@ -169,22 +171,38 @@ def test_a_tool_outside_a_server_has_no_client() -> None:
 
 async def test_each_server_has_a_client_of_its_own() -> None:
     """Two servers in one process, such as in tests or behind a reload,
-    share no client. Each closes its own when it stops."""
-    first, second = (
-        server.build_server(READ, _client),
-        server.build_server(READ, _client),
-    )
+    share no client. The MCP library runs a tool in the context of the
+    transport that read the call, not of the lifespan: here a context of
+    its own, empty. Each server closes its client when it stops."""
+    asked: list[str] = []
+    made: list[MailboxClient] = []
+
+    def connect_to(host: str) -> Callable[[], MailboxClient]:
+        def answer(request: httpx.Request) -> httpx.Response:
+            asked.append(request.url.host)
+            return httpx.Response(200, json=ME)
+
+        def connect() -> MailboxClient:
+            made.append(
+                MailboxClient(
+                    f"https://{host}", "tok", transport=httpx.MockTransport(answer)
+                )
+            )
+            return made[-1]
+
+        return connect
+
+    first = server.build_server(READ, connect_to("one.test"))
+    second = server.build_server(READ, connect_to("two.test"))
     assert first.settings.lifespan is not None
     assert second.settings.lifespan is not None
-    async with first.settings.lifespan(first):
-        outer = catalogue.client()
-        async with second.settings.lifespan(second):
-            inner = catalogue.client()
-            assert inner is not outer
-        assert catalogue.client() is outer
-    with pytest.raises(RuntimeError):
-        catalogue.client()
-    assert outer._http.is_closed and inner._http.is_closed
+    loop = asyncio.get_running_loop()
+    async with first.settings.lifespan(first), second.settings.lifespan(second):
+        for built in (first, second, first):
+            call = built.call_tool("list_accounts", {})
+            await loop.create_task(call, context=contextvars.Context())
+    assert asked == ["one.test", "two.test", "one.test"]
+    assert all(client._http.is_closed for client in made)
 
 
 def test_use_client_hands_back_the_one_before(make_client: Callable) -> None:
@@ -373,7 +391,7 @@ async def test_a_failed_tool_is_a_warning_without_its_arguments(
     async def send_message(account_id: str, to: list[str]) -> str:
         raise error
 
-    logged = server._logged(send_message)
+    logged = server._logged(send_message, server._Held())
     with pytest.raises(ToolError) as caught:
         await logged("acc_1", to=["a@x.org"])
     assert str(caught.value) == str(error)
