@@ -245,11 +245,17 @@ def build_services(
             if settings.sync_interval
             else None
         )
+
+        def deleted(account_id: str) -> None:
+            sync.forget_account(account_id)
+            if worker is not None:
+                worker.forget(account_id)
+
         accounts = AccountService(
             repos.accounts,
             vault,
             adapters,
-            on_delete=sync.forget_account,
+            on_delete=deleted,
             on_connect=users.connected,
             on_ready=worker.take_up if worker is not None else None,
             check_host=fetcher.checked_address,

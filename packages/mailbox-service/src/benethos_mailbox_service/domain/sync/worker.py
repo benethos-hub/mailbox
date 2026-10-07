@@ -131,6 +131,12 @@ class SyncWorker:
         if self._taken is not None:
             self._taken.send_nowait(account_id)
 
+    def forget(self, account_id: str) -> None:
+        """An account is deleted: what the worker noted of it goes. Its
+        watcher ends by itself."""
+        self._no_push.discard(account_id)
+        self._postponed.discard(account_id)
+
     async def _taking_up(
         self, waiting: MemoryObjectReceiveStream[str], watchers: TaskGroup
     ) -> None:

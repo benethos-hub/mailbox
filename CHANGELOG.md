@@ -213,6 +213,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The sync worker forgets a deleted account. It kept a note of each one
+  for as long as the service ran.
 - `openapi` and `keys generate` take `--env-file`, before or after the
   command, like every other command. They stopped with "unrecognized
   arguments".
