@@ -10,12 +10,14 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "benethos-mailbox-client",
     "benethos-mailbox-mcp",
     "benethos-mailbox-service",
 ]
 
 [manifest.dependency-groups]
 dev = [
+    { name = "benethos-mailbox-client", editable = "packages/mailbox-client" },
     { name = "benethos-mailbox-mcp", editable = "packages/mailbox-mcp" },
     { name = "benethos-mailbox-service", editable = "packages/mailbox-service" },
     { name = "mcp", extras = ["cli"], specifier = ">=2.3.0,<3" },
@@ -141,12 +143,23 @@ wheels = [
 ]
 
 [[package]]
+name = "benethos-mailbox-client"
+version = "0.2.0"
+source = { editable = "packages/mailbox-client" }
+dependencies = [
+    { name = "httpx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "httpx", specifier = ">=0.28" }]
+
+[[package]]
 name = "benethos-mailbox-mcp"
 version = "0.2.0"
 source = { editable = "packages/mailbox-mcp" }
 dependencies = [
     { name = "anyio" },
-    { name = "httpx" },
+    { name = "benethos-mailbox-client" },
     { name = "mcp" },
     { name = "platformdirs" },
     { name = "pydantic" },
@@ -159,7 +172,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "anyio", specifier = ">=4.14.2" },
-    { name = "httpx", specifier = ">=0.28" },
+    { name = "benethos-mailbox-client", editable = "packages/mailbox-client" },
     { name = "mcp", specifier = ">=2.0.0,<3" },
     { name = "platformdirs", specifier = ">=4.3" },
     { name = "pydantic", specifier = ">=2.12" },

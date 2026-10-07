@@ -1,8 +1,8 @@
-"""What the two distributions ship beside their code.
+"""What the three distributions ship beside their code.
 
 Each package carries a copy of the repository's LICENSE, since a wheel can
-only include files from its own folder, and both are released together
-under one version. The documentation quotes that version in several
+only include files from its own folder, and all three are released
+together under one version. The documentation quotes that version in several
 places, and those examples must follow it.
 """
 
@@ -17,7 +17,11 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
-PACKAGES = [ROOT / "packages" / "mailbox-service", ROOT / "packages" / "mailbox-mcp"]
+PACKAGES = [
+    ROOT / "packages" / "mailbox-service",
+    ROOT / "packages" / "mailbox-client",
+    ROOT / "packages" / "mailbox-mcp",
+]
 
 
 def _project(package: Path) -> dict[str, object]:
@@ -35,9 +39,17 @@ def test_the_license_is_the_repositorys(package: Path) -> None:
     assert _project(package)["license-files"] == ["LICENSE"]
 
 
-def test_both_packages_share_one_version() -> None:
+def test_the_packages_share_one_version() -> None:
     versions = {_project(package)["version"] for package in PACKAGES}
     assert len(versions) == 1, versions
+
+
+def test_the_mcp_server_needs_the_client_of_its_own_version() -> None:
+    """They are released together. The MCP server pins the client to the
+    version beside it, so an install never mixes two releases."""
+    needs = _project(PACKAGES[2])["dependencies"]
+    assert isinstance(needs, list)
+    assert f"benethos-mailbox-client=={_version()}" in needs
 
 
 @pytest.mark.parametrize("package", PACKAGES, ids=lambda p: p.name)
@@ -83,6 +95,7 @@ VERSION_EXAMPLES = [
     ("packages/mailbox-service/README.md", "status"),
     ("packages/mailbox-service/README.md", "tag"),
     ("packages/mailbox-service/README.md", "image"),
+    ("packages/mailbox-client/README.md", "status"),
     ("packages/mailbox-mcp/README.md", "status"),
     ("packages/mailbox-mcp/README.md", "tag"),
     ("packages/mailbox-mcp/README.md", "image"),
@@ -173,7 +186,7 @@ def test_the_openapi_document_has_the_version() -> None:
     assert document["info"]["version"] == _version()
 
 
-def test_the_lockfile_has_the_version_of_both_packages() -> None:
+def test_the_lockfile_has_the_version_of_every_package() -> None:
     lock = tomllib.loads((ROOT / "uv.lock").read_text("utf-8"))
     names = {str(_project(package)["name"]) for package in PACKAGES}
     locked = {p["name"]: p["version"] for p in lock["package"] if p["name"] in names}
@@ -192,7 +205,7 @@ def test_the_changelog_names_the_version_as_its_newest_release() -> None:
 
 
 def test_the_status_follows_the_classifier() -> None:
-    """``Development Status :: 3 - Alpha`` in both packages, and "alpha"
+    """``Development Status :: 3 - Alpha`` in every package, and "alpha"
     in every status line of the documentation."""
     statuses = set()
     for package in PACKAGES:

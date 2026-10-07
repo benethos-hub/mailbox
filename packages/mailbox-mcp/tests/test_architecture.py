@@ -32,7 +32,10 @@ TOOL_LINES = (
 # Where each library may be imported: a module, or a package with all its
 # modules.
 LIBRARY_HOMES = {
-    "httpx": {"client"},
+    # The REST client, and its records and errors. The server speaks no
+    # HTTP to the service itself, so httpx has no home.
+    "benethos_mailbox_client": {"client", "models", "errors"},
+    "httpx": set(),
     "pypdfium2": {"pdf"},
     "starlette": {"transport"},
     "uvicorn": {"transport"},

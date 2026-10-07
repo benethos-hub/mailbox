@@ -11,7 +11,7 @@ from typing import Any
 
 from mcp.types import CallToolResult, ImageContent, TextContent
 
-from ..client import MailboxApiClient
+from ..client import MailboxClient
 
 # What a tool answers when it hands over more than text.
 ToolResult = CallToolResult
@@ -19,10 +19,10 @@ ToolResult = CallToolResult
 MAX_LIMIT = 50
 
 
-_client: MailboxApiClient | None = None
+_client: MailboxClient | None = None
 
 
-def use_client(client: MailboxApiClient | None) -> MailboxApiClient | None:
+def use_client(client: MailboxClient | None) -> MailboxClient | None:
     """The client the tools call from now on: one made for a test, or
     ``None`` so the next call makes one from the environment. Returns the
     one before, for its owner to close."""
@@ -31,11 +31,11 @@ def use_client(client: MailboxApiClient | None) -> MailboxApiClient | None:
     return before
 
 
-def client() -> MailboxApiClient:
+def client() -> MailboxClient:
     """The shared REST client, created on first use."""
     global _client
     if _client is None:
-        _client = MailboxApiClient()
+        _client = MailboxClient()
     return _client
 
 

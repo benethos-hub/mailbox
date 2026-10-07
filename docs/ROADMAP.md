@@ -315,6 +315,9 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   SMTP commands and kept out of the log, the address, hosts and display
   name of an account checked, the worker's notes of a deleted account
   dropped, and every broad `except` checked by a test
+- **The Python client as a package of its own (8.2)**, decided
+  2026-10-07, done: `mailbox-client`, each endpoint described once, an
+  async and a sync client over it. The MCP server is built on it
 
 ## Keeping this file current
 

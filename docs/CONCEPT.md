@@ -1620,16 +1620,16 @@ account and re-issuing every token.
 ## 8. MCP server
 
 Its own package, `mailbox-mcp` (`benethos-mailbox-mcp` on PyPI), in the same uv workspace
-as the service (**decided 2026-09-24**). It depends on `mcp` and `httpx`,
-`pypdfium2` for PDF pages, `platformdirs` and `python-dotenv` for its
+as the service (**decided 2026-09-24**). It depends on `mcp` and the
+Python client `mailbox-client` (8.2), `pypdfium2` for PDF pages, `platformdirs` and `python-dotenv` for its
 settings, and `uvicorn`, `starlette`, `anyio` and `pydantic`, which `mcp`
 brings too. It never depends on the service package or a mail library,
 so `uvx benethos-mailbox-mcp` stays small and the REST-only rule is
 enforced by the dependency list itself. A test checks that no module
 imports the service.
 
-It reads `MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN` and calls the REST API with
-httpx. The URL is `https`, or `http` to this machine only, since the token
+It calls the REST API through the client, which reads
+`MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN`. The URL is `https`, or `http` to this machine only, since the token
 goes with every request. `MAILBOX_SERVICE_ALLOW_HTTP=1` allows `http` to
 another host, e.g. between containers (**decided 2026-09-27**). It runs over stdio or streamable HTTP. Over HTTP a bearer guard
 admits clients with one shared token (`MAILBOX_MCP_BEARER_TOKEN`), which
@@ -1791,12 +1791,33 @@ via `httpx.ASGITransport`. The REST contract stays the same, there is just
 no network hop and no background fetching. It is not offered as a user
 mode, since it would put the service package into the MCP installation.
 
+### 8.2 The Python client
+
+**Decided 2026-10-07:** a package of its own, `mailbox-client`
+(`benethos-mailbox-client` on PyPI, no image), released with the
+service and the MCP server under the same version. The MCP server is
+built on it and pins it to that version. It depends on httpx alone and
+never on the service, so the REST-only rule holds for it as for the MCP
+server.
+
+Two classes, `MailboxClient` for async code and `SyncMailboxClient` for
+code without an event loop. Neither is built on the other: sync over
+async needs an event loop per call, async over sync blocks the loop.
+Each endpoint is described once, without I/O: its method, path, query,
+body, and how its answer becomes a record. Both classes send those
+descriptions with httpx and differ only in `await`. They read errors,
+failures on the way and attachments in chunks the same way, through
+the same code.
+
+Its interface has no stability promise yet. It follows what the MCP
+server and the project's own checks need.
+
 ## 9. Technology
 
 | Area | Choice |
 |---|---|
 | Python | 3.11–3.14 |
-| Packaging | uv workspace with two distributions, hatchling, `src/` layout |
+| Packaging | uv workspace with three distributions (service, client, MCP server), hatchling, `src/` layout |
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
 | Storage | SQLite (stdlib `sqlite3` via a thread, or `aiosqlite`) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |

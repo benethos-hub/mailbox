@@ -107,7 +107,7 @@ done. Update the roadmap in the same commit that finishes an item.
   then deleted for good on both sides.
 ## Project layout
 
-A uv workspace with two distributions and one lockfile.
+A uv workspace with three distributions and one lockfile.
 
 ```
 pyproject.toml            # workspace root: members, dev group, tool config
@@ -125,8 +125,8 @@ containers/               # images/ (one folder per image), and one folder
                           #   Each keeps its secrets/ local
 .github/workflows/        # ci.yml: checks, fresh install, lowest
                           #   versions, images,
-                          #   publish.yml: on a release both packages to
-                          #   PyPI and both images to GHCR
+                          #   publish.yml: on a release the three packages
+                          #   to PyPI and both images to GHCR
 docs/
   CONCEPT.md              # design
   ARCHITECTURE.md         # layers, modules, seams, rules for new code
@@ -149,7 +149,12 @@ packages/
                           #   fakes, conftest.py and what checks the whole
                           #   service
       test_architecture.py  # checks the layering on every run
-  mailbox-mcp/            # the MCP server, a REST client
+  mailbox-client/         # the Python client of the REST API, async and
+                          #   sync, no image
+    src/benethos_mailbox_client/    # modules: docs/ARCHITECTURE.md
+    tests/                # REST mocked with httpx.MockTransport, each
+                          #   test for both clients
+  mailbox-mcp/            # the MCP server, on top of mailbox-client
     src/benethos_mailbox_mcp/       # modules: docs/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport
 ```
@@ -214,13 +219,15 @@ rule 1.
 
 ## Releasing
 
-A release is its own `release/X.Y.Z` branch and pull request. Both
-packages carry the same version.
+A release is its own `release/X.Y.Z` branch and pull request. The three
+packages carry the same version, and the MCP server pins the client to
+it.
 
 1. `uv lock --upgrade --dry-run`. If it moves anything, run
    `uv lock --upgrade` as a commit of its own, then all checks.
-2. Set `version` in both packages' `pyproject.toml`, then `uv lock` and
-   `uv sync`. `test_packaging.py` names every version example in the
+2. Set `version` in the three packages' `pyproject.toml` and the pin
+   `benethos-mailbox-client==X.Y.Z` in the MCP server's, then `uv lock`
+   and `uv sync`. `test_packaging.py` names every version example in the
    documentation that still shows the old one.
 3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`.
 4. Freeze the migrations new in this release: add `fingerprint(N)` of
@@ -228,6 +235,6 @@ packages carry the same version.
 5. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
    then `gh release create vX.Y.Z --verify-tag` with the changelog section
    as the notes. The published release starts `publish.yml`, which
-   uploads both packages to PyPI and both images to GHCR.
-6. Check what shipped: both packages on PyPI, and each image's tags
+   uploads the three packages to PyPI and both images to GHCR.
+6. Check what shipped: the three packages on PyPI, and each image's tags
    `X.Y.Z`, `X.Y` and `latest` on the same revision.

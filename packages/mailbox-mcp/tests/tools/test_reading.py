@@ -8,7 +8,7 @@ from collections.abc import Callable
 import pytest
 
 from benethos_mailbox_mcp import render
-from benethos_mailbox_mcp.errors import ToolError
+from benethos_mailbox_mcp.errors import ApiError
 from benethos_mailbox_mcp.tools import reading
 
 # --- search_messages ------------------------------------------------------------------
@@ -112,7 +112,7 @@ async def test_whats_new_first_call_and_one_account(api: Callable) -> None:
     assert result["changes"] == []
 
 
-async def test_an_expired_state_is_a_tool_error(api: Callable) -> None:
+async def test_an_expired_state_is_an_api_error(api: Callable) -> None:
     api(
         status=410,
         answer={
@@ -122,7 +122,7 @@ async def test_an_expired_state_is_a_tool_error(api: Callable) -> None:
             }
         },
     )
-    with pytest.raises(ToolError, match="older than the changes kept"):
+    with pytest.raises(ApiError, match="older than the changes kept"):
         await reading.whats_new(since="chs_MQ")
 
 

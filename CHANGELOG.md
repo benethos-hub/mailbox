@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `benethos-mailbox-client`, the Python client of the REST API, as a
+  package of its own on PyPI: `MailboxClient` for async code and
+  `SyncMailboxClient` for code without an event loop, with the same
+  methods and records. The MCP server is built on it. Its interface has
+  no stability promise yet.
 - Microsoft accounts connect without an app of your own: the service
   comes with the project's app, a public client without a secret, used
   when `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` is not set. Changing

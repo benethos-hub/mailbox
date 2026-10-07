@@ -17,7 +17,7 @@ from mcp.types import ToolAnnotations
 
 from . import __version__, render
 from .client import service_url
-from .errors import ApiError, ServiceUnavailableError, ToolError
+from .errors import MailboxError, ToolError, for_the_model, reason
 from .tools import TOOLS, Tool, client
 
 logger = logging.getLogger(__name__)
@@ -61,25 +61,21 @@ def _chosen(allowed: set[str]) -> list[Tool]:
 def _logged(fn: Callable[..., Any]) -> Callable[..., Any]:
     """The tool, with a warning in the log when it fails. The log names
     the tool and the error's code, never its arguments: the message of an
-    error may repeat an address or a search term the model sent."""
+    error may repeat an address or a search term the model sent. An error
+    of the REST client reaches the model as a ToolError with its message."""
 
     @functools.wraps(fn)
     async def run(*args: Any, **kwargs: Any) -> Any:
         try:
             return await fn(*args, **kwargs)
+        except MailboxError as exc:
+            logger.warning("tool %s failed: %s", fn.__name__, reason(exc))
+            raise for_the_model(exc) from None
         except ToolError as exc:
-            logger.warning("tool %s failed: %s", fn.__name__, _reason(exc))
+            logger.warning("tool %s failed: %s", fn.__name__, reason(exc))
             raise
 
     return run
-
-
-def _reason(exc: ToolError) -> str:
-    if isinstance(exc, ApiError):
-        return f"{exc.code} (HTTP {exc.status})"
-    if isinstance(exc, ServiceUnavailableError):
-        return "mailbox-service is not reachable"
-    return "the arguments were refused"
 
 
 def started(operations: Iterable[str], transport_name: str) -> None:
