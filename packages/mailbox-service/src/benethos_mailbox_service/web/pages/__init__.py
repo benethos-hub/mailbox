@@ -107,49 +107,53 @@ def install(app: FastAPI) -> None:
     for area in AREAS:
         app.include_router(area.router, prefix=PATH, include_in_schema=False)
 
-    @app.exception_handler(SignInRequired)
-    async def _sign_in(request: Request, _: SignInRequired) -> Response:
-        """To the sign-in page, and after it back to the page asked for, with
-        its query. A form that was posted cannot be repeated by a redirect,
-        so after a POST the sign-in lands on the start page."""
-        target = f"{PATH}/login"
-        if request.method == "GET":
-            page = request.url.path
-            if request.url.query:
-                page += f"?{request.url.query}"
-            target += f"?next={quote(page, safe='/')}"
-        if is_htmx(request):
-            return Response(status_code=204, headers={"HX-Redirect": target})
-        return RedirectResponse(target, status_code=303)
-
-    @app.exception_handler(PasswordChangeRequired)
-    async def _change_password(request: Request, _: PasswordChangeRequired) -> Response:
-        """A password someone else set is changed before anything else."""
-        if is_htmx(request):
-            return Response(status_code=204, headers={"HX-Redirect": PASSWORD_PAGE})
-        return RedirectResponse(PASSWORD_PAGE, status_code=303)
-
-    @app.exception_handler(Failed)
-    async def _failed(request: Request, exc: Failed) -> Response:
-        if exc.again is not None:
-            try:
-                page = exc.again(exc.error)
-                return await page if inspect.isawaitable(page) else page
-            except MailboxServiceError:
-                pass  # the page itself is gone: back with the message
-        return back(request, exc.path, error=exc.error)
-
-    @app.exception_handler(CsrfRefused)
-    async def _csrf(request: Request, _: CsrfRefused) -> HTMLResponse:
-        return error_page(
-            request,
-            403,
-            "This form is no longer valid. Reload the page and try again.",
-            title="Form expired",
-        )
-
+    app.exception_handler(SignInRequired)(_sign_in)
+    app.exception_handler(PasswordChangeRequired)(_change_password)
+    app.exception_handler(Failed)(_failed)
+    app.exception_handler(CsrfRefused)(_csrf)
     hosts = app.state.services.oauth.sign_in_hosts()
     app.add_middleware(_Security, headers=security_headers(hosts))
+
+
+async def _sign_in(request: Request, _: SignInRequired) -> Response:
+    """To the sign-in page, and after it back to the page asked for, with
+    its query. A form that was posted cannot be repeated by a redirect,
+    so after a POST the sign-in lands on the start page."""
+    target = f"{PATH}/login"
+    if request.method == "GET":
+        page = request.url.path
+        if request.url.query:
+            page += f"?{request.url.query}"
+        target += f"?next={quote(page, safe='/')}"
+    if is_htmx(request):
+        return Response(status_code=204, headers={"HX-Redirect": target})
+    return RedirectResponse(target, status_code=303)
+
+
+async def _change_password(request: Request, _: PasswordChangeRequired) -> Response:
+    """A password someone else set is changed before anything else."""
+    if is_htmx(request):
+        return Response(status_code=204, headers={"HX-Redirect": PASSWORD_PAGE})
+    return RedirectResponse(PASSWORD_PAGE, status_code=303)
+
+
+async def _failed(request: Request, exc: Failed) -> Response:
+    if exc.again is not None:
+        try:
+            page = exc.again(exc.error)
+            return await page if inspect.isawaitable(page) else page
+        except MailboxServiceError:
+            pass  # the page itself is gone: back with the message
+    return back(request, exc.path, error=exc.error)
+
+
+async def _csrf(request: Request, _: CsrfRefused) -> HTMLResponse:
+    return error_page(
+        request,
+        403,
+        "This form is no longer valid. Reload the page and try again.",
+        title="Form expired",
+    )
 
 
 class _Security:
