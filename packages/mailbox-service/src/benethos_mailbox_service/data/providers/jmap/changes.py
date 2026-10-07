@@ -58,7 +58,7 @@ class Changes:
         """The counts stand in for a state. The sync asks every folder what
         changed since the account's state, whatever these say."""
         return {
-            str(m["id"]): f"{m.get('totalEmails')}.{m.get('unreadEmails')}"
+            m.id: f"{m.total_emails}.{m.unread_emails}"
             for m in await self._account.mailboxes()
         }
 
@@ -71,7 +71,7 @@ class Changes:
     async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
         found = await self._account.emails(message_ids, ["messageId"])
         return {
-            message_id: f"<{email['messageId'][0]}>" if email.get("messageId") else None
+            message_id: f"<{email.message_id[0]}>" if email.message_id else None
             for message_id, email in found.items()
         }
 
@@ -100,8 +100,10 @@ class Changes:
         """The event source, until the state of the account's emails moves
         on from the one the last wait saw."""
         owner = await self._account.id()
-        found = await self._account.one("Email/get", {"ids": []})
-        state = str(found.get("state") or "")
+        found = await self._account.one(
+            "Email/get", {"ids": []}, jmap.Got[jmap.Anything]
+        )
+        state = found.state or ""
         if self._pushed is not None and state != self._pushed:
             self._pushed = state
             return True
@@ -111,7 +113,7 @@ class Changes:
                 async for changed in stream:
                     now = (changed.get(owner) or {}).get("Email")
                     if now and now != self._pushed:
-                        self._pushed = str(now)
+                        self._pushed = now
                         return True
             raise ProviderUnavailableError("the JMAP server closed its event stream")
         return False
@@ -131,16 +133,15 @@ class Changes:
             ("Email/get", {"accountId": owner, "ids": []}, "s"),
             ("Email/query", {**query, "position": 0}, "q"),
         )
-        state = str(jmap.result(answers, "s").get("state") or "")
+        state = jmap.read(answers, "s", jmap.Got[jmap.Anything]).state or ""
         ids: list[str] = []
-        page = jmap.result(answers, "q")
+        page = jmap.read(answers, "q", jmap.Queried)
         while True:
-            found = [str(i) for i in page.get("ids") or []]
-            ids += found
-            if not found or (len(found) < QUERY_PAGE and "limit" not in page):
+            ids += page.ids
+            if not page.ids or (len(page.ids) < QUERY_PAGE and page.limit is None):
                 return state, ids
             page = await self._account.one(
-                "Email/query", {**query, "position": len(ids)}
+                "Email/query", {**query, "position": len(ids)}, jmap.Queried
             )
 
     async def _changes(self, token: str) -> Since:
@@ -154,13 +155,15 @@ class Changes:
         state = token
         while True:
             found = await self._account.one(
-                "Email/changes", {"sinceState": state, "maxChanges": MAX_CHANGES}
+                "Email/changes",
+                {"sinceState": state, "maxChanges": MAX_CHANGES},
+                jmap.Changed,
             )
-            created |= {str(i) for i in found.get("created") or []}
-            updated |= {str(i) for i in found.get("updated") or []}
-            destroyed |= {str(i) for i in found.get("destroyed") or []}
-            state = str(found.get("newState") or state)
-            if not found.get("hasMoreChanges"):
+            created |= set(found.created)
+            updated |= set(found.updated)
+            destroyed |= set(found.destroyed)
+            state = found.new_state or state
+            if not found.has_more_changes:
                 break
         # Created and gone again within the span: nothing to report.
         fleeting = created & destroyed
@@ -171,7 +174,7 @@ class Changes:
         gone = (created | updated) - destroyed - fleeting - set(where)
         result = Since(
             state=state,
-            where={i: frozenset(e.get("mailboxIds") or {}) for i, e in where.items()},
+            where={i: frozenset(e.mailbox_ids) for i, e in where.items()},
             # JMAP says which are new since the token. They count as created
             # now, the moment the sync learns of them.
             created=frozenset(created - fleeting),

@@ -9,7 +9,6 @@ and the schemes decide whether to ask for a password or an API token.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Awaitable, Callable
 
 from ...errors import MailboxServiceError
@@ -23,14 +22,13 @@ from ..models import (
     Security,
     ServerProtocol,
 )
-from ..protocols import Answered, SafeFetcher
+from ..protocols import Answered, SafeFetcher, jmap
 from .base import Finding, Query
 from .dns import srv_targets
 
 SrvLookup = Callable[[str], Awaitable[list[tuple[str, int]]]]
 
 WELL_KNOWN = "/.well-known/jmap"
-CORE = "urn:ietf:params:jmap:core"
 # SRV targets asked at most, the first by priority.
 MAX_TARGETS = 3
 
@@ -78,7 +76,7 @@ def _candidate(answered: Answered) -> Candidate | None:
         credential = (
             CredentialKind.PASSWORD if "basic" in schemes else CredentialKind.API_TOKEN
         )
-    elif answered.status == 200 and _is_session(answered.body):
+    elif answered.status == 200 and jmap.is_session(answered.body):
         credential = CredentialKind.PASSWORD
     else:
         return None
@@ -113,11 +111,3 @@ def _schemes(header: str) -> set[str]:
         if word and "=" not in word:
             found.add(word.lower())
     return found
-
-
-def _is_session(body: bytes) -> bool:
-    try:
-        session = json.loads(body)
-    except ValueError:
-        return False
-    return isinstance(session, dict) and CORE in (session.get("capabilities") or {})

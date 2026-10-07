@@ -1,18 +1,8 @@
-"""JMAP (RFC 8620, 8621) over ``http``: the session, method calls, blobs
-and the event stream.
-
-Speaks the protocol and nothing else: no folders or messages of the API,
-no decisions. JMAP's own errors leave it as ``MailboxServiceError``.
-
-Every URL the session names is used on the server the account names: its
-path and query, never its host or port. So the credential goes to no other
-host, and a server that names itself otherwise, behind a proxy or by a
-name only its own network knows, still works.
-"""
+"""The client of one JMAP account: the session, method calls, blobs and
+the event stream."""
 
 from __future__ import annotations
 
-import json
 import math
 import time
 from collections.abc import AsyncIterator, Callable, Iterable, Mapping
@@ -23,10 +13,8 @@ from urllib.parse import quote, urlsplit
 
 import anyio
 
-from ...errors import (
+from ....errors import (
     BadRequestError,
-    ChangesExpiredError,
-    ConflictError,
     MailboxServiceError,
     NotFoundError,
     NotSupportedError,
@@ -34,8 +22,21 @@ from ...errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from .http import Answer, ServerClient
-from .transport import Pick
+from .. import wire
+from ..http import Answer, ServerClient
+from ..transport import Pick
+from .shapes import (
+    AccountShape,
+    Capabilities,
+    Invocation,
+    Limits,
+    Problem,
+    Reply,
+    SessionResource,
+    StateChange,
+    States,
+    Uploaded,
+)
 
 CORE = "urn:ietf:params:jmap:core"
 MAIL = "urn:ietf:params:jmap:mail"
@@ -48,10 +49,6 @@ MAX_REDIRECTS = 3
 DEFAULT_CONCURRENT = 4
 DEFAULT_CALLS = 16
 DEFAULT_GET = 500
-
-# One call: the method, its arguments, and the tag that pairs it with its
-# response.
-Invocation = tuple[str, dict[str, Any], str]
 
 
 @dataclass(frozen=True)
@@ -79,18 +76,23 @@ class Session:
     upload: str
     events: str | None
     state: str
-    capabilities: Mapping[str, Any]
-    # The capabilities of the account, e.g. what submission it allows.
-    account_capabilities: Mapping[str, Any]
+    capabilities: frozenset[str]
+    # The capabilities of the account, e.g. whether it may send.
+    account_capabilities: frozenset[str]
+    # The core capability's limits (RFC 8620 2).
+    max_concurrent: int = DEFAULT_CONCURRENT
+    max_get: int = DEFAULT_GET
 
     def offers(self, capability: str) -> bool:
         return capability in self.capabilities and (
             capability == CORE or capability in self.account_capabilities
         )
 
-    def limit(self, name: str, default: int) -> int:
-        value = (self.capabilities.get(CORE) or {}).get(name)
-        return value if isinstance(value, int) and value > 0 else default
+
+def is_session(body: bytes) -> bool:
+    """Whether ``body`` is a JMAP session resource."""
+    found = wire.read(Capabilities, body)
+    return found is not None and CORE in found.capabilities
 
 
 class JmapClient:
@@ -123,9 +125,7 @@ class JmapClient:
             if self._session is None or self._stale or fresh:
                 self._session = await self._read_session()
                 self._stale = False
-                self._limiter = anyio.CapacityLimiter(
-                    self._session.limit("maxConcurrentRequests", DEFAULT_CONCURRENT)
-                )
+                self._limiter = anyio.CapacityLimiter(self._session.max_concurrent)
             return self._session
 
     async def _read_session(self) -> Session:
@@ -137,7 +137,7 @@ class JmapClient:
                 continue
             if not answer.ok:
                 raise _failure(answer, "session")
-            return _session(answer.json())
+            return _session(answer.body)
         raise ProviderError(
             f"the JMAP session redirects more than {MAX_REDIRECTS} times"
         )
@@ -177,24 +177,12 @@ class JmapClient:
         answer = await self._limited("POST", session.api, json_body=body)
         if not answer.ok:
             raise _failure(answer, "request")
-        reply = answer.json()
-        if not isinstance(reply, dict) or not isinstance(
-            reply.get("methodResponses"), list
-        ):
-            raise ProviderError("the JMAP server answered without method responses")
-        if reply.get("sessionState") not in (None, session.state):
+        reply = wire.parse(
+            Reply, answer.body, "the JMAP server answered without method responses"
+        )
+        if reply.session_state not in (None, session.state):
             self._stale = True
-        responses: list[Invocation] = []
-        for item in reply["methodResponses"]:
-            if (
-                isinstance(item, list)
-                and len(item) == 3
-                and isinstance(item[0], str)
-                and isinstance(item[1], dict)
-                and isinstance(item[2], str)
-            ):
-                responses.append((item[0], item[1], item[2]))
-        return responses
+        return [item for item in reply.method_responses if item is not None]
 
     async def upload(self, data: bytes, content_type: str) -> str:
         """Store ``data`` as a blob of the account. Its blob id."""
@@ -205,11 +193,11 @@ class JmapClient:
         )
         if not answer.ok:
             raise _failure(answer, "upload")
-        reply = answer.json()
-        blob_id = reply.get("blobId") if isinstance(reply, dict) else None
-        if not isinstance(blob_id, str):
-            raise ProviderError("the JMAP server answered an upload without a blob id")
-        return blob_id
+        return wire.parse(
+            Uploaded,
+            answer.body,
+            "the JMAP server answered an upload without a blob id",
+        ).blob_id
 
     async def download(self, blob_id: str, name: str, content_type: str) -> bytes:
         session = await self.session()
@@ -230,7 +218,7 @@ class JmapClient:
     @asynccontextmanager
     async def events(
         self, types: str, ping: int, wait: float
-    ) -> AsyncIterator[AsyncIterator[dict[str, Any]]]:
+    ) -> AsyncIterator[AsyncIterator[Mapping[str, States | None]]]:
         """The server's state changes (RFC 8620 7.3) while the stream is
         open: each the ``changed`` map of a StateChange. ``ping``: the
         seconds between the server's pings, ``wait`` how long a read waits
@@ -287,96 +275,34 @@ class JmapClient:
         return {"Authorization": self._authorization(), "Accept": "application/json"}
 
 
-# --- reading answers ------------------------------------------------------------------
-
-
-def result(responses: list[Invocation], tag: str) -> dict[str, Any]:
-    """The arguments of the response to the call ``tag``. A method error
-    raises as this project's error."""
-    for name, args, answered in responses:
-        if answered == tag:
-            if name == "error":
-                raise method_error(args)
-            return args
-    raise ProviderError("the JMAP server left a call unanswered")
-
-
-def error_type(responses: list[Invocation], tag: str) -> str | None:
-    """The type of the method error the call ``tag`` met, None without one."""
-    for name, args, answered in responses:
-        if answered == tag and name == "error":
-            return str(args.get("type"))
-    return None
-
-
-def method_error(args: Mapping[str, Any]) -> MailboxServiceError:
-    """A method error (RFC 8620 3.6.2) as this project's error."""
-    kind = str(args.get("type") or "serverFail")
-    text = f"jmap: {args.get('description') or kind} ({kind})"
-    if kind == "cannotCalculateChanges":
-        return ChangesExpiredError(text)
-    if kind in ("serverUnavailable", "rateLimit"):
-        return ProviderUnavailableError(text)
-    if kind in ("unknownMethod", "unsupportedFilter", "unsupportedSort"):
-        return NotSupportedError(text)
-    if kind in ("invalidArguments", "requestTooLarge", "anchorNotFound"):
-        return BadRequestError(text)
-    if kind == "forbidden":
-        return ProviderAuthError(text)
-    return ProviderError(text)
-
-
-def set_error(error: Mapping[str, Any], what: str) -> MailboxServiceError:
-    """A SetError (RFC 8620 5.3) for one object as this project's error.
-    ``what``: what the object is, e.g. "message"."""
-    kind = str(error.get("type") or "serverFail")
-    text = f"jmap: {error.get('description') or kind} ({kind})"
-    if kind == "notFound":
-        return NotFoundError(f"{what} not found")
-    if kind in (
-        "alreadyExists",
-        "mailboxHasChild",
-        "mailboxHasEmail",
-        "overQuota",
-        "stateMismatch",
-        "willDestroy",
-    ):
-        return ConflictError(text)
-    if kind in ("invalidProperties", "invalidPatch", "tooLarge", "singleton"):
-        return BadRequestError(text)
-    if kind in ("forbidden", "forbiddenFrom", "forbiddenToSend", "forbiddenMailFrom"):
-        return ConflictError(text)
-    return ProviderError(text)
-
-
-def _session(body: Any) -> Session:
-    if not isinstance(body, dict):
-        raise ProviderError("the JMAP session is no JSON object")
-    capabilities = body.get("capabilities") or {}
-    primary = (body.get("primaryAccounts") or {}).get(MAIL)
-    if CORE not in capabilities or MAIL not in capabilities or not primary:
+def _session(body: bytes) -> Session:
+    found = wire.parse(
+        SessionResource, body, "the JMAP session is no JSON object of its shape"
+    )
+    primary = found.primary_accounts.get(MAIL)
+    if CORE not in found.capabilities or MAIL not in found.capabilities or not primary:
         raise ProviderError("the server offers no JMAP mail for this login")
-    account = (body.get("accounts") or {}).get(primary) or {}
-    try:
-        return Session(
-            account_id=str(primary),
-            api=_own(body["apiUrl"]),
-            download=_own(body["downloadUrl"]),
-            upload=_own(body["uploadUrl"]),
-            events=_own(body["eventSourceUrl"]) if body.get("eventSourceUrl") else None,
-            state=str(body.get("state") or ""),
-            capabilities=capabilities,
-            account_capabilities=account.get("accountCapabilities") or {},
-        )
-    except (KeyError, TypeError):
-        raise ProviderError("the JMAP session lacks a URL it must name") from None
+    if not (found.api_url and found.download_url and found.upload_url):
+        raise ProviderError("the JMAP session lacks a URL it must name")
+    account = found.accounts.get(primary) or AccountShape()
+    core = found.capabilities[CORE] or Limits()
+    return Session(
+        account_id=primary,
+        api=_own(found.api_url),
+        download=_own(found.download_url),
+        upload=_own(found.upload_url),
+        events=_own(found.event_source_url) if found.event_source_url else None,
+        state=found.state or "",
+        capabilities=frozenset(found.capabilities),
+        account_capabilities=frozenset(account.account_capabilities),
+        max_concurrent=core.max_concurrent_requests or DEFAULT_CONCURRENT,
+        max_get=core.max_objects_in_get or DEFAULT_GET,
+    )
 
 
-def _own(url: Any) -> str:
+def _own(url: str) -> str:
     """The path and query of a URL the session names, for the server the
     account names (see the module's docstring)."""
-    if not isinstance(url, str):
-        raise TypeError(url)
     parts = urlsplit(url)
     if not parts.path.startswith("/"):
         raise ProviderError("the JMAP session names a URL without a path")
@@ -391,7 +317,9 @@ def _expand(template: str, **values: str) -> str:
     return template
 
 
-async def _state_changes(lines: AsyncIterator[str]) -> AsyncIterator[dict[str, Any]]:
+async def _state_changes(
+    lines: AsyncIterator[str],
+) -> AsyncIterator[Mapping[str, States | None]]:
     """The ``changed`` map of each ``state`` event. Pings and other events
     pass by."""
     event = ""
@@ -399,12 +327,9 @@ async def _state_changes(lines: AsyncIterator[str]) -> AsyncIterator[dict[str, A
     async for line in lines:
         if line == "":
             if event in ("", "state") and data:
-                try:
-                    found = json.loads("\n".join(data))
-                except ValueError:
-                    found = None
-                if isinstance(found, dict) and isinstance(found.get("changed"), dict):
-                    yield found["changed"]
+                found = wire.read(StateChange, "\n".join(data))
+                if found is not None:
+                    yield found.changed
             event, data = "", []
         elif line.startswith("event:"):
             event = line[6:].strip()
@@ -419,13 +344,8 @@ def _retry_after(answer: Answer) -> float:
 
 def _failure(answer: Answer, what: str) -> MailboxServiceError:
     """A request the server refused as a whole, as this project's error."""
-    detail = ""
-    try:
-        problem = answer.json()
-    except ProviderError:
-        problem = None
-    if isinstance(problem, dict):
-        detail = str(problem.get("detail") or problem.get("type") or "")
+    problem = wire.read(Problem, answer.body) or Problem()
+    detail = problem.detail or problem.type
     text = f"jmap {what}: {detail or 'refused'} ({answer.status})"
     if answer.status == 401:
         return ProviderAuthError("the JMAP server refused the credential")

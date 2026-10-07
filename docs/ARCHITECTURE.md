@@ -250,11 +250,14 @@ packages/mailbox-service/
                         #   an address in Unicode
       protocols/        # the wire, one library each, in our types:
                         #   imap.py (IMAPClient), smtp.py (smtplib),
-                        #   pop3.py (poplib), jmap.py (JMAP over http),
+                        #   pop3.py (poplib), jmap/ (JMAP over http:
+                        #   client.py, shapes.py, answers.py),
                         #   oauth.py (OAuth 2.0 with PKCE, sign-in
                         #   with a code, refresh, token source),
                         #   transport.py: the Server, TLS,
-                        #   timeouts, the failures below every library
+                        #   timeouts, the failures below every library,
+                        #   wire.py: JSON a server sends read into
+                        #   shapes (pydantic)
         http/           # httpx: base.py (the client, the capped read),
                         #   safe.py (hosts users typed, SSRF guard),
                         #   api.py (JSON to a provider's known hosts),
@@ -269,11 +272,13 @@ packages/mailbox-service/
                         #   the server, the login, the guard, SMTP
         imap/, memory/, # one directory per provider (adapter),
         microsoft/,     #   provider.py the adapter, mappers.py the
-        pop3/, jmap/    #   translation, the rest one module per subject.
+        pop3/, jmap/    #   translation, shapes.py what the provider
+                        #   sends as JSON, the rest one module per
+                        #   subject.
                         #   imap: connect.py, mailbox.py (one session
                         #   and its folders), folders, messages, drafts,
                         #   sync, watch (IDLE).
-                        #   jmap: over data/protocols/jmap.py,
+                        #   jmap: over data/protocols/jmap/,
                         #   account.py (one account's calls), folders,
                         #   messages, drafts, sending, changes.
                         #   microsoft: graph.py (Graph over
@@ -513,6 +518,12 @@ imapclient boundary), never by patching deep inside a library.
 
 - **pydantic** for what crosses a boundary: the models in
   `data/models/`, settings, the shapes of the API.
+- **JSON from a server is read into a shape at the edge**, once:
+  a `Shape` of `data/protocols/wire.py`, in the protocol module or the
+  adapter's `shapes.py`. The code behind it reads typed fields, no
+  `dict.get` and no `isinstance`. A body of another shape is the
+  server's failure, a `ProviderError` whose text names none of the
+  input.
 - **Frozen dataclasses** for values inside a layer: an activity, a
   change, a finding of discovery. A value is made once and not changed.
 - **Protocols** for seams: a repository, a provider, a key provider, a
@@ -591,7 +602,7 @@ imapclient boundary), never by patching deep inside a library.
   boolean a question (`is_public_address`).
 - A mapper of an adapter (`mappers.py`) is named for what it makes, the
   same in every adapter: `folder`, `folders`, `summary`, `message`,
-  `keywords`, `when`. Called as `mappers.message(...)`, it reads as
+  `keywords`. Called as `mappers.message(...)`, it reads as
   what it answers. The way back to the provider is named for the
   provider's shape: `imap_flag`, `keyword_patch`, `query_filter`.
 - The name in the API is the name in the code where they meet. A rename

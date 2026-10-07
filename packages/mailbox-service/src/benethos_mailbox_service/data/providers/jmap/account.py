@@ -6,17 +6,22 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, TypeVar
+
+from pydantic import BaseModel
 
 from ....common.chunks import batched
-from ....errors import NotFoundError, missing_message
+from ....errors import NotFoundError, ProviderError, missing_message
 from ...models import Folder, FolderRole
 from ...protocols import jmap
 from ..base import CredentialReader
 from . import mappers
+from .shapes import Email, Mailbox
 
 # The name and type a message's source is down- and uploaded as.
 SOURCE = ("message.eml", "message/rfc822")
+
+S = TypeVar("S", bound=BaseModel)
 
 
 class JmapAccount:
@@ -49,36 +54,38 @@ class JmapAccount:
     ) -> list[jmap.Invocation]:
         return await self.client.call(list(calls), using)
 
-    async def one(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
-        """One method call in a request of its own, its arguments."""
+    async def one(self, name: str, args: dict[str, Any], shape: type[S]) -> S:
+        """One method call in a request of its own, its answer read as
+        ``shape``."""
         account = await self.id()
-        return jmap.result(
-            await self.call((name, {"accountId": account, **args}, "0")), "0"
-        )
+        answers = await self.call((name, {"accountId": account, **args}, "0"))
+        return jmap.read(answers, "0", shape)
 
-    async def emails(
-        self, ids: list[str], properties: list[str]
-    ) -> dict[str, dict[str, Any]]:
+    async def emails(self, ids: list[str], properties: list[str]) -> dict[str, Email]:
         """The emails among ``ids`` that are there, by id, in batches the
         server takes."""
-        limit = (await self.client.session()).limit("maxObjectsInGet", jmap.DEFAULT_GET)
-        found: dict[str, dict[str, Any]] = {}
+        limit = (await self.client.session()).max_get
+        found: dict[str, Email] = {}
         for batch in batched([i for i in ids if mappers.is_id(i)], limit):
-            got = await self.one("Email/get", {"ids": batch, "properties": properties})
-            found.update((str(e["id"]), e) for e in got.get("list") or [])
+            got = await self.one(
+                "Email/get", {"ids": batch, "properties": properties}, jmap.Got[Email]
+            )
+            found.update((e.id, e) for e in got.items)
         return found
 
-    async def email(self, message_id: str, properties: list[str]) -> dict[str, Any]:
+    async def email(self, message_id: str, properties: list[str]) -> Email:
         found = (await self.emails([message_id], properties)).get(message_id)
         if found is None:
             raise missing_message(message_id)
         return found
 
-    async def mailboxes(self) -> list[dict[str, Any]]:
+    async def mailboxes(self) -> list[Mailbox]:
         got = await self.one(
-            "Mailbox/get", {"ids": None, "properties": mappers.MAILBOX_PROPERTIES}
+            "Mailbox/get",
+            {"ids": None, "properties": mappers.MAILBOX_PROPERTIES},
+            jmap.Got[Mailbox],
         )
-        return list(got.get("list") or [])
+        return got.items
 
     async def folders(self) -> list[Folder]:
         return [mappers.folder(m) for m in await self.mailboxes()]
@@ -89,9 +96,11 @@ class JmapAccount:
                 return folder.id
         return None
 
-    async def source(self, email: dict[str, Any], message_id: str) -> bytes:
+    async def source(self, email: Email, message_id: str) -> bytes:
+        if email.blob_id is None:
+            raise ProviderError("the JMAP server named no source of the message")
         try:
-            return await self.client.download(str(email["blobId"]), *SOURCE)
+            return await self.client.download(email.blob_id, *SOURCE)
         except NotFoundError:
             raise missing_message(message_id) from None
 

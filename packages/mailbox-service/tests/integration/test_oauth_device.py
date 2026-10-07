@@ -112,6 +112,7 @@ async def test_a_code_with_what_the_provider_left_out() -> None:
     ("answer", "message"),
     [
         (code(user_code=None), "without a code"),
+        (code(verification_uri=None), "without a code"),
         (code(verification_uri="http://example.org/device"), "without HTTPS"),
         ((401, {"error": "invalid_client"}), "must allow public client flows"),
         ((400, {"error": "invalid_scope"}), "refused the token request"),

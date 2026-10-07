@@ -13,16 +13,15 @@ Tokens are ``SecretStr`` throughout and appear in no error text.
 from __future__ import annotations
 
 import hashlib
-import json
 import secrets
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Annotated
 from urllib.parse import urlencode
 
 import anyio
-from pydantic import SecretStr
+from pydantic import Field, RootModel, SecretStr
 
 from ...common import redact
 from ...common.clock import utc_now
@@ -33,7 +32,8 @@ from ...errors import (
     ProviderAuthError,
     ProviderError,
 )
-from .http import ApiClient
+from . import wire
+from .http import Answer, ApiClient
 
 # An access token counts as spent this long before it runs out.
 MARGIN = timedelta(minutes=1)
@@ -130,6 +130,43 @@ class Waiting:
     slow_down: bool = False
 
 
+class _Granted(wire.Shape):
+    """What a token endpoint hands out (RFC 6749 5.1)."""
+
+    access_token: str = Field(min_length=1)
+    expires_in: wire.Seconds = None
+    refresh_token: Annotated[str | None, wire.OrNone] = None
+    id_token: Annotated[str | None, wire.OrNone] = None
+
+
+class _Code(wire.Shape):
+    """A code for a sign-in on another device (RFC 8628 3.2). Some
+    providers spell it ``verification_url``."""
+
+    device_code: str = Field(min_length=1)
+    user_code: str = Field(min_length=1)
+    verification_uri: Annotated[str | None, wire.OrNone] = None
+    verification_url: Annotated[str | None, wire.OrNone] = None
+    expires_in: wire.Seconds = None
+    interval: wire.Seconds = None
+
+
+class _Refusal(wire.Shape):
+    """An error of a token endpoint (RFC 6749 5.2)."""
+
+    error: Annotated[str | None, wire.OrNone] = None
+
+
+class _Fields(RootModel[dict[str, Annotated[str | None, wire.OrNone]]]):
+    """A profile: its text fields, any other field None."""
+
+
+class _Claims(wire.Shape):
+    email: Annotated[str | None, wire.OrNone] = None
+    preferred_username: Annotated[str | None, wire.OrNone] = None
+    name: Annotated[str | None, wire.OrNone] = None
+
+
 class _StillWaiting(Exception):
     def __init__(self, slow_down: bool) -> None:
         super().__init__("authorization pending")
@@ -216,39 +253,31 @@ class OAuthClient:
                 "scope": " ".join(endpoints.sign_in_scopes),
             },
         )
-        body = _json(answer)
-        error = body.get("error") if isinstance(body, dict) else None
+        error = _error(answer)
         if error in ("invalid_client", "unauthorized_client"):
             # Microsoft: AADSTS70002, the app is no public client.
             raise ProviderError(
                 f"{endpoints.provider} refuses a sign-in with a code for this "
                 f"service's app ({error}): the app must allow public client flows"
             )
-        if not answer.ok or not isinstance(body, dict):
-            raise _refused(endpoints.provider, answer.status, body)
-        code = body.get("device_code")
-        user_code = body.get("user_code")
-        # Some providers spell it verification_url.
-        uri = body.get("verification_uri") or body.get("verification_url")
-        if not (
-            isinstance(code, str)
-            and code
-            and isinstance(user_code, str)
-            and user_code
-            and isinstance(uri, str)
-        ):
-            raise ProviderError(f"{endpoints.provider} answered without a code")
+        if not answer.ok:
+            raise _refused(endpoints.provider, answer.status, error)
+        without = f"{endpoints.provider} answered without a code"
+        code = wire.parse(_Code, answer.body, without)
+        uri = code.verification_uri or code.verification_url
+        if not uri:
+            raise ProviderError(without)
         if not uri.startswith("https://"):
             raise ProviderError(
                 f"{endpoints.provider} named a sign-in page without HTTPS"
             )
-        redact.note(code)
+        redact.note(code.device_code)
         return DeviceCode(
-            device_code=SecretStr(code),
-            user_code=user_code,
+            device_code=SecretStr(code.device_code),
+            user_code=code.user_code,
             verification_uri=uri,
-            expires_in=_seconds(body.get("expires_in"), DEVICE_LIFETIME),
-            interval=_seconds(body.get("interval"), DEVICE_INTERVAL),
+            expires_in=code.expires_in or DEVICE_LIFETIME,
+            interval=code.interval or DEVICE_INTERVAL,
         )
 
     async def poll_device(self, device_code: SecretStr) -> Tokens | Waiting:
@@ -284,22 +313,15 @@ class OAuthClient:
                 "Authorization": f"Bearer {tokens.access_token.get_secret_value()}"
             },
         )
-        try:
-            body = answer.json() if answer.ok else None
-        except ProviderError:
-            body = None
-        if not isinstance(body, dict):
-            raise ProviderError(
-                f"{provider} did not say whose mailbox this is ({answer.status})"
-            )
-        email = next(
-            (v for f in profile.email if isinstance(v := body.get(f), str) and v),
-            None,
-        )
-        name = body.get(profile.name) if profile.name else None
+        unknown = f"{provider} did not say whose mailbox this is ({answer.status})"
+        if not answer.ok:
+            raise ProviderError(unknown)
+        fields = wire.parse(_Fields, answer.body, unknown).root
+        email = next((v for f in profile.email if (v := fields.get(f))), None)
+        name = fields.get(profile.name) if profile.name else None
         return Identity(
             email=email.strip().lower() if email else None,
-            name=name if isinstance(name, str) and name else None,
+            name=name or None,
         )
 
     async def refresh(self, refresh_token: SecretStr) -> Tokens:
@@ -325,68 +347,54 @@ class OAuthClient:
         answer = await self._http.request(
             "POST", self.app.endpoints.token_url, form=form
         )
-        body = _json(answer)
-        if not answer.ok or not isinstance(body, dict):
-            raise _refused(self.app.endpoints.provider, answer.status, body)
-        return self._tokens(body)
+        if not answer.ok:
+            raise _refused(self.app.endpoints.provider, answer.status, _error(answer))
+        granted = wire.parse(
+            _Granted,
+            answer.body,
+            "the token endpoint answered without an access token",
+        )
+        return self._tokens(granted)
 
-    def _tokens(self, body: dict[str, Any]) -> Tokens:
-        access = body.get("access_token")
-        if not isinstance(access, str) or not access:
-            raise ProviderError("the token endpoint answered without an access token")
-        seconds = _seconds(body.get("expires_in"), 3600)
-        refresh = body.get("refresh_token")
-        id_token = body.get("id_token")
-        redact.note(access)
-        if isinstance(refresh, str):
+    def _tokens(self, granted: _Granted) -> Tokens:
+        redact.note(granted.access_token)
+        refresh = granted.refresh_token
+        if refresh is not None:
             redact.note(refresh)
+        seconds = granted.expires_in or 3600
         return Tokens(
-            access_token=SecretStr(access),
+            access_token=SecretStr(granted.access_token),
             expires_at=self.clock() + timedelta(seconds=seconds),
-            refresh_token=SecretStr(refresh) if isinstance(refresh, str) else None,
-            identity=identity_of(id_token) if isinstance(id_token, str) else None,
+            refresh_token=SecretStr(refresh) if refresh is not None else None,
+            identity=identity_of(granted.id_token) if granted.id_token else None,
         )
 
 
 def identity_of(id_token: str) -> Identity | None:
     """The address and name an ID token carries, or None if it is unreadable."""
     try:
-        claims = json.loads(from_base64(id_token.split(".")[1]))
+        payload = from_base64(id_token.split(".")[1])
     except (IndexError, ValueError):
         return None
-    if not isinstance(claims, dict):
+    claims = wire.read(_Claims, payload)
+    if claims is None:
         return None
-    email = claims.get("email") or claims.get("preferred_username")
-    name = claims.get("name")
+    email = claims.email or claims.preferred_username
     return Identity(
-        email=str(email).strip().lower() if email else None,
-        name=str(name) if name else None,
+        email=email.strip().lower() if email else None,
+        name=claims.name or None,
     )
 
 
-def _json(answer: Any) -> Any:
-    try:
-        return answer.json()
-    except ProviderError:
-        return None  # a gateway's HTML page: the status says enough
+def _error(answer: Answer) -> str | None:
+    """The error a token endpoint names. None for a gateway's HTML page:
+    the status says enough."""
+    refusal = wire.read(_Refusal, answer.body)
+    return refusal.error if refusal is not None else None
 
 
-def _seconds(value: object, default: int) -> int:
-    """A positive number of seconds as a provider wrote it, else ``default``."""
-    if isinstance(value, bool):
-        return default
-    if isinstance(value, int):
-        seconds = value
-    elif isinstance(value, str) and value.isdigit():
-        seconds = int(value)
-    else:
-        return default
-    return seconds if seconds > 0 else default
-
-
-def _refused(provider: str, status: int, body: Any) -> Exception:
+def _refused(provider: str, status: int, error: str | None) -> Exception:
     """The token endpoint's error, without anything that was sent."""
-    error = body.get("error") if isinstance(body, dict) else None
     if error in ("authorization_pending", "slow_down"):
         return _StillWaiting(slow_down=error == "slow_down")
     if error == "authorization_declined":
