@@ -222,8 +222,8 @@ packages/mailbox-service/
       mailbox/          # MailboxService, the facade for mail: calls under
                         #   our ids, lists across accounts (across,
                         #   merge), replies, sending and drafts
-                        #   (outgoing), grant limits and the send audit,
-                        #   Idempotency-Key
+                        #   (outgoing, its checks), grant limits and the
+                        #   send audit, Idempotency-Key
       sync/             # SyncService (stable message ids, the sync pass),
                         #   what a pass finds (passes), SyncWorker
                         #   (polling and IDLE)
@@ -621,7 +621,8 @@ imapclient boundary), never by patching deep inside a library.
 - A module is named for its subject (`passwords.py`), not for the
   pattern it uses (`repository.py`).
 - A function is a verb (`record`, `forget_account`), a value a noun, a
-  boolean a question (`is_public_address`).
+  boolean a question (`is_public_address`). An exception ends in
+  `Error`. Ruff checks the names (pep8-naming).
 - A mapper of an adapter (`mappers.py`) is named for what it makes, the
   same in every adapter: `folder`, `folders`, `summary`, `message`,
   `keywords`. Called as `mappers.message(...)`, it reads as
@@ -634,12 +635,15 @@ imapclient boundary), never by patching deep inside a library.
 
 ## 15. Size
 
-- A module holds one subject, up to a few hundred lines. Past that, the
-  subject has parts, and each part is a module.
+- A module holds one subject, at most 500 lines, a class at most 30
+  methods. `test_architecture.py` of each package checks both. Past
+  that, the subject has parts, and each part is a module.
 - A package holds a handful of modules. Past that, it holds areas, and
   each area is a package.
 - A function decides or does, and says which in its name. One that does
-  both is two functions.
+  both is two functions. Ruff checks its size: a complexity of at most
+  10, at most 12 branches and 50 statements. One beyond is split, never
+  excused with `noqa`.
 
 ## 16. Refactoring
 

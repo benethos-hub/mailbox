@@ -20,7 +20,7 @@ from ..session import (
     COOKIE,
     PASSWORD_PAGE,
     PATH,
-    SignInRequired,
+    SignInRequiredError,
     current,
     session_of,
     store_of,
@@ -57,7 +57,7 @@ async def login_page(
     try:
         current(request)
         return RedirectResponse(local_path(next, PATH), status_code=303)
-    except SignInRequired:
+    except SignInRequiredError:
         pass
     nonce = secrets.token_urlsafe(24)
     response = render(

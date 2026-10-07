@@ -20,7 +20,7 @@ from benethos_mailbox_service.data.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.data.providers import sign_in
 from benethos_mailbox_service.errors import ProviderError
 from benethos_mailbox_service.web.api.errors import api_error
-from benethos_mailbox_service.web.pages.forms import Failed, failing
+from benethos_mailbox_service.web.pages.forms import FormFailedError, failing
 
 PASSWORD = "hunter2-but-longer"
 
@@ -79,6 +79,6 @@ def test_an_error_text_is_masked_in_the_api_and_the_ui() -> None:
     error = ProviderError(f"the server said: bad password {PASSWORD}")
     body = json.loads(api_error(error).body)
     assert body["error"]["message"] == "the server said: bad password ***"
-    with pytest.raises(Failed) as refused, failing("/ui/accounts"):
+    with pytest.raises(FormFailedError) as refused, failing("/ui/accounts"):
         raise error
     assert refused.value.error == "the server said: bad password ***"

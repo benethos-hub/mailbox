@@ -155,3 +155,28 @@ def test_each_library_has_one_home() -> None:
             if homes is not None and name not in homes:
                 violations.append(f"{name}:{line} imports {imported[1:]}")
     assert not violations, "library outside its home:\n  " + "\n  ".join(violations)
+
+
+# Hard limits (docs/ARCHITECTURE.md 15): what grows beyond them is split
+# by subject.
+MAX_LINES = 500
+MAX_METHODS = 30
+
+
+def test_modules_and_classes_stay_small() -> None:
+    violations = []
+    for path in sorted(ROOT.rglob("*.py")):
+        text = path.read_text("utf-8")
+        name = path.relative_to(ROOT).as_posix()
+        lines = len(text.splitlines())
+        if lines > MAX_LINES:
+            violations.append(f"{name}: {lines} lines")
+        for node in ast.walk(ast.parse(text)):
+            if isinstance(node, ast.ClassDef):
+                methods = sum(
+                    isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef)
+                    for n in node.body
+                )
+                if methods > MAX_METHODS:
+                    violations.append(f"{name}: {node.name} has {methods} methods")
+    assert not violations, "beyond the limits:\n  " + "\n  ".join(violations)

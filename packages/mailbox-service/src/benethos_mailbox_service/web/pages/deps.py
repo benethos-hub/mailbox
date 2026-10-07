@@ -27,7 +27,7 @@ def if_allowed(
     return call() if caller.allows(operation, account_id) else default
 
 
-class CsrfRefused(Exception):
+class CsrfRefusedError(Exception):
     """A request that changes something came without the session's token."""
 
 
@@ -46,7 +46,7 @@ async def changing(request: Request) -> Access:
         value = form.get(CSRF_FIELD)
         presented = value if isinstance(value, str) else None
     if not csrf_ok(found.session, presented):
-        raise CsrfRefused
+        raise CsrfRefusedError
     return found.access
 
 

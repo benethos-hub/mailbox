@@ -60,7 +60,7 @@ def model_of(
 Again = Callable[[str], Response | Awaitable[Response]]
 
 
-class Failed(Exception):
+class FormFailedError(Exception):
     """A form did not go through. With ``again`` its page is shown again
     with what was typed and ``error``, else the browser goes back to
     ``path`` with ``error``. The pages' error handler does either."""
@@ -80,4 +80,4 @@ def failing(path: str, prefix: str = "", again: Again | None = None) -> Iterator
     try:
         yield
     except (MailboxServiceError, FormError) as exc:
-        raise Failed(path, redact(f"{prefix}{exc.message}"), again) from None
+        raise FormFailedError(path, redact(f"{prefix}{exc.message}"), again) from None

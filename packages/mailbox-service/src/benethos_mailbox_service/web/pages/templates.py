@@ -22,7 +22,7 @@ from ... import __version__
 from ...common.clock import log_time, utc_now
 from ...data.models import Address
 from .navigation import navigation, own_page
-from .session import PATH, SignInRequired, found_for, show_once
+from .session import PATH, SignInRequiredError, found_for, show_once
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE_DIR = HERE / "templates"
@@ -146,7 +146,7 @@ def back(
         for key, value in (("msg", message), ("err", error)):
             if value:
                 show_once(request, key, value)
-    except SignInRequired:
+    except SignInRequiredError:
         pass  # signed out meanwhile: the sign-in page says so
     return RedirectResponse(path, status_code=303)
 

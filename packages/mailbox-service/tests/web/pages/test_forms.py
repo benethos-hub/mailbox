@@ -8,7 +8,7 @@ from benethos_mailbox_service.data.models import FolderCreate
 from benethos_mailbox_service.web.pages.forms import FormError, model_of, text_of
 
 
-class _Named(FormError):
+class _NamedError(FormError):
     pass
 
 
@@ -19,8 +19,8 @@ def test_a_model_from_a_form() -> None:
 def test_what_the_model_refuses_is_a_form_error() -> None:
     with pytest.raises(FormError, match="^name: "):
         model_of(FolderCreate, {"name": ""})
-    with pytest.raises(_Named, match="^a name, please$"):
-        model_of(FolderCreate, {}, error=_Named, message="a name, please")
+    with pytest.raises(_NamedError, match="^a name, please$"):
+        model_of(FolderCreate, {}, error=_NamedError, message="a name, please")
 
 
 def test_a_field_as_text() -> None:

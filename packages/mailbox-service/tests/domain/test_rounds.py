@@ -9,7 +9,7 @@ from benethos_mailbox_service.domain.rounds import rounds
 from benethos_mailbox_service.errors import StorageError
 
 
-class _Stop(Exception):
+class _StopError(Exception):
     pass
 
 
@@ -27,9 +27,9 @@ async def test_a_failed_round_is_recorded_and_the_next_one_follows(
     async def sleep(seconds: float) -> None:
         paused.append(seconds)
         if len(done) == 2:
-            raise _Stop
+            raise _StopError
 
-    with pytest.raises(_Stop):
+    with pytest.raises(_StopError):
         await rounds(one, pause=5.0, sleep=sleep, activity=ActivityLog(), by=WORKER)
     assert len(done) == 2
     assert paused == [5.0, 5.0]
