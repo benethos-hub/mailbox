@@ -192,8 +192,8 @@ level in colour, the source without the package name (`http` for the
 access log), and a request as method, path and status with its name:
 
 ```
-2026-09-28T10:14:03.412+02:00 INFO    activity.auth.signed_in          admin (usr_...) signed in to the UI from 127.0.0.1
-2026-09-28T10:14:03.418+02:00 INFO    http                             POST /ui/sign-in 303 See Other 127.0.0.1:52344
+2026-09-28T10:14:03.412+02:00 INFO     activity.auth.signed_in          admin (usr_...) signed in to the UI from 127.0.0.1
+2026-09-28T10:14:03.418+02:00 INFO     http                             POST /ui/sign-in 303 See Other 127.0.0.1:52344
 ```
 
 `NO_COLOR` set to any value keeps the plain lines at a terminal too.
