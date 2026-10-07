@@ -17,6 +17,7 @@ from ...protocols import jmap
 from .. import rules
 from . import mappers
 from .account import JmapAccount
+from .shapes import Identity
 
 WITH_SUBMISSION = (jmap.CORE, jmap.MAIL, jmap.SUBMISSION)
 
@@ -62,14 +63,14 @@ async def send(
         ),
         using=WITH_SUBMISSION,
     )
-    imported = jmap.result(answers, "i")
-    refused = (imported.get("notCreated") or {}).get("m")
+    imported = jmap.read(answers, "i", jmap.SetResult)
+    refused = imported.not_created.get("m")
     if refused is not None:
         raise jmap.set_error(refused, "message")
-    stored = (imported.get("created") or {}).get("m") or {}
-    if not stored.get("id"):
+    stored = imported.created.get("m")
+    if stored is None:
         raise ProviderError("the JMAP server did not store the message to send")
-    email_id = str(stored["id"])
+    email_id = stored.id
     failed = _submission_failure(answers)
     if failed is not None:
         await _forget(account, email_id)
@@ -128,22 +129,22 @@ async def _identity(account: JmapAccount, sender: str) -> str:
         ("Identity/get", {"accountId": owner, "ids": None}, "0"),
         using=WITH_SUBMISSION,
     )
-    identities = list(jmap.result(answers, "0").get("list") or [])
+    identities = jmap.read(answers, "0", jmap.Got[Identity]).items
     if not identities:
         raise ConflictError("the JMAP account has no identity to send as")
     wanted = sender.lower()
     domain = "*@" + wanted.rpartition("@")[2]
     for match in (wanted, domain):
         for identity in identities:
-            if str(identity.get("email") or "").lower() == match:
-                return str(identity["id"])
-    return str(identities[0]["id"])
+            if (identity.email or "").lower() == match:
+                return identity.id
+    return identities[0].id
 
 
 async def _forget(account: JmapAccount, email_id: str) -> None:
     """Remove a message that was stored to be sent and was not."""
     try:
-        await account.one("Email/set", {"destroy": [email_id]})
+        await account.one("Email/set", {"destroy": [email_id]}, jmap.Anything)
     except MailboxServiceError:
         pass  # a stray draft is better than hiding why the send failed
 
@@ -151,12 +152,12 @@ async def _forget(account: JmapAccount, email_id: str) -> None:
 def _submission_failure(answers: list[jmap.Invocation]) -> MailboxServiceError | None:
     """Why the server did not take the message, None when it did."""
     try:
-        submitted = jmap.result(answers, "s")
+        submitted = jmap.read(answers, "s", jmap.SetResult)
     except MailboxServiceError as exc:
         return exc
-    refused = (submitted.get("notCreated") or {}).get("s")
+    refused = submitted.not_created.get("s")
     if refused is not None:
         return jmap.set_error(refused, "message")
-    if "s" not in (submitted.get("created") or {}):
+    if "s" not in submitted.created:
         return ProviderError("the JMAP server did not say whether it sent the message")
     return None

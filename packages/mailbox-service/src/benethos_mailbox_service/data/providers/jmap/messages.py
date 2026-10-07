@@ -21,6 +21,7 @@ from .. import rules
 from ..base import Capability
 from . import mappers
 from .account import JmapAccount
+from .shapes import Email
 
 # --- listing and reading ----------------------------------------------------------
 
@@ -51,16 +52,15 @@ async def list_messages(
         # Gone since: the next one has moved up to its place.
         del query["anchor"], query["anchorOffset"]
         answers = await _page(account, {**query, "position": start[1]})
-    found = jmap.result(answers, "q")
-    emails = {str(e["id"]): e for e in jmap.result(answers, "g").get("list") or []}
-    ids = [str(i) for i in found.get("ids") or []]
+    found = jmap.read(answers, "q", jmap.Queried)
+    emails = {e.id: e for e in jmap.read(answers, "g", jmap.Got[Email]).items}
+    ids = found.ids
     page = ids[:limit]
-    capped = found.get("limit")
+    capped = found.limit
     more = len(ids) > limit or (
-        isinstance(capped, int) and 0 < capped <= limit and len(ids) >= capped
+        capped is not None and capped <= limit and len(ids) >= capped
     )
-    position = found.get("position")
-    first = position if isinstance(position, int) else 0
+    first = found.position or 0
     return Page[MessageSummary](
         items=[mappers.summary(emails[i]) for i in page if i in emails],
         next_cursor=mappers.cursor(scope, page[-1], first + len(page) - 1)
@@ -123,8 +123,8 @@ async def update_messages(
     current = await account.emails(message_ids, ["keywords", "mailboxIds"])
     patches: dict[str, dict[str, Any]] = {}
     for message_id, email in current.items():
-        patch = mappers.keyword_patch(email.get("keywords") or {}, changes)
-        if targets is not None and set(targets) != set(email.get("mailboxIds") or {}):
+        patch = mappers.keyword_patch(email.keywords, changes)
+        if targets is not None and set(targets) != set(email.mailbox_ids):
             patch["mailboxIds"] = dict.fromkeys(targets, True)
         if patch:
             patches[message_id] = patch
@@ -143,7 +143,7 @@ async def delete_messages(
     results: dict[str, MessageSummary | None | MailboxServiceError] = {}
     patches: dict[str, dict[str, Any]] = {}
     for message_id, email in current.items():
-        if set(email.get("mailboxIds") or {}) == {trash}:
+        if set(email.mailbox_ids) == {trash}:
             results[message_id] = rules.in_trash_already()
         else:
             patches[message_id] = {"mailboxIds": {trash: True}}
@@ -157,7 +157,7 @@ async def delete_messages(
 async def _changed(
     account: JmapAccount,
     message_ids: list[str],
-    current: dict[str, dict[str, Any]],
+    current: dict[str, Email],
     patches: dict[str, dict[str, Any]],
 ) -> dict[str, MessageSummary | MailboxServiceError]:
     """Apply ``patches``, then each message as it is now, or why not."""
@@ -165,9 +165,9 @@ async def _changed(
         i: missing_message(i) for i in message_ids if i not in current
     }
     if patches:
-        done = await account.one("Email/set", {"update": patches})
-        for message_id, error in (done.get("notUpdated") or {}).items():
-            results[str(message_id)] = _message_error(error, str(message_id))
+        done = await account.one("Email/set", {"update": patches}, jmap.SetResult)
+        for message_id, error in done.not_updated.items():
+            results[message_id] = _message_error(error, message_id)
     wanted = [i for i in message_ids if i not in results]
     now = await account.emails(wanted, mappers.SUMMARY_PROPERTIES)
     for message_id in wanted:
@@ -186,8 +186,8 @@ async def _destroyed(
     }
     wanted = [i for i in message_ids if i not in results]
     if wanted:
-        done = await account.one("Email/set", {"destroy": wanted})
-        failed = done.get("notDestroyed") or {}
+        done = await account.one("Email/set", {"destroy": wanted}, jmap.SetResult)
+        failed = done.not_destroyed
         for message_id in wanted:
             error = failed.get(message_id)
             results[message_id] = (
@@ -196,7 +196,7 @@ async def _destroyed(
     return {i: results[i] for i in message_ids}
 
 
-def _message_error(error: dict[str, Any], message_id: str) -> MailboxServiceError:
-    if error.get("type") == "notFound":
+def _message_error(error: jmap.SetError, message_id: str) -> MailboxServiceError:
+    if error.type == "notFound":
         return missing_message(message_id)
     return jmap.set_error(error, "message")

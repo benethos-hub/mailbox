@@ -243,7 +243,7 @@ def test_method_errors(kind: str, error: type[Exception]) -> None:
     ],
 )
 def test_set_errors(kind: str, error: type[Exception]) -> None:
-    assert type(jmap.set_error({"type": kind}, "message")) is error
+    assert type(jmap.set_error(jmap.SetError(type=kind), "message")) is error
 
 
 async def test_an_event_source_that_refuses() -> None:

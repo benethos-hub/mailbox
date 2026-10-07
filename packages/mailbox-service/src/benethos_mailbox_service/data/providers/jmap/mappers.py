@@ -11,11 +11,11 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from datetime import UTC, date, datetime, time
 from typing import Any
 
 from ....common import opaque
-from ....common.clock import parse_iso
 from ...mail import convert, parse
 from ...models import (
     Folder,
@@ -26,6 +26,7 @@ from ...models import (
     MessageUpdate,
 )
 from .. import rules
+from .shapes import Addresses, Email, Mailbox
 
 # An id as JMAP allows it (RFC 8620 1.2).
 _ID = re.compile(r"^[A-Za-z0-9_-]{1,255}$")
@@ -71,43 +72,43 @@ def is_id(value: str | None) -> bool:
 # --- mailboxes --------------------------------------------------------------------
 
 
-def folder(mailbox: dict[str, Any]) -> Folder:
+def folder(mailbox: Mailbox) -> Folder:
     return Folder(
-        id=str(mailbox["id"]),
-        name=str(mailbox.get("name") or ""),
-        role=ROLES.get(str(mailbox.get("role") or "").lower()),
-        parent_id=mailbox.get("parentId") or None,
-        total=mailbox.get("totalEmails"),
-        unread=mailbox.get("unreadEmails"),
-        subscribed=mailbox.get("isSubscribed"),
+        id=mailbox.id,
+        name=mailbox.name or "",
+        role=ROLES.get((mailbox.role or "").lower()),
+        parent_id=mailbox.parent_id or None,
+        total=mailbox.total_emails,
+        unread=mailbox.unread_emails,
+        subscribed=mailbox.is_subscribed,
     )
 
 
 # --- emails -----------------------------------------------------------------------
 
 
-def summary(email: dict[str, Any]) -> MessageSummary:
-    flags = email.get("keywords") or {}
-    sender = _addresses(email.get("from"))
+def summary(email: Email) -> MessageSummary:
+    flags = email.keywords
+    sender = _addresses(email.sender)
     return MessageSummary.model_validate(
         {
-            "id": str(email["id"]),
-            "thread_id": email.get("threadId"),
-            "folder_ids": sorted(email.get("mailboxIds") or {}),
-            "subject": email.get("subject"),
+            "id": email.id,
+            "thread_id": email.thread_id,
+            "folder_ids": sorted(email.mailbox_ids),
+            "subject": email.subject,
             "from": sender[0] if sender else None,
-            "to": _addresses(email.get("to")),
-            "date": when(email.get("sentAt")) or when(email.get("receivedAt")),
-            "snippet": email.get("preview") or None,
+            "to": _addresses(email.to),
+            "date": email.sent_at or email.received_at,
+            "snippet": email.preview or None,
             "unread": SEEN not in flags,
             "starred": FLAGGED in flags,
             "keywords": keywords(flags),
-            "has_attachments": bool(email.get("hasAttachment")),
+            "has_attachments": bool(email.has_attachment),
         }
     )
 
 
-def message(email: dict[str, Any], raw: bytes) -> Message:
+def message(email: Email, raw: bytes) -> Message:
     """The whole message: what JMAP knows of it, and what its source says."""
     parsed = parse.ParsedMessage(raw)
     fields = {**convert.summary_fields(parsed), **convert.message_fields(parsed)}
@@ -118,14 +119,16 @@ def message(email: dict[str, Any], raw: bytes) -> Message:
     )
 
 
-def keywords(flags: dict[str, Any]) -> list[str]:
+def keywords(flags: Mapping[str, bool]) -> list[str]:
     """The API's keywords of an email's JMAP keywords, sorted."""
     return sorted(
         k.lower() for k, on in flags.items() if on and k.lower() not in _NOT_KEYWORDS
     )
 
 
-def keyword_patch(current: dict[str, Any], changes: MessageUpdate) -> dict[str, Any]:
+def keyword_patch(
+    current: Mapping[str, bool], changes: MessageUpdate
+) -> dict[str, Any]:
     """The patch of an email's keywords for ``changes`` (RFC 8620 5.3),
     given the keywords it has now."""
     patch: dict[str, Any] = {}
@@ -148,20 +151,11 @@ def _path(keyword: str) -> str:
     return "keywords/" + keyword.replace("~", "~0").replace("/", "~1")
 
 
-def when(value: Any) -> datetime | None:
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        return parse_iso(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-
-
-def _addresses(values: Any) -> list[dict[str, Any]]:
+def _addresses(values: Addresses) -> list[dict[str, str | None]]:
     return [
-        {"email": str(v["email"]), "name": v.get("name") or None}
-        for v in values or []
-        if isinstance(v, dict) and v.get("email")
+        {"email": v.email, "name": v.name or None}
+        for v in values
+        if v is not None and v.email
     ]
 
 

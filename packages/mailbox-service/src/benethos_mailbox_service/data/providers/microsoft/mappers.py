@@ -12,7 +12,6 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from typing import Any
 
-from ....common.clock import parse_iso
 from ...mail import fields
 from ...models import (
     Address,
@@ -24,6 +23,9 @@ from ...models import (
     MessageFilter,
     MessageSummary,
 )
+from .shapes import Attachment as GraphAttachment
+from .shapes import MailFolder, Recipient, Recipients
+from .shapes import Message as GraphMessage
 
 DRAFT_KEYWORD = "$draft"
 
@@ -48,95 +50,87 @@ FOLDER_FIELDS = (
 )
 
 
-def folder(item: dict[str, Any], roles: dict[str, FolderRole], root: str) -> Folder:
+def folder(item: MailFolder, roles: dict[str, FolderRole], root: str) -> Folder:
     """A mail folder. Graph names the mailbox's root folder, which no list
     shows, as the parent of the top ones: for us they have none."""
-    folder_id = str(item["id"])
-    parent = item.get("parentFolderId")
+    parent = item.parent_folder_id
     return Folder(
-        id=folder_id,
-        name=str(item.get("displayName") or ""),
-        role=roles.get(folder_id),
+        id=item.id,
+        name=item.display_name or "",
+        role=roles.get(item.id),
         parent_id=None if parent == root else parent,
-        total=item.get("totalItemCount"),
-        unread=item.get("unreadItemCount"),
+        total=item.total_item_count,
+        unread=item.unread_item_count,
     )
 
 
-def _address(value: Any) -> Address | None:
-    email = (value or {}).get("emailAddress") or {}
-    address = email.get("address")
-    if not address:
+def _address(value: Recipient | None) -> Address | None:
+    email = value.email_address if value is not None else None
+    if email is None or not email.address:
         return None
-    return Address(
-        email=fields.unicode_address(str(address)), name=email.get("name") or None
-    )
+    return Address(email=fields.unicode_address(email.address), name=email.name or None)
 
 
-def _addresses(values: Any) -> list[Address]:
-    found = (_address(v) for v in values or [])
+def _addresses(values: Recipients) -> list[Address]:
+    found = (_address(v) for v in values)
     return [a for a in found if a is not None]
 
 
-def when(value: Any) -> datetime | None:
-    return parse_iso(str(value).replace("Z", "+00:00")) if value else None
-
-
-def keywords(item: dict[str, Any]) -> list[str]:
+def keywords(item: GraphMessage) -> list[str]:
     """Lower case, as the other adapters answer keywords."""
-    found = [str(c).lower() for c in item.get("categories") or []]
-    if item.get("isDraft"):
+    found = [c.lower() for c in item.categories if c]
+    if item.is_draft:
         found.append(DRAFT_KEYWORD)
     return found
 
 
-def summary(item: dict[str, Any]) -> MessageSummary:
+def summary(item: GraphMessage) -> MessageSummary:
     return MessageSummary(
-        id=str(item["id"]),
-        thread_id=item.get("conversationId"),
-        folder_ids=[item["parentFolderId"]] if item.get("parentFolderId") else [],
-        subject=item.get("subject"),
-        sender=_address(item.get("from")),
-        to=_addresses(item.get("toRecipients")),
-        date=when(item.get("receivedDateTime")),
-        snippet=item.get("bodyPreview") or None,
-        unread=not item.get("isRead", True),
-        starred=(item.get("flag") or {}).get("flagStatus") == "flagged",
+        id=item.id,
+        thread_id=item.conversation_id,
+        folder_ids=[item.parent_folder_id] if item.parent_folder_id else [],
+        subject=item.subject,
+        sender=_address(item.sender),
+        to=_addresses(item.to_recipients),
+        date=item.received_date_time,
+        snippet=item.body_preview or None,
+        unread=item.is_read is False,
+        starred=item.flag is not None and item.flag.flag_status == "flagged",
         keywords=keywords(item),
-        has_attachments=bool(item.get("hasAttachments")),
+        has_attachments=bool(item.has_attachments),
     )
 
 
-def message(item: dict[str, Any], attachments: list[dict[str, Any]]) -> Message:
-    body = item.get("body") or {}
-    content = body.get("content") or None
-    is_html = str(body.get("contentType", "")).lower() == "html"
+def message(item: GraphMessage, attachments: list[GraphAttachment]) -> Message:
+    content = (item.body.content if item.body else None) or None
+    kind = (item.body.content_type if item.body else None) or ""
+    is_html = kind.lower() == "html"
     return Message(
         **summary(item).model_dump(by_alias=False),
-        cc=_addresses(item.get("ccRecipients")),
-        bcc=_addresses(item.get("bccRecipients")),
-        reply_to=_addresses(item.get("replyTo")),
-        message_id_header=item.get("internetMessageId"),
+        cc=_addresses(item.cc_recipients),
+        bcc=_addresses(item.bcc_recipients),
+        reply_to=_addresses(item.reply_to),
+        message_id_header=item.internet_message_id,
         text_body=None if is_html else content,
         html_body=content if is_html else None,
         attachments=[attachment(a) for a in attachments],
     )
 
 
-def attachment(item: dict[str, Any]) -> Attachment:
+def attachment(item: GraphAttachment) -> Attachment:
     return Attachment(
-        id=str(item["id"]),
-        filename=item.get("name") or None,
-        content_type=item.get("contentType") or fields.OCTET_STREAM,
-        size=int(item.get("size") or 0),
-        inline=bool(item.get("isInline")),
+        id=item.id,
+        filename=item.name or None,
+        content_type=item.content_type or fields.OCTET_STREAM,
+        size=item.size or 0,
+        inline=bool(item.is_inline),
     )
 
 
-def attachment_content(item: dict[str, Any], data: bytes) -> AttachmentContent:
+def attachment_content(item: GraphAttachment, data: bytes) -> AttachmentContent:
     return AttachmentContent(
-        filename=item.get("name") or None,
-        content_type=item.get("contentType") or fields.OCTET_STREAM,
+        filename=item.name or None,
+        content_type=item.content_type or fields.OCTET_STREAM,
         data=data,
     )
 

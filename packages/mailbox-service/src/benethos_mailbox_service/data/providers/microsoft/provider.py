@@ -23,7 +23,6 @@ from __future__ import annotations
 import base64
 import time
 from collections.abc import Callable
-from typing import Any
 from urllib.parse import unquote, urlencode
 
 from ....errors import (
@@ -50,6 +49,8 @@ from .. import rules
 from ..base import Capability, ChangedMessage, FolderChanges, TokenSource
 from . import mappers
 from .graph import Graph, id_, own_path
+from .shapes import Attachment, Batch, Item, Listing, MailFolder
+from .shapes import Message as GraphMessage
 
 # A page of folders or of message ids, as many as Graph hands out at once.
 PAGE_SIZE = 250
@@ -80,14 +81,16 @@ class MicrosoftProvider:
         root = await self._graph.root_id()
         params = {"$select": mappers.FOLDER_FIELDS, "$top": str(PAGE_SIZE)}
         found: list[Folder] = []
-        waiting = await self._graph.all("/me/mailFolders", params)
+        waiting = await self._graph.all(Listing[MailFolder], "/me/mailFolders", params)
         while waiting:
             item = waiting.pop(0)
             found.append(mappers.folder(item, roles, root))
-            if item.get("childFolderCount"):
+            if item.child_folder_count:
                 waiting.extend(
                     await self._graph.all(
-                        f"/me/mailFolders/{id_(item['id'])}/childFolders", params
+                        Listing[MailFolder],
+                        f"/me/mailFolders/{id_(item.id)}/childFolders",
+                        params,
                     )
                 )
         return found
@@ -98,7 +101,9 @@ class MicrosoftProvider:
             if parent_id
             else "/me/mailFolders"
         )
-        item = await self._graph.json("POST", path, json_body={"displayName": name})
+        item = await self._graph.read(
+            MailFolder, "POST", path, json_body={"displayName": name}
+        )
         return mappers.folder(
             item, await self._graph.folder_roles(), await self._graph.root_id()
         )
@@ -107,12 +112,14 @@ class MicrosoftProvider:
         self, folder_id: str, name: str, parent_id: str | None
     ) -> Folder:
         path = f"/me/mailFolders/{id_(folder_id)}"
-        item = await self._graph.json("PATCH", path, json_body={"displayName": name})
+        item = await self._graph.read(
+            MailFolder, "PATCH", path, json_body={"displayName": name}
+        )
         # The top of the folder tree is the mailbox's root folder, which
         # Graph names as the parent of a top-level folder.
         root = await self._graph.root_id()
-        if (item.get("parentFolderId") or root) != (parent_id or root):
-            item = await self._graph.move(path, parent_id or root)
+        if (item.parent_folder_id or root) != (parent_id or root):
+            item = await self._graph.move(MailFolder, path, parent_id or root)
         return mappers.folder(item, await self._graph.folder_roles(), root)
 
     async def delete_folder(self, folder_id: str) -> None:
@@ -130,7 +137,9 @@ class MicrosoftProvider:
     ) -> Page[MessageSummary]:
         query, rest = mappers.query(search)
         if cursor:
-            body = await self._graph.json("GET", own_path(cursor))
+            body = await self._graph.read(
+                Listing[GraphMessage], "GET", own_path(cursor)
+            )
         else:
             path = (
                 f"/me/mailFolders/{id_(folder_id)}/messages"
@@ -138,18 +147,20 @@ class MicrosoftProvider:
                 else "/me/messages"
             )
             params = {"$select": mappers.SUMMARY_FIELDS, "$top": str(limit), **query}
-            body = await self._graph.json("GET", path, params=params)
-        found = body.get("value") or []
+            body = await self._graph.read(
+                Listing[GraphMessage], "GET", path, params=params
+            )
+        found = body.value
         if "$search" in query or (cursor and "search=" in unquote(cursor)):
             found = await self._immutable(found)
         items = [mappers.summary(item) for item in found]
-        link = body.get("@odata.nextLink")
+        link = body.next_link
         return Page[MessageSummary](
             items=[item for item in items if mappers.keeps(item, rest)],
             next_cursor=own_path(link) if link else None,
         )
 
-    async def _immutable(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    async def _immutable(self, items: list[GraphMessage]) -> list[GraphMessage]:
         """Search results under their immutable ids.
 
         Seen live: Graph's search ignores the preference for immutable ids,
@@ -161,10 +172,10 @@ class MicrosoftProvider:
         up keeps the id the search gave.
         """
         ids: dict[str, str] = {}
-        wanted = [item for item in items if item.get("internetMessageId")]
+        wanted = [item for item in items if item.internet_message_id]
         urls = []
         for item in wanted:
-            header = str(item["internetMessageId"]).replace("'", "''")
+            header = (item.internet_message_id or "").replace("'", "''")
             query = urlencode(
                 {
                     "$select": "id,parentFolderId",
@@ -172,31 +183,32 @@ class MicrosoftProvider:
                 }
             )
             urls.append(f"/me/messages?{query}")
-        for n, body in (await self._graph.batch(urls)).items():
+        found = await self._graph.batch(urls, Batch[Listing[GraphMessage]])
+        for n, body in found.items():
             item = wanted[n]
-            found = body.get("value") or []
             same = [
-                f
-                for f in found
-                if f.get("parentFolderId") == item.get("parentFolderId")
+                f for f in body.value if f.parent_folder_id == item.parent_folder_id
             ]
             if len(same) == 1:
-                ids[item["id"]] = str(same[0]["id"])
-        return [{**item, "id": ids.get(item["id"], item["id"])} for item in items]
+                ids[item.id] = same[0].id
+        return [
+            item.model_copy(update={"id": ids.get(item.id, item.id)}) for item in items
+        ]
 
     async def get_message(self, message_id: str) -> Message:
         path = f"/me/messages/{id_(message_id)}"
-        item = await self._graph.json(
-            "GET", path, params={"$select": mappers.MESSAGE_FIELDS}
+        item = await self._graph.read(
+            GraphMessage, "GET", path, params={"$select": mappers.MESSAGE_FIELDS}
         )
-        attachments: list[dict[str, Any]] = []
-        if item.get("hasAttachments"):
+        attachments: list[Attachment] = []
+        if item.has_attachments:
             attachments = await self._graph.all(
+                Listing[Attachment],
                 f"{path}/attachments",
                 {"$select": "id,name,contentType,size,isInline"},
             )
         found = mappers.message(item, attachments)
-        if item.get("isDraft"):
+        if item.is_draft:
             # What a draft answers lives in its MIME only.
             thread = convert.thread_fields(
                 parse.ParsedMessage(await self.get_raw(message_id))
@@ -210,8 +222,8 @@ class MicrosoftProvider:
         self, message_id: str, attachment_id: str
     ) -> AttachmentContent:
         path = f"/me/messages/{id_(message_id)}/attachments/{id_(attachment_id)}"
-        item = await self._graph.json("GET", path)
-        content = item.get("contentBytes")
+        item = await self._graph.read(Attachment, "GET", path)
+        content = item.content_bytes
         data = (
             base64.b64decode(content)
             if content
@@ -248,7 +260,8 @@ class MicrosoftProvider:
     async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
         if replaces is not None:
             await self._draft(replaces)
-        item = await self._graph.json(
+        item = await self._graph.read(
+            GraphMessage,
             "POST",
             "/me/messages",
             content=base64.b64encode(raw),
@@ -270,12 +283,10 @@ class MicrosoftProvider:
         """Only drafts: any other id is not found, so the draft operations
         reach no other mail."""
         try:
-            item = await self._graph.json(
-                "GET", f"/me/messages/{id_(draft_id)}", params={"$select": "isDraft"}
-            )
+            draft = (await self._graph.placed(f"/me/messages/{id_(draft_id)}")).is_draft
         except BadRequestError:
-            item = {}
-        if not item.get("isDraft"):
+            draft = False
+        if not draft:
             raise missing("draft", draft_id)
 
     # --- changing -------------------------------------------------------------------
@@ -291,12 +302,17 @@ class MicrosoftProvider:
             path = f"/me/messages/{id_(message_id)}"
             item = None
             if body:
-                item = await self._graph.json("PATCH", path, json_body=body)
+                item = await self._graph.read(
+                    GraphMessage, "PATCH", path, json_body=body
+                )
             if target is not None:
-                item = await self._graph.move(path, target)
+                item = await self._graph.move(GraphMessage, path, target)
             if item is None:
-                item = await self._graph.json(
-                    "GET", path, params={"$select": mappers.SUMMARY_FIELDS}
+                item = await self._graph.read(
+                    GraphMessage,
+                    "GET",
+                    path,
+                    params={"$select": mappers.SUMMARY_FIELDS},
                 )
             return mappers.summary(item)
 
@@ -315,9 +331,9 @@ class MicrosoftProvider:
                 await self._delete_for_good(message_id, trash)
                 return None
             path = f"/me/messages/{id_(message_id)}"
-            if await self._graph.parent(path) == trash:
+            if (await self._graph.placed(path)).parent_folder_id == trash:
                 raise rules.in_trash_already()
-            return mappers.summary(await self._graph.move(path, trash))
+            return mappers.summary(await self._graph.move(GraphMessage, path, trash))
 
         return await rules.per_id(message_ids, one)
 
@@ -327,9 +343,9 @@ class MicrosoftProvider:
         if trash is None:
             trash = await self._graph.role_id(FolderRole.TRASH)
         path = f"/me/messages/{id_(message_id)}"
-        if await self._graph.parent(path) != trash:
-            item = await self._graph.move(path, trash)
-            path = f"/me/messages/{id_(str(item['id']))}"
+        if (await self._graph.placed(path)).parent_folder_id != trash:
+            item = await self._graph.move(Item, path, trash)
+            path = f"/me/messages/{id_(item.id)}"
         await self._graph.call("DELETE", path)
 
     # --- for the sync worker ------------------------------------------------------
@@ -344,10 +360,11 @@ class MicrosoftProvider:
 
     async def folder_contents(self, folder_id: str) -> list[str]:
         items = await self._graph.all(
+            Listing[Item],
             f"/me/mailFolders/{id_(folder_id)}/messages",
             {"$select": "id", "$top": str(PAGE_SIZE)},
         )
-        return [str(item["id"]) for item in items]
+        return [item.id for item in items]
 
     async def flag_changes(
         self, folder_id: str, since: str, message_ids: list[str]
@@ -361,34 +378,32 @@ class MicrosoftProvider:
             f"/me/messages/{id_(message_id)}?$select=internetMessageId"
             for message_id in message_ids
         ]
-        return {
-            message_ids[n]: body.get("internetMessageId")
-            for n, body in (await self._graph.batch(urls)).items()
-        }
+        found = await self._graph.batch(urls, Batch[GraphMessage])
+        return {message_ids[n]: body.internet_message_id for n, body in found.items()}
 
     async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
         """A delta query of the folder's messages. The token is Graph's
         deltaLink, below ``/v1.0``. A message moved out of the folder comes
         as removed, one moved in as changed, under the same immutable id."""
         if token is None:
-            body = await self._graph.json(
+            body = await self._graph.read(
+                Listing[GraphMessage],
                 "GET",
                 f"/me/mailFolders/{id_(folder_id)}/messages/delta",
                 params={"$select": "id,createdDateTime"},
             )
         else:
-            body = await self._graph.json("GET", own_path(token))
+            body = await self._graph.read(Listing[GraphMessage], "GET", own_path(token))
         changed: list[ChangedMessage] = []
         removed: list[str] = []
         delta = None
         async for page in self._graph.pages(body):
-            for item in page.get("value") or []:
-                if "@removed" in item:
-                    removed.append(str(item["id"]))
+            for item in page.value:
+                if item.removed is not None:
+                    removed.append(item.id)
                 else:
-                    created = mappers.when(item.get("createdDateTime"))
-                    changed.append(ChangedMessage(str(item["id"]), created))
-            delta = page.get("@odata.deltaLink")
+                    changed.append(ChangedMessage(item.id, item.created_date_time))
+            delta = page.delta_link
         if not delta:
             raise ProviderError("microsoft answered a delta query without a link")
         return FolderChanges(own_path(delta), changed, removed)

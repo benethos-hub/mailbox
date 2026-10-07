@@ -169,7 +169,9 @@ class JmapProvider:
         """A fresh session, then one call: both need the credential."""
         session = await self._account.client.session(fresh=True)
         self._changes.forget()
-        await self._account.one("Mailbox/get", {"ids": [], "properties": ["id"]})
+        await self._account.one(
+            "Mailbox/get", {"ids": [], "properties": ["id"]}, jmap.Anything
+        )
         if not session.offers(jmap.MAIL):
             raise ProviderError("the server offers no JMAP mail for this login")
 

@@ -8,8 +8,10 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import AsyncIterator, Callable, Mapping
-from typing import Any
+from typing import Any, TypeVar
 from urllib.parse import quote, urlsplit
+
+from pydantic import BaseModel
 
 from ....common.chunks import batched
 from ....errors import (
@@ -23,10 +25,11 @@ from ....errors import (
     ProviderUnavailableError,
 )
 from ...models import FolderRole
-from ...protocols import Answer, ApiClient
+from ...protocols import Answer, ApiClient, wire
 from .. import rules
 from ..base import TokenSource
 from . import mappers
+from .shapes import Batch, ErrorDetail, Failure, Item, Listing, Placed
 
 # DEBUG alone: the data layer decides nothing (docs/LOGGING.md rule 6.2).
 # A pause Graph asks for reaches the domain as an error.
@@ -38,6 +41,10 @@ VERSION = "/v1.0"
 BATCH_SIZE = 20
 # Ids that survive a move (CONCEPT 4.1), asked for on every request.
 IMMUTABLE_IDS = 'IdType="ImmutableId"'
+
+S = TypeVar("S", bound=BaseModel)
+T = TypeVar("T")
+L = TypeVar("L", bound=Listing[Any])
 
 
 class Graph:
@@ -100,29 +107,38 @@ class Graph:
             return answer
         raise AssertionError("unreachable")  # pragma: no cover
 
-    async def json(self, method: str, path: str, **kwargs: Any) -> Any:
-        return (await self.call(method, path, **kwargs)).json()
+    async def read(self, shape: type[S], method: str, path: str, **kwargs: Any) -> S:
+        """One Graph request, its answer read as ``shape``."""
+        answer = await self.call(method, path, **kwargs)
+        return wire.parse(
+            shape, answer.body, "microsoft answered in a shape of its own"
+        )
 
-    async def pages(self, body: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
-        """``body`` and every page after it, as Graph links them."""
+    async def pages(self, first: L) -> AsyncIterator[L]:
+        """``first`` and every page after it, as Graph links them."""
+        page = first
         while True:
-            yield body
-            link = body.get("@odata.nextLink")
-            if not link:
+            yield page
+            if not page.next_link:
                 return
-            body = await self.json("GET", own_path(link))
+            page = await self.read(type(page), "GET", own_path(page.next_link))
 
-    async def all(self, path: str, params: Mapping[str, str]) -> list[dict[str, Any]]:
-        """Every item of a list, following Graph's pages."""
-        items: list[dict[str, Any]] = []
-        async for page in self.pages(await self.json("GET", path, params=params)):
-            items.extend(page.get("value") or [])
+    async def all(
+        self, listing: type[Listing[T]], path: str, params: Mapping[str, str]
+    ) -> list[T]:
+        """Every item of a list, following Graph's pages. ``listing``
+        names what the items are, e.g. ``Listing[MailFolder]``."""
+        items: list[T] = []
+        first = await self.read(listing, "GET", path, params=params)
+        async for page in self.pages(first):
+            items.extend(page.value)
         return items
 
-    async def batch(self, urls: list[str]) -> dict[int, dict[str, Any]]:
+    async def batch(self, urls: list[str], batch: type[Batch[T]]) -> dict[int, T]:
         """GET each of ``urls`` under immutable ids, twenty to a JSON
-        batch. The body of each answered with 200, by its index."""
-        bodies: dict[int, dict[str, Any]] = {}
+        batch. The body of each answered with 200, by its index.
+        ``batch`` names what the bodies are, e.g. ``Batch[Message]``."""
+        bodies: dict[int, T] = {}
         for chunk in batched(list(enumerate(urls)), BATCH_SIZE):
             requests = [
                 {
@@ -133,25 +149,26 @@ class Graph:
                 }
                 for n, url in chunk
             ]
-            answer = await self.json(
-                "POST", "/$batch", json_body={"requests": requests}
+            answer = await self.read(
+                batch, "POST", "/$batch", json_body={"requests": requests}
             )
-            for reply in answer.get("responses") or []:
-                if reply.get("status") == 200:
-                    bodies[int(reply["id"])] = reply.get("body") or {}
+            for reply in answer.responses:
+                if reply.status == 200 and reply.body is not None:
+                    bodies[int(reply.id)] = reply.body
         return bodies
 
-    async def move(self, path: str, destination: str) -> Any:
+    async def move(self, shape: type[S], path: str, destination: str) -> S:
         """Moves the folder or message at ``path``. Graph answers with it
         in its new place."""
-        return await self.json(
-            "POST", f"{path}/move", json_body={"destinationId": destination}
+        return await self.read(
+            shape, "POST", f"{path}/move", json_body={"destinationId": destination}
         )
 
-    async def parent(self, path: str) -> Any:
-        """The id of the folder the message at ``path`` is in."""
-        where = await self.json("GET", path, params={"$select": "parentFolderId"})
-        return where.get("parentFolderId")
+    async def placed(self, path: str) -> Placed:
+        """Where the message at ``path`` is, and whether it is a draft."""
+        return await self.read(
+            Placed, "GET", path, params={"$select": "parentFolderId,isDraft"}
+        )
 
     async def folder_roles(self) -> dict[str, FolderRole]:
         """The id of each well-known folder the mailbox has, and its role."""
@@ -159,12 +176,12 @@ class Graph:
             roles: dict[str, FolderRole] = {}
             for name, role in mappers.WELL_KNOWN.items():
                 try:
-                    found = await self.json(
-                        "GET", f"/me/mailFolders/{name}", params={"$select": "id"}
+                    found = await self.read(
+                        Item, "GET", f"/me/mailFolders/{name}", params={"$select": "id"}
                     )
                 except NotFoundError:
                     continue
-                roles[str(found["id"])] = role
+                roles[found.id] = role
             self._roles = roles
         return self._roles
 
@@ -178,8 +195,8 @@ class Graph:
         """The mailbox's root folder, which Graph names as the parent of a
         top-level folder."""
         if self._root is None:
-            item = await self.json("GET", "/me/mailFolders/msgfolderroot")
-            self._root = str(item["id"])
+            item = await self.read(Item, "GET", "/me/mailFolders/msgfolderroot")
+            self._root = item.id
         return self._root
 
     def forget(self) -> None:
@@ -217,12 +234,10 @@ def _retry_after(answer: Answer) -> float:
 
 def _failure(answer: Answer) -> MailboxServiceError:
     """Graph's error as this project's, with Graph's code and message."""
-    try:
-        error = (answer.json() or {}).get("error") or {}
-    except ProviderError:
-        error = {}
-    code = error.get("code") or answer.status
-    text = f"microsoft: {error.get('message') or 'request failed'} ({code})"
+    found = wire.read(Failure, answer.body)
+    error = (found.error if found else None) or ErrorDetail()
+    code = error.code or answer.status
+    text = f"microsoft: {error.message or 'request failed'} ({code})"
     if answer.status == 401:
         return ProviderAuthError("microsoft refused the access token: sign in again")
     if answer.status == 404:

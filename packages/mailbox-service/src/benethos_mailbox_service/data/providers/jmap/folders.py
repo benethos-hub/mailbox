@@ -7,6 +7,7 @@ from ...models import Folder
 from ...protocols import jmap
 from . import mappers
 from .account import JmapAccount
+from .shapes import Mailbox
 
 
 async def create_folder(
@@ -21,16 +22,21 @@ async def create_folder(
                 "new": {"name": name, "parentId": parent_id, "isSubscribed": True}
             }
         },
+        jmap.SetResult,
     )
-    failed = (done.get("notCreated") or {}).get("new")
+    failed = done.not_created.get("new")
     if failed is not None:
         raise jmap.set_error(failed, "folder")
     # Asked for apart: not every server resolves a reference to a /set.
-    made = str(((done.get("created") or {}).get("new") or {}).get("id"))
-    got = await account.one(
-        "Mailbox/get", {"ids": [made], "properties": mappers.MAILBOX_PROPERTIES}
-    )
-    found = got.get("list") or []
+    made = done.created.get("new")
+    found: list[Mailbox] = []
+    if made is not None:
+        got = await account.one(
+            "Mailbox/get",
+            {"ids": [made.id], "properties": mappers.MAILBOX_PROPERTIES},
+            jmap.Got[Mailbox],
+        )
+        found = got.items
     if not found:
         raise ProviderError("the folder was stored but cannot be found again")
     return mappers.folder(found[0])
@@ -66,10 +72,10 @@ async def update_folder(
             "get",
         ),
     )
-    failed = (jmap.result(answers, "set").get("notUpdated") or {}).get(folder_id)
+    failed = jmap.read(answers, "set", jmap.SetResult).not_updated.get(folder_id)
     if failed is not None:
         raise jmap.set_error(failed, "folder")
-    found = jmap.result(answers, "get").get("list") or []
+    found = jmap.read(answers, "get", jmap.Got[Mailbox]).items
     if not found:
         raise ProviderError("the folder was stored but cannot be found again")
     return mappers.folder(found[0])
@@ -79,9 +85,11 @@ async def delete_folder(account: JmapAccount, folder_id: str) -> None:
     if not mappers.is_id(folder_id):
         raise missing("folder", folder_id)
     done = await account.one(
-        "Mailbox/set", {"destroy": [folder_id], "onDestroyRemoveEmails": False}
+        "Mailbox/set",
+        {"destroy": [folder_id], "onDestroyRemoveEmails": False},
+        jmap.SetResult,
     )
-    failed = (done.get("notDestroyed") or {}).get(folder_id)
+    failed = done.not_destroyed.get(folder_id)
     if failed is not None:
         raise jmap.set_error(failed, "folder")
 

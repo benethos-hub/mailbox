@@ -28,6 +28,7 @@ from benethos_mailbox_service.data.providers import (
     settings_from_servers,
 )
 from benethos_mailbox_service.data.providers.jmap import JmapProvider, mappers
+from benethos_mailbox_service.data.providers.jmap.shapes import Email, Mailbox
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ChangesExpiredError,
@@ -741,12 +742,24 @@ def test_keyword_patch_escapes_a_pointer() -> None:
 
 
 def test_dates_the_server_writes_oddly() -> None:
-    assert mappers.when("not a date") is None and mappers.when(None) is None
-    assert mappers.when("2026-10-06T10:00:00Z") == datetime(2026, 10, 6, 10, tzinfo=UTC)
+    odd = Email.model_validate({"id": "e", "sentAt": "not a date", "receivedAt": None})
+    assert mappers.summary(odd).date is None
+    email = Email.model_validate(
+        {"id": "e", "sentAt": "soon", "receivedAt": "2026-10-06T10:00:00Z"}
+    )
+    assert mappers.summary(email).date == datetime(2026, 10, 6, 10, tzinfo=UTC)
+
+
+def test_what_is_odd_in_an_email_is_left_out() -> None:
+    email = Email.model_validate(
+        {"id": "e", "from": [{"email": "a@example.org"}, "odd", {"name": "x"}]}
+    )
+    assert [a.email for a in mappers.summary(email).to] == []
+    assert mappers.summary(email).sender is not None
 
 
 def test_a_folder_with_a_role_the_api_lacks() -> None:
-    folder = mappers.folder({"id": "f", "name": "Imp", "role": "important"})
+    folder = mappers.folder(Mailbox(id="f", name="Imp", role="important"))
     assert folder.role is None
 
 

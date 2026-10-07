@@ -184,6 +184,8 @@ def test_identity_from_the_id_token() -> None:
     who = identity_of(id_token(preferred_username="Me@Example.org", name="Me"))
     assert who is not None and who.email == "me@example.org" and who.name == "Me"
     assert identity_of("not a token") is None
+    claims = base64.urlsafe_b64encode(b'["no", "object"]').decode().rstrip("=")
+    assert identity_of(f"head.{claims}.sig") is None
 
 
 async def test_the_code_is_exchanged() -> None:

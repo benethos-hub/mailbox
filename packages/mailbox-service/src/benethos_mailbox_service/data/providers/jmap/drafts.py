@@ -37,12 +37,16 @@ async def save_draft(
                 }
             }
         },
+        jmap.SetResult,
     )
-    refused = (done.get("notCreated") or {}).get("d")
+    refused = done.not_created.get("d")
     if refused is not None:
         raise jmap.set_error(refused, "draft")
-    made = str(((done.get("created") or {}).get("d") or {}).get("id"))
-    stored = (await account.emails([made], mappers.SUMMARY_PROPERTIES)).get(made)
+    made = done.created.get("d")
+    stored = None
+    if made is not None:
+        found = await account.emails([made.id], mappers.SUMMARY_PROPERTIES)
+        stored = found.get(made.id)
     if stored is None:
         raise ProviderError("the draft was stored but cannot be found again")
     if replaces is not None:
@@ -71,15 +75,15 @@ async def _draft(account: JmapAccount, draft_id: str, drafts: str) -> None:
     """Only drafts: any other id is not found, so the draft operations
     reach no other mail."""
     found = (await account.emails([draft_id], ["mailboxIds"])).get(draft_id)
-    if found is None or drafts not in (found.get("mailboxIds") or {}):
+    if found is None or drafts not in found.mailbox_ids:
         raise missing("draft", draft_id)
 
 
 async def _destroy(
     account: JmapAccount, email_id: str, missing_ok: bool = False
 ) -> None:
-    done = await account.one("Email/set", {"destroy": [email_id]})
-    failed = (done.get("notDestroyed") or {}).get(email_id)
-    if failed is None or (missing_ok and failed.get("type") == "notFound"):
+    done = await account.one("Email/set", {"destroy": [email_id]}, jmap.SetResult)
+    failed = done.not_destroyed.get(email_id)
+    if failed is None or (missing_ok and failed.type == "notFound"):
         return
     raise jmap.set_error(failed, "draft")
