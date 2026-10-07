@@ -1831,7 +1831,7 @@ server and the project's own checks need.
 | Python | 3.11–3.14 |
 | Packaging | uv workspace with three distributions (service, client, MCP server), hatchling, `src/` layout |
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
-| Storage | SQLite (stdlib `sqlite3`, in a worker thread) |
+| Storage | SQLite (stdlib `sqlite3`) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |
 | Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (Gmail, Graph) |
 | MCP | `mcp` 2.x |
