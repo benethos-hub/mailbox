@@ -17,7 +17,7 @@ def folder_states(box: Mailbox) -> dict[str, str]:
     box.session.noop()
     states = {}
     for folder in box.list_folders():
-        validity, uidnext, count, highest = box.session.folder_state(
+        validity, uidnext, count, highest = box.session.folders.folder_state(
             mappers.folder_name(folder.id), modseq=modseq
         )
         state = f"{validity}.{uidnext}.{count}"
@@ -37,7 +37,7 @@ def flag_changes(
     by_uid = by_folder(message_ids)[0].get((folder, validity), {})
     if not by_uid or box.session.select(folder) != validity:
         return []
-    changed = box.session.changed_since(sorted(by_uid), int(parts[3]))
+    changed = box.session.messages.changed_since(sorted(by_uid), int(parts[3]))
     return [by_uid[uid] for uid in changed if uid in by_uid]
 
 
@@ -46,7 +46,7 @@ def folder_contents(box: Mailbox, folder_id: str) -> list[str]:
     validity = box.session.select(folder)
     return [
         mappers.message_id(folder, validity, uid)
-        for uid in box.session.search(SearchCriteria())
+        for uid in box.session.messages.search(SearchCriteria())
     ]
 
 
@@ -57,5 +57,5 @@ def message_headers(
         return {}  # renumbered: these ids are gone
     return {
         mappers.message_id(folder, validity, uid): header
-        for uid, header in box.session.fetch_message_ids(uids).items()
+        for uid, header in box.session.messages.fetch_message_ids(uids).items()
     }

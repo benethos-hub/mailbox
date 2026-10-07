@@ -11,18 +11,20 @@ from __future__ import annotations
 import re
 import smtplib
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
 from typing import Any
 
 from ...errors import (
     BadRequestError,
+    MailboxServiceError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
 )
 from ..mail import fields
-from .transport import Server, one_line, text, transport_errors
+from . import transport
+from .transport import Server, one_line, text
 
 DEFAULT_PORTS = {"tls": 465, "starttls": 587}
 # What no address in MAIL FROM or RCPT TO may hold: a blank, which ends
@@ -84,7 +86,7 @@ class SmtpSession:
                 )
         envelope = [fields.wire_address(a) for a in (sender, *recipients)]
         options = ["SMTPUTF8"] if any(not a.isascii() for a in envelope) else []
-        with self._connected(login) as connection, _errors():
+        with self._connected(login) as connection, translated():
             if options:
                 connection.ehlo_or_helo_if_needed()
                 if not connection.has_extn("smtputf8"):
@@ -109,10 +111,10 @@ class SmtpSession:
 
     @contextmanager
     def _connected(self, login: SmtpLogin) -> Iterator[Any]:
-        with _errors():
+        with translated():
             connection = self._factory(self._server, self._timeout)
         try:
-            with _errors():
+            with translated():
                 if login.auth == "xoauth2":
                     # SASL XOAUTH2: user, bearer token, separated by ^A,
                     # which neither may hold.
@@ -149,32 +151,37 @@ class SmtpSession:
                 pass
 
 
-@contextmanager
-def _errors() -> Iterator[None]:
-    with transport_errors():
-        try:
-            yield
-        except (BadRequestError, ProviderAuthError, ProviderError):
-            raise
-        except smtplib.SMTPAuthenticationError as exc:
-            if 400 <= exc.smtp_code < 500:
-                # 454 4.7.0 and the like: try again later.
-                raise ProviderUnavailableError(
-                    f"the mail server refused the login for now ({exc.smtp_code})"
-                ) from None
-            raise ProviderAuthError("the mail server rejected the login") from None
-        except smtplib.SMTPServerDisconnected as exc:
-            raise ProviderUnavailableError(
+def translated() -> AbstractContextManager[None]:
+    """SMTP's errors as this project's."""
+    return transport.translated(
+        (smtplib.SMTPAuthenticationError, _login_refused),
+        (
+            smtplib.SMTPServerDisconnected,
+            lambda exc: ProviderUnavailableError(
                 f"the mail server dropped the connection: {exc}"
-            ) from None
-        except (smtplib.SMTPDataError, smtplib.SMTPResponseException) as exc:
-            said = (
-                text(exc.smtp_error)
-                if isinstance(exc.smtp_error, bytes)
-                else str(exc.smtp_error)
-            )
-            raise ProviderError(
-                f"the mail server answered {exc.smtp_code}: {said}"
-            ) from None
-        except smtplib.SMTPException as exc:
-            raise ProviderError(f"the mail server failed: {exc}") from None
+            ),
+        ),
+        (smtplib.SMTPResponseException, _answered),
+        (
+            smtplib.SMTPException,
+            lambda exc: ProviderError(f"the mail server failed: {exc}"),
+        ),
+    )
+
+
+def _login_refused(exc: smtplib.SMTPAuthenticationError) -> MailboxServiceError:
+    if 400 <= exc.smtp_code < 500:
+        # 454 4.7.0 and the like: try again later.
+        return ProviderUnavailableError(
+            f"the mail server refused the login for now ({exc.smtp_code})"
+        )
+    return ProviderAuthError("the mail server rejected the login")
+
+
+def _answered(exc: smtplib.SMTPResponseException) -> MailboxServiceError:
+    said = (
+        text(exc.smtp_error)
+        if isinstance(exc.smtp_error, bytes)
+        else str(exc.smtp_error)
+    )
+    return ProviderError(f"the mail server answered {exc.smtp_code}: {said}")

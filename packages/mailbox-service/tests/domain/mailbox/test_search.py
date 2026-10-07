@@ -93,7 +93,7 @@ def test_the_session_refuses_a_line_break_in_a_search(box: FakeMailBox) -> None:
     session.select("INBOX")
     for field in ("text", "sender", "to", "subject"):
         with pytest.raises(BadRequestError, match="control characters"):
-            session.search(SearchCriteria(**{field: "a\r\nX1 DELETE INBOX"}))
+            session.messages.search(SearchCriteria(**{field: "a\r\nX1 DELETE INBOX"}))
     assert not [c for c in box.calls if c[0] == "search"]
 
 

@@ -54,7 +54,7 @@ def _delete_draft_at(box: Mailbox, drafts: str, validity: int, uid: int) -> None
     found, _ = open_writable(box, drafts, validity, [uid])
     if uid not in found:
         raise missing("draft")
-    box.session.expunge([uid])
+    box.session.messages.expunge([uid])
 
 
 def _drafts_folder(box: Mailbox) -> str:

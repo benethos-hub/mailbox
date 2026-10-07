@@ -14,19 +14,19 @@ from __future__ import annotations
 
 import poplib
 import re
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from typing import Any
 
 from ...common.sizes import MIB
 from ...errors import (
-    BadRequestError,
     NotSupportedError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
 )
-from .transport import Server, names, one_line, text, transport_errors
+from . import transport
+from .transport import Server, names, one_line, text
 
 ConnectionFactory = Callable[[Server, float], Any]
 
@@ -72,7 +72,7 @@ class Pop3Session:
     def read_capabilities(self) -> frozenset[str]:
         """Connect without logging in and return what the server announces
         after TLS or STLS (CAPA, RFC 2449). Sends no credential."""
-        with _errors():
+        with translated():
             connection = self._factory(self._server, self._timeout)
             try:
                 return _capabilities(connection)
@@ -83,7 +83,7 @@ class Pop3Session:
         """USER and PASS. Raises ``ProviderAuthError`` if the server rejects
         the credential."""
         one_line(username, password, what="the user name or password")
-        with _errors():
+        with translated():
             connection = self._factory(self._server, self._timeout)
             try:
                 connection.user(username)
@@ -105,7 +105,7 @@ class Pop3Session:
         """Message number and unique id (UIDL) of every message, oldest
         first. A server without UIDL is refused: without it no id of a
         message survives the session."""
-        with _errors():
+        with translated():
             try:
                 _, lines, _ = self._require().uidl()
             except poplib.error_proto:
@@ -122,7 +122,7 @@ class Pop3Session:
     def headers(self, number: int) -> bytes:
         """The header of one message (TOP n 0). Without TOP, the whole
         message, of which the reader takes the header."""
-        with _errors():
+        with translated():
             connection = self._require()
             try:
                 _, lines, _ = connection.top(number, 0)
@@ -134,7 +134,7 @@ class Pop3Session:
 
     def message(self, number: int) -> bytes:
         """The whole message (RETR). Refused when it is larger than allowed."""
-        with _errors():
+        with translated():
             connection = self._require()
             size = _size(connection, number)
             if size > self._max_bytes:
@@ -146,7 +146,7 @@ class Pop3Session:
 
     def delete(self, number: int) -> None:
         """Mark a message deleted (DELE). It goes at ``commit``."""
-        with _errors():
+        with translated():
             self._require().dele(number)
 
     def commit(self) -> None:
@@ -155,7 +155,7 @@ class Pop3Session:
         connection, self._connection = self._connection, None
         if connection is None:
             return
-        with _errors():
+        with translated():
             try:
                 connection.quit()
             except poplib.error_proto as exc:
@@ -239,20 +239,13 @@ def _quietly_close(connection: Any) -> None:
         pass
 
 
-@contextmanager
-def _errors() -> Iterator[None]:
-    with transport_errors():
-        try:
-            yield
-        except (
-            BadRequestError,
-            NotSupportedError,
-            ProviderAuthError,
-            ProviderError,
-            ProviderUnavailableError,
-        ):
-            raise
-        except poplib.error_proto as exc:
-            raise ProviderError(
+def translated() -> AbstractContextManager[None]:
+    """POP3's errors as this project's."""
+    return transport.translated(
+        (
+            poplib.error_proto,
+            lambda exc: ProviderError(
                 f"the mail server answered with an error: {_text(exc)}"
-            ) from None
+            ),
+        )
+    )

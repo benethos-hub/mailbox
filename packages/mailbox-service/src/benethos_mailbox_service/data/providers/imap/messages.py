@@ -48,9 +48,11 @@ def list_messages(
     validity = box.session.select(folder)
     if expected_validity is not None and expected_validity != validity:
         raise BadRequestError("the folder changed on the server: start again")
-    uids = box.session.search(_criteria(search or MessageFilter(), before))
+    uids = box.session.messages.search(_criteria(search or MessageFilter(), before))
     page = list(reversed(uids[-limit:]))
-    messages = {int(m.uid): m for m in box.session.fetch_headers(page) if m.uid}
+    messages = {
+        int(m.uid): m for m in box.session.messages.fetch_headers(page) if m.uid
+    }
     items = [
         mappers.summary(messages[uid], folder, validity)
         for uid in page
@@ -73,7 +75,7 @@ def select_message(box: Mailbox, message_id: str) -> tuple[str, int, int]:
 
 def _fetch(box: Mailbox, message_id: str) -> tuple[Any, str, int]:
     folder, validity, uid = select_message(box, message_id)
-    message = box.session.fetch_message(uid)
+    message = box.session.messages.fetch_message(uid)
     if message is None:
         raise missing_message(message_id)
     return message, folder, validity
@@ -93,7 +95,7 @@ def get_attachment(
 
 def get_raw(box: Mailbox, message_id: str) -> bytes:
     _, _, uid = select_message(box, message_id)
-    raw = box.session.fetch_raw(uid)
+    raw = box.session.messages.fetch_raw(uid)
     if raw is None:
         raise missing_message(message_id)
     return raw
@@ -122,13 +124,13 @@ def append(
     dropped, and the APPEND may have gone through before the drop."""
     header = parse.ParsedMessage(raw).message_id
     validity = box.session.select(folder)
-    stored = box.session.search_message_id(header) if header else []
-    uid = stored[-1] if stored else box.session.append(folder, raw, flags)
+    stored = box.session.messages.search_message_id(header) if header else []
+    uid = stored[-1] if stored else box.session.messages.append(folder, raw, flags)
     if uid is None:
         validity = box.session.select(folder)
-        matches = box.session.search_message_id(header) if header else []
+        matches = box.session.messages.search_message_id(header) if header else []
         uid = matches[-1] if matches else None
-    found = box.session.fetch_headers([uid]) if uid else []
+    found = box.session.messages.fetch_headers([uid]) if uid else []
     return mappers.summary(found[0], folder, validity) if found else None
 
 
@@ -151,10 +153,10 @@ def update_in_folder(
         if add or remove:
             plans.setdefault((tuple(add), tuple(remove)), []).append(uid)
     for (to_add, to_remove), plan_uids in plans.items():
-        box.session.store_flags(plan_uids, list(to_add), list(to_remove))
+        box.session.messages.store_flags(plan_uids, list(to_add), list(to_remove))
     if plans:
         stored = list(found)
-        found = {int(m.uid): m for m in box.session.fetch_headers(stored)}
+        found = {int(m.uid): m for m in box.session.messages.fetch_headers(stored)}
         # Expunged by another client between the two fetches.
         results.update(_missing(stored, found))
     if target is None:
@@ -190,7 +192,7 @@ def delete_in_folder(
     if not found:
         return results
     if permanent:
-        box.session.expunge(list(found))
+        box.session.messages.expunge(list(found))
         results.update({uid: None for uid in found})
         return results
     trash = box.required_folder(FolderRole.TRASH)
@@ -209,7 +211,7 @@ def open_writable(
     current, permanent = box.session.select_writable(folder)
     if current != validity:
         return {}, permanent
-    found = {int(m.uid): m for m in box.session.fetch_headers(uids)}
+    found = {int(m.uid): m for m in box.session.messages.fetch_headers(uids)}
     return found, permanent
 
 
@@ -218,17 +220,18 @@ def _move(
 ) -> dict[int, MessageSummary]:
     """Move messages of the selected folder with one command. Their
     summaries in ``target``, for those found there at once."""
-    new_uids = box.session.move(list(found), target)
+    new_uids = box.session.messages.move(list(found), target)
     target_validity = box.session.select(target)
     for uid, message in found.items():
         header = message.message_id
         if uid not in new_uids and header and _searchable(header):
             # No COPYUID: find it by its Message-ID, if that is unambiguous.
-            matches = box.session.search_message_id(header)
+            matches = box.session.messages.search_message_id(header)
             if len(matches) == 1:
                 new_uids[uid] = matches[0]
     fetched = {
-        int(m.uid): m for m in box.session.fetch_headers(list(new_uids.values()))
+        int(m.uid): m
+        for m in box.session.messages.fetch_headers(list(new_uids.values()))
     }
     return {
         uid: mappers.summary(fetched[new], target, target_validity)
@@ -245,7 +248,7 @@ def _move_target(box: Mailbox, changes: MessageUpdate, current: str) -> str | No
     target = mappers.folder_name(wanted)
     if target == current:
         return None
-    if target not in names(box.session.list_folders()):
+    if target not in names(box.session.folders.list_folders()):
         raise missing("folder", wanted)
     return target
 

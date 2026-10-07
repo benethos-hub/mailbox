@@ -58,7 +58,7 @@ def _session(lines: list[bytes]) -> tuple[ImapSession, Any]:
 
 def test_folder_names_are_decoded() -> None:
     session, _ = _session(LIST_REPLY)
-    names = [raw.name for raw in session.list_folders()]
+    names = [raw.name for raw in session.folders.list_folders()]
     assert names == [
         "INBOX",
         "Entwürfe",
@@ -70,7 +70,7 @@ def test_folder_names_are_decoded() -> None:
 
 def test_localised_special_folders_get_their_roles() -> None:
     session, _ = _session(LIST_REPLY)
-    folders = {f.name: f for f in mappers.folders(session.list_folders())}
+    folders = {f.name: f for f in mappers.folders(session.folders.list_folders())}
     assert folders["Entwürfe"].role is FolderRole.DRAFTS
     assert folders["Gelöschte Elemente"].role is FolderRole.TRASH
     assert folders["Müller GmbH"].role is None
