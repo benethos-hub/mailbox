@@ -3113,7 +3113,7 @@
           "accounts"
         ],
         "summary": "Start Oauth",
-        "description": "Where to send a browser to sign in at the provider: to connect a new\naccount (needs `create_account`) or, with `account_id`, to sign that\naccount in again (needs `update_account`). The provider sends the\nbrowser back to `/ui/oauth/{provider}/callback`, where the person signs\nin to the UI as the same user and the account is connected. Valid for\nten minutes. `501` without an OAuth app for the provider, or when\nconnecting a kind of account this deployment does not offer.",
+        "description": "Where to send a browser to sign in at the provider: to connect a new\naccount (needs `create_account`) or, with `account_id`, to sign that\naccount in again (needs `update_account`). The provider sends the\nbrowser back to `/ui/oauth/{provider}/callback`, where the person signs\nin to the UI as the same user and the account is connected. Valid for\nten minutes. `400` with the project's app where this service is not\nat localhost: the provider sends a browser back to localhost only, so\nsign in with a code. `501` without an OAuth app for the provider, or\nwhen connecting a kind of account this deployment does not offer.",
         "operationId": "start_oauth",
         "security": [
           {

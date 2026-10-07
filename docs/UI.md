@@ -245,7 +245,9 @@ next step appears under the last one:
      password field, and beside it **Sign in with a code**. That one
      opens a page with the code and the provider's link, which asks
      every few seconds by htmx and goes on to the account once the
-     person signed in. **Check now** asks without script
+     person signed in. **Check now** asks without script. Where the
+     provider cannot send the browser back, as with the project's app
+     away from localhost, only the code is offered
    - a provider found with servers: the password field, the servers
      folded under **Servers**, with the source and whether it is trusted
    - nothing found: **Set up by hand** open at once, with the server

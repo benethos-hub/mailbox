@@ -30,6 +30,7 @@ import secrets
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from ipaddress import ip_address
 from urllib.parse import urlsplit
 
 from ...common.clock import utc_now
@@ -140,6 +141,11 @@ class OAuthService:
         or with ``account_id`` to sign that account in again."""
         client = self._client(provider)
         account = self._checked(access, provider, account_id)
+        if not self.in_browser(provider, redirect_uri):
+            raise BadRequestError(
+                f"{provider} sends a browser back to this service only at "
+                "localhost with the project's app: sign in with a code"
+            )
         if account is not None:
             login_hint = login_hint or account.email
         self._forget_old(access.user_id)
@@ -376,6 +382,14 @@ class OAuthService:
             return True
         return False
 
+    def in_browser(self, provider: ProviderType, redirect_uri: str) -> bool:
+        """Whether a sign-in in the browser can come back to
+        ``redirect_uri``. The project's app is sent back to localhost only."""
+        client = self._clients.get(provider)
+        if client is None:
+            return False
+        return not client.app.loopback_only or _loopback(redirect_uri)
+
     def sign_in_hosts(self) -> list[str]:
         """The hosts a browser is sent to for a sign-in."""
         return sorted(
@@ -429,3 +443,14 @@ class OAuthService:
             )
             for _, key in mine[: max(0, len(mine) - OPEN_PER_USER + 1)]:
                 del open_[key]
+
+
+def _loopback(url: str) -> bool:
+    """Whether ``url`` names this computer: localhost or a loopback address."""
+    host = urlsplit(url).hostname or ""
+    if host == "localhost":
+        return True
+    try:
+        return ip_address(host).is_loopback
+    except ValueError:
+        return False

@@ -51,10 +51,13 @@ def endpoint() -> TokenEndpoint:
 
 
 def build(
-    endpoint: TokenEndpoint, clock: Clock | None = None, **settings: Any
+    endpoint: TokenEndpoint,
+    clock: Clock | None = None,
+    app: App | None = None,
+    **settings: Any,
 ) -> tuple[TestClient, Services]:
     config = Settings(storage="memory", **settings)
-    app = App(microsoft_endpoints(), "client-1", SecretStr("app-secret"))
+    app = app or App(microsoft_endpoints(), "client-1", SecretStr("app-secret"))
     client = OAuthClient(app, ApiClient(transport=httpx.MockTransport(endpoint)))
     services = build_services(
         config,
@@ -429,3 +432,33 @@ def test_the_connect_page_offers_what_the_deployment_does(
     for text in hidden:
         assert text not in page
     assert ("Sign in with Microsoft" in page) == ("microsoft" in offered)
+
+
+def test_with_the_project_app_away_from_localhost_only_the_code() -> None:
+    project = App(microsoft_endpoints(), "project-app", loopback_only=True)
+    endpoint = TokenEndpoint(code(), signed_in())
+    clock = Clock()
+    client, services = build(
+        endpoint, clock, app=project, public_url="https://mail.example.org"
+    )
+    sign_in(client, *browser_admin(services))
+
+    class NothingFound:
+        async def discover(self, caller: Any, email: str) -> Discovery:
+            return Discovery(email=email, domain="example.org")
+
+    client.app.state.services = replace(  # type: ignore[attr-defined]
+        client.app.state.services, discovery=NothingFound()
+    )
+    page = post(client, "/ui/accounts/discover", {"email": "me@example.org"}).text
+    assert 'action="/ui/oauth/microsoft/start"' not in page
+    assert "Sign in with Microsoft and a code" in page
+    assert "only at localhost" in page
+    answer = post(client, "/ui/oauth/microsoft/start")
+    assert "sign in with a code" in answer.text
+    # Connected with the code, the account page offers the code again only.
+    _, url = _code_page(client)
+    clock.now += timedelta(seconds=5)
+    landed = client.get(_check(client, url).headers["HX-Redirect"]).text
+    assert "Sign in again with a code" in landed
+    assert 'action="/ui/oauth/microsoft/start"' not in landed

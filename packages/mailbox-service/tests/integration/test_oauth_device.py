@@ -13,6 +13,7 @@ from pydantic import SecretStr, ValidationError
 
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, ProviderType
+from benethos_mailbox_service.data.protocols.http import ApiClient
 from benethos_mailbox_service.data.protocols.oauth import (
     App,
     DeviceCode,
@@ -23,6 +24,9 @@ from benethos_mailbox_service.data.protocols.oauth import (
 )
 from benethos_mailbox_service.data.providers import project_client_id
 from benethos_mailbox_service.data.providers.microsoft import CLIENT_ID
+from benethos_mailbox_service.data.providers.microsoft import (
+    endpoints as microsoft_endpoints,
+)
 from benethos_mailbox_service.domain.accounts.adapters import REFRESH_TOKEN
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import (
@@ -329,7 +333,7 @@ def test_a_kind_not_known_stops_the_service() -> None:
 def test_without_an_app_of_its_own_the_project_app() -> None:
     client = build_oauth(Settings(storage="memory"))[MS]
     assert client.app.client_id == CLIENT_ID == project_client_id(MS)
-    assert client.app.client_secret is None
+    assert client.app.client_secret is None and client.app.loopback_only
     assert client.app.endpoints.device_url is not None
     assert project_client_id(ProviderType.IMAP) is None
 
@@ -343,6 +347,7 @@ def test_an_app_of_its_own() -> None:
     client = build_oauth(settings)[MS]
     assert client.app.client_id == "own-app"
     assert client.app.client_secret == SecretStr("own-secret")
+    assert not client.app.loopback_only
     # One without a secret is a public client too.
     settings = Settings(storage="memory", oauth_microsoft_client_id="own-public")
     assert build_oauth(settings)[MS].app.client_secret is None
@@ -385,3 +390,26 @@ async def test_a_code_for_an_account_of_another_kind() -> None:
     )
     with pytest.raises(BadRequestError, match="is a memory account"):
         await services.oauth.start_device(ADMIN, MS, account_id=account.id)
+
+
+def test_the_project_app_comes_back_to_localhost_only() -> None:
+    import httpx
+
+    from benethos_mailbox_service.main import build_services
+
+    app = App(microsoft_endpoints(), CLIENT_ID, loopback_only=True)
+    client = OAuthClient(app, ApiClient(transport=httpx.MockTransport(TokenEndpoint())))
+    services = build_services(Settings(storage="memory"), oauth_clients={MS: client})
+    oauth = services.oauth
+    for here in (
+        "http://localhost:8080/ui/oauth/microsoft/callback",
+        "http://127.0.0.1:8080/ui/oauth/microsoft/callback",
+        "http://[::1]:8080/ui/oauth/microsoft/callback",
+    ):
+        assert oauth.in_browser(MS, here)
+        assert oauth.start(ADMIN, MS, here).startswith("https://login.")
+    away = "https://mail.example.org/ui/oauth/microsoft/callback"
+    assert not oauth.in_browser(MS, away)
+    with pytest.raises(BadRequestError, match="sign in with a code"):
+        oauth.start(ADMIN, MS, away)
+    assert not oauth.in_browser(ProviderType.GMAIL, away)

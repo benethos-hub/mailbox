@@ -343,6 +343,7 @@ def build_oauth(settings: Settings) -> dict[ProviderType, OAuthClient]:
             endpoints=sign_in(ProviderType.MICROSOFT, settings.oauth_microsoft_tenant),
             client_id=client_id,
             client_secret=secret,
+            loopback_only=not own,
         )
         clients[ProviderType.MICROSOFT] = OAuthClient(app, ApiClient())
     return clients

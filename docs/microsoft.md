@@ -30,6 +30,12 @@ account**:
   Microsoft has seen the sign-in. This works wherever the service runs,
   also on a server.
 
+Where the service is not at `localhost`, the UI offers the code only,
+and `POST /v1/oauth/microsoft/start` answers `400`. A browser that
+reaches the service through an SSH tunnel at `localhost` can still sign
+in in the browser, as long as `MAILBOX_SERVICE_PUBLIC_URL` does not name
+another address.
+
 An account's page offers both again, as **Sign in again** and **Sign in
 again with a code**, when Microsoft stops accepting the token, e.g. after
 a password change.

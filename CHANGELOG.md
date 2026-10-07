@@ -19,7 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   account once the person signed in. It needs no address the provider
   sends a browser back to, so it works on a server. The UI offers it
   beside the sign-in in the browser, when connecting and on an account's
-  page.
+  page. With the project's app away from localhost, it is the only way:
+  `POST /v1/oauth/{provider}/start` then answers `400`.
 - `MAILBOX_SERVICE_PROVIDERS`, a JSON list of the kinds of account a
   deployment offers, every kind without it. Discovery leaves out the
   others, and connecting one answers `501`. Accounts connected before

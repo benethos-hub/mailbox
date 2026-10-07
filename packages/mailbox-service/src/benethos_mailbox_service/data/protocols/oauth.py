@@ -80,11 +80,13 @@ class Endpoints:
 class App:
     """The OAuth client a deployment signs in with: one the operator
     registered, or the project's. Without a secret it is a public client,
-    which proves itself by PKCE alone."""
+    which proves itself by PKCE alone. ``loopback_only``: the provider
+    sends a browser back to localhost only, as for the project's app."""
 
     endpoints: Endpoints
     client_id: str
     client_secret: SecretStr | None = None
+    loopback_only: bool = False
 
 
 @dataclass(frozen=True)

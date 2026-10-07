@@ -35,8 +35,10 @@ async def start_oauth(
     account in again (needs `update_account`). The provider sends the
     browser back to `/ui/oauth/{provider}/callback`, where the person signs
     in to the UI as the same user and the account is connected. Valid for
-    ten minutes. `501` without an OAuth app for the provider, or when
-    connecting a kind of account this deployment does not offer."""
+    ten minutes. `400` with the project's app where this service is not
+    at localhost: the provider sends a browser back to localhost only, so
+    sign in with a code. `501` without an OAuth app for the provider, or
+    when connecting a kind of account this deployment does not offer."""
     url = oauth.start(
         caller,
         provider,

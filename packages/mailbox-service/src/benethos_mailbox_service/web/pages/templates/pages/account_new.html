@@ -47,19 +47,22 @@
 </form>
 {% endmacro %}
 {# Two ways: in this browser, sent back to this service, or with a code
-   entered at the provider on any device. #}
+   entered at the provider on any device. The first only where the
+   provider can send the browser back here (``in_browser``). #}
 {% macro sign_in_form(provider, hint="") %}
+{% if provider in in_browser %}
 <form class="inline" method="post" action="/ui/oauth/{{ provider }}/start">
   {{ csrf_field() }}
   <input type="hidden" name="login_hint" value="{{ hint }}" />
   <button class="primary" type="submit">Sign in with {{ provider | capitalize }}</button>
 </form>
+{% endif %}
 <form class="inline" method="post" action="/ui/oauth/{{ provider }}/device">
   {{ csrf_field() }}
-  <button type="submit">Sign in with a code</button>
+  <button{% if provider not in in_browser %} class="primary"{% endif %} type="submit">Sign in {% if provider in in_browser %}with a code{% else %}with {{ provider | capitalize }} and a code{% endif %}</button>
 </form>
 {% endmacro %}
-{% set ways_hint = "In the browser, the provider sends you back to this service. Where it cannot, such as with the project's app on a server, sign in with a code." %}
+{% macro ways_hint(provider) %}{% if provider in in_browser %}In the browser, the provider sends you back to this service. Or sign in with a code on any device.{% else %}{{ provider | capitalize }} sends a browser back to this service only at localhost, so you sign in with a code on any device.{% endif %}{% endmacro %}
 
 <section class="card">
   <header><h2>1. The address</h2></header>
@@ -98,7 +101,7 @@
   </header>
   <div class="body toolbar">
     {{ sign_in_form(candidate.oauth_provider, discovery.email) }}
-    <span class="muted">No password is needed. {{ candidate.oauth_provider | capitalize }} asks you, and this service keeps only a token it can renew. {{ ways_hint }}</span>
+    <span class="muted">No password is needed. {{ candidate.oauth_provider | capitalize }} asks you, and this service keeps only a token it can renew. {{ ways_hint(candidate.oauth_provider) }}</span>
   </div>
 </section>
 {% endfor %}
@@ -129,8 +132,7 @@
 <section class="card way">
   <header><h2>Sign in with your provider</h2><span class="meta">if the address is at one of these</span></header>
   <div class="body toolbar">
-    {% for provider in oauth_providers %}{{ sign_in_form(provider, discovery.email) }}{% endfor %}
-    <span class="muted">{{ ways_hint }}</span>
+    {% for provider in oauth_providers %}{{ sign_in_form(provider, discovery.email) }}<span class="muted">{{ ways_hint(provider) }}</span>{% endfor %}
   </div>
 </section>
 {% endif %}

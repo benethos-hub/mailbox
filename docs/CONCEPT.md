@@ -413,6 +413,10 @@ an app password is the credential to ask for.
   `POST /v1/oauth/{provider}/device/{sign_in_id}`. A sign-in with a code
   is bound to the user who started it, like the one in the browser, and
   the provider is asked no more often than it allows.
+- **Decided 2026-10-07:** where the project's app cannot send the browser
+  back, because the service is not at localhost, the UI offers the
+  sign-in with a code only, and `POST /v1/oauth/{provider}/start`
+  answers `400`.
 - **Decided 2026-10-06:** `MAILBOX_SERVICE_PROVIDERS` names the kinds of
   account a deployment offers, a JSON list, every kind without it. The
   UI and the API offer only those: discovery leaves out the others, and
