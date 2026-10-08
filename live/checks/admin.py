@@ -14,7 +14,7 @@ import httpx
 
 from benethos_mailbox_client import SyncMailboxClient
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.domain.rights import permissions
+from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
 from benethos_mailbox_service.domain.rights.access import Access
 
 from .processes import program, run_dir
@@ -115,6 +115,6 @@ def user_token(
 def admin_token(services: Services, name: str = "live") -> str:
     """A token of a new user with every right, for a script that runs the
     services in its own process."""
-    caller = Access.admin("usr_live_script", "live script")
+    caller = Access("usr_live_script", "live script", [], service=ADMIN_SERVICE)
     user = services.users.create_user(caller, name, [], [], service=[permissions.ADMIN])
     return services.auth.issue_token(user.id, "live check")[1]

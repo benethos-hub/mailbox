@@ -96,6 +96,8 @@ files = [
     "packages/mailbox-service/src",
     "packages/mailbox-client/src",
     "packages/mailbox-mcp/src",
+    # The live checks run by hand: a break shows here, not in a run.
+    "live",
 ]
 warn_unused_ignores = true
 warn_redundant_casts = true
