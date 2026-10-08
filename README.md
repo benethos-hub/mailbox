@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo/logo-dark.svg">
+  <img src="assets/logo/logo.svg" alt="Mailbox" height="64">
+</picture>
+
 # Mailbox
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)

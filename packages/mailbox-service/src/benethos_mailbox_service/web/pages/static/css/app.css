@@ -101,11 +101,12 @@ a:hover { text-decoration: underline; }
 }
 
 .brand {
-  display: flex; align-items: baseline; gap: 8px;
+  display: flex; align-items: center; gap: 8px;
   padding: 0 8px 4px;
   font-size: 17px; font-weight: 650; letter-spacing: -.01em;
 }
-.brand .mark { color: var(--accent); }
+/* The project's icon, in the sidebar and on the sign-in card. */
+.mark { display: block; flex: 0 0 auto; }
 
 .nav { display: flex; flex-direction: column; gap: 2px; }
 .nav a {
@@ -174,6 +175,7 @@ footer {
   border-bottom: 1px solid var(--border);
 }
 .card > header h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.signin .card > header h2 { display: flex; align-items: center; gap: 8px; }
 .card > header .meta { color: var(--text-muted); font-size: 13px; }
 .card > header .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .card .body { padding: var(--pad); }

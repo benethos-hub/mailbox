@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The project has a logo. The READMEs show it, and the configuration
+  UI shows its icon in the sidebar, on the sign-in page and as the
+  favicon.
+
 ### Changed
 
 - **Breaking:** `containers/dev/` is now `containers/development/`.
