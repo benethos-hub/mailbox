@@ -1,4 +1,4 @@
-# Containers
+# <img src="../assets/logo/icon-3d.svg" alt="" height="36" align="absmiddle"> Containers
 
 > **Beta, version 0.3.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored

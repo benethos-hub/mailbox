@@ -1,5 +1,6 @@
-"""The project's icon in the configuration UI, and the script that makes
-the shipped copy from the source in ``assets/logo/``."""
+"""The project's icon: in the configuration UI, in the heading of every
+README, and the script that makes the shipped copy from the source in
+``assets/logo/``."""
 
 from __future__ import annotations
 
@@ -35,12 +36,42 @@ def test_a_shipped_image_has_no_manifest() -> None:
         assert "c2pa" not in target.read_text("utf-8"), target.name
 
 
-def test_the_dark_logo_differs_in_the_word_mark_only() -> None:
-    build = _build()
-    logo = (REPOSITORY / "assets/logo/logo.svg").read_text("utf-8")
-    # The word mark is the last element, after the icon's own dark blue.
-    head, _, tail = build.plain(logo).rpartition('fill="#1D4ED8"')
-    assert build.dark(logo) == f'{head}fill="{build.LIGHT}"{tail}'
+def test_the_ui_shows_the_3d_icon() -> None:
+    assert list(_build().BUILT.values()) == [REPOSITORY / "assets/logo/icon-3d.svg"]
+
+
+# PyPI shows no relative image: a package's README names it in full.
+_RAW = "https://raw.githubusercontent.com/benethos-hub/mailbox/main/"
+READMES = {
+    "README.md": "",
+    "containers/README.md": "../",
+    "containers/production/README.md": "../../",
+    "containers/test-mail-server/README.md": "../../",
+    "packages/mailbox-service/README.md": _RAW,
+    "packages/mailbox-client/README.md": _RAW,
+    "packages/mailbox-mcp/README.md": _RAW,
+}
+
+
+@pytest.mark.parametrize(("readme", "prefix"), READMES.items())
+def test_every_readme_has_the_3d_icon_in_its_heading(readme: str, prefix: str) -> None:
+    first = (REPOSITORY / readme).read_text("utf-8").splitlines()[0]
+    assert first.startswith(
+        f'# <img src="{prefix}assets/logo/icon-3d.svg" alt="" height="36"'
+        ' align="absmiddle"> '
+    ), first
+
+
+def test_every_readme_is_named() -> None:
+    found = {
+        path.relative_to(REPOSITORY).as_posix()
+        for folder in ("", "containers/", "packages/")
+        for path in (REPOSITORY / folder).glob(
+            "**/README.md" if folder else "README.md"
+        )
+        if "vendor" not in path.parts
+    }
+    assert found == set(READMES)
 
 
 def test_a_source_without_its_manifest_is_refused() -> None:

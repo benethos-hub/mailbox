@@ -1,9 +1,4 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/logo/logo-dark.svg">
-  <img src="assets/logo/logo.svg" alt="Mailbox" height="64">
-</picture>
-
-# Mailbox
+# <img src="assets/logo/icon-3d.svg" alt="" height="36" align="absmiddle"> Mailbox
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![PyPI benethos-mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)

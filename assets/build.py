@@ -5,16 +5,14 @@ names the ones that differ from what it would write. The sources stay
 as they came, with their C2PA manifest. What is made from them goes
 without it:
 
-- ``logo/logo-dark.svg``: the logo with a light word mark, for a page
-  in dark mode (the README on GitHub).
-- the icon of the configuration UI, its sidebar and favicon.
+- the icon of the configuration UI, its sidebar and favicon, from the
+  3D icon.
 """
 
 from __future__ import annotations
 
 import re
 import sys
-from collections.abc import Callable
 from pathlib import Path
 
 ASSETS = Path(__file__).resolve().parent
@@ -27,12 +25,6 @@ STATIC = (
 # The C2PA manifest and its namespace: provenance of the source only.
 _MANIFEST = re.compile(r"<metadata>.*?</metadata>\n?", re.S)
 _NAMESPACE = ' xmlns:c2pa="http://c2pa.org/manifest"'
-# The word mark is the one path placed with a translation.
-_WORD_MARK = re.compile(
-    r'(<path transform="translate\([^)]*\)" d="[^"]*" fill=")#1D4ED8(")'
-)
-# The light blue of the icon's lines, readable on a dark page.
-LIGHT = "#93C5FD"
 
 
 def plain(svg: str) -> str:
@@ -43,18 +35,9 @@ def plain(svg: str) -> str:
     return text.replace(_NAMESPACE, "")
 
 
-def dark(svg: str) -> str:
-    """The logo with a light word mark."""
-    text, count = _WORD_MARK.subn(rf"\g<1>{LIGHT}\g<2>", plain(svg))
-    if count != 1:
-        raise ValueError(f"expected one word mark, found {count}")
-    return text
-
-
-# What is made, from which source, and how.
-BUILT: dict[Path, tuple[Path, Callable[[str], str]]] = {
-    ASSETS / "logo/logo-dark.svg": (ASSETS / "logo/logo.svg", dark),
-    STATIC / "img/icon.svg": (ASSETS / "logo/icon.svg", plain),
+# What is made, and from which source.
+BUILT: dict[Path, Path] = {
+    STATIC / "img/icon.svg": ASSETS / "logo/icon-3d.svg",
 }
 
 
@@ -62,16 +45,16 @@ def stale() -> list[Path]:
     """The made images that differ from what their source makes."""
     return [
         target
-        for target, (source, make) in BUILT.items()
+        for target, source in BUILT.items()
         if not target.exists()
-        or target.read_bytes() != make(source.read_text("utf-8")).encode("utf-8")
+        or target.read_bytes() != plain(source.read_text("utf-8")).encode("utf-8")
     ]
 
 
 def build() -> None:
-    for target, (source, make) in BUILT.items():
+    for target, source in BUILT.items():
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(make(source.read_text("utf-8")).encode("utf-8"))
+        target.write_bytes(plain(source.read_text("utf-8")).encode("utf-8"))
 
 
 def main(arguments: list[str]) -> int:
