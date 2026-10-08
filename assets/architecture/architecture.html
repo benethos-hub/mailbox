@@ -1,0 +1,151 @@
+<!doctype html>
+<!--
+  The architecture diagram of the README. `uv run python assets/build.py
+  --diagram` renders it to architecture.png, and with #dark in the
+  address to architecture-dark.png, the image GitHub shows in dark mode.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mailbox architecture</title>
+<style>
+  :root {
+    --page: #F9FBFE; --card: #FFFFFF; --line: #CBD5E1; --text: #0F172A;
+    --muted: #475569; --faint: #64748B; --navy: #0F2A76; --blue: #1D4ED8;
+    --package: #EFF6FF; --package-line: #93C5FD; --chip: #F1F5FD;
+    --shadow: rgba(15, 42, 118, .07); --arrow: #64748B;
+  }
+  :root.dark {
+    --page: #0D1117; --card: #161B22; --line: #30363D; --text: #E6EDF3;
+    --muted: #9DA7B3; --faint: #8B949E; --navy: #BFDBFE; --blue: #60A5FA;
+    --package: #0F1E3D; --package-line: #1E40AF; --chip: #1C2433;
+    --shadow: rgba(0, 0, 0, .3); --arrow: #8B949E;
+  }
+  html, body { margin: 0; width: 1430px; height: 700px; overflow: hidden; }
+  body { background: var(--page); color: var(--text); position: relative;
+         font-family: "Segoe UI", system-ui, sans-serif; }
+  code { font-family: "Cascadia Code", Consolas, monospace; }
+  .head { position: absolute; top: 28px; font-size: 15px; font-weight: 600;
+          letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  .card { position: absolute; box-sizing: border-box; height: 86px; padding: 0 18px;
+          display: flex; flex-direction: column; justify-content: center;
+          background: var(--card); border: 2px solid var(--line); border-radius: 14px;
+          box-shadow: 0 3px 10px var(--shadow); }
+  .card b { font-size: 21px; font-weight: 600; }
+  .card small { font-size: 16px; color: var(--muted); margin-top: 2px; }
+  .who { left: 30px; width: 200px; }
+  .package { left: 290px; width: 270px; background: var(--package);
+             border-color: var(--package-line); }
+  .package code, .service code { font-size: 22px; font-weight: 700; color: var(--navy); }
+  .package small + small { color: var(--faint); font-size: 14px; }
+  .provider { left: 1160px; width: 240px; }
+  .planned { border-style: dashed; background: transparent; box-shadow: none; }
+  .planned b, .planned small { color: var(--faint); }
+  .service { position: absolute; left: 620px; top: 70px; width: 480px; height: 520px;
+             box-sizing: border-box; background: var(--card); border: 3px solid var(--blue);
+             border-radius: 22px; box-shadow: 0 12px 34px var(--shadow); }
+  .service .top { position: absolute; left: 24px; top: 22px; display: flex;
+                  align-items: center; gap: 14px; }
+  .service .top img { width: 54px; height: auto; }
+  .service .top small { display: block; font-size: 15px; color: var(--muted); }
+  .service .top small + small { color: var(--faint); font-size: 14px; }
+  .door { position: absolute; left: 18px; width: 140px; height: 70px; box-sizing: border-box;
+          padding: 0 14px; display: flex; flex-direction: column; justify-content: center;
+          background: var(--package); border: 2px solid var(--package-line);
+          border-radius: 12px; }
+  .door b { font-size: 18px; font-weight: 600; }
+  .door small { font-size: 14px; color: var(--muted); }
+  .service ul { position: absolute; left: 182px; top: 132px; margin: 0; padding: 0;
+                list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .service li { font-size: 16px; background: var(--chip); border-radius: 9px;
+                padding: 10px 14px; white-space: nowrap; }
+  .foot { position: absolute; left: 30px; top: 636px; font-size: 18px; color: var(--muted); }
+  .foot strong { color: var(--navy); }
+  svg { position: absolute; left: 0; top: 0; }
+  svg text { font: 600 14px "Segoe UI", system-ui, sans-serif; fill: var(--faint); }
+  .plain { stroke: var(--arrow); }
+  .blue { stroke: var(--blue); }
+  .dashed { stroke: var(--line); stroke-dasharray: 7 6; }
+  .tip-plain { fill: var(--arrow); }
+  .tip-blue { fill: var(--blue); }
+</style>
+<script>
+  if (location.hash === "#dark") document.documentElement.classList.add("dark");
+</script>
+</head>
+<body>
+  <div class="head" style="left:30px">Who works with it</div>
+  <div class="head" style="left:290px">The packages</div>
+  <div class="head" style="left:620px">On your own server</div>
+  <div class="head" style="left:1160px">Mail accounts</div>
+
+  <svg width="1430" height="700" viewBox="0 0 1430 700">
+    <defs>
+      <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="tip-plain" d="M0,0 L10,5 L0,10 z"/>
+      </marker>
+      <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="tip-blue" d="M0,0 L10,5 L0,10 z"/>
+      </marker>
+    </defs>
+    <g stroke-width="2.5" fill="none">
+      <!-- AI agent to mailbox-mcp, scripts to mailbox-client -->
+      <line class="plain" x1="234" y1="113" x2="286" y2="113" marker-start="url(#p)" marker-end="url(#p)"/>
+      <line class="plain" x1="234" y1="243" x2="286" y2="243" marker-start="url(#p)" marker-end="url(#p)"/>
+      <!-- mailbox-mcp uses mailbox-client -->
+      <line class="blue" x1="425" y1="160" x2="425" y2="196" marker-end="url(#b)"/>
+      <!-- mailbox-client to the REST API -->
+      <line class="blue" x1="564" y1="243" x2="616" y2="243" marker-start="url(#b)" marker-end="url(#b)"/>
+      <!-- people to /ui, webhooks out to your systems -->
+      <line class="plain" x1="234" y1="373" x2="616" y2="373" marker-start="url(#p)" marker-end="url(#p)"/>
+      <line class="plain" x1="618" y1="503" x2="236" y2="503" marker-end="url(#p)"/>
+      <!-- the service to each provider -->
+      <line class="blue" x1="1104" y1="113" x2="1156" y2="113" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1104" y1="218" x2="1156" y2="218" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1104" y1="323" x2="1156" y2="323" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1104" y1="428" x2="1156" y2="428" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="dashed" x1="1104" y1="533" x2="1156" y2="533"/>
+    </g>
+    <text x="246" y="102">MCP</text>
+    <text x="436" y="183">uses</text>
+    <text x="572" y="232">REST</text>
+    <text x="398" y="362">browser</text>
+    <text x="370" y="492">signed webhooks</text>
+  </svg>
+
+  <div class="card who" style="top:70px"><b>AI agents</b><small>Claude and others</small></div>
+  <div class="card who" style="top:200px"><b>Scripts and apps</b><small>your own code</small></div>
+  <div class="card who" style="top:330px"><b>People</b><small>admins and users</small></div>
+  <div class="card who" style="top:460px"><b>Your systems</b><small>ticket tool, dashboard</small></div>
+
+  <div class="card package" style="top:70px"><code>mailbox-mcp</code><small>MCP server, stdio or HTTP</small><small>PyPI and container image</small></div>
+  <div class="card package" style="top:200px"><code>mailbox-client</code><small>Python client, async and sync</small><small>PyPI</small></div>
+
+  <div class="service">
+    <div class="top">
+      <img src="../logo/icon-3d.svg" alt="">
+      <div><code>mailbox-service</code><small>one API for every provider</small><small>PyPI and container image</small></div>
+    </div>
+    <div class="door" style="top:138px"><b>REST API</b><small>/v1, OpenAPI</small></div>
+    <div class="door" style="top:268px"><b>Config UI</b><small>/ui</small></div>
+    <div class="door" style="top:398px"><b>Webhooks</b><small>on every change</small></div>
+    <ul>
+      <li>A token for every tool</li>
+      <li>Rights down to the folder</li>
+      <li>Recipient lists, daily limits</li>
+      <li>Sync and change feed</li>
+      <li>Audit of sends and admin</li>
+      <li>Credentials encrypted</li>
+      <li>Rate limits, backups</li>
+    </ul>
+  </div>
+
+  <div class="card provider" style="top:70px"><b>IMAP + SMTP</b><small>GMX, web.de, own servers</small></div>
+  <div class="card provider" style="top:175px"><b>Microsoft Graph</b><small>Microsoft 365, Outlook</small></div>
+  <div class="card provider" style="top:280px"><b>JMAP</b><small>Fastmail, Stalwart</small></div>
+  <div class="card provider" style="top:385px"><b>POP3</b><small>mailboxes without IMAP</small></div>
+  <div class="card provider planned" style="top:490px"><b>Gmail API</b><small>planned</small></div>
+
+  <div class="foot"><strong>Self-hosted.</strong> Mail goes straight from the provider to your server. No tool ever sees a mail password.</div>
+</body>
+</html>

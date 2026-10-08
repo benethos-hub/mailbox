@@ -14,6 +14,10 @@ without it:
   a Chromium browser (Chrome, Edge or Chromium), which ``--check``
   cannot repeat byte for byte. It goes up by hand, under Settings,
   General, Social preview.
+- ``architecture/architecture.png`` and ``architecture-dark.png``, the
+  diagram of the README, from ``architecture/architecture.html``.
+  ``--diagram`` renders both the same way, at twice the size for sharp
+  text.
 """
 
 from __future__ import annotations
@@ -156,27 +160,56 @@ def _browser() -> str:
     raise RuntimeError("no Chromium browser found: Chrome, Edge or Chromium")
 
 
-def render_social() -> None:
-    """Render the social preview as a PNG with a headless browser."""
-    width, height = SOCIAL_SIZE
+def _screenshot(
+    address: str, target: Path, size: tuple[int, int], scale: int = 1
+) -> None:
+    """Render a page as a PNG with a headless browser."""
+    width, height = size
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
-        page = Path(folder) / "social-preview.svg"
-        page.write_text(social(SOCIAL_SOURCE.read_text("utf-8")), "utf-8")
         subprocess.run(
             [
                 _browser(),
                 "--headless=new",
                 "--disable-gpu",
                 "--hide-scrollbars",
+                f"--force-device-scale-factor={scale}",
                 f"--user-data-dir={Path(folder) / 'profile'}",
                 f"--window-size={width},{height}",
-                f"--screenshot={SOCIAL}",
-                page.as_uri(),
+                f"--screenshot={target}",
+                address,
             ],
             check=True,
             capture_output=True,
             timeout=120,
         )
+
+
+def render_social() -> None:
+    """Render the social preview as a PNG."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+        page = Path(folder) / "social-preview.svg"
+        page.write_text(social(SOCIAL_SOURCE.read_text("utf-8")), "utf-8")
+        _screenshot(page.as_uri(), SOCIAL, SOCIAL_SIZE)
+
+
+# --- the architecture diagram ---------------------------------------------
+
+DIAGRAM_SOURCE = ASSETS / "architecture/architecture.html"
+# The page's size in CSS pixels, drawn at twice that.
+DIAGRAM_SIZE = (1430, 700)
+DIAGRAM_SCALE = 2
+# Each image and the fragment that picks its colours on the page.
+DIAGRAMS = {
+    ASSETS / "architecture/architecture.png": "",
+    ASSETS / "architecture/architecture-dark.png": "#dark",
+}
+
+
+def render_diagram() -> None:
+    """Render the architecture diagram as a PNG, light and dark."""
+    for target, fragment in DIAGRAMS.items():
+        address = DIAGRAM_SOURCE.as_uri() + fragment
+        _screenshot(address, target, DIAGRAM_SIZE, DIAGRAM_SCALE)
 
 
 def main(arguments: list[str]) -> int:
@@ -188,8 +221,11 @@ def main(arguments: list[str]) -> int:
     if arguments == ["--social"]:
         render_social()
         return 0
+    if arguments == ["--diagram"]:
+        render_diagram()
+        return 0
     if arguments:
-        print("usage: build.py [--check | --social]", file=sys.stderr)
+        print("usage: build.py [--check | --social | --diagram]", file=sys.stderr)
         return 2
     build()
     return 0
