@@ -9,8 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - The project has a logo. Its icon heads each README, and the
-  configuration UI shows it in the sidebar, on the sign-in page and
-  as the favicon.
+  configuration UI shows it in the sidebar and as the favicon. The
+  sign-in page shows the logo with its word mark.
 
 ### Changed
 

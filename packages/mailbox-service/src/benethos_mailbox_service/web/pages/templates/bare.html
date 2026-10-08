@@ -12,8 +12,12 @@
   </head>
   <body>
     <div class="signin">
+      <picture class="logo">
+        <source srcset="/ui/static/img/logo-dark.svg" media="(prefers-color-scheme: dark)" />
+        <img src="/ui/static/img/logo.svg" alt="{{ APP_NAME }}" width="212" height="72" />
+      </picture>
       <section class="card">
-        <header><h2><img class="mark" src="/ui/static/img/icon.svg" alt="" width="21" height="22" /> {{ APP_NAME }}{% block subtitle %}{% endblock %}</h2></header>
+        <header><h2>{% block heading %}{{ APP_NAME }}{% endblock %}</h2></header>
         <div class="body">
           {% block content %}{% endblock %}
         </div>

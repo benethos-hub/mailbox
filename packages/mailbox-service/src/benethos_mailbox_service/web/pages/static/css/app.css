@@ -105,7 +105,7 @@ a:hover { text-decoration: underline; }
   padding: 0 8px 4px;
   font-size: 17px; font-weight: 650; letter-spacing: -.01em;
 }
-/* The project's icon, in the sidebar and on the sign-in card. */
+/* The project's icon in the sidebar. */
 .mark { display: block; flex: 0 0 auto; }
 
 .nav { display: flex; flex-direction: column; gap: 2px; }
@@ -175,7 +175,6 @@ footer {
   border-bottom: 1px solid var(--border);
 }
 .card > header h2 { margin: 0; font-size: 15px; font-weight: 600; }
-.signin .card > header h2 { display: flex; align-items: center; gap: 8px; }
 .card > header .meta { color: var(--text-muted); font-size: 13px; }
 .card > header .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .card .body { padding: var(--pad); }
@@ -446,10 +445,13 @@ a.btn.ghost { border-color: transparent; background: transparent; color: var(--t
 
 .signin {
   min-height: 100vh;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; gap: 24px;
+  align-items: center; justify-content: center;
   padding: var(--pad);
 }
 .signin .card { width: min(440px, 100%); }
+/* The project's logo above the card: dark mode takes the light word mark. */
+.signin .logo img { display: block; height: 72px; width: auto; }
 
 /* --- narrow windows -------------------------------------------------------- */
 

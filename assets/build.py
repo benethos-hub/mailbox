@@ -7,6 +7,8 @@ without it:
 
 - the icon of the configuration UI, its sidebar and favicon, from the
   3D icon.
+- the logo above the sign-in card, from the 3D logo, and for dark
+  mode the same with a light word mark.
 - ``logo/social-preview.png``, the image GitHub shows when the
   repository is linked, from the 3D logo. ``--social`` renders it with
   a Chromium browser (Chrome, Edge or Chromium), which ``--check``
@@ -21,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 ASSETS = Path(__file__).resolve().parent
@@ -43,26 +46,61 @@ def plain(svg: str) -> str:
     return text.replace(_NAMESPACE, "")
 
 
-# What is made, and from which source.
-BUILT: dict[Path, Path] = {
-    STATIC / "img/icon.svg": ASSETS / "logo/icon-3d.svg",
+# The word mark of the 3D logo in dark mode: its face, the gradient
+# "word", in light blues, and its depth, the path drawn 3 below the
+# face, in the blue of the icon. The icon keeps its colours.
+_LIGHT_WORD = (
+    (
+        re.compile(
+            r'(<linearGradient id="word"[^>]*><stop offset="0" stop-color=")'
+            r'#335FDB("/><stop offset="1" stop-color=")#163CA8(")'
+        ),
+        r"\g<1>#DBEAFE\g<2>#93C5FD\g<3>",
+    ),
+    (
+        re.compile(
+            r'(<path transform="translate\(230,134\)" d="[^"]*" fill=")#0F2A76(")'
+        ),
+        r"\g<1>#1D4ED8\g<2>",
+    ),
+)
+
+
+def light_word(svg: str) -> str:
+    """The 3D logo with a light word mark, for a dark page."""
+    text = plain(svg)
+    for pattern, replacement in _LIGHT_WORD:
+        text, count = pattern.subn(replacement, text)
+        if count != 1:
+            raise ValueError(f"expected {pattern.pattern} once, found {count}")
+    return text
+
+
+# What is made, from which source, and how.
+BUILT: dict[Path, tuple[Path, Callable[[str], str]]] = {
+    STATIC / "img/icon.svg": (ASSETS / "logo/icon-3d.svg", plain),
+    STATIC / "img/logo.svg": (ASSETS / "logo/logo-3d.svg", plain),
+    STATIC / "img/logo-dark.svg": (ASSETS / "logo/logo-3d.svg", light_word),
 }
+
+
+def _made(source: Path, make: Callable[[str], str]) -> bytes:
+    return make(source.read_text("utf-8")).encode("utf-8")
 
 
 def stale() -> list[Path]:
     """The made images that differ from what their source makes."""
     return [
         target
-        for target, source in BUILT.items()
-        if not target.exists()
-        or target.read_bytes() != plain(source.read_text("utf-8")).encode("utf-8")
+        for target, (source, make) in BUILT.items()
+        if not target.exists() or target.read_bytes() != _made(source, make)
     ]
 
 
 def build() -> None:
-    for target, source in BUILT.items():
+    for target, (source, make) in BUILT.items():
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(plain(source.read_text("utf-8")).encode("utf-8"))
+        target.write_bytes(_made(source, make))
 
 
 # --- the social preview ---------------------------------------------------
