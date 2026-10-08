@@ -52,7 +52,7 @@ The three layers and what each may import:
   own, and its docstring says why.
 - **A helper exists once.** No module outside `common/` defines a
   function of a name `common/` holds, with or without a leading
-  underscore. The architecture test also names the copies a shared
+  underscore. `test_code_rules.py` also names the copies a shared
   helper replaced, with the one module that holds it now, so none comes
   back.
 - **No HTTP in the domain.** Nothing below `web/` raises an HTTP exception or
@@ -116,7 +116,9 @@ modules, that `common/` stays on the standard library and anyio, that FastAPI st
 that the domain picks no storage implementation, and that SQLite is
 reached through `data/storage/` alone. `tests/test_code_rules.py`
 checks that the data layer logs nothing above `DEBUG` and the domain
-nothing but activities. The architecture test also checks that the
+nothing but activities, that a broad `except` raises or records, the
+sizes of modules and classes, and that a helper of `common/` exists
+once. The architecture test also checks that the
 packages of the domain and of data are imported through
 their `__init__.py`, export what others import, have no cycle, and keep
 their lines. Nothing below reaches `assembly/` or `cli/`, the assembly
@@ -227,8 +229,9 @@ packages/mailbox-service/
         effective.py    # a user's effective rights, grouped for reading
         errors.py       # errors as a page
         routes/         # one module per area
-        templates/      # base, partials, components (macros), pages
-        static/         # app.css, app.js, vendored htmx
+        templates/      # base and bare, partials, components (macros), pages
+        static/         # app.css, app.js, vendored htmx, img/ (the icon
+                        #   and the logo, made by assets/build.py)
     domain/             # BUSINESS LOGIC: decides, knows no HTTP
                         # one package per area (docs/REFACTORING.md),
                         #   the service of a package in service.py,
@@ -539,7 +542,8 @@ technology says the seam is in the wrong place.
 1. **One library, one home.** Each third-party library is imported in
    exactly one module, or one package for a framework: IMAPClient only
    in `data/protocols/imap/`, `cryptography` only in
-   `data/secrets/cipher.py`, FastAPI only under `web/`. When it is
+   `data/secrets/cipher.py`, FastAPI only under `web/` and in
+   `assembly/web.py`, which builds the app. When it is
    needed somewhere else, its wrapper is extended, it is not imported a
    second time. The architecture test lists the homes.
 2. **Our interface, not theirs.** Code depends on a protocol this

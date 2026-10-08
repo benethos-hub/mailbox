@@ -7,14 +7,14 @@
 [![Container benethos-mailbox-service](https://img.shields.io/badge/ghcr.io-benethos--mailbox--service-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-service)
 [![Container benethos-mailbox-mcp](https://img.shields.io/badge/ghcr.io-benethos--mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
-[![Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
 One REST API for all your mailboxes, whichever provider they are at, a
 Python client for it and an MCP server on top. Scripts, tools and AI
 agents work with your mail through one door you control.
 
-> **Status: beta, version 0.3.0.** Usable with real accounts. A breaking
+> **Status: beta, version 0.3.1.** Usable with real accounts. A breaking
 > change of the API or the configuration is announced in the changelog.
 > Stored data is carried forward by migrations.
 

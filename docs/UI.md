@@ -68,7 +68,7 @@ The sidebar keeps its three groups, renamed by what a person looks for:
 | Group | Pages | Who sees it |
 |---|---|---|
 | (top) | Overview, Mail | everyone |
-| Mailboxes | Accounts, Sends, Webhooks | Accounts with a right on at least one account or with `accounts.connect`, Sends with `audit` on at least one account, Webhooks with `webhooks.manage` |
+| Mailboxes | Accounts, Sends, Webhooks | Accounts with `accounts.read` on at least one account or with `accounts.connect`, Sends with `audit` on at least one account, Webhooks with `webhooks.manage` |
 | Service | Users, Roles, Status, Audit, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Audit with `audit` in `service`, Log and Recovery key for the admin |
 
 The foot of the sidebar names the signed-in user and links to their own
@@ -380,8 +380,10 @@ receiver reports nothing. Built last, if at all.
   a name.
 - **Icon and logo**: the project's 3D icon from `assets/logo/` heads
   the sidebar and is the favicon. The 3D logo with its word mark
-  stands above the sign-in card, in dark mode with a light word
-  mark. `assets/build.py` makes the copies in `static/img/`.
+  stands above the card of the sign-in page and of the page a
+  provider sends the browser back to (`bare.html`), in dark mode
+  with a light word mark. `assets/build.py` makes the copies in
+  `static/img/`.
 - **Sidebar**: light, not dark, with the accent on the active entry.
   Collapses to a top bar under 860 px as today.
 - **Components**: everything a page uses is a macro in
@@ -389,8 +391,8 @@ receiver reports nothing. Built last, if at all.
   connection fields in `components/connection.html`, the rows of the
   audit in `components/audit.html`. A page has no
   markup of its own for a button, a tag, a field, a card header, a pager
-  or a filter bar. The rework adds `filter_bar`, `chips`, `facts`,
-  `related` and `breadcrumb` and makes the pages use them.
+  or a filter bar. The rework adds `filter_bar` with its chips,
+  `facts`, `related` and `breadcrumb` and makes the pages use them.
 - **No inline style or script**: the content security policy stays.
   htmx only where a page asks the service again by itself, the
   sign-in with a code. Every other form is a plain post, and a

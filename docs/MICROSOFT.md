@@ -1,6 +1,6 @@
 # Connecting Microsoft accounts
 
-> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.3.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -254,8 +254,9 @@ can consent for everyone under **API permissions → Grant admin consent**.
 
 A secret stops working on its expiry date. From then on every token
 refresh fails with "microsoft refused this service's app
-(invalid_client): check the client id and secret", and Microsoft accounts
-cannot be reached. Replace it, best before the date:
+(invalid_client): check the client id, the secret and how the app is
+registered", and Microsoft accounts cannot be reached. Replace it,
+best before the date:
 
 1. Create a new secret (step 4). The old one keeps working until it
    expires, so both are valid for a while.

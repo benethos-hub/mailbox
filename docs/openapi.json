@@ -3,7 +3,7 @@
   "info": {
     "title": "mailbox-service",
     "description": "Unified REST API for several mail providers and accounts. Requests are limited per token, and without one per client address. Past the limit the API answers `429` with `Retry-After`.",
-    "version": "0.3.0"
+    "version": "0.3.1"
   },
   "paths": {
     "/health": {
@@ -5341,10 +5341,10 @@
                   "type": "null"
                 }
               ],
-              "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft account, the inbox on IMAP.",
+              "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft or JMAP account, the inbox on IMAP and POP3.",
               "title": "Folder"
             },
-            "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft account, the inbox on IMAP."
+            "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft or JMAP account, the inbox on IMAP and POP3."
           },
           {
             "name": "limit",

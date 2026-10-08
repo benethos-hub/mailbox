@@ -213,7 +213,7 @@ def test_providers_are_reached_through_the_registry() -> None:
 
 
 def test_concurrency_is_written_with_anyio() -> None:
-    """The one concurrency library (docs/ARCHITECTURE.md 8, rule 2): no
+    """The one concurrency library (docs/ARCHITECTURE.md 7, rule 4): no
     module imports asyncio, so every part runs on either event loop."""
     offenders = [
         f"{name}:{line}"

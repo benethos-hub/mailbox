@@ -122,8 +122,10 @@ config/                   # one folder per package: .env.example versioned,
 data/                     # one folder per package, created when missing,
                           #   only .gitkeep is versioned
 assets/                   # logo/: the logo and the icon as they came,
-                          #   build.py makes the shipped copies and,
-                          #   with --social, the social preview
+                          #   and the social preview. build.py makes
+                          #   the shipped copies in the service's
+                          #   static/img/ and, with --social, the
+                          #   social preview
 live/                     # manual checks against the test accounts,
                           #   what they share in live/checks/, one module
                           #   per subject
@@ -193,10 +195,11 @@ that adds a module, a package, a library or a seam.
 Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside
 `testpaths`.
-They run against test accounts on an IMAP server of our own. Its address
-and the list of test accounts are local, unversioned configuration, and
-only the accounts listed there count as confirmed test accounts for golden
-rule 1.
+They run against test accounts: on an IMAP server of our own, the
+Microsoft test account, and the test mail server in a container. The
+server's address and the list of test accounts are local, unversioned
+configuration, and only the accounts listed there count as confirmed
+test accounts for golden rule 1.
 
 ## Conventions
 

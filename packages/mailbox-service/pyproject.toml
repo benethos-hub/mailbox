@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "benethos-mailbox-service"
-version = "0.3.0"
+version = "0.3.1"
 description = "Self-hosted REST API and web UI for all your mailboxes (IMAP, JMAP, POP3, Microsoft 365, Outlook.com): users, rights and encrypted credentials, a change feed, signed webhooks and an audit."
 readme = "README.md"
 requires-python = ">=3.11"
