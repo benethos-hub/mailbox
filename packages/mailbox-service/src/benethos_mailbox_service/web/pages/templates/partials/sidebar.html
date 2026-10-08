@@ -1,7 +1,7 @@
 {% from "components/ui.html" import csrf_field with context %}
 {# ``nav``: the groups and entries the caller may open (navigation.py). #}
 <aside class="sidebar">
-  <div class="brand"><span class="mark">✉</span> {{ APP_NAME }}</div>
+  <div class="brand"><img class="mark" src="/ui/static/img/icon.svg" alt="" width="22" height="22" /> {{ APP_NAME }}</div>
   <nav class="nav" aria-label="Main">
     {% for group in nav %}
     {% if group.title %}<div class="section">{{ group.title }}</div>{% endif %}

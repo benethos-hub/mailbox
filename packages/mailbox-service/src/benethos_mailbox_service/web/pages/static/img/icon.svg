@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><title>mailbox</title>
+<rect width="200" height="200" rx="44" fill="#1D4ED8"/><g fill="none" stroke-linecap="round" stroke-width="10">
+<path d="M28 58 C70 58 70 100 96 100" stroke="#93C5FD" opacity="0.55"/>
+<path d="M28 100 L96 100" stroke="#93C5FD" opacity="0.8"/>
+<path d="M28 142 C70 142 70 100 96 100" stroke="#93C5FD"/></g>
+<circle cx="28" cy="58" r="9" fill="#93C5FD" opacity="0.55"/><circle cx="28" cy="100" r="9" fill="#93C5FD" opacity="0.8"/><circle cx="28" cy="142" r="9" fill="#93C5FD"/>
+<path d="M96 84 L136 58 L176 84 Z" fill="#FFFFFF" opacity="0.55"/>
+<rect x="108" y="50" width="56" height="58" rx="6" fill="#FFFFFF"/>
+<path d="M118 64 H154 M118 76 H154 M118 88 H142" stroke="#93C5FD" stroke-width="5" stroke-linecap="round"/>
+<path d="M96 88 L136 116 L176 88 V128 A8 8 0 0 1 168 136 H104 A8 8 0 0 1 96 128 Z" fill="#FFFFFF"/>
+<path d="M96 88 L136 116 L176 88" fill="none" stroke="#1D4ED8" stroke-width="6" stroke-linejoin="round" opacity="0.35"/>
+
+</svg>

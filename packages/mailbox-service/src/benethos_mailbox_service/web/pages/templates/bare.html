@@ -7,12 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {% block head %}{% endblock %}
     <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+    <link rel="icon" href="/ui/static/img/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/ui/static/css/app.css" />
   </head>
   <body>
     <div class="signin">
       <section class="card">
-        <header><h2>✉ {{ APP_NAME }}{% block subtitle %}{% endblock %}</h2></header>
+        <header><h2><img class="mark" src="/ui/static/img/icon.svg" alt="" width="22" height="22" /> {{ APP_NAME }}{% block subtitle %}{% endblock %}</h2></header>
         <div class="body">
           {% block content %}{% endblock %}
         </div>

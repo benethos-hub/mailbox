@@ -6,6 +6,7 @@
     {# htmx must not inject its indicator style: the policy allows no inline style. #}
     <meta name="htmx-config" content='{"includeIndicatorStyles": false}' />
     <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+    <link rel="icon" href="/ui/static/img/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/ui/static/css/app.css" />
   </head>
   {# Every htmx request carries the session's CSRF token as a header. #}

@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/logo/logo.svg" alt="Mailbox" height="64">
+
 # mailbox-service
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
