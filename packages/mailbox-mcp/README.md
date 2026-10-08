@@ -1,6 +1,4 @@
-<img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/logo/logo.svg" alt="Mailbox" height="64">
-
-# mailbox-mcp
+# <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/logo/icon-3d.svg" alt="" height="36" align="absmiddle"> mailbox-mcp
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![PyPI benethos-mailbox-mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20benethos-mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
