@@ -47,14 +47,10 @@ hundreds, or when the IMAP session is rebuilt anyway.
 
 ## Attachments for the model
 
-- Size limits per attachment and per tool call.
-- Text extraction from PDF, Office documents and plain text, so the model
-  can read an invoice without a download. A PDF library has to fit this
-  project's MIT licence: PDFium bindings (BSD / Apache) yes, PyMuPDF (AGPL)
-  no.
-- Images: pass through for models that can see them, or skip.
-- Never execute or open anything. Attachments are data.
-- Attachment text is foreign content like the mail body (CONCEPT 7.7).
+- Text extraction from PDF and Office documents, so the model can read
+  an invoice without a download. Today `get_attachment` hands the pages
+  of a PDF over as images, text types as text and images as images
+  (CONCEPT 8), with limits on size, pages and characters.
 
 ## The standard library's mail parser instead of imap-tools
 

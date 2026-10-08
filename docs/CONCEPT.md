@@ -618,9 +618,9 @@ registered that domain.
    or read local files.
 8. **Limits.** Short timeouts, a cap on redirects and response size, a rate
    limit per user, and results cached per domain for a day.
-9. **Privacy switches.** ISPDB and the Microsoft lookup each tell a third
-   party which domain is being set up, and each can be switched off. The
-   other sources only talk to the domain itself.
+9. **Privacy switches.** ISPDB and the Microsoft lookup (planned) each
+   tell a third party which domain is being set up, and each can be
+   switched off. The other sources only talk to the domain itself.
 
 #### In the API
 
@@ -955,7 +955,7 @@ not followed.
 
 | Parameter | Meaning |
 |---|---|
-| `folder` | folder id, or a role such as `inbox`. Left out: every folder on a Microsoft account, the inbox on IMAP |
+| `folder` | folder id, or a role such as `inbox`. Left out: every folder on a Microsoft or JMAP account, the inbox on IMAP and POP3 |
 | `q` | free text (subject, addresses, body where the provider can) |
 | `from`, `to`, `subject` | structured filters |
 | `after`, `before` | days, `YYYY-MM-DD`: `after` includes its day, `before` does not. The audits take a time with a zone instead |
@@ -1159,8 +1159,8 @@ the data, rather than a readable file.
 - **Verify, then store.** A new or changed credential is tested against the
   provider first. Only a working one is encrypted and saved.
 - **Write-only.** No route returns a secret. An account shows
-  `credentials: {"type": "app_password", "updated_at": "..."}`, and `PATCH`
-  replaces the value.
+  `credentials: [{"field": "password", "updated_at": "..."}]`, and
+  `PATCH` replaces the value.
 - **Short plaintext lifetime.** Secrets are `SecretStr` in every model,
   decrypted right before a login and handed to the protocol library, never
   cached in plain form. On a reconnect they are decrypted again, which is
@@ -1626,8 +1626,8 @@ account and re-issuing every token.
 - **`benethos-mailbox-service backup verify <file>`** decrypts and checks a
   backup without restoring it. A backup that was never tested is a hope,
   not a backup.
-- **Scheduled backups** optional, with a retention count, into a directory
-  or the container volume.
+- **Scheduled backups**, planned: optional, with a retention count, into
+  a directory or the container volume.
 - **After a restore** some OAuth refresh tokens may be stale, since
   providers rotate them. Those accounts go to `needs_reauth` and are
   reconnected once. API tokens are valid again as they were at backup time:

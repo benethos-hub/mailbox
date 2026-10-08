@@ -618,7 +618,10 @@ Where the code differed from the tables, and what was accepted. **Decided
   page is awaited and keeps its own check, and `system/status.py` is
   the domain, where the helper does not belong.
 - **B10**: `main._loop` stays as the guard around a background loop
-  that ends for good.
+  that ends for good. Since #72 it is `_loop` in
+  `assembly/lifecycle.py`.
+- **A2**: the helper is `log_time` in `common/clock.py`, as
+  LOGGING.md 6.9 names the time of a log line.
 - **B14**: the six `why()` of the activity catalogue stay, since their
   reasons are of different types.
 - **C8**: the Microsoft adapter keeps its folder roles, which come from
@@ -921,7 +924,8 @@ Decided by the user: hard limits, without exceptions and without
 `noqa`. What grows beyond one is split.
 
 - A module at most 500 lines, a class at most 30 methods.
-  `test_architecture.py` of each package checks both.
+  `test_architecture.py` of the client and of the MCP server and
+  `test_code_rules.py` of the service check both.
 - A function at most a complexity of 10 (ruff `C901`), 12 branches
   (`PLR0912`) and 50 statements (`PLR0915`).
 - Names as pep8-naming has them (ruff `N`): an exception ends in

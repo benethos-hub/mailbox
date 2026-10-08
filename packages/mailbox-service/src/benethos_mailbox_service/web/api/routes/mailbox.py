@@ -94,7 +94,7 @@ async def list_messages(
         Query(
             description=(
                 "A folder id, or a role such as inbox. Left out: every folder "
-                "on a Microsoft account, the inbox on IMAP."
+                "on a Microsoft or JMAP account, the inbox on IMAP and POP3."
             )
         ),
     ] = None,
