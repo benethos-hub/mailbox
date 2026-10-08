@@ -40,6 +40,25 @@ def test_the_ui_shows_the_3d_icon() -> None:
     assert list(_build().BUILT.values()) == [REPOSITORY / "assets/logo/icon-3d.svg"]
 
 
+def test_the_social_preview_has_githubs_size() -> None:
+    # After a change of the 3D logo: uv run python assets/build.py --social
+    build = _build()
+    png = build.SOCIAL.read_bytes()
+    assert png.startswith(b"\x89PNG\r\n\x1a\n")
+    width, height = (int.from_bytes(png[at : at + 4], "big") for at in (16, 20))
+    assert (width, height) == build.SOCIAL_SIZE == (1280, 640)
+
+
+def test_the_social_preview_places_the_3d_logo_in_the_middle() -> None:
+    build = _build()
+    page = build.social(build.SOCIAL_SOURCE.read_text("utf-8"))
+    assert build.SOCIAL_SOURCE.name == "logo-3d.svg"
+    assert page.startswith('<svg xmlns="http://www.w3.org/2000/svg" width="1280"')
+    # 658 by 224 drawn 960 wide: 326.8 high, 156.6 from the top.
+    assert 'x="160" y="156.596" width="960" height="326.809"' in page
+    assert "c2pa" not in page
+
+
 # PyPI shows no relative image: a package's README names it in full.
 _RAW = "https://raw.githubusercontent.com/benethos-hub/mailbox/main/"
 READMES = {
