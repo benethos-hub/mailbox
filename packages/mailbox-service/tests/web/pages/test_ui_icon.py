@@ -1,6 +1,7 @@
 """The project's icon: in the configuration UI, in the heading of every
 README, and the script that makes the shipped copy from the source in
-``assets/logo/``."""
+``assets/logo/``. Also the README's architecture diagram, which the same
+script renders."""
 
 from __future__ import annotations
 
@@ -71,6 +72,29 @@ def test_the_social_preview_places_the_3d_logo_in_the_middle() -> None:
     # 658 by 224 drawn 960 wide: 326.8 high, 156.6 from the top.
     assert 'x="160" y="156.596" width="960" height="326.809"' in page
     assert "c2pa" not in page
+
+
+def test_the_architecture_diagram_has_the_size_of_its_page() -> None:
+    # After a change of the diagram: uv run python assets/build.py --diagram
+    build = _build()
+    width, height = build.DIAGRAM_SIZE
+    page = build.DIAGRAM_SOURCE.read_text("utf-8")
+    assert f"width: {width}px; height: {height}px;" in page
+    assert f'viewBox="0 0 {width} {height}"' in page
+    for image in build.DIAGRAMS:
+        png = image.read_bytes()
+        assert png.startswith(b"\x89PNG\r\n\x1a\n"), image.name
+        size = tuple(int.from_bytes(png[at : at + 4], "big") for at in (16, 20))
+        assert size == (width * build.DIAGRAM_SCALE, height * build.DIAGRAM_SCALE)
+
+
+def test_the_readme_shows_the_diagram_light_and_dark() -> None:
+    readme = (REPOSITORY / "README.md").read_text("utf-8")
+    assert (
+        '<source srcset="assets/architecture/architecture-dark.png"'
+        ' media="(prefers-color-scheme: dark)">' in readme
+    )
+    assert '<img src="assets/architecture/architecture.png" alt="' in readme
 
 
 # PyPI shows no relative image: a package's README names it in full.

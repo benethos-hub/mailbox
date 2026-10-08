@@ -122,10 +122,12 @@ config/                   # one folder per package: .env.example versioned,
 data/                     # one folder per package, created when missing,
                           #   only .gitkeep is versioned
 assets/                   # logo/: the logo and the icon as they came,
-                          #   and the social preview. build.py makes
-                          #   the shipped copies in the service's
-                          #   static/img/ and, with --social, the
-                          #   social preview
+                          #   and the social preview. architecture/:
+                          #   the README's diagram as HTML and PNG,
+                          #   light and dark. build.py makes the
+                          #   shipped copies in the service's
+                          #   static/img/, with --social the social
+                          #   preview, with --diagram the diagram
 live/                     # manual checks against the test accounts,
                           #   what they share in live/checks/, one module
                           #   per subject
