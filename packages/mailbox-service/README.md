@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.3.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -285,13 +285,13 @@ from the environment only and sets `MAILBOX_SERVICE_HOST=0.0.0.0`,
 `MAILBOX_SERVICE_DATA_DIR=/data`, `MAILBOX_SERVICE_KEY_PROVIDER=file` and
 `MAILBOX_SERVICE_KEY_FILE=/run/secrets/master_key`. The database lives in the
 volume at `/data`. The master key is a file mounted at
-`/run/secrets/master_key`. Tags: the version (`0.3.0`), the minor version
+`/run/secrets/master_key`. Tags: the version (`0.3.1`), the minor version
 (`0.3`) and `latest`.
 
 ### With docker run
 
 ```sh
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.3.0
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.3.1
 
 # once: a master key file, the keys in the database, the first user
 docker run --rm "$IMAGE" keys generate > master_key
@@ -326,7 +326,7 @@ does the first start in one run:
 sh setup.sh
 ```
 
-The version runs as named in its `.env`, `MAILBOX_VERSION=0.3.0`. Its
+The version runs as named in its `.env`, `MAILBOX_VERSION=0.3.1`. Its
 [README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md)
 has the same steps by hand, the update, backup and restore, HTTPS
 with Caddy or a proxy of your own, and the MCP server instances.

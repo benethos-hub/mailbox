@@ -144,7 +144,7 @@ wheels = [
 
 [[package]]
 name = "benethos-mailbox-client"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "packages/mailbox-client" }
 dependencies = [
     { name = "httpx" },
@@ -155,7 +155,7 @@ requires-dist = [{ name = "httpx", specifier = ">=0.28" }]
 
 [[package]]
 name = "benethos-mailbox-mcp"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "packages/mailbox-mcp" }
 dependencies = [
     { name = "anyio" },
@@ -184,7 +184,7 @@ requires-dist = [
 
 [[package]]
 name = "benethos-mailbox-service"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "packages/mailbox-service" }
 dependencies = [
     { name = "anyio" },

@@ -1,6 +1,6 @@
 # <img src="../../assets/logo/icon-3d.svg" alt="" height="36" align="absmiddle"> Mailbox in operation
 
-> **Beta, version 0.3.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.3.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -51,7 +51,7 @@ The same by hand, from this folder:
 
 ```sh
 cp .env.example .env && chmod 600 .env          # then edit it
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.3.0
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.3.1
 
 mkdir -p caddy.d secrets/mcp secrets/tls && chmod 700 secrets secrets/mcp
 docker run --rm "$IMAGE" keys generate > secrets/master_key

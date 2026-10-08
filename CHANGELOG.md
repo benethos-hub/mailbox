@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-08
+
 ### Added
 
 - The project has a logo. Its icon heads each README, and the
@@ -14,8 +16,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Breaking:** `containers/dev/` is now `containers/development/`.
-  A master key kept in `containers/dev/secrets/` moves along by hand.
+- `containers/dev/` is now `containers/development/`. This concerns a
+  clone of the repository only, not the packages or the images. A
+  master key kept in `containers/dev/secrets/` moves along by hand.
   The compose project keeps its name `mailbox-dev`, and with it its
   volume.
 
@@ -1306,7 +1309,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/benethos-hub/mailbox/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/benethos-hub/mailbox/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/benethos-hub/mailbox/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/benethos-hub/mailbox/releases/tag/v0.1.0
