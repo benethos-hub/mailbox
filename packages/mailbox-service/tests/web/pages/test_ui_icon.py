@@ -36,8 +36,22 @@ def test_a_shipped_image_has_no_manifest() -> None:
         assert "c2pa" not in target.read_text("utf-8"), target.name
 
 
-def test_the_ui_shows_the_3d_icon() -> None:
-    assert list(_build().BUILT.values()) == [REPOSITORY / "assets/logo/icon-3d.svg"]
+def test_the_ui_shows_the_3d_icon_and_logo() -> None:
+    sources = {source.name for source, _ in _build().BUILT.values()}
+    assert sources == {"icon-3d.svg", "logo-3d.svg"}
+
+
+def test_the_dark_logo_differs_in_the_word_mark_only() -> None:
+    build = _build()
+    logo = (REPOSITORY / "assets/logo/logo-3d.svg").read_text("utf-8")
+    plain, light = build.plain(logo).split(">"), build.light_word(logo).split(">")
+    changed = [(a, b) for a, b in zip(plain, light, strict=True) if a != b]
+    # The two stops of the face's gradient, and the depth below the face.
+    ends = ('stop-color="#DBEAFE"/', 'stop-color="#93C5FD"/', ' fill="#1D4ED8"/')
+    assert len(changed) == len(ends)
+    for (_, made), end in zip(changed, ends, strict=True):
+        assert made.endswith(end), made[-40:]
+    assert 'transform="translate(230,134)"' in changed[2][0]
 
 
 def test_the_social_preview_has_githubs_size() -> None:
@@ -104,10 +118,16 @@ def test_the_icon_is_served(app_client: TestClient) -> None:
     assert answer.headers["content-type"].startswith("image/svg+xml")
 
 
-def test_the_sign_in_page_shows_the_icon(app_client: TestClient) -> None:
+def test_the_sign_in_page_shows_the_logo(app_client: TestClient) -> None:
     page = app_client.get("/ui/login").text
     assert f'<link rel="icon" href="{ICON}"' in page
-    assert f'<img class="mark" src="{ICON}"' in page
+    assert (
+        '<source srcset="/ui/static/img/logo-dark.svg"'
+        ' media="(prefers-color-scheme: dark)" />' in page
+    )
+    assert '<img src="/ui/static/img/logo.svg" alt="Mailbox"' in page
+    for logo in ("logo.svg", "logo-dark.svg"):
+        assert app_client.get(f"/ui/static/img/{logo}").status_code == 200, logo
 
 
 def test_every_page_shows_the_icon(ui: TestClient) -> None:

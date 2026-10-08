@@ -378,9 +378,10 @@ receiver reports nothing. Built last, if at all.
 - **Density**: a little more air than today. Row height 40 px, card
   padding 20 px, one type size for text and one for the small line under
   a name.
-- **Icon**: the project's 3D icon from `assets/logo/` heads the
-  sidebar and the sign-in card and is the favicon. `assets/build.py` makes
-  the copy in `static/img/`.
+- **Icon and logo**: the project's 3D icon from `assets/logo/` heads
+  the sidebar and is the favicon. The 3D logo with its word mark
+  stands above the sign-in card, in dark mode with a light word
+  mark. `assets/build.py` makes the copies in `static/img/`.
 - **Sidebar**: light, not dark, with the accent on the active entry.
   Collapses to a top bar under 860 px as today.
 - **Components**: everything a page uses is a macro in
