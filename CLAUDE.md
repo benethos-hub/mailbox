@@ -127,7 +127,7 @@ live/                     # manual checks against the test accounts,
 containers/               # images/ (one folder per image), and one folder
                           #   per place they run: production/ (the
                           #   published images, Caddy, MCP instances),
-                          #   dev/ (built from the repository),
+                          #   development/ (built from the repository),
                           #   test-mail-server/ (Stalwart for tests).
                           #   Each keeps its secrets/ local
 .github/workflows/        # ci.yml: checks, fresh install, lowest

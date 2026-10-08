@@ -30,7 +30,7 @@ containers/
                                  #   instance
     setup.sh                     #   the first start
     README.md                    #   how to set it up and run it
-  dev/                           # for development, built from the repository
+  development/                   # for development, built from the repository
     compose.yaml                 # the service, the MCP server with the
                                  #   profile mcp, ports on 127.0.0.1 only
   test-mail-server/              # Stalwart as a mail server for tests
@@ -42,7 +42,7 @@ containers/
 | Folder | For | Images |
 |---|---|---|
 | `production/` | running Mailbox, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
-| `dev/` | trying a change in a container | built from this repository |
+| `development/` | trying a change in a container | built from this repository |
 | `test-mail-server/` | the adapters against a mail server of our own | Stalwart |
 
 How to start and run the service and the MCP server, with `docker run`
@@ -53,8 +53,8 @@ or with compose:
 
 ## For development
 
-`dev/compose.yaml` builds both images from the repository. The first
-start, in `dev/`:
+`development/compose.yaml` builds both images from the repository. The
+first start, in `development/`:
 
 ```sh
 docker compose build
@@ -67,8 +67,8 @@ docker compose run --rm mailbox-service users create-admin
 docker compose up -d
 ```
 
-The master key lives in `dev/secrets/master_key`. The MCP server starts with
-`docker compose --profile mcp up -d`. Compose reads these variables from
+The master key lives in `development/secrets/master_key`. The MCP server
+starts with `docker compose --profile mcp up -d`. Compose reads these variables from
 the environment or from an `.env` beside the file, not versioned:
 
 | Variable | Default | What it is |
@@ -96,15 +96,15 @@ version as the PyPI packages:
 - The service image holds the service package, the MCP image the MCP
   server and the client, each installed from `uv.lock` without the
   development tools.
-- They run as user `mailbox` (uid 10001). The compose files of `dev/`
-  and `production/` add a read-only root file system, no capabilities
+- They run as user `mailbox` (uid 10001). The compose files of
+  `development/` and `production/` add a read-only root file system, no capabilities
   and `no-new-privileges`, to Caddy as well, which keeps only
   `NET_BIND_SERVICE` for its ports 80 and 443. The test mail server runs
   Stalwart without these.
 - Settings come from the environment only.
 - Both have a health check: the service on `GET /health`, the MCP server
   on its port.
-- The compose files of `dev/` and `production/` cap the log Docker
+- The compose files of `development/` and `production/` cap the log Docker
   keeps of each container at 5 files of 10 MB, the oldest dropped first
   (`x-logging`, and in `mcp.yaml` on the service itself). The test mail
   server keeps Docker's default. To keep more,
@@ -129,7 +129,7 @@ it is.
 
 `ci.yml` builds both on every pull request and every push to `main`,
 for arm64 as well. It checks that the
-compose files in `dev/` and `production/` keep every port on the loopback
+compose files in `development/` and `production/` keep every port on the loopback
 address, all but Caddy's 80 and 443, production with the instances of
 its example override file. It also starts the
 service until its health check reports healthy, and the MCP server's

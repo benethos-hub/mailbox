@@ -185,7 +185,7 @@ jobs:
         working-directory: containers
         run: |
           set -euo pipefail
-          for place in dev production; do
+          for place in development production; do
             mkdir -p "$place/secrets" && touch "$place/secrets/master_key"
             if [ -e "$place/.env.example" ]; then cp "$place/.env.example" "$place/.env"; fi
             if [ -e "$place/compose.override.yaml.example" ]; then
