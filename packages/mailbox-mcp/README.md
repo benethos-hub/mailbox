@@ -246,7 +246,7 @@ service with the profile `mcp`, one per token, from the template
 [README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md#mcp-server-instances)
 has the steps, also for an instance on another host. For
 development,
-[containers/dev/compose.yaml](https://github.com/benethos-hub/mailbox/blob/main/containers/dev/compose.yaml)
+[containers/development/compose.yaml](https://github.com/benethos-hub/mailbox/blob/main/containers/development/compose.yaml)
 starts it beside a service built from the repository, with the profile
 `mcp`.
 

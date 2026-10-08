@@ -1730,8 +1730,9 @@ registry. The master key reaches the container as a file secret. Image
 files and the compose file live in `containers/`, one folder per image.
 Decided 2026-10-06: `containers/images/` holds the image folders, and
 each place they run in has a folder of its own beside it, with its own
-`secrets/`: `dev/` builds from the repository, `test-mail-server/` is
-Stalwart for tests.
+`secrets/`: `development/` builds from the repository,
+`test-mail-server/` is Stalwart for tests. Decided 2026-10-08: the
+folder for development is called `development/`, written out.
 
 **Decided 2026-10-06, operation:** `containers/production/` runs the
 published images without a clone of the repository. `.env` names a fixed

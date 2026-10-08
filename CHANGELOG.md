@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** `containers/dev/` is now `containers/development/`.
+  A master key kept in `containers/dev/secrets/` moves along by hand.
+  The compose project keeps its name `mailbox-dev`, and with it its
+  volume.
+
 ## [0.3.0] - 2026-10-07
 
 The status is beta: usable with real accounts. A breaking change of
