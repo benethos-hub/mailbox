@@ -7,7 +7,9 @@ from typing import Annotated, Any
 import anyio
 from pydantic import Field
 
-from .. import pdf, plaintext, render
+from benethos_mailbox_common import plaintext
+
+from .. import pdf, render
 from ..errors import ToolError
 from .base import MAX_LIMIT, ToolResult, client, reads, result
 

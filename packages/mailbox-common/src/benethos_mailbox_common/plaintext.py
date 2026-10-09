@@ -6,9 +6,8 @@ hidden by an attribute or by their inline style. Blocks go on lines of
 their own, list items get a dash, and a link keeps its address after its
 text.
 
-The service and the MCP server each keep this module, as the same file:
-the MCP server cannot import the service. A test of the service holds the
-two equal.
+The mail page of the service shows it, and the model of the MCP server
+reads it, so the model reads what a person sees, no more.
 """
 
 from __future__ import annotations

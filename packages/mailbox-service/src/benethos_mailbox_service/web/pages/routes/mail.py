@@ -15,7 +15,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 
-from ....common.plaintext import from_html
+from benethos_mailbox_common.plaintext import from_html
+
 from ....common.urls import path_and_query
 from ....data.models import Folder, FolderRole, Message, MessageFilter
 from ....domain.mailbox import MailboxService, find_folder

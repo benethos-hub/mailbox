@@ -18,7 +18,8 @@ from typing import NamedTuple
 
 from pydantic import ValidationError
 
-from ...common.plaintext import from_html
+from benethos_mailbox_common.plaintext import from_html
+
 from ...common.text import joined
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
 from .fields import ascii_domain, wire_address
