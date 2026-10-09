@@ -104,7 +104,61 @@ document.addEventListener("click", (event) => {
   );
 });
 
+// --- the account menu and the folded sidebar (docs/UI.md 3) ---------------------
+
+// The menu is a <details>: it opens without a script, and closes here on
+// a click elsewhere and on Escape.
+function closeMenus(except) {
+  for (const menu of document.querySelectorAll("details.account-menu[open]")) {
+    if (menu !== except) menu.open = false;
+  }
+}
+
+document.addEventListener("click", (event) => {
+  closeMenus(event.target.closest?.("details.account-menu"));
+});
+
+// Folded, the sidebar shows its icons alone: each entry's word becomes its
+// tooltip. The choice is kept in this browser only.
+function fold(folded) {
+  document.documentElement.classList.toggle("nav-folded", folded);
+  const button = document.querySelector("[data-fold]");
+  if (button) {
+    const label = folded ? "Unfold the sidebar" : "Fold the sidebar";
+    button.setAttribute("aria-expanded", String(!folded));
+    button.title = label;
+    button.setAttribute("aria-label", label);
+  }
+  for (const link of document.querySelectorAll(".nav a")) {
+    if (folded) link.title = link.querySelector(".label")?.textContent || "";
+    else link.removeAttribute("title");
+  }
+}
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest?.("[data-fold]")) return;
+  const folded = !document.documentElement.classList.contains("nav-folded");
+  fold(folded);
+  try {
+    if (folded) window.localStorage.setItem("mailbox.sidebar", "folded");
+    else window.localStorage.removeItem("mailbox.sidebar");
+  } catch {
+    // Storage blocked: it stays folded on this page only.
+  }
+});
+
+if (document.documentElement.classList.contains("nav-folded")) fold(true);
+
 // --- keys ------------------------------------------------------------------------
+
+// Escape closes the account menu. The dialog closes by itself.
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  const open = document.querySelector("details.account-menu[open]");
+  if (!open) return;
+  open.open = false;
+  open.querySelector("summary")?.focus();
+});
 
 // "/" puts the cursor in the search field of the page, as many sites do.
 document.addEventListener("keydown", (event) => {

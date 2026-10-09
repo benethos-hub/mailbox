@@ -471,11 +471,14 @@ def test_a_reader_sees_the_devices_but_removes_none(
     assert services.factors.has(user.id)
 
 
-def test_the_own_user_page_links_to_the_factor(
+def test_the_account_menu_links_to_the_factor_and_says_its_state(
     ui: TestClient, services: Services
 ) -> None:
     # The fixture ``ui`` signed in as the user browser_admin makes.
     me = user_named(services, "admin")
     page = ui.get(f"/ui/users/{me.id}").text
-    assert "Set up a second factor" in page
+    menu = page[page.index('<details class="account-menu">') :]
+    assert re.search(
+        r'href="/ui/second-factor">.*?Second factor <span class="hint">off', menu
+    )
     assert "second-factor/remove" not in page

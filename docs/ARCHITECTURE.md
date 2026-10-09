@@ -214,7 +214,8 @@ packages/mailbox-service/
         routes/         # one router per resource
       pages/            # the configuration UI under /ui, not in OpenAPI
         deps.py         # who is signed in, the CSRF check, if_allowed
-        navigation.py   # the sidebar entries a caller may open, breadcrumbs
+        navigation.py   # the sidebar entries a caller may open and their
+                        #   dots, breadcrumbs
         filters.py      # the filter bar of a list: its fields and chips,
                         #   user_names and records_filter for the lists
                         #   of records
@@ -232,7 +233,8 @@ packages/mailbox-service/
         errors.py       # errors as a page
         routes/         # one module per area
         templates/      # base and bare, partials, components (macros), pages
-        static/         # app.css, app.js, vendored htmx, img/ (the icon
+        static/         # app.css, app.js, early.js (read before the page
+                        #   is drawn), vendored htmx, img/ (the icon
                         #   and the logo, made by assets/build.py, the
                         #   sprite of Bootstrap Icons with its licence,
                         #   made by assets/icons.py)

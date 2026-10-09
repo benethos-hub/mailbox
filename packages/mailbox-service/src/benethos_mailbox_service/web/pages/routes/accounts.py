@@ -84,7 +84,7 @@ def _credentials(form: Any) -> dict[str, SecretStr]:
 
 @router.get("/accounts")
 async def list_accounts(
-    request: Request, caller: Viewer, accounts: Accounts
+    request: Request, caller: Viewer, accounts: Accounts, service: Status
 ) -> HTMLResponse:
     bar = filter_bar(
         request,
@@ -127,6 +127,7 @@ async def list_accounts(
         bar=bar,
         problem=problem,
         accounts=found.items,
+        healths=service.healths(caller, found.items),
         pages=page_links(request, found.next_cursor),
         can_create=caller.allows("create_account"),
     )

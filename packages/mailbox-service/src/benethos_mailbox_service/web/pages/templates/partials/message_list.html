@@ -21,7 +21,7 @@
         <td>{{ m.sender | address }}</td>
         <td class="name">
           <a href="/ui/accounts/{{ m.account_id }}/{{ open_as }}/{{ m.id }}">{{ m.subject | or_missing }}</a>
-          <span class="sub">{{ m.snippet | or_missing }}</span>
+          {% if m.snippet %}<span class="sub">{{ m.snippet }}</span>{% endif %}
         </td>
         <td>{{ m.date | when }}</td>
         <td>

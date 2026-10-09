@@ -61,19 +61,44 @@ What is missing, all on existing domain services and API routes:
 - **Recovery key** (phase 5): show it once, as the CLI does.
 - **Changes**, optional: what the change feed recorded lately.
 
+The rework of 2026-10 changed the frame once more: the account menu,
+the folding sidebar and its dots (3), the overview's Service card (5),
+the Status page gone into the overview and the Accounts list (6.5),
+icons, dialogs and copy buttons (7).
+
 ## 3. Navigation and the click budget
 
 The sidebar keeps its three groups, renamed by what a person looks for:
 
 | Group | Pages | Who sees it |
 |---|---|---|
-| (top) | Overview, Mail | everyone |
+| (top) | Overview, Mail search | everyone |
 | Mailboxes | Accounts, Sends, Webhooks | Accounts with `accounts.read` on at least one account or with `accounts.connect`, Sends with `audit` on at least one account, Webhooks with `webhooks.manage` |
-| Service | Users, Roles, Status, Audit, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Audit with `audit` in `service`, Log and Recovery key for the admin |
+| Service | Users, Roles, Audit, Log, Recovery key | Users and Roles with `users.read`, Audit with `audit` in `service`, Log and Recovery key for the admin |
 
-The foot of the sidebar names the signed-in user and links to their own
-page, Password, Second factor and Sign out. Changes, if built, is a tab of the account
-page and of Status, not a sidebar entry.
+Each entry has its icon. **Mail search** is the list across every
+account the person may read: the filter bar first, the cursor in its
+search field. The mail of one account is on the account's page.
+
+The foot of the sidebar is the **account menu**: one button with the
+initial in a circle, the name and the roles. It opens a menu upwards:
+"Signed in as" the name, then Your page (with `users.read`), Password,
+Second factor with its state (on or off), and Sign out in red, still a
+form that posts. A click elsewhere or Escape closes it. It is the one
+place for what is the person's own: neither the overview nor the own
+user page repeats its links.
+
+A button beside the brand **folds the sidebar** to a narrow bar of
+icons, each word its tooltip, the account menu its avatar alone. The
+choice is the viewer's own, kept in the browser (`localStorage`). Under
+860 px the sidebar is a bar along the top: it does not fold, and the
+account menu is the avatar at its end.
+
+A **dot** beside Accounts says an account the person may see the
+status of needs a new sign-in, cannot be reached or fails to sync. One
+beside Webhooks says a webhook of theirs fails. The page brings them
+along, nothing is polled. Changes, if built, is a tab of the account
+page, not a sidebar entry.
 
 Every page has a **top bar** with its heading, one line under it that
 says where the person is, and the page's **primary action** at the right.
@@ -85,8 +110,8 @@ The click budget, counted from the overview after signing in:
 | Task | Clicks | Path |
 |---|---|---|
 | Read a mail of one account | 3 | account on the overview, Mail, the message |
-| Read the newest mail of every account | 2 | Mail, the message |
-| Reply to a mail | 4 | Mail, the message, Reply, Send |
+| Read the newest mail of every account | 2 | Mail search, the message |
+| Reply to a mail | 4 | Mail search, the message, Reply, Send |
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
 | Change an account's password | 3 | Accounts, the account, Save |
 | Create a user with rights | 3 | Users, New user, Create |
@@ -94,7 +119,7 @@ The click budget, counted from the overview after signing in:
 | Revoke a token | 3 | Users, the user, Revoke |
 | Add a webhook | 3 | Webhooks, New webhook, Create |
 | See why a webhook fails | 1 | Webhooks |
-| See which account is not syncing | 1 | Overview, or Status |
+| See which account is not syncing | 1 | Overview, or Accounts (its dot shows on every page) |
 | Show the recovery key | 2 | Recovery key, Show |
 | Read the service log | 1 | Log |
 | See who changed a user | 1 | Audit, or 2: Users, the user |
@@ -219,17 +244,18 @@ the error page with a way back.
 The first page after signing in. Its cards, in order:
 
 1. **You**: name, roles, what the rights add up to, the last sign-in
-   (stored with the password),
-   links to your page, Password and, for the admin, Recovery key. The
+   (stored with the password). The account menu has the links. The
    card says at a glance whether this user may read mail and send it
    anywhere, the warning the API and the MCP server also give.
 2. **Your accounts**: one row per account with its address, status,
    unread count where cheap, and what you may do there. A row opens the
    account's mail, the address opens the account.
 3. **Service**: only for those with `accounts.read`: accounts that need
-   attention (needs_reauth, unreachable, sync failing), webhooks failing,
-   the worker's last pass. Each line links to the page that fixes it.
-   Empty when all is well, then it says so in one line.
+   attention (needs_reauth, unreachable, sync failing), webhooks failing.
+   Each line links to the page that fixes it. When all is well, it says
+   so in one line. Under it the sync worker: running and its interval,
+   or switched off and why, push with how many accounts it watches of
+   how many it may, its last pass.
 
 ## 6. Workflows
 
@@ -335,15 +361,15 @@ the receiver's status code and the error.
 A webhook has no Change card: the API has none, a person removes and
 recreates it.
 
-### 6.5 Status and the recovery key
+### 6.5 The state of the service and the recovery key
 
-Status is one page of three cards: accounts with status, last sync and
-last error, the worker with its interval, its last pass and how many
-accounts it watches of how many it may, the webhooks with their last
-delivery. Each row links where it can be fixed. Nothing
-is polled for the page. The worker keeps its last pass and each
-account's last sync and last error in memory, so they are empty after a
-restart until the first pass.
+No page of its own any more. The Accounts list shows each account's
+status, last sync and last error, the overview's Service card the
+worker, the Webhooks list the webhooks with their last delivery, and
+the dots of the sidebar say where to look (3). Nothing is polled for
+it. The worker keeps its last pass and each account's last sync and
+last error in memory, so they are empty after a restart until the
+first pass. `GET /v1/status` answers the same for the API.
 
 The recovery key page shows the key once after **Show**, with the
 warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again, and for a code when the
@@ -526,6 +552,9 @@ All four steps are done, as the roadmap's phase 4b records.
   per row, Bootstrap Icons as an own sprite, the primary action and
   the Danger button keep their word (7).
 - 2026-10-09: no CDN, everything the UI loads kept under `static/` (7).
+- 2026-10-09: the account menu in the sidebar's foot, the sidebar
+  folding to icons, dots for what needs a look, Mail search, the
+  Status page gone into the overview and the Accounts list (3, 5, 6.5).
 - 2026-10-09: the page's own dialog in place of the browser's
   question, copy buttons beside every secret shown once, relative
   times in lists (7).

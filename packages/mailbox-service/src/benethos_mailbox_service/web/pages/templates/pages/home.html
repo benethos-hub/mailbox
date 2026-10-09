@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import anywhere_tag, card, empty, fact, facts, rights_tags %}
+{% from "components/ui.html" import ago, anywhere_tag, card, empty, fact, facts, rights_tags %}
 {% from "components/grants.html" import role_tags, sending_of %}
 {% block title %}Overview · {{ APP_NAME }}{% endblock %}
 {% block heading %}Overview{% endblock %}
@@ -13,7 +13,6 @@
   {% call fact("Beyond one account") %}{{ rights_tags(view.groups, view.operations) }}{% endcall %}
   {% endif %}
   {% call fact("Last sign-in") %}{% if previous_sign_in %}{{ previous_sign_in | when }}, before this one{% else %}this is the first{% endif %}{% endcall %}
-  {% call fact("Go to") %}{% if own_page %}<a href="{{ own_page }}">Your page</a> · {% endif %}<a href="/ui/password">Password</a>{% if can_recover %} · <a href="/ui/recovery-key">Recovery key</a>{% endif %}{% endcall %}
 {% endcall %}
 {% if anywhere %}
 <div class="notice warn">You may read mail and send it to any address on at least one account. A mail with injected instructions could use that to carry data out. A grant with recipients narrows sending.</div>
@@ -30,7 +29,7 @@
       <tr>
         <td class="name">
           {% if row.page %}<a href="{{ row.page }}">{{ account.email }}</a>{% else %}{{ account.email }}{% endif %}
-          <span class="sub">{{ account.display_name | or_missing }}</span>
+          {% if account.display_name %}<span class="sub">{{ account.display_name }}</span>{% endif %}
         </td>
         <td>{% include "partials/account_status.html" %}</td>
         <td>
@@ -67,11 +66,16 @@
   {% endfor %}
 </ul>
 {% endif %}
-<p class="muted small-print">
-  {% if service.worker is none %}The sync worker is switched off.
-  {% elif service.worker.last_pass_at %}The sync worker's last pass ended {{ service.worker.last_pass_at | when }}. It runs every {{ service.worker.interval | round | int }} seconds.
-  {% else %}The sync worker has not finished its first pass yet.{% endif %}
-</p>
+{% set worker = service.worker %}
+<dl class="facts">
+  {% if worker is none %}
+  {% call fact("Sync worker") %}<span class="tag">switched off</span> <span class="mono">MAILBOX_SERVICE_SYNC_INTERVAL</span> is 0. Ids stay current only when mail is read.{% endcall %}
+  {% else %}
+  {% call fact("Sync worker") %}<span class="tag ok">running</span> every {{ worker.interval | round | int }} seconds{% endcall %}
+  {% call fact("Push") %}{% if worker.push %}IDLE where the server offers it, {{ worker.watching | length }} of at most {{ worker.watchers }} watched now{% else %}switched off, polling only{% endif %}{% endcall %}
+  {% call fact("Last pass") %}{% if worker.last_pass_at %}{{ ago(worker.last_pass_at) }}{% else %}not finished yet{% endif %}{% endcall %}
+  {% endif %}
+</dl>
 {% endcall %}
 {% endif %}
 {% endblock %}

@@ -29,8 +29,8 @@ def test_the_sidebar_shows_what_the_user_may_open(
     for hidden in ("/ui/accounts", "/ui/sends", "/ui/users", "/ui/roles"):
         assert f'href="{hidden}"' not in page, hidden
     assert ">Service<" not in page
-    # Without users.manage the name is no link to a page it cannot open.
-    assert "Signed in as <strong>browser-" in page
+    # Without users.read the menu has no link to a page it cannot open.
+    assert "Signed in as <strong>browser-" in page and "Your page" not in page
 
 
 def test_the_admin_sees_every_entry_and_its_own_page(ui: TestClient) -> None:
@@ -38,7 +38,10 @@ def test_the_admin_sees_every_entry_and_its_own_page(ui: TestClient) -> None:
     for entry in ("/ui/accounts", "/ui/sends", "/ui/users", "/ui/roles"):
         assert f'href="{entry}"' in page, entry
     assert 'href="/ui/users" class="active" aria-current="page"' in page
-    assert re.search(r'Signed in as <a href="/ui/users/usr_\w+"><strong>admin', page)
+    assert "Signed in as <strong>admin</strong>" in page
+    assert re.search(
+        r'<a class="item" href="/ui/users/usr_\w+">.*? Your page</a>', page
+    )
 
 
 def test_security_headers_on_the_ui_only(ui: TestClient, client: TestClient) -> None:
@@ -215,3 +218,36 @@ def test_no_template_marks_text_as_safe() -> None:
         if re.search(r"\|\s*safe\b", template.read_text(encoding="utf-8"))
     ]
     assert marked == []
+
+
+# --- the account menu and the folded sidebar (docs/UI.md 3) ----------------------
+
+
+def test_the_account_menu_holds_what_is_personal(ui: TestClient) -> None:
+    page = ui.get("/ui").text
+    menu = page[page.index('<details class="account-menu">') :]
+    menu = menu[: menu.index("</details>")]
+    assert '<span class="avatar" aria-hidden="true">A</span>' in menu
+    for link in ('href="/ui/password"', 'href="/ui/second-factor"'):
+        assert link in menu, link
+    # Signing out stays a form that posts, with the CSRF token.
+    assert '<form method="post" action="/ui/logout">' in menu
+    assert 'name="csrf_token"' in menu
+
+
+def test_the_sidebar_folds_by_the_viewers_choice(ui: TestClient) -> None:
+    page = ui.get("/ui").text
+    head = page[: page.index("</head>")]
+    # Read before the page is drawn, so a folded sidebar stays folded.
+    assert '<script src="/ui/static/js/early.js"></script>' in head
+    assert 'data-fold title="Fold the sidebar" aria-label="Fold the sidebar"' in page
+    early = (STATIC_DIR / "js" / "early.js").read_text(encoding="utf-8")
+    assert "try {" in early and "localStorage" in early
+    assert "localStorage" in (STATIC_DIR / "js" / "app.js").read_text(encoding="utf-8")
+
+
+def test_mail_search_starts_in_its_search_field(ui: TestClient) -> None:
+    page = ui.get("/ui/mail").text
+    assert "<h1>Mail search</h1>" in page
+    assert 'href="/ui/mail" class="active" aria-current="page"' in page
+    assert re.search(r'<input class="grow" name="q"[^>]* autofocus />', page)

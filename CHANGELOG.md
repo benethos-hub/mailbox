@@ -55,6 +55,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   secret shown once has a copy button. Lists show recent times as
   "3 minutes ago". `/` puts the cursor in the search field. Nothing is
   loaded from elsewhere.
+- The UI's sidebar ends in an account menu with your page, Password,
+  Second factor and Sign out. It folds to icons, and a dot marks
+  Accounts or Webhooks when something there needs a look. Mail is now
+  **Mail search**. The Status page is gone: the Accounts list shows
+  each account's last sync and error, the overview the sync worker.
 
 ## [0.3.1] - 2026-10-08
 

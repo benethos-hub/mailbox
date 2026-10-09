@@ -63,6 +63,5 @@ async def home(
         rows=rows,
         anywhere=any(row.view.warnings for row in rows),
         previous_sign_in=session_of(request).previous_sign_in,
-        can_recover=caller.allows("show_recovery_key"),
         service=status.status(caller) if caller.sees_status() else None,
     )

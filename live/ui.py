@@ -69,14 +69,17 @@ def check_frame(run: Run, browser: httpx.Client, emails: list[str]) -> None:
 def check_service(
     run: Run, browser: httpx.Client, url: str, admin: Admin, emails: list[str]
 ) -> None:
-    """The pages of phase 4b: status, a webhook, the recovery key, the log
-    and a user with a one-time password. Nothing here touches a mailbox."""
-    status = browser.get("/ui/status")
+    """The state of the service on the overview and the accounts list, a
+    webhook, the recovery key, the log and a user with a one-time
+    password. Nothing here touches a mailbox."""
+    home = browser.get("/ui")
+    accounts = browser.get("/ui/accounts")
     run.check(
-        "the status names both accounts and the worker",
-        status.status_code == 200
-        and all(e in status.text.lower() for e in emails)
-        and "<h2>Sync worker</h2>" in status.text,
+        "the overview names the worker, the accounts list both accounts"
+        " and their last sync",
+        "<dt>Sync worker</dt>" in home.text
+        and all(e in accounts.text.lower() for e in emails)
+        and "<th>Last sync</th>" in accounts.text,
     )
     csrf = csrf_of(browser.get("/ui/webhooks").text)
     # Port 9 (discard): nothing takes the posts, the log shows the failures.

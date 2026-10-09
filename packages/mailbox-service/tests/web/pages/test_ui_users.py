@@ -163,7 +163,9 @@ def test_the_page_says_whether_a_user_can_sign_in(
     own = services.auth.user_named("admin")
     assert own is not None
     mine = ui.get(f"/ui/users/{own.id}").text
-    assert "Change your password" in mine and "Set password" not in mine
+    # Its own password is changed from the account menu alone.
+    assert "Set password" not in mine and "Make a one-time password" not in mine
+    assert '<a class="item" href="/ui/password">' in mine
     # Nobody disables itself or takes its own sign-in: no tick boxes there.
     assert 'name="disabled"' not in mine and 'name="ui_sign_in"' not in mine
 

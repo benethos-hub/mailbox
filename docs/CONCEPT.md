@@ -755,7 +755,7 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | POST | `/v1/oauth/{provider}/device/{sign_in_id}` | poll the sign-in with a code: `connected` false until the person signed in, then the account, no sooner than its `interval` |
 | GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back after the UI's sign-in in a browser: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
-| GET | `/v1/status` | the sync worker and the accounts the caller may see the status of, as the UI's status page shows them. Nothing is asked of a provider |
+| GET | `/v1/status` | the sync worker and the accounts the caller may see the status of, as the UI's overview and Accounts list show them. Nothing is asked of a provider |
 
 **Decided 2026-10-06, the status at the API:** `get_status` in
 `accounts.read`, for the accounts the caller may list. The worker names

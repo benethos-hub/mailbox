@@ -1,5 +1,5 @@
-"""The state of the service, for the overview and the status page
-(docs/UI.md, sections 5 and 6.5).
+"""The state of the service, for the overview, the accounts list and the
+dots of the sidebar (docs/UI.md, sections 3 and 5), and `GET /v1/status`.
 
 It reads what the other services keep: the accounts, the sync state of
 each, the worker and the caller's webhooks. Nothing is asked of a
@@ -53,6 +53,17 @@ class ServiceStatus:
         return [webhook for webhook in self.webhooks if webhook.last_error]
 
 
+@dataclass(frozen=True)
+class Attention:
+    """Whether something waits for a person, for the dots of the sidebar."""
+
+    # An account the caller may see the status of needs a new sign-in,
+    # cannot be reached or fails to sync.
+    accounts: bool = False
+    # One of the caller's webhooks fails.
+    webhooks: bool = False
+
+
 class StatusService:
     def __init__(
         self,
@@ -80,19 +91,47 @@ class StatusService:
         if not access.sees_status():
             raise ForbiddenError("missing right: get_status")
         worker = self._worker.state() if self._worker is not None else None
+        accounts = self._healths(self._accounts.list(access, may="get_status"), worker)
+        return ServiceStatus(
+            accounts=accounts, worker=worker, webhooks=self._own_webhooks(access)
+        )
+
+    def healths(
+        self, access: Access, accounts: list[Account]
+    ) -> dict[str, AccountHealth]:
+        """How each of ``accounts`` fares, by its id, for those the caller
+        may see the status of, e.g. a page of the accounts list."""
+        worker = self._worker.state() if self._worker is not None else None
+        seen = [a for a in accounts if access.allows("get_status", a.id)]
+        return {health.account.id: health for health in self._healths(seen, worker)}
+
+    def attention(self, access: Access) -> Attention:
+        """Whether an account or a webhook of the caller's waits for a
+        person. Nothing is asked of a provider for it."""
+        accounts = access.sees_status() and any(
+            health.attention
+            for health in self._healths(
+                self._accounts.list(access, may="get_status"), None
+            )
+        )
+        webhooks = any(webhook.last_error for webhook in self._own_webhooks(access))
+        return Attention(accounts=accounts, webhooks=webhooks)
+
+    def _healths(
+        self, accounts: list[Account], worker: WorkerState | None
+    ) -> list[AccountHealth]:
         watching = worker.watching if worker is not None else frozenset()
-        accounts = [
+        return [
             AccountHealth(
                 account=account,
                 sync=self._sync.state(account.id),
                 synced=self._sync.watched(account.id),
                 watching=account.id in watching,
             )
-            for account in self._accounts.list(access, may="get_status")
+            for account in accounts
         ]
-        webhooks = (
-            self._webhooks.list_webhooks(access)
-            if access.allows("list_webhooks")
-            else []
-        )
-        return ServiceStatus(accounts=accounts, worker=worker, webhooks=webhooks)
+
+    def _own_webhooks(self, access: Access) -> list[Webhook]:
+        if not access.allows("list_webhooks"):
+            return []
+        return self._webhooks.list_webhooks(access)

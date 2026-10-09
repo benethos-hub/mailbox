@@ -46,7 +46,6 @@ ICONS = (
     "journal-text",
     "terminal",
     "key",
-    "activity",
     "layout-sidebar",
     # the account menu
     "person-circle",

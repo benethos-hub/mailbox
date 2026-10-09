@@ -126,16 +126,76 @@ a:hover { text-decoration: underline; }
 }
 
 .sidebar .spacer { flex: 1; }
-.sidebar .foot {
-  padding: 12px 10px 0;
-  border-top: 1px solid var(--border);
-  font-size: 13px; color: var(--text-muted);
+.brand .fold { margin-left: auto; }
+
+/* A dot beside an entry: something there waits for a person. */
+.nav .dot {
+  width: 8px; height: 8px; margin-left: auto;
+  border-radius: 50%;
+  background: var(--bad);
+  flex: 0 0 auto;
 }
-.sidebar .foot .who { overflow-wrap: anywhere; }
-.sidebar .foot .links {
-  display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px;
-  white-space: nowrap;
+
+/* The account menu in the foot: one button, the menu opens above it. */
+.account-menu { position: relative; padding-top: 10px; border-top: 1px solid var(--border); }
+.account-menu > summary { list-style: none; }
+.account-menu > summary::-webkit-details-marker { display: none; }
+.account {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 14px;
 }
+.account:hover, .account-menu[open] > .account { background: var(--surface-2); border-color: var(--border); }
+.account .who { flex: 1; min-width: 0; }
+.account .name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; }
+.account .role { display: block; font-size: 11px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account > .i { color: var(--text-faint); }
+.avatar {
+  width: 28px; height: 28px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 13px; font-weight: 650;
+}
+.account-menu .menu {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 30;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgba(20, 33, 61, .14);
+}
+.account-menu .head {
+  padding: 6px 10px 8px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text-faint);
+}
+.account-menu .head strong { display: block; color: var(--text); font-size: 13px; }
+.account-menu .item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 7px 10px;
+  border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--text);
+  font-size: 14px; text-align: left;
+}
+.account-menu .item:hover { background: var(--surface-2); text-decoration: none; }
+.account-menu .item .i { color: var(--text-muted); margin: 0; }
+.account-menu .item .hint { margin-left: auto; font-size: 12px; color: var(--text-faint); }
+.account-menu .item.out, .account-menu .item.out .i { color: var(--bad); }
+.account-menu .sep { height: 1px; margin: 4px 6px; background: var(--border); }
+
+/* Folded: the sidebar is a narrow bar of icons, each word its tooltip. */
+.nav-folded { --sidebar: 64px; }
+.nav-folded .sidebar { padding-inline: 10px; }
+.nav-folded .brand { flex-direction: column; padding: 0; }
+.nav-folded .brand .fold { margin-left: 0; }
+.nav-folded .brand-name, .nav-folded .nav .label, .nav-folded .nav .section,
+.nav-folded .account .who, .nav-folded .account > .i { display: none; }
+.nav-folded .nav a { position: relative; justify-content: center; padding: 10px 0; }
+.nav-folded .nav .dot { position: absolute; top: 6px; right: 8px; }
+.nav-folded .account { justify-content: center; padding: 6px 0; }
+.nav-folded .account-menu .menu { right: auto; width: 220px; }
 
 .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
@@ -534,10 +594,20 @@ dialog.ask .buttons { display: flex; justify-content: flex-end; gap: 8px; paddin
     width: auto; flex: none; height: auto; position: static;
     flex-direction: row; align-items: center; gap: 8px;
     border-right: 0; border-bottom: 1px solid var(--border);
-    overflow-x: auto; padding: 10px 12px;
+    padding: 10px 12px;
   }
-  .sidebar .spacer, .sidebar .foot, .nav .section { display: none; }
-  .nav { flex-direction: row; }
+  .sidebar .spacer, .nav .section, .brand .fold { display: none; }
+  /* The entries scroll, the brand and the account menu stay in place. */
+  .nav { flex-direction: row; flex: 1; min-width: 0; overflow-x: auto; }
+  .nav a { white-space: nowrap; }
+  /* The account menu sits at the end of the bar, as its avatar alone. */
+  .account-menu { padding-top: 0; border-top: 0; flex: 0 0 auto; }
+  .account .who, .account > .i { display: none; }
+  .account-menu .menu { position: fixed; left: auto; right: 12px; bottom: auto; top: 56px; width: 240px; }
+  /* A bar folds no further. */
+  .nav-folded .brand { flex-direction: row; }
+  .nav-folded .brand-name, .nav-folded .nav .label { display: inline; }
+  .nav-folded .nav a { padding: 8px 10px; }
 }
 
 /* Where no tooltip shows, an icon that is not plain on its own gets its

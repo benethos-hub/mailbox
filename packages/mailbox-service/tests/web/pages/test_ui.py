@@ -193,7 +193,7 @@ def test_the_overview_shows_the_service_to_who_may_list_accounts(
 ) -> None:
     page = ui.get("/ui").text
     assert "<h2>Service</h2>" in page
-    assert "sync worker" in page
+    assert "<dt>Sync worker</dt>" in page
 
 
 # --- the session ----------------------------------------------------------------------

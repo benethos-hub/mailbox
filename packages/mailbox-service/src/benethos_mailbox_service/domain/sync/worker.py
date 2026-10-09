@@ -50,7 +50,8 @@ Sleep = Callable[[float], Awaitable[None]]
 
 @dataclass(frozen=True)
 class WorkerState:
-    """What the worker does, for the status page. In memory only."""
+    """What the worker does, for the overview and `GET /v1/status`. In
+    memory only."""
 
     interval: float
     push: bool
