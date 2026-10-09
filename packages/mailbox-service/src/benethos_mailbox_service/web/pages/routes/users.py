@@ -9,6 +9,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
 from ....common.clock import utc_now
+from ....common.text import plural
 from ....data.models import ActivityFilter
 from ....domain.rights import Access
 from ....domain.users import UserService
@@ -344,3 +345,18 @@ async def revoke_token(
     with failing(here):
         token = tokens.revoke_token(caller, user_id, token_id)
     return back(request, here, f"Token {token.name} revoked.")
+
+
+@router.post("/users/{user_id}/tokens/revoke")
+async def revoke_tokens(
+    request: Request,
+    caller: Actor,
+    user_id: str,
+    tokens: Tokens,
+    token: Annotated[list[str] | None, Form()] = None,
+) -> Response:
+    """The tokens ticked in the list, at once."""
+    here = f"/ui/users/{user_id}"
+    with failing(here):
+        revoked = tokens.revoke_tokens(caller, user_id, token or [])
+    return back(request, here, f"{plural(len(revoked), 'token')} revoked.")

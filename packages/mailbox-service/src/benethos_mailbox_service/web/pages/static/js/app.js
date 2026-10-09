@@ -36,12 +36,20 @@ function ask(source) {
   });
 }
 
+// A form with data-confirm-when="moved" asks only when its select with
+// data-was holds another value than it had: a new name alone saves.
+function unchanged(form) {
+  if (form.dataset.confirmWhen !== "moved") return false;
+  const select = form.querySelector("[data-was]");
+  return !select || select.value === select.dataset.was;
+}
+
 document.addEventListener("submit", (event) => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement) || form.method === "dialog") return;
   const submitter = event.submitter;
   const source = submitter?.dataset.confirm ? submitter : form;
-  if (!source.dataset.confirm) return;
+  if (!source.dataset.confirm || (source === form && unchanged(form))) return;
   if (asked.has(form)) {
     asked.delete(form);
     return;
@@ -52,6 +60,62 @@ document.addEventListener("submit", (event) => {
     asked.add(form);
     form.requestSubmit(submitter && form.contains(submitter) ? submitter : null);
   });
+});
+
+// --- lists that act in the row (docs/UI.md 4.2) ----------------------------------
+
+// <button data-toggle="id"> opens and closes the form at a row, or at the
+// head of a list, and puts the cursor in its first field.
+document.addEventListener("click", (event) => {
+  const button = event.target.closest?.("[data-toggle]");
+  if (!button) return;
+  const target = document.getElementById(button.dataset.toggle);
+  if (!target) return;
+  const open = !target.classList.contains("open");
+  target.classList.toggle("open", open);
+  for (const other of document.querySelectorAll(`[data-toggle="${target.id}"]`)) {
+    other.setAttribute("aria-expanded", String(open));
+  }
+  if (open) target.querySelector("input:not([type=hidden]), select")?.focus();
+});
+
+// <button data-dialog="id"> opens a dialog that holds a form, e.g. one
+// that asks for the password and a code. data-close inside a dialog or a
+// form at a row closes it, nothing is sent.
+document.addEventListener("click", (event) => {
+  const opener = event.target.closest?.("[data-dialog]");
+  if (opener) {
+    const dialog = document.getElementById(opener.dataset.dialog);
+    if (dialog instanceof HTMLDialogElement && dialog.showModal) {
+      dialog.showModal();
+      dialog.querySelector("input:not([type=hidden])")?.focus();
+    }
+    return;
+  }
+  const closer = event.target.closest?.("[data-close]");
+  if (!closer) return;
+  const dialog = closer.closest("dialog");
+  if (dialog) {
+    dialog.close();
+    return;
+  }
+  const row = closer.closest(".row-form");
+  if (row) {
+    row.classList.remove("open");
+    for (const other of document.querySelectorAll(`[data-toggle="${row.id}"]`)) {
+      other.setAttribute("aria-expanded", "false");
+    }
+  }
+});
+
+// <input data-tick-all="name" data-batch="id"> ticks every row of a batch.
+document.addEventListener("change", (event) => {
+  const all = event.target;
+  if (!(all instanceof HTMLInputElement) || !all.dataset.tickAll) return;
+  const boxes = document.querySelectorAll(
+    `input[type=checkbox][name="${all.dataset.tickAll}"][form="${all.dataset.batch}"]`,
+  );
+  for (const box of boxes) box.checked = all.checked;
 });
 
 // --- copying a secret shown once -----------------------------------------------

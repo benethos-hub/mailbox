@@ -161,15 +161,41 @@ def test_create_rename_move_and_delete_a_folder(
     created = post(ui, base, {"name": "Projects"})
     assert "Projects created." in created.text
     [folder] = [f for f in adapter.folders if f.name == "Projects"]
-    assert "This folder" in created.text
-    renamed = post(ui, f"{base}/rename", {"folder": folder.id, "name": "Work"})
+    # The folder shown has its pencil and bin, its form folded.
+    assert 'data-toggle="change-folder"' in created.text
+    assert 'name="was_name" value="Projects"' in created.text
+    renamed = post(
+        ui,
+        f"{base}/change",
+        {"folder": folder.id, "was_name": "Projects", "name": "Work"},
+    )
     assert "Renamed." in renamed.text
     [work] = [f for f in adapter.folders if f.name == "Work"]
     inner = post(ui, base, {"name": "Inner", "parent": work.id})
     [child] = [f for f in adapter.folders if f.name == "Inner"]
     assert child.parent_id == work.id and "Inner created." in inner.text
-    post(ui, f"{base}/move", {"folder": child.id, "parent": ""})
+    # The form asks before a move: the select knows where it was.
+    assert (
+        f'data-was="{work.id}"' in inner.text
+        and 'data-confirm-when="moved"' in inner.text
+    )
+    moved = post(
+        ui,
+        f"{base}/change",
+        {
+            "folder": child.id,
+            "was_name": "Inner",
+            "name": "Inner",
+            "was_parent": work.id,
+            "parent": "",
+        },
+    )
+    assert "Moved." in moved.text
     assert next(f for f in adapter.folders if f.name == "Inner").parent_id is None
+    same = post(
+        ui, f"{base}/change", {"folder": child.id, "was_name": "Inner", "name": "Inner"}
+    )
+    assert "Nothing changed." in same.text
     refused = post(ui, f"{base}/delete", {"folder": "inbox"})
     assert "inbox" in refused.text.lower() and "err" not in refused.url.path
     deleted = post(ui, f"{base}/delete", {"folder": work.id})
@@ -190,7 +216,9 @@ def test_a_bad_folder_name_is_named(
     assert "without" in answer.text
     # The page of the folder the form was on, with what was typed.
     assert 'name="name" value="a*b"' in answer.text
-    assert 'name="parent" value="archive" checked' in answer.text
+    # The form at the head of the folders is open again, with its choice.
+    assert '<div class="row-form open" id="new-folder">' in answer.text
+    assert '<option value="archive" selected>' in answer.text
 
 
 def test_a_refused_rename_or_move_keeps_what_was_typed(
@@ -198,11 +226,25 @@ def test_a_refused_rename_or_move_keeps_what_was_typed(
 ) -> None:
     adapter = _with_trash(services, account_id)
     base = f"/ui/accounts/{account_id}/folders"
-    renamed = post(ui, f"{base}/rename", {"folder": "archive", "name": "Old%"})
+    renamed = post(
+        ui,
+        f"{base}/change",
+        {"folder": "archive", "was_name": "Archive", "name": "Old%"},
+    )
     assert renamed.status_code == 400
-    assert 'id="f-rename" name="name" value="Old%"' in renamed.text
-    moved = post(ui, f"{base}/move", {"folder": "archive", "parent": "nowhere"})
-    assert moved.status_code == 400 and "This folder" in moved.text
+    assert 'id="f-folder-name" name="name" value="Old%"' in renamed.text
+    assert '<div class="row-form open" id="change-folder">' in renamed.text
+    moved = post(
+        ui,
+        f"{base}/change",
+        {
+            "folder": "archive",
+            "was_name": "Archive",
+            "name": "Archive",
+            "parent": "nowhere",
+        },
+    )
+    assert moved.status_code == 400 and 'id="change-folder"' in moved.text
     assert [f.name for f in adapter.folders].count("Archive") == 1
 
 

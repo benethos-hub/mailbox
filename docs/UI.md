@@ -137,9 +137,11 @@ person who knows one page knows the next.
 A table of records with a heading, the count, the filter bar (4.5), the
 rows and the pager (4.6). The primary action at the top right creates a
 record: **New user**, **Connect an account**, **New webhook**. A row
-opens its detail page by its name. A row carries no delete button and no
-form. The one exception is the tick box for a batch on mail lists, whose
-actions sit in one toolbar above the table.
+opens its detail page by its name. A record with a detail page is
+removed there alone, in its Danger card, never from the list. A row
+carries only what its detail page's header offers, as icons, and the
+tick box of a batch whose actions sit in one bar above the table:
+mail lists have one.
 
 Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Audit,
 Log, and Changes if it is built (6.6).
@@ -149,17 +151,27 @@ Log, and Changes if it is built (6.6).
 One record. Cards from top to bottom, always in this order:
 
 1. **Facts**: what the record is. Read-only, with tags for its state.
-2. **Related lists**: tokens of a user, folders of an account, deliveries
-   of a webhook. Each with its own **New** form as the last row of the
-   card, folded until opened.
+2. **Related lists**: tokens of a user, folders of an account, devices
+   of the second factor, deliveries of a webhook. A related list creates
+   at its head and acts on its rows. The plus in the card's header
+   (with its word, e.g. **New token**) opens the form as the first row,
+   open at once while the list is empty. A pencil on a row unfolds the
+   form that changes it under the row, with Save and Cancel. A bin
+   removes it after a question, in the page's dialog, which holds the
+   fields a removal needs (a device: the password and a code). Entries
+   with no detail page of their own are removed only there. Lists with
+   a batch have a tick box per row, one in the head for all, and a bar
+   above the table: devices and tokens remove or revoke the ticked ones.
+   Without the script every form shows at once.
 3. **Change**: the form that edits the record, saved with one **Save**
    button. Fields the caller may not change are not shown.
 4. **Danger**: the last card, always. One button, red, with a question
    before it: **Remove account**, **Delete user**, **Delete role**,
    **Remove webhook**. It says what happens and what stays.
 
-A person finds the delete button in the same place on every detail
-page, and never anywhere else.
+A person finds the delete button of a record in the same place on every
+detail page, and never anywhere else. The entries of its lists have
+their bin on their row.
 
 Detail pages: Account, User, Role, Webhook, Message, Draft.
 
@@ -301,9 +313,13 @@ and `update` exist.
 
 ### 6.2 Creating, changing, removing
 
-The same three places on every record, from 4.2: create from the list's
-primary action or from the card the record belongs to, change in the
-Change card, remove in the Danger card. The same words everywhere:
+The same places on every record, from 4.2: create from the list's
+primary action or from the plus of the card the entry belongs to,
+change in the Change card or with the pencil on the entry's row, remove
+in the Danger card or with the bin on the entry's row. A folder's
+pencil sits at the folder shown: a new name saves at once, another
+place inside asks first. Folders with a role (inbox, sent, ...) have
+neither. The same words everywhere:
 **New**, **Create**, **Save**, **Cancel**, **Remove** for things that
 exist elsewhere (an account, a webhook), **Delete** for things that
 exist only here (a user, a role, a token, a folder).
@@ -339,12 +355,14 @@ was added and last used. **Add a device** asks for its name and the
 password, and with a device there already a code, then shows the QR
 code with the key as text and a field for the first code. The first
 device brings the ten recovery codes, shown once, with a button that
-copies them all and offered as a text file to download. **Rename a device**
-takes the new name, **Remove a device** the password and a code. The
+copies them all and offered as a text file to download. The pencil on
+a device's row takes the new name, its bin the password and a code in
+the dialog. With two devices or more they can be ticked and removed
+together after one password and one code. The
 Recovery codes card says how many are left and makes new ones after
 the password and a code. Another user's page lists its devices to a user with
 `get_second_factor`, with **Remove** for one to a user with
-`remove_totp_device` and **Remove every device** to a user with
+`remove_totp_device`, as the bin on its row, and **Remove every device** to a user with
 `remove_second_factor`. After the password, a user with a factor sees
 the code page, outside the layout as the sign-in is, which takes a code
 of any device or a recovery code.
@@ -555,6 +573,10 @@ All four steps are done, as the roadmap's phase 4b records.
 - 2026-10-09: the account menu in the sidebar's foot, the sidebar
   folding to icons, dots for what needs a look, Mail search, the
   Status page gone into the overview and the Accounts list (3, 5, 6.5).
+- 2026-10-09: a related list creates at its head and acts on its rows,
+  the form at a row unfolding under it. Removing on the row only for
+  entries without a detail page. A batch for devices and tokens, for
+  users later, none for accounts, roles and webhooks (4.1, 4.2, 6.2).
 - 2026-10-09: the page's own dialog in place of the browser's
   question, copy buttons beside every secret shown once, relative
   times in lists (7).

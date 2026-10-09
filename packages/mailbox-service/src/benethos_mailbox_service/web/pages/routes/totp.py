@@ -106,3 +106,21 @@ async def remove_device(
     with failing(page):
         totp.remove_device(caller, user_id, device_id)
     return back(request, page, "Device removed. The user's sessions end.")
+
+
+@router.post("/second-factor/totp/remove-ticked")
+async def remove_ticked(
+    request: Request,
+    caller: Actor,
+    totp: TotpDevices,
+    device: Annotated[list[str] | None, Form()] = None,
+    password: Annotated[str, Form()] = "",
+    code: Annotated[str, Form()] = "",
+) -> Response:
+    """The devices ticked in the list, after one password and one code."""
+    with failing(FACTOR_PAGE):
+        stamp = await totp.remove_own_devices(caller, device or [], password, code)
+    session_of(request).factor = stamp
+    if stamp is None:
+        return back(request, FACTOR_PAGE, "Devices removed. The second factor is off.")
+    return back(request, FACTOR_PAGE, f"Devices removed. {SIGNED_OUT}")

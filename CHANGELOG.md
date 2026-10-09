@@ -60,6 +60,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   Accounts or Webhooks when something there needs a look. Mail is now
   **Mail search**. The Status page is gone: the Accounts list shows
   each account's last sync and error, the overview the sync worker.
+- Lists in the UI create at their head and act on their rows: a plus in
+  the card's header, a pencil and a bin on each device, token and the
+  folder shown. Several devices or tokens are ticked and removed or
+  revoked together, devices after one password and one code. A folder
+  is renamed and moved in one form, and a move asks first.
 
 ## [0.3.1] - 2026-10-08
 

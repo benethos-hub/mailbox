@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb, csrf_field, filter_bar, folder_options, link_button with context %}
+{% from "components/ui.html" import action, breadcrumb, csrf_field, filter_bar, folder_options, icon, link_button, toggle with context %}
 {% block title %}{{ current.name }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ current.name }}{% endblock %}
 {% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
@@ -11,68 +11,70 @@
 <div class="mail-layout">
   <div>
     <nav class="card folders" aria-label="Folders">
-      <header><h2>Folders</h2></header>
+      <header><h2>Folders</h2>{% if can.create_folder %}<span class="right">{{ toggle("new-folder", "New folder", "plus-lg", alone=False, open=typed.adding) }}</span>{% endif %}</header>
+      {% if can.create_folder %}
+      <div class="row-form{{ ' open' if typed.adding }}" id="new-folder">
+        <form method="post" action="/ui/accounts/{{ account.id }}/folders">
+          {{ csrf_field() }}
+          <input type="hidden" name="shown" value="{{ current.id }}" />
+          <div class="field">
+            <label for="f-new-folder">Name</label>
+            <input id="f-new-folder" name="name" value="{{ typed.new }}" required />
+          </div>
+          <div class="field">
+            <label for="f-new-parent">Inside</label>
+            <select id="f-new-parent" name="parent">
+              <option value="">the top</option>
+              {{ folder_options(tree, [], selected=typed.new_parent) }}
+            </select>
+          </div>
+          <div class="form-actions"><button class="small primary" type="submit">{{ icon("check-lg") }} Create</button><button class="small" type="button" data-close>Cancel</button></div>
+        </form>
+      </div>
+      {% endif %}
+      {% set changeable = current.role is none and (can.update_folder or can.delete_folder) %}
       <ul>
         {% for folder, depth in tree %}
         <li class="depth-{{ [depth, 4] | min }}">
-          <a href="?{{ [('folder', folder.id)] | urlencode }}" class="{{ 'active' if folder.id == current.id }}">
-            <span class="grow">{{ folder.name }}</span>
-            {% if folder.unread %}<span class="count">{{ folder.unread }}</span>{% endif %}
-          </a>
+          <div class="folder-line">
+            <a href="?{{ [('folder', folder.id)] | urlencode }}" class="{{ 'active' if folder.id == current.id }}">
+              <span class="grow">{{ folder.name }}</span>
+              {% if folder.unread %}<span class="count">{{ folder.unread }}</span>{% endif %}
+            </a>
+            {% if folder.id == current.id and changeable %}
+            <span class="folder-actions">
+              {% if can.update_folder %}{{ toggle("change-folder", "Rename or move", "pencil", name="Rename or move " ~ folder.name, open=typed.changing) }}{% endif %}
+              {% if can.delete_folder %}{{ action("/ui/accounts/" ~ account.id ~ "/folders/delete", "Delete", confirm="Delete the folder " ~ folder.name ~ "? Only an empty folder without subfolders can be deleted. This cannot be undone.", cls="small danger", fields={"folder": folder.id}, icon="trash", alone=True, name="Delete " ~ folder.name) }}{% endif %}
+            </span>
+            {% endif %}
+          </div>
+          {% if folder.id == current.id and changeable and can.update_folder %}
+          <div class="row-form{{ ' open' if typed.changing }}" id="change-folder">
+            <form method="post" action="/ui/accounts/{{ account.id }}/folders/change" data-confirm-when="moved" data-confirm="Move the folder {{ folder.name }}? It moves with the folders inside it. Its messages stay where they are." data-confirm-label="Move">
+              {{ csrf_field() }}
+              <input type="hidden" name="folder" value="{{ folder.id }}" />
+              <input type="hidden" name="was_name" value="{{ folder.name }}" />
+              <input type="hidden" name="was_parent" value="{{ folder.parent_id or '' }}" />
+              <div class="field">
+                <label for="f-folder-name">Name</label>
+                <input id="f-folder-name" name="name" value="{{ typed.name if typed.name is not none else folder.name }}" required />
+              </div>
+              <div class="field">
+                <label for="f-folder-parent">Inside</label>
+                <select id="f-folder-parent" name="parent" data-was="{{ folder.parent_id or '' }}">
+                  <option value="">the top</option>
+                  {{ folder_options(tree, [folder.id], selected=typed.parent if typed.changing else folder.parent_id) }}
+                </select>
+              </div>
+              <span class="hint">A new name renames the folders inside it too. Another place moves it, after a question.</span>
+              <div class="form-actions"><button class="small primary" type="submit">{{ icon("check-lg") }} Save</button><button class="small" type="button" data-close>Cancel</button></div>
+            </form>
+          </div>
+          {% endif %}
         </li>
         {% endfor %}
       </ul>
-      {% if can.create_folder %}
-      <form class="body" method="post" action="/ui/accounts/{{ account.id }}/folders">
-        {{ csrf_field() }}
-        <input type="hidden" name="shown" value="{{ current.id }}" />
-        <div class="field">
-          <label for="f-new-folder">New folder</label>
-          <input id="f-new-folder" name="name" value="{{ typed.new }}" required />
-        </div>
-        <label class="check"><input type="checkbox" name="parent" value="{{ current.id }}"{% if typed.inside %} checked{% endif %} /> inside {{ current.name }}</label>
-        <div class="form-actions"><button class="small" type="submit">Create</button></div>
-      </form>
-      {% endif %}
     </nav>
-
-    {% if current.role is none and (can.update_folder or can.delete_folder) %}
-    <section class="card">
-      <header><h2>This folder</h2></header>
-      <div class="body">
-        {% if can.update_folder %}
-        <form method="post" action="/ui/accounts/{{ account.id }}/folders/rename">
-          {{ csrf_field() }}
-          <input type="hidden" name="folder" value="{{ current.id }}" />
-          <div class="field">
-            <label for="f-rename">Name</label>
-            <input id="f-rename" name="name" value="{{ typed.name if typed.name is not none else current.name }}" required />
-          </div>
-          <div class="form-actions"><button class="small" type="submit">Rename</button></div>
-        </form>
-        <form method="post" action="/ui/accounts/{{ account.id }}/folders/move">
-          {{ csrf_field() }}
-          <input type="hidden" name="folder" value="{{ current.id }}" />
-          <div class="field">
-            <label for="f-parent">Inside</label>
-            <select id="f-parent" name="parent">
-              <option value="">the top</option>
-              {{ folder_options(tree, [current.id], selected=typed.parent if typed.moving else current.parent_id) }}
-            </select>
-          </div>
-          <div class="form-actions"><button class="small" type="submit">Move</button></div>
-        </form>
-        {% endif %}
-        {% if can.delete_folder %}
-        <form method="post" action="/ui/accounts/{{ account.id }}/folders/delete" data-confirm="Delete the folder {{ current.name }}? Only an empty folder without subfolders can be deleted.">
-          {{ csrf_field() }}
-          <input type="hidden" name="folder" value="{{ current.id }}" />
-          <div class="form-actions"><button class="small danger" type="submit">Delete folder</button></div>
-        </form>
-        {% endif %}
-      </div>
-    </section>
-    {% endif %}
   </div>
 
   <section class="card">

@@ -145,10 +145,13 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
 # The folder forms of an account's mail page, as a page shows them first:
 # a new folder, and the name or parent of the one shown.
 FOLDER_FORMS: dict[str, Any] = {
+    # The form at the head of the folders, open with what was typed.
+    "adding": False,
     "new": "",
-    "inside": False,
+    "new_parent": None,
+    # The form at the folder shown, open with what was typed.
+    "changing": False,
     "name": None,
-    "moving": False,
     "parent": None,
 }
 

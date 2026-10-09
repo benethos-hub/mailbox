@@ -400,3 +400,24 @@ def test_the_list_pages_by_name(client: TestClient) -> None:
     assert (first, cursor is not None) == (["Anna", "admin"], True)
     assert names(limit=2, cursor=str(cursor)) == (["carl"], None)
     assert client.get("/v1/users", params={"cursor": "nope"}).status_code == 400
+
+
+def test_several_tokens_are_revoked_at_once_or_none(services: Services) -> None:
+    from benethos_mailbox_service.errors import BadRequestError, NotFoundError
+
+    from ...conftest import ADMIN
+
+    user = services.users.create_user(ADMIN, "bot", [], [])
+    other = services.users.create_user(ADMIN, "other", [], [])
+    one, _ = services.auth.issue_token(user.id, "one")
+    two, _ = services.auth.issue_token(user.id, "two")
+    foreign, _ = services.auth.issue_token(other.id, "foreign")
+    with pytest.raises(NotFoundError):
+        services.tokens.revoke_tokens(ADMIN, user.id, [one.id, foreign.id])
+    listed = services.tokens.list_tokens(ADMIN, user.id)
+    assert all(t.revoked_at is None for t in listed)
+    with pytest.raises(BadRequestError):
+        services.tokens.revoke_tokens(ADMIN, user.id, [])
+    revoked = services.tokens.revoke_tokens(ADMIN, user.id, [one.id, two.id, one.id])
+    assert [t.name for t in revoked] == ["one", "two"]
+    assert all(t.revoked_at is not None for t in revoked)

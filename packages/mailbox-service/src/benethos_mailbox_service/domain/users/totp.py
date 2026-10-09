@@ -92,11 +92,23 @@ class TotpService:
         """One of the caller's devices, with its password and a code.
         Returns the new stamp, which keeps the caller's session: None once
         the second factor is off."""
-        self._own_device(access, device_id)
+        return await self.remove_own_devices(access, [device_id], password, code)
+
+    async def remove_own_devices(
+        self, access: Access, device_ids: list[str], password: str, code: str
+    ) -> str | None:
+        """Several of the caller's devices after one password and one code,
+        since a code counts once. None is removed when one is not the
+        caller's. Returns the new stamp as ``remove_own``."""
+        if not device_ids:
+            raise BadRequestError("tick at least one device")
+        for device_id in device_ids:
+            self._own_device(access, device_id)
         await self._auth.confirm(access, password)
         self._auth.confirm_code(access, code)
         user = self._users.get(access.user_id)
-        self._remove(user, device_id, Actor.of(access))
+        for device_id in dict.fromkeys(device_ids):
+            self._remove(user, device_id, Actor.of(access))
         return self._factors.stamp(user.id)
 
     # --- another's ------------------------------------------------------------

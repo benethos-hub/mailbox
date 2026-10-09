@@ -1,4 +1,4 @@
-"""Folders: create, rename, move, delete.
+"""Folders: create, change (rename and move in one form), delete.
 
 A folder's id travels in the form, not in the path: on IMAP it is the
 folder's name and may hold a slash.
@@ -50,7 +50,7 @@ async def create_folder(
     form = await request.form()
     parent = text_of(form, "parent", strip=False) or None
     name = text_of(form, "name")
-    # The folder whose page the form was on, inside it or not.
+    # The folder whose page the form was on.
     shown = text_of(form, "shown", strip=False) or parent
     again = _again(
         request,
@@ -58,8 +58,9 @@ async def create_folder(
         account_id,
         mailbox,
         shown or FolderRole.INBOX.value,
+        adding=True,
         new=name,
-        inside=parent is not None,
+        new_parent=parent,
     )
     with failing(mail_url(account_id, shown), again=again):
         folder = await mailbox.create_folder(
@@ -68,35 +69,45 @@ async def create_folder(
     return back(request, mail_url(account_id, folder.id), f"{folder.name} created.")
 
 
-@router.post("/accounts/{account_id}/folders/rename")
-async def rename_folder(
+@router.post("/accounts/{account_id}/folders/change")
+async def change_folder(
     request: Request, caller: Actor, account_id: str, mailbox: Mailbox
 ) -> Response:
+    """The form at the folder: its name and where it sits. Only what
+    differs from what the form showed goes to the domain, so a new name
+    alone renames and another "Inside" alone moves."""
     form = await request.form()
     folder_id = text_of(form, "folder", strip=False)
     name = text_of(form, "name")
-    again = _again(request, caller, account_id, mailbox, folder_id, name=name)
-    with failing(mail_url(account_id, folder_id), again=again):
-        changes = _valid(FolderUpdate, name=name)
-        folder = await mailbox.update_folder(caller, account_id, folder_id, changes)
-    # On IMAP the id follows the name.
-    return back(request, mail_url(account_id, folder.id), "Renamed.")
-
-
-@router.post("/accounts/{account_id}/folders/move")
-async def move_folder(
-    request: Request, caller: Actor, account_id: str, mailbox: Mailbox
-) -> Response:
-    form = await request.form()
-    folder_id = text_of(form, "folder", strip=False)
     parent = text_of(form, "parent", strip=False) or None
+    fields: dict[str, Any] = {}
+    if name != text_of(form, "was_name"):
+        fields["name"] = name
+    if parent != (text_of(form, "was_parent", strip=False) or None):
+        fields["parent_id"] = parent
+    here = mail_url(account_id, folder_id)
+    if not fields:
+        return back(request, here, "Nothing changed.")
     again = _again(
-        request, caller, account_id, mailbox, folder_id, moving=True, parent=parent
+        request,
+        caller,
+        account_id,
+        mailbox,
+        folder_id,
+        changing=True,
+        name=name,
+        parent=parent,
     )
-    with failing(mail_url(account_id, folder_id), again=again):
-        changes = FolderUpdate(parent_id=parent)
+    with failing(here, again=again):
+        changes = _valid(FolderUpdate, **fields)
         folder = await mailbox.update_folder(caller, account_id, folder_id, changes)
-    return back(request, mail_url(account_id, folder.id), "Moved.")
+    done = _DONE.get(tuple(fields), "Renamed and moved.")
+    # On IMAP the id follows the name and the place.
+    return back(request, mail_url(account_id, folder.id), done)
+
+
+# What the form at the folder did, by the fields it changed.
+_DONE: dict[tuple[str, ...], str] = {("name",): "Renamed.", ("parent_id",): "Moved."}
 
 
 @router.post("/accounts/{account_id}/folders/delete")

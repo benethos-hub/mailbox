@@ -246,13 +246,31 @@ footer {
 .danger-zone > header h2 { color: var(--bad); }
 .card .body.list-bar { border-bottom: 1px solid var(--border); }
 
-/* The fold that adds one more to a related list. */
-.new-row { border-top: 1px solid var(--border); }
-.new-row > summary {
-  padding: 10px var(--pad);
-  cursor: pointer; color: var(--accent); font-size: 14px;
+/* The form at a row of a list, or at its head (docs/UI.md 4.2): folded
+ * until its button opens it, shown at once where the script does not run. */
+tr.row-form > td { background: var(--surface-2); padding: 12px var(--pad) 14px; }
+tr.row-form:hover { background: none; }
+div.row-form { display: grid; gap: 8px; padding: 10px 12px 12px; background: var(--surface-2); }
+div.row-form form { display: grid; gap: 8px; }
+div.row-form .form-actions { margin-top: 4px; }
+.js .row-form:not(.open) { display: none; }
+.row-form .toolbar .field { min-width: 180px; }
+.row-form .hint { display: block; margin-top: 8px; font-size: 12px; color: var(--text-faint); }
+
+/* A form in a dialog of its own: its fields under the question. Where
+ * the script does not run, it shows in the page. */
+dialog.form-dialog form { padding: 0 var(--pad); }
+dialog.form-dialog .form-grid { grid-template-columns: 1fr; }
+dialog.form-dialog .buttons { padding-inline: 0; }
+html:not(.js) dialog.form-dialog {
+  display: block; position: static;
+  width: auto; margin: 0 0 var(--gap);
+  box-shadow: none;
 }
-.new-row[open] > summary { border-bottom: 1px solid var(--border); }
+
+/* The bar above a list whose rows can be ticked for a batch. */
+.batch-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px var(--pad); border-bottom: 1px solid var(--border); }
+.batch-bar .label { color: var(--text-muted); font-size: 13px; }
 
 /* A card that folds: its header is the summary. */
 details.card > summary.card-summary {
@@ -523,6 +541,10 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 .folders a:hover { background: var(--surface-2); text-decoration: none; }
 .folders a.active { background: var(--surface-2); font-weight: 600; }
 .folders .grow { flex: 1; }
+.folders .folder-line { display: flex; align-items: center; gap: 2px; }
+.folders .folder-line > a { flex: 1; min-width: 0; }
+.folders .folder-actions { display: flex; flex: 0 0 auto; }
+.folders .row-form { margin: 4px 0 6px; border-radius: var(--radius-sm); }
 .folders .count { font-size: 12px; color: var(--text-muted); }
 .folders .depth-1 a { padding-left: 20px; }
 .folders .depth-2 a { padding-left: 32px; }

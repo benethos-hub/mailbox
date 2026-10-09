@@ -82,23 +82,49 @@
 
 {% macro fact(label, value=None, cls="") %}<dt>{{ label }}</dt><dd{% if cls %} class="{{ cls }}"{% endif %}>{% if caller is defined %}{{ caller() }}{% else %}{{ value | or_missing }}{% endif %}</dd>{% endmacro %}
 
-{# A list that belongs to the record of a detail page, e.g. its tokens.
-   The caller gives the table, and ``new_row`` as the last part. #}
-{% macro related(title, count=None, meta=None) %}
+{# A list that belongs to the record of a detail page, e.g. its tokens
+   (docs/UI.md 4.2). It creates at its head and acts on its rows. ``add``:
+   the word of the plus in its header, which opens the form ``add_form``
+   (an id, a ``row_form`` at the head of the table). #}
+{% macro related(title, count=None, meta=None, add=None, add_form=None, add_open=False) %}
 <section class="card">
-  <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}</header>
+  <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}{% if add %}<span class="right">{{ toggle(add_form, add, "plus-lg", alone=False, open=add_open) }}</span>{% endif %}</header>
   {{ caller() }}
 </section>
 {% endmacro %}
 
-{# The form that adds one more to a related list, folded until opened.
-   ``open``: unfolded, e.g. when the list is still empty. #}
-{% macro new_row(label, open=False) %}
-<details class="new-row"{% if open %} open{% endif %}>
-  <summary>{{ label }}</summary>
-  <div class="body">{{ caller() }}</div>
-</details>
+{# A button that opens and closes the form ``target`` (an id) at a row or
+   at the head of a list. ``alone``: the icon by itself, ``label`` its
+   tooltip and ``name`` what a screen reader hears. #}
+{% macro toggle(target, label, icon, alone=True, name=None, open=False) %}<button class="small{{ ' icon-btn' if alone }}" type="button" data-toggle="{{ target }}" aria-controls="{{ target }}" aria-expanded="{{ 'true' if open else 'false' }}"{% if alone %} title="{{ label }}" aria-label="{{ name or label }}"{% endif %}>{{ _face(icon, label, alone) }}</button>{% endmacro %}
+
+{# The form that unfolds under a row of a table, or at the head of the
+   list: a row of its own across ``columns``. Without app.js it shows at
+   once. ``open``: unfolded, e.g. when the list is still empty or a form
+   came back refused. #}
+{% macro row_form(id, columns, open=False) %}<tr class="row-form{{ ' open' if open }}" id="{{ id }}"><td colspan="{{ columns }}">{{ caller() }}</td></tr>{% endmacro %}
+
+{# A form in a dialog of its own, for a step that asks for more than a
+   yes, e.g. removing a device with the password and a code. The caller
+   gives the form, with ``dialog_buttons`` at its end. Opened by a
+   ``dialog_button``. Without app.js it shows in the page. #}
+{% macro form_dialog(id, title, text) %}
+<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title">
+  <div class="body"><h2 id="{{ id }}-title">{{ title }}</h2><p>{{ text }}</p></div>
+  {{ caller() }}
+</dialog>
 {% endmacro %}
+
+{% macro dialog_buttons(label, icon="trash", danger=True) %}<div class="buttons"><button type="button" data-close>Cancel</button><button class="{{ 'danger solid' if danger else 'primary' }}" type="submit">{{ _svg(icon) }} {{ label }}</button></div>{% endmacro %}
+
+{# The button that opens the ``form_dialog`` ``target``: an icon alone on
+   a row, or with its word in a batch bar. #}
+{% macro dialog_button(target, label, icon="trash", alone=True, name=None, danger=True) %}<button class="small{{ ' icon-btn' if alone }}{{ ' danger' if danger }}" type="button" data-dialog="{{ target }}"{% if alone %} title="{{ label }}" aria-label="{{ name or label }}"{% endif %}>{{ _face(icon, label, alone) }}</button>{% endmacro %}
+
+{# The tick box of a row for a batch: it belongs to the form ``batch`` (an
+   id) above the table. ``all`` in the head ticks every row. #}
+{% macro tick(batch, name, value, label) %}<input type="checkbox" name="{{ name }}" value="{{ value }}" form="{{ batch }}" aria-label="{{ label }}" />{% endmacro %}
+{% macro tick_all(batch, name, label="Tick all") %}<input type="checkbox" data-tick-all="{{ name }}" data-batch="{{ batch }}" aria-label="{{ label }}" title="{{ label }}" />{% endmacro %}
 
 {# The hidden field every form that changes something carries. #}
 {% macro csrf_field() %}<input type="hidden" name="csrf_token" value="{{ csrf }}" />{% endmacro %}
