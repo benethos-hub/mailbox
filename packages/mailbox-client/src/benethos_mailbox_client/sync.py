@@ -187,6 +187,10 @@ class SyncMailboxClient:
     list_sends = blocking(endpoints.list_sends)
     list_all_sends = blocking(endpoints.list_all_sends)
 
+    # --- the service ------------------------------------------------------------------
+
+    get_status = blocking(endpoints.get_status)
+
     # --- attachments ------------------------------------------------------------------
 
     def get_attachment(

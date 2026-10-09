@@ -20,6 +20,7 @@ from .errors import (
 )
 from .models import (
     Account,
+    AccountHealth,
     Activity,
     Attachment,
     Candidate,
@@ -47,6 +48,7 @@ from .models import (
     SendRecord,
     Sent,
     SourceReport,
+    Status,
     StoredCredential,
     Token,
     TotpDevice,
@@ -55,6 +57,7 @@ from .models import (
     WebhookDetail,
     WebhookPost,
     WebhookSecret,
+    Worker,
 )
 from .sync import SyncMailboxClient
 
@@ -64,6 +67,9 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "AccountHealth",
+    "Status",
+    "Worker",
     "SendRecord",
     "Activity",
     "NewWebhook",

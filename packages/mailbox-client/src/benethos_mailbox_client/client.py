@@ -185,6 +185,10 @@ class MailboxClient:
     list_sends = awaiting(endpoints.list_sends)
     list_all_sends = awaiting(endpoints.list_all_sends)
 
+    # --- the service ------------------------------------------------------------------
+
+    get_status = awaiting(endpoints.get_status)
+
     # --- attachments ------------------------------------------------------------------
 
     async def get_attachment(
