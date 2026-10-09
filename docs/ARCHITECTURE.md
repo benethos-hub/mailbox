@@ -264,7 +264,9 @@ packages/mailbox-service/
                         #   in in the browser (oauth.py), with a code
                         #   in device.py, what both ways share in
                         #   signin.py
-      discovery/        # DiscoveryService: trust, ranking, cache, limits
+      discovery/        # DiscoveryService: trust, ranking, cache, limits,
+                        #   candidates.py: an address read, candidates
+                        #   merged and filled in, what can be connected
       mailbox/          # MailboxService, the facade for mail: calls under
                         #   our ids, an account's folders and their
                         #   roles (folders), the folders a grant

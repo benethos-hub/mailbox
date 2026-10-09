@@ -17,6 +17,7 @@ from benethos_mailbox_service.data.models import (
     ServerProtocol,
 )
 from benethos_mailbox_service.domain.discovery import service as discovery_module
+from benethos_mailbox_service.domain.discovery.candidates import connectable
 
 from .test_discovery import (
     ADMIN,
@@ -141,7 +142,7 @@ async def test_pop3_is_offered_where_no_imap_is() -> None:
         "security": "tls",
         "username": "me@firma.example",
     }
-    assert discovery_module.connectable([candidate]) == [candidate]
+    assert connectable([candidate]) == [candidate]
 
 
 async def test_pop3_is_left_out_beside_imap() -> None:
@@ -168,9 +169,7 @@ async def test_kinds_not_offered_are_left_out() -> None:
 
 def test_connectable_prefers_imap() -> None:
     both = [pop3("pop.x.example", ISPDB), imap("imap.x.example", ISPDB)]
-    assert [c.provider for c in discovery_module.connectable(both)] == [
-        ProviderType.IMAP
-    ]
+    assert [c.provider for c in connectable(both)] == [ProviderType.IMAP]
 
 
 def jmap(
@@ -248,13 +247,11 @@ async def test_pop3_is_left_out_beside_jmap() -> None:
 def test_connectable_offers_jmap_then_imap() -> None:
     token = jmap("api.x.example", PRESET, CredentialKind.API_TOKEN)
     oauth = jmap("o.x.example", PRESET, CredentialKind.OAUTH)
-    found = discovery_module.connectable(
+    found = connectable(
         [imap("imap.x.example", ISPDB), oauth, token, pop3("pop.x.example", ISPDB)]
     )
     assert [c.servers[0].host for c in found] == ["api.x.example", "imap.x.example"]
-    assert discovery_module.connectable([pop3("pop.x.example", ISPDB), token]) == [
-        token
-    ]
+    assert connectable([pop3("pop.x.example", ISPDB), token]) == [token]
 
 
 async def test_candidates_without_imap_are_kept_without_settings() -> None:
