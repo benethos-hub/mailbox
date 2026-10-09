@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A second factor for the sign-in to the UI: a code of an authenticator
+  app (TOTP) after the password, a choice of each user. It is set up on
+  the page **Second factor** with a QR code, and comes with ten recovery
+  codes shown once. A password set by someone else is changed only
+  after the code. docs/AUTHENTICATION.md has the details.
 - Gmail and Google Workspace accounts over the Gmail API, with the
   kind of account `gmail`. They sign in with Google in the browser,
   through a Google client of the deployment's own, set up as

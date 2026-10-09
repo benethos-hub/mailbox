@@ -54,6 +54,7 @@ LIBRARY_HOMES = {
     "publicsuffixlist": f"{PACKAGE}.data.discovery.suffix",
     "jinja2": f"{PACKAGE}.web.pages.templates",
     "platformdirs": f"{PACKAGE}.config",
+    "segno": f"{PACKAGE}.web.pages.qr",
 }
 
 

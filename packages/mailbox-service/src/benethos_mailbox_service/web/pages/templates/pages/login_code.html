@@ -1,0 +1,18 @@
+{% extends "bare.html" %}
+{% block title %}Code · {{ APP_NAME }}{% endblock %}
+{% block heading %}Code{% endblock %}
+{% block content %}
+{% include "partials/flash.html" %}
+<form method="post" action="/ui/login/code">
+  <input type="hidden" name="nonce" value="{{ nonce }}" />
+  <div class="field">
+    <label for="f-code">The code of your authenticator app</label>
+    <input id="f-code" name="code" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="40" required autofocus />
+    <span class="hint">Or one of your recovery codes, which then works no more.</span>
+  </div>
+  <div class="form-actions">
+    <button class="primary" type="submit">Sign in</button>
+    <a href="/ui/login">Cancel</a>
+  </div>
+</form>
+{% endblock %}

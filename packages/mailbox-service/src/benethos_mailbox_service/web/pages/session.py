@@ -2,9 +2,14 @@
 
 A person signs in with a user name and a password. The session lives on
 the server: the cookie carries only a random id, the session the id of its
-user and when that user's password was set. Every request loads the user
-anew, so a disabled user, changed rights or a changed password take
-effect at once. A restart signs everyone out.
+user and when that user's password and second factor were set. Every
+request loads the user anew, so a disabled user, changed rights, a changed
+password or factor take effect at once. A restart signs everyone out.
+
+A user with a second factor gets no session for the password alone, but a
+pending sign-in with a cookie of its own. It reaches the code page and
+nothing else, and ends after a few minutes or a few wrong codes
+(docs/AUTHENTICATION.md 3).
 
 Forms carry a CSRF token of the session, checked on every request that
 changes something. The cookie is ``HttpOnly`` and ``SameSite=Strict`` too.
@@ -20,7 +25,7 @@ from fastapi import Request
 
 from ...common.clock import utc_now
 from ...common.secret import same, token
-from ...domain.auth import SignedIn
+from ...domain.auth import CODE_TRIES, PENDING, SignedIn
 from ...domain.rights import Access
 from ...errors import MailboxServiceError
 from ..limits import signed_in
@@ -39,6 +44,15 @@ PASSWORD_PAGE = f"{PATH}/password"
 _WHILE_CHANGING = {PASSWORD_PAGE, f"{PATH}/logout"}
 
 
+@dataclass(frozen=True)
+class PendingSetup:
+    """A secret shown for a second factor, not confirmed yet. Never stored
+    before its first code."""
+
+    secret: bytes
+    until: datetime
+
+
 @dataclass
 class UiSession:
     user_id: str
@@ -49,9 +63,26 @@ class UiSession:
     last_seen: datetime
     # The sign-in before this session's, shown on the overview.
     previous_sign_in: datetime | None = None
+    # When the user's second factor was confirmed, None without one: the
+    # session ends once it changes.
+    factor: datetime | None = None
+    # A second factor being set up in this session.
+    setup: PendingSetup | None = None
     # Shown on the next page only, e.g. a new token: kept here, never in a
     # URL, and gone once shown.
     once: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class PendingSignIn:
+    """The password was right, the code of the second factor is next."""
+
+    user_id: str
+    # Where to go once signed in.
+    next: str
+    csrf: str
+    until: datetime
+    tries_left: int = CODE_TRIES
 
 
 class SignInRequiredError(Exception):
@@ -67,6 +98,7 @@ class SessionStore:
         self, clock: Callable[[], datetime] = utc_now, idle: timedelta = IDLE
     ) -> None:
         self._sessions: dict[str, UiSession] = {}
+        self._pending: dict[str, PendingSignIn] = {}
         self._clock = clock
         self._idle = idle
 
@@ -92,8 +124,43 @@ class SessionStore:
             csrf=token(),
             last_seen=now,
             previous_sign_in=signed.previous,
+            factor=signed.factor,
         )
         return session_id
+
+    def begin_pending(self, user_id: str, next: str) -> str:
+        """A pending sign-in, with an id of its own for its cookie."""
+        now = self._clock()
+        for gone in [p for p, v in self._pending.items() if v.until <= now]:
+            del self._pending[gone]
+        pending_id = token()
+        self._pending[pending_id] = PendingSignIn(
+            user_id, next, csrf=token(), until=now + PENDING
+        )
+        return pending_id
+
+    def pending(self, pending_id: str | None) -> PendingSignIn | None:
+        """The pending sign-in, unless it is unknown or ran out."""
+        found = self._pending.get(pending_id) if pending_id else None
+        if found is None or found.until <= self._clock():
+            self.drop_pending(pending_id)
+            return None
+        return found
+
+    def missed(self, pending_id: str) -> bool:
+        """One wrong code. False once no try is left: then it is gone."""
+        found = self._pending.get(pending_id)
+        if found is None:
+            return False
+        found.tries_left -= 1
+        if found.tries_left <= 0:
+            self.drop_pending(pending_id)
+            return False
+        return True
+
+    def drop_pending(self, pending_id: str | None) -> None:
+        if pending_id:
+            self._pending.pop(pending_id, None)
 
     def known(self, session_id: str | None) -> bool:
         """Whether the session exists and is not idle too long. Unlike
@@ -154,7 +221,10 @@ def current(request: Request) -> Current:
     auth = get_auth(request)
     try:
         access = auth.session_access(
-            session.user_id, session.stamp, source=client_address(request)
+            session.user_id,
+            session.stamp,
+            factor=session.factor,
+            source=client_address(request),
         )
     except MailboxServiceError:
         # Gone, disabled, or its password changed since the sign-in.

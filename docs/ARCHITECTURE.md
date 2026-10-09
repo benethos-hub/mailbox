@@ -218,7 +218,9 @@ packages/mailbox-service/
         filters.py      # the filter bar of a list: its fields and chips,
                         #   user_names and records_filter for the lists
                         #   of records
-        session.py      # sign-in with a password, server-side sessions
+        session.py      # sign-in with a password, server-side sessions,
+                        #   the pending sign-in before the code
+        qr.py           # QR codes as SVG data URIs (segno)
         templates.py    # Jinja2: filters, render, Post/Redirect/Get
         grants.py       # the grant editor's rows, read back into grants
         editor.py       # the editor of rights on a user's or a role's page
@@ -239,9 +241,10 @@ packages/mailbox-service/
       rights/           # who may do what: permissions (the catalogue of
                         #   rights and groups), Access (one caller)
       auth/             # proving who calls: AuthService, Passwords,
-                        #   SignInThrottle
+                        #   SignInThrottle, SecondFactors
       users/            # UserService, RoleService, TokenService,
-                        #   PasswordService, one module each, the
+                        #   PasswordService, SecondFactorService, one
+                        #   module each, the
                         #   rules they share in rules.py, effective
                         #   rights in effective.py
       accounts/         # AccountService, Adapters (the live adapter per
@@ -346,7 +349,7 @@ packages/mailbox-service/
                         #   versions/ one class per schema version,
                         #   repositories.py opens one of them
       secrets/          # envelope encryption, key providers, password
-                        #   hashes, the vault of the credentials
+                        #   hashes, the vault of the credentials, TOTP
       backup.py         # encrypted backups of the database, restore
       files.py          # files for the owner alone (0600): database, backup, key
       logbook.py        # the newest log lines in memory, for the log page
@@ -599,7 +602,8 @@ noticing. Every change is measured against that.
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Folders for settings and data | `folders()` in `config.py` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
-| Authentication | credential kinds of a user (CONCEPT 7.5) | API token, password for the UI | TOTP, OAuth client credentials |
+| Authentication | credential kinds of a user (CONCEPT 7.5, [AUTHENTICATION.md](AUTHENTICATION.md)) | API token, password for the UI, TOTP after it (`data/secrets/totp.py`) | a passkey, OAuth client credentials |
+| QR code | `data_uri` in `web/pages/qr.py` | segno | another QR library |
 | Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints/`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py`, `sync.py` and the modules that read an answer |
 
 **When you add something new**, ask first where its seam is. A new

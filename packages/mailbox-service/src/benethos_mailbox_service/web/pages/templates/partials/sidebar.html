@@ -16,6 +16,7 @@
     <div class="who">Signed in as {% if own_page %}<a href="{{ own_page }}"><strong>{{ me.name }}</strong></a>{% else %}<strong>{{ me.name }}</strong>{% endif %}</div>
     <div class="links">
       <a href="/ui/password">Password</a>
+      <a href="/ui/second-factor">Second factor</a>
       <form class="inline" method="post" action="/ui/logout">
         {{ csrf_field() }}
         <button class="link" type="submit">Sign out</button>

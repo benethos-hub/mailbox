@@ -316,6 +316,20 @@ ul.lines li:last-child { border-bottom: 0; }
   user-select: all;
 }
 
+/* A QR code to scan: white around it in either theme, its pixels sharp. */
+.qr {
+  display: block;
+  width: 225px; max-width: 100%; height: auto;
+  margin-bottom: 12px;
+  image-rendering: pixelated;
+}
+
+/* Recovery codes, in two columns. */
+ul.codes {
+  list-style: none; margin: 0;
+  display: grid; grid-template-columns: repeat(2, max-content); gap: 4px 32px;
+}
+
 /* The body of a mail, as text: its own line breaks, long lines wrapped. */
 .mail-body {
   margin: 0;

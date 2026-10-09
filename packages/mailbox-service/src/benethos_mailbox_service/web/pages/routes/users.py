@@ -212,6 +212,7 @@ def _user_page(
         can_create_token=caller.allows("create_token"),
         can_revoke=caller.allows("revoke_token"),
         can_set_password=caller.allows("set_password"),
+        can_remove_factor=caller.allows("remove_second_factor"),
         activity=if_allowed(
             caller,
             "list_activity",

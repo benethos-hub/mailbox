@@ -19,10 +19,12 @@ Towards the callers of the service:
 | Requests with a credential | per API token, per UI session | 120 a minute, 60 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` |
 | Requests without a credential | per client address | 30 a minute, 15 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` |
 | Request body | per request | 40 MiB | `413 payload_too_large` | fixed |
-| Failed sign-ins per address | wrong API tokens and wrong UI passwords alike | 10 in 15 minutes lock the address for 15 minutes | `429 rate_limited` for a wrong credential, the UI names the minutes. A valid token passes. | `MAILBOX_SERVICE_SIGN_IN_FAILURES`, `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` |
-| Failed sign-ins per name | UI password, the password asked again before the recovery key | 10 in 15 minutes, from any address, make the name wait 1 minute | `429 rate_limited` | the same failures, `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` |
+| Failed sign-ins per address | wrong API tokens, wrong UI passwords and wrong codes of a second factor alike | 10 in 15 minutes lock the address for 15 minutes | `429 rate_limited` for a wrong credential, the UI names the minutes. A valid token passes. | `MAILBOX_SERVICE_SIGN_IN_FAILURES`, `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` |
+| Failed sign-ins per name | UI password, the code of a second factor, the password or code asked again before a step such as the recovery key | 10 in 15 minutes, from any address, make the name wait 1 minute | `429 rate_limited` | the same failures, `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` |
 | Password hashes | at once, for the whole service | 2 | the next one waits | `MAILBOX_SERVICE_PASSWORD_HASHES_AT_ONCE` |
 | UI session | per session | ends after 8 hours without a request | sign in again | `MAILBOX_SERVICE_SESSION_IDLE_HOURS` |
+| Code of a second factor | per pending sign-in, between the password and the code | 5 minutes, 5 wrong codes | sign in again with the password | fixed |
+| Second factor not confirmed | per session setting one up | 15 minutes from showing the QR code | start the setup again | fixed |
 | Discoveries | per user | 10 in any minute, each domain's findings kept a day | `429 rate_limited` | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE`, the day is fixed |
 | Sends | per user and account, under a grant | `max_sends_per_day` in any 24 hours | `429 send_limit_reached` | the grant |
 | Recipients | per send, under a grant | the grant's `recipients` | `403 recipient_not_allowed` | the grant |
@@ -97,6 +99,15 @@ failures at one name make it wait a minute, from anywhere, so its owner
 is never locked out for long. Two hashes at a time keep a flood of forms
 from taking the memory. The others wait.
 
+**Guessing a code.** A user with a second factor gets no session for the
+right password, only a pending sign-in for five minutes. Each wrong code
+counts as a failed sign-in for the address and the name, and the fifth
+ends the pending sign-in: the next try starts with the password again.
+The brakes are cleared once the code is right, not before. A code of six
+digits has a million values, of which three are taken at a time, one
+step either way. Five codes per password and the brakes above leave a
+guess no real chance ([AUTHENTICATION.md](AUTHENTICATION.md)).
+
 **Many clients at one address.** Behind a reverse proxy the service sees
 the proxy's address, unless `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` names
 the proxy. Then every visitor shares the 30 requests a minute without a
@@ -129,8 +140,9 @@ request.
 
 ## 4. State
 
-The limits on requests, the sign-in throttle, the discovery counts and
-the paces are kept in memory, in the one process of the service. A
+The limits on requests, the sign-in throttle, the pending sign-ins, the
+discovery counts and the paces are kept in memory, in the one process of
+the service. A
 restart forgets them. Each is capped, so spoofed addresses cannot grow
 the memory: 10,000 addresses or callers, the one idle longest forgotten
 first, and 1,000 domains in the discovery cache. The sign-in throttle

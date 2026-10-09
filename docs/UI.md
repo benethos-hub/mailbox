@@ -72,7 +72,7 @@ The sidebar keeps its three groups, renamed by what a person looks for:
 | Service | Users, Roles, Status, Audit, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Audit with `audit` in `service`, Log and Recovery key for the admin |
 
 The foot of the sidebar names the signed-in user and links to their own
-page, Password and Sign out. Changes, if built, is a tab of the account
+page, Password, Second factor and Sign out. Changes, if built, is a tab of the account
 page and of Status, not a sidebar entry.
 
 Every page has a **top bar** with its heading, one line under it that
@@ -303,6 +303,18 @@ Recent activity is the user's newest ten activities of the audit, for
 `audit` in `service`, with links to all of them and to what was done to
 the user. Roles the same without
 tokens. A token is created in the Tokens card and shown once.
+
+The second factor ([AUTHENTICATION.md](AUTHENTICATION.md)) has a page of
+its own, **Second factor**, reached from the foot of the sidebar and the
+person's own user page. Off, it offers **Set up** after the password,
+then the QR code with the key as text and a field for the first code,
+then the ten recovery codes, shown once. On, it shows how many recovery
+codes are left, **Make new codes** after the password, and **Remove**
+with the password and a code. Another user's page says whether it has
+one, and offers **Remove second factor** to a user with
+`remove_second_factor`. After the password, a user with a factor sees
+the code page, outside the layout as the sign-in is, which takes a code
+of the app or a recovery code.
 
 ### 6.4 Webhooks
 
