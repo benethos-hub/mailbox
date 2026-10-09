@@ -5341,10 +5341,10 @@
                   "type": "null"
                 }
               ],
-              "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft or JMAP account, the inbox on IMAP and POP3.",
+              "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft, JMAP or Gmail account, the inbox on IMAP and POP3.",
               "title": "Folder"
             },
-            "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft or JMAP account, the inbox on IMAP and POP3."
+            "description": "A folder id, or a role such as inbox. Left out: every folder on a Microsoft, JMAP or Gmail account, the inbox on IMAP and POP3."
           },
           {
             "name": "limit",
@@ -7216,7 +7216,7 @@
           "mailbox"
         ],
         "summary": "Update Draft",
-        "description": "Replace a draft as a whole. The answer names its id from now on:\nan IMAP draft keeps its id, a Microsoft or JMAP draft gets a new one,\nsince the provider stores a new message. Stored attachments are\ngone unless `keep_attachments` names them. A draft sent as it is\nstored, every attachment kept, is not stored again. An id that names\nno draft answers `404`.",
+        "description": "Replace a draft as a whole. The answer names its id from now on:\nan IMAP draft keeps its id, a Microsoft, JMAP or Gmail draft gets a\nnew one, since the provider stores a new message. Stored attachments\nare gone unless `keep_attachments` names them. A draft sent as it is\nstored, every attachment kept, is not stored again. An id that names\nno draft answers `404`.",
         "operationId": "update_draft",
         "security": [
           {
