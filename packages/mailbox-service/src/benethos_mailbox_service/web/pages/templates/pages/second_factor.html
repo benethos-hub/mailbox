@@ -2,7 +2,7 @@
 {% from "components/ui.html" import card, csrf_field, empty, new_row, related with context %}
 {% block title %}Second factor · {{ APP_NAME }}{% endblock %}
 {% block heading %}Second factor{% endblock %}
-{% block subheading %}<div class="sub">A code of an authenticator app after your password, when you sign in to this UI</div>{% endblock %}
+{% block subheading %}<div class="sub">A second step after your password, when you sign in to this UI</div>{% endblock %}
 {% block content %}
 {% set devices = factor.totp %}
 {% if codes %}
@@ -73,7 +73,7 @@
         </div>
         {% if devices %}
         <div class="field">
-          <label for="f-code">A code of a device you have, or a recovery code</label>
+          <label for="f-code">A code of any of your devices, or a recovery code</label>
           <input id="f-code" name="code" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
         </div>
         {% endif %}
