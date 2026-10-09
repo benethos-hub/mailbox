@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb, card, csrf_field with context %}
+{% from "components/ui.html" import breadcrumb, card, copy_button, csrf_field with context %}
 {% block title %}Sign in with a code · {{ APP_NAME }}{% endblock %}
 {% block heading %}Sign in with a code{% endblock %}
 {% block subheading %}{{ breadcrumb([("Accounts", "/ui/accounts"), ("Sign in with " ~ (provider | signs_in_at), None)]) }}{% endblock %}
 {% block content %}
 {% call card("Enter this code at " ~ (provider | signs_in_at), meta="valid until " ~ (sign_in.expires_at | when)) %}
   <p class="muted">Open the page below on any device, enter the code and sign in with the account to connect. This page goes on by itself once you did.</p>
-  <code class="secret">{{ sign_in.user_code }}</code>
+  <div class="secret-line"><code class="secret" id="user-code">{{ sign_in.user_code }}</code>{{ copy_button("user-code", "Copy the code") }}</div>
   <p><a href="{{ sign_in.verification_uri }}" target="_blank" rel="noreferrer noopener">{{ sign_in.verification_uri }}</a></p>
   {# Asks every few seconds by htmx. Without script, Check now asks once. #}
   <form method="post" action="/ui/oauth/{{ provider }}/device/{{ sign_in.id }}" hx-post="/ui/oauth/{{ provider }}/device/{{ sign_in.id }}" hx-trigger="every {{ sign_in.interval }}s" hx-swap="none">

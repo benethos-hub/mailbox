@@ -1,27 +1,41 @@
-{% from "components/ui.html" import csrf_field with context %}
-{# ``nav``: the groups and entries the caller may open (navigation.py). #}
-<aside class="sidebar">
-  <div class="brand"><img class="mark" src="/ui/static/img/icon.svg" alt="" width="21" height="22" /> {{ APP_NAME }}</div>
+{% from "components/ui.html" import csrf_field, icon with context %}
+{# ``nav``: the groups and entries the caller may open (navigation.py),
+   each with a dot when something there waits for a person. #}
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <img class="mark" src="/ui/static/img/icon.svg" alt="" width="21" height="22" />
+    <span class="brand-name">{{ APP_NAME }}</span>
+    {% if me %}<button class="small icon-btn fold" type="button" data-fold title="Fold the sidebar" aria-label="Fold the sidebar" aria-controls="sidebar" aria-expanded="true">{{ icon("layout-sidebar") }}</button>{% endif %}
+  </div>
   <nav class="nav" aria-label="Main">
     {% for group in nav %}
     {% if group.title %}<div class="section">{{ group.title }}</div>{% endif %}
     {% for entry in group.entries %}
-    <a href="{{ entry.url }}" class="{{ 'active' if page == entry.key }}"{% if page == entry.key %} aria-current="page"{% endif %}><span class="icon">{{ entry.icon }}</span> {{ entry.label }}</a>
+    <a href="{{ entry.url }}" class="{{ 'active' if page == entry.key }}"{% if page == entry.key %} aria-current="page"{% endif %}>{{ icon(entry.icon) }} <span class="label">{{ entry.label }}</span>{% if entry.dot %}<span class="dot" role="img" aria-label="needs a look" title="Needs a look"></span>{% endif %}</a>
     {% endfor %}
     {% endfor %}
   </nav>
   <div class="spacer"></div>
   {% if me %}
-  <div class="foot">
-    <div class="who">Signed in as {% if own_page %}<a href="{{ own_page }}"><strong>{{ me.name }}</strong></a>{% else %}<strong>{{ me.name }}</strong>{% endif %}</div>
-    <div class="links">
-      <a href="/ui/password">Password</a>
-      <a href="/ui/second-factor">Second factor</a>
-      <form class="inline" method="post" action="/ui/logout">
+  {# The account menu (docs/UI.md 3): a details element opens it without
+     a script, app.js closes it on a click elsewhere and on Escape. #}
+  <details class="account-menu">
+    <summary class="account" aria-label="Account of {{ me.name }}" title="{{ me.name }}">
+      <span class="avatar" aria-hidden="true">{{ me.name[:1] | upper }}</span>
+      <span class="who"><span class="name">{{ me.name }}</span>{% if me.roles %}<span class="role">{{ me.roles | join(", ") }}</span>{% endif %}</span>
+      {{ icon("chevron-up") }}
+    </summary>
+    <div class="menu">
+      <div class="head">Signed in as <strong>{{ me.name }}</strong></div>
+      {% if own_page %}<a class="item" href="{{ own_page }}">{{ icon("person-circle") }} Your page</a>{% endif %}
+      <a class="item" href="/ui/password">{{ icon("key") }} Password</a>
+      <a class="item" href="/ui/second-factor">{{ icon("shield-lock") }} Second factor <span class="hint">{{ "on" if factor_on else "off" }}</span></a>
+      <div class="sep"></div>
+      <form method="post" action="/ui/logout">
         {{ csrf_field() }}
-        <button class="link" type="submit">Sign out</button>
+        <button class="item out" type="submit">{{ icon("box-arrow-right") }} Sign out</button>
       </form>
     </div>
-  </div>
+  </details>
   {% endif %}
 </aside>

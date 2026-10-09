@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, credentials, empty, filter_bar, pager with context %}
+{% from "components/ui.html" import ago, card, credentials, empty, filter_bar, link_button, pager with context %}
 {% block title %}Accounts · {{ APP_NAME }}{% endblock %}
 {% block heading %}Accounts{% endblock %}
 {% block subheading %}<div class="sub">The mailboxes this service connects</div>{% endblock %}
 {% block actions %}
-{% if can_create %}<a class="btn primary" href="/ui/accounts/new">Connect an account</a>{% endif %}
+{% if can_create %}{{ link_button("/ui/accounts/new", "Connect an account", "plus-lg", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
 {% call card("Accounts", meta=none if pages[0] or pages[1] else accounts | length, tight=True) %}
@@ -12,17 +12,23 @@
 {% if accounts %}
 <div class="table-scroll">
   <table>
-    <thead><tr><th>Address</th><th>Provider</th><th>Status</th><th>Credentials</th></tr></thead>
+    <thead><tr><th>Address</th><th>Provider</th><th>Status</th><th>Last sync</th><th>Credentials</th><th class="actions"><span class="sr">Actions</span></th></tr></thead>
     <tbody>
       {% for account in accounts %}
+      {% set health = healths.get(account.id) %}
       <tr>
         <td class="name">
           <a href="/ui/accounts/{{ account.id }}">{{ account.email }}</a>
-          <span class="sub">{{ account.display_name | or_missing }}</span>
+          {% if account.display_name %}<span class="sub">{{ account.display_name }}</span>{% endif %}
         </td>
-        <td>{{ account.provider.value }}</td>
+        <td>{{ account.provider.value }}{% if health and health.watching %}<span class="sub">push</span>{% endif %}</td>
         <td>{% include "partials/account_status.html" %}</td>
+        <td>{% if health is none %}—{% elif not health.synced %}<span class="muted">not synced</span>{% else %}{{ ago(health.sync.last_sync_at) }}{% endif %}{% if health and health.sync.last_error %}<span class="sub"><span class="tag bad" title="{{ health.sync.last_error_at | when }}">sync failed</span> {{ health.sync.last_error }}</span>{% endif %}</td>
         <td><span class="sub">{{ credentials(account.credentials) }}</span></td>
+        <td class="actions">
+          {% if account.id in auditable %}{{ link_button("/ui/sends?account=" ~ account.id, "Sends", "send", alone=True, word=True, name="Sends of " ~ account.email) }}{% endif %}
+          {% if account.id in readable %}{{ link_button("/ui/accounts/" ~ account.id ~ "/mail", "Mail", "envelope", alone=True, name="Mail of " ~ account.email) }}{% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>

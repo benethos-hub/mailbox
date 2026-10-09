@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, csrf_field, empty, new_row, related with context %}
+{% from "components/ui.html" import ago, card, copy_button, csrf_field, dialog_button, dialog_buttons, empty, form_dialog, icon, related, row_form, tick, tick_all, toggle with context %}
 {% block title %}Second factor · {{ APP_NAME }}{% endblock %}
 {% block heading %}Second factor{% endblock %}
 {% block subheading %}<div class="sub">A second step after your password, when you sign in to this UI</div>{% endblock %}
@@ -10,8 +10,8 @@
   <header><h2>Recovery codes</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
   <div class="body">
     <p class="muted">Each signs you in once in place of a code of a device, e.g. when a phone is lost. Keep them apart from your devices, in a password manager or on paper.</p>
-    <ul class="codes secret">{% for code in codes %}<li>{{ code }}</li>{% endfor %}</ul>
-    <div class="form-actions"><a class="btn" href="{{ codes_file }}" download="mailbox-recovery-codes.txt">Download as a text file</a></div>
+    <div class="secret-line"><ul class="codes secret" id="recovery-codes">{% for code in codes %}<li>{{ code }}</li>{% endfor %}</ul>{{ copy_button("recovery-codes", "Copy all codes") }}</div>
+    <div class="form-actions"><a class="btn" href="{{ codes_file }}" download="mailbox-recovery-codes.txt">{{ icon("download") }} Download as a text file</a></div>
   </div>
 </section>
 {% endif %}
@@ -20,7 +20,7 @@
 {% call card("Scan the code for " ~ setup.name, meta="With an authenticator app, within " ~ minutes ~ " minutes.") %}
   <img class="qr" src="{{ qr }}" alt="QR code of the device {{ setup.name }}" width="225" height="225" />
   <p class="muted">Where the camera cannot reach, type in this key:</p>
-  <code class="secret">{{ secret }}</code>
+  <div class="secret-line"><code class="secret" id="totp-key">{{ secret }}</code>{{ copy_button("totp-key", "Copy the key") }}</div>
   <form method="post" action="/ui/second-factor/totp/confirm">
     {{ csrf_field() }}
     <div class="form-grid">
@@ -38,88 +38,108 @@
 {% endcall %}
 {% endif %}
 
-{% call related("Authenticator app (TOTP)", count=devices | length, meta=("devices: a code of any of them signs in" if devices else "off now: your password alone signs you in")) %}
+{% set can_add = not qr and devices | length < max_devices %}
+{% call related("Authenticator app (TOTP)", count=devices | length, meta=("devices: a code of any of them signs in" if devices else "off now: your password alone signs you in"), add=("Add a device" if can_add else None), add_form="add-device", add_open=not devices) %}
+  {% if devices | length > 1 %}
+  <div class="batch-bar">
+    <span class="label">Ticked devices</span>
+    {{ dialog_button("remove-ticked", "Remove", alone=False) }}
+  </div>
+  {% endif %}
   <div class="body tight">
-    {% if devices %}
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Name</th><th>Added</th><th>Last used</th></tr></thead>
+        <thead><tr>{% if devices | length > 1 %}<th class="tick">{{ tick_all("devices-batch", "device") }}</th>{% endif %}<th>Name</th><th>Added</th><th>Last used</th><th class="actions"><span class="sr">Actions</span></th></tr></thead>
         <tbody>
+          {% set columns = 5 if devices | length > 1 else 4 %}
+          {% if can_add %}
+          {% call row_form("add-device", columns, open=not devices) %}
+            <form method="post" action="/ui/second-factor/totp/begin">
+              {{ csrf_field() }}
+              <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
+              <div class="toolbar">
+                <div class="field">
+                  <label for="f-name">Its name</label>
+                  <input id="f-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Phone" />
+                </div>
+                <div class="field">
+                  <label for="f-password">Your password</label>
+                  <input id="f-password" name="password" type="password" autocomplete="current-password" required />
+                </div>
+                {% if devices %}
+                <div class="field">
+                  <label for="f-code">A code of any of your devices, or a recovery code</label>
+                  <input id="f-code" name="code" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
+                </div>
+                {% endif %}
+              </div>
+              <span class="hint">The next step shows its QR code.{% if not devices %} Then ten recovery codes, once.{% endif %} Adding a device signs out your other sessions.</span>
+              <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Next</button>{% if devices %}<button type="button" data-close>Cancel</button>{% endif %}</div>
+            </form>
+          {% endcall %}
+          {% endif %}
           {% for device in devices %}
           <tr>
+            {% if devices | length > 1 %}<td class="tick">{{ tick("devices-batch", "device", device.id, "Tick " ~ device.name) }}</td>{% endif %}
             <td class="name">{{ device.name }}</td>
-            <td>{{ device.created_at | when }}</td>
-            <td>{{ device.last_used_at | when }}</td>
+            <td>{{ ago(device.created_at) }}</td>
+            <td>{{ ago(device.last_used_at) }}</td>
+            <td class="actions">
+              {{ toggle("rename-" ~ device.id, "Rename", "pencil", name="Rename " ~ device.name) }}
+              {{ dialog_button("remove-" ~ device.id, "Remove", name="Remove " ~ device.name) }}
+            </td>
           </tr>
+          {% call row_form("rename-" ~ device.id, columns) %}
+            <form class="toolbar" method="post" action="/ui/second-factor/totp/rename">
+              {{ csrf_field() }}
+              <input type="hidden" name="device" value="{{ device.id }}" />
+              <div class="field">
+                <label for="f-rename-{{ device.id }}">Name</label>
+                <input id="f-rename-{{ device.id }}" name="name" value="{{ device.name }}" maxlength="{{ max_name }}" required />
+              </div>
+              <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Save</button><button type="button" data-close>Cancel</button></div>
+            </form>
+          {% endcall %}
           {% endfor %}
         </tbody>
       </table>
     </div>
-    {% else %}{{ empty("No device yet. Any authenticator app works: add a phone or a tablet, scan its QR code, and keep the ten recovery codes the first one brings.") }}{% endif %}
+    {% if not devices %}{{ empty("No device yet. Any authenticator app works: add a phone or a tablet, scan its QR code, and keep the ten recovery codes the first one brings.") }}{% endif %}
   </div>
-  {% if not qr and devices | length < max_devices %}
-  {% call new_row("Add a device", open=not devices) %}
-    <form method="post" action="/ui/second-factor/totp/begin">
-      {{ csrf_field() }}
-      <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
-      <div class="form-grid">
-        <div class="field">
-          <label for="f-name">Its name</label>
-          <input id="f-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Phone" />
-        </div>
-        <div class="field">
-          <label for="f-password">Your password</label>
-          <input id="f-password" name="password" type="password" autocomplete="current-password" required />
-        </div>
-        {% if devices %}
-        <div class="field">
-          <label for="f-code">A code of any of your devices, or a recovery code</label>
-          <input id="f-code" name="code" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
-        </div>
-        {% endif %}
-      </div>
-      <span class="hint">The next step shows its QR code.{% if not devices %} Then ten recovery codes, once.{% endif %} Adding a device signs out your other sessions.</span>
-      <div class="form-actions"><button class="primary" type="submit">Next</button></div>
-    </form>
-  {% endcall %}
-  {% endif %}
-  {% if devices %}
-  {% call new_row("Rename a device") %}
-    <form class="toolbar" method="post" action="/ui/second-factor/totp/rename">
-      {{ csrf_field() }}
-      <select name="device" aria-label="Device" required>
-        {% for device in devices %}<option value="{{ device.id }}">{{ device.name }}</option>{% endfor %}
-      </select>
-      <input class="grow" name="name" maxlength="{{ max_name }}" required placeholder="New name" aria-label="New name" />
-      <button type="submit">Rename</button>
-    </form>
-  {% endcall %}
-  {% call new_row("Remove a device") %}
-    <form method="post" action="/ui/second-factor/totp/remove">
-      {{ csrf_field() }}
-      <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
-      <div class="form-grid">
-        <div class="field">
-          <label for="f-remove-device">Device</label>
-          <select id="f-remove-device" name="device" required>
-            {% for device in devices %}<option value="{{ device.id }}">{{ device.name }}</option>{% endfor %}
-          </select>
-        </div>
-        <div class="field">
-          <label for="f-remove-password">Your password</label>
-          <input id="f-remove-password" name="password" type="password" autocomplete="current-password" required />
-        </div>
-        <div class="field">
-          <label for="f-remove-code">A code of any of your devices, this one too, or a recovery code</label>
-          <input id="f-remove-code" name="code" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
-        </div>
-      </div>
-      <span class="hint">Its codes work no more.{% if devices | length == 1 %} It is the last one: the second factor is off then, and the recovery codes go with it.{% endif %}</span>
-      <div class="form-actions"><button class="danger" type="submit">Remove device</button></div>
-    </form>
-  {% endcall %}
-  {% endif %}
 {% endcall %}
+
+{% macro confirm_fields(id) %}
+  <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
+  <div class="form-grid">
+    <div class="field">
+      <label for="f-{{ id }}-password">Your password</label>
+      <input id="f-{{ id }}-password" name="password" type="password" autocomplete="current-password" required />
+    </div>
+    <div class="field">
+      <label for="f-{{ id }}-code">A code of any of your devices, or a recovery code</label>
+      <input id="f-{{ id }}-code" name="code" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
+    </div>
+  </div>
+{% endmacro %}
+{% for device in devices %}
+{% call form_dialog("remove-" ~ device.id, "Remove " ~ device.name ~ "?", "Its codes work no more." ~ (" It is the last one: the second factor is off then, and the recovery codes go with it." if devices | length == 1 else "")) %}
+  <form method="post" action="/ui/second-factor/totp/remove">
+    {{ csrf_field() }}
+    <input type="hidden" name="device" value="{{ device.id }}" />
+    {{ confirm_fields("remove-" ~ device.id) }}
+    {{ dialog_buttons("Remove device") }}
+  </form>
+{% endcall %}
+{% endfor %}
+{% if devices | length > 1 %}
+{% call form_dialog("remove-ticked", "Remove the ticked devices?", "Their codes work no more. With every device ticked, the second factor is off, and the recovery codes go with it.") %}
+  <form method="post" action="/ui/second-factor/totp/remove-ticked" id="devices-batch">
+    {{ csrf_field() }}
+    {{ confirm_fields("remove-ticked") }}
+    {{ dialog_buttons("Remove devices") }}
+  </form>
+{% endcall %}
+{% endif %}
 
 {% if factor.totp %}
 {% call card("Recovery codes", meta=factor.recovery_codes_left ~ " left. New ones replace them all.") %}

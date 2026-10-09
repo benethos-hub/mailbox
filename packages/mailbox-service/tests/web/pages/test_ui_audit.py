@@ -81,7 +81,7 @@ def test_the_card_on_a_users_page(app_client: TestClient, services: Services) ->
     sign_in(app_client, *browser_admin(services))
     anna = services.users.create_user(ADMIN, "Anna", [], [READER], service=["admin"])
     services.roles.create_role(services.auth.access_of(anna.id), "readers", [READER])
-    page = app_client.get(f"/ui/users/{anna.id}").text
+    page = app_client.get(f"/ui/users/{anna.id}?tab=activity").text
     assert "Recent activity" in page
     assert "users.role_created" in page
     # What was done to Anna is not what Anna did.

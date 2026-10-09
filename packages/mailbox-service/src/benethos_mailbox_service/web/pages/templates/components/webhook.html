@@ -1,0 +1,27 @@
+{# The fields of a webhook, for New webhook and its Change card alike:
+   the URL, the events, the accounts. ``typed``: what the form holds,
+   none for an empty one. ``events``: every event, ``accounts``: the
+   accounts a webhook of the caller can hear of. #}
+{% macro webhook_fields(typed, events, accounts, focus=False) %}
+<div class="form-grid">
+  <div class="field wide">
+    <label for="f-url">URL</label>
+    <input id="f-url" name="url" type="url" value="{{ typed.url if typed else '' }}" required{% if focus %} autofocus{% endif %} placeholder="https://receiver.example.org/mail" />
+    <span class="hint">http or https. A host in the local network is allowed.</span>
+  </div>
+</div>
+<div class="field">
+  <span class="label">Events</span>
+  <div class="checks">
+    {% for event in events %}<label class="check"><input type="checkbox" name="events" value="{{ event }}"{% if not typed or event in typed.events %} checked{% endif %} /> {{ event }}</label>{% endfor %}
+  </div>
+</div>
+<div class="field">
+  <span class="label">Accounts</span>
+  <div class="checks">
+    <label class="check"><input type="checkbox" name="every" value="1"{% if not typed or typed.every %} checked{% endif %} /> every account you may read, also later ones</label>
+    {% for account in accounts %}<label class="check"><input type="checkbox" name="accounts" value="{{ account.id }}"{% if typed and account.id in typed.accounts %} checked{% endif %} /> {{ account.email }}</label>{% endfor %}
+  </div>
+  <span class="hint">Untick every account to choose some.</span>
+</div>
+{% endmacro %}

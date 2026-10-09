@@ -1,19 +1,31 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, breadcrumb, csrf_field, folder_options with context %}
+{% from "components/ui.html" import action, breadcrumb, csrf_field, dialog_button, dialog_buttons, folder_options, form_dialog, icon, link_button with context %}
 {% block title %}{{ message.subject | or_missing }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ message.subject | or_missing }}{% endblock %}
 {% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
+{# The header holds what can be done with the message (docs/UI.md 4.4):
+   Reply with its word, the rest as icons, the way back is the
+   breadcrumb. #}
 {% block actions %}
+{% set url = "/ui/accounts/" ~ account.id ~ "/mail/" ~ message.id %}
+{% set compose = "/ui/accounts/" ~ account.id ~ "/compose?" %}
+{% set mail = "/ui/accounts/" ~ account.id ~ "/mail" %}
 {% if can.write %}
-{% for verb, label in [("reply", "Reply"), ("reply_all", "Reply to all"), ("forward", "Forward")] %}
-<a class="btn" href="/ui/accounts/{{ account.id }}/compose?{{ [('original', message.id), ('action', verb)] | urlencode }}">{{ label }}</a>
-{% endfor %}
+{{ link_button(compose ~ ([('original', message.id), ('action', 'reply_all')] | urlencode), "Reply to all", "reply-all", alone=True) }}
+{{ link_button(compose ~ ([('original', message.id), ('action', 'forward')] | urlencode), "Forward", "forward", alone=True) }}
 {% endif %}
-{% if can_raw %}<a class="btn" href="/ui/accounts/{{ account.id }}/mail/{{ message.id }}/raw">Download original</a>{% endif %}
+{% if can_raw %}{{ link_button(url ~ "/raw", "Download original", "download", alone=True, word=True) }}{% endif %}
+{% if can.flag %}
+{{ action(url ~ "/flags", "Mark read" if message.unread else "Mark unread", fields={"unread": "0" if message.unread else "1"}, icon="envelope-open" if message.unread else "envelope", alone=True, word=True) }}
+{{ action(url ~ "/flags", "Unstar" if message.starred else "Star", fields={"starred": "0" if message.starred else "1"}, icon="star-fill" if message.starred else "star", alone=True) }}
+{% endif %}
+{% if can.move and tree %}{{ dialog_button("move-message", "Move", "folder-symlink", danger=False) }}{% endif %}
+{% if can.trash and not in_trash %}{{ action(url ~ "/delete", "Move to the trash", fields={"back": mail}, icon="trash", alone=True) }}{% endif %}
+{% if can.purge %}{{ action(url ~ "/delete", "Delete for good", confirm="Delete this message for good? This cannot be undone.", cls="small danger", fields={"permanent": "1", "back": mail}, icon="x-octagon", alone=True, word=True) }}{% endif %}
+{% if can.write %}{{ link_button(compose ~ ([('original', message.id), ('action', 'reply')] | urlencode), "Reply", "reply", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
 {% set url = "/ui/accounts/" ~ account.id ~ "/mail/" ~ message.id %}
-<p class="back"><a href="{{ back_to }}">← Back to the list</a></p>
 <section class="card">
   <div class="body">
     <dl class="facts">
@@ -30,44 +42,43 @@
         {{ "unread" if message.unread else "read" }}{% if message.starred %}, starred{% endif %}
         {% for keyword in message.keywords if keyword not in own %}<span class="tag">{{ keyword }}</span> {% endfor %}
       </dd>
-      <dt>Keywords</dt>
-      <dd>
-        {% for keyword in own %}<span class="tag">{{ keyword }}</span>{% if can.flag %} {{ action(url ~ "/keywords", "Remove " ~ keyword, fields={"remove": keyword}) }}{% endif %} {% else %}{{ "—" if not can.flag }}{% endfor %}
-        {% if can.flag %}
-        <form class="inline toolbar" method="post" action="{{ url }}/keywords">
-          {{ csrf_field() }}
-          <input name="add" aria-label="New keyword" placeholder="New keyword" maxlength="100" />
-          <button class="small" type="submit">Add</button>
-        </form>
-        {% endif %}
-      </dd>
       {% endif %}
       <dt>Id</dt><dd class="mono">{{ message.id }}</dd>
     </dl>
   </div>
 </section>
 
-{% if can.change or can.trash or can.purge %}
+{% if "flags" in account.capabilities and (own or can.flag) %}
 <section class="card">
-  <div class="body toolbar">
+  <header><h2>Keywords</h2></header>
+  <div class="body keywords">
+    {% for keyword in own %}<span class="chip">{{ keyword }}{% if can.flag %}{{ action(url ~ "/keywords", "Remove", fields={"remove": keyword}, cls="small", icon="x-lg", alone=True, name="Remove the keyword " ~ keyword) }}{% endif %}</span>{% else %}{% if not can.flag %}—{% endif %}{% endfor %}
     {% if can.flag %}
-    {{ action(url ~ "/flags", "Mark unread" if not message.unread else "Mark read", fields={"unread": "0" if message.unread else "1"}, cls="") }}
-    {{ action(url ~ "/flags", "Unstar" if message.starred else "Star", fields={"starred": "0" if message.starred else "1"}, cls="") }}
-    {% endif %}
-    {% if can.move and tree %}
-    <form class="inline toolbar" method="post" action="{{ url }}/move">
+    <form class="inline toolbar" method="post" action="{{ url }}/keywords">
       {{ csrf_field() }}
-      <select name="folder" aria-label="Move to folder">
-        {{ folder_options(tree, message.folder_ids) }}
-      </select>
-      <button type="submit">Move</button>
+      <input name="add" aria-label="New keyword" placeholder="New keyword" maxlength="100" />
+      <button class="small" type="submit">{{ icon("plus-lg") }} Add</button>
     </form>
     {% endif %}
-    <span class="grow"></span>
-    {% if can.trash and not in_trash %}{{ action(url ~ "/delete", "Move to the trash", fields={"back": "/ui/accounts/" ~ account.id ~ "/mail"}, cls="") }}{% endif %}
-    {% if can.purge %}{{ action(url ~ "/delete", "Delete for good", confirm="Delete this message for good? This cannot be undone.", cls="danger", fields={"permanent": "1", "back": "/ui/accounts/" ~ account.id ~ "/mail"}) }}{% endif %}
   </div>
 </section>
+{% endif %}
+
+{% if can.move and tree %}
+{% call form_dialog("move-message", "Move the message?", "It goes to the folder you choose and leaves this one.") %}
+  <form method="post" action="{{ url }}/move">
+    {{ csrf_field() }}
+    <div class="form-grid">
+      <div class="field">
+        <label for="f-move-folder">To the folder</label>
+        <select id="f-move-folder" name="folder">
+          {{ folder_options(tree, message.folder_ids) }}
+        </select>
+      </div>
+    </div>
+    {{ dialog_buttons("Move", "folder-symlink", danger=False) }}
+  </form>
+{% endcall %}
 {% endif %}
 
 {% if message.attachments %}
@@ -80,7 +91,7 @@
         <tr>
           <td class="name">{{ a.filename | or_missing }}<span class="sub">{{ a.content_type }}{% if a.inline %}, inline{% endif %}</span></td>
           <td class="num">{{ a.size | size }}</td>
-          <td class="actions">{% if can_attachment %}<a class="btn small" href="/ui/accounts/{{ account.id }}/mail/{{ message.id }}/attachments/{{ a.id | segment }}">Download</a>{% endif %}</td>
+          <td class="actions">{% if can_attachment %}{{ link_button("/ui/accounts/" ~ account.id ~ "/mail/" ~ message.id ~ "/attachments/" ~ (a.id | segment), "Download", "download", alone=True, name="Download " ~ (a.filename or "the attachment")) }}{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>

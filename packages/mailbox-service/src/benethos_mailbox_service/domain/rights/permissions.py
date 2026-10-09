@@ -101,6 +101,8 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "list_webhooks",
         "get_webhook",
         "create_webhook",
+        "update_webhook",
+        "renew_webhook_secret",
         "delete_webhook",
     ),
 }

@@ -121,7 +121,7 @@ def _add(
             "code": code,
         },
     )
-    key = re.search(r'<code class="secret">([^<]+)</code>', scan.text)
+    key = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', scan.text)
     if not run.check(
         f"adding {name} shows a QR code and the key",
         'src="data:image/svg+xml' in scan.text and key is not None,
@@ -299,7 +299,7 @@ def _removed_by_others(
         _add(run, own, "Tablet", password, codes[0] if codes else "")
     shown = api.get(f"/v1/users/{user_id}").json()
     run.check("the API says it has one", shown.get("second_factor") is True)
-    page = browser.get(f"/ui/users/{user_id}")
+    page = browser.get(f"/ui/users/{user_id}?tab=access")
     run.check(
         "the user's page lists the devices",
         '<td class="name">Phone</td>' in page.text

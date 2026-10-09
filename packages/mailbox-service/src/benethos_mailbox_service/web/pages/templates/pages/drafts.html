@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb %}
+{% from "components/ui.html" import breadcrumb, link_button %}
 {% block title %}Drafts · {{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}Drafts{% endblock %}
 {% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
 {% block actions %}
-{% if can_write %}<a class="btn primary" href="/ui/accounts/{{ account.id }}/compose">Write</a>{% endif %}
+{% if can_write %}{{ link_button("/ui/accounts/" ~ account.id ~ "/compose", "Write", "pencil", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
 <section class="card">

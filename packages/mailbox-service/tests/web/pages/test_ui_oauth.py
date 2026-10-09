@@ -337,7 +337,7 @@ def _code_page(client: TestClient, **fields: str) -> tuple[str, str]:
 def test_sign_in_with_a_code() -> None:
     client, services, clock = _with_code(TokenEndpoint(code(), PENDING, signed_in()))
     page, url = _code_page(client)
-    assert '<code class="secret">ABCD-EFGH</code>' in page
+    assert '<code class="secret" id="user-code">ABCD-EFGH</code>' in page
     assert 'href="https://microsoft.com/devicelogin"' in page
     assert 'hx-trigger="every 5s"' in page
     # Nothing yet: htmx swaps nothing and asks again.

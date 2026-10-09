@@ -1,5 +1,5 @@
-"""The status of the service, the recovery key and the service log
-(docs/UI.md, 6.5)."""
+"""The recovery key and the service log (docs/UI.md, 6.5). The status
+of the service is on the overview and the accounts list."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
 from ....domain.system import LEVELS
-from ...services import Log, Recovery, Status
+from ...services import Log, Recovery
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
 from ..forms import failing
@@ -20,19 +20,6 @@ router = APIRouter()
 
 RECOVERY_PAGE = "/ui/recovery-key"
 LOG_LEVELS = [(name, name) for name in LEVELS]
-
-
-@router.get("/status")
-async def status(request: Request, caller: Viewer, status: Status) -> HTMLResponse:
-    """Accounts, the sync worker and the caller's webhooks. Nothing is asked
-    of a provider for it."""
-    return render(
-        request,
-        "pages/status.html",
-        page="status",
-        service=status.status(caller),
-        can_webhooks=caller.allows("list_webhooks"),
-    )
 
 
 @router.get("/log")

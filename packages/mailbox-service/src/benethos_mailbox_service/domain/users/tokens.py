@@ -7,7 +7,7 @@ from datetime import datetime
 
 from ...data.models import ApiToken
 from ...data.storage import TokenRepository
-from ...errors import missing
+from ...errors import BadRequestError, missing
 from ..activity import ActivityLog, Actor
 from ..activity import users as said
 from ..auth import AuthService, TokenState
@@ -75,3 +75,16 @@ class TokenService:
                     )
                 )
         return token
+
+    def revoke_tokens(
+        self, access: Access, user_id: str, token_ids: list[str]
+    ) -> list[ApiToken]:
+        """Several tokens of one user at once, each as ``revoke_token``.
+        None is revoked when one is not the user's."""
+        if not token_ids:
+            raise BadRequestError("tick at least one token")
+        self._rules.managed(access, "revoke_token", user_id)
+        for token_id in token_ids:
+            if self._tokens.get(token_id).user_id != user_id:
+                raise missing("token", token_id)
+        return [self.revoke_token(access, user_id, t) for t in dict.fromkeys(token_ids)]

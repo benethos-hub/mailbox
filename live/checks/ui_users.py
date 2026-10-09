@@ -76,7 +76,7 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
     page = browser.post(
         f"{user_path}/tokens", data={"csrf_token": csrf, "name": "live", "days": "1"}
     ).text
-    shown = re.search(r'<code class="secret">([^<]+)</code>', page)
+    shown = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', page)
     run.check("the new token is shown once", shown is not None)
     run.check(
         "and never again",
@@ -92,7 +92,8 @@ def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> N
             me.status_code == 200 and me.json()["name"] == "ui-live-reader",
         )
         token_id = re.search(
-            r"/tokens/(tok_[0-9a-f]+)/revoke", browser.get(user_path).text
+            r"/tokens/(tok_[0-9a-f]+)/revoke",
+            browser.get(f"{user_path}?tab=access").text,
         )
         if token_id is not None:
             browser.post(

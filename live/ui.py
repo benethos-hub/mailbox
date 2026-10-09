@@ -69,14 +69,17 @@ def check_frame(run: Run, browser: httpx.Client, emails: list[str]) -> None:
 def check_service(
     run: Run, browser: httpx.Client, url: str, admin: Admin, emails: list[str]
 ) -> None:
-    """The pages of phase 4b: status, a webhook, the recovery key, the log
-    and a user with a one-time password. Nothing here touches a mailbox."""
-    status = browser.get("/ui/status")
+    """The state of the service on the overview and the accounts list, a
+    webhook, the recovery key, the log and a user with a one-time
+    password. Nothing here touches a mailbox."""
+    home = browser.get("/ui")
+    accounts = browser.get("/ui/accounts")
     run.check(
-        "the status names both accounts and the worker",
-        status.status_code == 200
-        and all(e in status.text.lower() for e in emails)
-        and "<h2>Sync worker</h2>" in status.text,
+        "the overview names the worker, the accounts list both accounts"
+        " and their last sync",
+        "<dt>Sync worker</dt>" in home.text
+        and all(e in accounts.text.lower() for e in emails)
+        and "<th>Last sync</th>" in accounts.text,
     )
     csrf = csrf_of(browser.get("/ui/webhooks").text)
     # Port 9 (discard): nothing takes the posts, the log shows the failures.
@@ -95,6 +98,26 @@ def check_service(
     )
     listed = browser.get("/ui/webhooks").text
     run.check("the webhook is listed", "127.0.0.1:9/ui-live" in listed)
+    changed = browser.post(
+        hook.url.path,
+        data={
+            "csrf_token": csrf,
+            "url": "http://127.0.0.1:9/ui-live-changed",
+            "events": ["message.created", "message.sent"],
+            "every": "1",
+        },
+    )
+    run.check(
+        "change its URL and events",
+        "Saved." in changed.text
+        and "127.0.0.1:9/ui-live-changed" in changed.text
+        and 'name="events" value="message.sent" checked' in changed.text,
+    )
+    renewed = browser.post(f"{hook.url.path}/secret", data={"csrf_token": csrf})
+    run.check(
+        "give it a new secret, shown once",
+        "New secret made." in renewed.text and "shown this once" in renewed.text,
+    )
     removed = browser.post(f"{hook.url.path}/delete", data={"csrf_token": csrf})
     run.check("remove the webhook", "Webhook removed." in removed.text)
 
@@ -109,7 +132,7 @@ def check_service(
     shown = browser.post(
         "/ui/recovery-key", data={"csrf_token": csrf, "password": admin.password}
     )
-    key = re.search(r'<code class="secret">([^<]+)</code>', shown.text)
+    key = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', shown.text)
     run.check("the recovery key is shown after it", key is not None)
     run.check(
         "and only once",
@@ -135,7 +158,7 @@ def check_service(
             "one_time": "1",
         },
     )
-    password = re.search(r'<code class="secret">([^<]+)</code>', once.text)
+    password = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', once.text)
     if not run.check("a new user gets a one-time password", password is not None):
         return
     assert password is not None
@@ -151,9 +174,10 @@ def check_service(
     api = browser.post(
         "/ui/users", data={"csrf_token": csrf, "name": "ui-live-api", "grants": "0"}
     )
+    access = browser.get(f"{api.url.path}?tab=access").text
     run.check(
         "a new user is an API user by default",
-        "off: an API user, tokens only" in api.text and "Set password" not in api.text,
+        "off: an API user, tokens only" in access and "Set password" not in access,
     )
     gone = browser.post(f"{api.url.path}/delete", data={"csrf_token": csrf})
     run.check("delete the API user", "User deleted" in gone.text)
@@ -255,6 +279,8 @@ def check_audit(run: Run, browser: httpx.Client, url: str, admin: Admin) -> None
         "users.token_issued",
         "users.role_created",
         "webhooks.created",
+        "webhooks.changed",
+        "webhooks.secret_renewed",
         "webhooks.removed",
         "system.recovery_shown",
         "system.log_read",
@@ -269,10 +295,15 @@ def check_audit(run: Run, browser: httpx.Client, url: str, admin: Admin) -> None
     run.check(
         "its filter keeps an area",
         set(re.findall(r'<span class="mono">(\w+\.\w+)</span>', hooks))
-        == {"webhooks.created", "webhooks.removed"},
+        == {
+            "webhooks.created",
+            "webhooks.changed",
+            "webhooks.secret_renewed",
+            "webhooks.removed",
+        },
     )
     own = re.search(r'href="(/ui/users/usr_\w+)"', browser.get("/ui").text)
-    card = browser.get(own.group(1)).text if own else ""
+    card = browser.get(f"{own.group(1)}?tab=activity").text if own else ""
     # The newest ten: this run did more since its sign-in.
     run.check(
         "the own page shows its recent activity",

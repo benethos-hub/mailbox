@@ -8,7 +8,7 @@ import sqlite3
 from datetime import datetime
 
 from ....common.clock import iso, parse_iso
-from ...models import Webhook
+from ...models import ChangeKind, Webhook
 from ..webhooks import Attempt, Delivery, Sealed, WebhookRecord
 from .database import Database
 from .rows import SqliteRows
@@ -54,6 +54,30 @@ class SqliteWebhookRepository:
 
     def delete(self, webhook_id: str) -> None:
         self._rows.delete(webhook_id)
+
+    def change(
+        self,
+        webhook_id: str,
+        *,
+        url: str,
+        events: builtins.list[ChangeKind],
+        accounts: builtins.list[str] | None,
+    ) -> None:
+        self._db.execute(
+            "UPDATE webhooks SET url = ?, events = ?, accounts = ? WHERE id = ?",
+            (
+                url,
+                json.dumps(events),
+                json.dumps(accounts) if accounts is not None else None,
+                webhook_id,
+            ),
+        )
+
+    def set_secret(self, webhook_id: str, secret: Sealed) -> None:
+        self._db.execute(
+            "UPDATE webhooks SET key_id = ?, nonce = ?, ciphertext = ? WHERE id = ?",
+            (secret.key_id, secret.nonce, secret.ciphertext, webhook_id),
+        )
 
     def delete_for_user(self, user_id: str) -> int:
         return self._db.execute("DELETE FROM webhooks WHERE user_id = ?", (user_id,))

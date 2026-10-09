@@ -96,8 +96,13 @@ def check_folders(run: Run, browser: httpx.Client, csrf: str, base: str) -> None
     folder = parse_qs(urlsplit(str(created.url)).query).get("folder", [""])[0]
     run.check("create a folder", "ui-live-check created." in created.text)
     renamed = browser.post(
-        f"{base}/folders/rename",
-        data={"csrf_token": csrf, "folder": folder, "name": "ui-live-check-2"},
+        f"{base}/folders/change",
+        data={
+            "csrf_token": csrf,
+            "folder": folder,
+            "was_name": "ui-live-check",
+            "name": "ui-live-check-2",
+        },
     )
     run.check("rename it", "Renamed." in renamed.text)
     folder = parse_qs(urlsplit(str(renamed.url)).query).get("folder", [""])[0]
@@ -245,14 +250,15 @@ def check_sent_mail(
         )
         run.check(
             "give it a keyword",
-            "Remove live-check" in tagged.text and 'role="alert"' not in tagged.text,
+            'aria-label="Remove the keyword live-check"' in tagged.text
+            and 'role="alert"' not in tagged.text,
         )
         untagged = browser.post(
             f"{received}/keywords", data={"csrf_token": csrf, "remove": "live-check"}
         )
         run.check(
             "take the keyword away",
-            "Remove live-check" not in untagged.text
+            "Remove the keyword live-check" not in untagged.text
             and 'role="alert"' not in untagged.text,
         )
         trashed = browser.post(f"{received}/delete", data={"csrf_token": csrf})

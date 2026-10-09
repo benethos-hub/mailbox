@@ -1,5 +1,6 @@
-"""The sidebar: which entries a caller sees (docs/UI.md, section 3), and
-the breadcrumb of the mail pages.
+"""The sidebar: which entries a caller sees and which carry a dot for
+what waits for a person (docs/UI.md, section 3), and the breadcrumb of
+the mail pages.
 
 An entry shows only to a caller with the right its page needs. The page
 checks the right again through the domain: hiding an entry is a
@@ -13,6 +14,7 @@ from urllib.parse import urlencode
 
 from ...data.models import Account
 from ...domain.rights import Access
+from ...domain.system import Attention
 
 # A breadcrumb: (label, link) pairs, the last one the page itself.
 Trail = list[tuple[str, str | None]]
@@ -23,8 +25,11 @@ class Entry:
     # The ``page`` a route renders with, to mark the entry active.
     key: str
     label: str
+    # Its icon in the sprite, by the name in Bootstrap Icons.
     icon: str
     url: str
+    # Something on the page waits for a person: a dot beside the entry.
+    dot: bool = False
 
 
 @dataclass(frozen=True)
@@ -33,35 +38,40 @@ class Group:
     entries: list[Entry]
 
 
-def navigation(caller: Access) -> list[Group]:
+def navigation(caller: Access, attention: Attention | None = None) -> list[Group]:
     """The groups of the sidebar, each with the entries the caller may
     open. A group without entries is left out."""
+    attention = attention or Attention()
     mailboxes = []
     if caller.anywhere("list_accounts") or caller.allows("create_account"):
-        mailboxes.append(Entry("accounts", "Accounts", "▤", "/ui/accounts"))
+        mailboxes.append(
+            Entry("accounts", "Accounts", "at", "/ui/accounts", attention.accounts)
+        )
     if caller.anywhere("list_sends"):
-        mailboxes.append(Entry("sends", "Sends", "⇢", "/ui/sends"))
+        mailboxes.append(Entry("sends", "Sends", "send", "/ui/sends"))
     if caller.allows("list_webhooks"):
-        mailboxes.append(Entry("webhooks", "Webhooks", "⚑", "/ui/webhooks"))
+        mailboxes.append(
+            Entry(
+                "webhooks", "Webhooks", "broadcast", "/ui/webhooks", attention.webhooks
+            )
+        )
     service = []
     if caller.allows("list_users"):
-        service.append(Entry("users", "Users", "☺", "/ui/users"))
+        service.append(Entry("users", "Users", "people", "/ui/users"))
     if caller.allows("list_roles"):
-        service.append(Entry("roles", "Roles", "◈", "/ui/roles"))
-    if caller.sees_status():
-        service.append(Entry("status", "Status", "◉", "/ui/status"))
+        service.append(Entry("roles", "Roles", "person-badge", "/ui/roles"))
     if caller.allows("list_activity"):
-        service.append(Entry("audit", "Audit", "✎", "/ui/audit"))
+        service.append(Entry("audit", "Audit", "journal-text", "/ui/audit"))
     if caller.allows("read_service_log"):
-        service.append(Entry("log", "Log", "☰", "/ui/log"))
+        service.append(Entry("log", "Log", "terminal", "/ui/log"))
     if caller.allows("show_recovery_key"):
-        service.append(Entry("recovery", "Recovery key", "⚿", "/ui/recovery-key"))
+        service.append(Entry("recovery", "Recovery key", "key", "/ui/recovery-key"))
     groups = [
         Group(
             None,
             [
-                Entry("home", "Overview", "◫", "/ui"),
-                Entry("mail", "Mail", "✉", "/ui/mail"),
+                Entry("home", "Overview", "house", "/ui"),
+                Entry("mail", "Mail search", "search", "/ui/mail"),
             ],
         ),
         Group("Mailboxes", mailboxes),
@@ -82,9 +92,12 @@ def mail_url(account_id: str, folder_id: str | None = None) -> str:
 
 
 def mail_trail(account: Account, folder: tuple[str, str] | None = None) -> Trail:
-    """Mail › the account's mail › a folder, for the pages below them.
+    """Mail search › the account's mail › a folder, for the pages below them.
     ``folder``: its id and name."""
-    trail: Trail = [("Mail", "/ui/mail"), (account.email, mail_url(account.id))]
+    trail: Trail = [
+        ("Mail search", "/ui/mail"),
+        (account.email, mail_url(account.id)),
+    ]
     if folder is not None:
         folder_id, name = folder
         trail.append((name, mail_url(account.id, folder_id)))

@@ -755,7 +755,7 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | POST | `/v1/oauth/{provider}/device/{sign_in_id}` | poll the sign-in with a code: `connected` false until the person signed in, then the account, no sooner than its `interval` |
 | GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back after the UI's sign-in in a browser: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
-| GET | `/v1/status` | the sync worker and the accounts the caller may see the status of, as the UI's status page shows them. Nothing is asked of a provider |
+| GET | `/v1/status` | the sync worker and the accounts the caller may see the status of, as the UI's overview and Accounts list show them. Nothing is asked of a provider |
 
 **Decided 2026-10-06, the status at the API:** `get_status` in
 `accounts.read`, for the accounts the caller may list. The worker names
@@ -907,7 +907,13 @@ request that fails stores nothing and may be tried again.
 | GET | `{acc}/changes?since=<state>` | created / updated / deleted message ids since a state token, plus a new state |
 | GET | `/v1/changes?since=<state>` | the same across all accounts (`list_all_changes`) |
 | GET / POST | `/v1/webhooks` | list, register (URL, events, account filter) |
-| GET / DELETE | `/v1/webhooks/{webhook_id}` | one webhook with its last 20 posts to the receiver, remove |
+| GET / PATCH / DELETE | `/v1/webhooks/{webhook_id}` | one webhook with its last 20 posts to the receiver, change its URL, events or accounts, remove |
+| POST | `/v1/webhooks/{webhook_id}/secret` | a new signing secret, shown once, the one before void at once (`renew_webhook_secret`) |
+
+Only the user who made a webhook sees, changes and removes it. A change
+keeps its deliveries and where its posts stand, so no event is lost or
+posted twice. `accounts` set to `null` is every account the owner may
+read.
 
 Events: `message.created`, `message.updated`, `message.deleted`,
 `message.sent`, `account.needs_reauth`. Payloads carry ids only, signed with
@@ -1367,7 +1373,7 @@ with the role
   | `audit` | `list_sends`, `list_all_sends` on accounts, `list_activity` in `service` |
   | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, credentials of mail accounts |
   | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account`. Of the service |
-  | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook`. Of the service |
+  | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `renew_webhook_secret`, `delete_webhook`. Of the service |
   | `users.read` | users, their tokens, roles, to read. Of the service |
   | `users.manage` | users, their tokens, roles. Of the service |
   | `admin` | everything, and `show_recovery_key` (the recovery key in the UI) and `read_service_log` (the log page), [UI.md](UI.md) 6.5, which nothing else gives. Of the service |

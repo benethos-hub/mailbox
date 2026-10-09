@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, breadcrumb, card, credentials, csrf_field, danger_card, fact, facts with context %}
+{% from "components/ui.html" import action, breadcrumb, card, credentials, csrf_field, danger_card, fact, facts, link_button with context %}
 {% from "components/connection.html" import connection_fields %}
 {% block title %}{{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ account.email }}{% endblock %}
 {% block subheading %}{{ breadcrumb([("Accounts", "/ui/accounts"), (account.email, None)]) }}{% endblock %}
 {% block actions %}
-{% if can_audit %}<a class="btn" href="/ui/sends?account={{ account.id }}">Sends</a>{% endif %}
-{% if can_verify %}{{ action("/ui/accounts/" ~ account.id ~ "/verify", "Verify", cls="") }}{% endif %}
-{% if can_read %}<a class="btn primary" href="/ui/accounts/{{ account.id }}/mail">Mail</a>{% endif %}
+{% if can_audit %}{{ link_button("/ui/sends?account=" ~ account.id, "Sends", "send", cls="") }}{% endif %}
+{% if can_verify %}{{ action("/ui/accounts/" ~ account.id ~ "/verify", "Verify", cls="", icon="arrow-repeat") }}{% endif %}
+{% if can_read %}{{ link_button("/ui/accounts/" ~ account.id ~ "/mail", "Mail", "envelope", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
 {% set secret_name = "API token" if account.settings.get("auth") == "token" else "password" %}

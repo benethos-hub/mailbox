@@ -20,8 +20,10 @@ from fastapi.templating import Jinja2Templates
 
 from ... import __version__
 from ...common.clock import log_time, utc_now
+from ...common.text import plural
 from ...common.urls import path_and_query
 from ...data.models import Address
+from ..services import get_status
 from .navigation import navigation, own_page
 from .session import PATH, SignInRequiredError, found_for, show_once
 
@@ -42,6 +44,24 @@ def when(value: datetime | None) -> str:
     if value is None:
         return MISSING
     return value.astimezone().strftime("%Y-%m-%d %H:%M")
+
+
+def ago(value: datetime | None) -> str:
+    """A time in a list: under a day ago "3 minutes ago", older as
+    ``when``. A time to come is ``when`` as well."""
+    if value is None:
+        return MISSING
+    seconds = (utc_now() - value).total_seconds()
+    if not 0 <= seconds < _DAY:
+        return when(value)
+    if seconds < _MINUTE:
+        return "just now"
+    if seconds < _HOUR:
+        return f"{plural(int(seconds // _MINUTE), 'minute')} ago"
+    return f"{plural(int(seconds // _HOUR), 'hour')} ago"
+
+
+_MINUTE, _HOUR, _DAY = 60, 3600, 86400
 
 
 def past(value: datetime | None) -> bool:
@@ -98,6 +118,7 @@ def segment(value: str) -> str:
 
 templates.env.filters.update(
     when=when,
+    ago=ago,
     past=past,
     moment=log_time,
     size=size,
@@ -119,18 +140,22 @@ def render(
     status_code: int = 200,
     **context: Any,
 ) -> HTMLResponse:
-    """A page, with what the layout needs: the active navigation entry and
-    the entries the caller may open, the session's CSRF token, who is
-    signed in, and the message the form before left in the session."""
+    """A page, with what the layout needs: the active navigation entry, the
+    entries the caller may open and their dots, the session's CSRF token,
+    who is signed in, and the message the form before left in the
+    session."""
     found = found_for(request)
     session = found.session if found is not None else None
     access = found.access if found is not None else None
+    attention = get_status(request).attention(access) if access is not None else None
     context.update(
         page=page,
         csrf=session.csrf if session is not None else "",
         me=access,
-        nav=navigation(access) if access is not None else [],
+        nav=navigation(access, attention) if access is not None else [],
         own_page=own_page(access) if access is not None else None,
+        # For the account menu: whether a code follows the password.
+        factor_on=session is not None and session.factor is not None,
     )
     for key in ("msg", "err"):
         kept = session.once.pop(key, None) if session is not None else None

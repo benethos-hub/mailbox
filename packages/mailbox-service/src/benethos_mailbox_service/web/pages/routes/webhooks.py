@@ -1,6 +1,5 @@
-"""Webhooks: list, create, one with its delivery log, remove (docs/UI.md,
-6.4). A webhook has no change: the API has none. A person removes it and
-creates it anew."""
+"""Webhooks: list, create, one with its delivery log, change, a new
+secret, remove (docs/UI.md, 6.4)."""
 
 from __future__ import annotations
 
@@ -9,8 +8,9 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
-from ....data.models import CHANGE_KINDS, WebhookCreate
+from ....data.models import CHANGE_KINDS, Webhook, WebhookCreate, WebhookUpdate
 from ....domain.rights import Access
+from ....domain.webhooks import WebhookService
 from ...services import Webhooks, get_accounts
 from ..deps import Actor, Viewer, account_names
 from ..filters import Field, filter_bar
@@ -87,18 +87,31 @@ def _typed(form: Any) -> dict[str, Any]:
     }
 
 
-def _request_of(form: Any) -> WebhookCreate:
+def _shown(webhook: Webhook) -> dict[str, Any]:
+    """The fields of a webhook as its Change card shows them."""
+    return {
+        "url": webhook.url,
+        "events": list(webhook.events),
+        "every": webhook.accounts is None,
+        "accounts": list(webhook.accounts or []),
+    }
+
+
+def _fields_of(form: Any) -> dict[str, Any]:
+    """The URL, events and accounts of a webhook form, for the API's
+    shapes. Every account is ``accounts`` None."""
     typed = _typed(form)
     if not typed["every"] and not typed["accounts"]:
         raise FormError("Choose the accounts, or every account.")
-    return model_of(
-        WebhookCreate,
-        {
-            "url": typed["url"],
-            "events": typed["events"],
-            "accounts": None if typed["every"] else typed["accounts"],
-        },
-    )
+    return {
+        "url": typed["url"],
+        "events": typed["events"],
+        "accounts": None if typed["every"] else typed["accounts"],
+    }
+
+
+def _request_of(form: Any) -> WebhookCreate:
+    return model_of(WebhookCreate, _fields_of(form))
 
 
 @router.post("/webhooks")
@@ -120,16 +133,64 @@ async def create_webhook(
 async def webhook(
     request: Request, caller: Viewer, webhook_id: str, webhooks: Webhooks
 ) -> HTMLResponse:
+    return _webhook_page(request, caller, webhook_id, webhooks)
+
+
+def _webhook_page(
+    request: Request,
+    caller: Access,
+    webhook_id: str,
+    webhooks: WebhookService,
+    form: Any = None,
+    err: str | None = None,
+) -> HTMLResponse:
+    """A webhook's page, its Change card as ``form`` held it if given."""
     found = webhooks.get_webhook(caller, webhook_id)
     return render(
         request,
         "pages/webhook.html",
         page="webhooks",
+        status_code=400 if err else 200,
+        err=err,
         webhook=found,
         names=account_names(request, caller),
         secret=take_once(request, f"secret:{webhook_id}"),
+        typed=_typed(form) if form is not None else _shown(found),
+        events=CHANGE_KINDS,
+        accounts=_readable(request, caller),
+        can_update=caller.allows("update_webhook"),
+        can_renew=caller.allows("renew_webhook_secret"),
         can_delete=caller.allows("delete_webhook"),
     )
+
+
+@router.post("/webhooks/{webhook_id}")
+async def update_webhook(
+    request: Request, caller: Actor, webhook_id: str, webhooks: Webhooks
+) -> Response:
+    form = await request.form()
+    here = f"/ui/webhooks/{webhook_id}"
+    with failing(
+        here,
+        again=lambda err: _webhook_page(
+            request, caller, webhook_id, webhooks, form, err
+        ),
+    ):
+        changes = model_of(WebhookUpdate, _fields_of(form))
+        webhooks.update_webhook(caller, webhook_id, changes)
+    return back(request, here, "Saved.")
+
+
+@router.post("/webhooks/{webhook_id}/secret")
+async def renew_webhook_secret(
+    request: Request, caller: Actor, webhook_id: str, webhooks: Webhooks
+) -> Response:
+    here = f"/ui/webhooks/{webhook_id}"
+    with failing(here):
+        renewed = webhooks.renew_webhook_secret(caller, webhook_id)
+    # Shown on the next page, once, and never in the URL.
+    show_once(request, f"secret:{webhook_id}", renewed.secret)
+    return back(request, here, "New secret made. The one before stops at once.")
 
 
 @router.post("/webhooks/{webhook_id}/delete")

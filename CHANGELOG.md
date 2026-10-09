@@ -41,6 +41,18 @@ adheres to [Semantic Versioning](https://semver.org/).
   (`remove_totp_device`) one TOTP device, both in `users.manage`, for a user whose
   rights the caller holds, never for the caller itself. The database
   moves to schema 19.
+- `PATCH /v1/webhooks/{webhook_id}` (`update_webhook`) changes a
+  webhook's `url`, `events` or `accounts`. A field left out stays,
+  `accounts` set to `null` is every account the owner may read. Its
+  deliveries, where its posts stand and its secret stay. `POST
+  /v1/webhooks/{webhook_id}/secret` (`renew_webhook_secret`) answers a
+  new signing secret, shown once. The one before stops at once. Both are
+  in `webhooks.manage`, for the webhook's owner alone, and audited as
+  `webhooks.changed` and `webhooks.secret_renewed`. The UI's webhook
+  page has a Change card and **New secret**. `mailbox-client` has both
+  as `update_webhook` and `renew_webhook_secret`, with the records
+  `Webhook` and `WebhookSecret`. The secret is a `Secret`, kept out of
+  `repr` and `str`, read with `get_secret_value()`.
 - `users reset-second-factor <name>` on the host removes a user's second factor,
   for the last administrator who lost every device and the recovery
   codes.
@@ -50,6 +62,29 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The UI names the company a person signs in at: "Sign in with
   Google" for Gmail. It offers a sign-in with a code only where the
   provider has one.
+- The UI shows icons, a set of Bootstrap Icons kept in the service, and
+  asks before a form that changes much in a dialog of its own. Every
+  secret shown once has a copy button. Lists show recent times as
+  "3 minutes ago". `/` puts the cursor in the search field. Nothing is
+  loaded from elsewhere.
+- The UI's sidebar ends in an account menu with your page, Password,
+  Second factor and Sign out. It folds to icons, and a dot marks
+  Accounts or Webhooks when something there needs a look. Mail is now
+  **Mail search**. The Status page is gone: the Accounts list shows
+  each account's last sync and error, the overview the sync worker.
+- Lists in the UI create at their head and act on their rows: a plus in
+  the card's header, a pencil and a bin on each device, token and the
+  folder shown. Several devices or tokens are ticked and removed or
+  revoked together, devices after one password and one code. A folder
+  is renamed and moved in one form, and a move asks first.
+- A user's page in the UI has the tabs Rights, Access and Activity. The
+  grant editor shows each grant as a line to change or remove. The
+  Users list disables, enables, gives or takes a role of the ticked
+  users and names those it could not change.
+- Each row of the UI's Accounts list links to the account's mail and
+  sends. A message has its actions in its header and its keywords as
+  chips, and Move asks for the folder in a dialog. The batch bar of a
+  mail list asks for a folder only to move, and its head ticks all.
 
 ## [0.3.1] - 2026-10-08
 

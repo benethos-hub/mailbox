@@ -69,7 +69,7 @@ def code_form(client: TestClient, code: str) -> str:
 
 def scanned(page: httpx.Response) -> bytes:
     """The secret of the key beside the QR code."""
-    key = re.search(r'<code class="secret">([^<]+)</code>', page.text)
+    key = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', page.text)
     assert key is not None
     return totp.from_base32(key.group(1).replace(" ", ""))
 
@@ -413,13 +413,13 @@ def test_the_recovery_key_needs_a_code_with_a_second_factor(
             app_client, "/ui/recovery-key", {"password": password, "code": code}
         )
         assert "the code is not right" in refused.text
-        assert '<code class="secret">' not in refused.text
+        assert '<code class="secret"' not in refused.text
     shown = post(
         app_client,
         "/ui/recovery-key",
         {"password": password, "code": code_after(secret)},
     )
-    key = re.search(r'<code class="secret">([^<]+)</code>', shown.text)
+    key = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', shown.text)
     assert key is not None
     assert key.group(1) == encode_recovery(services.vault.master_key())
 
@@ -442,7 +442,7 @@ def test_an_administrator_removes_a_device_then_every_one(
     anna = TestClient(ui.app)
     try_sign_in(anna, name, password)
     code_form(anna, code_after(secret))
-    page = ui.get(f"/ui/users/{user.id}").text
+    page = ui.get(f"/ui/users/{user.id}?tab=access").text
     assert "a code of an authenticator app after the password" in page
     assert '<td class="name">Phone</td>' in page and "9 recovery codes left" in page
     phone = device_ids(services, name)["Phone"]
@@ -463,7 +463,7 @@ def test_a_reader_sees_the_devices_but_removes_none(
     user = user_named(services, name)
     # It holds the rights of the user it reads, which the page wants.
     sign_in(app_client, *browser_user(services, READER, service=["users.read"]))
-    page = app_client.get(f"/ui/users/{user.id}").text
+    page = app_client.get(f"/ui/users/{user.id}?tab=access").text
     assert '<td class="name">Phone</td>' in page
     assert "second-factor/remove" not in page and "/totp/" not in page
     refused = post(app_client, f"/ui/users/{user.id}/second-factor/remove")
@@ -471,11 +471,14 @@ def test_a_reader_sees_the_devices_but_removes_none(
     assert services.factors.has(user.id)
 
 
-def test_the_own_user_page_links_to_the_factor(
+def test_the_account_menu_links_to_the_factor_and_says_its_state(
     ui: TestClient, services: Services
 ) -> None:
     # The fixture ``ui`` signed in as the user browser_admin makes.
     me = user_named(services, "admin")
     page = ui.get(f"/ui/users/{me.id}").text
-    assert "Set up a second factor" in page
+    menu = page[page.index('<details class="account-menu">') :]
+    assert re.search(
+        r'href="/ui/second-factor">.*?Second factor <span class="hint">off', menu
+    )
     assert "second-factor/remove" not in page

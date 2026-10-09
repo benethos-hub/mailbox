@@ -214,7 +214,8 @@ packages/mailbox-service/
         routes/         # one router per resource
       pages/            # the configuration UI under /ui, not in OpenAPI
         deps.py         # who is signed in, the CSRF check, if_allowed
-        navigation.py   # the sidebar entries a caller may open, breadcrumbs
+        navigation.py   # the sidebar entries a caller may open and their
+                        #   dots, breadcrumbs
         filters.py      # the filter bar of a list: its fields and chips,
                         #   user_names and records_filter for the lists
                         #   of records
@@ -232,8 +233,11 @@ packages/mailbox-service/
         errors.py       # errors as a page
         routes/         # one module per area
         templates/      # base and bare, partials, components (macros), pages
-        static/         # app.css, app.js, vendored htmx, img/ (the icon
-                        #   and the logo, made by assets/build.py)
+        static/         # app.css, app.js, early.js (read before the page
+                        #   is drawn), vendored htmx, img/ (the icon
+                        #   and the logo, made by assets/build.py, the
+                        #   sprite of Bootstrap Icons with its licence,
+                        #   made by assets/icons.py)
     domain/             # BUSINESS LOGIC: decides, knows no HTTP
                         # one package per area (docs/REFACTORING.md),
                         #   the service of a package in service.py,
@@ -386,6 +390,7 @@ packages/mailbox-client/
                         #   the page the drafts read too
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a message, send a draft
+      webhooks.py       # change a webhook, a new signing secret
       compose.py        # message_body: what drafts and sending share
       generic.py        # request(): any route, its JSON as it comes
     answers.py          # an answer read: its JSON, the error envelope
@@ -397,7 +402,8 @@ packages/mailbox-client/
                         #   checked before a client is made
     calls.py            # Call: the request an endpoint describes,
                         #   its path below /v1, the timeouts
-    models.py           # the records the clients answer with
+    models.py           # the records the clients answer with, Secret
+                        #   for what the service shows once
     errors.py           # MailboxError and its subclasses
 ```
 

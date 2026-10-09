@@ -1,4 +1,4 @@
-"""Webhooks: register, list and remove them (``WebhookService``), and
+"""Webhooks: register, list, change and remove them (``WebhookService``), and
 post the changes of the feed to them (``WebhookDispatcher``)
 (CONCEPT 6.5).
 """

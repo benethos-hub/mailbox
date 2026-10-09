@@ -1,9 +1,10 @@
-"""Webhooks: register, list and remove (CONCEPT 6.5).
+"""Webhooks: register, list, change and remove (CONCEPT 6.5).
 
-A webhook belongs to the user who created it. It hears of the accounts
-that user may read, checked again at every delivery, so a right taken
-away also stops the webhook. The signing secret is shown once, when the
-webhook is created, and kept sealed with the data key.
+A webhook belongs to the user who created it, who alone changes it. It
+hears of the accounts that user may read, checked again at every
+delivery, so a right taken away also stops the webhook. The signing
+secret is shown once, when the webhook is created or given a new one,
+and kept sealed with the data key.
 """
 
 from __future__ import annotations
@@ -23,6 +24,8 @@ from ...data.models import (
     WebhookCreate,
     WebhookDetail,
     WebhookPost,
+    WebhookSecret,
+    WebhookUpdate,
 )
 from ...data.secrets import CredentialVault
 from ...data.storage import Delivery, WebhookRecord, WebhookRepository
@@ -133,6 +136,72 @@ class WebhookService:
                 for a in self._repository.attempts(webhook_id)
             ],
         )
+
+    def update_webhook(
+        self, access: Access, webhook_id: str, request: WebhookUpdate
+    ) -> Webhook:
+        """Where one of the caller's webhooks posts and what. A field left
+        out stays, ``accounts`` set to None is every account the caller may
+        read. Its deliveries and its secret stay."""
+        access.require("update_webhook")
+        hook = self._own(access, webhook_id).webhook
+        given = request.model_fields_set
+        for name in ("url", "events"):
+            if name in given and getattr(request, name) is None:
+                raise BadRequestError(f"the webhook's {name} cannot be null")
+        url = request.url if request.url is not None else hook.url
+        events = list(dict.fromkeys(request.events or hook.events))
+        accounts = hook.accounts
+        if "accounts" in given:
+            accounts = (
+                list(dict.fromkeys(request.accounts))
+                if request.accounts is not None
+                else None
+            )
+        _check_url(url)
+        for account_id in accounts or []:
+            access.require("list_changes", account_id)
+        changed = tuple(
+            name
+            for name, value in (
+                ("url", url),
+                ("events", events),
+                ("accounts", accounts),
+            )
+            if getattr(hook, name) != value
+        )
+        if not changed:
+            return hook
+        with self._activity.atomic():
+            self._repository.change(
+                webhook_id, url=url, events=events, accounts=accounts
+            )
+            self._activity.record(
+                said.WebhookChanged(
+                    by=Actor.of(access),
+                    webhook_id=webhook_id,
+                    host=_host(url),
+                    changed=changed,
+                )
+            )
+        return self._repository.get(webhook_id).webhook
+
+    def renew_webhook_secret(self, access: Access, webhook_id: str) -> WebhookSecret:
+        """A new signing secret for one of the caller's webhooks, shown this
+        once. The one before stops at once: the next post is signed with the
+        new one."""
+        access.require("renew_webhook_secret")
+        hook = self._own(access, webhook_id).webhook
+        secret = SECRET_PREFIX + token()
+        sealed = self._vault.seal(sealed_label(webhook_id), SecretStr(secret))
+        with self._activity.atomic():
+            self._repository.set_secret(webhook_id, sealed)
+            self._activity.record(
+                said.SecretRenewed(
+                    by=Actor.of(access), webhook_id=webhook_id, host=_host(hook.url)
+                )
+            )
+        return WebhookSecret(webhook_id=webhook_id, secret=secret)
 
     def delete_webhook(self, access: Access, webhook_id: str) -> None:
         access.require("delete_webhook")

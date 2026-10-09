@@ -374,3 +374,27 @@ async def test_a_password_set_by_another_keeps_the_factor(
     user, _, _ = await with_factor(services, clock)
     await services.passwords.one_time_password(ADMIN, user.id)
     assert services.factors.has(user.id)
+
+
+async def test_several_devices_go_after_one_password_and_one_code(
+    services: Services, clock: Clock
+) -> None:
+    """A code counts once: ticking several devices asks for it once."""
+    user, _, codes = await with_factor(services, clock)
+    await add_device(services, user, clock, "Tablet", codes[0])
+    access = access_of(services, user)
+    both = [device_id(services, user, n) for n in ("Phone", "Tablet")]
+    with pytest.raises(NotFoundError):
+        await services.totp.remove_own_devices(
+            access, [both[0], "tfa_unknown"], SECRET, codes[1]
+        )
+    # Nothing was taken: neither device nor the code.
+    assert len(services.factors.mine(access).totp) == 2
+    with pytest.raises(BadRequestError):
+        await services.totp.remove_own_devices(access, [], SECRET, codes[1])
+    stamp = await services.totp.remove_own_devices(access, both, SECRET, codes[1])
+    assert stamp is None and not services.factors.has(user.id)
+    assert sorted(details(services, "users.totp_removed")) == [
+        "removed its authenticator app Phone",
+        "removed its authenticator app Tablet, the last one: the second factor is off",
+    ]

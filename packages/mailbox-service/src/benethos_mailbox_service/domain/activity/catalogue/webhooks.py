@@ -39,6 +39,45 @@ class WebhookCreated(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class WebhookChanged(Activity):
+    name: ClassVar[str] = "changed"
+    audited: ClassVar[bool] = True
+
+    webhook_id: str
+    # The host it posts to now.
+    host: str
+    # What changed: url, events, accounts.
+    changed: tuple[str, ...]
+
+    def says(self) -> str:
+        return (
+            f"changed the {', '.join(self.changed)} of webhook {self.webhook_id}"
+            f", posting to {self.host}"
+        )
+
+    def touched(self) -> str | None:
+        return self.webhook_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class SecretRenewed(Activity):
+    name: ClassVar[str] = "secret_renewed"
+    audited: ClassVar[bool] = True
+
+    webhook_id: str
+    host: str
+
+    def says(self) -> str:
+        return (
+            f"gave webhook {self.webhook_id} to {self.host} a new signing secret,"
+            " the one before stops at once"
+        )
+
+    def touched(self) -> str | None:
+        return self.webhook_id
+
+
+@dataclass(frozen=True, kw_only=True)
 class WebhookRemoved(Activity):
     name: ClassVar[str] = "removed"
     audited: ClassVar[bool] = True

@@ -41,7 +41,7 @@ def test_active_filters_are_chips_that_remove_themselves(
     chips = dict(
         (label, html.unescape(link))
         for link, label in re.findall(
-            r'<a class="chip" href="([^"]+)"[^>]*>([^<]+?) <span', page
+            r'<a class="chip" href="([^"]+)"[^>]*>([^<]+?) <svg', page
         )
     )
     assert set(chips) == {"Search text: invoice", "unread"}
@@ -62,8 +62,10 @@ def test_the_mail_of_every_account_filters_by_account_and_folder(
 
 def test_a_message_leads_back_to_its_list(ui: TestClient, account_id: str) -> None:
     page = ui.get(f"/ui/accounts/{account_id}/mail/m1").text
-    assert "Back to the list" in page
-    assert '<a href="/ui/mail">Mail</a>' in page  # the breadcrumb
+    # The breadcrumb is the way back, to the folder the message is in.
+    assert '<a href="/ui/mail">Mail search</a>' in page
+    assert f'href="/ui/accounts/{account_id}/mail?folder=inbox">' in page
+    assert "Back to the list" not in page
 
 
 def test_a_bad_search_is_named_not_run(ui: TestClient) -> None:
@@ -94,7 +96,8 @@ def test_folders_as_a_tree(ui: TestClient, account_id: str, services: Services) 
     adapter = services.adapters.get(account_id)
     adapter.folders.append(Folder(id="projects", name="Projects"))
     adapter.folders.append(Folder(id="projects/a", name="A", parent_id="projects"))
-    page = ui.get(f"/ui/accounts/{account_id}/mail").text
+    whole = ui.get(f"/ui/accounts/{account_id}/mail").text
+    page = whole[whole.index("<main>") :]
     assert page.index(">Inbox<") < page.index(">Projects<") < page.index(">A<")
     assert 'class="depth-1"' in page
     assert (

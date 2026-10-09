@@ -4,6 +4,37 @@
 
 {% macro empty(text) %}<div class="empty">{{ text }}</div>{% endmacro %}
 
+{# An icon of the sprite, static/img/icons.svg (docs/UI.md 7), by its
+   name in Bootstrap Icons. Without ``label`` a word or the control
+   around it says what it is, so it is hidden from screen readers. With
+   ``label`` it stands alone: read out, and shown as a tooltip. #}
+{% macro icon(name, label=None) %}{{ _svg(name, label) }}{% endmacro %}
+
+{% macro _svg(name, label=None) %}{% if label %}<svg class="i" role="img" aria-label="{{ label }}"><title>{{ label }}</title><use href="/ui/static/img/icons.svg#{{ name }}"></use></svg>{% else %}<svg class="i" aria-hidden="true" focusable="false"><use href="/ui/static/img/icons.svg#{{ name }}"></use></svg>{% endif %}{% endmacro %}
+
+{# The inside of a button or link with an icon: the word beside it, or
+   with ``alone`` the icon by itself and the word as its tooltip. ``word``
+   brings the word back where no tooltip shows, on a touch screen or in
+   a narrow window, for an icon that is not plain on its own. #}
+{% macro _face(name, label, alone=False, word=False) %}{% if alone %}{{ _svg(name) }}{% if word %}<span class="word">{{ label }}</span>{% endif %}{% else %}{{ _svg(name) }} {{ label }}{% endif %}{% endmacro %}
+
+{# The attributes of a control that asks before it goes on: the question,
+   the word of its button, red for what cannot be undone. #}
+{% macro _asks(confirm, label, danger) %}{% if confirm %} data-confirm="{{ confirm }}" data-confirm-label="{{ label }}"{% if danger %} data-confirm-danger{% endif %}{% endif %}{% endmacro %}
+
+{# A link that looks like a button, with an icon. ``alone``: the icon
+   only, ``label`` its tooltip and ``name`` what a screen reader hears. #}
+{% macro link_button(url, label, icon, alone=False, word=False, cls="small", name=None) %}<a class="btn {{ cls }}{{ ' icon-btn' if alone }}" href="{{ url }}"{% if alone %} title="{{ label }}" aria-label="{{ name or label }}"{% endif %}>{{ _face(icon, label, alone, word) }}</a>{% endmacro %}
+
+{# A button that copies the text of the element ``target`` (an id),
+   e.g. a secret shown once. Needs app.js: without it, the text is
+   selectable in one piece. #}
+{% macro copy_button(target, label="Copy") %}<button class="small icon-btn" type="button" data-copy="{{ target }}" title="{{ label }}" aria-label="{{ label }}">{{ _svg("clipboard") }}</button>{% endmacro %}
+
+{# A time in a list: under a day ago as "3 minutes ago", older as date
+   and time. The full stamp is always the tooltip. #}
+{% macro ago(value) %}{% if value %}<time datetime="{{ value.isoformat() }}" title="{{ value | when }}">{{ value | ago }}</time>{% else %}—{% endif %}{% endmacro %}
+
 {# The line under a detail page's heading: where the page sits.
    ``trail``: (label, url) pairs, the last one the page itself. #}
 {% macro breadcrumb(trail) %}
@@ -30,12 +61,12 @@
 
 {# A secret the service shows once, e.g. a new token: ``title``, the
    value in one selectable piece, and the caller says what to do with it. #}
-{% macro secret_card(title, value) %}
+{% macro secret_card(title, value, id="secret") %}
 <section class="card">
   <header><h2>{{ title }}</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
   <div class="body">
     <p class="muted">{{ caller() }}</p>
-    <code class="secret">{{ value }}</code>
+    <div class="secret-line"><code class="secret" id="{{ id }}">{{ value }}</code>{{ copy_button(id) }}</div>
   </div>
 </section>
 {% endmacro %}
@@ -51,33 +82,64 @@
 
 {% macro fact(label, value=None, cls="") %}<dt>{{ label }}</dt><dd{% if cls %} class="{{ cls }}"{% endif %}>{% if caller is defined %}{{ caller() }}{% else %}{{ value | or_missing }}{% endif %}</dd>{% endmacro %}
 
-{# A list that belongs to the record of a detail page, e.g. its tokens.
-   The caller gives the table, and ``new_row`` as the last part. #}
-{% macro related(title, count=None, meta=None) %}
+{# A list that belongs to the record of a detail page, e.g. its tokens
+   (docs/UI.md 4.2). It creates at its head and acts on its rows. ``add``:
+   the word of the plus in its header, which opens the form ``add_form``
+   (an id, a ``row_form`` at the head of the table). #}
+{% macro related(title, count=None, meta=None, add=None, add_form=None, add_open=False) %}
 <section class="card">
-  <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}</header>
+  <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}{% if add %}<span class="right">{{ toggle(add_form, add, "plus-lg", alone=False, open=add_open) }}</span>{% endif %}</header>
   {{ caller() }}
 </section>
 {% endmacro %}
 
-{# The form that adds one more to a related list, folded until opened.
-   ``open``: unfolded, e.g. when the list is still empty. #}
-{% macro new_row(label, open=False) %}
-<details class="new-row"{% if open %} open{% endif %}>
-  <summary>{{ label }}</summary>
-  <div class="body">{{ caller() }}</div>
-</details>
+{# A button that opens and closes the form ``target`` (an id) at a row or
+   at the head of a list. ``alone``: the icon by itself, ``label`` its
+   tooltip and ``name`` what a screen reader hears. #}
+{% macro toggle(target, label, icon, alone=True, name=None, open=False) %}<button class="small{{ ' icon-btn' if alone }}" type="button" data-toggle="{{ target }}" aria-controls="{{ target }}" aria-expanded="{{ 'true' if open else 'false' }}"{% if alone %} title="{{ label }}" aria-label="{{ name or label }}"{% endif %}>{{ _face(icon, label, alone) }}</button>{% endmacro %}
+
+{# The form that unfolds under a row of a table, or at the head of the
+   list: a row of its own across ``columns``. Without app.js it shows at
+   once. ``open``: unfolded, e.g. when the list is still empty or a form
+   came back refused. #}
+{% macro row_form(id, columns, open=False) %}<tr class="row-form{{ ' open' if open }}" id="{{ id }}"><td colspan="{{ columns }}">{{ caller() }}</td></tr>{% endmacro %}
+
+{# A form in a dialog of its own, for a step that asks for more than a
+   yes, e.g. removing a device with the password and a code. The caller
+   gives the form, with ``dialog_buttons`` at its end. Opened by a
+   ``dialog_button``. Without app.js it shows in the page. #}
+{% macro form_dialog(id, title, text) %}
+<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title">
+  <div class="body"><h2 id="{{ id }}-title">{{ title }}</h2><p>{{ text }}</p></div>
+  {{ caller() }}
+</dialog>
 {% endmacro %}
+
+{% macro dialog_buttons(label, icon="trash", danger=True) %}<div class="buttons"><button type="button" data-close>Cancel</button><button class="{{ 'danger solid' if danger else 'primary' }}" type="submit">{{ _svg(icon) }} {{ label }}</button></div>{% endmacro %}
+
+{# The button that opens the ``form_dialog`` ``target``: an icon alone on
+   a row, or with its word in a batch bar. #}
+{% macro dialog_button(target, label, icon="trash", alone=True, name=None, danger=True) %}<button class="small{{ ' icon-btn' if alone }}{{ ' danger' if danger }}" type="button" data-dialog="{{ target }}"{% if alone %} title="{{ label }}" aria-label="{{ name or label }}"{% endif %}>{{ _face(icon, label, alone) }}</button>{% endmacro %}
+
+{# The tick box of a row for a batch: it belongs to the form ``batch`` (an
+   id) above the table. ``all`` in the head ticks every row. #}
+{% macro tick(batch, name, value, label) %}<input type="checkbox" name="{{ name }}" value="{{ value }}" form="{{ batch }}" aria-label="{{ label }}" />{% endmacro %}
+{% macro tick_all(batch, name, label="Tick all") %}<input type="checkbox" data-tick-all="{{ name }}" data-batch="{{ batch }}" aria-label="{{ label }}" title="{{ label }}" />{% endmacro %}
 
 {# The hidden field every form that changes something carries. #}
 {% macro csrf_field() %}<input type="hidden" name="csrf_token" value="{{ csrf }}" />{% endmacro %}
 
-{# A form that is only a button, e.g. "Delete", with a question before it. #}
-{% macro action(url, label, confirm=None, cls="small", fields={}) %}
-<form class="inline" method="post" action="{{ url }}"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
+{# A form that is only a button, e.g. "Delete", with a question before it.
+   ``icon``: an icon beside the word, or with ``alone`` in its place, the
+   word then the tooltip and ``name`` what a screen reader hears, e.g.
+   "Revoke the token laptop". A ``danger`` button asks with a red one. #}
+{% macro action(url, label, confirm=None, cls="small", fields={}, icon=None, alone=False, word=False, name=None) %}
+<form class="inline" method="post" action="{{ url }}"{{ _asks(confirm, label, "danger" in cls) }}>
   {{ csrf_field() }}
-  {% for name, value in fields.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endfor %}
-  <button class="{{ cls }}" type="submit">{{ label }}</button>
+  {% for key, value in fields.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}" />{% endfor %}
+  {% if icon and alone %}<button class="{{ cls }} icon-btn" type="submit" title="{{ label }}" aria-label="{{ name or label }}">{{ _face(icon, label, True, word) }}</button>
+  {% elif icon %}<button class="{{ cls }}" type="submit">{{ _face(icon, label) }}</button>
+  {% else %}<button class="{{ cls }}" type="submit">{{ label }}</button>{% endif %}
 </form>
 {% endmacro %}
 
@@ -92,13 +154,14 @@
 
 {# The filter bar above a list (filters.py): the search first, more
    filters folded, the active ones as chips under it. A GET form, so a
-   filtered list has its URL. #}
-{% macro filter_bar(bar, problem=None) %}
+   filtered list has its URL. ``focus``: the cursor starts in the search,
+   for a page that is a search. #}
+{% macro filter_bar(bar, problem=None, focus=False) %}
 <form class="filter-bar" method="get" action="{{ bar.action }}" role="search">
   {% for name, value in bar.keep %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endfor %}
   <div class="toolbar">
-    {% if bar.search %}<input class="grow" name="{{ bar.search.name }}" value="{{ bar.value(bar.search.name) }}" placeholder="{{ bar.search.label }}" aria-label="{{ bar.search.label }}" />{% endif %}
-    <button class="primary" type="submit">Search</button>
+    {% if bar.search %}<input class="grow" name="{{ bar.search.name }}" value="{{ bar.value(bar.search.name) }}" placeholder="{{ bar.search.label }}" aria-label="{{ bar.search.label }}"{% if focus %} autofocus{% endif %} />{% endif %}
+    <button class="primary" type="submit">{{ _svg("search") }} Search</button>
   </div>
   {% if bar.fields %}
   <details class="fold"{% if not bar.folded %} open{% endif %}>
@@ -132,7 +195,7 @@
   {% endif %}
   {% if bar.chips %}
   <div class="chips" aria-label="Active filters">
-    {% for chip in bar.chips %}<a class="chip" href="{{ chip.remove }}" title="Remove this filter">{{ chip.label }} <span aria-hidden="true">✕</span></a>{% endfor %}
+    {% for chip in bar.chips %}<a class="chip" href="{{ chip.remove }}" title="Remove this filter">{{ chip.label }} {{ _svg("x-lg") }}</a>{% endfor %}
     <a class="btn small ghost" href="{{ bar.clear }}">Clear</a>
   </div>
   {% endif %}
@@ -175,7 +238,14 @@
   <header><h2>{{ title }}</h2></header>
   <div class="body toolbar">
     <span class="muted grow">{{ text }}</span>
-    {{ action(url, label, confirm=confirm, cls="danger") }}
+    {{ action(url, label, confirm=confirm, cls="danger", icon="trash") }}
   </div>
 </section>
+{% endmacro %}
+
+{# The tabs of a detail page, each a URL of its own (``?tab=``), drawn by
+   the service: no script. ``items``: (key, label) pairs, ``active`` the
+   key shown, ``base`` the page. #}
+{% macro tabs(items, active, base) %}
+<nav class="tabs" aria-label="Sections">{% for key, label in items %}<a href="{{ base }}?tab={{ key }}"{% if key == active %} class="active" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
 {% endmacro %}

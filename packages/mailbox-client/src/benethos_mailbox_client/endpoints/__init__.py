@@ -24,6 +24,7 @@ from .messages import (
     update_messages,
 )
 from .sending import send_draft, send_message
+from .webhooks import renew_webhook_secret, update_webhook
 
 __all__ = [
     "create_draft",
@@ -38,10 +39,12 @@ __all__ = [
     "list_messages",
     "me",
     "message_body",
+    "renew_webhook_secret",
     "request",
     "send_draft",
     "send_message",
     "trash_messages",
     "update_draft",
     "update_messages",
+    "update_webhook",
 ]

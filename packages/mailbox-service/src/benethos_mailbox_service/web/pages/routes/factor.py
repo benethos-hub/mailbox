@@ -75,7 +75,7 @@ async def renew_codes(
 async def remove(
     request: Request, user_id: str, caller: Actor, factors: Factors
 ) -> Response:
-    page = f"/ui/users/{user_id}"
+    page = f"/ui/users/{user_id}?tab=access"
     with failing(page):
         factors.remove(caller, user_id)
     return back(request, page, "Second factor removed. The user's sessions end.")

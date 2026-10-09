@@ -27,8 +27,11 @@ from .models import (
     Outcome,
     Page,
     Recipient,
+    Secret,
     Sending,
     Sent,
+    Webhook,
+    WebhookSecret,
 )
 from .sync import SyncMailboxClient
 
@@ -51,11 +54,14 @@ __all__ = [
     "Outcome",
     "Page",
     "Recipient",
+    "Secret",
     "Sending",
     "Sent",
     "ServiceTimeoutError",
     "ServiceUnavailableError",
     "SyncMailboxClient",
+    "Webhook",
+    "WebhookSecret",
     "__version__",
     "from_environment",
     "message_body",

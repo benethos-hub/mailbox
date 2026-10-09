@@ -7,13 +7,23 @@ from datetime import UTC, datetime
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.data.models import Account, Grant, ProviderType
+from benethos_mailbox_service.data.models import (
+    Account,
+    AccountStatus,
+    Grant,
+    ProviderType,
+)
+from benethos_mailbox_service.domain.rights import Access
 from benethos_mailbox_service.domain.sync import SyncState
 from benethos_mailbox_service.domain.sync.worker import WorkerState
-from benethos_mailbox_service.domain.system import AccountHealth, ServiceStatus
+from benethos_mailbox_service.domain.system import (
+    AccountHealth,
+    Attention,
+    ServiceStatus,
+)
 from benethos_mailbox_service.web.api.schemas import ServiceStatus as Answer
 
-from ...conftest import bearer_for, create_account
+from ...conftest import ADMIN, bearer_for, create_account
 
 AT = datetime(2026, 10, 6, 12, tzinfo=UTC)
 
@@ -65,3 +75,27 @@ def test_the_worker_names_how_many_it_watches_not_which() -> None:
     assert (health["watching"], health["attention"]) == (True, True)
     assert health["last_error"] == "503 from server"
     assert "acc_hidden" not in str(answer)
+
+
+def test_attention_names_what_waits_for_a_person(
+    services: Services, account_id: str
+) -> None:
+    status = services.status
+    assert status.attention(ADMIN) == Attention()
+    services.repositories.accounts.set_status(account_id, AccountStatus.NEEDS_REAUTH)
+    assert status.attention(ADMIN) == Attention(accounts=True)
+    # Without the right to see the status, nothing waits for this caller.
+    reader = Access("usr_r", "reader", [Grant(accounts=["*"], allow=["mail.read"])])
+    assert status.attention(reader) == Attention()
+
+
+def test_healths_only_of_accounts_whose_status_the_caller_may_see(
+    services: Services, account_id: str
+) -> None:
+    other = create_account(services.accounts, ProviderType.MEMORY, "b@example.com")
+    both = services.accounts.list(ADMIN)
+    assert set(services.status.healths(ADMIN, both)) == {account_id, other.id}
+    narrow = Access(
+        "usr_n", "narrow", [Grant(accounts=[account_id], allow=["accounts.read"])]
+    )
+    assert set(services.status.healths(narrow, both)) == {account_id}

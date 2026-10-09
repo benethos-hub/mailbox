@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, empty, filter_bar, webhook_state %}
+{% from "components/ui.html" import ago, card, empty, filter_bar, link_button, webhook_state %}
 {% block title %}Webhooks · {{ APP_NAME }}{% endblock %}
 {% block heading %}Webhooks{% endblock %}
 {% block subheading %}<div class="sub">Where the service posts what changed in your accounts</div>{% endblock %}
 {% block actions %}
-{% if can_create %}<a class="btn primary" href="/ui/webhooks/new">New webhook</a>{% endif %}
+{% if can_create %}{{ link_button("/ui/webhooks/new", "New webhook", "plus-lg", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
 {% call card("Webhooks", meta=webhooks | length, tight=True) %}
@@ -19,7 +19,7 @@
         <td class="name"><a class="mono" href="/ui/webhooks/{{ hook.id }}">{{ hook.url }}</a></td>
         <td>{% for event in hook.events %}<span class="tag">{{ event }}</span> {% endfor %}</td>
         <td>{% if hook.accounts is none %}every account you may read{% else %}{% for account in hook.accounts %}{{ names.get(account, account) }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</td>
-        <td>{{ hook.last_delivery_at | when }}</td>
+        <td>{{ ago(hook.last_delivery_at) }}</td>
         <td>{{ webhook_state(hook.last_error) }}</td>
       </tr>
       {% endfor %}

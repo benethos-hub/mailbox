@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb, card, csrf_field with context %}
+{% from "components/ui.html" import breadcrumb, card, csrf_field, icon with context %}
+{% from "components/webhook.html" import webhook_fields %}
 {% block title %}New webhook · {{ APP_NAME }}{% endblock %}
 {% block heading %}New webhook{% endblock %}
 {% block subheading %}{{ breadcrumb([("Webhooks", "/ui/webhooks"), ("New webhook", None)]) }}{% endblock %}
@@ -7,30 +8,10 @@
 <form method="post" action="/ui/webhooks">
   {{ csrf_field() }}
   {% call card("Webhook", meta="Each post is signed with a secret, shown once after creating.") %}
-    <div class="form-grid">
-      <div class="field wide">
-        <label for="f-url">URL</label>
-        <input id="f-url" name="url" type="url" value="{{ typed.url if typed else '' }}" required autofocus placeholder="https://receiver.example.org/mail" />
-        <span class="hint">http or https. A host in the local network is allowed.</span>
-      </div>
-    </div>
-    <div class="field">
-      <span class="label">Events</span>
-      <div class="checks">
-        {% for event in events %}<label class="check"><input type="checkbox" name="events" value="{{ event }}"{% if not typed or event in typed.events %} checked{% endif %} /> {{ event }}</label>{% endfor %}
-      </div>
-    </div>
-    <div class="field">
-      <span class="label">Accounts</span>
-      <div class="checks">
-        <label class="check"><input type="checkbox" name="every" value="1"{% if not typed or typed.every %} checked{% endif %} /> every account you may read, also later ones</label>
-        {% for account in accounts %}<label class="check"><input type="checkbox" name="accounts" value="{{ account.id }}"{% if typed and account.id in typed.accounts %} checked{% endif %} /> {{ account.email }}</label>{% endfor %}
-      </div>
-      <span class="hint">Untick every account to choose some.</span>
-    </div>
+    {{ webhook_fields(typed, events, accounts, focus=True) }}
   {% endcall %}
   <div class="form-actions">
-    <button class="primary" type="submit">Create</button>
+    <button class="primary" type="submit">{{ icon("check-lg") }} Create</button>
     <a class="btn" href="/ui/webhooks">Cancel</a>
   </div>
 </form>

@@ -61,19 +61,44 @@ What is missing, all on existing domain services and API routes:
 - **Recovery key** (phase 5): show it once, as the CLI does.
 - **Changes**, optional: what the change feed recorded lately.
 
+The rework of 2026-10 changed the frame once more: the account menu,
+the folding sidebar and its dots (3), the overview's Service card (5),
+the Status page gone into the overview and the Accounts list (6.5),
+icons, dialogs and copy buttons (7).
+
 ## 3. Navigation and the click budget
 
 The sidebar keeps its three groups, renamed by what a person looks for:
 
 | Group | Pages | Who sees it |
 |---|---|---|
-| (top) | Overview, Mail | everyone |
+| (top) | Overview, Mail search | everyone |
 | Mailboxes | Accounts, Sends, Webhooks | Accounts with `accounts.read` on at least one account or with `accounts.connect`, Sends with `audit` on at least one account, Webhooks with `webhooks.manage` |
-| Service | Users, Roles, Status, Audit, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Audit with `audit` in `service`, Log and Recovery key for the admin |
+| Service | Users, Roles, Audit, Log, Recovery key | Users and Roles with `users.read`, Audit with `audit` in `service`, Log and Recovery key for the admin |
 
-The foot of the sidebar names the signed-in user and links to their own
-page, Password, Second factor and Sign out. Changes, if built, is a tab of the account
-page and of Status, not a sidebar entry.
+Each entry has its icon. **Mail search** is the list across every
+account the person may read: the filter bar first, the cursor in its
+search field. The mail of one account is on the account's page.
+
+The foot of the sidebar is the **account menu**: one button with the
+initial in a circle, the name and the roles. It opens a menu upwards:
+"Signed in as" the name, then Your page (with `users.read`), Password,
+Second factor with its state (on or off), and Sign out in red, still a
+form that posts. A click elsewhere or Escape closes it. It is the one
+place for what is the person's own: neither the overview nor the own
+user page repeats its links.
+
+A button beside the brand **folds the sidebar** to a narrow bar of
+icons, each word its tooltip, the account menu its avatar alone. The
+choice is the viewer's own, kept in the browser (`localStorage`). Under
+860 px the sidebar is a bar along the top: it does not fold, and the
+account menu is the avatar at its end.
+
+A **dot** beside Accounts says an account the person may see the
+status of needs a new sign-in, cannot be reached or fails to sync. One
+beside Webhooks says a webhook of theirs fails. The page brings them
+along, nothing is polled. Changes, if built, is a tab of the account
+page, not a sidebar entry.
 
 Every page has a **top bar** with its heading, one line under it that
 says where the person is, and the page's **primary action** at the right.
@@ -84,17 +109,18 @@ The click budget, counted from the overview after signing in:
 
 | Task | Clicks | Path |
 |---|---|---|
-| Read a mail of one account | 3 | account on the overview, Mail, the message |
-| Read the newest mail of every account | 2 | Mail, the message |
-| Reply to a mail | 4 | Mail, the message, Reply, Send |
+| Read a mail of one account | 2 | Mail on its row of the overview or of Accounts, the message |
+| Read the newest mail of every account | 2 | Mail search, the message |
+| Reply to a mail | 4 | Mail search, the message, Reply, Send |
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
 | Change an account's password | 3 | Accounts, the account, Save |
 | Create a user with rights | 3 | Users, New user, Create |
 | Give a user a token | 3, 4 once it has one | Users, the user, (New token), Create token |
 | Revoke a token | 3 | Users, the user, Revoke |
 | Add a webhook | 3 | Webhooks, New webhook, Create |
+| Change a webhook | 3 | Webhooks, the webhook, Save |
 | See why a webhook fails | 1 | Webhooks |
-| See which account is not syncing | 1 | Overview, or Status |
+| See which account is not syncing | 1 | Overview, or Accounts (its dot shows on every page) |
 | Show the recovery key | 2 | Recovery key, Show |
 | Read the service log | 1 | Log |
 | See who changed a user | 1 | Audit, or 2: Users, the user |
@@ -112,9 +138,12 @@ person who knows one page knows the next.
 A table of records with a heading, the count, the filter bar (4.5), the
 rows and the pager (4.6). The primary action at the top right creates a
 record: **New user**, **Connect an account**, **New webhook**. A row
-opens its detail page by its name. A row carries no delete button and no
-form. The one exception is the tick box for a batch on mail lists, whose
-actions sit in one toolbar above the table.
+opens its detail page by its name. A record with a detail page is
+removed there alone, in its Danger card, never from the list. A row
+carries only what its detail page's header offers, as icons, and the
+tick box of a batch whose actions sit in one bar above the table:
+mail lists have one, and Users (disable, enable, give a role, take a
+role, the role chosen in the bar).
 
 Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Audit,
 Log, and Changes if it is built (6.6).
@@ -124,17 +153,27 @@ Log, and Changes if it is built (6.6).
 One record. Cards from top to bottom, always in this order:
 
 1. **Facts**: what the record is. Read-only, with tags for its state.
-2. **Related lists**: tokens of a user, folders of an account, deliveries
-   of a webhook. Each with its own **New** form as the last row of the
-   card, folded until opened.
+2. **Related lists**: tokens of a user, folders of an account, devices
+   of the second factor, deliveries of a webhook. A related list creates
+   at its head and acts on its rows. The plus in the card's header
+   (with its word, e.g. **New token**) opens the form as the first row,
+   open at once while the list is empty. A pencil on a row unfolds the
+   form that changes it under the row, with Save and Cancel. A bin
+   removes it after a question, in the page's dialog, which holds the
+   fields a removal needs (a device: the password and a code). Entries
+   with no detail page of their own are removed only there. Lists with
+   a batch have a tick box per row, one in the head for all, and a bar
+   above the table: devices and tokens remove or revoke the ticked ones.
+   Without the script every form shows at once.
 3. **Change**: the form that edits the record, saved with one **Save**
    button. Fields the caller may not change are not shown.
 4. **Danger**: the last card, always. One button, red, with a question
    before it: **Remove account**, **Delete user**, **Delete role**,
    **Remove webhook**. It says what happens and what stays.
 
-A person finds the delete button in the same place on every detail
-page, and never anywhere else.
+A person finds the delete button of a record in the same place on every
+detail page, and never anywhere else. The entries of its lists have
+their bin on their row.
 
 Detail pages: Account, User, Role, Webhook, Message, Draft.
 
@@ -150,12 +189,21 @@ from the card it belongs to, not from an editor page.
 ### 4.4 Reader
 
 The mail page of an account: folders on the left, the list in the
-middle, the message where the list was when one is opened, with **Back
-to the list** at the top. Not a three-pane client. The rework keeps this
-layout and gives it the filter bar and the pager of every other list.
+middle, the message where the list was when one is opened, the
+breadcrumb the way back to its folder. Not a three-pane client. The
+rework keeps this layout and gives it the filter bar and the pager of
+every other list. The batch bar above the list asks for a folder only
+while "move to" is chosen, and the head of the list ticks every row.
 
-A message shows its keywords, and the list shows them as tags. Whoever
-may change the message adds or removes one there, one at a time.
+The header of a message holds what can be done with it, each as far as
+the caller may: **Reply** with its word, then as icons Reply to all,
+Forward, Download original, Mark read or unread, Star, Move (the dialog
+asks the folder), Move to the trash and Delete for good (the dialog
+asks first).
+
+A message shows its keywords in a card of their own, as chips, and the
+list shows them as tags. Whoever may change the message removes one
+with the x on its chip and adds one with the field beside them.
 Keywords starting with `$`, such as `$answered`, belong to the mail
 protocol: they show beside the flags and are not changed in the UI.
 
@@ -219,17 +267,18 @@ the error page with a way back.
 The first page after signing in. Its cards, in order:
 
 1. **You**: name, roles, what the rights add up to, the last sign-in
-   (stored with the password),
-   links to your page, Password and, for the admin, Recovery key. The
+   (stored with the password). The account menu has the links. The
    card says at a glance whether this user may read mail and send it
    anywhere, the warning the API and the MCP server also give.
 2. **Your accounts**: one row per account with its address, status,
    unread count where cheap, and what you may do there. A row opens the
    account's mail, the address opens the account.
 3. **Service**: only for those with `accounts.read`: accounts that need
-   attention (needs_reauth, unreachable, sync failing), webhooks failing,
-   the worker's last pass. Each line links to the page that fixes it.
-   Empty when all is well, then it says so in one line.
+   attention (needs_reauth, unreachable, sync failing), webhooks failing.
+   Each line links to the page that fixes it. When all is well, it says
+   so in one line. Under it the sync worker: running and its interval,
+   or switched off and why, push with how many accounts it watches of
+   how many it may, its last pass.
 
 ## 6. Workflows
 
@@ -275,9 +324,13 @@ and `update` exist.
 
 ### 6.2 Creating, changing, removing
 
-The same three places on every record, from 4.2: create from the list's
-primary action or from the card the record belongs to, change in the
-Change card, remove in the Danger card. The same words everywhere:
+The same places on every record, from 4.2: create from the list's
+primary action or from the plus of the card the entry belongs to,
+change in the Change card or with the pencil on the entry's row, remove
+in the Danger card or with the bin on the entry's row. A folder's
+pencil sits at the folder shown: a new name saves at once, another
+place inside asks first. Folders with a role (inbox, sent, ...) have
+neither. The same words everywhere:
 **New**, **Create**, **Save**, **Cancel**, **Remove** for things that
 exist elsewhere (an account, a webhook), **Delete** for things that
 exist only here (a user, a role, a token, a folder).
@@ -293,16 +346,34 @@ A user that signs in to the API only has the tag **API only** in the
 list and on its page, and the list filters by it. Its page has no
 Password card. The Change card switches the UI sign-in on and off, but
 not for the signed-in user itself. Switched on, the Password card
-offers a one-time password. New role is an editor page too. It takes the path
+offers a one-time password. The Users list ticks users and disables,
+enables, gives or takes a role of all of them at once: each change goes
+through the domain as one change of that user would, recorded per
+user, and those the caller may not change are named with the reason.
+Nobody disables itself that way either. New role is an editor page too. It takes the path
 `/ui/roles/new`, so the UI cannot open a role named `new`. It offers four
 templates that fill the form, Reader, Agent, Sender and Operator
 ([PERMISSIONS.md](PERMISSIONS.md) 8.7). Nothing is stored until the role
-is created, and Sender wants the recipients named. The user page shows the effective rights as
-today, then tokens, then Recent activity, then Change, then Danger.
-Recent activity is the user's newest ten activities of the audit, for
+is created, and Sender wants the recipients named.
+
+The user page has three tabs, each an address of its own (`?tab=`),
+drawn by the service: **Rights** with the facts, the effective rights
+and the Change card, **Access** with the sign-in (to the UI, the second
+factor, the last sign-in, and for the person's own page the links to
+Password and Second factor), the Password card for another user, its
+devices and the tokens, and **Activity**. The Danger card stays below
+the tabs, the same on each. A form that comes back refused shows its
+tab. Activity is the user's newest ten activities of the audit, for
 `audit` in `service`, with links to all of them and to what was done to
-the user. Roles the same without
-tokens. A token is created in the Tokens card and shown once.
+the user. A role's page has no tabs: facts, Change, Danger. A token is
+created at the head of the Tokens list and shown once.
+
+The grant editor, on a user's and a role's page alike, shows one line
+per grant as it reads. Its pencil unfolds the grant's fields under it,
+its bin marks it removed, struck through, a tick box under the icon.
+The plus at the top unfolds an empty grant. Nothing is stored before
+the one Save of the Change card. Service rights and grants fold alike
+on both pages.
 
 The second factor ([AUTHENTICATION.md](AUTHENTICATION.md)) has a page of
 its own, **Second factor**, reached from the foot of the sidebar and the
@@ -312,13 +383,15 @@ lists the devices with their name, when each
 was added and last used. **Add a device** asks for its name and the
 password, and with a device there already a code, then shows the QR
 code with the key as text and a field for the first code. The first
-device brings the ten recovery codes, shown once and offered as a text
-file to download. **Rename a device**
-takes the new name, **Remove a device** the password and a code. The
+device brings the ten recovery codes, shown once, with a button that
+copies them all and offered as a text file to download. The pencil on
+a device's row takes the new name, its bin the password and a code in
+the dialog. With two devices or more they can be ticked and removed
+together after one password and one code. The
 Recovery codes card says how many are left and makes new ones after
 the password and a code. Another user's page lists its devices to a user with
 `get_second_factor`, with **Remove** for one to a user with
-`remove_totp_device` and **Remove every device** to a user with
+`remove_totp_device`, as the bin on its row, and **Remove every device** to a user with
 `remove_second_factor`. After the password, a user with a factor sees
 the code page, outside the layout as the sign-in is, which takes a code
 of any device or a recovery code.
@@ -329,21 +402,23 @@ The list shows the URL, the events, the accounts, the last delivery and
 the last error as a red tag with the reason. New webhook from the list:
 URL, events as tick boxes, accounts as tick boxes or "every account I may
 read". The secret is shown once on the detail page after creating, as a
-token is. The detail page has the facts, the last deliveries, and Remove.
-The service keeps the last 20 attempts of each webhook: when, the events,
-the receiver's status code and the error.
-A webhook has no Change card: the API has none, a person removes and
-recreates it.
+token is. The detail page has the facts, the last deliveries, the Change
+card, the card **Signing secret** and Remove. The service keeps the last
+20 attempts of each webhook: when, the events, the receiver's status
+code and the error. The Change card holds the fields of New webhook,
+filled. Saving keeps the deliveries, where the posts stand and the
+secret. **New secret** asks first, since the one before stops at once,
+and shows the new one once, as after creating.
 
-### 6.5 Status and the recovery key
+### 6.5 The state of the service and the recovery key
 
-Status is one page of three cards: accounts with status, last sync and
-last error, the worker with its interval, its last pass and how many
-accounts it watches of how many it may, the webhooks with their last
-delivery. Each row links where it can be fixed. Nothing
-is polled for the page. The worker keeps its last pass and each
-account's last sync and last error in memory, so they are empty after a
-restart until the first pass.
+No page of its own any more. The Accounts list shows each account's
+status, last sync and last error, the overview's Service card the
+worker, the Webhooks list the webhooks with their last delivery, and
+the dots of the sidebar say where to look (3). Nothing is polled for
+it. The worker keeps its last pass and each account's last sync and
+last error in memory, so they are empty after a restart until the
+first pass. `GET /v1/status` answers the same for the API.
 
 The recovery key page shows the key once after **Show**, with the
 warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again, and for a code when the
@@ -411,14 +486,47 @@ receiver reports nothing. Built last, if at all.
 - **Components**: everything a page uses is a macro in
   `components/ui.html`, the grant editor in `components/grants.html`, the
   connection fields in `components/connection.html`, the rows of the
-  audit in `components/audit.html`. A page has no
+  audit in `components/audit.html`, the fields of a webhook in
+  `components/webhook.html`. A page has no
   markup of its own for a button, a tag, a field, a card header, a pager
   or a filter bar. The rework adds `filter_bar` with its chips,
   `facts`, `related` and `breadcrumb` and makes the pages use them.
+- **Icons**: a hand-picked set of [Bootstrap Icons](https://icons.getbootstrap.com/)
+  (MIT), one sprite `static/img/icons.svg` with the licence beside it.
+  `assets/icons.py` names them and makes the sprite from the npm
+  package of a pinned version, checked by its SHA-256. A new icon is a
+  line there. The macro `icon(name)` draws one in the colour of the
+  text around it. The primary action of a page (Create, Save, Send,
+  Connect, Write, Mail) and the red button of the Danger card keep
+  their word, with an icon beside it. Everything repeated per row is
+  an icon alone, its word the tooltip (`title`) and, with the record's
+  name, what a screen reader hears (`aria-label`). A touch screen
+  shows no tooltip: an icon that is not plain on its own (Sends,
+  Verify) gets its word back there and in a narrow window. Pencil,
+  bin, plus and envelope stand alone.
+- **The question before a form**: a form that changes much carries
+  `data-confirm`, the question and in a sentence after it what happens
+  and what stays. `app.js` asks it in the page's own dialog, with the
+  form's button word (`data-confirm-label`) and red where it cannot be
+  undone (`data-confirm-danger`). Escape and Cancel close it, nothing
+  is sent. Without the dialog the browser asks.
+- **Copy**: every secret shown once has a copy button beside it, the
+  recovery codes one for all of them. Where the browser offers no
+  clipboard, a page not on https or localhost, the button selects the
+  text instead.
+- **Times in lists**: tokens, devices, sends, webhooks and deliveries
+  show a time under a day ago as "3 minutes ago", older ones as date
+  and time, the full stamp always as the tooltip (macro `ago`). Audit,
+  log, the facts of a record and the message keep the full stamp.
+- **Keys**: `/` puts the cursor in the page's search field, Escape
+  closes the dialog.
 - **No inline style or script**: the content security policy stays.
   htmx only where a page asks the service again by itself, the
   sign-in with a code. Every other form is a plain post, and a
   destructive one asks first through `data-confirm`.
+- **Nothing from elsewhere**: no CDN. Every script, style, font and
+  image the UI loads is kept under `static/`, as htmx and the icons
+  are. A test checks the templates and the stylesheet for it.
 
 ## 8. Rules for building and extending
 
@@ -449,10 +557,12 @@ These rules bind every page, the reworked ones and the ones to come.
    the right, and one per form. `live/ui.py` walks every workflow of
    section 6 against the test accounts.
 8. **Checklist for a new page**: route module or a route in one; the
-   template of its type; the sidebar entry with its right; the tests of
-   rule 7; a line in this file's section 3 table and, if it changes a
-   workflow, in section 6; the roadmap item; a CHANGELOG entry only when
-   a person using the API notices.
+   template of its type; the sidebar entry with its right and its icon;
+   icons only from the sprite, a new one added in `assets/icons.py`;
+   nothing loaded from elsewhere, no CDN; the tests of rule 7; a line
+   in this file's section 3 table and, if it changes a workflow, in
+   section 6; the roadmap item; a CHANGELOG entry only when a person
+   using the API notices.
 
 ## 9. Order of work
 
@@ -488,5 +598,27 @@ All four steps are done, as the roadmap's phase 4b records.
   the mail protocol not changed there (4.4).
 - 2026-10-06: Accounts and Users paged like their lists in the API,
   Roles not (4.6).
+- 2026-10-09: icons with tooltips in place of words on what repeats
+  per row, Bootstrap Icons as an own sprite, the primary action and
+  the Danger button keep their word (7).
+- 2026-10-09: no CDN, everything the UI loads kept under `static/` (7).
+- 2026-10-09: the account menu in the sidebar's foot, the sidebar
+  folding to icons, dots for what needs a look, Mail search, the
+  Status page gone into the overview and the Accounts list (3, 5, 6.5).
+- 2026-10-09: a related list creates at its head and acts on its rows,
+  the form at a row unfolding under it. Removing on the row only for
+  entries without a detail page. A batch for devices and tokens, for
+  users later, none for accounts, roles and webhooks (4.1, 4.2, 6.2).
+- 2026-10-09: the user page in tabs Rights, Access, Activity, the grant
+  editor in lines, a batch of the Users list (6.3).
+- 2026-10-09: Mail and Sends on each row of the Accounts list, Verify on
+  the account page alone; the message's actions in its header, its
+  keywords as chips (4.1, 4.4).
+- 2026-10-09: webhooks changeable, a Change card and a new signing
+  secret on their page, with the API's `update_webhook` and
+  `renew_webhook_secret` (6.4).
+- 2026-10-09: the page's own dialog in place of the browser's
+  question, copy buttons beside every secret shown once, relative
+  times in lists (7).
 
 The Service card of the overview shows to everyone with `accounts.read`.

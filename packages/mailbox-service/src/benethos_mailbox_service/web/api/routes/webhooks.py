@@ -6,7 +6,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response
 
-from ....data.models import CreatedWebhook, Webhook, WebhookCreate, WebhookDetail
+from ....data.models import (
+    CreatedWebhook,
+    Webhook,
+    WebhookCreate,
+    WebhookDetail,
+    WebhookSecret,
+    WebhookUpdate,
+)
 from ..deps import Caller, Webhooks
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
@@ -54,6 +61,27 @@ async def get_webhook(
     """One of the caller's webhooks, with its last posts to the receiver:
     when, how many events, what it answered and why a post failed."""
     return webhooks.get_webhook(caller, webhook_id)
+
+
+@router.patch("/{webhook_id}")
+async def update_webhook(
+    webhook_id: str, request: WebhookUpdate, caller: Caller, webhooks: Webhooks
+) -> Webhook:
+    """Change where one of the caller's webhooks posts and what. A field
+    left out stays as it is, `accounts` set to `null` is every account the
+    caller may read. Its deliveries, where its posts stand and its secret
+    stay."""
+    return webhooks.update_webhook(caller, webhook_id, request)
+
+
+@router.post("/{webhook_id}/secret")
+async def renew_webhook_secret(
+    webhook_id: str, caller: Caller, webhooks: Webhooks
+) -> WebhookSecret:
+    """A new signing secret for one of the caller's webhooks. The answer
+    holds it, the only time it is shown. The one before stops at once: the
+    next post is signed with the new one."""
+    return webhooks.renew_webhook_secret(caller, webhook_id)
 
 
 @router.delete("/{webhook_id}", status_code=204)

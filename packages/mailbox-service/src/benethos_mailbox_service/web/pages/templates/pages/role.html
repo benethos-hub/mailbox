@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb, card, csrf_field, danger_card, fact, facts with context %}
+{% from "components/ui.html" import breadcrumb, card, csrf_field, danger_card, fact, facts, icon with context %}
 {% from "components/grants.html" import grant_editor, grants_of, service_editor, service_of %}
 {% block title %}{{ role.id }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}Role {{ role.id }}{% endblock %}
@@ -21,8 +21,11 @@
       <summary>Service rights</summary>
       {{ service_editor(service, service_names, service_ops) }}
     </details>
-    {{ grant_editor(rows, account_choices, groups, group_ops) }}
-    <div class="form-actions"><button class="primary" type="submit">Save</button></div>
+    <details class="fold"{% if err %} open{% endif %}>
+      <summary>Grants</summary>
+      {{ grant_editor(rows, account_choices, groups, group_ops, open=err) }}
+    </details>
+    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Save</button></div>
   {% endcall %}
 </form>
 {% endif %}

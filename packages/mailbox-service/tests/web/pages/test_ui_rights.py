@@ -236,7 +236,8 @@ def test_users_read_opens_the_pages_and_changes_nothing(
     home = app_client.get("/ui").text
     assert 'href="/ui/users"' in home and 'href="/ui/roles"' in home
     page = app_client.get(f"/ui/users/{target.id}").text
-    assert "Effective rights" in page and "Tokens" in page
+    assert "Effective rights" in page
+    assert "Tokens" in app_client.get(f"/ui/users/{target.id}?tab=access").text
     assert 'name="service"' not in page and "New user" not in page
     refused = post(app_client, f"/ui/users/{target.id}", {"name": "x", "grants": "0"})
     assert "missing right: update_user" in refused.text

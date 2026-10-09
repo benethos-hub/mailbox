@@ -236,6 +236,26 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   per user, a further one and new recovery codes after a code, one set
   of recovery codes, the second factor a frame and TOTP its first
   method
+- **The UI rework of 2026-10 ([UI.md](UI.md) 10)**, decided 2026-10-09,
+  done in six steps:
+  1. **foundations: Bootstrap Icons as an own sprite made by
+     `assets/icons.py`, the page's own dialog before a form, copy
+     buttons beside every secret shown once, relative times in lists,
+     `/` for the search, nothing loaded from elsewhere**, done
+  2. **the sidebar and the overview: the account menu, the sidebar
+     folding to icons, dots for what needs a look, Mail search, the
+     Status page gone into the overview and the Accounts list**, done
+  3. **lists act in the row: the plus at the head, a pencil and a bin
+     per device, token and folder, ticked devices and tokens together**,
+     done
+  4. **users and roles: the user page in tabs, the grant editor in
+     lines, a batch of the Users list**, done
+  5. **accounts and mail: Mail and Sends per account row, the message's
+     actions in its header, its keywords as chips**, done
+  6. **webhooks changeable: `update_webhook` and `renew_webhook_secret`
+     in the API, the client and the UI**, done
+  Live-checked in `live/ui.py`, the MCP server after step 6 in
+  `live/mcp_stdio.py` and `live/mcp_http.py`
 - **`jmap` adapter for Fastmail and JMAP servers (5.6)**, decided
   2026-10-06, done: a password or an API token, sending through JMAP,
   changes since a state and push through the event source. Discovery
