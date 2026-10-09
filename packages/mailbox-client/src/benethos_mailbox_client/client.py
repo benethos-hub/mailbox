@@ -92,6 +92,7 @@ class MailboxClient:
     # --- the caller -------------------------------------------------------------------
 
     get_me = awaiting(endpoints.get_me)
+    list_permissions = awaiting(endpoints.list_permissions)
 
     # --- folders ----------------------------------------------------------------------
 

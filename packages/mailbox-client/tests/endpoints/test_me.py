@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from benethos_mailbox_client import Me, MeAccount, Sending
+from benethos_mailbox_client import Me, MeAccount, Permissions, Sending
 
 from ..fake_api import ME, FakeApi
 
@@ -33,4 +33,19 @@ async def test_me(make_client: Callable) -> None:
             ),
         ],
         operations=frozenset({"list_users"}),
+    )
+
+
+async def test_list_permissions(make_client: Callable) -> None:
+    api = FakeApi(
+        {
+            "groups": {"mail.read": ["list_messages", "get_message"]},
+            "service": ["users.manage"],
+        }
+    )
+    found = await make_client(api).list_permissions()
+    assert api.call() == ("GET", "/v1/permissions", {}, None)
+    assert found == Permissions(
+        groups={"mail.read": ("list_messages", "get_message")},
+        service=("users.manage",),
     )

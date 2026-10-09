@@ -22,7 +22,7 @@ from .folders import Folder
 from .me import Me, MeAccount, Sending
 from .messages import Attachment, Changes, Outcome, Page
 from .paging import Paged
-from .rights import Grant
+from .rights import Grant, Permissions
 from .roles import Role
 from .secrets import Secret
 from .sending import Recipient, Sent
@@ -33,6 +33,7 @@ from .users import NewPassword, User
 from .webhooks import NewWebhook, Webhook, WebhookDetail, WebhookPost, WebhookSecret
 
 __all__ = [
+    "Permissions",
     "Worker",
     "Status",
     "AccountHealth",

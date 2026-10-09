@@ -94,6 +94,7 @@ class SyncMailboxClient:
     # --- the caller -------------------------------------------------------------------
 
     get_me = blocking(endpoints.get_me)
+    list_permissions = blocking(endpoints.list_permissions)
 
     # --- folders ----------------------------------------------------------------------
 

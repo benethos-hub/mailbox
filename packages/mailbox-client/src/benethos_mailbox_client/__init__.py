@@ -40,6 +40,7 @@ from .models import (
     Outcome,
     Page,
     Paged,
+    Permissions,
     Recipient,
     Role,
     SecondFactor,
@@ -67,6 +68,7 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "Permissions",
     "AccountHealth",
     "Status",
     "Worker",
