@@ -26,6 +26,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   (`remove_second_factor`, in `users.manage`) removes one, for a user
   whose rights the caller holds, never for the caller itself. The
   database moves to schema 18.
+- `users reset-totp <name>` on the host removes a user's second factor,
+  for the last administrator who lost the app and the recovery codes.
 
 ### Changed
 

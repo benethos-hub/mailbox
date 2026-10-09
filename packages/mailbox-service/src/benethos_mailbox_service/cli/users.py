@@ -1,5 +1,6 @@
 """``users create-admin`` and ``users set-password``: a one-time password
-for a user, made on the host."""
+for a user, made on the host. ``users reset-totp``: a user's second
+factor removed, when its owner lost the app and the recovery codes."""
 
 from __future__ import annotations
 
@@ -27,6 +28,13 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
         parents=[option],
     )
     set_password.add_argument("name")
+    reset_totp = users_commands.add_parser(
+        "reset-totp",
+        help="remove a user's second factor, e.g. when the last administrator "
+        "lost the app and the recovery codes",
+        parents=[option],
+    )
+    reset_totp.add_argument("name")
 
 
 def run(args: argparse.Namespace) -> None:
@@ -37,6 +45,15 @@ def run(args: argparse.Namespace) -> None:
 
     settings = stored(load_settings(args.env_file), "users")
     with opened(settings) as services:
+        if args.users_command == "reset-totp":
+            user = services.factors.reset(args.name)
+            say(
+                f"Removed the second factor of {user.name} ({user.id}) in "
+                f"{settings.database_path}. Its sessions end. It signs in to "
+                "the UI with its password alone, and sets up a new factor on "
+                "its page Second factor."
+            )
+            return
         if args.users_command == "create-admin":
             user, password = anyio.run(services.users.create_admin, args.name)
             done = f"Created user {user.id} ({user.name}) with every right"

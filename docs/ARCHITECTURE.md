@@ -146,7 +146,7 @@ packages/mailbox-service/
       serve.py          # the REST API and the UI, the log first
       openapi.py        # the OpenAPI document on stdout
       paths.py          # where the settings and the data are
-      users.py          # create-admin, set-password
+      users.py          # create-admin, set-password, reset-totp
       keys.py           # init, import, generate
       backup.py         # write a backup, verify one
       restore.py        # replace the database with a backup
