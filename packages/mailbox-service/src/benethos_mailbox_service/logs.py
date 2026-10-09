@@ -6,7 +6,7 @@ service's records then had no handler: below WARNING they were dropped,
 above they came without time or source. Libraries log from WARNING on,
 so a debug level shows the service without the IMAP commands of a
 library. A secret the service holds is masked in every line
-(``common/redact.py``).
+(``benethos_mailbox_common.redact``).
 """
 
 from __future__ import annotations
@@ -18,7 +18,8 @@ from datetime import datetime
 from http import HTTPStatus
 from typing import Any
 
-from .common import redact
+from benethos_mailbox_common import redact
+
 from .common.clock import log_time
 
 PACKAGE = __name__.rpartition(".")[0]

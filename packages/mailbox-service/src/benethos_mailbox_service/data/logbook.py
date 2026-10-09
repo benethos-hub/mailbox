@@ -15,7 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from ..common.redact import redact
+from benethos_mailbox_common.redact import redact
 
 KEPT = 1000
 

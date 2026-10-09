@@ -1,4 +1,4 @@
-"""The secrets the service holds in plain text, kept out of what it writes.
+"""The secrets a program holds in plain text, kept out of what it writes.
 
 The second line of defence (CONCEPT 7.4): no code logs a secret or puts
 one into an error text on purpose. Whatever still carries one, a
@@ -7,9 +7,9 @@ A secret is noted where it is decrypted or received. The newest
 ``KEPT`` are held: access tokens come anew every hour, and one in use
 is noted again on its next decryption.
 
-The one module of ``common`` with state of its own: a secret noted where
-it is decrypted must be masked wherever a text is written, in every layer
-and in the log, so the noted secrets are held process-wide.
+The one module of the package with state of its own: a secret noted
+where it is decrypted must be masked wherever a text is written, in every
+layer and in the log, so the noted secrets are held process-wide.
 """
 
 from __future__ import annotations

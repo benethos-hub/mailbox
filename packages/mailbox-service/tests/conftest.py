@@ -15,10 +15,10 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from benethos_mailbox_common import redact
 from benethos_mailbox_service import config
 from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.assembly import providers as assembly
-from benethos_mailbox_service.common import redact
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import (
     Account,

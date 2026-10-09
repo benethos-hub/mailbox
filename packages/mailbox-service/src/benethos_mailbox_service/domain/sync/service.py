@@ -24,9 +24,10 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
 
+from benethos_mailbox_common.redact import redact
+
 from ...common.clock import utc_now
 from ...common.locks import KeyedLocks
-from ...common.redact import redact
 from ...common.secret import new_id
 from ...data.providers import Capability, FolderChanges
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository

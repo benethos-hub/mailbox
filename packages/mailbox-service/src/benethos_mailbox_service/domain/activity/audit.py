@@ -13,8 +13,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
+from benethos_mailbox_common.redact import redact
+
 from ...common.clock import utc_now
-from ...common.redact import redact
 from ...common.retention import Retention
 from ...common.secret import new_id
 from ...data.models import ActivityFilter, ActivityRecord, Page

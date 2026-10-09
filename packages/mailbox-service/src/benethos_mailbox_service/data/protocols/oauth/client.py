@@ -16,7 +16,8 @@ from urllib.parse import urlencode
 
 from pydantic import SecretStr
 
-from ....common import redact
+from benethos_mailbox_common import redact
+
 from ....common.clock import utc_now
 from ....common.opaque import to_base64
 from ....common.secret import token

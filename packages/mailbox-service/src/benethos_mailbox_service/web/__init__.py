@@ -18,7 +18,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 from starlette.exceptions import HTTPException
 
-from ..common.redact import redact
+from benethos_mailbox_common.redact import redact
+
 from ..errors import MailboxServiceError, RateLimitedError
 from . import api, pages
 from .api.errors import api_error, http_error, validation_error

@@ -20,7 +20,8 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from ....common.redact import redact
+from benethos_mailbox_common.redact import redact
+
 from ....data.models import ProviderType
 from ....domain.accounts import DeviceSignIn
 from ....errors import MailboxServiceError

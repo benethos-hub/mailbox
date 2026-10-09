@@ -9,7 +9,8 @@ from typing import Any, TypeVar
 from fastapi.responses import Response
 from pydantic import BaseModel, ValidationError
 
-from ...common.redact import redact
+from benethos_mailbox_common.redact import redact
+
 from ...errors import MailboxServiceError
 
 # A refused form comes back with this status, what was typed, the reason.
