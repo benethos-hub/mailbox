@@ -13,6 +13,7 @@ from benethos_mailbox_service.domain.auth.factors import (
     recovery_hash,
 )
 from benethos_mailbox_service.errors import (
+    BadRequestError,
     ConflictError,
     RateLimitedError,
     UnauthorizedError,
@@ -167,15 +168,29 @@ async def test_new_recovery_codes_replace_the_old(
     user, _, codes = await with_factor(services, clock)
     access = access_of(services, user)
     services.auth.sign_in_with_code(user.id, codes[0], source=SOURCE)
-    fresh = await services.factors.renew_codes(access, SECRET)
+    fresh = await services.factors.renew_codes(access, SECRET, codes[1])
     assert services.factors.mine(access).recovery_codes_left == RECOVERY_CODES
     assert not set(fresh) & set(codes)
     with pytest.raises(UnauthorizedError):
-        services.auth.sign_in_with_code(user.id, codes[1], source=SOURCE)
+        services.auth.sign_in_with_code(user.id, codes[2], source=SOURCE)
     assert credentials(services, "users.codes_renewed")
+
+
+async def test_new_codes_need_password_and_code(
+    services: Services, clock: Clock
+) -> None:
+    user, secret, codes = await with_factor(services, clock)
+    access = access_of(services, user)
+    with pytest.raises(BadRequestError, match="password"):
+        await services.factors.renew_codes(access, "not it at all", codes[0])
+    with pytest.raises(BadRequestError, match="code"):
+        await services.factors.renew_codes(access, SECRET, "000000")
+    # A code of the device does as well as a recovery code.
+    await services.factors.renew_codes(access, SECRET, now_code(secret, clock))
+    assert credentials(services, "auth.confirm_failed")
 
 
 async def test_new_codes_need_a_factor(services: Services) -> None:
     access = access_of(services, await anna(services))
     with pytest.raises(ConflictError):
-        await services.factors.renew_codes(access, SECRET)
+        await services.factors.renew_codes(access, SECRET, "123456")

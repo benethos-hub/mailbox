@@ -90,13 +90,15 @@ class SecondFactorService:
                 said.DeviceRenamed(by=Actor.of(access), before=before, after=name)
             )
 
-    async def renew_codes(self, access: Access, password: str) -> list[str]:
+    async def renew_codes(self, access: Access, password: str, code: str) -> list[str]:
         """A new set of recovery codes for the caller, in place of the old,
-        after its password once more."""
+        after its password once more and a code: of any of its devices,
+        or one of the old recovery codes."""
         user = self._users.get(access.user_id)
         if not self._factors.has(user.id):
             raise ConflictError("you have no second factor")
         await self._auth.confirm(access, password)
+        self._auth.confirm_code(access, code)
         with self._activity.atomic():
             codes = self._factors.renew_codes(user.id)
             self._activity.record(said.RecoveryCodesRenewed(by=Actor.of(access)))

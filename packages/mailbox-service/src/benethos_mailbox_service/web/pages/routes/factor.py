@@ -108,9 +108,10 @@ async def renew_codes(
     caller: Actor,
     factors: Factors,
     password: Annotated[str, Form()] = "",
+    code: Annotated[str, Form()] = "",
 ) -> Response:
     with failing(FACTOR_PAGE):
-        codes = await factors.renew_codes(caller, password)
+        codes = await factors.renew_codes(caller, password, code)
     show_once(request, CODES, "\n".join(codes))
     return back(request, FACTOR_PAGE, "New recovery codes. The old ones work no more.")
 

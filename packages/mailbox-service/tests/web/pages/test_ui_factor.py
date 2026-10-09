@@ -231,7 +231,9 @@ def test_the_recovery_codes_download_as_a_text_file(
     _, old = with_factor(services, name)
     try_sign_in(app_client, name, password)
     code_form(app_client, old[0])
-    fresh = post(app_client, "/ui/second-factor/codes", {"password": password})
+    fresh = post(
+        app_client, "/ui/second-factor/codes", {"password": password, "code": old[1]}
+    )
     link = re.search(
         r'<a class="btn" href="(data:text/plain;charset=utf-8,[^"]+)"'
         r' download="mailbox-recovery-codes.txt">',
@@ -370,7 +372,13 @@ def test_new_recovery_codes_on_the_own_page(
     try_sign_in(app_client, name, password)
     code_form(app_client, old[0])
     assert "9 left" in app_client.get("/ui/second-factor").text
-    fresh = post(app_client, "/ui/second-factor/codes", {"password": password})
+    refused = post(
+        app_client, "/ui/second-factor/codes", {"password": password, "code": "0"}
+    )
+    assert "the code is not right" in refused.text
+    fresh = post(
+        app_client, "/ui/second-factor/codes", {"password": password, "code": old[1]}
+    )
     assert "New recovery codes." in fresh.text
     codes = re.findall(CODES, fresh.text)
     assert len(codes) == 10 and not set(codes) & set(old)

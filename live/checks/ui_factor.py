@@ -213,7 +213,11 @@ def _two_devices(
         )
         fresh = browser.post(
             "/ui/second-factor/codes",
-            data={"csrf_token": csrf_of(renamed.text), "password": password},
+            data={
+                "csrf_token": csrf_of(renamed.text),
+                "password": password,
+                "code": phone.code(),
+            },
         )
         codes = re.findall(CODES, fresh.text)
         run.check("new recovery codes", len(codes) == 10)

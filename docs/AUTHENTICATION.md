@@ -144,12 +144,15 @@ is lost.
 - Stored as SHA-256 hashes, as tokens are: a random code of that
   length needs no slow hash. Case, spaces and dashes do not count.
 - The page shows how many are left. **New recovery codes** asks for the
-  password and replaces the whole set.
+  password and a code, of any device or an old recovery code, as adding
+  a device does, and replaces the whole set. Whoever holds the password
+  and an open session alone cannot make a set of its own.
 - A recovery code used at the sign-in is written to the audit as
   `auth.recovery_code_used`, a warning: it means the app is gone or
   out of reach.
-- A recovery code also confirms adding or removing a device, and is
-  used up by it.
+- A recovery code also confirms adding or removing a device and making
+  new codes, and is used up by it. Whoever lost every device and every
+  recovery code needs an administrator (section 4).
 
 **Decided 2026-10-09:** recovery codes and the host command, both. The
 codes let a person back in alone. The command is the last way for the
@@ -261,3 +264,5 @@ the mail accounts. A second factor there is the provider's.
   further device after the password and a code, one set of recovery
   codes per user, an administrator removes one device or all, renaming,
   at most 10 (section 4).
+- New recovery codes after the password and a code, as a further
+  device (section 5).

@@ -314,7 +314,7 @@ device brings the ten recovery codes, shown once and offered as a text
 file to download. **Rename a device**
 takes the new name, **Remove a device** the password and a code. The
 Recovery codes card says how many are left and makes new ones after
-the password. Another user's page lists its devices to a user with
+the password and a code. Another user's page lists its devices to a user with
 `get_second_factor`, with **Remove** for one to a user with
 `remove_factor_device` and **Remove every device** to a user with
 `remove_second_factor`. After the password, a user with a factor sees
