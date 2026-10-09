@@ -145,6 +145,15 @@ class SyncMailboxClient:
     start_device_oauth = blocking(endpoints.start_device_oauth)
     poll_device_oauth = blocking(endpoints.poll_device_oauth)
 
+    # --- users ------------------------------------------------------------------------
+
+    list_users = blocking(endpoints.list_users)
+    create_user = blocking(endpoints.create_user)
+    get_user = blocking(endpoints.get_user)
+    update_user = blocking(endpoints.update_user)
+    delete_user = blocking(endpoints.delete_user)
+    set_password = blocking(endpoints.set_password)
+
     # --- attachments ------------------------------------------------------------------
 
     def get_attachment(

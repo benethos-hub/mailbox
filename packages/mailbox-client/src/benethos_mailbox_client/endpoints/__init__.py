@@ -38,9 +38,23 @@ from .messages import (
     update_messages,
 )
 from .sending import send_draft, send_message
+from .users import (
+    create_user,
+    delete_user,
+    get_user,
+    list_users,
+    set_password,
+    update_user,
+)
 from .webhooks import renew_webhook_secret, update_webhook
 
 __all__ = [
+    "create_user",
+    "delete_user",
+    "get_user",
+    "list_users",
+    "set_password",
+    "update_user",
     "discover_account",
     "poll_device_oauth",
     "start_device_oauth",

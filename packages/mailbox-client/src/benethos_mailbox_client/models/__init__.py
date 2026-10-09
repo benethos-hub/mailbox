@@ -20,11 +20,16 @@ from .folders import Folder
 from .me import Me, MeAccount, Sending
 from .messages import Attachment, Changes, Outcome, Page
 from .paging import Paged
+from .rights import Grant
 from .secrets import Secret
 from .sending import Recipient, Sent
+from .users import NewPassword, User
 from .webhooks import Webhook, WebhookSecret
 
 __all__ = [
+    "User",
+    "NewPassword",
+    "Grant",
     "SourceReport",
     "MailServer",
     "Hint",

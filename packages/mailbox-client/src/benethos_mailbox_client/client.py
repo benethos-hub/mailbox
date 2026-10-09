@@ -143,6 +143,15 @@ class MailboxClient:
     start_device_oauth = awaiting(endpoints.start_device_oauth)
     poll_device_oauth = awaiting(endpoints.poll_device_oauth)
 
+    # --- users ------------------------------------------------------------------------
+
+    list_users = awaiting(endpoints.list_users)
+    create_user = awaiting(endpoints.create_user)
+    get_user = awaiting(endpoints.get_user)
+    update_user = awaiting(endpoints.update_user)
+    delete_user = awaiting(endpoints.delete_user)
+    set_password = awaiting(endpoints.set_password)
+
     # --- attachments ------------------------------------------------------------------
 
     async def get_attachment(

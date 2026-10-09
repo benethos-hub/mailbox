@@ -27,10 +27,12 @@ from .models import (
     DeviceSignInState,
     Discovery,
     Folder,
+    Grant,
     Hint,
     MailServer,
     Me,
     MeAccount,
+    NewPassword,
     Outcome,
     Page,
     Paged,
@@ -40,6 +42,7 @@ from .models import (
     Sent,
     SourceReport,
     StoredCredential,
+    User,
     Webhook,
     WebhookSecret,
 )
@@ -51,6 +54,9 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "NewPassword",
+    "User",
+    "Grant",
     "Candidate",
     "DeviceSignIn",
     "DeviceSignInState",
