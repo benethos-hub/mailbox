@@ -258,7 +258,9 @@ packages/mailbox-service/
                         #   rights in effective.py
       accounts/         # AccountService, Adapters (the live adapter per
                         #   account), OAuthService, abilities: 501 for
-                        #   what an adapter does not implement
+                        #   what an adapter does not implement, checks:
+                        #   what settings and credentials must pass
+                        #   before they are stored
       discovery/        # DiscoveryService: trust, ranking, cache, limits
       mailbox/          # MailboxService, the facade for mail: calls under
                         #   our ids, an account's folders and their
