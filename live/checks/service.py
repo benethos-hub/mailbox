@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
@@ -29,6 +29,8 @@ class Service:
 
     url: str
     admin_user: Admin
+    # The environment it runs with, for a command on its host.
+    env: dict[str, str] = field(default_factory=dict)
 
     def admin(self, timeout: float = 60) -> httpx.Client:
         """Plain HTTP with the admin's token, for a check of what the API
@@ -54,7 +56,7 @@ def throwaway_service(prefix: str) -> Iterator[Service]:
     env = service_env(data_dir, port)
     process = start_service(env, url)
     try:
-        yield Service(url, bootstrap(env, url))
+        yield Service(url, bootstrap(env, url), env)
     finally:
         stop(process)
         shutil.rmtree(Path(data_dir), ignore_errors=True)

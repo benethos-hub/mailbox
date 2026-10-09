@@ -88,7 +88,9 @@ done. Update the roadmap in the same commit that finishes an item.
   user, a role and a token and uses the token on the API, opens the
   status, adds and removes a webhook, shows the recovery key of its own
   service, reads its log, makes a user with a one-time password and
-  reads the audit of administration.
+  reads the audit of administration. A user of its own sets up a second
+  factor from the key of the QR code, signs in with a code and a
+  recovery code, and has it removed by itself, the admin and the host.
   How the pages look and behave, and the checklist for a new page:
   `docs/UI.md`.
 - Microsoft accounts: the service comes with the project's app,

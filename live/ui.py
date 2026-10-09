@@ -11,10 +11,13 @@ and sets the user's password, which the user changes at its sign-in.
 It reads mail, opens the pages and follows their forms. It opens the
 status, adds and removes a webhook, shows the recovery key of its own
 service, reads its log, makes a user with a one-time password, and reads
-what it did in the audit, on its page, a user's page and the API. It
-writes on the test accounts only: a folder and a draft on the first,
-which it removes again, and one mail from the first to the second,
-deleted for good on both sides. Credentials and mail content are never printed.
+what it did in the audit, on its page, a user's page and the API. A user
+of its own sets up a second factor from the QR code's key, signs in with
+a code and a recovery code, makes new codes and removes it, and the
+admin and the host remove it too. It writes on the test accounts only:
+a folder and a draft on the first, which it removes again, and one mail
+from the first to the second, deleted for good on both sides.
+Credentials and mail content are never printed.
 """
 
 from __future__ import annotations
@@ -27,6 +30,7 @@ from checks.accounts import accounts, imap_settings, read_env, register
 from checks.admin import Admin, csrf_of, ui_sign_in
 from checks.run import Run
 from checks.service import throwaway_service
+from checks.ui_factor import check_second_factor
 from checks.ui_mail import check_mail, check_writing
 from checks.ui_users import check_users
 
@@ -326,6 +330,8 @@ def main() -> int:
             check_service(run, browser, url, admin, emails)
             print("\n== the audit of administration")
             check_audit(run, browser, url, admin)
+            print("\n== the second factor")
+            check_second_factor(run, url, admin, browser, service.env)
     return run.finish()
 
 

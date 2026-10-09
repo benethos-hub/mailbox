@@ -230,7 +230,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   ([AUTHENTICATION.md](AUTHENTICATION.md))**, decided 2026-10-09, done:
   schema 18, the code after the password, the page Second factor with
   a QR code, removal by the owner, a user with `users.manage` and
-  `users reset-totp` on the host, `second_factor` in the API
+  `users reset-totp` on the host, `second_factor` in the API.
+  Live-checked in `live/ui.py`
 - **`jmap` adapter for Fastmail and JMAP servers (5.6)**, decided
   2026-10-06, done: a password or an API token, sending through JMAP,
   changes since a state and push through the event source. Discovery
