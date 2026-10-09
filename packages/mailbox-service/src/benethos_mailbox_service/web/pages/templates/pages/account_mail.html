@@ -4,7 +4,7 @@
 {% block heading %}{{ current.name }}{% endblock %}
 {% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
 {% block actions %}
-{% if can.drafts %}<a class="btn" href="/ui/accounts/{{ account.id }}/drafts">Drafts</a>{% endif %}
+{% if can.drafts %}{{ link_button("/ui/accounts/" ~ account.id ~ "/drafts", "Drafts", "pencil", cls="") }}{% endif %}
 {% if can.write %}{{ link_button("/ui/accounts/" ~ account.id ~ "/compose", "Write", "pencil", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
@@ -95,13 +95,13 @@
         {% if can.trash and current.role != "trash" %}<option value="trash">move to the trash</option>{% endif %}
       </select>
       {% if can.move %}
-      <select name="folder" aria-label="Folder to move to">
-        <option value="">(folder, for move)</option>
+      <select name="folder" aria-label="Folder to move to" data-show-for="f-batch-action:move">
+        <option value="">choose a folder</option>
         {{ folder_options(tree, [current.id]) }}
       </select>
       {% endif %}
-      <button type="submit">Apply</button>
-      {% if can.purge %}<button class="danger" type="submit" name="purge" value="1" data-confirm="Delete the ticked messages for good? This cannot be undone.">Delete for good</button>{% endif %}
+      <button type="submit">{{ icon("check-lg") }} Apply</button>
+      {% if can.purge %}<button class="danger" type="submit" name="purge" value="1" data-confirm="Delete the ticked messages for good? This cannot be undone." data-confirm-label="Delete for good" data-confirm-danger>{{ icon("x-octagon") }} Delete for good</button>{% endif %}
     </form>
     {% endif %}
     <div class="body tight">{% include "partials/message_list.html" %}</div>

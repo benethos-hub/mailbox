@@ -250,14 +250,15 @@ def check_sent_mail(
         )
         run.check(
             "give it a keyword",
-            "Remove live-check" in tagged.text and 'role="alert"' not in tagged.text,
+            'aria-label="Remove the keyword live-check"' in tagged.text
+            and 'role="alert"' not in tagged.text,
         )
         untagged = browser.post(
             f"{received}/keywords", data={"csrf_token": csrf, "remove": "live-check"}
         )
         run.check(
             "take the keyword away",
-            "Remove live-check" not in untagged.text
+            "Remove the keyword live-check" not in untagged.text
             and 'role="alert"' not in untagged.text,
         )
         trashed = browser.post(f"{received}/delete", data={"csrf_token": csrf})

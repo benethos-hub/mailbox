@@ -195,7 +195,7 @@
   {% endif %}
   {% if bar.chips %}
   <div class="chips" aria-label="Active filters">
-    {% for chip in bar.chips %}<a class="chip" href="{{ chip.remove }}" title="Remove this filter">{{ chip.label }} <span aria-hidden="true">✕</span></a>{% endfor %}
+    {% for chip in bar.chips %}<a class="chip" href="{{ chip.remove }}" title="Remove this filter">{{ chip.label }} {{ _svg("x-lg") }}</a>{% endfor %}
     <a class="btn small ghost" href="{{ bar.clear }}">Clear</a>
   </div>
   {% endif %}

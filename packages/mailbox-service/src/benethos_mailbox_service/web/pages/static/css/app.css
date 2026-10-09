@@ -362,6 +362,8 @@ tr.unread td.name { font-weight: 650; }
 .tag.bad { border-color: transparent; background: var(--err-soft); color: var(--bad); }
 .tag.warn { border-color: transparent; background: var(--warn-soft); color: var(--warn); }
 .tag.accent { border-color: transparent; background: var(--accent-soft); color: var(--accent); }
+.tag .i { width: 11px; height: 11px; vertical-align: -1px; }
+.chip .i { width: 11px; height: 11px; }
 
 .muted { color: var(--text-muted); }
 .faint { color: var(--text-faint); }
@@ -386,7 +388,6 @@ tr.unread td.name { font-weight: 650; }
 .card .body > p:first-child { margin-top: 0; }
 .card .body > p:last-child { margin-bottom: 0; }
 .small-print { font-size: 13px; }
-p.back { margin: 0; font-size: 14px; }
 
 /* Lines to act on, each with its link, e.g. what needs attention. */
 ul.lines { list-style: none; margin: 0 0 12px; padding: 0; }
@@ -591,6 +592,10 @@ label.icon-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 
   font-size: 13px;
 }
 .chip:hover { text-decoration: none; filter: brightness(.97); }
+/* The keywords of a message: chips, each with its x, and the field to add. */
+.body.keywords { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.chip button.icon-btn { padding: 0 2px; color: inherit; }
+.chip button.icon-btn:hover { background: none; border-color: transparent; }
 a.btn.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
 
 /* Shows that htmx is loading, without letting the page jump. */

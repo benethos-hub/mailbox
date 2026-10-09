@@ -250,7 +250,6 @@ async def message(
         page="mail",
         account=account,
         trail=[*trail, (found.subject or "(no subject)", None)],
-        back_to=trail[-1][1],
         message=found,
         body=_body(found),
         from_html=not found.text_body and bool(found.html_body),

@@ -56,7 +56,8 @@ def test_keywords_on_a_message(
     post(ui, f"{url}/keywords", {"add": "LATER"})  # held already
     assert held() == ["$answered", "later", "project-x"]
     page = ui.get(url).text
-    assert "Remove project-x" in page and "Remove $answered" not in page
+    assert 'aria-label="Remove the keyword project-x"' in page
+    assert "Remove the keyword $answered" not in page
     post(ui, f"{url}/keywords", {"remove": "project-x"})
     assert held() == ["$answered", "later"]
     listing = ui.get(f"/ui/accounts/{account_id}/mail").text

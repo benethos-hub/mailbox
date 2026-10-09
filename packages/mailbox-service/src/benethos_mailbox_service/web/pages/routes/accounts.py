@@ -128,6 +128,9 @@ async def list_accounts(
         problem=problem,
         accounts=found.items,
         healths=service.healths(caller, found.items),
+        # The account page's links in each row, where the caller may.
+        readable={a.id for a in found.items if caller.allows("list_messages", a.id)},
+        auditable={a.id for a in found.items if caller.allows("list_sends", a.id)},
         pages=page_links(request, found.next_cursor),
         can_create=caller.allows("create_account"),
     )

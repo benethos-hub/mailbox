@@ -69,6 +69,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   grant editor shows each grant as a line to change or remove. The
   Users list disables, enables, gives or takes a role of the ticked
   users and names those it could not change.
+- Each row of the UI's Accounts list links to the account's mail and
+  sends. A message has its actions in its header and its keywords as
+  chips, and Move asks for the folder in a dialog. The batch bar of a
+  mail list asks for a folder only to move, and its head ticks all.
 
 ## [0.3.1] - 2026-10-08
 

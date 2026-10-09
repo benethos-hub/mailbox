@@ -109,7 +109,7 @@ The click budget, counted from the overview after signing in:
 
 | Task | Clicks | Path |
 |---|---|---|
-| Read a mail of one account | 3 | account on the overview, Mail, the message |
+| Read a mail of one account | 2 | Mail on its row of the overview or of Accounts, the message |
 | Read the newest mail of every account | 2 | Mail search, the message |
 | Reply to a mail | 4 | Mail search, the message, Reply, Send |
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
@@ -188,12 +188,21 @@ from the card it belongs to, not from an editor page.
 ### 4.4 Reader
 
 The mail page of an account: folders on the left, the list in the
-middle, the message where the list was when one is opened, with **Back
-to the list** at the top. Not a three-pane client. The rework keeps this
-layout and gives it the filter bar and the pager of every other list.
+middle, the message where the list was when one is opened, the
+breadcrumb the way back to its folder. Not a three-pane client. The
+rework keeps this layout and gives it the filter bar and the pager of
+every other list. The batch bar above the list asks for a folder only
+while "move to" is chosen, and the head of the list ticks every row.
 
-A message shows its keywords, and the list shows them as tags. Whoever
-may change the message adds or removes one there, one at a time.
+The header of a message holds what can be done with it, each as far as
+the caller may: **Reply** with its word, then as icons Reply to all,
+Forward, Download original, Mark read or unread, Star, Move (the dialog
+asks the folder), Move to the trash and Delete for good (the dialog
+asks first).
+
+A message shows its keywords in a card of their own, as chips, and the
+list shows them as tags. Whoever may change the message removes one
+with the x on its chip and adds one with the field beside them.
 Keywords starting with `$`, such as `$answered`, belong to the mail
 protocol: they show beside the flags and are not changed in the UI.
 
@@ -598,6 +607,9 @@ All four steps are done, as the roadmap's phase 4b records.
   users later, none for accounts, roles and webhooks (4.1, 4.2, 6.2).
 - 2026-10-09: the user page in tabs Rights, Access, Activity, the grant
   editor in lines, a batch of the Users list (6.3).
+- 2026-10-09: Mail and Sends on each row of the Accounts list, Verify on
+  the account page alone; the message's actions in its header, its
+  keywords as chips (4.1, 4.4).
 - 2026-10-09: the page's own dialog in place of the browser's
   question, copy buttons beside every secret shown once, relative
   times in lists (7).

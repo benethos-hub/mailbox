@@ -1,4 +1,4 @@
-{% from "components/ui.html" import pager %}
+{% from "components/ui.html" import icon, pager, tick_all %}
 {# A page of messages. ``emails``: the account column, for lists across
    accounts, None for one account's list. ``selectable``: a tick box per
    message for the form ``batch``. ``open_as``: "mail", or "drafts" for
@@ -8,7 +8,7 @@
   <table>
     <thead>
       <tr>
-        {% if selectable %}<th class="tick"><span class="sr">Select</span></th>{% endif %}
+        {% if selectable %}<th class="tick">{{ tick_all("batch", "ids", "Tick every message") }}</th>{% endif %}
         {% if emails is not none %}<th>Account</th>{% endif %}
         <th>From</th><th>Subject</th><th>Date</th><th></th>
       </tr>
@@ -25,9 +25,9 @@
         </td>
         <td>{{ m.date | when }}</td>
         <td>
-          {% if m.starred %}<span class="tag warn" title="starred">★</span>{% endif %}
-          {% if m.has_attachments %}<span class="tag" title="has attachments">📎</span>{% endif %}
-          {% if "$answered" in m.keywords %}<span class="tag" title="answered">↩</span>{% endif %}
+          {% if m.starred %}<span class="tag warn">{{ icon("star-fill", "starred") }}</span>{% endif %}
+          {% if m.has_attachments %}<span class="tag">{{ icon("paperclip", "has attachments") }}</span>{% endif %}
+          {% if "$answered" in m.keywords %}<span class="tag">{{ icon("reply", "answered") }}</span>{% endif %}
           {% for keyword in m.keywords | own_keywords %}<span class="tag">{{ keyword }}</span>{% endfor %}
         </td>
       </tr>
