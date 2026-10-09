@@ -158,6 +158,7 @@ def test_every_text_colour_is_readable_on_its_backgrounds() -> None:
     texts = ("text", "text-muted", "text-faint", "accent", "ok", "bad", "warn")
     pairs = [(t, b) for t in texts for b in ("bg", "surface", "surface-2")] + [
         ("on-accent", "accent"),
+        ("on-accent", "bad"),
         ("accent", "accent-soft"),
         ("ok", "ok-soft"),
         ("bad", "err-soft"),

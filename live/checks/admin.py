@@ -84,7 +84,7 @@ def bootstrap(env: dict[str, str], url: str) -> Admin:
             f"/ui/users/{user_id.group(1)}/tokens",
             data={"csrf_token": csrf_of(users), "name": "live check"},
         )
-        token = re.search(r'<code class="secret">([^<]+)</code>', made_token.text)
+        token = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', made_token.text)
         if token is None:
             sys.exit("bootstrap: no token on the user page")
     return Admin("admin", own, token.group(1))

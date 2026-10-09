@@ -109,7 +109,7 @@ def check_service(
     shown = browser.post(
         "/ui/recovery-key", data={"csrf_token": csrf, "password": admin.password}
     )
-    key = re.search(r'<code class="secret">([^<]+)</code>', shown.text)
+    key = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', shown.text)
     run.check("the recovery key is shown after it", key is not None)
     run.check(
         "and only once",
@@ -135,7 +135,7 @@ def check_service(
             "one_time": "1",
         },
     )
-    password = re.search(r'<code class="secret">([^<]+)</code>', once.text)
+    password = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', once.text)
     if not run.check("a new user gets a one-time password", password is not None):
         return
     assert password is not None

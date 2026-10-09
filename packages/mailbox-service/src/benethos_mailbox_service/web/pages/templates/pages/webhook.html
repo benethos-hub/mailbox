@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb, card, danger_card, empty, fact, facts, related, secret_card, webhook_state with context %}
+{% from "components/ui.html" import ago, breadcrumb, card, danger_card, empty, fact, facts, related, secret_card, webhook_state with context %}
 {% block title %}Webhook · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ webhook.url }}{% endblock %}
 {% block subheading %}{{ breadcrumb([("Webhooks", "/ui/webhooks"), (webhook.url, None)]) }}{% endblock %}
@@ -28,7 +28,7 @@
         <tbody>
           {% for attempt in webhook.deliveries %}
           <tr>
-            <td>{{ attempt.at | when }}</td>
+            <td>{{ ago(attempt.at) }}</td>
             <td class="num">{{ attempt.events }}</td>
             <td>
               {% if attempt.error is none %}<span class="tag ok">{{ attempt.status }}</span>

@@ -233,7 +233,9 @@ packages/mailbox-service/
         routes/         # one module per area
         templates/      # base and bare, partials, components (macros), pages
         static/         # app.css, app.js, vendored htmx, img/ (the icon
-                        #   and the logo, made by assets/build.py)
+                        #   and the logo, made by assets/build.py, the
+                        #   sprite of Bootstrap Icons with its licence,
+                        #   made by assets/icons.py)
     domain/             # BUSINESS LOGIC: decides, knows no HTTP
                         # one package per area (docs/REFACTORING.md),
                         #   the service of a package in service.py,

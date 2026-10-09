@@ -69,7 +69,7 @@ def code_form(client: TestClient, code: str) -> str:
 
 def scanned(page: httpx.Response) -> bytes:
     """The secret of the key beside the QR code."""
-    key = re.search(r'<code class="secret">([^<]+)</code>', page.text)
+    key = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', page.text)
     assert key is not None
     return totp.from_base32(key.group(1).replace(" ", ""))
 
@@ -413,13 +413,13 @@ def test_the_recovery_key_needs_a_code_with_a_second_factor(
             app_client, "/ui/recovery-key", {"password": password, "code": code}
         )
         assert "the code is not right" in refused.text
-        assert '<code class="secret">' not in refused.text
+        assert '<code class="secret"' not in refused.text
     shown = post(
         app_client,
         "/ui/recovery-key",
         {"password": password, "code": code_after(secret)},
     )
-    key = re.search(r'<code class="secret">([^<]+)</code>', shown.text)
+    key = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', shown.text)
     assert key is not None
     assert key.group(1) == encode_recovery(services.vault.master_key())
 

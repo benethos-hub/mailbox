@@ -23,6 +23,7 @@ class Entry:
     # The ``page`` a route renders with, to mark the entry active.
     key: str
     label: str
+    # Its icon in the sprite, by the name in Bootstrap Icons.
     icon: str
     url: str
 
@@ -38,30 +39,30 @@ def navigation(caller: Access) -> list[Group]:
     open. A group without entries is left out."""
     mailboxes = []
     if caller.anywhere("list_accounts") or caller.allows("create_account"):
-        mailboxes.append(Entry("accounts", "Accounts", "▤", "/ui/accounts"))
+        mailboxes.append(Entry("accounts", "Accounts", "at", "/ui/accounts"))
     if caller.anywhere("list_sends"):
-        mailboxes.append(Entry("sends", "Sends", "⇢", "/ui/sends"))
+        mailboxes.append(Entry("sends", "Sends", "send", "/ui/sends"))
     if caller.allows("list_webhooks"):
-        mailboxes.append(Entry("webhooks", "Webhooks", "⚑", "/ui/webhooks"))
+        mailboxes.append(Entry("webhooks", "Webhooks", "broadcast", "/ui/webhooks"))
     service = []
     if caller.allows("list_users"):
-        service.append(Entry("users", "Users", "☺", "/ui/users"))
+        service.append(Entry("users", "Users", "people", "/ui/users"))
     if caller.allows("list_roles"):
-        service.append(Entry("roles", "Roles", "◈", "/ui/roles"))
+        service.append(Entry("roles", "Roles", "person-badge", "/ui/roles"))
     if caller.sees_status():
-        service.append(Entry("status", "Status", "◉", "/ui/status"))
+        service.append(Entry("status", "Status", "activity", "/ui/status"))
     if caller.allows("list_activity"):
-        service.append(Entry("audit", "Audit", "✎", "/ui/audit"))
+        service.append(Entry("audit", "Audit", "journal-text", "/ui/audit"))
     if caller.allows("read_service_log"):
-        service.append(Entry("log", "Log", "☰", "/ui/log"))
+        service.append(Entry("log", "Log", "terminal", "/ui/log"))
     if caller.allows("show_recovery_key"):
-        service.append(Entry("recovery", "Recovery key", "⚿", "/ui/recovery-key"))
+        service.append(Entry("recovery", "Recovery key", "key", "/ui/recovery-key"))
     groups = [
         Group(
             None,
             [
-                Entry("home", "Overview", "◫", "/ui"),
-                Entry("mail", "Mail", "✉", "/ui/mail"),
+                Entry("home", "Overview", "house", "/ui"),
+                Entry("mail", "Mail", "envelope", "/ui/mail"),
             ],
         ),
         Group("Mailboxes", mailboxes),

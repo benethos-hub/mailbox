@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 
 from ... import __version__
 from ...common.clock import log_time, utc_now
+from ...common.text import plural
 from ...common.urls import path_and_query
 from ...data.models import Address
 from .navigation import navigation, own_page
@@ -42,6 +43,24 @@ def when(value: datetime | None) -> str:
     if value is None:
         return MISSING
     return value.astimezone().strftime("%Y-%m-%d %H:%M")
+
+
+def ago(value: datetime | None) -> str:
+    """A time in a list: under a day ago "3 minutes ago", older as
+    ``when``. A time to come is ``when`` as well."""
+    if value is None:
+        return MISSING
+    seconds = (utc_now() - value).total_seconds()
+    if not 0 <= seconds < _DAY:
+        return when(value)
+    if seconds < _MINUTE:
+        return "just now"
+    if seconds < _HOUR:
+        return f"{plural(int(seconds // _MINUTE), 'minute')} ago"
+    return f"{plural(int(seconds // _HOUR), 'hour')} ago"
+
+
+_MINUTE, _HOUR, _DAY = 60, 3600, 86400
 
 
 def past(value: datetime | None) -> bool:
@@ -98,6 +117,7 @@ def segment(value: str) -> str:
 
 templates.env.filters.update(
     when=when,
+    ago=ago,
     past=past,
     moment=log_time,
     size=size,

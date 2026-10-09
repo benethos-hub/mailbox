@@ -312,8 +312,8 @@ lists the devices with their name, when each
 was added and last used. **Add a device** asks for its name and the
 password, and with a device there already a code, then shows the QR
 code with the key as text and a field for the first code. The first
-device brings the ten recovery codes, shown once and offered as a text
-file to download. **Rename a device**
+device brings the ten recovery codes, shown once, with a button that
+copies them all and offered as a text file to download. **Rename a device**
 takes the new name, **Remove a device** the password and a code. The
 Recovery codes card says how many are left and makes new ones after
 the password and a code. Another user's page lists its devices to a user with
@@ -415,10 +415,42 @@ receiver reports nothing. Built last, if at all.
   markup of its own for a button, a tag, a field, a card header, a pager
   or a filter bar. The rework adds `filter_bar` with its chips,
   `facts`, `related` and `breadcrumb` and makes the pages use them.
+- **Icons**: a hand-picked set of [Bootstrap Icons](https://icons.getbootstrap.com/)
+  (MIT), one sprite `static/img/icons.svg` with the licence beside it.
+  `assets/icons.py` names them and makes the sprite from the npm
+  package of a pinned version, checked by its SHA-256. A new icon is a
+  line there. The macro `icon(name)` draws one in the colour of the
+  text around it. The primary action of a page (Create, Save, Send,
+  Connect, Write, Mail) and the red button of the Danger card keep
+  their word, with an icon beside it. Everything repeated per row is
+  an icon alone, its word the tooltip (`title`) and, with the record's
+  name, what a screen reader hears (`aria-label`). A touch screen
+  shows no tooltip: an icon that is not plain on its own (Sends,
+  Verify) gets its word back there and in a narrow window. Pencil,
+  bin, plus and envelope stand alone.
+- **The question before a form**: a form that changes much carries
+  `data-confirm`, the question and in a sentence after it what happens
+  and what stays. `app.js` asks it in the page's own dialog, with the
+  form's button word (`data-confirm-label`) and red where it cannot be
+  undone (`data-confirm-danger`). Escape and Cancel close it, nothing
+  is sent. Without the dialog the browser asks.
+- **Copy**: every secret shown once has a copy button beside it, the
+  recovery codes one for all of them. Where the browser offers no
+  clipboard, a page not on https or localhost, the button selects the
+  text instead.
+- **Times in lists**: tokens, devices, sends, webhooks and deliveries
+  show a time under a day ago as "3 minutes ago", older ones as date
+  and time, the full stamp always as the tooltip (macro `ago`). Audit,
+  log, the facts of a record and the message keep the full stamp.
+- **Keys**: `/` puts the cursor in the page's search field, Escape
+  closes the dialog.
 - **No inline style or script**: the content security policy stays.
   htmx only where a page asks the service again by itself, the
   sign-in with a code. Every other form is a plain post, and a
   destructive one asks first through `data-confirm`.
+- **Nothing from elsewhere**: no CDN. Every script, style, font and
+  image the UI loads is kept under `static/`, as htmx and the icons
+  are. A test checks the templates and the stylesheet for it.
 
 ## 8. Rules for building and extending
 
@@ -449,10 +481,12 @@ These rules bind every page, the reworked ones and the ones to come.
    the right, and one per form. `live/ui.py` walks every workflow of
    section 6 against the test accounts.
 8. **Checklist for a new page**: route module or a route in one; the
-   template of its type; the sidebar entry with its right; the tests of
-   rule 7; a line in this file's section 3 table and, if it changes a
-   workflow, in section 6; the roadmap item; a CHANGELOG entry only when
-   a person using the API notices.
+   template of its type; the sidebar entry with its right and its icon;
+   icons only from the sprite, a new one added in `assets/icons.py`;
+   nothing loaded from elsewhere, no CDN; the tests of rule 7; a line
+   in this file's section 3 table and, if it changes a workflow, in
+   section 6; the roadmap item; a CHANGELOG entry only when a person
+   using the API notices.
 
 ## 9. Order of work
 
@@ -488,5 +522,12 @@ All four steps are done, as the roadmap's phase 4b records.
   the mail protocol not changed there (4.4).
 - 2026-10-06: Accounts and Users paged like their lists in the API,
   Roles not (4.6).
+- 2026-10-09: icons with tooltips in place of words on what repeats
+  per row, Bootstrap Icons as an own sprite, the primary action and
+  the Danger button keep their word (7).
+- 2026-10-09: no CDN, everything the UI loads kept under `static/` (7).
+- 2026-10-09: the page's own dialog in place of the browser's
+  question, copy buttons beside every secret shown once, relative
+  times in lists (7).
 
 The Service card of the overview shows to everyone with `accounts.read`.

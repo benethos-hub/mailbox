@@ -121,7 +121,7 @@ def _add(
             "code": code,
         },
     )
-    key = re.search(r'<code class="secret">([^<]+)</code>', scan.text)
+    key = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', scan.text)
     if not run.check(
         f"adding {name} shows a QR code and the key",
         'src="data:image/svg+xml' in scan.text and key is not None,

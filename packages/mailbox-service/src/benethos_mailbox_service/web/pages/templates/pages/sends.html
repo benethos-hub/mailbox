@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, empty, filter_bar, pager %}
+{% from "components/ui.html" import ago, card, empty, filter_bar, pager %}
 {% block title %}Sends · {{ APP_NAME }}{% endblock %}
 {% block heading %}Sends{% endblock %}
 {% block subheading %}<div class="sub">Who sent from which account to whom, never what</div>{% endblock %}
@@ -20,7 +20,7 @@
         <tbody>
           {% for r in records %}
           <tr>
-            <td>{{ r.created_at | when }}</td>
+            <td>{{ ago(r.created_at) }}</td>
             {% if not one_account %}<td><a href="/ui/sends?account={{ r.account_id }}">{{ emails.get(r.account_id, r.account_id) }}</a></td>{% endif %}
             <td class="name">
               {% if r.user_id in names %}{{ names[r.user_id] }}{% else %}<span class="mono">{{ r.user_id[:16] }}…</span>{% endif %}

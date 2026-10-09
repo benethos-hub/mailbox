@@ -1,4 +1,4 @@
-{% from "components/ui.html" import csrf_field with context %}
+{% from "components/ui.html" import csrf_field, icon with context %}
 {# ``nav``: the groups and entries the caller may open (navigation.py). #}
 <aside class="sidebar">
   <div class="brand"><img class="mark" src="/ui/static/img/icon.svg" alt="" width="21" height="22" /> {{ APP_NAME }}</div>
@@ -6,7 +6,7 @@
     {% for group in nav %}
     {% if group.title %}<div class="section">{{ group.title }}</div>{% endif %}
     {% for entry in group.entries %}
-    <a href="{{ entry.url }}" class="{{ 'active' if page == entry.key }}"{% if page == entry.key %} aria-current="page"{% endif %}><span class="icon">{{ entry.icon }}</span> {{ entry.label }}</a>
+    <a href="{{ entry.url }}" class="{{ 'active' if page == entry.key }}"{% if page == entry.key %} aria-current="page"{% endif %}>{{ icon(entry.icon) }} {{ entry.label }}</a>
     {% endfor %}
     {% endfor %}
   </nav>

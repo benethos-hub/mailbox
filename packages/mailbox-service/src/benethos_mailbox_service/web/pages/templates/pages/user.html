@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, anywhere_tag, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, new_row, related, rights_tags, secret_card with context %}
+{% from "components/ui.html" import action, ago, anywhere_tag, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, new_row, related, rights_tags, secret_card with context %}
 {% from "components/audit.html" import activity_rows %}
 {% from "components/grants.html" import grant_editor, grants_of, role_checks, role_tags, sending_of, service_editor, service_of %}
 {% block title %}{{ user.name }} · {{ APP_NAME }}{% endblock %}
@@ -64,9 +64,9 @@
           {% for token, state in tokens %}
           <tr>
             <td class="name">{{ token.name }}<span class="sub mono">{{ token.id[:16] }}…</span></td>
-            <td>{{ token.created_at | when }}</td>
+            <td>{{ ago(token.created_at) }}</td>
             <td>{{ token.expires_at | when }}</td>
-            <td>{{ token.last_used_at | when }}</td>
+            <td>{{ ago(token.last_used_at) }}</td>
             <td>{% if state == "active" %}<span class="tag ok">active</span>{% else %}<span class="tag">{{ state }}</span>{% endif %}</td>
             <td class="actions">
               {% if can_revoke and state == "active" %}{{ action("/ui/users/" ~ user.id ~ "/tokens/" ~ token.id ~ "/revoke", "Revoke", confirm="Revoke the token " ~ token.name ~ "? Whoever uses it is locked out at once.", cls="small danger") }}{% endif %}
@@ -175,8 +175,8 @@
           {% for device in factor.totp %}
           <tr>
             <td class="name">{{ device.name }}</td>
-            <td>{{ device.created_at | when }}</td>
-            <td>{{ device.last_used_at | when }}</td>
+            <td>{{ ago(device.created_at) }}</td>
+            <td>{{ ago(device.last_used_at) }}</td>
             <td class="actions">
               {% if can_remove_device %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/totp/" ~ device.id ~ "/remove", "Remove", confirm="Remove the device " ~ device.name ~ " of " ~ user.name ~ "? Its codes work no more.", cls="small danger") }}{% endif %}
             </td>

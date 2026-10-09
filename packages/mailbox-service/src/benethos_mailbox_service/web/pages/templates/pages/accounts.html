@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, credentials, empty, filter_bar, pager with context %}
+{% from "components/ui.html" import card, credentials, empty, filter_bar, link_button, pager with context %}
 {% block title %}Accounts · {{ APP_NAME }}{% endblock %}
 {% block heading %}Accounts{% endblock %}
 {% block subheading %}<div class="sub">The mailboxes this service connects</div>{% endblock %}
 {% block actions %}
-{% if can_create %}<a class="btn primary" href="/ui/accounts/new">Connect an account</a>{% endif %}
+{% if can_create %}{{ link_button("/ui/accounts/new", "Connect an account", "plus-lg", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
 {% call card("Accounts", meta=none if pages[0] or pages[1] else accounts | length, tight=True) %}

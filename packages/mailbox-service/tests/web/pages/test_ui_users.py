@@ -266,7 +266,7 @@ def test_a_new_token_is_shown_once_and_never_in_the_url(
     )
     assert answer.headers["location"] == url
     page = ui.get(url).text
-    shown = re.search(r'<code class="secret">([^<]+)</code>', page)
+    shown = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', page)
     assert shown is not None
     plain = shown.group(1)
     assert services.auth.authenticate(plain).user_id == user.id
@@ -319,7 +319,7 @@ def test_a_new_user_gets_a_one_time_password_shown_once(
         {"name": "Otto", "grants": "0", "signs_in_to": "ui", "one_time": "1"},
     )
     assert "Otto created." in created.text
-    shown = re.search(r'<code class="secret">([^<]+)</code>', created.text)
+    shown = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', created.text)
     assert shown is not None
     assert shown.group(1) not in ui.get(str(created.url)).text
     assert "not possible" not in created.text  # it has a password now
@@ -363,7 +363,7 @@ def test_a_new_user_is_an_api_user_by_default(
     created = post(ui, "/ui/users", {"name": "script", "grants": "0", "one_time": "1"})
     assert "script created." in created.text
     # No one-time password for an API user, though the box was ticked.
-    assert '<code class="secret">' not in created.text
+    assert '<code class="secret"' not in created.text
     assert "off: an API user, tokens only" in created.text
     listed = ui.get("/ui/users", params={"api_only": "1"}).text
     assert ">script</a>" in listed and ">admin</a>" not in listed

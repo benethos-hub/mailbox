@@ -43,7 +43,7 @@ def test_create_shows_the_secret_once(ready: TestClient) -> None:
     page = create(ready)
     shown = ready.get(page).text
     assert "Webhook created." in shown and "shown this once" in shown
-    secret = re.search(r'<code class="secret">([^<]+)</code>', shown)
+    secret = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', shown)
     assert secret is not None
     again = ready.get(page).text
     assert secret.group(1) not in again and URL in again

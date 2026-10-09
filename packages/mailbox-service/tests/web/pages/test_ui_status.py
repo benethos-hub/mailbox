@@ -50,7 +50,7 @@ def test_the_recovery_key_after_the_password(
 
     with caplog.at_level(logging.INFO):
         shown = post(ui, "/ui/recovery-key", {"password": UI_PASSWORD})
-    key = re.search(r'<code class="secret">([^<]+)</code>', shown.text)
+    key = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', shown.text)
     assert key is not None
     assert key.group(1) == encode_recovery(services.vault.master_key())
     assert "was shown the recovery key in the UI" in caplog.text

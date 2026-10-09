@@ -141,7 +141,9 @@ assets/                   # logo/: the logo and the icon as they came,
                           #   light and dark. build.py makes the
                           #   shipped copies in the service's
                           #   static/img/, with --social the social
-                          #   preview, with --diagram the diagram
+                          #   preview, with --diagram the diagram.
+                          #   icons.py makes the UI's icon sprite
+                          #   from a pinned Bootstrap Icons package
 live/                     # manual checks against the test accounts,
                           #   what they share in live/checks/, one module
                           #   per subject

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, empty %}
+{% from "components/ui.html" import card, empty, link_button %}
 {% from "components/grants.html" import rights_of %}
 {% block title %}Roles · {{ APP_NAME }}{% endblock %}
 {% block heading %}Roles{% endblock %}
 {% block subheading %}<div class="sub">Named sets of rights that users share</div>{% endblock %}
 {% block actions %}
-{% if can_create %}<a class="btn primary" href="/ui/roles/new">New role</a>{% endif %}
+{% if can_create %}{{ link_button("/ui/roles/new", "New role", "plus-lg", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
 {% if roles %}

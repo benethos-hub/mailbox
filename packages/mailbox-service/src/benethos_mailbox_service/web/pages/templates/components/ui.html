@@ -4,6 +4,37 @@
 
 {% macro empty(text) %}<div class="empty">{{ text }}</div>{% endmacro %}
 
+{# An icon of the sprite, static/img/icons.svg (docs/UI.md 7), by its
+   name in Bootstrap Icons. Without ``label`` a word or the control
+   around it says what it is, so it is hidden from screen readers. With
+   ``label`` it stands alone: read out, and shown as a tooltip. #}
+{% macro icon(name, label=None) %}{{ _svg(name, label) }}{% endmacro %}
+
+{% macro _svg(name, label=None) %}{% if label %}<svg class="i" role="img" aria-label="{{ label }}"><title>{{ label }}</title><use href="/ui/static/img/icons.svg#{{ name }}"></use></svg>{% else %}<svg class="i" aria-hidden="true" focusable="false"><use href="/ui/static/img/icons.svg#{{ name }}"></use></svg>{% endif %}{% endmacro %}
+
+{# The inside of a button or link with an icon: the word beside it, or
+   with ``alone`` the icon by itself and the word as its tooltip. ``word``
+   brings the word back where no tooltip shows, on a touch screen or in
+   a narrow window, for an icon that is not plain on its own. #}
+{% macro _face(name, label, alone=False, word=False) %}{% if alone %}{{ _svg(name) }}{% if word %}<span class="word">{{ label }}</span>{% endif %}{% else %}{{ _svg(name) }} {{ label }}{% endif %}{% endmacro %}
+
+{# The attributes of a control that asks before it goes on: the question,
+   the word of its button, red for what cannot be undone. #}
+{% macro _asks(confirm, label, danger) %}{% if confirm %} data-confirm="{{ confirm }}" data-confirm-label="{{ label }}"{% if danger %} data-confirm-danger{% endif %}{% endif %}{% endmacro %}
+
+{# A link that looks like a button, with an icon. ``alone``: the icon
+   only, ``label`` its tooltip and ``name`` what a screen reader hears. #}
+{% macro link_button(url, label, icon, alone=False, word=False, cls="small", name=None) %}<a class="btn {{ cls }}{{ ' icon-btn' if alone }}" href="{{ url }}"{% if alone %} title="{{ label }}" aria-label="{{ name or label }}"{% endif %}>{{ _face(icon, label, alone, word) }}</a>{% endmacro %}
+
+{# A button that copies the text of the element ``target`` (an id),
+   e.g. a secret shown once. Needs app.js: without it, the text is
+   selectable in one piece. #}
+{% macro copy_button(target, label="Copy") %}<button class="small icon-btn" type="button" data-copy="{{ target }}" title="{{ label }}" aria-label="{{ label }}">{{ _svg("clipboard") }}</button>{% endmacro %}
+
+{# A time in a list: under a day ago as "3 minutes ago", older as date
+   and time. The full stamp is always the tooltip. #}
+{% macro ago(value) %}{% if value %}<time datetime="{{ value.isoformat() }}" title="{{ value | when }}">{{ value | ago }}</time>{% else %}—{% endif %}{% endmacro %}
+
 {# The line under a detail page's heading: where the page sits.
    ``trail``: (label, url) pairs, the last one the page itself. #}
 {% macro breadcrumb(trail) %}
@@ -30,12 +61,12 @@
 
 {# A secret the service shows once, e.g. a new token: ``title``, the
    value in one selectable piece, and the caller says what to do with it. #}
-{% macro secret_card(title, value) %}
+{% macro secret_card(title, value, id="secret") %}
 <section class="card">
   <header><h2>{{ title }}</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
   <div class="body">
     <p class="muted">{{ caller() }}</p>
-    <code class="secret">{{ value }}</code>
+    <div class="secret-line"><code class="secret" id="{{ id }}">{{ value }}</code>{{ copy_button(id) }}</div>
   </div>
 </section>
 {% endmacro %}
@@ -72,12 +103,17 @@
 {# The hidden field every form that changes something carries. #}
 {% macro csrf_field() %}<input type="hidden" name="csrf_token" value="{{ csrf }}" />{% endmacro %}
 
-{# A form that is only a button, e.g. "Delete", with a question before it. #}
-{% macro action(url, label, confirm=None, cls="small", fields={}) %}
-<form class="inline" method="post" action="{{ url }}"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
+{# A form that is only a button, e.g. "Delete", with a question before it.
+   ``icon``: an icon beside the word, or with ``alone`` in its place, the
+   word then the tooltip and ``name`` what a screen reader hears, e.g.
+   "Revoke the token laptop". A ``danger`` button asks with a red one. #}
+{% macro action(url, label, confirm=None, cls="small", fields={}, icon=None, alone=False, word=False, name=None) %}
+<form class="inline" method="post" action="{{ url }}"{{ _asks(confirm, label, "danger" in cls) }}>
   {{ csrf_field() }}
-  {% for name, value in fields.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endfor %}
-  <button class="{{ cls }}" type="submit">{{ label }}</button>
+  {% for key, value in fields.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}" />{% endfor %}
+  {% if icon and alone %}<button class="{{ cls }} icon-btn" type="submit" title="{{ label }}" aria-label="{{ name or label }}">{{ _face(icon, label, True, word) }}</button>
+  {% elif icon %}<button class="{{ cls }}" type="submit">{{ _face(icon, label) }}</button>
+  {% else %}<button class="{{ cls }}" type="submit">{{ label }}</button>{% endif %}
 </form>
 {% endmacro %}
 
@@ -175,7 +211,7 @@
   <header><h2>{{ title }}</h2></header>
   <div class="body toolbar">
     <span class="muted grow">{{ text }}</span>
-    {{ action(url, label, confirm=confirm, cls="danger") }}
+    {{ action(url, label, confirm=confirm, cls="danger", icon="trash") }}
   </div>
 </section>
 {% endmacro %}

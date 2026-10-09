@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb, csrf_field, filter_bar, folder_options with context %}
+{% from "components/ui.html" import breadcrumb, csrf_field, filter_bar, folder_options, link_button with context %}
 {% block title %}{{ current.name }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ current.name }}{% endblock %}
 {% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
 {% block actions %}
 {% if can.drafts %}<a class="btn" href="/ui/accounts/{{ account.id }}/drafts">Drafts</a>{% endif %}
-{% if can.write %}<a class="btn primary" href="/ui/accounts/{{ account.id }}/compose">Write</a>{% endif %}
+{% if can.write %}{{ link_button("/ui/accounts/" ~ account.id ~ "/compose", "Write", "pencil", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
 <div class="mail-layout">

@@ -50,6 +50,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The UI names the company a person signs in at: "Sign in with
   Google" for Gmail. It offers a sign-in with a code only where the
   provider has one.
+- The UI shows icons, a set of Bootstrap Icons kept in the service, and
+  asks before a form that changes much in a dialog of its own. Every
+  secret shown once has a copy button. Lists show recent times as
+  "3 minutes ago". `/` puts the cursor in the search field. Nothing is
+  loaded from elsewhere.
 
 ## [0.3.1] - 2026-10-08
 

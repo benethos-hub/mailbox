@@ -28,6 +28,15 @@
         <footer>benethos-mailbox-service {{ VERSION }}</footer>
       </div>
     </div>
+    {# The question before a form that changes much (data-confirm), filled
+       by app.js. Escape and Cancel close it, nothing is sent. #}
+    <dialog class="ask" id="confirm" aria-labelledby="confirm-title">
+      <form method="dialog">
+        <div class="body"><h2 id="confirm-title"></h2><p id="confirm-text"></p></div>
+        <div class="buttons"><button type="submit" value="cancel" autofocus>Cancel</button><button class="primary" type="submit" value="ok" id="confirm-ok">OK</button></div>
+      </form>
+    </dialog>
+    <div class="toast" id="toast" role="status" hidden></div>
     <script src="/ui/static/vendor/htmx/htmx.min.js" defer></script>
     <script src="/ui/static/js/app.js" defer></script>
   </body>
