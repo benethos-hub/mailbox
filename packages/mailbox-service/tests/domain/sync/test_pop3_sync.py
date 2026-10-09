@@ -6,66 +6,13 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
-from benethos_mailbox_service.assembly import Services, build_services, create_app
+from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.models import ProviderType
-from benethos_mailbox_service.data.protocols.pop3 import Pop3Session
-from benethos_mailbox_service.data.providers import (
-    CredentialReader,
-    ProviderSettings,
-    Reads,
-)
-from benethos_mailbox_service.data.providers.memory import MemoryProvider
-from benethos_mailbox_service.data.providers.pop3 import Pop3Provider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
-from ...conftest import ADMIN, admin_bearer, create_account
+from ...conftest import ADMIN, admin_bearer
 from ...imap_fake import make_message
 from ...pop3_fake import FakePop3Server
-
-
-@pytest.fixture
-def pop3_server() -> FakePop3Server:
-    box = FakePop3Server()
-    for n in range(1, 4):
-        box.add(f"uid-{n}", make_message(f"Mail {n}"))
-    return box
-
-
-@pytest.fixture
-def pop3_services(
-    pop3_server: FakePop3Server, monkeypatch: pytest.MonkeyPatch
-) -> Services:
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
-
-    def factory(
-        kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
-    ) -> Reads:
-        if kind is ProviderType.MEMORY:
-            return MemoryProvider()
-        return Pop3Provider(
-            settings,
-            credentials,
-            session_factory=lambda s: Pop3Session(s, connection_factory=pop3_server),
-            sleep=lambda seconds: None,
-        )
-
-    services = build_services(Settings(storage="memory"), provider_factory=factory)
-    services.vault.initialize()
-    return services
-
-
-@pytest.fixture
-def pop3_account_id(pop3_services: Services) -> str:
-    return create_account(
-        pop3_services.accounts,
-        ProviderType.POP3,
-        "me@example.com",
-        settings={"host": "pop.example.com"},
-        credentials={"password": SecretStr("secret")},
-    ).id
 
 
 @pytest.fixture

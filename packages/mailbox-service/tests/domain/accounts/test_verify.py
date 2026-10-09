@@ -33,10 +33,12 @@ def server() -> FakeMailBox:
     return box
 
 
+# The services and a client of the API with every right.
+World = tuple[Services, TestClient]
+
+
 @pytest.fixture
-def world(
-    server: FakeMailBox, monkeypatch: pytest.MonkeyPatch
-) -> Iterator[tuple[Services, TestClient]]:
+def world(server: FakeMailBox, monkeypatch: pytest.MonkeyPatch) -> Iterator[World]:
     monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
 
     def factory(
@@ -58,7 +60,7 @@ def world(
     )
 
 
-def test_a_working_credential_is_stored(world, server: FakeMailBox) -> None:  # type: ignore[no-untyped-def]
+def test_a_working_credential_is_stored(world: World, server: FakeMailBox) -> None:
     services, client = world
     response = client.post("/v1/accounts", json=NEW_ACCOUNT)
     assert response.status_code == 201
@@ -72,7 +74,7 @@ def test_a_working_credential_is_stored(world, server: FakeMailBox) -> None:  # 
     assert server.logins == 2
 
 
-def test_a_wrong_credential_stores_nothing(world) -> None:  # type: ignore[no-untyped-def]
+def test_a_wrong_credential_stores_nothing(world: World) -> None:
     services, client = world
     wrong = {**NEW_ACCOUNT, "credentials": {"password": "nope"}}
     response = client.post("/v1/accounts", json=wrong)
@@ -81,7 +83,7 @@ def test_a_wrong_credential_stores_nothing(world) -> None:  # type: ignore[no-un
     assert client.get("/v1/accounts").json()["items"] == []
 
 
-def test_a_missing_credential_is_a_bad_request(world) -> None:  # type: ignore[no-untyped-def]
+def test_a_missing_credential_is_a_bad_request(world: World) -> None:
     _, client = world
     missing = {**NEW_ACCOUNT, "credentials": {}}
     response = client.post("/v1/accounts", json=missing)
@@ -90,14 +92,14 @@ def test_a_missing_credential_is_a_bad_request(world) -> None:  # type: ignore[n
     assert client.get("/v1/accounts").json()["items"] == []
 
 
-def test_bad_settings_store_nothing(world) -> None:  # type: ignore[no-untyped-def]
+def test_bad_settings_store_nothing(world: World) -> None:
     _, client = world
     plain = {**NEW_ACCOUNT, "settings": {**NEW_ACCOUNT["settings"], "security": "none"}}
     assert client.post("/v1/accounts", json=plain).status_code == 400
     assert client.get("/v1/accounts").json()["items"] == []
 
 
-def test_verify_after_the_password_changed(world, server: FakeMailBox) -> None:  # type: ignore[no-untyped-def]
+def test_verify_after_the_password_changed(world: World, server: FakeMailBox) -> None:
     services, client = world
     account_id = client.post("/v1/accounts", json=NEW_ACCOUNT).json()["id"]
 
@@ -118,7 +120,7 @@ def test_verify_after_the_password_changed(world, server: FakeMailBox) -> None: 
     assert client.get(f"/v1/accounts/{account_id}/folders").status_code == 200
 
 
-def test_verify_needs_accounts_manage(world) -> None:  # type: ignore[no-untyped-def]
+def test_verify_needs_accounts_manage(world: World) -> None:
     services, client = world
     account_id = client.post("/v1/accounts", json=NEW_ACCOUNT).json()["id"]
     user = client.post(

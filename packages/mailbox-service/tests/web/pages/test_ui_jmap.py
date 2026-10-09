@@ -14,11 +14,8 @@ from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Candidate, Discovery, ProviderType
 
 from ...conftest import browser_admin
-from ...domain.sync.test_jmap_sync import account_id, jmap_services, server
 from ...jmap_fake import HOST, TOKEN, FakeJmap
 from ...ui_helpers import post, sign_in
-
-__all__ = ["account_id", "jmap_services", "server"]  # fixtures
 
 
 @pytest.fixture
@@ -28,12 +25,12 @@ def browser(jmap_services: Services) -> TestClient:
     return client
 
 
-def test_the_account_page(browser: TestClient, account_id: str) -> None:
-    page = browser.get(f"/ui/accounts/{account_id}").text
+def test_the_account_page(browser: TestClient, jmap_account_id: str) -> None:
+    page = browser.get(f"/ui/accounts/{jmap_account_id}").text
     assert "JMAP server" in page and "Session path" in page
     assert "SMTP server" not in page and "New password" in page
     # Everything a mail client does is offered.
-    mail = browser.get(f"/ui/accounts/{account_id}/mail").text
+    mail = browser.get(f"/ui/accounts/{jmap_account_id}/mail").text
     assert "move to the trash" in mail and "New folder" in mail
 
 
@@ -44,7 +41,9 @@ class NothingFound:
         return Discovery(email=email, domain="example.org")
 
 
-def test_connect_by_hand_with_a_token(browser: TestClient, server: FakeJmap) -> None:
+def test_connect_by_hand_with_a_token(
+    browser: TestClient, jmap_server: FakeJmap
+) -> None:
     browser.app.state.services = replace(  # type: ignore[attr-defined]
         browser.app.state.services,  # type: ignore[attr-defined]
         discovery=NothingFound(),
@@ -66,7 +65,7 @@ def test_connect_by_hand_with_a_token(browser: TestClient, server: FakeJmap) -> 
     )
     assert done.status_code == 200, done.text
     assert "me@example.org connected" in done.text
-    assert server.requests[-1].headers["authorization"] == f"Bearer {TOKEN}"
+    assert jmap_server.requests[-1].headers["authorization"] == f"Bearer {TOKEN}"
     # The token is stored as one, and the account page asks for a new one.
     assert "token" in done.text and "New API token" in done.text
 
@@ -138,9 +137,9 @@ def saved_draft(browser: TestClient, account_id: str) -> str:
 
 
 def test_a_draft_edited_and_sent(
-    browser: TestClient, account_id: str, server: FakeJmap
+    browser: TestClient, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:
-    first = saved_draft(browser, account_id)
+    first = saved_draft(browser, jmap_account_id)
     edited = post(
         browser,
         first,
@@ -155,16 +154,16 @@ def test_a_draft_edited_and_sent(
         {"to": "bob@example.org", "subject": "Plan", "text": "third", "do": "send"},
     )
     assert "Sent." in sent.text, sent.text
-    [submission] = server.submissions
-    assert b"third" in server.raw_of(submission["emailId"])
+    [submission] = jmap_server.submissions
+    assert b"third" in jmap_server.raw_of(submission["emailId"])
     assert submission["envelope"]["rcptTo"] == [{"email": "bob@example.org"}]
 
 
 def test_a_draft_saved_but_not_sent(
-    browser: TestClient, account_id: str, server: FakeJmap
+    browser: TestClient, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:
-    first = saved_draft(browser, account_id)
-    server.refuse_submission = {"type": "forbiddenToSend", "description": "quota"}
+    first = saved_draft(browser, jmap_account_id)
+    jmap_server.refuse_submission = {"type": "forbiddenToSend", "description": "quota"}
     refused = post(
         browser,
         first,
@@ -173,8 +172,8 @@ def test_a_draft_saved_but_not_sent(
     assert refused.status_code == 409 and "quota" in refused.text
     [now] = [
         e["id"]
-        for e in server.emails.values()
-        if "drafts" in e["mailboxIds"] and b"second" in server.raw_of(e["id"])
+        for e in jmap_server.emails.values()
+        if "drafts" in e["mailboxIds"] and b"second" in jmap_server.raw_of(e["id"])
     ]
     # The form goes on with the draft as it is stored now.
-    assert f'action="/ui/accounts/{account_id}/drafts/{now}"' in refused.text
+    assert f'action="/ui/accounts/{jmap_account_id}/drafts/{now}"' in refused.text

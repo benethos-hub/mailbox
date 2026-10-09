@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +13,8 @@ from benethos_mailbox_service.data.models import (
     FolderRole,
     Grant,
     Message,
+    MessageSummary,
+    Page,
     ProviderType,
 )
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
@@ -26,10 +29,14 @@ START = datetime(2026, 9, 1, tzinfo=UTC)
 class Flaky(MemoryProvider):
     fail = False
 
-    async def list_messages(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+    async def list_messages(self, *args: Any, **kwargs: Any) -> Page[MessageSummary]:
         if self.fail:
             raise ProviderUnavailableError("the mail server is not reachable")
         return await super().list_messages(*args, **kwargs)
+
+
+# The services, a client of the API, the three accounts and their adapters.
+World = tuple[Services, TestClient, list[str], list[Flaky]]
 
 
 def _messages(prefix: str, hours: list[int], folder: str = "inbox") -> list[Message]:
@@ -45,7 +52,7 @@ def _messages(prefix: str, hours: list[int], folder: str = "inbox") -> list[Mess
 
 
 @pytest.fixture
-def world() -> tuple[Services, TestClient, list[str], list[Flaky]]:
+def world() -> World:
     adapters = [
         Flaky(messages=_messages("a", [9, 7, 5, 3, 1])),
         Flaky(messages=_messages("b", [10, 8, 2])),
@@ -88,7 +95,7 @@ def _walk(client: TestClient, limit: int, **params: object) -> list[list[str]]:
             return pages
 
 
-def test_every_message_once_newest_first(world) -> None:  # type: ignore[no-untyped-def]
+def test_every_message_once_newest_first(world: World) -> None:
     _, client, _, _ = world
     pages = _walk(client, limit=3)
     flat = [s for page in pages for s in page]
@@ -97,19 +104,19 @@ def test_every_message_once_newest_first(world) -> None:  # type: ignore[no-unty
 
 
 @pytest.mark.parametrize("limit", [1, 2, 4, 50])
-def test_order_holds_for_any_page_size(world, limit: int) -> None:  # type: ignore[no-untyped-def]
+def test_order_holds_for_any_page_size(world: World, limit: int) -> None:
     _, client, _, _ = world
     flat = [s for page in _walk(client, limit=limit) for s in page]
     assert flat == ["b10", "a9", "b8", "a7", "c6", "a5", "c4", "a3", "b2", "a1"]
 
 
-def test_items_carry_their_account(world) -> None:  # type: ignore[no-untyped-def]
+def test_items_carry_their_account(world: World) -> None:
     _, client, ids, _ = world
     items = client.get("/v1/messages", params={"limit": 2}).json()["items"]
     assert [i["account_id"] for i in items] == [ids[1], ids[0]]
 
 
-def test_chosen_accounts_only(world) -> None:  # type: ignore[no-untyped-def]
+def test_chosen_accounts_only(world: World) -> None:
     _, client, ids, _ = world
     flat = [
         s for page in _walk(client, limit=10, accounts=[ids[2], ids[1]]) for s in page
@@ -117,7 +124,7 @@ def test_chosen_accounts_only(world) -> None:  # type: ignore[no-untyped-def]
     assert flat == ["b10", "b8", "c6", "c4", "b2"]
 
 
-def test_a_cursor_continues_its_own_search_alone(world) -> None:  # type: ignore[no-untyped-def]
+def test_a_cursor_continues_its_own_search_alone(world: World) -> None:
     _, client, _, _ = world
     first = client.get("/v1/messages", params={"limit": 1, "folder": "inbox"}).json()
     cursor = first["next_cursor"]
@@ -131,7 +138,7 @@ def test_a_cursor_continues_its_own_search_alone(world) -> None:  # type: ignore
         assert "another search" in answer.json()["error"]["message"]
 
 
-def test_folder_role_per_account(world) -> None:  # type: ignore[no-untyped-def]
+def test_folder_role_per_account(world: World) -> None:
     _, client, _, _ = world
     archive = _walk(client, limit=10, folder="archive")
     assert archive == [["c6", "c4"]]
@@ -140,7 +147,7 @@ def test_folder_role_per_account(world) -> None:  # type: ignore[no-untyped-def]
     assert inbox[0] == "b10"
 
 
-def test_rights_filter_without_a_word(world) -> None:  # type: ignore[no-untyped-def]
+def test_rights_filter_without_a_word(world: World) -> None:
     services, client, ids, _ = world
     headers = bearer_for(services, Grant(accounts=[ids[0]], allow=["mail.read"]))
     body = client.get(
@@ -152,7 +159,7 @@ def test_rights_filter_without_a_word(world) -> None:  # type: ignore[no-untyped
     assert body["incomplete"] == []
 
 
-def test_a_failing_account_does_not_keep_the_cursor_alive(world) -> None:  # type: ignore[no-untyped-def]
+def test_a_failing_account_does_not_keep_the_cursor_alive(world: World) -> None:
     _, client, ids, adapters = world
     adapters[1].fail = True
     # The failed account keeps its place while the others deliver. Once
@@ -161,7 +168,7 @@ def test_a_failing_account_does_not_keep_the_cursor_alive(world) -> None:  # typ
     assert pages == [["a9", "a7", "c6", "a5", "c4", "a3", "a1"], []]
 
 
-def test_a_failing_account_leaves_the_page_incomplete(world) -> None:  # type: ignore[no-untyped-def]
+def test_a_failing_account_leaves_the_page_incomplete(world: World) -> None:
     _, client, ids, adapters = world
     adapters[1].fail = True
     body = client.get("/v1/messages", params={"limit": 3}).json()
@@ -191,14 +198,14 @@ def test_a_failing_account_leaves_the_page_incomplete(world) -> None:  # type: i
     ]
 
 
-def test_invalid_cursor(world) -> None:  # type: ignore[no-untyped-def]
+def test_invalid_cursor(world: World) -> None:
     _, client, _, _ = world
     for cursor in ["nonsense", "x_!!!", "x_" + "e30"[:-1]]:
         response = client.get("/v1/messages", params={"cursor": cursor})
         assert response.status_code == 400
 
 
-def test_per_account_listing_also_names_the_account(world) -> None:  # type: ignore[no-untyped-def]
+def test_per_account_listing_also_names_the_account(world: World) -> None:
     _, client, ids, _ = world
     items = client.get(f"/v1/accounts/{ids[0]}/messages").json()["items"]
     assert {i["account_id"] for i in items} == {ids[0]}

@@ -20,12 +20,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...imap_fake import FakeMailBox
-from .test_imap import FakeTime, filled_server, provider
-
-
-@pytest.fixture
-def server() -> FakeMailBox:
-    return filled_server()
+from .test_imap import FakeTime, provider
 
 
 async def test_one_login_for_many_calls(server: FakeMailBox) -> None:

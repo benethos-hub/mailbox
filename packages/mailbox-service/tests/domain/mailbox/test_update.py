@@ -15,7 +15,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...conftest import bearer_for
-from ...data.providers.test_imap import provider, server  # noqa: F401 - the fixture
+from ...data.providers.test_imap import provider
 from ...imap_fake import FakeMailBox
 from ...provider_ops import update
 
@@ -80,7 +80,7 @@ def test_invalid_keywords_are_refused(keyword: str) -> None:
 # --- the IMAP adapter -----------------------------------------------------
 
 
-async def test_update_on_the_server(server: FakeMailBox) -> None:  # noqa: F811
+async def test_update_on_the_server(server: FakeMailBox) -> None:
     imap = provider(server)
     message_id = mappers.message_id("INBOX", 7, 3)
     summary = await update(
@@ -101,7 +101,7 @@ async def test_update_on_the_server(server: FakeMailBox) -> None:  # noqa: F811
     assert server.calls[-1][2] == "header"
 
 
-async def test_an_empty_update_writes_nothing(server: FakeMailBox) -> None:  # noqa: F811
+async def test_an_empty_update_writes_nothing(server: FakeMailBox) -> None:
     imap = provider(server)
     summary = await update(imap, mappers.message_id("INBOX", 7, 3), MessageUpdate())
     assert summary.unread is True
@@ -113,7 +113,7 @@ async def test_an_empty_update_writes_nothing(server: FakeMailBox) -> None:  # n
     [mappers.message_id("INBOX", 7, 99), mappers.message_id("INBOX", 6, 3)],
 )
 async def test_update_of_an_unknown_message(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
     message_id: str,
 ) -> None:
     with pytest.raises(NotFoundError):

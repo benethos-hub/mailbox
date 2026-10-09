@@ -26,7 +26,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...conftest import admin_bearer, bearer_for, create_account
-from ...data.providers.test_imap import provider, server  # noqa: F401 - the fixture
+from ...data.providers.test_imap import provider
 from ...imap_fake import FakeFolder, FakeMailBox
 
 
@@ -160,7 +160,7 @@ async def test_delete_drops_the_subscription(below_inbox: FakeMailBox) -> None:
     assert "INBOX.Weg" not in below_inbox.subscribed
 
 
-async def test_without_namespace_at_the_top(server: FakeMailBox) -> None:  # noqa: F811
+async def test_without_namespace_at_the_top(server: FakeMailBox) -> None:
     await provider(server).create_folder("Projekte", None)
     assert "Projekte" in server.folders
 

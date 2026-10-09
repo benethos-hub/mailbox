@@ -25,51 +25,10 @@ from benethos_mailbox_service.domain.webhooks.delivery import BATCH, Retries, si
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 
 from ...conftest import ADMIN, bearer_for, memory_of
+from ..conftest import Clock, Receiver
 
 pytestmark = pytest.mark.usefixtures("master_key")
 URL = "https://hooks.example.com/mail"
-
-
-class Receiver:
-    """Stands in for the WebhookPoster: records each post, answers a status."""
-
-    def __init__(self) -> None:
-        self.posts: list[tuple[str, bytes, dict[str, str]]] = []
-        self.status = 204
-        self.failure: Exception | None = None
-
-    async def post(self, url: str, body: bytes, headers: dict[str, str]) -> int:
-        self.posts.append((url, body, dict(headers)))
-        if self.failure is not None:
-            raise self.failure
-        return self.status
-
-    def events(self, n: int = -1) -> list[dict[str, Any]]:
-        events: list[dict[str, Any]] = json.loads(self.posts[n][1])["events"]
-        return events
-
-
-class Clock:
-    def __init__(self) -> None:
-        self.now = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
-
-    def __call__(self) -> datetime:
-        return self.now
-
-
-@pytest.fixture
-def receiver(services: Services, monkeypatch: pytest.MonkeyPatch) -> Receiver:
-    services.vault.initialize()
-    fake = Receiver()
-    monkeypatch.setattr(services.deliveries, "_poster", fake)
-    return fake
-
-
-@pytest.fixture
-def clock(services: Services, monkeypatch: pytest.MonkeyPatch) -> Clock:
-    fixed = Clock()
-    monkeypatch.setattr(services.deliveries, "_clock", fixed)
-    return fixed
 
 
 def mark_read(client: TestClient, account_id: str, message_id: str) -> None:
@@ -210,7 +169,7 @@ async def test_a_failed_post_is_tried_again_later(
     services: Services,
     account_id: str,
     receiver: Receiver,
-    clock: Clock,
+    delivery_clock: Clock,
 ) -> None:
     created = hook(client)
     mark_read(client, account_id, "m0")
@@ -218,12 +177,12 @@ async def test_a_failed_post_is_tried_again_later(
     await services.deliveries.deliver_due()
     record = stored(services, created["id"])
     assert record.delivery.attempts == 1
-    assert record.delivery.next_attempt_at == clock.now + timedelta(seconds=30)
+    assert record.delivery.next_attempt_at == delivery_clock.now + timedelta(seconds=30)
     assert record.webhook.last_error == "the receiver answered 503"
     # Not yet due: nothing is posted.
     await services.deliveries.deliver_due()
     assert len(receiver.posts) == 1
-    clock.now += timedelta(seconds=31)
+    delivery_clock.now += timedelta(seconds=31)
     receiver.status = 200
     await services.deliveries.deliver_due()
     assert len(receiver.posts) == 2
@@ -245,7 +204,7 @@ async def test_after_the_last_attempt_the_events_are_dropped(
     services: Services,
     account_id: str,
     receiver: Receiver,
-    clock: Clock,
+    delivery_clock: Clock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -259,8 +218,8 @@ async def test_after_the_last_attempt_the_events_are_dropped(
         await services.deliveries.deliver_due()
         record = stored(services, created["id"])
         if record.delivery.next_attempt_at is not None:
-            pauses.append(record.delivery.next_attempt_at - clock.now)
-            clock.now = record.delivery.next_attempt_at
+            pauses.append(record.delivery.next_attempt_at - delivery_clock.now)
+            delivery_clock.now = record.delivery.next_attempt_at
     assert pauses == [timedelta(seconds=10), timedelta(seconds=20)]
     record = stored(services, created["id"])
     assert record.delivery.attempts == 0

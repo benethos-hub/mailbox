@@ -30,9 +30,7 @@ from benethos_mailbox_service.domain.changes import (
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
-from ..sync.test_sync import ids_by_subject, imap_account_id, imap_services, server
-
-__all__ = ["imap_account_id", "server", "imap_services"]  # fixtures
+from ..sync.test_sync import ids_by_subject
 
 ARCHIVE = mappers.folder_id("Archive")
 
@@ -62,20 +60,20 @@ async def test_listing_before_the_first_sync_records_nothing(
 
 
 async def test_a_new_mail_found_by_the_sync(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
     await imap_services.sync.sync_account(imap_account_id)
-    server.add("INBOX", 5, make_message("New"))
+    imap_server.add("INBOX", 5, make_message("New"))
     await imap_services.sync.sync_account(imap_account_id)
     new = (await ids_by_subject(imap_services, imap_account_id))["New"]
     assert recorded(imap_services, imap_account_id) == [("message.created", new)]
 
 
 async def test_a_new_mail_listed_before_the_sync_is_recorded_once(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
     await imap_services.sync.sync_account(imap_account_id)
-    server.add("INBOX", 5, make_message("New"))
+    imap_server.add("INBOX", 5, make_message("New"))
     new = (await ids_by_subject(imap_services, imap_account_id))["New"]
     await imap_services.sync.sync_account(imap_account_id)
     await ids_by_subject(imap_services, imap_account_id)
@@ -83,12 +81,12 @@ async def test_a_new_mail_listed_before_the_sync_is_recorded_once(
 
 
 async def test_a_move_and_a_deletion_by_another_client(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
     await imap_services.sync.sync_account(imap_account_id)
     ids = await ids_by_subject(imap_services, imap_account_id)
-    server.other_client_moves("INBOX", 1, "Archive", 5)
-    del server.folders["INBOX"].messages[2]
+    imap_server.other_client_moves("INBOX", 1, "Archive", 5)
+    del imap_server.folders["INBOX"].messages[2]
     await imap_services.sync.sync_account(imap_account_id)
     assert recorded(imap_services, imap_account_id) == [
         ("message.updated", ids["Mail 1"]),
@@ -108,32 +106,32 @@ async def test_a_sync_without_changes_records_nothing(
 
 
 async def test_flags_set_by_another_client_with_condstore(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
-    server.announced.append("CONDSTORE")
+    imap_server.announced.append("CONDSTORE")
     await imap_services.sync.sync_account(imap_account_id)
     ids = await ids_by_subject(imap_services, imap_account_id)
-    server.other_client_flags("INBOX", 2, ("\\Seen", "\\Flagged"))
+    imap_server.other_client_flags("INBOX", 2, ("\\Seen", "\\Flagged"))
     await imap_services.sync.sync_account(imap_account_id)
     assert recorded(imap_services, imap_account_id) == [
         ("message.updated", ids["Mail 2"])
     ]
     # Asked only for the folder whose state changed.
-    asked = [c for c in server.calls if c[0] == "changedsince"]
+    asked = [c for c in imap_server.calls if c[0] == "changedsince"]
     assert len(asked) == 1
 
 
 async def test_flag_changes_are_asked_for_in_batches(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
-    server.announced.append("CONDSTORE")
+    imap_server.announced.append("CONDSTORE")
     for uid in range(5, 1205):
-        server.add("INBOX", uid, make_message(f"Bulk {uid}"))
+        imap_server.add("INBOX", uid, make_message(f"Bulk {uid}"))
     await imap_services.sync.sync_account(imap_account_id)
-    server.other_client_flags("INBOX", 1100, ("\\Seen",))
-    server.calls.clear()
+    imap_server.other_client_flags("INBOX", 1100, ("\\Seen",))
+    imap_server.calls.clear()
     await imap_services.sync.sync_account(imap_account_id)
-    batches = [c[1] for c in server.calls if c[0] == "changedsince"]
+    batches = [c[1] for c in imap_server.calls if c[0] == "changedsince"]
     assert [len(b) for b in batches] == [500, 500, 204]
     assert [t for t, _ in recorded(imap_services, imap_account_id)] == [
         "message.updated"
@@ -141,49 +139,49 @@ async def test_flag_changes_are_asked_for_in_batches(
 
 
 async def test_the_states_are_read_after_a_noop(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
     # A server answers STATUS on the selected folder from when it was
     # selected, until a NOOP lets it catch up.
     await ids_by_subject(imap_services, imap_account_id)  # selects INBOX
-    server.calls.clear()
+    imap_server.calls.clear()
     await imap_services.sync.sync_account(imap_account_id)
-    kinds = [c[0] for c in server.calls]
+    kinds = [c[0] for c in imap_server.calls]
     assert kinds.index("noop") < kinds.index("status")
 
 
 async def test_flags_set_by_another_client_without_condstore(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
     await imap_services.sync.sync_account(imap_account_id)
-    server.other_client_flags("INBOX", 2, ("\\Seen",))
+    imap_server.other_client_flags("INBOX", 2, ("\\Seen",))
     await imap_services.sync.sync_account(imap_account_id)
     assert recorded(imap_services, imap_account_id) == []
-    assert not [c for c in server.calls if c[0] == "changedsince"]
+    assert not [c for c in imap_server.calls if c[0] == "changedsince"]
 
 
 async def test_a_new_mail_with_condstore_is_created_not_updated(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
-    server.announced.append("CONDSTORE")
+    imap_server.announced.append("CONDSTORE")
     await imap_services.sync.sync_account(imap_account_id)
-    server.add("INBOX", 5, make_message("New"))
+    imap_server.add("INBOX", 5, make_message("New"))
     await imap_services.sync.sync_account(imap_account_id)
     new = (await ids_by_subject(imap_services, imap_account_id))["New"]
     assert recorded(imap_services, imap_account_id) == [("message.created", new)]
 
 
 async def test_a_state_from_before_condstore_asks_for_no_flags(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
     await imap_services.sync.sync_account(imap_account_id)
-    server.announced.append("CONDSTORE")
-    server.other_client_flags("INBOX", 1, ("\\Seen",))
+    imap_server.announced.append("CONDSTORE")
+    imap_server.other_client_flags("INBOX", 1, ("\\Seen",))
     # The states gain HIGHESTMODSEQ: every folder counts as changed once.
     await imap_services.sync.sync_account(imap_account_id)
     assert recorded(imap_services, imap_account_id) == []
     ids = await ids_by_subject(imap_services, imap_account_id)
-    server.other_client_flags("INBOX", 1, ("\\Flagged",))
+    imap_server.other_client_flags("INBOX", 1, ("\\Flagged",))
     await imap_services.sync.sync_account(imap_account_id)
     assert recorded(imap_services, imap_account_id) == [
         ("message.updated", ids["Mail 1"])
@@ -191,13 +189,13 @@ async def test_a_state_from_before_condstore_asks_for_no_flags(
 
 
 async def test_a_new_uidvalidity_asks_for_no_flags(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
-    server.announced.append("CONDSTORE")
+    imap_server.announced.append("CONDSTORE")
     await imap_services.sync.sync_account(imap_account_id)
-    inbox = server.folders["INBOX"]
+    inbox = imap_server.folders["INBOX"]
     inbox.uidvalidity = 8
-    server.other_client_flags("INBOX", 1, ("\\Seen",))
+    imap_server.other_client_flags("INBOX", 1, ("\\Seen",))
     await imap_services.sync.sync_account(imap_account_id)
     assert all(
         t != "message.updated" for t, _ in recorded(imap_services, imap_account_id)
@@ -235,9 +233,9 @@ async def test_our_own_move_is_recorded_once(
 
 
 async def test_trash_and_delete_for_good(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
-    server.folders["Trash"] = FakeFolder(flags=("\\Trash",))
+    imap_server.folders["Trash"] = FakeFolder(flags=("\\Trash",))
     ids = await ids_by_subject(imap_services, imap_account_id)
     await imap_services.mailbox.delete_message(
         ADMIN, imap_account_id, ids["Mail 3"], False
@@ -252,9 +250,9 @@ async def test_trash_and_delete_for_good(
 
 
 async def test_a_draft_written_replaced_and_deleted(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
-    server.folders["Drafts"] = FakeFolder(uidvalidity=3, flags=("\\Drafts",))
+    imap_server.folders["Drafts"] = FakeFolder(uidvalidity=3, flags=("\\Drafts",))
     await imap_services.sync.sync_account(imap_account_id)
     draft = await imap_services.mailbox.outgoing.create_draft(
         ADMIN, imap_account_id, DraftMessage(subject="One", text="x")
@@ -366,14 +364,14 @@ def test_a_change_names_messages_or_its_account() -> None:
 
 
 async def test_the_sync_records_each_change_with_its_folder(
-    imap_services: Services, imap_account_id: str, server: FakeMailBox
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
     """For a grant narrowed to folders (PERMISSIONS.md 8.5): where a new
     or moved message is now, where a deleted one was."""
     await imap_services.sync.sync_account(imap_account_id)
-    server.other_client_moves("INBOX", 1, "Archive", 5)
-    del server.folders["INBOX"].messages[2]
-    server.add("INBOX", 6, make_message("New"))
+    imap_server.other_client_moves("INBOX", 1, "Archive", 5)
+    del imap_server.folders["INBOX"].messages[2]
+    imap_server.add("INBOX", 6, make_message("New"))
     await imap_services.sync.sync_account(imap_account_id)
     folders = {
         e.record.type: e.record.folder_id

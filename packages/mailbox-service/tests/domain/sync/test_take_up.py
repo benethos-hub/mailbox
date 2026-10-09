@@ -14,12 +14,10 @@ from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import AccountStatus, ProviderType
 from benethos_mailbox_service.domain.sync.worker import SyncWorker
 
-from ...conftest import ADMIN
+from ...conftest import ADMIN, jmap_services_for
 from ...imap_fake import make_message
 from ...jmap_fake import HOST, PASSWORD, USER, FakeJmap
-from .test_jmap_sync import recorded, server, services_for
-
-__all__ = ["server"]  # fixtures
+from .test_jmap_sync import recorded
 
 # The tests switch the worker off unless asked.
 WITH_WORKER = {"sync_interval": 300}
@@ -37,9 +35,9 @@ def taken(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 @pytest.fixture
 def services(
-    taken: list[str], server: FakeJmap, monkeypatch: pytest.MonkeyPatch
+    taken: list[str], jmap_server: FakeJmap, monkeypatch: pytest.MonkeyPatch
 ) -> Services:
-    return services_for(server, monkeypatch, **WITH_WORKER)
+    return jmap_services_for(jmap_server, monkeypatch, **WITH_WORKER)
 
 
 async def connect(services: Services) -> str:
@@ -84,17 +82,17 @@ async def test_connecting_changing_and_verifying_take_it_up(
 
 
 async def test_without_a_worker_nothing_is_taken_up(
-    server: FakeJmap, monkeypatch: pytest.MonkeyPatch
+    jmap_server: FakeJmap, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    services = services_for(server, monkeypatch, sync_interval=0)
+    services = jmap_services_for(jmap_server, monkeypatch, sync_interval=0)
     assert services.worker is None
     await connect(services)
 
 
 def test_before_the_worker_runs_take_up_does_nothing(
-    server: FakeJmap, monkeypatch: pytest.MonkeyPatch
+    jmap_server: FakeJmap, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    services = services_for(server, monkeypatch, **WITH_WORKER)
+    services = jmap_services_for(jmap_server, monkeypatch, **WITH_WORKER)
     assert services.worker is not None
     services.worker.take_up("acc_unknown")
 
@@ -103,14 +101,14 @@ def test_before_the_worker_runs_take_up_does_nothing(
 
 
 @pytest.fixture
-def running(server: FakeJmap, monkeypatch: pytest.MonkeyPatch) -> Services:
+def running(jmap_server: FakeJmap, monkeypatch: pytest.MonkeyPatch) -> Services:
     # The event source stays open and quiet: watchers wait.
-    server.hold = True
-    return services_for(server, monkeypatch, **WITH_WORKER)
+    jmap_server.hold = True
+    return jmap_services_for(jmap_server, monkeypatch, **WITH_WORKER)
 
 
 async def test_a_new_account_is_synced_and_watched_at_once(
-    running: Services, server: FakeJmap
+    running: Services, jmap_server: FakeJmap
 ) -> None:
     worker = running.worker
     assert worker is not None
@@ -125,14 +123,14 @@ async def test_a_new_account_is_synced_and_watched_at_once(
             )
         )
         # Arrived after the first sync: the change feed names it.
-        new = server.add_email(make_message("Right after"))
+        new = jmap_server.add_email(make_message("Right after"))
         await running.sync.sync_account(account_id)
         group.cancel_scope.cancel()
     assert ("message.created", new, "inbox") in recorded(running, account_id)
 
 
 async def test_a_verified_account_is_watched_again(
-    running: Services, server: FakeJmap
+    running: Services, jmap_server: FakeJmap
 ) -> None:
     worker = running.worker
     assert worker is not None
@@ -148,18 +146,18 @@ async def test_a_verified_account_is_watched_again(
 
 
 async def test_a_server_that_learnt_to_push_is_watched(
-    running: Services, server: FakeJmap
+    running: Services, jmap_server: FakeJmap
 ) -> None:
     worker = running.worker
     assert worker is not None
-    server.event_source = False
+    jmap_server.event_source = False
     account_id = await connect(running)
     async with anyio.create_task_group() as group:
         group.start_soon(worker.run)
         await until(lambda: worker.state().last_pass_at is not None)
         # The watcher found no event source and gave up.
         await until(lambda: account_id not in worker.state().watching)
-        server.event_source = True
+        jmap_server.event_source = True
         await running.accounts.verify(ADMIN, account_id)
         await until(lambda: account_id in worker.state().watching)
         group.cancel_scope.cancel()

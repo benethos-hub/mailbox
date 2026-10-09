@@ -7,7 +7,7 @@ network is missing.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from email.message import EmailMessage
 from email.parser import BytesParser
 from email.policy import default
@@ -339,6 +339,39 @@ class FakeMailBox(FolderCommands):
     def idle_done(self) -> tuple[bytes, list[Any]]:
         self.calls.append(("done",))
         return (b"Idle completed", [])
+
+
+def filled_server() -> FakeMailBox:
+    """Five messages and one with files in INBOX, beside Sent and an
+    archive with a folder below it."""
+    box = FakeMailBox()
+    box.folders = {
+        "INBOX": FakeFolder(uidvalidity=7),
+        "Sent": FakeFolder(flags=("\\HasNoChildren", "\\Sent")),
+        "Archive": FakeFolder(flags=("\\Noselect",)),
+        "Archive/2026": FakeFolder(),
+    }
+    for uid in range(1, 6):
+        box.add(
+            "INBOX",
+            uid,
+            make_message(
+                f"Invoice {uid}" if uid % 2 else f"Hello {uid}",
+                date=datetime(2026, 9, uid, 10, 0, tzinfo=UTC),
+            ),
+            flags=("\\Seen",) if uid < 3 else (),
+        )
+    box.add(
+        "INBOX",
+        9,
+        make_message(
+            "With files",
+            html="<p>Hello</p>",
+            attachments=[("report.pdf", "application/pdf", b"%PDF-1.7 data")],
+        ),
+        flags=("\\Flagged",),
+    )
+    return box
 
 
 def _message_id_block(head: bytes) -> bytes:

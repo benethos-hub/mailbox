@@ -13,7 +13,7 @@ from benethos_mailbox_service.errors import (
     NotSupportedError,
 )
 
-from ...data.providers.test_imap import provider, server  # noqa: F401 - the fixture
+from ...data.providers.test_imap import provider
 from ...imap_fake import FakeMailBox
 from ...provider_ops import update
 
@@ -43,7 +43,7 @@ def test_no_copyuid() -> None:
 # --- the IMAP adapter ---------------------------------------------------------
 
 
-async def test_move_with_move(server: FakeMailBox) -> None:  # noqa: F811
+async def test_move_with_move(server: FakeMailBox) -> None:
     summary = await update(provider(server), MESSAGE, MessageUpdate(folder_ids=[SENT]))
     assert 3 not in server.folders["INBOX"].messages
     new_uid = max(server.folders["Sent"].messages)
@@ -54,7 +54,7 @@ async def test_move_with_move(server: FakeMailBox) -> None:  # noqa: F811
 
 
 async def test_move_with_uidplus_expunges_only_this_message(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     server.announced = ["IMAP4REV1", "UIDPLUS"]
     # Another client marked a message deleted and has not expunged yet.
@@ -67,14 +67,14 @@ async def test_move_with_uidplus_expunges_only_this_message(
     assert ("expunge", (3,)) in server.calls
 
 
-async def test_no_move_without_move_or_uidplus(server: FakeMailBox) -> None:  # noqa: F811
+async def test_no_move_without_move_or_uidplus(server: FakeMailBox) -> None:
     server.announced = ["IMAP4REV1"]
     with pytest.raises(NotSupportedError, match="neither MOVE nor UIDPLUS"):
         await update(provider(server), MESSAGE, MessageUpdate(folder_ids=[SENT]))
     assert 3 in server.folders["INBOX"].messages
 
 
-async def test_without_copyuid_found_by_message_id(server: FakeMailBox) -> None:  # noqa: F811
+async def test_without_copyuid_found_by_message_id(server: FakeMailBox) -> None:
     server.copyuid = False
     summary = await update(provider(server), MESSAGE, MessageUpdate(folder_ids=[SENT]))
     new_uid = max(server.folders["Sent"].messages)
@@ -82,7 +82,7 @@ async def test_without_copyuid_found_by_message_id(server: FakeMailBox) -> None:
 
 
 async def test_a_message_id_a_search_cannot_carry_is_not_looked_for(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     server.copyuid = False
     raw, flags = server.folders["INBOX"].messages[3]
@@ -95,7 +95,7 @@ async def test_a_message_id_a_search_cannot_carry_is_not_looked_for(
 
 
 async def test_a_message_expunged_meanwhile_is_answered_as_missing(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     stored = server.add_flags
 
@@ -110,7 +110,7 @@ async def test_a_message_expunged_meanwhile_is_answered_as_missing(
     assert isinstance(outcome[MESSAGE], NotFoundError)
 
 
-async def test_flags_and_move_in_one_patch(server: FakeMailBox) -> None:  # noqa: F811
+async def test_flags_and_move_in_one_patch(server: FakeMailBox) -> None:
     summary = await update(
         provider(server),
         MESSAGE,
@@ -124,7 +124,7 @@ async def test_flags_and_move_in_one_patch(server: FakeMailBox) -> None:  # noqa
 
 
 async def test_moving_into_its_own_folder_changes_nothing(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     inbox = mappers.folder_id("INBOX")
     summary = await update(provider(server), MESSAGE, MessageUpdate(folder_ids=[inbox]))
@@ -140,7 +140,7 @@ async def test_moving_into_its_own_folder_changes_nothing(
     ],
 )
 async def test_bad_targets(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
     folder_ids: list[str],
     error: type[Exception],
 ) -> None:

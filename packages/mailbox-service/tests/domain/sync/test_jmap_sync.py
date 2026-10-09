@@ -5,78 +5,18 @@ it, a push wakes the worker, and the API serves the account as any other."""
 from __future__ import annotations
 
 import json
-from typing import Any
 
-import httpx
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from benethos_mailbox_service.assembly import Services, build_services, create_app
+from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
-from benethos_mailbox_service.data.protocols import ServerClient
-from benethos_mailbox_service.data.providers import (
-    CredentialReader,
-    ProviderSettings,
-    Reads,
-)
-from benethos_mailbox_service.data.providers.jmap import JmapProvider
-from benethos_mailbox_service.data.providers.memory import MemoryProvider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
 from ...conftest import admin_bearer, create_account
 from ...imap_fake import make_message
-from ...jmap_fake import HOST, PASSWORD, TOKEN, USER, FakeJmap
-
-
-@pytest.fixture
-def server() -> FakeJmap:
-    box = FakeJmap()
-    for n in range(1, 3):
-        box.add_email(make_message(f"Mail {n}"))
-    return box
-
-
-@pytest.fixture
-def jmap_services(server: FakeJmap, monkeypatch: pytest.MonkeyPatch) -> Services:
-    return services_for(server, monkeypatch)
-
-
-def services_for(
-    server: FakeJmap, monkeypatch: pytest.MonkeyPatch, **settings: Any
-) -> Services:
-    """The services, with JMAP accounts against ``server``. ``settings``
-    change those of the tests."""
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
-
-    def factory(
-        kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
-    ) -> Reads:
-        if kind is ProviderType.MEMORY:
-            return MemoryProvider()
-        return JmapProvider(
-            settings,
-            credentials,
-            http=ServerClient(transport=httpx.MockTransport(server)),
-        )
-
-    services = build_services(
-        Settings(storage="memory", **settings), provider_factory=factory
-    )
-    services.vault.initialize()
-    return services
-
-
-@pytest.fixture
-def account_id(jmap_services: Services) -> str:
-    return create_account(
-        jmap_services.accounts,
-        ProviderType.JMAP,
-        USER,
-        settings={"host": HOST},
-        credentials={"password": SecretStr(PASSWORD)},
-    ).id
+from ...jmap_fake import HOST, TOKEN, USER, FakeJmap
 
 
 @pytest.fixture
@@ -93,25 +33,25 @@ def recorded(services: Services, account_id: str) -> list[tuple[str, str, str | 
 
 
 async def test_the_sync_keeps_no_index_for_it(
-    jmap_services: Services, account_id: str, server: FakeJmap
+    jmap_services: Services, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:
-    pair = server.requests[-1].headers["authorization"]
+    pair = jmap_server.requests[-1].headers["authorization"]
     assert pair.startswith("Basic ")
-    assert jmap_services.sync.watched(account_id)
-    assert not jmap_services.sync.mapped(account_id)
+    assert jmap_services.sync.watched(jmap_account_id)
+    assert not jmap_services.sync.mapped(jmap_account_id)
 
 
 async def test_the_sync_reports_what_changed(
-    jmap_services: Services, account_id: str, server: FakeJmap
+    jmap_services: Services, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:
-    await jmap_services.sync.sync_account(account_id)
-    assert recorded(jmap_services, account_id) == []
-    first, second = list(server.emails)
-    new = server.add_email(make_message("New"))
-    server.other_client_changes(first, mailboxIds={"trash": True})
-    server.other_client_deletes(second)
-    await jmap_services.sync.sync_account(account_id)
-    assert sorted(recorded(jmap_services, account_id)) == sorted(
+    await jmap_services.sync.sync_account(jmap_account_id)
+    assert recorded(jmap_services, jmap_account_id) == []
+    first, second = list(jmap_server.emails)
+    new = jmap_server.add_email(make_message("New"))
+    jmap_server.other_client_changes(first, mailboxIds={"trash": True})
+    jmap_server.other_client_deletes(second)
+    await jmap_services.sync.sync_account(jmap_account_id)
+    assert sorted(recorded(jmap_services, jmap_account_id)) == sorted(
         [
             ("message.created", new, "inbox"),
             ("message.updated", first, "trash"),
@@ -122,38 +62,38 @@ async def test_the_sync_reports_what_changed(
 
 
 async def test_a_sync_without_changes_asks_once(
-    jmap_services: Services, account_id: str, server: FakeJmap
+    jmap_services: Services, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:
-    await jmap_services.sync.sync_account(account_id)
-    server.calls.clear()
-    await jmap_services.sync.sync_account(account_id)
-    assert server.calls.count("Email/changes") == 1
-    assert recorded(jmap_services, account_id) == []
+    await jmap_services.sync.sync_account(jmap_account_id)
+    jmap_server.calls.clear()
+    await jmap_services.sync.sync_account(jmap_account_id)
+    assert jmap_server.calls.count("Email/changes") == 1
+    assert recorded(jmap_services, jmap_account_id) == []
 
 
 async def test_a_push_wakes_the_sync(
-    jmap_services: Services, account_id: str, server: FakeJmap
+    jmap_services: Services, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:
-    await jmap_services.sync.sync_account(account_id)
-    new = server.add_email(make_message("Pushed"))
+    await jmap_services.sync.sync_account(jmap_account_id)
+    new = jmap_server.add_email(make_message("Pushed"))
     # The state the server reports next, past the one the wait starts from.
     data = {"changed": {"acc1": {"Email": "s-next"}}}
-    server.events = ["event: state", f"data: {json.dumps(data)}", ""]
+    jmap_server.events = ["event: state", f"data: {json.dumps(data)}", ""]
     changed = await jmap_services.adapters.call(
-        account_id, lambda p: p.wait_for_change(5)
+        jmap_account_id, lambda p: p.wait_for_change(5)
     )
     assert changed
-    await jmap_services.sync.sync_account(account_id)
-    assert ("message.created", new, "inbox") in recorded(jmap_services, account_id)
+    await jmap_services.sync.sync_account(jmap_account_id)
+    assert ("message.created", new, "inbox") in recorded(jmap_services, jmap_account_id)
 
 
 # --- through the API ------------------------------------------------------------------
 
 
 def test_the_account_names_its_capabilities(
-    client: TestClient, account_id: str
+    client: TestClient, jmap_account_id: str
 ) -> None:
-    account = client.get(f"/v1/accounts/{account_id}").json()
+    account = client.get(f"/v1/accounts/{jmap_account_id}").json()
     assert account["provider"] == "jmap"
     assert account["settings"] == {"host": HOST, "username": USER}
     assert {"send", "drafts", "flags", "folders", "search", "push"} <= set(
@@ -163,9 +103,9 @@ def test_the_account_names_its_capabilities(
 
 
 def test_mail_through_the_api(
-    client: TestClient, account_id: str, server: FakeJmap
+    client: TestClient, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:
-    base = f"/v1/accounts/{account_id}"
+    base = f"/v1/accounts/{jmap_account_id}"
     folders = {f["role"]: f["id"] for f in client.get(f"{base}/folders").json()}
     assert folders["inbox"] == "inbox"
     page = client.get(f"{base}/messages", params={"folder": "inbox"}).json()
@@ -178,13 +118,13 @@ def test_mail_through_the_api(
     assert moved.status_code == 404, moved.text  # no archive folder here
     trashed = client.delete(f"{base}/messages/{message_id}")
     assert trashed.status_code in (200, 204), trashed.text
-    assert server.emails[message_id]["mailboxIds"] == {"trash": True}
+    assert jmap_server.emails[message_id]["mailboxIds"] == {"trash": True}
     sent = client.post(
         f"{base}/send",
         json={"to": [{"email": "you@example.org"}], "subject": "Hi", "text": "Hello"},
     )
     assert sent.status_code == 200, sent.text
-    [submission] = server.submissions
+    [submission] = jmap_server.submissions
     assert submission["envelope"]["rcptTo"] == [{"email": "you@example.org"}]
     draft = client.post(
         f"{base}/drafts", json={"to": [{"email": "you@example.org"}], "subject": "D"}
@@ -192,7 +132,7 @@ def test_mail_through_the_api(
     assert draft.status_code == 201, draft.text
 
 
-def test_a_token_account(jmap_services: Services, server: FakeJmap) -> None:
+def test_a_token_account(jmap_services: Services, jmap_server: FakeJmap) -> None:
     account = create_account(
         jmap_services.accounts,
         ProviderType.JMAP,
@@ -200,14 +140,14 @@ def test_a_token_account(jmap_services: Services, server: FakeJmap) -> None:
         settings={"host": HOST, "auth": "token"},
         credentials={"token": SecretStr(TOKEN)},
     )
-    assert server.requests[-1].headers["authorization"] == f"Bearer {TOKEN}"
+    assert jmap_server.requests[-1].headers["authorization"] == f"Bearer {TOKEN}"
     assert [c.field for c in account.credentials] == ["token"]
 
 
 def test_a_replaced_draft_answers_with_its_new_id(
-    client: TestClient, account_id: str
+    client: TestClient, jmap_account_id: str
 ) -> None:
-    base = f"/v1/accounts/{account_id}/drafts"
+    base = f"/v1/accounts/{jmap_account_id}/drafts"
     made = client.post(base, json={"subject": "Plan", "text": "first"}).json()
     replaced = client.put(
         f"{base}/{made['id']}", json={"subject": "Plan", "text": "second"}
@@ -215,6 +155,6 @@ def test_a_replaced_draft_answers_with_its_new_id(
     assert replaced.status_code == 200, replaced.text
     new = replaced.json()["id"]
     assert new != made["id"]
-    gone = client.get(f"/v1/accounts/{account_id}/messages/{made['id']}")
+    gone = client.get(f"/v1/accounts/{jmap_account_id}/messages/{made['id']}")
     assert gone.status_code == 404
     assert [d["id"] for d in client.get(base).json()["items"]] == [new]
