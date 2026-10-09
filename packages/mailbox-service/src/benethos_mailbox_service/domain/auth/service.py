@@ -1,20 +1,16 @@
 """Who is calling: credentials to an ``Access``.
 
 The web layer hands over what the caller presented, this module decides
-whether it is valid and whose rights it carries.
+whether it is valid and whose rights it carries. The API tokens
+themselves are ``tokens``.
 """
 
 from __future__ import annotations
 
-import secrets
-import string
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Literal
 
 from ...common.clock import utc_now
-from ...common.secret import digest, new_id
 from ...data.models import ApiToken, User
 from ...data.storage import RoleRepository, TokenRepository, UserRepository
 from ...errors import (
@@ -29,28 +25,9 @@ from ..activity import users as users_said
 from ..rights import Access
 from .factors import SecondFactors, Taken
 from .passwords import MAX_LENGTH, Passwords
+from .signin import SignedIn, SignInState
 from .throttle import SignInThrottle
-
-TOKEN_PREFIX = "mbx_"
-_ALPHABET = string.ascii_letters + string.digits
-# 64 characters of base62 carry a little over 380 bits.
-_TOKEN_LENGTH = 64
-
-TokenState = Literal["active", "expired", "revoked"]
-
-
-@dataclass(frozen=True)
-class SignInState:
-    """How a user signs in to the UI, never the password itself."""
-
-    has_password: bool
-    # Set by someone else, or a one-time password: changed at the next
-    # sign-in. False without a password.
-    must_change: bool
-    last_sign_in_at: datetime | None
-    # A code of an authenticator app is asked after the password.
-    second_factor: bool = False
-
+from .tokens import ApiTokens, TokenState
 
 # A user name that fails this often in the window waits this long, from
 # any address: slower guessing at one account from many addresses, and
@@ -65,36 +42,6 @@ MAX_NAME = 200
 MAX_CODE = 40
 # How the audit names a sign-in with a second factor.
 WITH_FACTOR = {"totp": "password+totp", "recovery": "password+recovery"}
-
-
-@dataclass(frozen=True)
-class SignedIn:
-    """Who signed in with a password, for a session of the UI."""
-
-    user_id: str
-    # The password was set by someone else: it must be changed first.
-    must_change: bool
-    # When the password was set. The session keeps it and ends once the
-    # password changes.
-    stamp: datetime
-    # The sign-in before this one, to show the user.
-    previous: datetime | None = None
-    # The password was right, the code of the second factor comes next:
-    # no session yet, a pending sign-in.
-    needs_code: bool = False
-    # Which devices of a second factor the user has, None without one. The
-    # session keeps it and ends once a device is added or removed.
-    factor: str | None = None
-
-
-def hash_token(token: str) -> str:
-    return digest(token)
-
-
-def new_token() -> str:
-    return TOKEN_PREFIX + "".join(
-        secrets.choice(_ALPHABET) for _ in range(_TOKEN_LENGTH)
-    )
 
 
 class AuthService:
@@ -115,7 +62,6 @@ class AuthService:
         ``factors`` no user has a second factor."""
         self._users = users
         self._roles = roles
-        self._tokens = tokens
         self._clock = clock
         self._throttle = throttle or SignInThrottle(clock=clock)
         self._names = names or SignInThrottle(
@@ -124,6 +70,7 @@ class AuthService:
         self.passwords = passwords
         self.factors = factors
         self.activity = activity or ActivityLog(clock)
+        self._api_tokens = ApiTokens(tokens, users, clock, self.activity)
         # The unknown rights already logged, per user and names.
         self._told_unknown: set[tuple[str, frozenset[str]]] = set()
 
@@ -322,36 +269,13 @@ class AuthService:
         self, user_id: str, name: str, expires_at: datetime | None = None
     ) -> tuple[ApiToken, str]:
         """A new token for a user. The plain token is returned once only."""
-        self._users.get(user_id)
-        if expires_at is not None and expires_at.utcoffset() is None:
-            raise BadRequestError("expires_at needs a time zone")
-        if expires_at is not None and expires_at <= self._clock():
-            raise BadRequestError("the token would be expired already")
-        plain = new_token()
-        token = ApiToken(
-            id=new_id("tok"),
-            user_id=user_id,
-            name=name,
-            token_hash=hash_token(plain),
-            created_at=self._clock(),
-            expires_at=expires_at,
-        )
-        self._tokens.save(token)
-        return token, plain
+        return self._api_tokens.issue(user_id, name, expires_at)
 
     def revoke_token(self, token_id: str) -> ApiToken:
-        token = self._tokens.get(token_id)
-        if token.revoked_at is None:
-            token = token.model_copy(update={"revoked_at": self._clock()})
-            self._tokens.save(token)
-        return token
+        return self._api_tokens.revoke(token_id)
 
     def state_of(self, token: ApiToken) -> TokenState:
-        if token.revoked_at is not None:
-            return "revoked"
-        if token.expires_at is not None and token.expires_at <= self._clock():
-            return "expired"
-        return "active"
+        return self._api_tokens.state_of(token)
 
     def sign_in_state(self, user_id: str) -> SignInState:
         stored = self.passwords.stored(user_id)
@@ -371,36 +295,8 @@ class AuthService:
         return user
 
     def _access_for_token(self, presented: str, source: str | None) -> Access:
-        token = self._tokens.find_by_hash(hash_token(presented))
-        if token is None:
-            raise UnauthorizedError("invalid or revoked token")
-        if self.state_of(token) == "revoked":
-            self._refused(token, source, "it is revoked")
-            raise UnauthorizedError("invalid or revoked token")
-        if self.state_of(token) == "expired":
-            self._refused(token, source, "it expired")
-            raise UnauthorizedError("token expired")
-        now = self._clock()
-        try:
-            user = self._users.get(token.user_id)
-        except NotFoundError:
-            raise UnauthorizedError("invalid or revoked token") from None
-        if user.disabled:
-            self._refused(token, source, "its user is disabled")
-            raise UnauthorizedError("user is disabled")
-        self._tokens.touch(token.id, now)
+        token, user = self._api_tokens.presented(presented, source)
         return self._access(user, token, source)
-
-    def _refused(self, token: ApiToken, source: str | None, reason: str) -> None:
-        self.activity.record(
-            said.TokenRefused(
-                by=someone(source),
-                token_id=token.id,
-                token_name=token.name,
-                user_id=token.user_id,
-                reason=reason,
-            )
-        )
 
     def _check_source(self, source: str) -> None:
         """``RateLimitedError`` while the source is locked out. A lockout

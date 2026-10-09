@@ -211,7 +211,11 @@ packages/mailbox-service/
                         #   one module per subject: accounts, oauth,
                         #   mail, users, tokens, status, errors
         errors.py       # the error envelope, the errors routes document
-        routes/         # one router per resource
+        routes/         # one router per resource. One account's mail:
+                        #   folders.py, mailbox.py (its messages, in
+                        #   two routers that keep the order of the
+                        #   OpenAPI document), sending.py, changes.py,
+                        #   drafts.py. messages.py across accounts
       pages/            # the configuration UI under /ui, not in OpenAPI
         deps.py         # who is signed in, the CSRF check, if_allowed
         navigation.py   # the sidebar entries a caller may open and their
@@ -246,7 +250,10 @@ packages/mailbox-service/
                         #   rights and groups), Access (one caller)
       auth/             # proving who calls: AuthService, Passwords,
                         #   SignInThrottle, SecondFactors (the frame of
-                        #   the second factor), Totp and RecoveryCodes
+                        #   the second factor), Totp and RecoveryCodes,
+                        #   ApiTokens (tokens.py: issued, revoked, the
+                        #   one presented), what a sign-in to the UI
+                        #   answers (signin.py)
       users/            # UserService, RoleService, TokenService,
                         #   PasswordService, SecondFactorService,
                         #   TotpService, one
@@ -255,10 +262,19 @@ packages/mailbox-service/
                         #   rights in effective.py
       accounts/         # AccountService, Adapters (the live adapter per
                         #   account), OAuthService, abilities: 501 for
-                        #   what an adapter does not implement
-      discovery/        # DiscoveryService: trust, ranking, cache, limits
+                        #   what an adapter does not implement, checks:
+                        #   what settings and credentials must pass
+                        #   before they are stored. OAuthService signs
+                        #   in in the browser (oauth.py), with a code
+                        #   in device.py, what both ways share in
+                        #   signin.py
+      discovery/        # DiscoveryService: trust, ranking, cache, limits,
+                        #   candidates.py: an address read, candidates
+                        #   merged and filled in, what can be connected
       mailbox/          # MailboxService, the facade for mail: calls under
-                        #   our ids, the folders a grant reaches (reach),
+                        #   our ids, an account's folders and their
+                        #   roles (folders), the folders a grant
+                        #   reaches (reach),
                         #   lists across accounts (across, merge),
                         #   replies, sending and drafts (outgoing, its
                         #   checks), grant limits and the send audit
@@ -304,8 +320,10 @@ packages/mailbox-service/
                         #   values.py), smtp.py (smtplib),
                         #   pop3.py (poplib), jmap/ (JMAP over http:
                         #   client.py, shapes.py, answers.py),
-                        #   oauth.py (OAuth 2.0 with PKCE, sign-in
-                        #   with a code, refresh, token source),
+                        #   oauth/ (OAuth 2.0: values.py, client.py
+                        #   with PKCE, the sign-in with a code and
+                        #   refresh, answers.py what the provider
+                        #   answers, tokens.py the token source),
                         #   transport.py: the Server, TLS,
                         #   timeouts, translated(): a library's errors
                         #   as this project's, the failures below
@@ -650,7 +668,7 @@ noticing. Every change is measured against that.
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
-| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
+| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Folders for settings and data | `folders()` in `config.py` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |

@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated
 
-from fastapi import Depends, Query, Request
+from fastapi import Depends, Header, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import AwareDatetime
 
@@ -42,6 +42,7 @@ __all__ = [
     "Caller",
     "Discoverer",
     "Factors",
+    "IdempotencyKey",
     "Limit",
     "Mailbox",
     "Passwords",
@@ -67,6 +68,22 @@ Since = Annotated[
             "The `state` of an earlier answer. Without it the answer holds "
             "no changes, only the current state to start from."
         )
+    ),
+]
+
+# A send that is retried, sent once: sending a message and sending a draft.
+IdempotencyKey = Annotated[
+    str | None,
+    Header(
+        alias="Idempotency-Key",
+        min_length=1,
+        max_length=200,
+        description=(
+            "Sent again with the same key within 24 hours, the request "
+            "returns the first result instead of sending twice. The same "
+            "key with a different message answers `409`. Without a key a "
+            "retried request sends again."
+        ),
     ),
 ]
 

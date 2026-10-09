@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant
-from benethos_mailbox_service.domain.auth.service import SignedIn
+from benethos_mailbox_service.domain.auth.signin import SignedIn
 from benethos_mailbox_service.web.pages.session import IDLE, SessionStore
 
 from ...conftest import ADMIN, UI_PASSWORD, browser_admin, browser_user

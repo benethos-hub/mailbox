@@ -1,5 +1,6 @@
 """Connected accounts: create, change, verify, delete, under the caller's
-rights. The live adapter of each is ``adapters``."""
+rights. The live adapter of each is ``adapters``, what settings and
+credentials must pass ``checks``."""
 
 from __future__ import annotations
 
@@ -8,28 +9,28 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 
 from pydantic import SecretStr
 
-from ...common import redact
-from ...common.hosts import address_problem, is_server
+from ...common.hosts import address_problem
 from ...common.secret import new_id
-from ...common.text import has_break
 from ...data.models import Account, AccountStatus, Page, ProviderType
 from ...data.protocols import HostCheck
-from ...data.providers import (
-    CredentialReader,
-    ProviderSettings,
-    Tokens,
-    hosts_in,
-    settings_defaults,
-)
+from ...data.providers import ProviderSettings, Tokens, settings_defaults
 from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository, IdempotencyRepository
-from ...errors import BadRequestError, MailboxServiceError, NotSupportedError
+from ...errors import BadRequestError, NotSupportedError
 from .. import paging
 from ..activity import ActivityLog, Actor
 from ..activity import accounts as said
 from ..changes import ChangeFeed
 from ..rights import Access
-from .adapters import REFRESH_TOKEN, Adapters
+from .adapters import Adapters
+from .checks import (
+    AccountChecks,
+    merge_settings,
+    no_secrets_in,
+    one_line_name,
+    pending,
+    what_changed,
+)
 
 BY_ADDRESS = paging.Order[Account]("ac_", lambda a: (a.email.casefold(), a.id))
 
@@ -69,9 +70,7 @@ class AccountService:
         self._on_ready = on_ready
         self._idempotency = idempotency
         self._changes = changes
-        # Every host in an account's settings passes this before the first
-        # connection: the service must not be pointed into its own network.
-        self._check_host = check_host
+        self._checks = AccountChecks(adapters, check_host)
 
     def list(
         self,
@@ -139,7 +138,7 @@ class AccountService:
             raise NotSupportedError(
                 f"{provider} accounts cannot be connected in this deployment"
             )
-        _no_secrets_in(settings)
+        no_secrets_in(settings)
         settings = {**settings_defaults(provider, email), **(settings or {})}
         secrets = dict(credentials or {})
         failed = self._activity.on_failure(
@@ -154,17 +153,17 @@ class AccountService:
             problem = address_problem(email)
             if problem is not None:
                 raise BadRequestError(problem)
-            _one_line_name(display_name)
-            await self._check_hosts(settings)
+            one_line_name(display_name)
+            await self._checks.hosts(settings)
             if secrets:
                 self._vault.require_ready()
             # A throwaway adapter that reads the credential from the
             # request. An unsupported provider or bad settings fail here,
             # before anything is stored.
-            await self._probe(
+            await self._checks.login(
                 provider,
                 settings,
-                lambda field: _pending(secrets, field),
+                lambda field: pending(secrets, field),
                 secrets,
                 signed_in,
             )
@@ -213,17 +212,17 @@ class AccountService:
         create: nothing is stored unless the provider accepts it. Settings
         sent as they are stored change nothing and log in nowhere."""
         access.require("update_account", account_id)
-        _no_secrets_in(settings)
+        no_secrets_in(settings)
         if rename:
-            _one_line_name(display_name)
+            one_line_name(display_name)
         account = self._repository.get(account_id)
         defaults = settings_defaults(account.provider, account.email)
         before = {**defaults, **self._repository.settings(account_id)}
-        merged = _merged(before, defaults, settings or {})
+        merged = merge_settings(before, defaults, settings or {})
         changed = merged != before
         secrets = dict(credentials or {})
         await self._check_update(account, merged, changed, secrets, signed_in)
-        what = _what_changed(account, display_name, rename, changed, secrets)
+        what = what_changed(account, display_name, rename, changed, secrets)
         if rename:
             account = account.model_copy(update={"display_name": display_name})
         self._store_update(access, account, merged, secrets, what)
@@ -249,7 +248,7 @@ class AccountService:
         if secrets or self.signs_in_with_oauth(account.provider):
             self._vault.require_ready()
         if changed:
-            await self._check_hosts(merged)
+            await self._checks.hosts(merged)
         if not changed and not secrets:
             return
 
@@ -258,7 +257,7 @@ class AccountService:
                 return secrets[field]
             return self._vault.read(account.id, field)
 
-        await self._probe(account.provider, merged, read, secrets, signed_in)
+        await self._checks.login(account.provider, merged, read, secrets, signed_in)
 
     def _store_update(
         self,
@@ -325,52 +324,6 @@ class AccountService:
         this deployment."""
         return self._adapters.signs_in_with_oauth(provider)
 
-    async def _probe(
-        self,
-        provider: ProviderType,
-        settings: ProviderSettings,
-        read: CredentialReader,
-        secrets: dict[str, SecretStr],
-        signed_in: Tokens | None = None,
-    ) -> None:
-        """Log in once with a throwaway adapter. A refresh token it is
-        handed lands in ``secrets``, to be stored with the rest."""
-        for value in secrets.values():
-            # Typed in just now: a failed login must not show it.
-            redact.note(value.get_secret_value())
-        probe = self._adapters.build(
-            provider,
-            settings,
-            read,
-            lambda value: secrets.__setitem__(REFRESH_TOKEN, value),
-            signed_in,
-        )
-        try:
-            await probe.verify()
-        finally:
-            await probe.close()
-
-    async def _check_hosts(self, settings: Mapping[str, object]) -> None:
-        """Refuse settings that point the service at a host it may not
-        connect to, before any adapter is built: ``host``, ``smtp_host`` and
-        any other ``*_host``. A host that is no name and no address is
-        refused before it is looked up. Without a check, every other host
-        passes."""
-        for named in hosts_in(settings):
-            if not is_server(named.host):
-                raise BadRequestError(
-                    f"{named.key} is not a host name or an IP address"
-                )
-        if self._check_host is None:
-            return
-        for named in hosts_in(settings):
-            try:
-                address = await self._check_host(named.host, named.port)
-            except MailboxServiceError as exc:
-                raise BadRequestError(exc.message) from None
-            if address is None:
-                raise BadRequestError(f"{named.key}: {named.host} does not resolve")
-
     def _with_credentials(self, account: Account) -> Account:
         """The account as callers see it: which credentials are stored, and
         its settings."""
@@ -381,76 +334,3 @@ class AccountService:
                 "capabilities": self._adapters.offered(account.id),
             }
         )
-
-
-# The display name goes into the From of every send, on one line, and
-# into the log. No line break, no other control character.
-LONGEST_NAME = 200
-
-
-def _one_line_name(name: str | None) -> None:
-    if name is None:
-        return
-    if len(name) > LONGEST_NAME:
-        raise BadRequestError(
-            f"the display name is longer than {LONGEST_NAME} characters"
-        )
-    if has_break(name):
-        raise BadRequestError(
-            "the display name must not hold a line break or a control character"
-        )
-
-
-# Settings are returned to callers. A secret belongs in the credentials,
-# which never are.
-_SECRET_WORDS = ("password", "secret", "token", "credential", "apikey", "api_key")
-
-
-def _merged(
-    before: dict[str, str | int | bool],
-    defaults: Mapping[str, str | int | bool],
-    settings: Mapping[str, str | int | bool | None],
-) -> dict[str, str | int | bool]:
-    """The settings with the changes. A setting removed falls back to
-    what the provider assumes."""
-    merged = dict(before)
-    for key, value in settings.items():
-        if value is None:
-            merged.pop(key, None)
-            if key in defaults:
-                merged[key] = defaults[key]
-        else:
-            merged[key] = value
-    return merged
-
-
-def _what_changed(
-    account: Account,
-    display_name: str | None,
-    rename: bool,
-    changed: bool,
-    secrets: Mapping[str, SecretStr],
-) -> list[str]:
-    """What an update changes, for the audit: never a secret's value."""
-    what = []
-    if rename and display_name != account.display_name:
-        what.append("display name")
-    if changed:
-        what.append("settings")
-    return what + sorted(secrets)
-
-
-def _no_secrets_in(settings: Mapping[str, object] | None) -> None:
-    for key in settings or {}:
-        if any(word in key.lower().replace("-", "_") for word in _SECRET_WORDS):
-            raise BadRequestError(
-                f"{key} looks like a secret: pass it in credentials, which are "
-                "stored encrypted and never returned, not in settings"
-            )
-
-
-def _pending(secrets: Mapping[str, SecretStr], field: str) -> SecretStr:
-    try:
-        return secrets[field]
-    except KeyError:
-        raise BadRequestError(f"the account needs the credential {field}") from None

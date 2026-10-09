@@ -17,6 +17,9 @@ The sources in ``data/discovery`` only look up. Decided here:
   findings are cached for a day.
 - **What can be connected.** Which candidates this service connects today,
   and which sign in with an OAuth app the deployment has.
+
+What a candidate is made of, merged and filled in, and what can be
+connected are ``candidates``.
 """
 
 from __future__ import annotations
@@ -29,17 +32,15 @@ from dataclasses import dataclass
 import anyio
 
 from ...common.bounded import trim
-from ...common.hosts import address_problem, ascii_host, unicode_host
+from ...common.hosts import unicode_host
 from ...data.discovery import (
     DiscoverySource,
     Finding,
     Query,
-    placeholders,
     registrable_domain,
 )
 from ...data.models import (
     Candidate,
-    CredentialKind,
     Discovery,
     DiscoverySourceName,
     Hint,
@@ -50,11 +51,20 @@ from ...data.models import (
     SourceReport,
 )
 from ...data.protocols import HostCheck
-from ...data.providers import ServerProbe, settings_from_servers
-from ...errors import BadRequestError, MailboxServiceError, RateLimitedError
+from ...data.providers import ServerProbe
+from ...errors import MailboxServiceError, RateLimitedError
 from ..activity import ActivityLog, Actor
 from ..activity import discovery as said
 from ..rights import Access
+from .candidates import (
+    incoming,
+    merge,
+    pop3_only_alone,
+    query_of,
+    replace_incoming,
+    unreachable,
+    with_settings,
+)
 
 Clock = Callable[[], float]
 
@@ -69,17 +79,9 @@ PER_SECONDS = 60.0
 MAX_CACHED = 1000
 MAX_CALLERS = 10_000
 
-
-# The servers a candidate reads mail from.
-_INCOMING = (ServerProtocol.JMAP, ServerProtocol.IMAP, ServerProtocol.POP3)
-# Those probed before they are offered.
+# The servers a candidate reads mail from that are probed before they
+# are offered.
 _PROBED = (ServerProtocol.IMAP, ServerProtocol.POP3)
-
-
-# What a JMAP or IMAP candidate keeps POP3 out of the list.
-_BEFORE_POP3 = (ProviderType.JMAP, ProviderType.IMAP)
-_PASSWORDS = (CredentialKind.PASSWORD, CredentialKind.APP_PASSWORD)
-_JMAP_CREDENTIALS = (*_PASSWORDS, CredentialKind.API_TOKEN)
 
 
 @dataclass(frozen=True)
@@ -129,7 +131,7 @@ class DiscoveryService:
 
     async def discover(self, access: Access, email: str) -> Discovery:
         access.require("discover_account")
-        query = _query(email)
+        query = query_of(email)
         self._count(access)
         results = await self._lookup(query)
 
@@ -141,15 +143,12 @@ class DiscoveryService:
             hints += [h for h in result.finding.hints if h not in hints]
             for candidate in result.finding.candidates:
                 if self._offered is None or candidate.provider in self._offered:
-                    _merge(candidates, self._judged(candidate, result.finding, query))
-        if any(c.provider in _BEFORE_POP3 for c in candidates):
-            # POP3 only where no IMAP or JMAP is (CONCEPT 5.2).
-            candidates = [c for c in candidates if c.provider is not ProviderType.POP3]
-        candidates = await self._probed(candidates)
+                    merge(candidates, self._judged(candidate, result.finding, query))
+        candidates = await self._probed(pop3_only_alone(candidates))
         candidates.sort(
             key=lambda c: (
                 not c.confirmed,
-                _unreachable(c),
+                unreachable(c),
                 c.provider is not ProviderType.JMAP,
                 self._order.get(c.source, len(self._order)),
             )
@@ -166,7 +165,7 @@ class DiscoveryService:
         return Discovery(
             email=query.email,
             domain=domain,
-            candidates=[_with_settings(c, query) for c in candidates],
+            candidates=[with_settings(c, query) for c in candidates],
             hints=hints,
             sources=[_report(r) for r in results],
         )
@@ -270,7 +269,7 @@ class DiscoveryService:
             dict.fromkeys(
                 (s.protocol, s.host, s.port, s.security)
                 for c in candidates
-                if (s := _incoming(c)) is not None and s.protocol in _PROBED
+                if (s := incoming(c)) is not None and s.protocol in _PROBED
             )
         )[:MAX_PROBES]
         outcome: dict[tuple[ServerProtocol, str, int, str], MailServer | None] = {}
@@ -284,15 +283,15 @@ class DiscoveryService:
 
         kept = []
         for candidate in candidates:
-            incoming = _incoming(candidate)
-            if incoming is None:
+            server = incoming(candidate)
+            if server is None:
                 kept.append(candidate)
                 continue
-            key = (incoming.protocol, incoming.host, incoming.port, incoming.security)
+            key = (server.protocol, server.host, server.port, server.security)
             if key not in outcome:
                 kept.append(candidate)
             elif (probed := outcome[key]) is not None:
-                kept.append(_replace_incoming(candidate, incoming, probed))
+                kept.append(replace_incoming(candidate, server, probed))
         return kept
 
     async def _probe_one(
@@ -319,122 +318,6 @@ class DiscoveryService:
         return template.model_copy(
             update={"reachable": True, "capabilities": sorted(capabilities)}
         )
-
-
-def _query(email: str) -> Query:
-    email = email.strip()
-    # The domain goes into URLs and DNS names: a host name, nothing else,
-    # so neither a port nor a path can ride along.
-    problem = address_problem(email)
-    if problem is not None:
-        raise BadRequestError(problem)
-    domain = email.rpartition("@")[2]
-    ascii_domain = ascii_host(domain)
-    if ascii_domain is None:
-        raise BadRequestError(f"{domain} is no host name")
-    if registrable_domain(ascii_domain) is None:
-        raise BadRequestError(f"{domain} is a public suffix, not a mail domain")
-    return Query(email=email, domain=ascii_domain)
-
-
-def _incoming(candidate: Candidate) -> MailServer | None:
-    """The server a candidate reads mail from: JMAP, IMAP or POP3."""
-    return next((s for s in candidate.servers if s.protocol in _INCOMING), None)
-
-
-def _unreachable(candidate: Candidate) -> bool:
-    incoming = _incoming(candidate)
-    return incoming is not None and incoming.reachable is False
-
-
-def _replace_incoming(
-    candidate: Candidate, old: MailServer, probed: MailServer
-) -> Candidate:
-    servers = [
-        s.model_copy(
-            update={"reachable": probed.reachable, "capabilities": probed.capabilities}
-        )
-        if s is old
-        else s
-        for s in candidate.servers
-    ]
-    update: dict[str, object] = {"servers": servers}
-    # A server that refuses a password login but offers OAuth wants OAuth.
-    if "LOGINDISABLED" in probed.capabilities and "AUTH=XOAUTH2" in probed.capabilities:
-        update["credential"] = CredentialKind.OAUTH
-    return candidate.model_copy(update=update)
-
-
-def _merge(candidates: list[Candidate], new: Candidate) -> None:
-    """Add a candidate, or fold it into an earlier one for the same server."""
-    key = _key(new)
-    for index, existing in enumerate(candidates):
-        if _key(existing) == key:
-            candidates[index] = existing.model_copy(
-                update={
-                    "confirmed": existing.confirmed or new.confirmed,
-                    "hints": existing.hints
-                    + [h for h in new.hints if h not in existing.hints],
-                    "name": existing.name or new.name,
-                }
-            )
-            return
-    candidates.append(new)
-
-
-def _key(candidate: Candidate) -> tuple[object, ...]:
-    incoming = _incoming(candidate)
-    server = (
-        (incoming.protocol, incoming.host, incoming.port, incoming.security)
-        if incoming
-        else None
-    )
-    return (candidate.provider, server)
-
-
-def _with_settings(candidate: Candidate, query: Query) -> Candidate:
-    """Fill in the login name and the settings for POST /v1/accounts."""
-    servers = [
-        s.model_copy(update={"username": _username(s.username, query.email)})
-        for s in candidate.servers
-    ]
-    settings = settings_from_servers(
-        candidate.provider, servers, candidate.credential, query.email
-    )
-    return candidate.model_copy(update={"servers": servers, "settings": settings})
-
-
-def _username(template: str | None, email: str) -> str:
-    """The login name a source names, filled in. Without one, the address."""
-    return placeholders.fill(template, email) if template is not None else email
-
-
-def connectable(candidates: list[Candidate]) -> list[Candidate]:
-    """What this service can connect today: JMAP with a password or an API
-    token first, then IMAP with a password, and POP3 with a password only
-    where neither is (CONCEPT 5.2)."""
-    jmap = [
-        c
-        for c in candidates
-        if c.provider is ProviderType.JMAP and c.credential in _JMAP_CREDENTIALS
-    ]
-    with_password = [c for c in candidates if c.credential in _PASSWORDS]
-    imap = [c for c in with_password if c.provider is ProviderType.IMAP]
-    if jmap or imap:
-        return jmap + imap
-    return [c for c in with_password if c.provider is ProviderType.POP3]
-
-
-def sign_ins(candidates: list[Candidate], configured: Iterable[str]) -> list[Candidate]:
-    """Candidates that sign in with a provider this deployment has an OAuth
-    app for, one per provider."""
-    apps = set(configured)
-    found: dict[str, Candidate] = {}
-    for candidate in candidates:
-        name = candidate.oauth_provider
-        if candidate.credential is CredentialKind.OAUTH and name in apps:
-            found.setdefault(name, candidate)
-    return list(found.values())
 
 
 def _report(result: _Result) -> SourceReport:

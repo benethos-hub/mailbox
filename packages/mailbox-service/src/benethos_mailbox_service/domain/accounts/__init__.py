@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from .abilities import deletes, deltas, drafts, sends, watches, writes
 from .adapters import Adapters
-from .oauth import DeviceSignIn, OAuthService
+from .device import DeviceSignIn
+from .oauth import OAuthService
 from .service import AccountService
 
 __all__ = [
