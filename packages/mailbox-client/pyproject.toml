@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "benethos-mailbox-client"
 version = "0.3.1"
-description = "Python client of the REST API of mailbox-service: the mail of all your mailboxes (IMAP, JMAP, POP3, Microsoft 365, Outlook.com) through one API, async and sync."
+description = "Python client of the REST API of mailbox-service: the mail of all your mailboxes (IMAP, JMAP, POP3, Gmail, Microsoft 365, Outlook.com) through one API, async and sync."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -16,6 +16,7 @@ keywords = [
     "imap",
     "jmap",
     "pop3",
+    "gmail",
     "outlook",
     "microsoft-365",
     "multi-account",
