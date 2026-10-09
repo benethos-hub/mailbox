@@ -31,6 +31,7 @@ from .versions.v0015_service_rights_moved import V0015ServiceRightsMoved
 from .versions.v0016_change_folders import V0016ChangeFolders
 from .versions.v0017_activity import V0017Activity
 from .versions.v0018_second_factor import V0018SecondFactor
+from .versions.v0019_recovery_codes_keyed import V0019RecoveryCodesKeyed
 
 MIGRATIONS = MigrationRegistry(
     V0001AccountsUsers(),
@@ -51,6 +52,7 @@ MIGRATIONS = MigrationRegistry(
     V0016ChangeFolders(),
     V0017Activity(),
     V0018SecondFactor(),
+    V0019RecoveryCodesKeyed(),
 )
 
 SCHEMA_VERSION = MIGRATIONS.schema_version

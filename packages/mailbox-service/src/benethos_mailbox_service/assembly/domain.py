@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from functools import partial
 
 from ..common.clock import utc_now
 from ..config import Settings
@@ -18,6 +19,7 @@ from ..data.storage import Repositories, open_repositories
 from ..domain.accounts import AccountService, Adapters, OAuthService
 from ..domain.activity import ActivityLog
 from ..domain.auth import (
+    HASH_LABEL,
     AuthService,
     Passwords,
     RecoveryCodes,
@@ -181,7 +183,11 @@ class _Domain:
         )
         factors = SecondFactors(
             Totp(repositories.totp, vault, clock=clock),
-            RecoveryCodes(repositories.recovery_codes, clock=clock),
+            RecoveryCodes(
+                repositories.recovery_codes,
+                partial(vault.keyed_hash, HASH_LABEL),
+                clock=clock,
+            ),
         )
         self.auth = _auth(base, password_hasher, factors)
         self.sends = SendControl(

@@ -12,20 +12,21 @@ class SqliteRecoveryCodeRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    def replace(self, user_id: str, codes: list[str]) -> None:
+    def replace(self, user_id: str, key_id: str, codes: list[str]) -> None:
         with self._db.transaction() as db:
             db.execute("DELETE FROM recovery_codes WHERE user_id = ?", (user_id,))
             db.executemany(
-                "INSERT INTO recovery_codes (user_id, hash) VALUES (?, ?)",
-                [(user_id, code) for code in codes],
+                "INSERT INTO recovery_codes (user_id, key_id, hash) VALUES (?, ?, ?)",
+                [(user_id, key_id, code) for code in codes],
             )
 
-    def use(self, user_id: str, code: str, at: datetime) -> bool:
+    def use(self, user_id: str, key_id: str, code: str, at: datetime) -> bool:
         return bool(
             self._db.execute(
                 "UPDATE recovery_codes SET used_at = ?"
-                " WHERE user_id = ? AND hash = ? AND used_at IS NULL",
-                (iso(at), user_id, code),
+                " WHERE user_id = ? AND key_id = ? AND hash = ?"
+                " AND used_at IS NULL",
+                (iso(at), user_id, key_id, code),
             )
         )
 

@@ -228,7 +228,7 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   history id, polled
 - **A second factor for the UI sign-in, TOTP with recovery codes
   ([AUTHENTICATION.md](AUTHENTICATION.md))**, decided 2026-10-09, done:
-  schema 18, the code after the password, up to ten named devices on
+  schemas 18 and 19, the code after the password, up to ten named devices on
   the page Second factor with a QR code, added, renamed and removed by
   the owner, removed by a user with `users.manage` and all at once by
   `users reset-second-factor` on the host, the devices in the API.

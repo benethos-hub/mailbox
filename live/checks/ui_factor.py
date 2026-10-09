@@ -22,7 +22,7 @@ from .processes import program, run_dir
 from .run import Run
 
 NAME = "ui-live-factor"
-CODES = r"<li>([0-9A-Z]{5}-[0-9A-Z]{5})</li>"
+CODES = r"<li>([0-9A-Z]{5}-[0-9A-Z]{5}-[0-9A-Z]{5})</li>"
 # The longest pause taken for the limit on requests without a credential.
 LONGEST_WAIT = 65
 
