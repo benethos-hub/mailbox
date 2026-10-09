@@ -13,7 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   through a Google client of the deployment's own, set up as
   docs/GOOGLE.md says and named in `MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_ID`
   with its secret. Without one, Gmail connects over IMAP with an app
-  password as before. Not yet checked live against a Google account.
+  password as before.
 - In a Gmail account labels are folders, and a message can be in
   several. "All Mail" is the folder `ALL_MAIL` with the role `all`.
   Setting keywords answers `501 not_supported`. The change feed follows

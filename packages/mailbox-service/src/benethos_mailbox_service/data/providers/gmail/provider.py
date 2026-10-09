@@ -11,9 +11,8 @@ push: Gmail pushes through Cloud Pub/Sub only, which needs more of
 Google Cloud set up. The worker asks instead.
 
 The parts are in ``api`` (the wire), ``messages``, ``folders``,
-``sending`` (with the drafts) and ``changes``. Details Gmail's
-documentation leaves open are marked **(unverified)** until a live
-check against a Google account confirms them.
+``sending`` (with the drafts) and ``changes``. ``live/gmail.py`` checks
+them against a Gmail account.
 """
 
 from __future__ import annotations

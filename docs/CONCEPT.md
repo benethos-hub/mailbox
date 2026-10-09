@@ -256,7 +256,7 @@ account lacks.
 | `imap` | everything without a better API: GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, Zoho, own servers, Proton via Bridge | **IMAPClient** (protocol), the mail parser of **imap-tools** (messages) | BSD-3-Clause, Apache-2.0 | synchronous, run in a worker thread. Auth: password and app password, built. **XOAUTH2** waits for the token refresher (5.1) |
 | `smtp` | sending for `imap` and `pop3` accounts | stdlib **smtplib**, for now (decided 2026-09-24) | PSF | synchronous, run in a worker thread like IMAP, also XOAUTH2, built |
 | `microsoft` | Microsoft 365, Outlook.com | Microsoft Graph over **httpx** | — | OAuth 2.0, the only sensible route (5.4), built |
-| `gmail` | Gmail, Google Workspace | Gmail REST API over **httpx** | — | OAuth 2.0 with a Google client of the deployment's own, no Google SDK (5.5), built, not yet checked live |
+| `gmail` | Gmail, Google Workspace | Gmail REST API over **httpx** | — | OAuth 2.0 with a Google client of the deployment's own, no Google SDK (5.5), built |
 | `jmap` | Fastmail, Stalwart, Cyrus, any JMAP server | JMAP (RFC 8620/8621) over **httpx** | — | password or API token. A second generic protocol next to IMAP (5.6), built |
 | `pop3` | legacy mailboxes | stdlib **poplib** | PSF | synchronous, worker thread, reduced (5.2), built |
 | `memory` | tests and development | — | — | built |
@@ -467,8 +467,8 @@ The same consent screen covers the Gmail API and IMAP with XOAUTH2, so the
 API costs nothing extra in verification. That settles `gmail` over `imap`
 for Google accounts.
 
-**Built 2026-10-09** (`data/providers/gmail/`, docs/GOOGLE.md), not yet
-checked live against a Google account:
+**Built 2026-10-09** (`data/providers/gmail/`, docs/GOOGLE.md), checked
+live against a Gmail account (`live/gmail.py`):
 
 - The client goes into the settings, `MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_ID`
   with its secret, like an own Microsoft app. Without it, Gmail is not

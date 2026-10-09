@@ -83,6 +83,11 @@ again. Treat the secret like a password.
 
 **Audience → Publish app**, so that the status is **In production**.
 
+**Publish app** stays grey until the page **Branding** is complete.
+The app name, a support address and the developer's contact address
+are enough. A home page, a privacy policy and authorized domains are
+needed only for Google's verification, which this app does not ask for.
+
 This is no review. It matters: in the status **Testing** Google lets
 refresh tokens expire after 7 days, and every Gmail account would have
 to sign in again each week. In production an app that is not verified
@@ -178,8 +183,9 @@ no sign-in with Google. Gmail accounts can still connect over IMAP.
   with `/ui/oauth/gmail/callback`, is not among the redirect URIs of
   step 4. Compare scheme, host and port exactly.
 - **"Access blocked: ... has not completed the Google verification
-  process"**: the app is in **Testing** and the account is not a test
-  user. Publish the app (step 5).
+  process"**, error 403 `access_denied`: the app is in **Testing** and
+  the account is not a test user. Publish the app (step 5), or add the
+  account under **Audience → Test users**.
 - **The account asks to sign in again after a week**: the app is still
   in **Testing**. Publish it, then sign in once more.
 - **"invalid_client"** on connecting: the client id or the secret does

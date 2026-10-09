@@ -222,7 +222,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   (5.5)**, built: the client in the settings, the sign-in in the
   browser only, labels as folders with "All Mail", flags, moves,
   trash and delete for good, drafts, sending, search in Gmail's
-  syntax (`docs/GOOGLE.md`). Not yet checked live (`live/gmail.py`)
+  syntax (`docs/GOOGLE.md`). Checked live against a Gmail account
+  (`live/gmail.py`)
 - **Gmail history in the worker**, built: `history.list` since a
   history id, polled
 - **`jmap` adapter for Fastmail and JMAP servers (5.6)**, decided

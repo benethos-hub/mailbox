@@ -39,8 +39,6 @@
   .package code, .service code { font-size: 22px; font-weight: 700; color: var(--navy); }
   .package small + small { color: var(--faint); font-size: 14px; }
   .provider { left: 1160px; width: 240px; }
-  .planned { border-style: dashed; background: transparent; box-shadow: none; }
-  .planned b, .planned small { color: var(--faint); }
   .service { position: absolute; left: 620px; top: 70px; width: 480px; height: 520px;
              box-sizing: border-box; background: var(--card); border: 3px solid var(--blue);
              border-radius: 22px; box-shadow: 0 12px 34px var(--shadow); }
@@ -65,7 +63,6 @@
   svg text { font: 600 14px "Segoe UI", system-ui, sans-serif; fill: var(--faint); }
   .plain { stroke: var(--arrow); }
   .blue { stroke: var(--blue); }
-  .dashed { stroke: var(--line); stroke-dasharray: 7 6; }
   .tip-plain { fill: var(--arrow); }
   .tip-blue { fill: var(--blue); }
 </style>
@@ -104,7 +101,7 @@
       <line class="blue" x1="1104" y1="218" x2="1156" y2="218" marker-start="url(#b)" marker-end="url(#b)"/>
       <line class="blue" x1="1104" y1="323" x2="1156" y2="323" marker-start="url(#b)" marker-end="url(#b)"/>
       <line class="blue" x1="1104" y1="428" x2="1156" y2="428" marker-start="url(#b)" marker-end="url(#b)"/>
-      <line class="dashed" x1="1104" y1="533" x2="1156" y2="533"/>
+      <line class="blue" x1="1104" y1="533" x2="1156" y2="533" marker-start="url(#b)" marker-end="url(#b)"/>
     </g>
     <text x="246" y="102">MCP</text>
     <text x="436" y="183">uses</text>
@@ -144,7 +141,7 @@
   <div class="card provider" style="top:175px"><b>Microsoft Graph</b><small>Microsoft 365, Outlook</small></div>
   <div class="card provider" style="top:280px"><b>JMAP</b><small>Fastmail, Stalwart</small></div>
   <div class="card provider" style="top:385px"><b>POP3</b><small>mailboxes without IMAP</small></div>
-  <div class="card provider planned" style="top:490px"><b>Gmail API</b><small>planned</small></div>
+  <div class="card provider" style="top:490px"><b>Gmail API</b><small>Gmail, Google Workspace</small></div>
 
   <div class="foot"><strong>Self-hosted.</strong> Mail goes straight from the provider to your server. No tool ever sees a mail password.</div>
 </body>
