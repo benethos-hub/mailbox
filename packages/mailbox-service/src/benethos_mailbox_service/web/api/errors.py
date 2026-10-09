@@ -64,6 +64,22 @@ CHANGES_ERRORS: dict[int | str, dict[str, Any]] = {
     }
 }
 
+# A grant may narrow sending (CONCEPT 7.5).
+SEND_ERRORS: dict[int | str, dict[str, Any]] = {
+    403: {
+        "model": ErrorResponse,
+        "description": (
+            "The caller lacks the right, or no grant allows these recipients "
+            "(`recipient_not_allowed`)"
+        ),
+    },
+    429: {
+        "model": ErrorResponse,
+        "description": "The grant's send limit is reached (`send_limit_reached`), "
+        "see Retry-After",
+    },
+}
+
 
 def api_error(exc: MailboxServiceError) -> JSONResponse:
     """A domain error as the API answers it: status and envelope."""

@@ -211,7 +211,11 @@ packages/mailbox-service/
                         #   one module per subject: accounts, oauth,
                         #   mail, users, tokens, status, errors
         errors.py       # the error envelope, the errors routes document
-        routes/         # one router per resource
+        routes/         # one router per resource. One account's mail:
+                        #   folders.py, mailbox.py (its messages, in
+                        #   two routers that keep the order of the
+                        #   OpenAPI document), sending.py, changes.py,
+                        #   drafts.py. messages.py across accounts
       pages/            # the configuration UI under /ui, not in OpenAPI
         deps.py         # who is signed in, the CSRF check, if_allowed
         navigation.py   # the sidebar entries a caller may open and their
