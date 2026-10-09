@@ -5,9 +5,10 @@ send a ``Call``, each in its own way."""
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+import functools
+from collections.abc import Callable, Coroutine, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Generic, TypeVar
+from typing import Any, Concatenate, Generic, ParamSpec, TypeVar
 from urllib.parse import quote
 
 import httpx
@@ -19,6 +20,7 @@ TIMEOUT = 30.0
 ATTACHMENT_TIMEOUT = 120.0
 
 T = TypeVar("T")
+P = ParamSpec("P")
 
 
 @dataclass(frozen=True)
@@ -62,3 +64,35 @@ def as_is(found: Any) -> Any:
 def nothing(found: Any) -> None:
     """The reading of a call whose answer has no content."""
     return None
+
+
+# --- a client's methods ---------------------------------------------------------------
+#
+# Each method of a client is one line, made from the function of
+# ``endpoints`` that describes its call: it takes that function's
+# arguments, sends the call and answers what it reads. Its name, its
+# docstring and its signature are the endpoint's.
+
+
+def awaiting(
+    make: Callable[P, Call[T]],
+) -> Callable[Concatenate[Any, P], Coroutine[Any, Any, T]]:
+    """A method of the async client: the call ``make`` describes, sent."""
+
+    @functools.wraps(make)
+    async def method(client: Any, /, *args: P.args, **kwargs: P.kwargs) -> T:
+        found: T = await client.send(make(*args, **kwargs))
+        return found
+
+    return method
+
+
+def blocking(make: Callable[P, Call[T]]) -> Callable[Concatenate[Any, P], T]:
+    """A method of the sync client: the call ``make`` describes, sent."""
+
+    @functools.wraps(make)
+    def method(client: Any, /, *args: P.args, **kwargs: P.kwargs) -> T:
+        found: T = client.send(make(*args, **kwargs))
+        return found
+
+    return method

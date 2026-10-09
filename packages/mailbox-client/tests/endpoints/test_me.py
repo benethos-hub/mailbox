@@ -11,7 +11,7 @@ from ..fake_api import ME, FakeApi
 
 async def test_me(make_client: Callable) -> None:
     api = FakeApi(ME)
-    me = await make_client(api).me()
+    me = await make_client(api).get_me()
     assert api.call() == ("GET", "/v1/me", {}, None)
     assert me == Me(
         accounts=[

@@ -59,6 +59,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `mailbox-client`: `me()` is now `get_me()`, named like its operation,
+  as every method of the client is. Each method is made from the
+  endpoint that describes its call, with that endpoint's name,
+  docstring and signature.
 - The UI names the company a person signs in at: "Sign in with
   Google" for Gmail. It offers a sign-in with a code only where the
   provider has one.

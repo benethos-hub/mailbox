@@ -9,11 +9,11 @@ name or a field of the API.
 
 from __future__ import annotations
 
-from .accounts import me
 from .compose import message_body
 from .drafts import create_draft, delete_draft, list_drafts, update_draft
 from .folders import create_folder, list_folders
 from .generic import request
+from .me import get_me
 from .messages import (
     delete_message,
     get_attachment,
@@ -32,12 +32,12 @@ __all__ = [
     "delete_draft",
     "delete_message",
     "get_attachment",
+    "get_me",
     "get_message",
     "list_changes",
     "list_drafts",
     "list_folders",
     "list_messages",
-    "me",
     "message_body",
     "renew_webhook_secret",
     "request",

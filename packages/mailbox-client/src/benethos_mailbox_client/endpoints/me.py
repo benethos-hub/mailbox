@@ -9,7 +9,7 @@ from ..calls import Call, path
 from ..models import Me, MeAccount, Sending
 
 
-def me() -> Call[Me]:
+def get_me() -> Call[Me]:
     return Call("GET", path("me"), _me)
 
 

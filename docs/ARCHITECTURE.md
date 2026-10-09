@@ -383,7 +383,7 @@ packages/mailbox-client/
     endpoints/          # each endpoint once, one module per resource
                         #   of the API, with the readings of its
                         #   records. Sends nothing
-      accounts.py       # me(): the caller and its accounts
+      me.py             # get_me(): the caller and its accounts
       folders.py        # the folders of an account
       messages.py       # lists and search, changes, a message, an
                         #   attachment, flags and moves, deleting;
@@ -401,7 +401,8 @@ packages/mailbox-client/
                         #   environment (from_environment) or given,
                         #   checked before a client is made
     calls.py            # Call: the request an endpoint describes,
-                        #   its path below /v1, the timeouts
+                        #   its path below /v1, the timeouts; awaiting
+                        #   and blocking make a client's method of it
     models/             # the records the clients answer with, one
                         #   module per resource as in endpoints/, every
                         #   one offered by its __init__.py
@@ -427,9 +428,13 @@ The modules stand in lines, each importing only lines below:
 ```
 
 **An endpoint of the client** is a function in the module of its
-resource in `endpoints/` that answers a `Call`, and a one-line method
-on each client that sends it. Its test is in `tests/endpoints/`, in
-the file of that module, and runs for both clients. Neither client
+resource in `endpoints/` that answers a `Call`, named like the
+operation's `operationId`, and a one-line method on each client made
+from it: `list_users = awaiting(endpoints.list_users)` in
+`MailboxClient`, `blocking(...)` in `SyncMailboxClient` (`calls.py`).
+The method takes the function's arguments and has its name, docstring
+and signature. Its test is in `tests/endpoints/`, in the file of that
+module, and runs for both clients. Neither client
 knows a path or a field: when the two differ in more than `await`,
 the difference belongs in `endpoints/`, `calls.py` or `answers.py`.
 

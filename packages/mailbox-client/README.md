@@ -43,7 +43,7 @@ For async code:
 from benethos_mailbox_client import MailboxClient
 
 async with MailboxClient() as mailbox:
-    me = await mailbox.me()
+    me = await mailbox.get_me()
     for account in me.accounts:
         page = await mailbox.list_messages(account.id, folder="inbox", limit=10)
         for summary in page.items:
