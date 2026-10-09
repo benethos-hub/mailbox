@@ -310,7 +310,8 @@ person's own user page. It lists the devices with their name, when each
 was added and last used. **Add a device** asks for its name and the
 password, and with a device there already a code, then shows the QR
 code with the key as text and a field for the first code. The first
-device brings the ten recovery codes, shown once. **Rename a device**
+device brings the ten recovery codes, shown once and offered as a text
+file to download. **Rename a device**
 takes the new name, **Remove a device** the password and a code. The
 Recovery codes card says how many are left and makes new ones after
 the password. Another user's page lists its devices to a user with

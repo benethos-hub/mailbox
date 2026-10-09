@@ -11,6 +11,7 @@
   <div class="body">
     <p class="muted">Each signs you in once in place of a code of a device, e.g. when a phone is lost. Keep them apart from your devices, in a password manager or on paper.</p>
     <ul class="codes secret">{% for code in codes %}<li>{{ code }}</li>{% endfor %}</ul>
+    <div class="form-actions"><a class="btn" href="{{ codes_file }}" download="mailbox-recovery-codes.txt">Download as a text file</a></div>
   </div>
 </section>
 {% endif %}

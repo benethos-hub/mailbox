@@ -12,7 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   app (TOTP) after the password, a choice of each user. A user holds it
   on up to ten named devices, each with codes of its own, added,
   renamed and removed on the page **Second factor** with a QR code. The
-  first device brings ten recovery codes shown once, a further one
+  first device brings ten recovery codes shown once, also as a text
+  file to download, a further one
   needs a code. A password set by someone else is changed only after
   the code. docs/AUTHENTICATION.md has the details.
 - Gmail and Google Workspace accounts over the Gmail API, with the

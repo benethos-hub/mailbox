@@ -149,6 +149,11 @@ def _add(
             and len(codes) == 10
             and codes[0] not in own.get("/ui/second-factor").text,
         )
+        run.check(
+            "and offers them as a text file",
+            'href="data:text/plain;charset=utf-8,' in done.text
+            and 'download="mailbox-recovery-codes.txt"' in done.text,
+        )
     else:
         run.check(
             f"{name} is added, without recovery codes",

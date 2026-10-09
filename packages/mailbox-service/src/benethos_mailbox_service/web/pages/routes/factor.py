@@ -5,6 +5,7 @@ another user's devices from its page (docs/AUTHENTICATION.md 4)."""
 from __future__ import annotations
 
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
@@ -39,12 +40,14 @@ async def factor_page(
     if setup is not None and setup.until <= utc_now():
         session.setup = setup = None
     shown = take_once(request, CODES)
+    codes = shown.split("\n") if shown else None
     return render(
         request,
         "pages/second_factor.html",
         page="factor",
         factor=factors.mine(caller),
-        codes=shown.split("\n") if shown else None,
+        codes=codes,
+        codes_file=_codes_file(request, caller.name, codes) if codes else None,
         setup=setup,
         qr=data_uri(_uri(request, caller.name, setup)) if setup else None,
         secret=_grouped(totp.base32(setup.secret)) if setup else None,
@@ -166,6 +169,22 @@ def _uri(request: Request, name: str, setup: PendingSetup) -> str:
     """What the QR code carries: the user name with the host of the
     service, so two deployments show apart in the app."""
     return totp.uri(setup.secret, ISSUER, f"{name}@{public_host(request)}")
+
+
+def _codes_file(request: Request, name: str, codes: list[str]) -> str:
+    """The recovery codes as a text file to download, in a data URI: the
+    page holds them, the service keeps none after showing them."""
+    host = public_host(request)
+    lines = [
+        f"Recovery codes of {name} for {ISSUER} at {host}",
+        f"Made {utc_now():%Y-%m-%d %H:%M} UTC. Each signs in once in place of",
+        "a code of a device. New ones make these void.",
+        "",
+        *codes,
+        "",
+    ]
+    text = "\r\n".join(lines)
+    return "data:text/plain;charset=utf-8," + quote(text, safe="")
 
 
 def _grouped(text: str) -> str:

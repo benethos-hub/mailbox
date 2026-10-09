@@ -135,7 +135,9 @@ device or all, never adds one. Devices can be renamed, at most 10.
 
 Ten codes, each ten characters from a base32 alphabet without the
 letters easily mistaken, shown as `ABCDE-FGHJK`. They are made with
-the first device and shown once. Each holds 50 bits and works once.
+the first device and shown once, with a link to download them as a
+text file. The page holds the file as a data URI, so the service keeps
+nothing of them after showing them. Each holds 50 bits and works once.
 They belong to the user, not to a device: they help whichever device
 is lost.
 

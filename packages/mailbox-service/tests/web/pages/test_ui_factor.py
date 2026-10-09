@@ -7,6 +7,7 @@ import asyncio
 import html
 import re
 from datetime import UTC, datetime
+from urllib.parse import unquote
 
 import httpx
 import pytest
@@ -221,6 +222,28 @@ def test_the_first_device_shows_a_qr_code_then_the_recovery_codes_once(
     assert '<td class="name">Phone</td>' in again and "10 left" in again
     # The session that set it up carries on.
     assert app_client.get("/ui").status_code == 200
+
+
+def test_the_recovery_codes_download_as_a_text_file(
+    app_client: TestClient, services: Services
+) -> None:
+    name, password = browser_user(services, READER)
+    _, old = with_factor(services, name)
+    try_sign_in(app_client, name, password)
+    code_form(app_client, old[0])
+    fresh = post(app_client, "/ui/second-factor/codes", {"password": password})
+    link = re.search(
+        r'<a class="btn" href="(data:text/plain;charset=utf-8,[^"]+)"'
+        r' download="mailbox-recovery-codes.txt">',
+        fresh.text,
+    )
+    assert link is not None
+    text = unquote(link.group(1).split(",", 1)[1])
+    codes = re.findall(CODES, fresh.text)
+    assert all(code in text.splitlines() for code in codes)
+    assert text.startswith(f"Recovery codes of {name} for Mailbox at ")
+    # Shown once: the next visit offers neither the codes nor the file.
+    assert "data:text/plain" not in app_client.get("/ui/second-factor").text
 
 
 def test_a_further_device_needs_a_code(
