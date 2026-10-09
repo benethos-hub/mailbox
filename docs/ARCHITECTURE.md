@@ -737,6 +737,9 @@ imapclient boundary), never by patching deep inside a library.
 - A test sits in the folder of the code it tests, `tests/domain/sync/`
   for `domain/sync/`. A test of several layers at once is in
   `tests/integration/`. The fakes and `conftest.py` are at the top.
+  A fixture that tests of more than one module take is in the
+  `conftest.py` of their nearest common folder, never imported from a
+  test module.
 - Fakes plug in at a seam: the memory provider, `httpx.MockTransport`,
   a fake `IMAPClient` at the imapclient boundary. Nothing is patched
   deep inside a library.
