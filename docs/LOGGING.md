@@ -228,6 +228,8 @@ Drafts are mail content and change nothing others see: not logged.
 | Level | Line | Fields | Note |
 |---|---|---|---|
 | INFO | X created webhook W to host H for its events of N accounts | actor, webhook id, host, events, accounts or "every account" | |
+| INFO | X changed the url, events, accounts of webhook W, posting to host H | actor, webhook, host now, what changed | |
+| INFO | X gave webhook W to host H a new signing secret, the one before stops at once | actor, webhook, host | never the secret |
 | INFO | X removed webhook W to host H | actor, webhook, host | |
 | WARNING | could not post for webhook W, attempt N of M: reason | webhook, attempt, attempts, reason | the post is tried again |
 | WARNING | gave up on N changes for webhook W after M attempts: reason | webhook, count of changes, attempts, reason | |
@@ -405,7 +407,8 @@ domain/
       mailbox.py       sent, refused, replayed, the send limit
       sync.py          a pass, a failed sync, IDLE
       changes.py       the change log purged
-      webhooks.py      created, removed, a post failed, given up
+      webhooks.py      created, changed, a new secret, removed, a post
+                       failed, given up
       http.py          what the web layer refuses: a body too large,
                          a caller out of requests
 ```
@@ -552,6 +555,8 @@ and that each is listed here.
 | `sync.watch_failed` | watching an account failed |
 | `changes.purged` | old changes purged from the change log |
 | `webhooks.created` | a webhook created |
+| `webhooks.changed` | a webhook's url, events or accounts changed |
+| `webhooks.secret_renewed` | a webhook given a new signing secret |
 | `webhooks.removed` | a webhook removed |
 | `webhooks.post_failed` | a post failed, to be tried again |
 | `webhooks.gave_up` | the posts of a batch given up |

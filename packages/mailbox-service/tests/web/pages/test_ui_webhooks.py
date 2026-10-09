@@ -139,3 +139,62 @@ def test_webhooks_filter_by_url_account_and_state(
     assert "a.example.com" in by_account and "b.example.com" in by_account
     failing = ready.get("/ui/webhooks", params={"failing": "1"}).text
     assert "No webhook matches." in failing
+
+
+# --- change and a new secret ------------------------------------------------------
+
+
+def test_the_change_card_shows_the_webhook_and_saves_it(
+    ready: TestClient, services: Services, account_id: str
+) -> None:
+    page = create(ready)
+    shown = ready.get(page).text
+    assert "<h2>Change</h2>" in shown
+    assert f'name="url" type="url" value="{URL}"' in shown
+    assert 'name="events" value="message.created" checked' in shown
+    assert 'name="events" value="message.sent" />' in shown
+    saved = post(
+        ready,
+        page,
+        {
+            "url": "https://other.example.org/x",
+            "events": "message.sent",
+            "accounts": account_id,
+        },
+    )
+    assert "Saved." in saved.text
+    [hook] = services.webhooks.list_webhooks(services.auth.access_of(_admin(services)))
+    assert hook.url == "https://other.example.org/x"
+    assert hook.events == ["message.sent"] and hook.accounts == [account_id]
+
+
+def test_a_refused_change_keeps_what_was_typed(ready: TestClient) -> None:
+    page = create(ready)
+    refused = post(
+        ready, page, {"url": "ftp://nowhere", "events": "message.sent", "every": "1"}
+    )
+    assert refused.status_code == 400
+    assert 'value="ftp://nowhere"' in refused.text
+    nothing = post(ready, page, {"url": URL, "events": "message.sent"})
+    assert "Choose the accounts, or every account." in nothing.text
+
+
+def test_a_new_secret_after_a_question_shown_once(
+    ready: TestClient, services: Services
+) -> None:
+    page = create(ready)
+    first = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', ready.get(page).text)
+    assert first is not None
+    shown = ready.get(page).text
+    assert 'data-confirm="Make a new signing secret?' in shown
+    renewed = post(ready, f"{page}/secret")
+    assert "New secret made. The one before stops at once." in renewed.text
+    second = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', renewed.text)
+    assert second is not None and second.group(1) != first.group(1)
+    assert second.group(1) not in ready.get(page).text
+
+
+def _admin(services: Services) -> str:
+    user = services.auth.user_named("admin")
+    assert user is not None
+    return user.id

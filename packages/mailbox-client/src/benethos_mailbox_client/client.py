@@ -4,7 +4,7 @@ it asks and what it answers is described in ``endpoints``."""
 
 from __future__ import annotations
 
-from types import TracebackType
+from types import EllipsisType, TracebackType
 from typing import Any, TypeVar
 
 import httpx
@@ -14,7 +14,17 @@ from .answers import api_error, failure, read
 from .attachments import Collected, attachment
 from .calls import Call, timeouts
 from .environment import connection
-from .models import Attachment, Changes, Folder, Me, Outcome, Page, Sent
+from .models import (
+    Attachment,
+    Changes,
+    Folder,
+    Me,
+    Outcome,
+    Page,
+    Sent,
+    Webhook,
+    WebhookSecret,
+)
 
 T = TypeVar("T")
 
@@ -240,3 +250,22 @@ class MailboxClient:
         return await self.send(
             endpoints.send_draft(account_id, draft_id, idempotency_key)
         )
+
+    # --- webhooks ---------------------------------------------------------------------
+
+    async def update_webhook(
+        self,
+        webhook_id: str,
+        *,
+        url: str | None = None,
+        events: list[str] | None = None,
+        accounts: list[str] | None | EllipsisType = ...,
+    ) -> Webhook:
+        return await self.send(
+            endpoints.update_webhook(
+                webhook_id, url=url, events=events, accounts=accounts
+            )
+        )
+
+    async def renew_webhook_secret(self, webhook_id: str) -> WebhookSecret:
+        return await self.send(endpoints.renew_webhook_secret(webhook_id))

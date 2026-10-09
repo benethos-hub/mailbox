@@ -66,7 +66,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `audit` | `list_activity`, the audit of administration (8.6) | the service |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account` | an account |
 | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account` | the service |
-| `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |
+| `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `renew_webhook_secret`, `delete_webhook` | the service |
 | `users.read` | `list_users`, `get_user`, `list_tokens`, `get_second_factor`, `list_roles`, `get_role` | the service |
 | `users.manage` | `users.read` and changes to users, tokens, passwords, roles: fourteen rights | the service |
 | `admin` | everything, and `show_recovery_key` and `read_service_log`, which nothing else gives | the service |

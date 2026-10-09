@@ -98,6 +98,26 @@ def check_service(
     )
     listed = browser.get("/ui/webhooks").text
     run.check("the webhook is listed", "127.0.0.1:9/ui-live" in listed)
+    changed = browser.post(
+        hook.url.path,
+        data={
+            "csrf_token": csrf,
+            "url": "http://127.0.0.1:9/ui-live-changed",
+            "events": ["message.created", "message.sent"],
+            "every": "1",
+        },
+    )
+    run.check(
+        "change its URL and events",
+        "Saved." in changed.text
+        and "127.0.0.1:9/ui-live-changed" in changed.text
+        and 'name="events" value="message.sent" checked' in changed.text,
+    )
+    renewed = browser.post(f"{hook.url.path}/secret", data={"csrf_token": csrf})
+    run.check(
+        "give it a new secret, shown once",
+        "New secret made." in renewed.text and "shown this once" in renewed.text,
+    )
     removed = browser.post(f"{hook.url.path}/delete", data={"csrf_token": csrf})
     run.check("remove the webhook", "Webhook removed." in removed.text)
 
@@ -259,6 +279,8 @@ def check_audit(run: Run, browser: httpx.Client, url: str, admin: Admin) -> None
         "users.token_issued",
         "users.role_created",
         "webhooks.created",
+        "webhooks.changed",
+        "webhooks.secret_renewed",
         "webhooks.removed",
         "system.recovery_shown",
         "system.log_read",
@@ -273,7 +295,12 @@ def check_audit(run: Run, browser: httpx.Client, url: str, admin: Admin) -> None
     run.check(
         "its filter keeps an area",
         set(re.findall(r'<span class="mono">(\w+\.\w+)</span>', hooks))
-        == {"webhooks.created", "webhooks.removed"},
+        == {
+            "webhooks.created",
+            "webhooks.changed",
+            "webhooks.secret_renewed",
+            "webhooks.removed",
+        },
     )
     own = re.search(r'href="(/ui/users/usr_\w+)"', browser.get("/ui").text)
     card = browser.get(f"{own.group(1)}?tab=activity").text if own else ""

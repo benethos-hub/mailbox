@@ -390,6 +390,7 @@ packages/mailbox-client/
                         #   the page the drafts read too
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a message, send a draft
+      webhooks.py       # change a webhook, a new signing secret
       compose.py        # message_body: what drafts and sending share
       generic.py        # request(): any route, its JSON as it comes
     answers.py          # an answer read: its JSON, the error envelope
@@ -401,7 +402,8 @@ packages/mailbox-client/
                         #   checked before a client is made
     calls.py            # Call: the request an endpoint describes,
                         #   its path below /v1, the timeouts
-    models.py           # the records the clients answer with
+    models.py           # the records the clients answer with, Secret
+                        #   for what the service shows once
     errors.py           # MailboxError and its subclasses
 ```
 

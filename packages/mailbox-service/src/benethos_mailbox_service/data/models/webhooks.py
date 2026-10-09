@@ -39,6 +39,27 @@ class WebhookCreate(BaseModel):
     )
 
 
+class WebhookUpdate(BaseModel):
+    """Change a webhook. A field left out stays as it is. Its deliveries and
+    where its posts stand stay, its secret too."""
+
+    url: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Where the service posts events, http or https.",
+    )
+    events: list[ChangeKind] | None = Field(
+        default=None, min_length=1, description="The events to post."
+    )
+    accounts: list[str] | None = Field(
+        default=None,
+        description=(
+            "Account ids. `null`: every account the owner may read, accounts "
+            "added later included. Left out: as it is."
+        ),
+    )
+
+
 class Webhook(BaseModel):
     id: str
     url: str
@@ -71,6 +92,18 @@ class WebhookPost(BaseModel):
 class WebhookDetail(Webhook):
     deliveries: list[WebhookPost] = Field(
         description="The last posts to the receiver, newest first, up to 20."
+    )
+
+
+class WebhookSecret(BaseModel):
+    """A webhook's new signing secret. The one before stops at once."""
+
+    webhook_id: str
+    secret: str = Field(
+        description=(
+            "Signs every post from now on (HMAC-SHA256). Shown once, here. "
+            "Keep it with the receiver."
+        )
     )
 
 

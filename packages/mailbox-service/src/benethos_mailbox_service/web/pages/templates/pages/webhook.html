@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import ago, breadcrumb, card, danger_card, empty, fact, facts, related, secret_card, webhook_state with context %}
+{% from "components/ui.html" import action, ago, breadcrumb, card, csrf_field, danger_card, empty, fact, facts, icon, related, secret_card, webhook_state with context %}
+{% from "components/webhook.html" import webhook_fields %}
 {% block title %}Webhook · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ webhook.url }}{% endblock %}
 {% block subheading %}{{ breadcrumb([("Webhooks", "/ui/webhooks"), (webhook.url, None)]) }}{% endblock %}
@@ -43,6 +44,25 @@
     {% else %}{{ empty("Nothing posted yet.") }}{% endif %}
   </div>
 {% endcall %}
+
+{% if can_update %}
+<form method="post" action="/ui/webhooks/{{ webhook.id }}">
+  {{ csrf_field() }}
+  {% call card("Change", meta="Its deliveries and where its posts stand stay, its secret too.") %}
+    {{ webhook_fields(typed, events, accounts) }}
+    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Save</button></div>
+  {% endcall %}
+</form>
+{% endif %}
+
+{% if can_renew %}
+{% call card("Signing secret") %}
+  <div class="toolbar">
+    <span class="muted grow">A new secret is shown once. The one before stops at once: the receiver needs the new one before the next post.</span>
+    {{ action("/ui/webhooks/" ~ webhook.id ~ "/secret", "New secret", confirm="Make a new signing secret? The one before stops at once, so the receiver refuses the next posts until it has the new one.", cls="", icon="arrow-clockwise") }}
+  </div>
+{% endcall %}
+{% endif %}
 
 {% if can_delete %}
 {{ danger_card("Remove", "The service stops posting to this URL. What it posted stays with the receiver.", "/ui/webhooks/" ~ webhook.id ~ "/delete", "Remove webhook", "Remove the webhook " ~ webhook.url ~ "?") }}

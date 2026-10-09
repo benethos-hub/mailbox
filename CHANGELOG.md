@@ -41,6 +41,18 @@ adheres to [Semantic Versioning](https://semver.org/).
   (`remove_totp_device`) one TOTP device, both in `users.manage`, for a user whose
   rights the caller holds, never for the caller itself. The database
   moves to schema 19.
+- `PATCH /v1/webhooks/{webhook_id}` (`update_webhook`) changes a
+  webhook's `url`, `events` or `accounts`. A field left out stays,
+  `accounts` set to `null` is every account the owner may read. Its
+  deliveries, where its posts stand and its secret stay. `POST
+  /v1/webhooks/{webhook_id}/secret` (`renew_webhook_secret`) answers a
+  new signing secret, shown once. The one before stops at once. Both are
+  in `webhooks.manage`, for the webhook's owner alone, and audited as
+  `webhooks.changed` and `webhooks.secret_renewed`. The UI's webhook
+  page has a Change card and **New secret**. `mailbox-client` has both
+  as `update_webhook` and `renew_webhook_secret`, with the records
+  `Webhook` and `WebhookSecret`. The secret is a `Secret`, kept out of
+  `repr` and `str`, read with `get_secret_value()`.
 - `users reset-second-factor <name>` on the host removes a user's second factor,
   for the last administrator who lost every device and the recovery
   codes.

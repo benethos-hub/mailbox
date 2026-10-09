@@ -8,7 +8,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
-from ..models import Webhook
+from ..models import ChangeKind, Webhook
 from .table import Table
 
 
@@ -66,6 +66,21 @@ class WebhookRepository(Protocol):
 
     def delete(self, webhook_id: str) -> None: ...
 
+    def change(
+        self,
+        webhook_id: str,
+        *,
+        url: str,
+        events: builtins.list[ChangeKind],
+        accounts: builtins.list[str] | None,
+    ) -> None:
+        """Where a webhook posts and what. Its delivery stays."""
+        ...
+
+    def set_secret(self, webhook_id: str, secret: Sealed) -> None:
+        """A new signing secret in place of the one before."""
+        ...
+
     def delete_for_user(self, user_id: str) -> int:
         """Remove every webhook of a user. Returns how many there were."""
         ...
@@ -108,6 +123,24 @@ class InMemoryWebhookRepository:
     def delete(self, webhook_id: str) -> None:
         self._records.delete(webhook_id)
         self._attempts.pop(webhook_id, None)
+
+    def change(
+        self,
+        webhook_id: str,
+        *,
+        url: str,
+        events: builtins.list[ChangeKind],
+        accounts: builtins.list[str] | None,
+    ) -> None:
+        record = self._records.get(webhook_id)
+        webhook = record.webhook.model_copy(
+            update={"url": url, "events": events, "accounts": accounts}
+        )
+        self._records.put(webhook_id, replace(record, webhook=webhook))
+
+    def set_secret(self, webhook_id: str, secret: Sealed) -> None:
+        record = self._records.get(webhook_id)
+        self._records.put(webhook_id, replace(record, secret=secret))
 
     def delete_for_user(self, user_id: str) -> int:
         owned = [r.webhook.id for r in self.list() if r.webhook.user_id == user_id]

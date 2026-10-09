@@ -118,6 +118,7 @@ The click budget, counted from the overview after signing in:
 | Give a user a token | 3, 4 once it has one | Users, the user, (New token), Create token |
 | Revoke a token | 3 | Users, the user, Revoke |
 | Add a webhook | 3 | Webhooks, New webhook, Create |
+| Change a webhook | 3 | Webhooks, the webhook, Save |
 | See why a webhook fails | 1 | Webhooks |
 | See which account is not syncing | 1 | Overview, or Accounts (its dot shows on every page) |
 | Show the recovery key | 2 | Recovery key, Show |
@@ -401,11 +402,13 @@ The list shows the URL, the events, the accounts, the last delivery and
 the last error as a red tag with the reason. New webhook from the list:
 URL, events as tick boxes, accounts as tick boxes or "every account I may
 read". The secret is shown once on the detail page after creating, as a
-token is. The detail page has the facts, the last deliveries, and Remove.
-The service keeps the last 20 attempts of each webhook: when, the events,
-the receiver's status code and the error.
-A webhook has no Change card: the API has none, a person removes and
-recreates it.
+token is. The detail page has the facts, the last deliveries, the Change
+card, the card **Signing secret** and Remove. The service keeps the last
+20 attempts of each webhook: when, the events, the receiver's status
+code and the error. The Change card holds the fields of New webhook,
+filled. Saving keeps the deliveries, where the posts stand and the
+secret. **New secret** asks first, since the one before stops at once,
+and shows the new one once, as after creating.
 
 ### 6.5 The state of the service and the recovery key
 
@@ -483,7 +486,8 @@ receiver reports nothing. Built last, if at all.
 - **Components**: everything a page uses is a macro in
   `components/ui.html`, the grant editor in `components/grants.html`, the
   connection fields in `components/connection.html`, the rows of the
-  audit in `components/audit.html`. A page has no
+  audit in `components/audit.html`, the fields of a webhook in
+  `components/webhook.html`. A page has no
   markup of its own for a button, a tag, a field, a card header, a pager
   or a filter bar. The rework adds `filter_bar` with its chips,
   `facts`, `related` and `breadcrumb` and makes the pages use them.
@@ -610,6 +614,9 @@ All four steps are done, as the roadmap's phase 4b records.
 - 2026-10-09: Mail and Sends on each row of the Accounts list, Verify on
   the account page alone; the message's actions in its header, its
   keywords as chips (4.1, 4.4).
+- 2026-10-09: webhooks changeable, a Change card and a new signing
+  secret on their page, with the API's `update_webhook` and
+  `renew_webhook_secret` (6.4).
 - 2026-10-09: the page's own dialog in place of the browser's
   question, copy buttons beside every secret shown once, relative
   times in lists (7).

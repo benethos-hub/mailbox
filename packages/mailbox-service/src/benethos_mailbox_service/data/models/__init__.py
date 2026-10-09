@@ -79,6 +79,8 @@ from .webhooks import (
     WebhookCreate,
     WebhookDetail,
     WebhookPost,
+    WebhookSecret,
+    WebhookUpdate,
 )
 
 __all__ = [
@@ -148,4 +150,6 @@ __all__ = [
     "WebhookCreate",
     "WebhookDetail",
     "WebhookPost",
+    "WebhookSecret",
+    "WebhookUpdate",
 ]
