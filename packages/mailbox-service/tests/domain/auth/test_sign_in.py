@@ -344,3 +344,29 @@ def test_the_hashes_at_once_come_from_the_settings() -> None:
     settings = Settings(storage="memory", password_hashes_at_once=3)
     services = build_services(settings, password_hasher=CHEAP)
     assert services.auth.passwords.at_once == 3
+
+
+async def test_wrong_confirmations_from_one_address_lock_it_out(
+    services: Services,
+) -> None:
+    """Each name stays under its own limit, the address does not."""
+    callers = []
+    for name in ("Anna", "Bert"):
+        user = services.users.create_user(ADMIN, name, [], [READER], ui_sign_in=True)
+        await services.passwords.set_password(ADMIN, user.id, SECRET)
+        stamp = services.auth.passwords.stored(user.id)
+        assert stamp is not None
+        callers.append(
+            services.auth.session_access(user.id, stamp.updated_at, source="10.0.0.9")
+        )
+    for caller in callers * 5:
+        with pytest.raises(BadRequestError):
+            await services.auth.confirm(caller, "not the password at all")
+    with pytest.raises(RateLimitedError):
+        await services.auth.confirm(callers[0], SECRET)
+    with pytest.raises(RateLimitedError):
+        services.auth.confirm_code(callers[1], "123456")
+    with pytest.raises(RateLimitedError):
+        await services.auth.sign_in("Anna", SECRET, source="10.0.0.9")
+    # Another address is not held up.
+    await services.auth.sign_in("Anna", SECRET, source="10.0.0.10")

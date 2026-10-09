@@ -19,7 +19,7 @@ Towards the callers of the service:
 | Requests with a credential | per API token, per UI session | 120 a minute, 60 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` |
 | Requests without a credential | per client address | 30 a minute, 15 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` |
 | Request body | per request | 40 MiB | `413 payload_too_large` | fixed |
-| Failed sign-ins per address | wrong API tokens, wrong UI passwords and wrong codes of a second factor alike | 10 in 15 minutes lock the address for 15 minutes | `429 rate_limited` for a wrong credential, the UI names the minutes. A valid token passes. | `MAILBOX_SERVICE_SIGN_IN_FAILURES`, `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` |
+| Failed sign-ins per address | wrong API tokens, wrong UI passwords, wrong codes of a second factor, and the password or code asked again before a step such as the recovery key, alike | 10 in 15 minutes lock the address for 15 minutes | `429 rate_limited` for a wrong credential, the UI names the minutes. A valid token passes. | `MAILBOX_SERVICE_SIGN_IN_FAILURES`, `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` |
 | Failed sign-ins per name | UI password, the code of a second factor, the password or code asked again before a step such as the recovery key | 10 in 15 minutes, from any address, make the name wait 1 minute | `429 rate_limited` | the same failures, `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` |
 | Password hashes | at once, for the whole service | 2 | the next one waits | `MAILBOX_SERVICE_PASSWORD_HASHES_AT_ONCE` |
 | UI session | per session | ends after 8 hours without a request, and after 24 hours however used | sign in again | `MAILBOX_SERVICE_SESSION_IDLE_HOURS`, `MAILBOX_SERVICE_SESSION_MAX_HOURS` |

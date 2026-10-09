@@ -279,7 +279,8 @@ Never a secret, a code or a recovery code in a line.
 **Limits** ([LIMITS.md](LIMITS.md)): five codes per pending sign-in,
 five minutes for it, 15 for a secret not yet confirmed, 10 TOTP
 devices per user. The brakes per address and per name count wrong
-codes as they count wrong passwords.
+codes as they count wrong passwords, at the sign-in and when a step
+asks for the password or a code once more.
 
 ## 8. Troubleshooting
 
