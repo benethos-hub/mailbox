@@ -132,7 +132,10 @@ a:hover { text-decoration: underline; }
   font-size: 13px; color: var(--text-muted);
 }
 .sidebar .foot .who { overflow-wrap: anywhere; }
-.sidebar .foot .links { display: flex; gap: 12px; margin-top: 6px; }
+.sidebar .foot .links {
+  display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px;
+  white-space: nowrap;
+}
 
 .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
