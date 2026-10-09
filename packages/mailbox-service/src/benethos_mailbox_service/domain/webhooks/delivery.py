@@ -22,8 +22,9 @@ from typing import Protocol
 
 import anyio
 
+from benethos_mailbox_common.canonical import compact
+
 from ... import __version__
-from ...common.canonical import compact
 from ...common.clock import utc_now
 from ...common.ratelimit import backoff
 from ...common.secret import hmac_hex, new_id

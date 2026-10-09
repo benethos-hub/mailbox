@@ -6,7 +6,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from ...common.canonical import canonical
+from benethos_mailbox_common.canonical import canonical
+
 from ...common.secret import digest
 
 

@@ -14,8 +14,9 @@ import html
 from datetime import UTC, date, datetime, time
 from typing import Any
 
+from benethos_mailbox_common.canonical import canonical
+
 from ....common import opaque
-from ....common.canonical import canonical
 from ....common.secret import digest
 from ...mail import convert, parse
 from ...models import Folder, FolderRole, Message, MessageFilter, MessageSummary

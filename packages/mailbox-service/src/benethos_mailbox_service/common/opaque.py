@@ -13,7 +13,7 @@ import base64
 import json
 from typing import Any
 
-from .canonical import compact
+from benethos_mailbox_common.canonical import compact
 
 _URL_SAFE = b"-_"
 

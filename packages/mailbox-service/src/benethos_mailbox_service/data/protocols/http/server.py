@@ -20,7 +20,8 @@ from typing import Any
 import anyio
 import httpx
 
-from ....common.canonical import compact
+from benethos_mailbox_common.canonical import compact
+
 from ....errors import ProviderError
 from ..transport import Pick
 from .api import MAX_BYTES, TIMEOUT, Answer
