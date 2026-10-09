@@ -442,7 +442,7 @@ def test_an_administrator_removes_a_device_then_every_one(
     anna = TestClient(ui.app)
     try_sign_in(anna, name, password)
     code_form(anna, code_after(secret))
-    page = ui.get(f"/ui/users/{user.id}").text
+    page = ui.get(f"/ui/users/{user.id}?tab=access").text
     assert "a code of an authenticator app after the password" in page
     assert '<td class="name">Phone</td>' in page and "9 recovery codes left" in page
     phone = device_ids(services, name)["Phone"]
@@ -463,7 +463,7 @@ def test_a_reader_sees_the_devices_but_removes_none(
     user = user_named(services, name)
     # It holds the rights of the user it reads, which the page wants.
     sign_in(app_client, *browser_user(services, READER, service=["users.read"]))
-    page = app_client.get(f"/ui/users/{user.id}").text
+    page = app_client.get(f"/ui/users/{user.id}?tab=access").text
     assert '<td class="name">Phone</td>' in page
     assert "second-factor/remove" not in page and "/totp/" not in page
     refused = post(app_client, f"/ui/users/{user.id}/second-factor/remove")

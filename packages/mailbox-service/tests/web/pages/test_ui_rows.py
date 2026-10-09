@@ -117,7 +117,7 @@ def test_another_users_device_goes_from_its_row(
     _two_devices(services, name)
     user = services.auth.user_named(name)
     assert user is not None
-    page = ui.get(f"/ui/users/{user.id}").text
+    page = ui.get(f"/ui/users/{user.id}?tab=access").text
     assert 'aria-label="Remove Phone"' in page and "Remove every device" in page
     phone = _devices(services, user)["Phone"]
     post(ui, f"/ui/users/{user.id}/second-factor/totp/{phone}/remove")
@@ -131,7 +131,7 @@ def test_tokens_are_made_at_the_head_and_revoked_in_their_row(
     ui: TestClient, services: Services
 ) -> None:
     user = services.users.create_user(ADMIN, "bot", [], [])
-    url = f"/ui/users/{user.id}"
+    url = f"/ui/users/{user.id}?tab=access"
     empty = ui.get(url).text
     # No token yet: the form at the head of the list is open at once.
     assert '<tr class="row-form open" id="new-token">' in empty
@@ -148,7 +148,7 @@ def test_ticked_tokens_are_revoked_together(ui: TestClient, services: Services) 
     one, _ = services.auth.issue_token(user.id, "one")
     two, _ = services.auth.issue_token(user.id, "two")
     url = f"/ui/users/{user.id}"
-    page = ui.get(url).text
+    page = ui.get(f"{url}?tab=access").text
     assert 'id="tokens-batch"' in page and page.count('form="tokens-batch"') == 2
     assert 'data-confirm="Revoke the ticked tokens?' in page
     nothing = post(ui, f"{url}/tokens/revoke")
@@ -165,6 +165,7 @@ def test_a_reader_sees_no_plus_and_no_tick(
     services.auth.issue_token(user.id, "one")
     services.auth.issue_token(user.id, "two")
     sign_in(app_client, *browser_user(services, service=["users.read"]))
-    page = app_client.get(f"/ui/users/{user.id}").text
+    page = app_client.get(f"/ui/users/{user.id}?tab=access").text
+    assert "<h2>Tokens</h2>" in page
     assert 'id="new-token"' not in page and 'id="tokens-batch"' not in page
     assert 'aria-label="Revoke one"' not in page

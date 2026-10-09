@@ -118,6 +118,25 @@ document.addEventListener("change", (event) => {
   for (const box of boxes) box.checked = all.checked;
 });
 
+// <select data-show-for="id:value other"> shows only while the select
+// with that id holds one of the values, e.g. the role of a batch that
+// gives one. Without the script it always shows.
+function showFor() {
+  for (const field of document.querySelectorAll("[data-show-for]")) {
+    const [id, values] = field.dataset.showFor.split(":");
+    const chooser = document.getElementById(id);
+    if (!chooser) continue;
+    const shown = values.split(" ").includes(chooser.value);
+    field.hidden = !shown;
+    field.disabled = !shown;
+  }
+}
+
+document.addEventListener("change", (event) => {
+  if (event.target instanceof HTMLSelectElement) showFor();
+});
+showFor();
+
 // --- copying a secret shown once -----------------------------------------------
 
 function toast(text) {

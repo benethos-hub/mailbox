@@ -23,7 +23,7 @@
     </details>
     <details class="fold"{% if err %} open{% endif %}>
       <summary>Grants</summary>
-      {{ grant_editor(rows, account_choices, groups, group_ops) }}
+      {{ grant_editor(rows, account_choices, groups, group_ops, open=err) }}
     </details>
     <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Save</button></div>
   {% endcall %}

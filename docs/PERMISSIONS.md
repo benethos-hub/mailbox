@@ -163,13 +163,16 @@ from becoming a way up:
 - **API**: `x-permission` on every operation, `/v1/me`,
   `/v1/permissions`, the user and role resources, `403` naming the right.
 - **UI**: the editor with the service rights as tick boxes and single
-  rights in a text field, and a row per grant: accounts as tick boxes,
-  groups as tick boxes with their rights as a hint, single rights in a
-  text field, recipients, the daily limit, the folders and "Valid
-  until". The user's page shows the
-  effective rights per account, the sending limits and the warning
-  "reads and sends anywhere". Pages and buttons appear only for those
-  with the right.
+  rights in a text field, and a line per grant as it reads. Its pencil
+  unfolds the grant's fields: accounts as tick boxes, groups as tick
+  boxes with their rights as a hint, single rights in a text field,
+  recipients, the daily limit, the folders and "Valid until". Its bin
+  marks it removed until Save. The user's page shows on its tab Rights
+  the effective rights per account, the sending limits and the warning
+  "reads and sends anywhere". The Users list disables, enables, gives
+  or takes a role of the ticked users, each within the caller's rights,
+  and names those it could not change. Pages and buttons appear only
+  for those with the right.
 - **MCP server**: at start `/v1/me` decides which tools exist.
   `list_accounts` names the limits on sending per account, and warns of
   an account where the token may read mail and send it anywhere, since a
@@ -304,9 +307,9 @@ full, which activities, which fields, storage, API and page, is
   `audit` appears in both lists), paged newest first, filters by user,
   activity (a name or its area), record, and time with `after` and
   `before`.
-- UI: a card **Recent activity** on the user's page with its own
-  activities, and a page **Audit** under Service, both for `audit`
-  in `service`.
+- UI: a card **Recent activity** on the user's page, its tab Activity,
+  with its own activities, and a page **Audit** under Service, both for
+  `audit` in `service`.
 - Kept for `MAILBOX_SERVICE_AUDIT_DAYS` days, 90 by default. The
   setting exists since 0.2.0 for the audit of sends.
 

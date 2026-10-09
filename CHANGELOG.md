@@ -65,6 +65,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   folder shown. Several devices or tokens are ticked and removed or
   revoked together, devices after one password and one code. A folder
   is renamed and moved in one form, and a move asks first.
+- A user's page in the UI has the tabs Rights, Access and Activity. The
+  grant editor shows each grant as a line to change or remove. The
+  Users list disables, enables, gives or takes a role of the ticked
+  users and names those it could not change.
 
 ## [0.3.1] - 2026-10-08
 

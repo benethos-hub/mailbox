@@ -142,30 +142,33 @@ def test_the_page_says_whether_a_user_can_sign_in(
     ui: TestClient, services: Services
 ) -> None:
     bot = services.users.create_user(ADMIN, "bot", [], [])
-    page = ui.get(f"/ui/users/{bot.id}").text
+    access = f"/ui/users/{bot.id}?tab=access"
+    page = ui.get(access).text
     assert "off: an API user, tokens only" in page and "API only" in page
     assert "Set password" not in page
-    saved = post(
+    post(
         ui,
         f"/ui/users/{bot.id}",
         {"name": "bot", "ui_sign_in_shown": "1", "ui_sign_in": "1"},
     )
-    assert "not possible: no password yet" in saved.text
-    assert "Set password" in saved.text and "Make a one-time password" in saved.text
+    saved = ui.get(access).text
+    assert "not possible: no password yet" in saved
+    assert "Set password" in saved and "Make a one-time password" in saved
     secret = "a password for the bot user"
     post(
         ui,
         f"/ui/users/{bot.id}/password",
         {"new_password": secret, "repeat_password": secret},
     )
-    set_for_it = ui.get(f"/ui/users/{bot.id}").text
+    set_for_it = ui.get(access).text
     assert "with a password set for it, to change at the next sign-in" in set_for_it
     own = services.auth.user_named("admin")
     assert own is not None
-    mine = ui.get(f"/ui/users/{own.id}").text
-    # Its own password is changed from the account menu alone.
+    mine = ui.get(f"/ui/users/{own.id}?tab=access").text
+    # Its own password is changed on its own page, never set for it.
     assert "Set password" not in mine and "Make a one-time password" not in mine
-    assert '<a class="item" href="/ui/password">' in mine
+    assert '<a href="/ui/password">Change your password</a>' in mine
+    mine = ui.get(f"/ui/users/{own.id}").text
     # Nobody disables itself or takes its own sign-in: no tick boxes there.
     assert 'name="disabled"' not in mine and 'name="ui_sign_in"' not in mine
 
@@ -262,9 +265,10 @@ def test_a_new_token_is_shown_once_and_never_in_the_url(
     ui: TestClient, services: Services
 ) -> None:
     user = services.users.create_user(ADMIN, "bot", [], [])
-    url = f"/ui/users/{user.id}"
+    base = f"/ui/users/{user.id}"
+    url = f"{base}?tab=access"
     answer = post(
-        ui, f"{url}/tokens", {"name": "laptop", "days": "30"}, follow_redirects=False
+        ui, f"{base}/tokens", {"name": "laptop", "days": "30"}, follow_redirects=False
     )
     assert answer.headers["location"] == url
     page = ui.get(url).text
@@ -283,7 +287,7 @@ def test_revoke_a_token(ui: TestClient, services: Services) -> None:
     user = services.users.create_user(ADMIN, "bot", [], [])
     token, plain = services.auth.issue_token(user.id, "old")
     url = f"/ui/users/{user.id}"
-    assert "Revoke" in ui.get(url).text
+    assert "Revoke" in ui.get(f"{url}?tab=access").text
     revoked = post(ui, f"{url}/tokens/{token.id}/revoke")
     assert "Token old revoked." in revoked.text
     assert "revoked" in revoked.text
@@ -366,7 +370,7 @@ def test_a_new_user_is_an_api_user_by_default(
     assert "script created." in created.text
     # No one-time password for an API user, though the box was ticked.
     assert '<code class="secret"' not in created.text
-    assert "off: an API user, tokens only" in created.text
+    assert '<span class="tag">API only</span>' in created.text
     listed = ui.get("/ui/users", params={"api_only": "1"}).text
     assert ">script</a>" in listed and ">admin</a>" not in listed
     assert "API only" in listed

@@ -242,3 +242,10 @@
   </div>
 </section>
 {% endmacro %}
+
+{# The tabs of a detail page, each a URL of its own (``?tab=``), drawn by
+   the service: no script. ``items``: (key, label) pairs, ``active`` the
+   key shown, ``base`` the page. #}
+{% macro tabs(items, active, base) %}
+<nav class="tabs" aria-label="Sections">{% for key, label in items %}<a href="{{ base }}?tab={{ key }}"{% if key == active %} class="active" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+{% endmacro %}

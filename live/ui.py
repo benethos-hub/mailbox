@@ -154,9 +154,10 @@ def check_service(
     api = browser.post(
         "/ui/users", data={"csrf_token": csrf, "name": "ui-live-api", "grants": "0"}
     )
+    access = browser.get(f"{api.url.path}?tab=access").text
     run.check(
         "a new user is an API user by default",
-        "off: an API user, tokens only" in api.text and "Set password" not in api.text,
+        "off: an API user, tokens only" in access and "Set password" not in access,
     )
     gone = browser.post(f"{api.url.path}/delete", data={"csrf_token": csrf})
     run.check("delete the API user", "User deleted" in gone.text)
@@ -275,7 +276,7 @@ def check_audit(run: Run, browser: httpx.Client, url: str, admin: Admin) -> None
         == {"webhooks.created", "webhooks.removed"},
     )
     own = re.search(r'href="(/ui/users/usr_\w+)"', browser.get("/ui").text)
-    card = browser.get(own.group(1)).text if own else ""
+    card = browser.get(f"{own.group(1)}?tab=activity").text if own else ""
     # The newest ten: this run did more since its sign-in.
     run.check(
         "the own page shows its recent activity",

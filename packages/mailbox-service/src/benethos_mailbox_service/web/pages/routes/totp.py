@@ -102,7 +102,7 @@ async def remove_own(
 async def remove_device(
     request: Request, user_id: str, device_id: str, caller: Actor, totp: TotpDevices
 ) -> Response:
-    page = f"/ui/users/{user_id}"
+    page = f"/ui/users/{user_id}?tab=access"
     with failing(page):
         totp.remove_device(caller, user_id, device_id)
     return back(request, page, "Device removed. The user's sessions end.")

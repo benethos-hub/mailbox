@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, Response
 
 from ....common.clock import utc_now
 from ....common.text import plural
+from ....common.urls import path_and_query
 from ....data.models import ActivityFilter
 from ....domain.rights import Access
 from ....domain.users import UserService
@@ -33,7 +34,7 @@ from ..grants import (
     read_service,
 )
 from ..session import show_once, take_once
-from ..templates import PAGE_SIZE, back, page_links, render
+from ..templates import PAGE_SIZE, back, local_path, page_links, render
 from . import audit as audit_routes
 
 router = APIRouter()
@@ -90,7 +91,30 @@ async def list_users(request: Request, caller: Viewer, users: Users) -> HTMLResp
         pages=page_links(request, found.next_cursor),
         names=account_names(request, caller),
         can_create=caller.allows("create_user"),
+        can_batch=caller.allows("update_user"),
+        role_choices=roles,
+        here=path_and_query(str(request.url)),
     )
+
+
+@router.post("/users/batch")
+async def change_users(
+    request: Request,
+    caller: Actor,
+    users: Users,
+    user: Annotated[list[str] | None, Form()] = None,
+    action: Annotated[str, Form()] = "",
+    role: Annotated[str, Form()] = "",
+    back_to: Annotated[str, Form(alias="back")] = "",
+) -> Response:
+    """One change to every ticked user: disable, enable, give or take a
+    role. What the caller may not do to a user is named, the rest done."""
+    here = local_path(back_to, "/ui/users")
+    with failing(here):
+        done = users.change_users(caller, user or [], action, role or None)
+    refused = "; ".join(f"{name}: {why}" for name, why in done.refused)
+    message = f"{plural(len(done.changed), 'user')} changed." if done.changed else None
+    return back(request, here, message, f"Not changed: {refused}." if refused else None)
 
 
 @router.get("/users/new")
@@ -181,8 +205,9 @@ def _user_page(
     token_form: Any = None,
     err: str | None = None,
 ) -> HTMLResponse:
-    """A user's page. With ``form`` its editor shows what was typed, with
-    ``token_form`` the fields of a new token do."""
+    """A user's page, at one of its tabs. With ``form`` its editor shows
+    what was typed, on Rights, with ``token_form`` the fields of a new
+    token do, on Access."""
     found = users.get_user(caller, user_id)
     typed = _typed_user(form) if form is not None else None
     held = get_tokens(request)
@@ -236,7 +261,37 @@ def _user_page(
         ),
         outcomes=audit_routes.OUTCOMES,
         **editor(request, caller, found.service, found.grants, form),
+        **_tabs(request, caller, form, token_form),
     )
+
+
+# The tabs of a user's page (docs/UI.md 6.3).
+TABS = (("rights", "Rights"), ("access", "Access"), ("activity", "Activity"))
+
+
+def _tabs(
+    request: Request, caller: Access, form: Any, token_form: Any
+) -> dict[str, Any]:
+    """The tabs the caller sees and the one shown: the one of a refused
+    form, else the one the address names, else Rights."""
+    shown = [
+        (k, label)
+        for k, label in TABS
+        if k != "activity" or caller.allows("list_activity")
+    ]
+    keys = [key for key, _ in shown]
+    wanted = request.query_params.get("tab", "")
+    tab = wanted if wanted in keys else "rights"
+    if form is not None:
+        tab = "rights"
+    elif token_form is not None:
+        tab = "access"
+    return {"tabs_shown": shown, "tab": tab}
+
+
+def access_tab(user_id: str) -> str:
+    """The tab of a user's page with its password, factor and tokens."""
+    return f"/ui/users/{user_id}?tab=access"
 
 
 @router.post("/users/{user_id}")
@@ -289,7 +344,7 @@ async def set_password(
     new_password: Annotated[str, Form()] = "",
     repeat_password: Annotated[str, Form()] = "",
 ) -> Response:
-    here = f"/ui/users/{user_id}"
+    here = access_tab(user_id)
     if new_password != repeat_password:
         return back(request, here, error="The two passwords differ.")
     with failing(here):
@@ -302,7 +357,7 @@ async def one_time_password(
     request: Request, caller: Actor, user_id: str, passwords: Passwords
 ) -> Response:
     """A password the service makes, shown once on the next page."""
-    here = f"/ui/users/{user_id}"
+    here = access_tab(user_id)
     with failing(here):
         password = await passwords.one_time_password(caller, user_id)
     show_once(request, f"password:{user_id}", password)
@@ -317,7 +372,7 @@ async def create_token(
     request: Request, caller: Actor, user_id: str, users: Users, tokens: Tokens
 ) -> Response:
     form = await request.form()
-    here = f"/ui/users/{user_id}"
+    here = access_tab(user_id)
     typed = _typed_token(form)
     name, days = typed["name"], typed["days"]
     with failing(
@@ -341,7 +396,7 @@ async def create_token(
 async def revoke_token(
     request: Request, caller: Actor, user_id: str, token_id: str, tokens: Tokens
 ) -> Response:
-    here = f"/ui/users/{user_id}"
+    here = access_tab(user_id)
     with failing(here):
         token = tokens.revoke_token(caller, user_id, token_id)
     return back(request, here, f"Token {token.name} revoked.")
@@ -356,7 +411,7 @@ async def revoke_tokens(
     token: Annotated[list[str] | None, Form()] = None,
 ) -> Response:
     """The tokens ticked in the list, at once."""
-    here = f"/ui/users/{user_id}"
+    here = access_tab(user_id)
     with failing(here):
         revoked = tokens.revoke_tokens(caller, user_id, token or [])
     return back(request, here, f"{plural(len(revoked), 'token')} revoked.")

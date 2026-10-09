@@ -141,7 +141,8 @@ opens its detail page by its name. A record with a detail page is
 removed there alone, in its Danger card, never from the list. A row
 carries only what its detail page's header offers, as icons, and the
 tick box of a batch whose actions sit in one bar above the table:
-mail lists have one.
+mail lists have one, and Users (disable, enable, give a role, take a
+role, the role chosen in the bar).
 
 Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Audit,
 Log, and Changes if it is built (6.6).
@@ -335,16 +336,34 @@ A user that signs in to the API only has the tag **API only** in the
 list and on its page, and the list filters by it. Its page has no
 Password card. The Change card switches the UI sign-in on and off, but
 not for the signed-in user itself. Switched on, the Password card
-offers a one-time password. New role is an editor page too. It takes the path
+offers a one-time password. The Users list ticks users and disables,
+enables, gives or takes a role of all of them at once: each change goes
+through the domain as one change of that user would, recorded per
+user, and those the caller may not change are named with the reason.
+Nobody disables itself that way either. New role is an editor page too. It takes the path
 `/ui/roles/new`, so the UI cannot open a role named `new`. It offers four
 templates that fill the form, Reader, Agent, Sender and Operator
 ([PERMISSIONS.md](PERMISSIONS.md) 8.7). Nothing is stored until the role
-is created, and Sender wants the recipients named. The user page shows the effective rights as
-today, then tokens, then Recent activity, then Change, then Danger.
-Recent activity is the user's newest ten activities of the audit, for
+is created, and Sender wants the recipients named.
+
+The user page has three tabs, each an address of its own (`?tab=`),
+drawn by the service: **Rights** with the facts, the effective rights
+and the Change card, **Access** with the sign-in (to the UI, the second
+factor, the last sign-in, and for the person's own page the links to
+Password and Second factor), the Password card for another user, its
+devices and the tokens, and **Activity**. The Danger card stays below
+the tabs, the same on each. A form that comes back refused shows its
+tab. Activity is the user's newest ten activities of the audit, for
 `audit` in `service`, with links to all of them and to what was done to
-the user. Roles the same without
-tokens. A token is created in the Tokens card and shown once.
+the user. A role's page has no tabs: facts, Change, Danger. A token is
+created at the head of the Tokens list and shown once.
+
+The grant editor, on a user's and a role's page alike, shows one line
+per grant as it reads. Its pencil unfolds the grant's fields under it,
+its bin marks it removed, struck through, a tick box under the icon.
+The plus at the top unfolds an empty grant. Nothing is stored before
+the one Save of the Change card. Service rights and grants fold alike
+on both pages.
 
 The second factor ([AUTHENTICATION.md](AUTHENTICATION.md)) has a page of
 its own, **Second factor**, reached from the foot of the sidebar and the
@@ -577,6 +596,8 @@ All four steps are done, as the roadmap's phase 4b records.
   the form at a row unfolding under it. Removing on the row only for
   entries without a detail page. A batch for devices and tokens, for
   users later, none for accounts, roles and webhooks (4.1, 4.2, 6.2).
+- 2026-10-09: the user page in tabs Rights, Access, Activity, the grant
+  editor in lines, a batch of the Users list (6.3).
 - 2026-10-09: the page's own dialog in place of the browser's
   question, copy buttons beside every secret shown once, relative
   times in lists (7).

@@ -4,6 +4,8 @@ and what each may do in effect. The rules every change keeps are in
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from ...common.secret import new_id
 from ...data.models import Grant, Page, User
 from ...data.storage import (
@@ -12,7 +14,7 @@ from ...data.storage import (
     UserRepository,
     WebhookRepository,
 )
-from ...errors import ConflictError, NotFoundError
+from ...errors import BadRequestError, ConflictError, MailboxServiceError, NotFoundError
 from .. import paging
 from ..activity import HOST, ActivityLog, Actor
 from ..activity import users as said
@@ -23,6 +25,18 @@ from .passwords import PasswordService
 from .rules import UserRules, named
 
 BY_NAME = paging.Order[User]("u_", lambda u: (u.name.casefold(), u.id))
+
+# What a batch of the users list does to each ticked user.
+BATCH_ACTIONS = ("disable", "enable", "give_role", "take_role")
+
+
+@dataclass(frozen=True)
+class BatchOutcome:
+    """What a batch did: the users it changed, and for each one it did not
+    change, its name and why."""
+
+    changed: list[User]
+    refused: list[tuple[str, str]]
 
 
 class UserService:
@@ -211,6 +225,47 @@ class UserService:
                 self._remove_factor(user_id)
                 self._activity.record(said.MadeApiUser(by=Actor.of(access), user=user))
         return updated
+
+    def change_users(
+        self,
+        access: Access,
+        user_ids: list[str],
+        action: str,
+        role: str | None = None,
+    ) -> BatchOutcome:
+        """One change to each of several users, as ``update_user`` makes
+        it: within the caller's rights, recorded per user. A user it cannot
+        change is named with the reason, the others are changed still.
+        ``action`` is one of ``BATCH_ACTIONS``, the role ones with
+        ``role``."""
+        if action not in BATCH_ACTIONS:
+            raise BadRequestError(f"no such change of users: {action}")
+        if action in ("give_role", "take_role") and not role:
+            raise BadRequestError("choose a role")
+        if not user_ids:
+            raise BadRequestError("tick at least one user")
+        changed, refused = [], []
+        for user_id in dict.fromkeys(user_ids):
+            try:
+                changed.append(self._change_one(access, user_id, action, role or ""))
+            except MailboxServiceError as exc:
+                refused.append((self._name_of(user_id), exc.message))
+        return BatchOutcome(changed=changed, refused=refused)
+
+    def _change_one(self, access: Access, user_id: str, action: str, role: str) -> User:
+        if action in ("disable", "enable"):
+            return self.update_user(access, user_id, disabled=action == "disable")
+        user = self._rules.managed(access, "update_user", user_id)
+        roles = [r for r in user.roles if r != role]
+        if action == "give_role":
+            roles.append(role)
+        return self.update_user(access, user_id, roles=roles)
+
+    def _name_of(self, user_id: str) -> str:
+        try:
+            return self._users.get(user_id).name
+        except NotFoundError:
+            return user_id
 
     def delete_user(self, access: Access, user_id: str) -> None:
         user = self._rules.managed(access, "delete_user", user_id)

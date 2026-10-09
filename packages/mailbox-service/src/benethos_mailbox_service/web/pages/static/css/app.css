@@ -272,6 +272,16 @@ html:not(.js) dialog.form-dialog {
 .batch-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px var(--pad); border-bottom: 1px solid var(--border); }
 .batch-bar .label { color: var(--text-muted); font-size: 13px; }
 
+/* The tabs of a detail page: links, the one shown underlined. */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tabs a {
+  padding: 8px 14px; margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted); font-size: 14px; white-space: nowrap;
+}
+.tabs a:hover { color: var(--text); text-decoration: none; }
+.tabs a.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 550; }
+
 /* A card that folds: its header is the summary. */
 details.card > summary.card-summary {
   display: flex; align-items: baseline; gap: 10px;
@@ -523,6 +533,23 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
 .grant-row > legend { padding: 0 6px; font-size: 13px; font-weight: 600; }
+
+/* The grants in their editor: a line each, its fields under it. A grant
+ * marked for removal is struck through until the form is saved. */
+.grant-lines { display: grid; gap: 8px; margin-top: 8px; }
+.grant-tools { display: flex; }
+.grant-line { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.grant-head { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; }
+.grant-head > .grant { flex: 1; min-width: 0; }
+.grant-actions { display: flex; flex: 0 0 auto; }
+.grant-line > .row-form { border-top: 1px solid var(--border); }
+.grant-line > .row-form .grant-row { margin: 0; border: 0; padding: 0; }
+.grant-line:has(input[name$="_remove"]:checked) .grant { text-decoration: line-through; opacity: .55; }
+.grant-line:has(input[name$="_remove"]:checked) label.icon-btn { background: var(--err-soft); color: var(--bad); }
+#grant-new .grant-row { margin: 0; }
+label.icon-btn { display: inline-block; cursor: pointer; padding: 5px 7px; border-radius: var(--radius-sm); border: 1px solid transparent; color: var(--text-muted); }
+label.icon-btn:hover { background: var(--err-soft); color: var(--bad); }
+label.icon-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .fold { margin-top: var(--gap); border-top: 1px solid var(--border); padding-top: 12px; }
 .fold > summary { cursor: pointer; font-size: 13px; color: var(--text-muted); }

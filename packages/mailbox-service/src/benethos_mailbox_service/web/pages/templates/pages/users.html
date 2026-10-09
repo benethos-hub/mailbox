@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, empty, filter_bar, link_button, pager %}
+{% from "components/ui.html" import card, csrf_field, empty, filter_bar, icon, link_button, pager, tick, tick_all with context %}
 {% from "components/grants.html" import rights_of, role_tags %}
 {% block title %}Users · {{ APP_NAME }}{% endblock %}
 {% block heading %}Users{% endblock %}
@@ -11,12 +11,34 @@
 {% call card("Users", meta=none if pages[0] or pages[1] else users | length, tight=True) %}
 <div class="body list-bar">{{ filter_bar(bar) }}</div>
 {% if users %}
+{% if can_batch %}
+<form class="batch-bar" id="users-batch" method="post" action="/ui/users/batch">
+  {{ csrf_field() }}
+  <input type="hidden" name="back" value="{{ here }}" />
+  <label class="label" for="f-users-action">Ticked users</label>
+  <select id="f-users-action" name="action" required>
+    <option value="disable">disable</option>
+    <option value="enable">enable</option>
+    {% if role_choices %}
+    <option value="give_role">give the role …</option>
+    <option value="take_role">take the role …</option>
+    {% endif %}
+  </select>
+  {% if role_choices %}
+  <select name="role" aria-label="Role" data-show-for="f-users-action:give_role take_role">
+    {% for role in role_choices %}<option value="{{ role }}">{{ role }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <button class="small" type="submit">{{ icon("check-lg") }} Apply</button>
+</form>
+{% endif %}
 <div class="table-scroll">
   <table>
-    <thead><tr><th>Name</th><th>Roles</th><th>Rights</th></tr></thead>
+    <thead><tr>{% if can_batch %}<th class="tick">{{ tick_all("users-batch", "user") }}</th>{% endif %}<th>Name</th><th>Roles</th><th>Rights</th></tr></thead>
     <tbody>
       {% for user in users %}
       <tr>
+        {% if can_batch %}<td class="tick">{{ tick("users-batch", "user", user.id, "Tick " ~ user.name) }}</td>{% endif %}
         <td class="name">
           <a href="/ui/users/{{ user.id }}">{{ user.name }}</a>
           {% if user.id == me.user_id %}<span class="tag accent">you</span>{% endif %}

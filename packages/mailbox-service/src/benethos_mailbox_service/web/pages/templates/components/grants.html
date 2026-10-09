@@ -1,6 +1,7 @@
 {# Rights: the service rights and the grants, one line each to read, and
    their editor inside a form (see grants.py).
    Roles: as tags, and as checkboxes to give. #}
+{% from "components/ui.html" import icon, toggle %}
 
 {% macro grants_of(grants, names) %}{% for grant in grants %}{{ grant_summary(grant, names) }}{% else %}—{% endfor %}{% endmacro %}
 
@@ -55,13 +56,63 @@
 </div>
 {% endmacro %}
 
-{% macro grant_editor(rows, account_choices, groups, group_ops) %}
+{# The grants of a user or a role in their editor (docs/UI.md 6.3): one
+   line each as it reads, the pencil unfolds its fields, the bin marks it
+   removed (struck through, a hidden tick box), the plus at the top
+   unfolds an empty one. Nothing is stored before the form's Save.
+   ``open``: every grant unfolded, e.g. when the form came back refused. #}
+{% macro grant_editor(rows, account_choices, groups, group_ops, open=False) %}
+{% set names = dict(account_choices) %}
+{% set existing = rows | length - 1 %}
 <input type="hidden" name="grants" value="{{ rows | length }}" />
-{% for row in rows %}
-{% set i = loop.index0 %}
-{% set adding = loop.last %}
-<fieldset class="grant-row">
-  <legend>{{ "Add a grant" if adding else "Grant " ~ loop.index }}</legend>
+<div class="grant-lines">
+  <div class="grant-tools">{{ toggle("grant-new", "Add a grant", "plus-lg", alone=False, open=open or not existing) }}</div>
+  {% for row in rows %}
+  {% set i = loop.index0 %}
+  {% if loop.last %}
+  <div class="row-form{{ ' open' if open or not existing }}" id="grant-new">
+    <fieldset class="grant-row">
+      <legend>A new grant</legend>
+{{ _grant_fields(row, i, account_choices, groups, group_ops) }}
+    </fieldset>
+  </div>
+  {% else %}
+  <div class="grant-line">
+    <div class="grant-head">
+      {{ row_summary(row, names) }}
+      <span class="grant-actions">
+        {{ toggle("grant-" ~ i, "Change", "pencil", name="Change grant " ~ loop.index, open=open) }}
+        <label class="small icon-btn danger" title="Remove"><input class="sr" type="checkbox" name="g{{ i }}_remove" value="1" aria-label="Remove grant {{ loop.index }}" />{{ icon("trash") }}</label>
+      </span>
+    </div>
+    <div class="row-form{{ ' open' if open }}" id="grant-{{ i }}">
+      <fieldset class="grant-row">
+        <legend>Grant {{ loop.index }}</legend>
+{{ _grant_fields(row, i, account_choices, groups, group_ops) }}
+      </fieldset>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# A grant as the editor holds it, in one line, as grant_summary reads a
+   stored one. #}
+{% macro row_summary(row, names) %}
+<div class="grant">
+  <span class="muted">on</span>
+  {% for account in row.accounts %}<span class="tag">{{ "every account" if account == "*" else names.get(account, account) }}</span> {% else %}<span class="muted">no account</span>{% endfor %}
+  <span class="muted">may</span>
+  {% for right in row.groups %}<span class="tag accent">{{ right }}</span> {% endfor %}{% for right in row.more.split() %}<span class="tag mono">{{ right }}</span> {% endfor %}
+  {% if row.folders %}<span class="muted">in the folders</span> {{ row.folders.splitlines() | join(", ") }}{% endif %}
+  {% if row.recipients %}<span class="muted">sending to</span> {{ row.recipients.split() | join(", ") }}{% endif %}
+  {% if row.max_per_day %}<span class="muted">at most</span> {{ row.max_per_day }} <span class="muted">mails a day</span>{% endif %}
+  {% if row.expires %}<span class="muted">until</span> {{ row.expires | replace("T", " ") }}{% endif %}
+</div>
+{% endmacro %}
+
+{% macro _grant_fields(row, i, account_choices, groups, group_ops) %}
   <div class="field">
     <span class="label">Accounts</span>
     <div class="checks">
@@ -109,7 +160,4 @@
       <span class="hint">One per line. Empty: to anyone.</span>
     </div>
   </div>
-  {% if not adding %}<label class="check"><input type="checkbox" name="g{{ i }}_remove" value="1" /> remove this grant</label>{% endif %}
-</fieldset>
-{% endfor %}
 {% endmacro %}

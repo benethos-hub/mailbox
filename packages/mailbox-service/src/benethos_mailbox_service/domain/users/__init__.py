@@ -12,10 +12,12 @@ from .roles import RoleService
 from .rules import UserRules
 from .tokens import TokenService
 from .totp import TotpService
-from .users import UserService
+from .users import BATCH_ACTIONS, BatchOutcome, UserService
 
 __all__ = [
+    "BATCH_ACTIONS",
     "AccountRights",
+    "BatchOutcome",
     "Effective",
     "EffectiveRights",
     "PasswordService",

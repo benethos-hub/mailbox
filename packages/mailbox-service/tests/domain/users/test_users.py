@@ -421,3 +421,25 @@ def test_several_tokens_are_revoked_at_once_or_none(services: Services) -> None:
     revoked = services.tokens.revoke_tokens(ADMIN, user.id, [one.id, two.id, one.id])
     assert [t.name for t in revoked] == ["one", "two"]
     assert all(t.revoked_at is not None for t in revoked)
+
+
+def test_a_batch_changes_each_user_it_may_and_names_the_others(
+    services: Services,
+) -> None:
+    from benethos_mailbox_service.errors import BadRequestError
+
+    from ...conftest import ADMIN
+
+    one = services.users.create_user(ADMIN, "one", [], [])
+    narrow = Access("usr_n", "narrow", [], service=["users.manage"])
+    wide = services.users.create_user(ADMIN, "wide", [], [], service=["admin"])
+    done = services.users.change_users(narrow, [one.id, wide.id], "disable")
+    assert [u.name for u in done.changed] == ["one"]
+    [(name, why)] = done.refused
+    assert name == "wide" and "lacks" in why
+    with pytest.raises(BadRequestError):
+        services.users.change_users(ADMIN, [one.id], "promote")
+    with pytest.raises(BadRequestError):
+        services.users.change_users(ADMIN, [one.id], "give_role")
+    unknown = services.users.change_users(ADMIN, [one.id], "give_role", "nobody")
+    assert unknown.refused == [("one", "unknown role: nobody")]
