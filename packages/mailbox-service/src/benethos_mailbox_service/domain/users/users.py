@@ -32,12 +32,22 @@ BATCH_ACTIONS = ("disable", "enable", "give_role", "take_role")
 
 @dataclass(frozen=True)
 class BatchOutcome:
-    """What a batch did: the users it changed, and for each one it could
-    not change, its name and why. A user that was as asked already is in
-    neither."""
+    """What a batch did: the users it changed, or for each one it could
+    not change, its name and why, and then it changed none. A user that
+    was as asked already is in neither."""
 
     changed: list[User]
     refused: list[tuple[str, str]]
+
+
+@dataclass(frozen=True)
+class _Planned:
+    """A change of a user, checked and not made yet."""
+
+    before: User
+    after: User
+    # The fields that differ.
+    changed: tuple[str, ...]
 
 
 class UserService:
@@ -186,6 +196,36 @@ class UserService:
         """Switching ``ui_sign_in`` off deletes the password and the second
         factor, which ends the user's UI sessions. Nobody disables itself
         or takes its own UI sign-in."""
+        planned = self._plan(
+            access,
+            user_id,
+            name=name,
+            roles=roles,
+            service=service,
+            grants=grants,
+            disabled=disabled,
+            ui_sign_in=ui_sign_in,
+        )
+        self._rules.require_an_administrator(replaced=[planned.after])
+        with self._activity.atomic():
+            self._make(access, planned)
+        return planned.after
+
+    def _plan(
+        self,
+        access: Access,
+        user_id: str,
+        *,
+        name: str | None = None,
+        roles: list[str] | None = None,
+        service: list[str] | None = None,
+        grants: list[Grant] | None = None,
+        disabled: bool | None = None,
+        ui_sign_in: bool | None = None,
+    ) -> _Planned:
+        """The change ``update_user`` makes, checked within the caller's
+        rights, but for the administrator left: that one counts every user
+        a change touches."""
         user = self._rules.managed(access, "update_user", user_id)
         if name is not None:
             name = named("a user", name)
@@ -211,21 +251,25 @@ class UserService:
         # Only rights given now must be known. A stored one may name a
         # right a release renamed, and grants nothing by it.
         self._rules.check_grantable(access, updated, grants or [], service or [])
-        self._rules.require_an_administrator(replaced=updated)
         changed = tuple(
             key for key in changes if getattr(user, key) != getattr(updated, key)
         )
-        with self._activity.atomic():
-            self._users.save(updated)
-            if changed:
-                self._activity.record(
-                    said.UserChanged(by=Actor.of(access), user=updated, changed=changed)
+        return _Planned(user, updated, changed)
+
+    def _make(self, access: Access, planned: _Planned) -> None:
+        """A planned change, inside the caller's transaction."""
+        user, updated = planned.before, planned.after
+        self._users.save(updated)
+        if planned.changed:
+            self._activity.record(
+                said.UserChanged(
+                    by=Actor.of(access), user=updated, changed=planned.changed
                 )
-            if user.ui_sign_in and not updated.ui_sign_in:
-                self._auth.passwords.delete(user_id)
-                self._remove_factor(user_id)
-                self._activity.record(said.MadeApiUser(by=Actor.of(access), user=user))
-        return updated
+            )
+        if user.ui_sign_in and not updated.ui_sign_in:
+            self._auth.passwords.delete(user.id)
+            self._remove_factor(user.id)
+            self._activity.record(said.MadeApiUser(by=Actor.of(access), user=user))
 
     def change_users(
         self,
@@ -235,43 +279,47 @@ class UserService:
         role: str | None = None,
     ) -> BatchOutcome:
         """One change to each of several users, as ``update_user`` makes
-        it: within the caller's rights, recorded per user. A user it cannot
-        change is named with the reason, the others are changed still.
-        ``action`` is one of ``BATCH_ACTIONS``, the role ones with
-        ``role``."""
+        it: within the caller's rights, recorded per user. Every user is
+        changed or none (docs/UI.md 4.1): a user it cannot change is named
+        with the reason, and nothing changes. ``action`` is one of
+        ``BATCH_ACTIONS``, the role ones with ``role``."""
         if action not in BATCH_ACTIONS:
             raise BadRequestError(f"no such change of users: {action}")
         if action in ("give_role", "take_role") and not role:
             raise BadRequestError("choose a role")
         if not user_ids:
             raise BadRequestError("tick at least one user")
-        changed, refused = [], []
+        planned, refused = [], []
         for user_id in dict.fromkeys(user_ids):
             try:
-                done = self._change_one(access, user_id, action, role or "")
+                one = self._plan_one(access, user_id, action, role or "")
             except MailboxServiceError as exc:
                 refused.append((self._name_of(user_id), exc.message))
             else:
-                if done is not None:
-                    changed.append(done)
-        return BatchOutcome(changed=changed, refused=refused)
+                if one.changed:
+                    planned.append(one)
+        if refused:
+            return BatchOutcome(changed=[], refused=refused)
+        self._rules.require_an_administrator(replaced=[p.after for p in planned])
+        with self._activity.atomic():
+            for one in planned:
+                self._make(access, one)
+        return BatchOutcome(changed=[p.after for p in planned], refused=[])
 
-    def _change_one(
+    def _plan_one(
         self, access: Access, user_id: str, action: str, role: str
-    ) -> User | None:
-        """The user changed, None when it was as asked already."""
-        user = self._rules.managed(access, "update_user", user_id)
+    ) -> _Planned:
+        """The change of one user in a batch. Nothing in ``changed`` when
+        it was as asked already."""
         if action in ("disable", "enable"):
-            disabled = action == "disable"
-            if user.disabled == disabled:
-                return None
-            return self.update_user(access, user_id, disabled=disabled)
+            return self._plan(access, user_id, disabled=action == "disable")
+        user = self._rules.managed(access, "update_user", user_id)
         roles = [r for r in user.roles if r != role]
         if action == "give_role":
             roles.append(role)
         if sorted(roles) == sorted(user.roles):
-            return None
-        return self.update_user(access, user_id, roles=roles)
+            return _Planned(user, user, ())
+        return self._plan(access, user_id, roles=roles)
 
     def _name_of(self, user_id: str) -> str:
         try:

@@ -7,7 +7,7 @@ the service without an enabled administrator who can sign in to the UI.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 
 from ...data.models import Grant, Role, User
 from ...data.storage import RoleRepository, UserRepository
@@ -58,22 +58,20 @@ class UserRules:
     def require_an_administrator(
         self,
         *,
-        replaced: User | None = None,
+        replaced: Sequence[User] = (),
         deleted: str | None = None,
         role: Role | None = None,
     ) -> None:
         """Refuse a change that would leave no enabled administrator who
         can sign in to the UI, where there was one (PERMISSIONS.md 8.3).
-        The way back would be the host's ``users set-password`` alone."""
+        The way back would be the host's ``users set-password`` alone.
+        ``replaced`` are the users as the change leaves them, together."""
         users = self._users.list()
         roles = {r.id: r for r in self._roles.list()}
         if not _administrators(users, roles):
             return
-        after = [
-            replaced if replaced is not None and u.id == replaced.id else u
-            for u in users
-            if u.id != deleted
-        ]
+        new = {u.id: u for u in replaced}
+        after = [new.get(u.id, u) for u in users if u.id != deleted]
         if role is not None:
             roles = {**roles, role.id: role}
         if not _administrators(after, roles):

@@ -171,7 +171,7 @@ from becoming a way up:
   the effective rights per account, the sending limits and the warning
   "reads and sends anywhere". The Users list disables, enables, gives
   or takes a role of the ticked users, each within the caller's rights,
-  and names those it could not change. Pages and buttons appear only
+  all of them or none, and names those it could not change. Pages and buttons appear only
   for those with the right.
 - **MCP server**: at start `/v1/me` decides which tools exist.
   `list_accounts` names the limits on sending per account, and warns of

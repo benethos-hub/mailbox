@@ -28,7 +28,7 @@ from ...domain.system import Attention
 from ...errors import MailboxServiceError
 from ..services import get_status
 from .navigation import navigation, own_page
-from .session import PATH, SignInRequiredError, found_for, show_once
+from .session import PATH, SignInRequiredError, found_for, show_once, store_of
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE_DIR = HERE / "templates"
@@ -161,7 +161,9 @@ def render(
         factor_on=session is not None and session.factor is not None,
     )
     for key in ("msg", "err"):
-        kept = session.once.pop(key, None) if session is not None else None
+        kept = (
+            store_of(request).take_once(session, key) if session is not None else None
+        )
         if context.get(key) is None:
             context[key] = kept
     response: HTMLResponse = templates.TemplateResponse(

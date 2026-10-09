@@ -102,15 +102,16 @@ async def change_users(
     back_to: Annotated[str, Form(alias="back")] = "",
 ) -> Response:
     """One change to every ticked user: disable, enable, give or take a
-    role. What the caller may not do to a user is named, the rest done."""
+    role. All or nothing: what the caller may not do to a user is named,
+    and nothing is done."""
     here = local_path(back_to, "/ui/users")
     with failing(here):
         done = users.change_users(caller, user or [], action, role or None)
     refused = "; ".join(f"{name}: {why}" for name, why in done.refused)
-    message: str | None = f"{plural(len(done.changed), 'user')} changed."
-    if not done.changed:
-        message = None if refused else "Nothing to change."
-    return back(request, here, message, f"Not changed: {refused}." if refused else None)
+    if refused:
+        return back(request, here, None, f"Nothing changed. {refused}.")
+    message = f"{plural(len(done.changed), 'user')} changed."
+    return back(request, here, message if done.changed else "Nothing to change.")
 
 
 @router.get("/users/new")

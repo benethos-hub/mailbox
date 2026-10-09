@@ -107,8 +107,12 @@ def owns(request: Request) -> bool:
 
 
 def install(app: FastAPI) -> None:
+    settings = app_settings(app)
     app.state.ui_sessions = SessionStore(
-        idle=timedelta(hours=app_settings(app).session_idle_hours)
+        idle=timedelta(hours=settings.session_idle_hours),
+        max_age=timedelta(hours=settings.session_max_hours),
+        per_user=settings.sessions_per_user,
+        shown_once=timedelta(minutes=settings.shown_once_minutes),
     )
     app.mount(STATIC, StaticFiles(directory=STATIC_DIR), name="ui-static")
     for area in AREAS:

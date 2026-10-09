@@ -171,6 +171,9 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` | `60` | seconds a user name waits after as many failures from anywhere |
 | `MAILBOX_SERVICE_PASSWORD_HASHES_AT_ONCE` | `2` | password hashes running at once, 32 MiB each |
 | `MAILBOX_SERVICE_SESSION_IDLE_HOURS` | `8` | hours a UI session lives without a request |
+| `MAILBOX_SERVICE_SESSION_MAX_HOURS` | `24` | hours a UI session lives at most, used or not |
+| `MAILBOX_SERVICE_SESSIONS_PER_USER` | `10` | UI sessions of one user at most. A new one ends the oldest |
+| `MAILBOX_SERVICE_SHOWN_ONCE_MINUTES` | `5` | minutes a secret shown once, such as a new token, waits for the page that shows it |
 | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE` | `10` | autodiscovery lookups a minute per user |
 | `MAILBOX_SERVICE_DISCOVERY_ISPDB` | `true` | whether autodiscovery asks Thunderbird's ISPDB (tells Mozilla the domain) |
 | `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` | `[]` | JSON list of hosts that may resolve to private addresses, e.g. an internal mail server. Autodiscovery may look them up and accounts may use them. |

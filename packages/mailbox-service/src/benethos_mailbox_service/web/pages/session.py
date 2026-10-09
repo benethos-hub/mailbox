@@ -5,6 +5,8 @@ the server: the cookie carries only a random id, the session the id of its
 user and when that user's password and second factor were set. Every
 request loads the user anew, so a disabled user, changed rights, a changed
 password or factor take effect at once. A restart signs everyone out.
+A session ends after some hours without a request, and after a day
+whatever it did. A user holds a few at most: a new one ends the oldest.
 
 A user with a second factor gets no session for the password alone, but a
 pending sign-in with a cookie of its own. It reaches the code page and
@@ -38,6 +40,12 @@ PATH = "/ui"
 CSRF_FIELD = "csrf_token"
 CSRF_HEADER = "X-CSRF-Token"
 IDLE = timedelta(hours=8)
+# How long a session lives at most, used or not.
+MAX_AGE = timedelta(hours=24)
+# Sessions of one user at most. A new one ends the oldest.
+PER_USER = 10
+# How long something shown once waits for the page that shows it.
+SHOWN_ONCE = timedelta(minutes=5)
 # Where a password set by someone else is changed. Until then the session
 # reaches this page and signing out, nothing else.
 PASSWORD_PAGE = f"{PATH}/password"
@@ -54,6 +62,14 @@ class PendingTotp:
     until: datetime
 
 
+@dataclass(frozen=True)
+class Kept:
+    """Something shown on the next page only, until a time."""
+
+    value: str
+    until: datetime
+
+
 @dataclass
 class UiSession:
     user_id: str
@@ -62,6 +78,7 @@ class UiSession:
     must_change: bool
     csrf: str
     last_seen: datetime
+    created: datetime
     # The sign-in before this session's, shown on the overview.
     previous_sign_in: datetime | None = None
     # Which devices of a second factor the user had at the sign-in, None
@@ -70,8 +87,8 @@ class UiSession:
     # A TOTP device being added in this session.
     totp: PendingTotp | None = None
     # Shown on the next page only, e.g. a new token: kept here, never in a
-    # URL, and gone once shown.
-    once: dict[str, str] = field(default_factory=dict)
+    # URL, and gone once shown or once its time ran out.
+    once: dict[str, Kept] = field(default_factory=dict)
 
 
 @dataclass
@@ -96,27 +113,47 @@ class PasswordChangeRequiredError(Exception):
 
 class SessionStore:
     def __init__(
-        self, clock: Callable[[], datetime] = utc_now, idle: timedelta = IDLE
+        self,
+        clock: Callable[[], datetime] = utc_now,
+        idle: timedelta = IDLE,
+        max_age: timedelta = MAX_AGE,
+        per_user: int = PER_USER,
+        shown_once: timedelta = SHOWN_ONCE,
     ) -> None:
         self._sessions: dict[str, UiSession] = {}
         self._pending: dict[str, PendingSignIn] = {}
         self._clock = clock
         self._idle = idle
+        self._max_age = max_age
+        self._per_user = per_user
+        self._shown_once = shown_once
 
     @property
     def idle(self) -> timedelta:
         """How long a session lives without a request."""
         return self._idle
 
+    @property
+    def max_age(self) -> timedelta:
+        """How long a session lives at most, used or not."""
+        return self._max_age
+
     def create(self, signed: SignedIn) -> str:
         """A new session, with an id of its own: one the browser held
-        before signing in is never taken over."""
+        before signing in is never taken over. The user's oldest sessions
+        end, so it holds no more than its limit."""
         now = self._clock()
         # Sessions nobody came back to would stay for the life of the
         # process. Each sign-in sweeps them.
-        idle = self._idle
-        for stale in [s for s, v in self._sessions.items() if now - v.last_seen > idle]:
+        for stale in [s for s, v in self._sessions.items() if not self._alive(v, now)]:
             del self._sessions[stale]
+        own = sorted(
+            (v.created, s)
+            for s, v in self._sessions.items()
+            if v.user_id == signed.user_id
+        )
+        for _, oldest in own[: max(0, len(own) - self._per_user + 1)]:
+            del self._sessions[oldest]
         session_id = token()
         self._sessions[session_id] = UiSession(
             user_id=signed.user_id,
@@ -124,10 +161,33 @@ class SessionStore:
             must_change=signed.must_change,
             csrf=token(),
             last_seen=now,
+            created=now,
             previous_sign_in=signed.previous,
             factor=signed.factor,
         )
         return session_id
+
+    def _alive(self, session: UiSession, now: datetime) -> bool:
+        """Not idle too long, and not older than the longest a session
+        lives."""
+        return (
+            now - session.last_seen <= self._idle
+            and now - session.created <= self._max_age
+        )
+
+    def keep_once(self, session: UiSession, key: str, value: str) -> None:
+        """``value`` for the next page that asks for ``key``, for a few
+        minutes at most."""
+        session.once[key] = Kept(value, self._clock() + self._shown_once)
+
+    def take_once(self, session: UiSession, key: str) -> str | None:
+        """What ``keep_once`` kept under ``key``, once, unless its time
+        ran out. Whatever ran out goes too."""
+        now = self._clock()
+        for gone in [k for k, kept in session.once.items() if kept.until <= now]:
+            del session.once[gone]
+        kept = session.once.pop(key, None)
+        return kept.value if kept is not None else None
 
     def begin_pending(self, user_id: str, next: str) -> str:
         """A pending sign-in, with an id of its own for its cookie."""
@@ -167,15 +227,16 @@ class SessionStore:
         """Whether the session exists and is not idle too long. Unlike
         ``get``, the look does not count as the session being used."""
         session = self._sessions.get(session_id) if session_id else None
-        return session is not None and self._clock() - session.last_seen <= self._idle
+        return session is not None and self._alive(session, self._clock())
 
     def get(self, session_id: str | None) -> UiSession | None:
-        """The session, unless it is unknown or was idle too long."""
+        """The session, unless it is unknown, was idle too long or is
+        older than the longest a session lives."""
         if not session_id:
             return None
         session = self._sessions.get(session_id)
         now = self._clock()
-        if session is None or now - session.last_seen > self._idle:
+        if session is None or not self._alive(session, now):
             self._sessions.pop(session_id, None)
             return None
         session.last_seen = now
@@ -249,12 +310,12 @@ def found_for(request: Request) -> Current | None:
 
 def show_once(request: Request, key: str, value: str) -> None:
     """Keep ``value`` for the next page that asks for ``key``."""
-    session_of(request).once[key] = value
+    store_of(request).keep_once(session_of(request), key, value)
 
 
 def take_once(request: Request, key: str) -> str | None:
     """What ``show_once`` kept under ``key``, once."""
-    return session_of(request).once.pop(key, None)
+    return store_of(request).take_once(session_of(request), key)
 
 
 def session_of(request: Request) -> UiSession:

@@ -349,6 +349,59 @@ def test_the_idle_time_comes_from_the_settings(services: Services) -> None:
     assert app.state.ui_sessions.idle == timedelta(minutes=30)
 
 
+def test_a_session_ends_after_a_day_however_used() -> None:
+    now = [NOW]
+    store = SessionStore(clock=lambda: now[0])
+    session_id = store.create(SIGNED)
+    for _ in range(12):
+        now[0] += timedelta(hours=2)
+        assert store.get(session_id) is not None
+    now[0] += timedelta(minutes=1)
+    assert not store.known(session_id)
+    assert store.get(session_id) is None
+
+
+def test_a_new_session_ends_the_oldest_of_its_user() -> None:
+    now = [NOW]
+    store = SessionStore(clock=lambda: now[0], per_user=3)
+    first = store.create(SIGNED)
+    other = store.create(SignedIn(user_id="usr_b", must_change=False, stamp=NOW))
+    later = []
+    for _ in range(3):
+        now[0] += timedelta(minutes=1)
+        later.append(store.create(SIGNED))
+    assert store.get(first) is None
+    assert all(store.get(s) is not None for s in later)
+    assert store.get(other) is not None
+
+
+def test_something_shown_once_waits_a_few_minutes() -> None:
+    now = [NOW]
+    store = SessionStore(clock=lambda: now[0], shown_once=timedelta(minutes=5))
+    session = store.get(store.create(SIGNED))
+    assert session is not None
+    store.keep_once(session, "token", "secret one")
+    store.keep_once(session, "key", "secret two")
+    assert store.take_once(session, "token") == "secret one"
+    assert store.take_once(session, "token") is None
+    now[0] += timedelta(minutes=5)
+    assert store.take_once(session, "other") is None
+    assert session.once == {}
+
+
+def test_the_session_limits_come_from_the_settings(services: Services) -> None:
+    settings = Settings(
+        storage="memory",
+        session_max_hours=12,
+        sessions_per_user=5,
+        shown_once_minutes=2,
+    )
+    sessions = create_app(settings, services).state.ui_sessions
+    assert sessions.max_age == timedelta(hours=12)
+    assert sessions._per_user == 5
+    assert sessions._shown_once == timedelta(minutes=2)
+
+
 def test_idle_sessions_are_swept_on_sign_in() -> None:
     now = [NOW]
     store = SessionStore(clock=lambda: now[0])
