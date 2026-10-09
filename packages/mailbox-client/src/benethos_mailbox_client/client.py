@@ -180,6 +180,11 @@ class MailboxClient:
 
     list_activity = awaiting(endpoints.list_activity)
 
+    # --- the audit of sends -----------------------------------------------------------
+
+    list_sends = awaiting(endpoints.list_sends)
+    list_all_sends = awaiting(endpoints.list_all_sends)
+
     # --- attachments ------------------------------------------------------------------
 
     async def get_attachment(

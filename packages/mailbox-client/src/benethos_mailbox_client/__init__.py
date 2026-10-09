@@ -44,6 +44,7 @@ from .models import (
     SecondFactor,
     Secret,
     Sending,
+    SendRecord,
     Sent,
     SourceReport,
     StoredCredential,
@@ -63,6 +64,7 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "SendRecord",
     "Activity",
     "NewWebhook",
     "WebhookDetail",

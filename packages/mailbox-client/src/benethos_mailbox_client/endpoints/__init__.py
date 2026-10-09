@@ -41,6 +41,7 @@ from .messages import (
 )
 from .roles import create_role, delete_role, get_role, list_roles, replace_role
 from .sending import send_draft, send_message
+from .sends import list_all_sends, list_sends
 from .tokens import create_token, list_tokens, revoke_token
 from .users import (
     create_user,
@@ -60,6 +61,8 @@ from .webhooks import (
 )
 
 __all__ = [
+    "list_all_sends",
+    "list_sends",
     "list_activity",
     "create_webhook",
     "delete_webhook",

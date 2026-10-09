@@ -182,6 +182,11 @@ class SyncMailboxClient:
 
     list_activity = blocking(endpoints.list_activity)
 
+    # --- the audit of sends -----------------------------------------------------------
+
+    list_sends = blocking(endpoints.list_sends)
+    list_all_sends = blocking(endpoints.list_all_sends)
+
     # --- attachments ------------------------------------------------------------------
 
     def get_attachment(
