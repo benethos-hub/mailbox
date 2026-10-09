@@ -494,6 +494,8 @@ packages/mailbox-mcp/
       sending.py        # send a mail, send a draft
     render.py           # what the model sees of mail, marked as foreign
     pdf.py              # PDF pages as PNG (pypdfium2)
+    plaintext.py        # the visible text of an HTML body, the same
+                        #   file as the service's common/plaintext.py
     client.py           # the client package's MailboxClient, the
                         #   one way to the REST API
     models.py           # the client package's records

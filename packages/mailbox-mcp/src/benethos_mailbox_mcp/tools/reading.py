@@ -7,7 +7,7 @@ from typing import Annotated, Any
 import anyio
 from pydantic import Field
 
-from .. import pdf, render
+from .. import pdf, plaintext, render
 from ..errors import ToolError
 from .base import MAX_LIMIT, ToolResult, client, reads, result
 
@@ -190,7 +190,7 @@ async def get_attachment(
     decoded = found.data.decode(found.charset or "utf-8", errors="replace")
     if kind == "text/html":
         # What a person sees of it, as of an HTML body: hidden parts out.
-        decoded = render.html_to_text(decoded)
+        decoded = plaintext.from_html(decoded)
         head += " As text, made from its HTML."
     text, note = render.cut(decoded, max_chars)
     shortened = f" {note[0].upper()}{note[1:]}." if note else ""
