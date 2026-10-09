@@ -17,6 +17,7 @@ from ..forms import failing
 from ..session import PendingTotp, session_of, show_once
 from ..templates import back
 from .factor import CODES, FACTOR_PAGE
+from .users import access_tab
 
 router = APIRouter()
 
@@ -102,7 +103,7 @@ async def remove_own(
 async def remove_device(
     request: Request, user_id: str, device_id: str, caller: Actor, totp: TotpDevices
 ) -> Response:
-    page = f"/ui/users/{user_id}?tab=access"
+    page = access_tab(user_id)
     with failing(page):
         totp.remove_device(caller, user_id, device_id)
     return back(request, page, "Device removed. The user's sessions end.")

@@ -12,6 +12,9 @@ from pydantic import BaseModel, ValidationError
 from ...common.redact import redact
 from ...errors import MailboxServiceError
 
+# A refused form comes back with this status, what was typed, the reason.
+REFUSED = 400
+
 
 class FormError(ValueError):
     """What the form holds is not what the domain takes yet. ``message``

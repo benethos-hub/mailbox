@@ -11,10 +11,9 @@ from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import MailboxServiceError, NotFoundError
 
 from ...conftest import bearer_for
-from ...data.providers.test_imap import (  # noqa: F401 - the fixture
+from ...data.providers.test_imap import (
     FakeTime,
     provider,
-    server,
 )
 from ...imap_fake import FakeMailBox, make_message
 
@@ -29,7 +28,7 @@ def inbox(uid: int) -> str:
 # --- the IMAP adapter: one round per folder --------------------------------------
 
 
-async def test_one_store_per_set_of_changes(server: FakeMailBox) -> None:  # noqa: F811
+async def test_one_store_per_set_of_changes(server: FakeMailBox) -> None:
     server.add("Sent", 1, make_message("Sent 1"))
     ids = [inbox(1), inbox(3), mappers.message_id("Sent", 1, 1)]
     results = await provider(server).update_messages(ids, MessageUpdate(starred=True))
@@ -44,7 +43,7 @@ async def test_one_store_per_set_of_changes(server: FakeMailBox) -> None:  # noq
     assert [c[1] for c in server.calls if c[0] == "select"] == ["INBOX", "Sent"]
 
 
-async def test_keywords_differ_per_message(server: FakeMailBox) -> None:  # noqa: F811
+async def test_keywords_differ_per_message(server: FakeMailBox) -> None:
     raw, _ = server.folders["INBOX"].messages[3]
     server.folders["INBOX"].messages[3] = (raw, ("$Forwarded",))
     await provider(server).update_messages(
@@ -56,7 +55,7 @@ async def test_keywords_differ_per_message(server: FakeMailBox) -> None:  # noqa
     ]
 
 
-async def test_one_move_for_many(server: FakeMailBox) -> None:  # noqa: F811
+async def test_one_move_for_many(server: FakeMailBox) -> None:
     results = await provider(server).update_messages(
         [inbox(1), inbox(2), inbox(5)], MessageUpdate(folder_ids=[ARCHIVE])
     )
@@ -67,7 +66,7 @@ async def test_one_move_for_many(server: FakeMailBox) -> None:  # noqa: F811
     assert new == {mappers.message_id("Archive/2026", 1, uid) for uid in (1, 2, 3)}
 
 
-async def test_unknown_ones_fail_alone(server: FakeMailBox) -> None:  # noqa: F811
+async def test_unknown_ones_fail_alone(server: FakeMailBox) -> None:
     results = await provider(server).update_messages(
         [inbox(1), inbox(99), "junk", mappers.message_id("INBOX", 6, 2)],
         MessageUpdate(unread=False),
@@ -78,7 +77,7 @@ async def test_unknown_ones_fail_alone(server: FakeMailBox) -> None:  # noqa: F8
 
 
 async def test_a_batch_is_paced_per_folder_not_per_message(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     for uid in range(100, 200):
         server.add("INBOX", uid, make_message(f"Bulk {uid}"))
@@ -90,7 +89,7 @@ async def test_a_batch_is_paced_per_folder_not_per_message(
     assert time.sleeps == []
 
 
-async def test_a_batch_into_the_trash(server: FakeMailBox) -> None:  # noqa: F811
+async def test_a_batch_into_the_trash(server: FakeMailBox) -> None:
     server.folders["Trash"] = server.folders.pop("Archive")
     server.folders["Trash"].flags = ("\\Trash",)
     results = await provider(server).delete_messages(

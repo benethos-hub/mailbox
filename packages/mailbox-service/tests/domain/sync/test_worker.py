@@ -24,10 +24,9 @@ from benethos_mailbox_service.errors import (
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeMailBox, make_message
-from .test_sync import imap_account_id, imap_services, server  # noqa: F401 - fixtures
 
 
-def worker(imap_services: Services, **options: object) -> SyncWorker:  # noqa: F811
+def worker(imap_services: Services, **options: object) -> SyncWorker:
     async def no_sleep(seconds: float) -> None:
         return None
 
@@ -40,13 +39,13 @@ def worker(imap_services: Services, **options: object) -> SyncWorker:  # noqa: F
     )
 
 
-def indexed(imap_services: Services, imap_account_id: str) -> dict[str, str]:  # noqa: F811
+def indexed(imap_services: Services, imap_account_id: str) -> dict[str, str]:
     return imap_services.index.folder_states(imap_account_id)
 
 
 async def test_a_poll_syncs_mapped_accounts(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
 ) -> None:
     memory = await imap_services.accounts.create(
         ADMIN, ProviderType.MEMORY, "m@example.com"
@@ -57,26 +56,26 @@ async def test_a_poll_syncs_mapped_accounts(
 
 
 async def test_a_rejected_account_is_left_alone(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
-    server: FakeMailBox,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
 ) -> None:
-    server.password = "changed"
+    imap_server.password = "changed"
     with pytest.raises(ProviderAuthError):
         await imap_services.sync.sync_account(imap_account_id)
     assert imap_services.adapters.status(imap_account_id) is AccountStatus.NEEDS_REAUTH
-    logins = [c for c in server.calls if c[0] == "login"]
+    logins = [c for c in imap_server.calls if c[0] == "login"]
     await worker(imap_services).poll()
-    assert [c for c in server.calls if c[0] == "login"] == logins
+    assert [c for c in imap_server.calls if c[0] == "login"] == logins
 
 
 async def test_a_failing_account_does_not_stop_the_round(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
-    server: FakeMailBox,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    server.failures = [OSError("gone")] * 3
+    imap_server.failures = [OSError("gone")] * 3
     memory = await imap_services.accounts.create(
         ADMIN, ProviderType.MEMORY, "m@example.com"
     )
@@ -90,25 +89,25 @@ async def test_a_failing_account_does_not_stop_the_round(
 
 
 async def test_a_change_reported_over_idle_is_synced(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
-    server: FakeMailBox,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(worker_module, "IDLE_RENEW", 0.05)
     await imap_services.sync.sync_account(imap_account_id)
     before = indexed(imap_services, imap_account_id)
-    server.add("INBOX", 10, make_message("Arrived"))
-    server.idle_script = [[(5, b"EXISTS")]]
+    imap_server.add("INBOX", 10, make_message("Arrived"))
+    imap_server.idle_script = [[(5, b"EXISTS")]]
     with anyio.move_on_after(0.5):
         await worker(imap_services).watch(imap_account_id)
     assert indexed(imap_services, imap_account_id) != before
-    assert ("idle", "INBOX") in server.calls
+    assert ("idle", "INBOX") in imap_server.calls
 
 
 async def test_past_the_cap_an_account_is_polled_only(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     background = worker(imap_services, watchers=0)
@@ -156,11 +155,11 @@ async def test_a_deleted_account_leaves_nothing_in_the_worker() -> None:
 
 
 async def test_without_idle_only_polling(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
-    server: FakeMailBox,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
 ) -> None:
-    server.announced = ["IMAP4REV1"]
+    imap_server.announced = ["IMAP4REV1"]
     background = worker(imap_services)
     await background.watch(imap_account_id)  # ends by itself
     started: list[str] = []
@@ -174,8 +173,8 @@ async def test_without_idle_only_polling(
 
 
 async def test_idle_can_be_switched_off(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
 ) -> None:
     started: list[str] = []
 
@@ -190,9 +189,9 @@ async def test_idle_can_be_switched_off(
 
 
 def test_the_app_starts_and_stops_the_worker(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
-    server: FakeMailBox,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
 ) -> None:
     settings = Settings(storage="memory", sync_idle=False)
     running = Services(
@@ -206,18 +205,18 @@ def test_the_app_starts_and_stops_the_worker(
     with TestClient(create_app(settings, running)) as client:
         assert client.get("/health").status_code == 200
     # Stopping closed the adapter's connection.
-    assert server.calls[-1] == ("logout",)
+    assert imap_server.calls[-1] == ("logout",)
 
 
 def test_no_worker_when_the_interval_is_zero(
-    imap_services: Services,  # noqa: F811
+    imap_services: Services,
 ) -> None:
     assert imap_services.worker is None
 
 
 async def test_a_deleted_account_ends_the_watcher_at_once(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     slept: list[float] = []
@@ -236,19 +235,19 @@ async def test_a_deleted_account_ends_the_watcher_at_once(
 
 
 async def test_a_rejected_login_ends_the_watcher(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
-    server: FakeMailBox,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
 ) -> None:
-    server.password = "changed"
+    imap_server.password = "changed"
     await worker(imap_services).watch(imap_account_id)  # ends by itself
     assert imap_services.adapters.status(imap_account_id) is AccountStatus.NEEDS_REAUTH
 
 
 async def test_the_worker_and_the_sync_keep_their_state(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
-    server: FakeMailBox,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
 ) -> None:
     before = worker(imap_services)
     assert before.state().last_pass_at is None
@@ -260,8 +259,8 @@ async def test_the_worker_and_the_sync_keep_their_state(
     assert before.state().interval == 300
 
     # A new message makes the next pass search, and the search fails.
-    server.add("INBOX", 10, make_message("Arrived"))
-    server.failures = [OSError("gone")] * 3
+    imap_server.add("INBOX", 10, make_message("Arrived"))
+    imap_server.failures = [OSError("gone")] * 3
     await before.poll()
     failed = imap_services.sync.state(imap_account_id)
     assert failed.last_sync_at == synced.last_sync_at
@@ -269,9 +268,9 @@ async def test_the_worker_and_the_sync_keep_their_state(
 
 
 async def test_the_status_names_what_needs_attention(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
-    server: FakeMailBox,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
 ) -> None:
     status = StatusService(
         imap_services.accounts,
@@ -281,7 +280,7 @@ async def test_the_status_names_what_needs_attention(
     )
     assert [h.account.id for h in status.status(ADMIN).accounts] == [imap_account_id]
     assert status.status(ADMIN).attention == []
-    server.password = "changed"
+    imap_server.password = "changed"
     with pytest.raises(ProviderAuthError):
         await imap_services.sync.sync_account(imap_account_id)
     [health] = status.status(ADMIN).attention
@@ -295,8 +294,8 @@ async def test_the_status_names_what_needs_attention(
 
 
 async def test_a_bug_in_one_account_does_not_stop_the_round(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -321,8 +320,8 @@ async def test_a_bug_in_one_account_does_not_stop_the_round(
 
 
 async def test_a_bug_while_watching_pauses_and_tries_again(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -345,7 +344,7 @@ async def test_a_bug_while_watching_pauses_and_tries_again(
 
 
 async def test_a_failed_round_does_not_end_the_worker(
-    imap_services: Services,  # noqa: F811
+    imap_services: Services,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:

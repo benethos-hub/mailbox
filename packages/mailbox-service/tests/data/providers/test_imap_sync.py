@@ -15,14 +15,14 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...imap_fake import FakeMailBox, make_message
-from .test_imap import provider, server  # noqa: F401 - the fixture
+from .test_imap import provider
 
 INBOX = mappers.folder_id("INBOX")
 SENT = mappers.folder_id("Sent")
 
 
 async def test_folder_states_change_when_messages_come_and_go(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     imap = provider(server)
     before = await imap.folder_states()
@@ -42,13 +42,13 @@ async def test_folder_states_change_when_messages_come_and_go(
     assert not any(c[0] == "select" for c in server.calls)
 
 
-async def test_folder_contents(server: FakeMailBox) -> None:  # noqa: F811
+async def test_folder_contents(server: FakeMailBox) -> None:
     imap = provider(server)
     ids = await imap.folder_contents(INBOX)
     assert ids == [mappers.message_id("INBOX", 7, uid) for uid in (1, 2, 3, 4, 5, 9)]
 
 
-async def test_message_headers(server: FakeMailBox) -> None:  # noqa: F811
+async def test_message_headers(server: FakeMailBox) -> None:
     server.add(
         "INBOX",
         20,
@@ -70,7 +70,7 @@ async def test_message_headers(server: FakeMailBox) -> None:  # noqa: F811
     assert fetches and all(c[2] == "message-id" for c in fetches)
 
 
-async def test_message_headers_in_batches(server: FakeMailBox) -> None:  # noqa: F811
+async def test_message_headers_in_batches(server: FakeMailBox) -> None:
     for uid in range(100, 550):
         server.add("Sent", uid, make_message(f"Sent {uid}"))
     imap = provider(server)
@@ -81,7 +81,7 @@ async def test_message_headers_in_batches(server: FakeMailBox) -> None:  # noqa:
 
 
 async def test_message_headers_after_a_uidvalidity_change(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     imap = provider(server)
     assert await imap.message_headers([mappers.message_id("INBOX", 6, 1)]) == {}
@@ -141,7 +141,7 @@ def test_idle_bye_is_a_lost_connection() -> None:
 
 
 async def test_wait_for_change_uses_a_connection_of_its_own(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     server.idle_script = [[(7, b"EXISTS")]]
     imap = provider(server)
@@ -153,14 +153,14 @@ async def test_wait_for_change_uses_a_connection_of_its_own(
     assert ("select", "INBOX", True) in server.calls
 
 
-async def test_wait_for_change_without_idle(server: FakeMailBox) -> None:  # noqa: F811
+async def test_wait_for_change_without_idle(server: FakeMailBox) -> None:
     server.announced = ["IMAP4REV1"]
     with pytest.raises(NotSupportedError):
         await provider(server).wait_for_change(60)
 
 
 async def test_wait_for_change_with_a_rejected_login(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     server.password = "changed"
     imap = provider(server)
@@ -171,7 +171,7 @@ async def test_wait_for_change_with_a_rejected_login(
         await imap.list_folders()
 
 
-async def test_closed_provider_does_not_wait(server: FakeMailBox) -> None:  # noqa: F811
+async def test_closed_provider_does_not_wait(server: FakeMailBox) -> None:
     imap = provider(server)
     await imap.close()
     assert await imap.wait_for_change(60) is False

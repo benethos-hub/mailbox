@@ -10,8 +10,10 @@ from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Any
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from benethos_mailbox_service import config
 from benethos_mailbox_service.assembly import Services, build_services, create_app
@@ -25,13 +27,17 @@ from benethos_mailbox_service.data.models import (
     Message,
     ProviderType,
 )
+from benethos_mailbox_service.data.protocols import ServerClient
+from benethos_mailbox_service.data.protocols.pop3 import Pop3Session
 from benethos_mailbox_service.data.providers import (
     CredentialReader,
     ProviderSettings,
     Reads,
     build_provider,
 )
+from benethos_mailbox_service.data.providers.jmap import JmapProvider
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
+from benethos_mailbox_service.data.providers.pop3 import Pop3Provider
 from benethos_mailbox_service.data.secrets import (
     PasswordHasher,
     Scrypt,
@@ -42,6 +48,10 @@ from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.service import AuthService
 from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
 from benethos_mailbox_service.domain.rights.access import Access
+
+from .imap_fake import FakeMailBox, filled_server, make_message
+from .jmap_fake import HOST, PASSWORD, USER, FakeJmap
+from .pop3_fake import FakePop3Server
 
 PUBLIC = "93.184.215.14"  # what every host resolves to, without DNS
 METHODS = {"get", "post", "put", "patch", "delete"}  # of the OpenAPI document
@@ -277,3 +287,104 @@ def ui(app_client: TestClient, services: Services) -> TestClient:
 
     sign_in(app_client, *browser_admin(services))
     return app_client
+
+
+# --- accounts on fake servers -------------------------------------------------------
+
+
+@pytest.fixture
+def server() -> FakeMailBox:
+    """A filled IMAP server for the adapter. Tests of another server bring
+    a ``server`` of their own."""
+    return filled_server()
+
+
+@pytest.fixture
+def jmap_server() -> FakeJmap:
+    box = FakeJmap()
+    for n in range(1, 3):
+        box.add_email(make_message(f"Mail {n}"))
+    return box
+
+
+@pytest.fixture
+def jmap_services(jmap_server: FakeJmap, monkeypatch: pytest.MonkeyPatch) -> Services:
+    return jmap_services_for(jmap_server, monkeypatch)
+
+
+def jmap_services_for(
+    server: FakeJmap, monkeypatch: pytest.MonkeyPatch, **settings: Any
+) -> Services:
+    """The services, with JMAP accounts against ``server``. ``settings``
+    change those of the tests."""
+    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+
+    def factory(
+        kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
+    ) -> Reads:
+        if kind is ProviderType.MEMORY:
+            return MemoryProvider()
+        return JmapProvider(
+            settings,
+            credentials,
+            http=ServerClient(transport=httpx.MockTransport(server)),
+        )
+
+    services = build_services(
+        Settings(storage="memory", **settings), provider_factory=factory
+    )
+    services.vault.initialize()
+    return services
+
+
+@pytest.fixture
+def jmap_account_id(jmap_services: Services) -> str:
+    return create_account(
+        jmap_services.accounts,
+        ProviderType.JMAP,
+        USER,
+        settings={"host": HOST},
+        credentials={"password": SecretStr(PASSWORD)},
+    ).id
+
+
+@pytest.fixture
+def pop3_server() -> FakePop3Server:
+    box = FakePop3Server()
+    for n in range(1, 4):
+        box.add(f"uid-{n}", make_message(f"Mail {n}"))
+    return box
+
+
+@pytest.fixture
+def pop3_services(
+    pop3_server: FakePop3Server, monkeypatch: pytest.MonkeyPatch
+) -> Services:
+    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+
+    def factory(
+        kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
+    ) -> Reads:
+        if kind is ProviderType.MEMORY:
+            return MemoryProvider()
+        return Pop3Provider(
+            settings,
+            credentials,
+            session_factory=lambda s: Pop3Session(s, connection_factory=pop3_server),
+            sleep=lambda seconds: None,
+        )
+
+    services = build_services(Settings(storage="memory"), provider_factory=factory)
+    services.vault.initialize()
+    return services
+
+
+@pytest.fixture
+def pop3_account_id(pop3_services: Services) -> str:
+    return create_account(
+        pop3_services.accounts,
+        ProviderType.POP3,
+        "me@example.com",
+        settings={"host": "pop.example.com"},
+        credentials={"password": SecretStr("secret")},
+    ).id

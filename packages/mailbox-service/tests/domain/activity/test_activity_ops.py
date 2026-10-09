@@ -35,17 +35,10 @@ from benethos_mailbox_service.web import limits
 
 from ...conftest import ADMIN, CHEAP
 from ...imap_fake import FakeMailBox
+from ..conftest import Clock, Receiver
 from ..discovery.test_discovery import ISPDB, FakeSource, service
-from ..sync.test_sync import imap_account_id, imap_services, server  # noqa: F401
 from ..sync.test_worker import worker
-from ..webhooks.test_delivery import (  # noqa: F401
-    Clock,
-    Receiver,
-    clock,
-    hook,
-    mark_read,
-    receiver,
-)
+from ..webhooks.test_delivery import hook, mark_read
 
 WHO = "test admin (usr_test_admin)"
 
@@ -67,9 +60,9 @@ def lines(caplog: pytest.LogCaptureFixture, *, level: int = logging.DEBUG) -> li
 
 
 async def test_a_watcher_names_the_account_each_pass_and_each_renewal(
-    imap_services: Services,  # noqa: F811
-    imap_account_id: str,  # noqa: F811
-    server: FakeMailBox,  # noqa: F811
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -87,7 +80,7 @@ async def test_a_watcher_names_the_account_each_pass_and_each_renewal(
 
 
 async def test_the_worker_names_how_it_runs(
-    imap_services: Services,  # noqa: F811
+    imap_services: Services,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     class StopError(Exception):
@@ -186,8 +179,8 @@ async def test_a_webhook_from_creation_to_removal(
     client: TestClient,
     services: Services,
     account_id: str,
-    receiver: Receiver,  # noqa: F811
-    clock: Clock,  # noqa: F811
+    receiver: Receiver,
+    delivery_clock: Clock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     with caplog.at_level(logging.INFO):
@@ -195,7 +188,7 @@ async def test_a_webhook_from_creation_to_removal(
         mark_read(client, account_id, "m0")
         receiver.status = 503
         await services.deliveries.deliver_due()
-        clock.now += timedelta(seconds=31)
+        delivery_clock.now += timedelta(seconds=31)
         receiver.status = 200
         await services.deliveries.deliver_due()
         client.delete(f"/v1/webhooks/{created['id']}")
@@ -221,8 +214,8 @@ async def test_a_webhook_that_gives_up(
     client: TestClient,
     services: Services,
     account_id: str,
-    receiver: Receiver,  # noqa: F811
-    clock: Clock,  # noqa: F811
+    receiver: Receiver,
+    delivery_clock: Clock,
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

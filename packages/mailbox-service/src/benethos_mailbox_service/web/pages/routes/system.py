@@ -1,5 +1,6 @@
-"""The recovery key and the service log (docs/UI.md, 6.5). The status
-of the service is on the overview and the accounts list."""
+"""The service's own pages: the recovery key and the service log
+(docs/UI.md, 6.5). The status of the service is on the overview and the
+accounts list."""
 
 from __future__ import annotations
 

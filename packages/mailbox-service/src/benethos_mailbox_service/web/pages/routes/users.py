@@ -1,14 +1,12 @@
-"""Users, their passwords and their tokens."""
+"""Users and their passwords. A user's tokens are in ``tokens``."""
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
-from ....common.clock import utc_now
 from ....common.text import plural
 from ....common.urls import path_and_query
 from ....data.models import ActivityFilter
@@ -16,7 +14,6 @@ from ....domain.rights import Access
 from ....domain.users import UserService
 from ...services import (
     Passwords,
-    Tokens,
     Users,
     get_audit,
     get_factors,
@@ -25,10 +22,10 @@ from ...services import (
     get_tokens,
 )
 from ..deps import Actor, Viewer, account_names, if_allowed
-from ..editor import REFUSED, editor
+from ..editor import editor
 from ..effective import view_of
 from ..filters import Field, filter_bar
-from ..forms import FormError, failing, text_of
+from ..forms import REFUSED, failing, text_of
 from ..grants import (
     read_grants,
     read_service,
@@ -41,9 +38,6 @@ router = APIRouter()
 
 # The newest activities of a user its page shows.
 RECENT = 10
-
-# Longer than that is a token without an end: leave the field empty for one.
-MAX_TOKEN_DAYS = 3650
 
 
 def _role_choices(request: Request, caller: Access, held: list[str]) -> list[str]:
@@ -122,10 +116,10 @@ async def change_users(
 @router.get("/users/new")
 async def new_user(request: Request, caller: Viewer) -> HTMLResponse:
     caller.require("create_user")
-    return _new_user_page(request, caller)
+    return _newuser_page(request, caller)
 
 
-def _new_user_page(
+def _newuser_page(
     request: Request, caller: Access, form: Any = None, err: str | None = None
 ) -> HTMLResponse:
     """The editor of a new user, empty or as ``form`` held it."""
@@ -155,7 +149,7 @@ def _typed_user(form: Any) -> dict[str, Any]:
     }
 
 
-def _typed_token(form: Any) -> dict[str, str]:
+def typed_token(form: Any) -> dict[str, str]:
     """The fields of a new token as they were submitted."""
     return {
         "name": text_of(form, "name"),
@@ -171,7 +165,7 @@ async def create_user(
     typed = _typed_user(form)
     ui_sign_in = typed["signs_in_to"] == "ui"
     with failing(
-        "/ui/users/new", again=lambda err: _new_user_page(request, caller, form, err)
+        "/ui/users/new", again=lambda err: _newuser_page(request, caller, form, err)
     ):
         user = users.create_user(
             caller,
@@ -194,10 +188,10 @@ async def create_user(
 async def user(
     request: Request, caller: Viewer, user_id: str, users: Users
 ) -> HTMLResponse:
-    return _user_page(request, caller, user_id, users)
+    return user_page(request, caller, user_id, users)
 
 
-def _user_page(
+def user_page(
     request: Request,
     caller: Access,
     user_id: str,
@@ -223,7 +217,7 @@ def _user_page(
         status_code=REFUSED if err else 200,
         err=err,
         typed=typed,
-        typed_token=_typed_token(token_form) if token_form is not None else None,
+        typed_token=typed_token(token_form) if token_form is not None else None,
         user=found,
         effective=view_of(users.rights_of(caller, user_id)),
         tokens=[(token, held.token_state(token)) for token in tokens or []],
@@ -308,7 +302,7 @@ async def update_user(
     ui_sign_in = typed["ui_sign_in"] if "ui_sign_in_shown" in form else None
     with failing(
         here,
-        again=lambda err: _user_page(
+        again=lambda err: user_page(
             request, caller, user_id, users, form=form, err=err
         ),
     ):
@@ -364,56 +358,3 @@ async def one_time_password(
         password = await passwords.one_time_password(caller, user_id)
     show_once(request, f"password:{user_id}", password)
     return back(request, here, "One-time password made.")
-
-
-# --- tokens ---------------------------------------------------------------------
-
-
-@router.post("/users/{user_id}/tokens")
-async def create_token(
-    request: Request, caller: Actor, user_id: str, users: Users, tokens: Tokens
-) -> Response:
-    form = await request.form()
-    here = access_tab(user_id)
-    typed = _typed_token(form)
-    name, days = typed["name"], typed["days"]
-    with failing(
-        here,
-        again=lambda err: _user_page(
-            request, caller, user_id, users, token_form=form, err=err
-        ),
-    ):
-        if days and not (days.isdigit() and 1 <= int(days) <= MAX_TOKEN_DAYS):
-            raise FormError(
-                f"Days valid must be a whole number from 1 to {MAX_TOKEN_DAYS}."
-            )
-        expires_at = utc_now() + timedelta(days=int(days)) if days else None
-        _, plain = tokens.create_token(caller, user_id, name, expires_at)
-    # Shown on the next page, once, and never in the URL.
-    show_once(request, f"token:{user_id}", plain)
-    return back(request, here)
-
-
-@router.post("/users/{user_id}/tokens/{token_id}/revoke")
-async def revoke_token(
-    request: Request, caller: Actor, user_id: str, token_id: str, tokens: Tokens
-) -> Response:
-    here = access_tab(user_id)
-    with failing(here):
-        token = tokens.revoke_token(caller, user_id, token_id)
-    return back(request, here, f"Token {token.name} revoked.")
-
-
-@router.post("/users/{user_id}/tokens/revoke")
-async def revoke_tokens(
-    request: Request,
-    caller: Actor,
-    user_id: str,
-    tokens: Tokens,
-    token: Annotated[list[str] | None, Form()] = None,
-) -> Response:
-    """The tokens ticked in the list, at once."""
-    here = access_tab(user_id)
-    with failing(here):
-        revoked = tokens.revoke_tokens(caller, user_id, token or [])
-    return back(request, here, f"{plural(len(revoked), 'token')} revoked.")

@@ -11,7 +11,7 @@ from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import ConflictError, NotSupportedError
 
 from ...conftest import bearer_for
-from ...data.providers.test_imap import provider, server  # noqa: F401 - the fixture
+from ...data.providers.test_imap import provider
 from ...imap_fake import FakeFolder, FakeMailBox
 from ...provider_ops import delete
 
@@ -19,7 +19,7 @@ MESSAGE = mappers.message_id("INBOX", 7, 3)
 
 
 @pytest.fixture
-def with_trash(server: FakeMailBox) -> FakeMailBox:  # noqa: F811
+def with_trash(server: FakeMailBox) -> FakeMailBox:
     server.folders["Trash"] = FakeFolder(flags=("\\Trash",))
     return server
 
@@ -47,20 +47,20 @@ async def test_from_the_trash_only_for_good(with_trash: FakeMailBox) -> None:
 
 
 async def test_a_retried_deletion_that_went_through_is_done(
-    server: FakeMailBox,  # noqa: F811
+    server: FakeMailBox,
 ) -> None:
     server.lose_the_reply("uid_expunge")
     assert await delete(provider(server), MESSAGE, permanent=True) is None
     assert 3 not in server.folders["INBOX"].messages
 
 
-async def test_no_trash_no_deletion(server: FakeMailBox) -> None:  # noqa: F811
+async def test_no_trash_no_deletion(server: FakeMailBox) -> None:
     with pytest.raises(ConflictError, match="no trash folder"):
         await delete(provider(server), MESSAGE, permanent=False)
     assert 3 in server.folders["INBOX"].messages
 
 
-async def test_for_good_only_this_message(server: FakeMailBox) -> None:  # noqa: F811
+async def test_for_good_only_this_message(server: FakeMailBox) -> None:
     # Another client marked a message deleted and has not expunged yet.
     raw, _ = server.folders["INBOX"].messages[4]
     server.folders["INBOX"].messages[4] = (raw, ("\\Deleted",))
@@ -70,7 +70,7 @@ async def test_for_good_only_this_message(server: FakeMailBox) -> None:  # noqa:
     assert ("expunge", (3,)) in server.calls
 
 
-async def test_for_good_needs_uidplus(server: FakeMailBox) -> None:  # noqa: F811
+async def test_for_good_needs_uidplus(server: FakeMailBox) -> None:
     server.announced = ["IMAP4REV1", "MOVE"]
     with pytest.raises(NotSupportedError, match="UIDPLUS"):
         await delete(provider(server), MESSAGE, permanent=True)

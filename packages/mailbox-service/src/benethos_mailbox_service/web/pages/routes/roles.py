@@ -12,8 +12,8 @@ from ....domain.rights import Access
 from ....domain.users import RoleService
 from ...services import Roles
 from ..deps import Actor, Viewer, account_names, if_allowed
-from ..editor import REFUSED, editor
-from ..forms import failing, text_of
+from ..editor import editor
+from ..forms import REFUSED, failing, text_of
 from ..grants import ROLE_TEMPLATES, read_grants, read_service, require_recipients
 from ..templates import back, render, segment
 
