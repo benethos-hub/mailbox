@@ -21,6 +21,7 @@ from ..forms import failing
 from ..qr import data_uri
 from ..session import PendingTotp, session_of, show_once, take_once
 from ..templates import back, render
+from .users import access_tab
 
 router = APIRouter()
 
@@ -75,7 +76,7 @@ async def renew_codes(
 async def remove(
     request: Request, user_id: str, caller: Actor, factors: Factors
 ) -> Response:
-    page = f"/ui/users/{user_id}?tab=access"
+    page = access_tab(user_id)
     with failing(page):
         factors.remove(caller, user_id)
     return back(request, page, "Second factor removed. The user's sessions end.")

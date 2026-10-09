@@ -24,9 +24,6 @@ from .grants import (
     typed_service,
 )
 
-# A refused editor comes back with this status, what was typed, the reason.
-REFUSED = 400
-
 
 def editor(
     request: Request,

@@ -25,7 +25,7 @@ from ...services import Mailbox, get_accounts
 from ..deps import Viewer, account_of, emails_of
 from ..errors import error_page
 from ..filters import Field, FilterBar, Kind, filter_bar
-from ..forms import first_problem
+from ..forms import REFUSED, first_problem
 from ..navigation import mail_trail, mail_url
 from ..rights import mail_rights
 from ..templates import PAGE_SIZE, page_links, render
@@ -205,7 +205,7 @@ async def account_mail_page(
         request,
         "pages/account_mail.html",
         page="mail",
-        status_code=400 if err else 200,
+        status_code=REFUSED if err else 200,
         err=err,
         typed={**FOLDER_FORMS, **(typed or {})},
         account=account,

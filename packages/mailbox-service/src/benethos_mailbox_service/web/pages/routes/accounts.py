@@ -20,7 +20,7 @@ from ...services import Accounts, Discoverer, Status, get_accounts, get_oauth
 from ...urls import oauth_callback
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
-from ..forms import failing, text_of
+from ..forms import REFUSED, failing, text_of
 from ..templates import PAGE_SIZE, back, page_links, render
 
 router = APIRouter()
@@ -261,7 +261,7 @@ def _account_page(
         request,
         "pages/account.html",
         page="accounts",
-        status_code=400 if err else 200,
+        status_code=REFUSED if err else 200,
         err=err,
         typed=_typed_account(form) if form is not None else None,
         account=found,

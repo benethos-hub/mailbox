@@ -14,7 +14,7 @@ from ....domain.webhooks import WebhookService
 from ...services import Webhooks, get_accounts
 from ..deps import Actor, Viewer, account_names
 from ..filters import Field, filter_bar
-from ..forms import FormError, failing, model_of, text_of
+from ..forms import REFUSED, FormError, failing, model_of, text_of
 from ..session import show_once, take_once
 from ..templates import back, render
 
@@ -69,7 +69,7 @@ def _new_webhook_page(
         request,
         "pages/webhook_new.html",
         page="webhooks",
-        status_code=400 if err else 200,
+        status_code=REFUSED if err else 200,
         err=err,
         typed=_typed(form) if form is not None else None,
         events=CHANGE_KINDS,
@@ -150,7 +150,7 @@ def _webhook_page(
         request,
         "pages/webhook.html",
         page="webhooks",
-        status_code=400 if err else 200,
+        status_code=REFUSED if err else 200,
         err=err,
         webhook=found,
         names=account_names(request, caller),
