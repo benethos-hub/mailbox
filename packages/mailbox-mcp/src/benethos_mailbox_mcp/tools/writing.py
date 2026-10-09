@@ -6,6 +6,7 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
+from .. import render
 from ..errors import ToolError
 from .base import changes, client
 
@@ -38,7 +39,7 @@ async def update_messages(
         outcome = await client().update_messages(
             account_id, message_ids, unread=unread, starred=starred, folder_id=move_to
         )
-    return {"done": outcome.done, "failed": outcome.failed}
+    return render.outcome(outcome)
 
 
 async def create_folder(

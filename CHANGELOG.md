@@ -72,6 +72,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `mailbox-client`: `list_messages` and `list_changes` take one
+  account, `account_id` is required. `list_all_messages` and
+  `list_all_changes` read every account. A change of the feed is the
+  record `Change` and a failed id of a batch the record `Failed`,
+  where both were a dict.
 - `mailbox-client`: `me()` is now `get_me()`, named like its operation,
   as every method of the client is. Each method is made from the
   endpoint that describes its call, with that endpoint's name,
