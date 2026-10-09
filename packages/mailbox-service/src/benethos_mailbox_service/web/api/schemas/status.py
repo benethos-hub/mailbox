@@ -48,7 +48,7 @@ class AccountSync(BaseModel):
     attention: bool = Field(
         description=(
             "Whether a person should look: the account is not connected, "
-            "or its last pass failed"
+            "the service cannot use it, or its last pass failed"
         )
     )
 

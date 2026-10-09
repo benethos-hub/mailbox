@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ...data.models import Account, AccountStatus, Webhook
-from ...errors import ForbiddenError
+from ...errors import ForbiddenError, MailboxServiceError
 from ..accounts import AccountService
 from ..rights import Access
 from ..sync import SyncService, SyncState, SyncWorker, WorkerState
@@ -26,6 +26,9 @@ class AccountHealth:
     synced: bool
     # Whether a watcher waits for the server to report a change.
     watching: bool
+    # Why the service cannot build the account's adapter, e.g. a Gmail
+    # account without the Google client in the settings.
+    problem: str | None = None
 
     @property
     def attention(self) -> bool:
@@ -33,6 +36,7 @@ class AccountHealth:
         return (
             self.account.status is not AccountStatus.CONNECTED
             or self.sync.last_error is not None
+            or self.problem is not None
         )
 
 
@@ -81,7 +85,7 @@ class StatusService:
         """How the account's sync went, None when no pass does anything
         for it."""
         access.require("get_account", account_id)
-        if not self._sync.watched(account_id):
+        if not self._synced(account_id)[0]:
             return None
         return self._sync.state(account_id)
 
@@ -121,15 +125,28 @@ class StatusService:
         self, accounts: list[Account], worker: WorkerState | None
     ) -> list[AccountHealth]:
         watching = worker.watching if worker is not None else frozenset()
-        return [
-            AccountHealth(
-                account=account,
-                sync=self._sync.state(account.id),
-                synced=self._sync.watched(account.id),
-                watching=account.id in watching,
+        healths = []
+        for account in accounts:
+            synced, problem = self._synced(account.id)
+            healths.append(
+                AccountHealth(
+                    account=account,
+                    sync=self._sync.state(account.id),
+                    synced=synced,
+                    watching=account.id in watching,
+                    problem=problem,
+                )
             )
-            for account in accounts
-        ]
+        return healths
+
+    def _synced(self, account_id: str) -> tuple[bool, str | None]:
+        """Whether a sync pass does anything for the account, and why
+        not when its adapter cannot be built. Such an account is not
+        synced, and every page still opens to remove it."""
+        try:
+            return self._sync.watched(account_id), None
+        except MailboxServiceError as exc:
+            return False, str(exc)
 
     def _own_webhooks(self, access: Access) -> list[Webhook]:
         if not access.allows("list_webhooks"):

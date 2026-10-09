@@ -32,6 +32,7 @@ class WebhookCreate(BaseModel):
     )
     accounts: list[str] | None = Field(
         default=None,
+        min_length=1,
         description=(
             "Account ids. Without: every account the creator may read, "
             "accounts added later included."
@@ -53,6 +54,7 @@ class WebhookUpdate(BaseModel):
     )
     accounts: list[str] | None = Field(
         default=None,
+        min_length=1,
         description=(
             "Account ids. `null`: every account the owner may read, accounts "
             "added later included. Left out: as it is."

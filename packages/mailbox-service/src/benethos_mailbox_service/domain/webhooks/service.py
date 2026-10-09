@@ -159,8 +159,11 @@ class WebhookService:
                 else None
             )
         _check_url(url)
+        # Only an account added needs the right. One the owner can no
+        # longer read stays and hears nothing: each post is filtered.
         for account_id in accounts or []:
-            access.require("list_changes", account_id)
+            if account_id not in (hook.accounts or []):
+                access.require("list_changes", account_id)
         changed = tuple(
             name
             for name, value in (

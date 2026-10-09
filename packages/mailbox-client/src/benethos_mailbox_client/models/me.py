@@ -33,5 +33,7 @@ class Me:
     """The token's user: its accounts with what it may do on each, and
     what it may do beyond one account."""
 
+    user_id: str
+    name: str
     accounts: list[MeAccount]
     operations: frozenset[str]

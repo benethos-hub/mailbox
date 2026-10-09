@@ -14,6 +14,8 @@ async def test_me(make_client: Callable) -> None:
     me = await make_client(api).get_me()
     assert api.call() == ("GET", "/v1/me", {}, None)
     assert me == Me(
+        user_id="usr_1",
+        name="me",
         accounts=[
             MeAccount(
                 id="acc_1",

@@ -41,10 +41,13 @@ class PasswordService:
 
     async def change_password(self, access: Access, current: str, new: str) -> datetime:
         """The caller's own password, with the current one. Returns the new
-        stamp, which keeps the caller's session and ends its others."""
+        stamp, which keeps the caller's session and ends its others. A
+        wrong current password counts as a failed confirmation."""
         user = self._users.get(access.user_id)
-        if not await self._auth.passwords.matches(user.id, current):
-            raise BadRequestError("the current password is not right")
+        try:
+            await self._auth.confirm(access, current)
+        except BadRequestError:
+            raise BadRequestError("the current password is not right") from None
         if new == current:
             raise BadRequestError("the new password is the current one")
         hashed = await self._auth.passwords.hashed(new, user.name)

@@ -23,6 +23,9 @@ from ...common.clock import log_time, utc_now
 from ...common.text import plural
 from ...common.urls import path_and_query
 from ...data.models import Address
+from ...domain.rights import Access
+from ...domain.system import Attention
+from ...errors import MailboxServiceError
 from ..services import get_status
 from .navigation import navigation, own_page
 from .session import PATH, SignInRequiredError, found_for, show_once
@@ -147,7 +150,7 @@ def render(
     found = found_for(request)
     session = found.session if found is not None else None
     access = found.access if found is not None else None
-    attention = get_status(request).attention(access) if access is not None else None
+    attention = _attention(request, access) if access is not None else None
     context.update(
         page=page,
         csrf=session.csrf if session is not None else "",
@@ -165,6 +168,15 @@ def render(
         request, template, context, status_code=status_code
     )
     return response
+
+
+def _attention(request: Request, access: Access) -> Attention | None:
+    """The dots of the sidebar, None when they cannot be told: a page
+    and the error page still open without them."""
+    try:
+        return get_status(request).attention(access)
+    except MailboxServiceError:
+        return None
 
 
 def is_htmx(request: Request) -> bool:
