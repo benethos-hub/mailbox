@@ -105,9 +105,13 @@ class SyncMailboxClient:
     # --- messages ---------------------------------------------------------------------
 
     list_messages = blocking(endpoints.list_messages)
+    list_all_messages = blocking(endpoints.list_all_messages)
     list_changes = blocking(endpoints.list_changes)
+    list_all_changes = blocking(endpoints.list_all_changes)
     get_message = blocking(endpoints.get_message)
     get_message_raw = blocking(endpoints.get_message_raw)
+    update_message = blocking(endpoints.update_message)
+    batch_messages = blocking(endpoints.batch_messages)
     update_messages = blocking(endpoints.update_messages)
     trash_messages = blocking(endpoints.trash_messages)
     delete_message = blocking(endpoints.delete_message)

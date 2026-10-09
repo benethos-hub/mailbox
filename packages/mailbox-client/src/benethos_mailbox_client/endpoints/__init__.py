@@ -24,13 +24,17 @@ from .folders import create_folder, delete_folder, list_folders, update_folder
 from .generic import request
 from .me import get_me
 from .messages import (
+    batch_messages,
     delete_message,
     get_attachment,
     get_message,
     get_message_raw,
+    list_all_changes,
+    list_all_messages,
     list_changes,
     list_messages,
     trash_messages,
+    update_message,
     update_messages,
 )
 from .sending import send_draft, send_message
@@ -55,6 +59,10 @@ __all__ = [
     "get_me",
     "get_message",
     "get_message_raw",
+    "list_all_changes",
+    "list_all_messages",
+    "update_message",
+    "batch_messages",
     "list_changes",
     "list_drafts",
     "list_folders",
