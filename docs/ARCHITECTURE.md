@@ -260,7 +260,10 @@ packages/mailbox-service/
                         #   account), OAuthService, abilities: 501 for
                         #   what an adapter does not implement, checks:
                         #   what settings and credentials must pass
-                        #   before they are stored
+                        #   before they are stored. OAuthService signs
+                        #   in in the browser (oauth.py), with a code
+                        #   in device.py, what both ways share in
+                        #   signin.py
       discovery/        # DiscoveryService: trust, ranking, cache, limits
       mailbox/          # MailboxService, the facade for mail: calls under
                         #   our ids, an account's folders and their
