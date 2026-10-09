@@ -132,7 +132,10 @@ a:hover { text-decoration: underline; }
   font-size: 13px; color: var(--text-muted);
 }
 .sidebar .foot .who { overflow-wrap: anywhere; }
-.sidebar .foot .links { display: flex; gap: 12px; margin-top: 6px; }
+.sidebar .foot .links {
+  display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px;
+  white-space: nowrap;
+}
 
 .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
@@ -314,6 +317,20 @@ ul.lines li:last-child { border-bottom: 0; }
   font-family: var(--mono); font-size: 13px;
   overflow-wrap: anywhere;
   user-select: all;
+}
+
+/* A QR code to scan: white around it in either theme, its pixels sharp. */
+.qr {
+  display: block;
+  width: 225px; max-width: 100%; height: auto;
+  margin-bottom: 12px;
+  image-rendering: pixelated;
+}
+
+/* Recovery codes, in two columns. */
+ul.codes {
+  list-style: none; margin: 0;
+  display: grid; grid-template-columns: repeat(2, max-content); gap: 4px 32px;
 }
 
 /* The body of a mail, as text: its own line breaks, long lines wrapped. */

@@ -1483,8 +1483,12 @@ with the role
     says so. It is the way back in when nobody can sign in.
   - In the API: `ui_sign_in` on the user, in `POST /v1/users` (false
     when left out) and `PATCH /v1/users/{user_id}`.
-- **Later:** TOTP or a passkey as a second factor (IDEAS), OAuth 2.0
-  client credentials for machines. Rights come from grants alone. The
+- **A second factor** for the UI sign-in, TOTP with recovery codes
+  (**decided 2026-10-09**): a choice per user, set up in the UI,
+  asked after the password. The factors of the UI sign-in and how each
+  is set up and removed: [AUTHENTICATION.md](AUTHENTICATION.md).
+- **Later:** a passkey (AUTHENTICATION.md 8), OAuth 2.0 client
+  credentials for machines. Rights come from grants alone. The
   switch above says where a user may sign in, not what it may do.
 - A disabled user fails authentication with every credential at once.
   Rights changes take effect on the next request. Revoking a token is
@@ -1535,10 +1539,12 @@ included for a grant on every account. `user`, `outcome`, `recipient`
 | GET | `/v1/me` | any authenticated user. Who am I, and my effective rights resolved to operations per account |
 | GET | `/v1/permissions` | any authenticated user. The catalogue of operations and groups |
 | GET / POST | `/v1/users` | GET `users.read`, POST `users.manage` |
-| GET / PATCH / DELETE | `/v1/users/{user_id}` | GET `users.read`, the others `users.manage`. Name, roles, service, grants, disabled, `ui_sign_in`. Each answer also says how the user signs in to the UI: `has_password`, `must_change`, `last_sign_in_at` |
+| GET / PATCH / DELETE | `/v1/users/{user_id}` | GET `users.read`, the others `users.manage`. Name, roles, service, grants, disabled, `ui_sign_in`. Each answer also says how the user signs in to the UI: `has_password`, `must_change`, `last_sign_in_at`, `second_factor` |
 | GET / POST | `/v1/users/{user_id}/tokens` | GET `users.read`, POST `users.manage`. POST returns the token once |
 | DELETE | `/v1/users/{user_id}/tokens/{token_id}` | `users.manage`. Revoke |
 | POST | `/v1/users/{user_id}/password` | `users.manage`. A password to change at the next sign-in, or a one-time password answered once |
+| GET / DELETE | `/v1/users/{user_id}/second-factor` | GET `users.read`: the devices of the user's second factor ([AUTHENTICATION.md](AUTHENTICATION.md)), never a secret. DELETE `users.manage`: every device, never the caller's own |
+| DELETE | `/v1/users/{user_id}/second-factor/totp/{device_id}` | `users.manage`. One TOTP device, never the caller's own |
 | GET / POST | `/v1/roles` | GET `users.read`, POST `users.manage` |
 | GET / PUT / DELETE | `/v1/roles/{role_id}` | GET `users.read`, the others `users.manage` |
 | GET | `/v1/audit` | `audit` in `service`. The audit of administration, newest first ([AUDIT.md](AUDIT.md)) |

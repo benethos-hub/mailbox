@@ -72,7 +72,7 @@ The sidebar keeps its three groups, renamed by what a person looks for:
 | Service | Users, Roles, Status, Audit, Log, Recovery key | Users and Roles with `users.read`, Status with `accounts.read`, Audit with `audit` in `service`, Log and Recovery key for the admin |
 
 The foot of the sidebar names the signed-in user and links to their own
-page, Password and Sign out. Changes, if built, is a tab of the account
+page, Password, Second factor and Sign out. Changes, if built, is a tab of the account
 page and of Status, not a sidebar entry.
 
 Every page has a **top bar** with its heading, one line under it that
@@ -304,6 +304,25 @@ Recent activity is the user's newest ten activities of the audit, for
 the user. Roles the same without
 tokens. A token is created in the Tokens card and shown once.
 
+The second factor ([AUTHENTICATION.md](AUTHENTICATION.md)) has a page of
+its own, **Second factor**, reached from the foot of the sidebar and the
+person's own user page. It has a card per method of the second factor
+and one for the recovery codes. The card **Authenticator app (TOTP)**
+lists the devices with their name, when each
+was added and last used. **Add a device** asks for its name and the
+password, and with a device there already a code, then shows the QR
+code with the key as text and a field for the first code. The first
+device brings the ten recovery codes, shown once and offered as a text
+file to download. **Rename a device**
+takes the new name, **Remove a device** the password and a code. The
+Recovery codes card says how many are left and makes new ones after
+the password and a code. Another user's page lists its devices to a user with
+`get_second_factor`, with **Remove** for one to a user with
+`remove_totp_device` and **Remove every device** to a user with
+`remove_second_factor`. After the password, a user with a factor sees
+the code page, outside the layout as the sign-in is, which takes a code
+of any device or a recovery code.
+
 ### 6.4 Webhooks
 
 The list shows the URL, the events, the accounts, the last delivery and
@@ -327,7 +346,8 @@ account's last sync and last error in memory, so they are empty after a
 restart until the first pass.
 
 The recovery key page shows the key once after **Show**, with the
-warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again. The key is never
+warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again, and for a code when the
+user has a second factor ([AUTHENTICATION.md](AUTHENTICATION.md) 7). The key is never
 stored or logged, the log only says that it was shown and to whom.
 
 The Audit page lists the audit of administration of

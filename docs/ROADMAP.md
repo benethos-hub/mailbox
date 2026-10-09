@@ -226,6 +226,16 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   (`live/gmail.py`)
 - **Gmail history in the worker**, built: `history.list` since a
   history id, polled
+- **A second factor for the UI sign-in, TOTP with recovery codes
+  ([AUTHENTICATION.md](AUTHENTICATION.md))**, decided 2026-10-09, done:
+  schema 18, the code after the password, up to ten named devices on
+  the page Second factor with a QR code, added, renamed and removed by
+  the owner, removed by a user with `users.manage` and all at once by
+  `users reset-second-factor` on the host, the devices in the API.
+  Live-checked in `live/ui.py`. Decided 2026-10-09: several devices
+  per user, a further one and new recovery codes after a code, one set
+  of recovery codes, the second factor a frame and TOTP its first
+  method
 - **`jmap` adapter for Fastmail and JMAP servers (5.6)**, decided
   2026-10-06, done: a password or an API token, sending through JMAP,
   changes since a state and push through the event source. Discovery

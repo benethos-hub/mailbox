@@ -34,6 +34,7 @@ from .routes import (
     audit,
     compose,
     drafts,
+    factor,
     folders,
     home,
     login,
@@ -43,6 +44,7 @@ from .routes import (
     roles,
     sends,
     status,
+    totp,
     users,
     webhooks,
 )
@@ -69,6 +71,8 @@ AREAS = (
     status,
     audit,
     users,
+    factor,
+    totp,
     roles,
     webhooks,
 )

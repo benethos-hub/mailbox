@@ -19,6 +19,7 @@
   {% call fact("Service rights") %}{{ service_of(user.service) }}{% endcall %}
   {% call fact("Grants") %}{{ grants_of(user.grants, names) }}{% endcall %}
   {% call fact("Sign-in to the UI") %}{% if not user.ui_sign_in %}off: an API user, tokens only{% elif sign_in.must_change %}with a password set for it, to change at the next sign-in{% elif sign_in.has_password %}with a password{% else %}not possible: no password yet{% endif %}{% endcall %}
+  {% if user.ui_sign_in %}{% call fact("Second factor") %}{% if sign_in.second_factor %}<span class="tag ok">on</span> a code of an authenticator app after the password{% else %}off{% endif %}{% endcall %}{% endif %}
   {{ fact("Last sign-in", sign_in.last_sign_in_at | when) }}
   {{ fact("Id", user.id, cls="mono") }}
 {% endcall %}
@@ -134,6 +135,7 @@
 {% if is_me %}
 {% call card("Password") %}
   <p><a href="/ui/password">Change your password</a></p>
+  <p><a href="/ui/second-factor">{% if sign_in.second_factor %}Your second factor{% else %}Set up a second factor{% endif %}</a></p>
 {% endcall %}
 {% elif can_set_password and user.ui_sign_in %}
 {% call card("Password", meta="Whoever sets a password can sign in as that user.") %}
@@ -160,6 +162,36 @@
     <div class="form-actions"><button class="primary" type="submit">Set password</button></div>
   </form>
   </div>
+{% endcall %}
+{% endif %}
+
+{% if not is_me and factor and factor.totp %}
+{% call related("Second factor", count=factor.totp | length, meta="authenticator apps (TOTP), " ~ factor.recovery_codes_left ~ " recovery codes left. Only " ~ user.name ~ " adds one.") %}
+  <div class="body tight">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Authenticator app</th><th>Added</th><th>Last used</th><th></th></tr></thead>
+        <tbody>
+          {% for device in factor.totp %}
+          <tr>
+            <td class="name">{{ device.name }}</td>
+            <td>{{ device.created_at | when }}</td>
+            <td>{{ device.last_used_at | when }}</td>
+            <td class="actions">
+              {% if can_remove_device %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/totp/" ~ device.id ~ "/remove", "Remove", confirm="Remove the device " ~ device.name ~ " of " ~ user.name ~ "? Its codes work no more.", cls="small danger") }}{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if can_remove_factor %}
+  <div class="body toolbar">
+    <span class="muted grow">Removing every device lets {{ user.name }} sign in with the password alone, e.g. after every device is lost. Its sessions end.</span>
+    {{ action("/ui/users/" ~ user.id ~ "/second-factor/remove", "Remove every device", confirm="Remove every device of the second factor of " ~ user.name ~ "?", cls="danger") }}
+  </div>
+  {% endif %}
 {% endcall %}
 {% endif %}
 

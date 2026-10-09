@@ -29,8 +29,8 @@ record changes hands, and every sign-in. By area:
 
 | Area | Activities (LOGGING.md) | Names |
 |---|---|---|
-| Sign-in (5.2) | signed in, failed sign-in, revoked or expired token presented, wrong password to confirm a step | `auth.signed_in`, `auth.sign_in_failed`, `auth.token_refused`, `auth.confirm_failed` |
-| Users, passwords, tokens, roles (5.3) | user created, changed, deleted; UI sign-in taken, given back; password changed, set, one-time made; token issued, revoked; role created, replaced, deleted | `users.created`, `users.changed`, `users.deleted`, `users.made_api_user`, `users.sign_in_allowed`, `users.password_changed`, `users.password_set`, `users.token_issued`, `users.token_revoked`, `users.role_created`, `users.role_replaced`, `users.role_deleted` |
+| Sign-in (5.2) | signed in, failed sign-in, wrong code of the second factor, signed in with a recovery code, revoked or expired token presented, wrong password or code to confirm a step | `auth.signed_in`, `auth.sign_in_failed`, `auth.code_failed`, `auth.recovery_code_used`, `auth.token_refused`, `auth.confirm_failed` |
+| Users, passwords, tokens, roles (5.3) | user created, changed, deleted; UI sign-in taken, given back; password changed, set, one-time made; authenticator app (TOTP) added, renamed, removed, the whole second factor removed, new recovery codes; token issued, revoked; role created, replaced, deleted | `users.created`, `users.changed`, `users.deleted`, `users.made_api_user`, `users.sign_in_allowed`, `users.password_changed`, `users.password_set`, `users.totp_added`, `users.totp_renamed`, `users.totp_removed`, `users.factor_removed`, `users.codes_renewed`, `users.token_issued`, `users.token_revoked`, `users.role_created`, `users.role_replaced`, `users.role_deleted` |
 | Accounts and OAuth (5.4) | account connected, changed, verified, removed; connecting failed; sign-in with a provider started, finished, failed | `accounts.connected`, `accounts.changed`, `accounts.verified`, `accounts.removed`, `accounts.connect_failed`, `accounts.oauth_started`, `accounts.oauth_finished`, `accounts.oauth_failed` |
 | Webhooks (5.7) | webhook created, removed | `webhooks.created`, `webhooks.removed` |
 | Rate limits (5.9) | address locked out, name waiting, token or address limited | `auth.locked_out`, `auth.name_braked`, `http.rate_limited` |
@@ -49,7 +49,7 @@ nothing secret, and sends, which have their own audit.
 | `id` | `evt_` + 64 hex |
 | `at` | time, UTC |
 | `user_id`, `user_name` | who, the name as it was then |
-| `credential` | `token:<id>`, `password`, `host` for a CLI command, null for a failed sign-in |
+| `credential` | `token:<id>`, `password`, `host` for a CLI command, null for a failed sign-in. A sign-in with a second factor: `password+totp`, `password+recovery` |
 | `activity` | the activity's name in the log, `<area>.<name>` of LOGGING.md 7.2: `users.token_revoked`, `auth.sign_in_failed` |
 | `record` | the id of the record touched: `usr_`, `acc_`, `tok_`, `whk_`, a role id |
 | `source` | the client address, null without a request |

@@ -140,11 +140,13 @@ the audit keeps as well are listed in [AUDIT.md](AUDIT.md) section 2.
 
 | Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | signed in to the UI | user, source | |
+| INFO | signed in to the UI [with a code of D] | user, source, how: `password`, `password+totp`, `password+recovery`, the device | after the code, for a user with a second factor |
 | WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | |
+| WARNING | someone typed a wrong code to sign in to the UI as X | user, source | after the right password ([AUTHENTICATION.md](AUTHENTICATION.md) 3) |
+| WARNING | X signed in with a recovery code, N left | user, count, source | its app is gone or out of reach |
 | INFO | signed out | user | |
 | WARNING | someone presented token T of U: reason | token name and id, user id, source, reason: revoked, expired or its user disabled | a token the service does not know counts against the sign-in throttle alone |
-| WARNING | a wrong password to confirm a step | user | |
+| WARNING | a wrong password or code to confirm a step | user | |
 
 Sessions ending by idleness or restart are not logged. The lockouts of
 the sign-in throttle are in 5.9 with the other limits.
@@ -160,6 +162,11 @@ the sign-in throttle are in 5.9 with the other limits.
 | INFO | X deleted user Y and its N webhooks | actor, user, count | |
 | INFO | X changed its password | user | |
 | INFO | X set the password of Y / a one-time password for Y | actor, user | |
+| INFO | X added the authenticator app D to its second factor[, which turns it on] | user, device | TOTP. The first device turns the second factor on |
+| INFO | X renamed its authenticator app D to E | user, both names | TOTP |
+| INFO | X removed its authenticator app D / the authenticator app D of Y[, the last one: the second factor is off] | actor, user, device | TOTP |
+| INFO | X removed every device of the second factor of Y | actor, user | every method and the recovery codes. The host too, with `users reset-second-factor` |
+| INFO | X made new recovery codes for its second factor | user | |
 | INFO | X issued token Z for Y, with its expiry | actor, token name and id, user, expiry | |
 | INFO | X revoked token Z of Y | actor, token name and id, user | |
 | INFO | X created / replaced / deleted role R | actor, role, [its rights] | |
@@ -486,8 +493,10 @@ and that each is listed here.
 | `system.not_audited` | an activity the audit could not keep |
 | `auth.signed_in` | a sign-in to the UI |
 | `auth.sign_in_failed` | a failed sign-in to the UI |
+| `auth.code_failed` | a wrong code of the second factor at the sign-in |
+| `auth.recovery_code_used` | a sign-in with a recovery code |
 | `auth.signed_out` | a sign-out of the UI |
-| `auth.confirm_failed` | a wrong password to confirm a step |
+| `auth.confirm_failed` | a wrong password or code to confirm a step |
 | `auth.token_refused` | a token that is revoked, expired or of a disabled user |
 | `auth.locked_out` | a client address locked out after failed sign-ins |
 | `auth.lockout_ended` | its lockout ended |
@@ -499,6 +508,11 @@ and that each is listed here.
 | `users.sign_in_allowed` | the host gave a user its UI sign-in back |
 | `users.password_changed` | a user changed its own password |
 | `users.password_set` | a password or one-time password set for a user |
+| `users.totp_added` | an authenticator app (TOTP) added to a second factor |
+| `users.totp_renamed` | an authenticator app (TOTP) renamed |
+| `users.totp_removed` | an authenticator app (TOTP) removed |
+| `users.factor_removed` | a whole second factor removed, every method |
+| `users.codes_renewed` | new recovery codes for a second factor |
 | `users.token_issued` | a token issued |
 | `users.token_revoked` | a token revoked |
 | `users.role_created` | a role created |

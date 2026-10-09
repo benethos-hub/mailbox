@@ -17,6 +17,7 @@ from ...services import (
     Tokens,
     Users,
     get_audit,
+    get_factors,
     get_passwords,
     get_roles,
     get_tokens,
@@ -212,6 +213,14 @@ def _user_page(
         can_create_token=caller.allows("create_token"),
         can_revoke=caller.allows("revoke_token"),
         can_set_password=caller.allows("set_password"),
+        can_remove_factor=caller.allows("remove_second_factor"),
+        can_remove_device=caller.allows("remove_totp_device"),
+        factor=if_allowed(
+            caller,
+            "get_second_factor",
+            lambda: get_factors(request).of(caller, user_id),
+            None,
+        ),
         activity=if_allowed(
             caller,
             "list_activity",

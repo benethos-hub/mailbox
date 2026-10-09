@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from fastapi import Request
 
 from ..data.models import ProviderType
@@ -12,6 +14,11 @@ def public_base(request: Request) -> str:
     """``MAILBOX_SERVICE_PUBLIC_URL``, else the address the request came to."""
     base = app_settings(request.app).public_url or str(request.base_url)
     return base.rstrip("/")
+
+
+def public_host(request: Request) -> str:
+    """The host name of ``public_base``, without scheme and port."""
+    return urlsplit(public_base(request)).hostname or "localhost"
 
 
 def client_address(request: Request) -> str:

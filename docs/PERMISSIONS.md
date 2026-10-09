@@ -67,7 +67,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account` | an account |
 | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account` | the service |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `delete_webhook` | the service |
-| `users.read` | `list_users`, `get_user`, `list_tokens`, `list_roles`, `get_role` | the service |
+| `users.read` | `list_users`, `get_user`, `list_tokens`, `get_second_factor`, `list_roles`, `get_role` | the service |
 | `users.manage` | `users.read` and changes to users, tokens, passwords, roles: fourteen rights | the service |
 | `admin` | everything, and `show_recovery_key` and `read_service_log`, which nothing else gives | the service |
 
@@ -139,7 +139,7 @@ from becoming a way up:
 - **Nobody locks itself out.** A user cannot delete or disable itself
   and cannot take its own UI sign-in.
 - **The recovery key and the service log are `admin` only**, the key
-  after the password again.
+  after the password again, and a code with a second factor.
 
 ## 6. Credentials and kinds of user
 
@@ -153,8 +153,9 @@ from becoming a way up:
   their own name. The audit then names the token.
 - **Disabled** ends every credential at once. Rights changes count from
   the next request.
-- Later: TOTP or a passkey as a second factor for UI users, OAuth client
-  credentials for machines (IDEAS). New credential kinds, the same
+- A second factor for UI users, TOTP, since 2026-10-09
+  ([AUTHENTICATION.md](AUTHENTICATION.md)). Later a passkey, OAuth
+  client credentials for machines (IDEAS). New credential kinds, the same
   rights.
 
 ## 7. Where the model shows
@@ -243,8 +244,8 @@ tokens without being able to create any.
 
 | Group | Rights |
 |---|---|
-| `users.read` | `list_users`, `get_user`, `list_tokens`, `list_roles`, `get_role` |
-| `users.manage` | `users.read` and `create_user`, `update_user`, `delete_user`, `create_token`, `revoke_token`, `set_password`, `create_role`, `replace_role`, `delete_role` |
+| `users.read` | `list_users`, `get_user`, `list_tokens`, `get_second_factor`, `list_roles`, `get_role` |
+| `users.manage` | `users.read` and `create_user`, `update_user`, `delete_user`, `create_token`, `revoke_token`, `set_password`, `remove_second_factor`, `remove_totp_device`, `create_role`, `replace_role`, `delete_role` |
 
 Migration: none, `users.manage` keeps every right it had.
 

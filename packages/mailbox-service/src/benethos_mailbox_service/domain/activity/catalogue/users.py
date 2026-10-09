@@ -130,6 +130,99 @@ class PasswordSet(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class TotpAdded(Activity):
+    """The actor added a TOTP device, an authenticator app, to its second
+    factor. The first device turns it on. Nobody adds one for another
+    user."""
+
+    name: ClassVar[str] = "totp_added"
+    audited: ClassVar[bool] = True
+
+    device: str
+    first: bool
+
+    def says(self) -> str:
+        added = f"added the authenticator app {self.device} to its second factor"
+        return f"{added}, which turns it on" if self.first else added
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class TotpRenamed(Activity):
+    name: ClassVar[str] = "totp_renamed"
+    audited: ClassVar[bool] = True
+
+    before: str
+    after: str
+
+    def says(self) -> str:
+        return f"renamed its authenticator app {self.before} to {self.after}"
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class TotpRemoved(Activity):
+    """One TOTP device taken away, by its user or by a user with
+    ``users.manage``. With the last device the second factor is off."""
+
+    name: ClassVar[str] = "totp_removed"
+    audited: ClassVar[bool] = True
+
+    user: User
+    device: str
+    last: bool
+
+    def says(self) -> str:
+        if self.user.id == self.by.user_id:
+            removed = f"removed its authenticator app {self.device}"
+        else:
+            removed = (
+                f"removed the authenticator app {self.device} of {user(self.user)}"
+            )
+        return (
+            f"{removed}, the last one: the second factor is off"
+            if self.last
+            else removed
+        )
+
+    def touched(self) -> str | None:
+        return self.user.id
+
+
+@dataclass(frozen=True, kw_only=True)
+class SecondFactorRemoved(Activity):
+    """The whole second factor taken away, every method and the recovery
+    codes: by a user with ``users.manage``, or on the host."""
+
+    name: ClassVar[str] = "factor_removed"
+    audited: ClassVar[bool] = True
+
+    user: User
+
+    def says(self) -> str:
+        return f"removed every device of the second factor of {user(self.user)}"
+
+    def touched(self) -> str | None:
+        return self.user.id
+
+
+@dataclass(frozen=True, kw_only=True)
+class RecoveryCodesRenewed(Activity):
+    name: ClassVar[str] = "codes_renewed"
+    audited: ClassVar[bool] = True
+
+    def says(self) -> str:
+        return "made new recovery codes for its second factor"
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
 class TokenIssued(Activity):
     name: ClassVar[str] = "token_issued"
     audited: ClassVar[bool] = True

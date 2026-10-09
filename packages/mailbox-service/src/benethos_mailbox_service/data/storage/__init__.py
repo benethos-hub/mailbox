@@ -30,6 +30,7 @@ from .index import (
     MessageIndexRepository,
 )
 from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
+from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .repositories import Repositories, Store, open_repositories
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
@@ -41,15 +42,18 @@ from .sqlite import (
     SqliteIdempotencyRepository,
     SqliteMessageIndexRepository,
     SqlitePasswordRepository,
+    SqliteRecoveryCodeRepository,
     SqliteRoleRepository,
     SqliteSendLogRepository,
     SqliteTokenRepository,
+    SqliteTotpRepository,
     SqliteUserRepository,
     SqliteWebhookRepository,
     inspect_file,
     migrate_file,
     service_lock,
 )
+from .totp import InMemoryTotpRepository, StoredTotpDevice, TotpRepository
 from .users import (
     InMemoryRoleRepository,
     InMemoryTokenRepository,
@@ -87,6 +91,8 @@ __all__ = [
     "InMemoryMessageIndexRepository",
     "InMemoryPasswordRepository",
     "InMemoryRoleRepository",
+    "InMemoryRecoveryCodeRepository",
+    "InMemoryTotpRepository",
     "InMemorySendLogRepository",
     "InMemoryTokenRepository",
     "InMemoryUserRepository",
@@ -101,6 +107,7 @@ __all__ = [
     "RoleRepository",
     "SCHEMA_VERSION",
     "Sealed",
+    "RecoveryCodeRepository",
     "SendLogRepository",
     "SqliteAccountRepository",
     "SqliteChangeLogRepository",
@@ -108,14 +115,18 @@ __all__ = [
     "SqliteMessageIndexRepository",
     "SqlitePasswordRepository",
     "SqliteRoleRepository",
+    "SqliteRecoveryCodeRepository",
+    "SqliteTotpRepository",
     "SqliteSendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",
     "SqliteWebhookRepository",
     "Store",
+    "StoredTotpDevice",
     "StoredPassword",
     "StoredResult",
     "TokenRepository",
+    "TotpRepository",
     "UserRepository",
     "WebhookRecord",
     "WebhookRepository",

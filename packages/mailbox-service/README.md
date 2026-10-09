@@ -64,6 +64,9 @@ benethos-mailbox-service serve
   standard error, so it can be piped straight into a password manager.
   Printed to a terminal, it stays in its scrollback, and in a container
   or CI job, in the log of that run. Clear these afterwards.
+- A lost second factor without a recovery code:
+  `users reset-second-factor <name>`
+  on the host removes it ([AUTHENTICATION.md](https://github.com/benethos-hub/mailbox/blob/main/docs/AUTHENTICATION.md)).
 - `serve` listens on `http://127.0.0.1:8080`:
   - `/ui`: the configuration UI (sign in with the user name and password)
   - `/docs`: the interactive API documentation
@@ -230,6 +233,7 @@ holds is written as `***`, should a message or a traceback carry one.
 | `keys generate` | prints a new master key for a key file or a container secret, stores nothing |
 | `users create-admin [--name N]` | creates a user with every right and prints a one-time password |
 | `users set-password NAME` | gives the user a new one-time password and prints it, and switches its UI sign-in on |
+| `users reset-second-factor NAME` | removes the user's second factor, every method and the recovery codes |
 | `backup FILE` | writes an encrypted backup, while the service runs |
 | `backup verify FILE [--recovery-key]` | checks a backup |
 | `restore FILE [--recovery-key [--replace-master-key]]` | replaces the database with a backup. Stop the service first. |

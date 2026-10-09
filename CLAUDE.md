@@ -88,7 +88,10 @@ done. Update the roadmap in the same commit that finishes an item.
   user, a role and a token and uses the token on the API, opens the
   status, adds and removes a webhook, shows the recovery key of its own
   service, reads its log, makes a user with a one-time password and
-  reads the audit of administration.
+  reads the audit of administration. A user of its own adds two devices
+  of the second factor's first method, TOTP, from the keys of their QR
+  codes, renames one, signs in with a code of each and a recovery code,
+  and has them removed by itself, the admin and the host.
   How the pages look and behave, and the checklist for a new page:
   `docs/UI.md`.
 - Microsoft accounts: the service comes with the project's app,
@@ -163,6 +166,7 @@ docs/
   REFACTORING.md          # how the layout came to be
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   GOOGLE.md               # connecting Gmail accounts, the Google client
+  AUTHENTICATION.md       # the factors of the UI sign-in: password, TOTP
   ROADMAP.md              # phases and their state
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test

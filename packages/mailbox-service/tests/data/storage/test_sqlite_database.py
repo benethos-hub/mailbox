@@ -18,6 +18,7 @@ from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.common.clock import iso
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ApiToken, ProviderType, User
+from benethos_mailbox_service.data.secrets import cipher, encode_recovery, totp
 from benethos_mailbox_service.data.storage import (
     Database,
     SqliteTokenRepository,
@@ -220,6 +221,39 @@ def test_set_password_command(
         asyncio.run(services.auth.sign_in("admin", first, source="host"))
     services.close()
     assert main(["users", "set-password", "nobody"]) == 1
+    assert "no user is named nobody" in capsys.readouterr().err
+
+
+def test_reset_totp_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "sqlite")
+    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    assert main(["users", "create-admin"]) == 0
+    first = capsys.readouterr().out.strip()
+    services = build_services(Settings())
+    services.vault.initialize()
+    user = services.auth.user_named("admin")
+    assert user is not None
+    access = services.auth.access_of(user.id)
+    assert access is not None
+    name, secret = asyncio.run(services.totp.begin(access, "Phone", first))
+    code = totp.code(secret, totp.step_of(datetime.now(UTC)))
+    services.totp.confirm(access, name, secret, code)
+    services.close()
+
+    assert main(["users", "reset-second-factor", "ADMIN"]) == 0
+    out, err = capsys.readouterr()
+    assert out == "" and "Removed the second factor of admin" in err
+    services = build_services(Settings())
+    assert not services.factors.has(user.id)
+    services.close()
+    assert main(["users", "reset-second-factor", "admin"]) == 1
+    assert "admin has no second factor" in capsys.readouterr().err
+    assert main(["users", "reset-second-factor", "nobody"]) == 1
     assert "no user is named nobody" in capsys.readouterr().err
 
 

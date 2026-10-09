@@ -1,5 +1,7 @@
 """``users create-admin`` and ``users set-password``: a one-time password
-for a user, made on the host."""
+for a user, made on the host. ``users reset-second-factor``: a user's
+second factor removed, when its owner lost every device and the
+recovery codes."""
 
 from __future__ import annotations
 
@@ -27,6 +29,13 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
         parents=[option],
     )
     set_password.add_argument("name")
+    reset = users_commands.add_parser(
+        "reset-second-factor",
+        help="remove a user's second factor, every method and the recovery "
+        "codes, e.g. when the last administrator lost them all",
+        parents=[option],
+    )
+    reset.add_argument("name")
 
 
 def run(args: argparse.Namespace) -> None:
@@ -37,6 +46,15 @@ def run(args: argparse.Namespace) -> None:
 
     settings = stored(load_settings(args.env_file), "users")
     with opened(settings) as services:
+        if args.users_command == "reset-second-factor":
+            user = services.factors.reset(args.name)
+            say(
+                f"Removed the second factor of {user.name} ({user.id}) in "
+                f"{settings.database_path}. Its sessions end. It signs in to "
+                "the UI with its password alone, and adds a device again on "
+                "its page Second factor."
+            )
+            return
         if args.users_command == "create-admin":
             user, password = anyio.run(services.users.create_admin, args.name)
             done = f"Created user {user.id} ({user.name}) with every right"

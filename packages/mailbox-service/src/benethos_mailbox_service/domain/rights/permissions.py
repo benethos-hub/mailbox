@@ -68,7 +68,14 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "create_account",
     ),
     # Who exists, never a change. users.manage holds every one of them.
-    "users.read": ("list_users", "get_user", "list_tokens", "list_roles", "get_role"),
+    "users.read": (
+        "list_users",
+        "get_user",
+        "list_tokens",
+        "get_second_factor",
+        "list_roles",
+        "get_role",
+    ),
     "users.manage": (
         "list_users",
         "create_user",
@@ -79,6 +86,9 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "create_token",
         "revoke_token",
         "set_password",
+        "get_second_factor",
+        "remove_second_factor",
+        "remove_totp_device",
         "list_roles",
         "create_role",
         "get_role",
