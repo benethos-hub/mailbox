@@ -36,6 +36,11 @@ service decides who may do what. A script, an app or an AI agent gets
 a token of its own. That token opens exactly the accounts and
 operations it was given, nothing more.
 
+<picture>
+  <source srcset="assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
+  <img src="assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP and POP3, with the Gmail API planned.">
+</picture>
+
 That makes a few things simple that are hard otherwise.
 
 ### Working with an AI agent in your mail
@@ -138,11 +143,6 @@ provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
 | `mailbox-service` | the service: REST API, configuration UI, users and rights, accounts, encrypted credentials, provider adapters, background sync | permanently | [packages/mailbox-service](packages/mailbox-service/README.md) |
 | `mailbox-client` | the Python client of the REST API, async and sync | inside your own code | [packages/mailbox-client](packages/mailbox-client/README.md) |
 | `mailbox-mcp` | the MCP server, on top of `mailbox-client` | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
-
-<picture>
-  <source srcset="assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
-  <img src="assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP and POP3, with the Gmail API planned.">
-</picture>
 
 A release publishes all three to PyPI under the same version, as
 `benethos-mailbox-service`, `benethos-mailbox-client` and
