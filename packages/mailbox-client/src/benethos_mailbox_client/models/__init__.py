@@ -7,6 +7,7 @@ the JSON of the API, which describes them in docs/openapi.json."""
 from __future__ import annotations
 
 from .accounts import Account, StoredCredential
+from .audit import Activity
 from .discovery import (
     Candidate,
     DeviceSignIn,
@@ -30,6 +31,7 @@ from .users import NewPassword, User
 from .webhooks import NewWebhook, Webhook, WebhookDetail, WebhookPost, WebhookSecret
 
 __all__ = [
+    "Activity",
     "NewWebhook",
     "WebhookDetail",
     "WebhookPost",

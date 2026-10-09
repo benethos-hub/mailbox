@@ -176,6 +176,10 @@ class MailboxClient:
     remove_second_factor = awaiting(endpoints.remove_second_factor)
     remove_totp_device = awaiting(endpoints.remove_totp_device)
 
+    # --- the audit --------------------------------------------------------------------
+
+    list_activity = awaiting(endpoints.list_activity)
+
     # --- attachments ------------------------------------------------------------------
 
     async def get_attachment(

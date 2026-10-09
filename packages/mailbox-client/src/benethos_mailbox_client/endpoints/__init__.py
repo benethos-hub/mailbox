@@ -17,6 +17,7 @@ from .accounts import (
     update_account,
     verify_account,
 )
+from .audit import list_activity
 from .compose import message_body
 from .discovery import discover_account, poll_device_oauth, start_device_oauth
 from .drafts import create_draft, delete_draft, list_drafts, update_draft
@@ -59,6 +60,7 @@ from .webhooks import (
 )
 
 __all__ = [
+    "list_activity",
     "create_webhook",
     "delete_webhook",
     "get_webhook",

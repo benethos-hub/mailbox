@@ -20,6 +20,7 @@ from .errors import (
 )
 from .models import (
     Account,
+    Activity,
     Attachment,
     Candidate,
     Changes,
@@ -62,6 +63,7 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "Activity",
     "NewWebhook",
     "WebhookDetail",
     "WebhookPost",

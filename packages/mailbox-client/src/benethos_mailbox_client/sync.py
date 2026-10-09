@@ -178,6 +178,10 @@ class SyncMailboxClient:
     remove_second_factor = blocking(endpoints.remove_second_factor)
     remove_totp_device = blocking(endpoints.remove_totp_device)
 
+    # --- the audit --------------------------------------------------------------------
+
+    list_activity = blocking(endpoints.list_activity)
+
     # --- attachments ------------------------------------------------------------------
 
     def get_attachment(
