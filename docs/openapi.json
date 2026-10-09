@@ -10103,7 +10103,7 @@
           "attention": {
             "type": "boolean",
             "title": "Attention",
-            "description": "Whether a person should look: the account is not connected, or its last pass failed"
+            "description": "Whether a person should look: the account is not connected, the service cannot use it, or its last pass failed"
           }
         },
         "type": "object",
@@ -13310,7 +13310,8 @@
                 "items": {
                   "type": "string"
                 },
-                "type": "array"
+                "type": "array",
+                "minItems": 1
               },
               {
                 "type": "null"
@@ -13537,7 +13538,8 @@
                 "items": {
                   "type": "string"
                 },
-                "type": "array"
+                "type": "array",
+                "minItems": 1
               },
               {
                 "type": "null"

@@ -103,6 +103,25 @@ adheres to [Semantic Versioning](https://semver.org/).
   chips, and Move asks for the folder in a dialog. The batch bar of a
   mail list asks for a folder only to move, and its head ticks all.
 
+### Fixed
+
+- A Gmail or Microsoft account whose OAuth app is missing from the
+  settings no longer breaks every page of the UI. The Accounts list
+  says it cannot be used, it counts as needing attention, and it can be
+  removed. In `GET /v1/status` it is not `synced` and needs
+  `attention`.
+- Changing your password checks the current one as any confirmation
+  does: a wrong one counts against your name and is audited as
+  `auth.confirm_failed`.
+- A webhook's `accounts` cannot be an empty list, which would hear
+  nothing. Send `null` for every account.
+- Changing a webhook needs `list_changes` only on the accounts the
+  change adds. An owner who lost the right on one of its accounts can
+  still change the URL or the events.
+- The UI's Users list counts only the users a batch changed, not those
+  that were as asked already.
+- `mailbox-client`: `Me` has the caller's `user_id` and `name`.
+
 ## [0.3.1] - 2026-10-08
 
 ### Added

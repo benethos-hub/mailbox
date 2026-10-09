@@ -443,3 +443,16 @@ def test_a_batch_changes_each_user_it_may_and_names_the_others(
         services.users.change_users(ADMIN, [one.id], "give_role")
     unknown = services.users.change_users(ADMIN, [one.id], "give_role", "nobody")
     assert unknown.refused == [("one", "unknown role: nobody")]
+
+
+def test_a_batch_counts_only_the_users_it_changed(services: Services) -> None:
+    from ...conftest import ADMIN
+
+    one = services.users.create_user(ADMIN, "one", [], [])
+    two = services.users.create_user(ADMIN, "two", [], [])
+    services.users.update_user(ADMIN, two.id, disabled=True)
+    services.roles.create_role(ADMIN, "helper", [])
+    disabled = services.users.change_users(ADMIN, [one.id, two.id], "disable")
+    assert [u.name for u in disabled.changed] == ["one"]
+    taken = services.users.change_users(ADMIN, [one.id, two.id], "take_role", "helper")
+    assert taken.changed == [] and taken.refused == []

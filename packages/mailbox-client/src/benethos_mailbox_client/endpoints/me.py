@@ -29,6 +29,8 @@ def list_permissions() -> Call[Permissions]:
 
 def _me(found: dict[str, Any]) -> Me:
     return Me(
+        user_id=str(found["user_id"]),
+        name=str(found["name"]),
         accounts=[
             MeAccount(
                 id=str(a["id"]),

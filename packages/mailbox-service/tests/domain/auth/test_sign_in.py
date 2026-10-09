@@ -30,6 +30,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...conftest import ADMIN, CHEAP
+from ...factor_helpers import credentials
 
 SECRET = "correct horse battery staple"
 OTHER = "a different long passphrase"
@@ -134,6 +135,22 @@ async def test_the_rules_of_a_new_password(
     caller = services.auth.session_access(user.id, signed.stamp)
     with pytest.raises(BadRequestError, match=message):
         await services.passwords.change_password(caller, current, new)
+
+
+async def test_a_wrong_current_password_counts_as_a_failed_confirmation(
+    services: Services,
+) -> None:
+    """It is audited and counts against the name, and a long one is
+    refused before it is hashed."""
+    user = await anna(services)
+    signed = await services.auth.sign_in("Anna", SECRET, source="10.0.0.1")
+    caller = services.auth.session_access(user.id, signed.stamp)
+    for wrong in ["not the current one", "x" * 257] * 5:
+        with pytest.raises(BadRequestError, match="current password is not right"):
+            await services.passwords.change_password(caller, wrong, OTHER)
+    assert credentials(services, "auth.confirm_failed")
+    with pytest.raises(RateLimitedError):
+        await services.passwords.change_password(caller, SECRET, OTHER)
 
 
 async def test_a_password_is_not_the_name(services: Services) -> None:

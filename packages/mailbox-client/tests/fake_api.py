@@ -33,6 +33,8 @@ class FakeApi:
 
 
 ME = {
+    "user_id": "usr_1",
+    "name": "me",
     "accounts": [
         {
             "id": "acc_1",

@@ -13,14 +13,16 @@ from starlette.datastructures import FormData
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import (
+    Account,
     Candidate,
     Discovery,
     Grant,
     Hint,
     ProviderType,
 )
+from benethos_mailbox_service.errors import NotSupportedError
 
-from ...conftest import browser_user
+from ...conftest import ADMIN, browser_user
 from ...ui_helpers import post, sign_in
 
 
@@ -275,3 +277,35 @@ def test_accounts_page_by_address(
     second = ui.get(html.unescape(on.group(1))).text
     assert "zed@example.org" in second and "a@example.net" not in second
     assert ">First</a>" in second
+
+
+def test_an_account_without_its_oauth_app_keeps_every_page_open(
+    ui: TestClient, services: Services
+) -> None:
+    """Its adapter cannot be built: the dots of the sidebar, the list and
+    its page still open, it needs attention, and it can be removed."""
+    services.repositories.accounts.add(
+        Account(id="acc_gmail", provider=ProviderType.GMAIL, email="g@example.com")
+    )
+    for path in ("/ui", "/ui/accounts", "/ui/accounts/acc_gmail", "/ui/webhooks"):
+        page = ui.get(path)
+        assert page.status_code == 200, (path, page.text)
+    listed = ui.get("/ui/accounts").text
+    assert "cannot be used" in listed
+    assert "no OAuth app for gmail" in listed
+    [health] = services.status.status(ADMIN).accounts
+    assert health.attention
+    assert not health.synced
+    assert "Account removed" in post(ui, "/ui/accounts/acc_gmail/delete").text
+    assert services.repositories.accounts.list() == []
+
+
+def test_a_page_opens_when_the_dots_cannot_be_told(
+    ui: TestClient, services: Services, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fails(access: Any) -> None:
+        raise NotSupportedError("no adapter")
+
+    monkeypatch.setattr(services.status, "attention", fails)
+    assert ui.get("/ui/accounts").status_code == 200
+    assert ui.get("/ui/accounts/acc_unknown").status_code == 404

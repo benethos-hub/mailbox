@@ -113,7 +113,9 @@ async def change_users(
     with failing(here):
         done = users.change_users(caller, user or [], action, role or None)
     refused = "; ".join(f"{name}: {why}" for name, why in done.refused)
-    message = f"{plural(len(done.changed), 'user')} changed." if done.changed else None
+    message: str | None = f"{plural(len(done.changed), 'user')} changed."
+    if not done.changed:
+        message = None if refused else "Nothing to change."
     return back(request, here, message, f"Not changed: {refused}." if refused else None)
 
 

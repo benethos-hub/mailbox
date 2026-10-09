@@ -32,8 +32,9 @@ BATCH_ACTIONS = ("disable", "enable", "give_role", "take_role")
 
 @dataclass(frozen=True)
 class BatchOutcome:
-    """What a batch did: the users it changed, and for each one it did not
-    change, its name and why."""
+    """What a batch did: the users it changed, and for each one it could
+    not change, its name and why. A user that was as asked already is in
+    neither."""
 
     changed: list[User]
     refused: list[tuple[str, str]]
@@ -247,18 +248,29 @@ class UserService:
         changed, refused = [], []
         for user_id in dict.fromkeys(user_ids):
             try:
-                changed.append(self._change_one(access, user_id, action, role or ""))
+                done = self._change_one(access, user_id, action, role or "")
             except MailboxServiceError as exc:
                 refused.append((self._name_of(user_id), exc.message))
+            else:
+                if done is not None:
+                    changed.append(done)
         return BatchOutcome(changed=changed, refused=refused)
 
-    def _change_one(self, access: Access, user_id: str, action: str, role: str) -> User:
-        if action in ("disable", "enable"):
-            return self.update_user(access, user_id, disabled=action == "disable")
+    def _change_one(
+        self, access: Access, user_id: str, action: str, role: str
+    ) -> User | None:
+        """The user changed, None when it was as asked already."""
         user = self._rules.managed(access, "update_user", user_id)
+        if action in ("disable", "enable"):
+            disabled = action == "disable"
+            if user.disabled == disabled:
+                return None
+            return self.update_user(access, user_id, disabled=disabled)
         roles = [r for r in user.roles if r != role]
         if action == "give_role":
             roles.append(role)
+        if sorted(roles) == sorted(user.roles):
+            return None
         return self.update_user(access, user_id, roles=roles)
 
     def _name_of(self, user_id: str) -> str:

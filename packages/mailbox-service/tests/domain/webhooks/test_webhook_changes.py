@@ -16,6 +16,8 @@ from benethos_mailbox_service.data.models import (
     Grant,
     ProviderType,
     Webhook,
+    WebhookCreate,
+    WebhookUpdate,
 )
 from benethos_mailbox_service.data.storage import (
     Database,
@@ -26,7 +28,9 @@ from benethos_mailbox_service.data.storage import (
     WebhookRecord,
     WebhookRepository,
 )
+from benethos_mailbox_service.domain.rights import Access
 from benethos_mailbox_service.domain.webhooks.service import sealed_label
+from benethos_mailbox_service.errors import NotFoundError
 
 from ...conftest import ADMIN, bearer_for, create_account
 
@@ -94,6 +98,47 @@ def test_accounts_null_is_every_account_and_a_list_needs_the_right(
     hidden = limited.patch(f"/v1/webhooks/{hook}", json={"accounts": [other.id]})
     assert hidden.status_code == 404
     assert limited.get(f"/v1/webhooks/{hook}").json()["accounts"] is None
+
+
+def test_an_owner_who_lost_a_right_still_changes_the_webhook(
+    ready: Services, account_id: str
+) -> None:
+    """Only an account the change adds needs the right. One the owner can
+    no longer read stays."""
+    other = create_account(ready.accounts, ProviderType.MEMORY, "b@example.com")
+    service = ["webhooks.manage"]
+    both = Access(
+        "usr_o", "owner", [Grant(accounts=["*"], allow=["mail.read"])], service=service
+    )
+    made = ready.webhooks.create_webhook(
+        both, WebhookCreate(url=HOOK["url"], accounts=[account_id, other.id])
+    )
+    one = Access(
+        "usr_o",
+        "owner",
+        [Grant(accounts=[account_id], allow=["mail.read"])],
+        service=service,
+    )
+    moved = ready.webhooks.update_webhook(
+        one, made.id, WebhookUpdate(url="https://other.example.org/x")
+    )
+    assert moved.url == "https://other.example.org/x"
+    assert moved.accounts == [account_id, other.id]
+    with pytest.raises(NotFoundError):
+        ready.webhooks.update_webhook(
+            Access("usr_o", "owner", [], service=service),
+            made.id,
+            WebhookUpdate(accounts=[account_id, other.id, "acc_third"]),
+        )
+
+
+def test_accounts_cannot_be_an_empty_list(client: TestClient, ready: Services) -> None:
+    """It would make a webhook that never hears anything."""
+    assert client.post("/v1/webhooks", json={**HOOK, "accounts": []}).status_code == 422
+    hook = client.post("/v1/webhooks", json=HOOK).json()["id"]
+    emptied = client.patch(f"/v1/webhooks/{hook}", json={"accounts": []})
+    assert emptied.status_code == 422
+    assert client.get(f"/v1/webhooks/{hook}").json()["accounts"] is None
 
 
 @pytest.mark.parametrize(
