@@ -18,6 +18,7 @@ from .accounts import (
     verify_account,
 )
 from .compose import message_body
+from .discovery import discover_account, poll_device_oauth, start_device_oauth
 from .drafts import create_draft, delete_draft, list_drafts, update_draft
 from .folders import create_folder, list_folders
 from .generic import request
@@ -35,6 +36,9 @@ from .sending import send_draft, send_message
 from .webhooks import renew_webhook_secret, update_webhook
 
 __all__ = [
+    "discover_account",
+    "poll_device_oauth",
+    "start_device_oauth",
     "create_account",
     "delete_account",
     "get_account",

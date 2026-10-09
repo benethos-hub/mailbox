@@ -130,6 +130,12 @@ class MailboxClient:
     delete_account = awaiting(endpoints.delete_account)
     verify_account = awaiting(endpoints.verify_account)
 
+    # --- discovery and the sign-in with a code ----------------------------------------
+
+    discover_account = awaiting(endpoints.discover_account)
+    start_device_oauth = awaiting(endpoints.start_device_oauth)
+    poll_device_oauth = awaiting(endpoints.poll_device_oauth)
+
     # --- attachments ------------------------------------------------------------------
 
     async def get_attachment(

@@ -21,8 +21,14 @@ from .errors import (
 from .models import (
     Account,
     Attachment,
+    Candidate,
     Changes,
+    DeviceSignIn,
+    DeviceSignInState,
+    Discovery,
     Folder,
+    Hint,
+    MailServer,
     Me,
     MeAccount,
     Outcome,
@@ -32,6 +38,7 @@ from .models import (
     Secret,
     Sending,
     Sent,
+    SourceReport,
     StoredCredential,
     Webhook,
     WebhookSecret,
@@ -44,6 +51,13 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "Candidate",
+    "DeviceSignIn",
+    "DeviceSignInState",
+    "Discovery",
+    "Hint",
+    "MailServer",
+    "SourceReport",
     "Account",
     "StoredCredential",
     "Paged",

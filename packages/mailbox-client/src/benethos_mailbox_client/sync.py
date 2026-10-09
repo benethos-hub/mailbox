@@ -132,6 +132,12 @@ class SyncMailboxClient:
     delete_account = blocking(endpoints.delete_account)
     verify_account = blocking(endpoints.verify_account)
 
+    # --- discovery and the sign-in with a code ----------------------------------------
+
+    discover_account = blocking(endpoints.discover_account)
+    start_device_oauth = blocking(endpoints.start_device_oauth)
+    poll_device_oauth = blocking(endpoints.poll_device_oauth)
+
     # --- attachments ------------------------------------------------------------------
 
     def get_attachment(
