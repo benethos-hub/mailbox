@@ -304,8 +304,10 @@ packages/mailbox-service/
                         #   values.py), smtp.py (smtplib),
                         #   pop3.py (poplib), jmap/ (JMAP over http:
                         #   client.py, shapes.py, answers.py),
-                        #   oauth.py (OAuth 2.0 with PKCE, sign-in
-                        #   with a code, refresh, token source),
+                        #   oauth/ (OAuth 2.0: values.py, client.py
+                        #   with PKCE, the sign-in with a code and
+                        #   refresh, answers.py what the provider
+                        #   answers, tokens.py the token source),
                         #   transport.py: the Server, TLS,
                         #   timeouts, translated(): a library's errors
                         #   as this project's, the failures below
@@ -650,7 +652,7 @@ noticing. Every change is measured against that.
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
-| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
+| OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Folders for settings and data | `folders()` in `config.py` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
