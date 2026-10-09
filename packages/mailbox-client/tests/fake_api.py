@@ -69,3 +69,14 @@ BODY = message_body(
     html="<p>Hello</p>",
     reference=("msg_1", "reply"),
 )
+
+ACCOUNT = {
+    "id": "acc_1",
+    "provider": "imap",
+    "email": "me@example.com",
+    "display_name": None,
+    "status": "connected",
+    "credentials": [{"field": "password", "updated_at": "2026-10-01T00:00:00Z"}],
+    "settings": {"host": "imap.example.com", "port": 993},
+    "capabilities": ["flags", "folders"],
+}

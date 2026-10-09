@@ -9,6 +9,14 @@ name or a field of the API.
 
 from __future__ import annotations
 
+from .accounts import (
+    create_account,
+    delete_account,
+    get_account,
+    list_accounts,
+    update_account,
+    verify_account,
+)
 from .compose import message_body
 from .drafts import create_draft, delete_draft, list_drafts, update_draft
 from .folders import create_folder, list_folders
@@ -27,6 +35,12 @@ from .sending import send_draft, send_message
 from .webhooks import renew_webhook_secret, update_webhook
 
 __all__ = [
+    "create_account",
+    "delete_account",
+    "get_account",
+    "list_accounts",
+    "update_account",
+    "verify_account",
     "create_draft",
     "create_folder",
     "delete_draft",

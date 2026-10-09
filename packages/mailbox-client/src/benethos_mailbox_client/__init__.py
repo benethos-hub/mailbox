@@ -19,6 +19,7 @@ from .errors import (
     ServiceUnavailableError,
 )
 from .models import (
+    Account,
     Attachment,
     Changes,
     Folder,
@@ -26,10 +27,12 @@ from .models import (
     MeAccount,
     Outcome,
     Page,
+    Paged,
     Recipient,
     Secret,
     Sending,
     Sent,
+    StoredCredential,
     Webhook,
     WebhookSecret,
 )
@@ -41,6 +44,9 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "Account",
+    "StoredCredential",
+    "Paged",
     "ApiError",
     "Attachment",
     "Changes",

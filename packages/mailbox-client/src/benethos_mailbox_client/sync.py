@@ -123,6 +123,15 @@ class SyncMailboxClient:
     update_webhook = blocking(endpoints.update_webhook)
     renew_webhook_secret = blocking(endpoints.renew_webhook_secret)
 
+    # --- accounts ---------------------------------------------------------------------
+
+    list_accounts = blocking(endpoints.list_accounts)
+    create_account = blocking(endpoints.create_account)
+    get_account = blocking(endpoints.get_account)
+    update_account = blocking(endpoints.update_account)
+    delete_account = blocking(endpoints.delete_account)
+    verify_account = blocking(endpoints.verify_account)
+
     # --- attachments ------------------------------------------------------------------
 
     def get_attachment(

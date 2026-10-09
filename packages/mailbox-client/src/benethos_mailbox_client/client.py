@@ -121,6 +121,15 @@ class MailboxClient:
     update_webhook = awaiting(endpoints.update_webhook)
     renew_webhook_secret = awaiting(endpoints.renew_webhook_secret)
 
+    # --- accounts ---------------------------------------------------------------------
+
+    list_accounts = awaiting(endpoints.list_accounts)
+    create_account = awaiting(endpoints.create_account)
+    get_account = awaiting(endpoints.get_account)
+    update_account = awaiting(endpoints.update_account)
+    delete_account = awaiting(endpoints.delete_account)
+    verify_account = awaiting(endpoints.verify_account)
+
     # --- attachments ------------------------------------------------------------------
 
     async def get_attachment(

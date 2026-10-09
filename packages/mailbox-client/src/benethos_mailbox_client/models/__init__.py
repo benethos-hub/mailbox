@@ -6,14 +6,19 @@ the JSON of the API, which describes them in docs/openapi.json."""
 
 from __future__ import annotations
 
+from .accounts import Account, StoredCredential
 from .folders import Folder
 from .me import Me, MeAccount, Sending
 from .messages import Attachment, Changes, Outcome, Page
+from .paging import Paged
 from .secrets import Secret
 from .sending import Recipient, Sent
 from .webhooks import Webhook, WebhookSecret
 
 __all__ = [
+    "StoredCredential",
+    "Account",
+    "Paged",
     "Attachment",
     "Changes",
     "Folder",

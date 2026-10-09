@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from types import EllipsisType
 from typing import Any
 
 from ..calls import Call, given, path
 from ..models import Secret, Webhook, WebhookSecret
+from .readings import maybe_time, time
 
 
 def update_webhook(
@@ -46,12 +46,7 @@ def webhook(item: dict[str, Any]) -> Webhook:
         events=tuple(item["events"]),
         accounts=tuple(accounts) if accounts is not None else None,
         user_id=str(item["user_id"]),
-        created_at=_time(item["created_at"]),
-        last_delivery_at=_time(item.get("last_delivery_at")),
+        created_at=time(item["created_at"]),
+        last_delivery_at=maybe_time(item.get("last_delivery_at")),
         last_error=item.get("last_error"),
     )
-
-
-def _time(value: Any) -> Any:
-    """A time of the API, None as None."""
-    return datetime.fromisoformat(value) if value else None
