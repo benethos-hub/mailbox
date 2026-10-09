@@ -245,7 +245,7 @@ tokens without being able to create any.
 | Group | Rights |
 |---|---|
 | `users.read` | `list_users`, `get_user`, `list_tokens`, `list_roles`, `get_role` |
-| `users.manage` | `users.read` and `create_user`, `update_user`, `delete_user`, `create_token`, `revoke_token`, `set_password`, `create_role`, `replace_role`, `delete_role` |
+| `users.manage` | `users.read` and `create_user`, `update_user`, `delete_user`, `create_token`, `revoke_token`, `set_password`, `remove_second_factor`, `create_role`, `replace_role`, `delete_role` |
 
 Migration: none, `users.manage` keeps every right it had.
 

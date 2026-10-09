@@ -48,6 +48,8 @@ class SignInState:
     # sign-in. False without a password.
     must_change: bool
     last_sign_in_at: datetime | None
+    # A code of an authenticator app is asked after the password.
+    second_factor: bool = False
 
 
 # A user name that fails this often in the window waits this long, from
@@ -344,9 +346,10 @@ class AuthService:
 
     def sign_in_state(self, user_id: str) -> SignInState:
         stored = self.passwords.stored(user_id)
+        factor = self.factor_stamp(user_id) is not None
         if stored is None:
-            return SignInState(False, False, None)
-        return SignInState(True, stored.must_change, stored.last_sign_in_at)
+            return SignInState(False, False, None, factor)
+        return SignInState(True, stored.must_change, stored.last_sign_in_at, factor)
 
     def _live_user(self, user_id: str) -> User:
         """The user, ``UnauthorizedError`` when it is gone or disabled."""

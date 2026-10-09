@@ -1539,10 +1539,11 @@ included for a grant on every account. `user`, `outcome`, `recipient`
 | GET | `/v1/me` | any authenticated user. Who am I, and my effective rights resolved to operations per account |
 | GET | `/v1/permissions` | any authenticated user. The catalogue of operations and groups |
 | GET / POST | `/v1/users` | GET `users.read`, POST `users.manage` |
-| GET / PATCH / DELETE | `/v1/users/{user_id}` | GET `users.read`, the others `users.manage`. Name, roles, service, grants, disabled, `ui_sign_in`. Each answer also says how the user signs in to the UI: `has_password`, `must_change`, `last_sign_in_at` |
+| GET / PATCH / DELETE | `/v1/users/{user_id}` | GET `users.read`, the others `users.manage`. Name, roles, service, grants, disabled, `ui_sign_in`. Each answer also says how the user signs in to the UI: `has_password`, `must_change`, `last_sign_in_at`, `second_factor` |
 | GET / POST | `/v1/users/{user_id}/tokens` | GET `users.read`, POST `users.manage`. POST returns the token once |
 | DELETE | `/v1/users/{user_id}/tokens/{token_id}` | `users.manage`. Revoke |
 | POST | `/v1/users/{user_id}/password` | `users.manage`. A password to change at the next sign-in, or a one-time password answered once |
+| DELETE | `/v1/users/{user_id}/second-factor` | `users.manage`. Removes the user's second factor ([AUTHENTICATION.md](AUTHENTICATION.md)), never the caller's own |
 | GET / POST | `/v1/roles` | GET `users.read`, POST `users.manage` |
 | GET / PUT / DELETE | `/v1/roles/{role_id}` | GET `users.read`, the others `users.manage` |
 | GET | `/v1/audit` | `audit` in `service`. The audit of administration, newest first ([AUDIT.md](AUDIT.md)) |

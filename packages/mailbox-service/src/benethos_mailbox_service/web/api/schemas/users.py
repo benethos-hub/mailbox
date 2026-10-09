@@ -141,6 +141,12 @@ class UserInfo(User):
     last_sign_in_at: datetime | None = Field(
         description="The last sign-in to the UI, null for none yet"
     )
+    second_factor: bool = Field(
+        description=(
+            "Whether the UI sign-in asks for a code of an authenticator app "
+            "after the password. The user sets one up in the UI."
+        )
+    )
 
     @classmethod
     def of(cls, user: User, state: SignInState) -> UserInfo:

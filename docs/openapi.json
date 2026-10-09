@@ -1150,6 +1150,138 @@
         "x-permission": "users.manage"
       }
     },
+    "/v1/users/{user_id}/second-factor": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Remove Second Factor",
+        "description": "Remove a user's second factor and its recovery codes. It signs in to\nthe UI with its password alone until it sets up a new one, and its\nsessions end. The caller must hold every right the user holds. `404`\nwhen the user has none, `409` for the caller itself, who removes its\nown in the UI with a code.",
+        "operationId": "remove_second_factor",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      }
+    },
     "/v1/users/{user_id}/tokens": {
       "get": {
         "tags": [
@@ -12293,6 +12425,11 @@
             ],
             "title": "Last Sign In At",
             "description": "The last sign-in to the UI, null for none yet"
+          },
+          "second_factor": {
+            "type": "boolean",
+            "title": "Second Factor",
+            "description": "Whether the UI sign-in asks for a code of an authenticator app after the password. The user sets one up in the UI."
           }
         },
         "type": "object",
@@ -12301,7 +12438,8 @@
           "name",
           "has_password",
           "must_change",
-          "last_sign_in_at"
+          "last_sign_in_at",
+          "second_factor"
         ],
         "title": "UserInfo",
         "description": "A user, with how it signs in to the UI. Never the password."

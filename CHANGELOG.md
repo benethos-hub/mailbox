@@ -21,6 +21,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Looking up a Gmail address offers **Sign in with Google** first,
   where the deployment has a Google client. The way over IMAP links to
   Google's page for app passwords.
+- Each user in `/v1/users` says whether it has a second factor for the
+  UI sign-in, in `second_factor`. `DELETE /v1/users/{user_id}/second-factor`
+  (`remove_second_factor`, in `users.manage`) removes one, for a user
+  whose rights the caller holds, never for the caller itself. The
+  database moves to schema 18.
 
 ### Changed
 

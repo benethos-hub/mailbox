@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query, status
 from ....data.models import ApiToken, Page, Role, User
 from ....domain.rights import permissions
 from ....domain.users import PasswordService, TokenService
-from ..deps import Caller, Limit, Passwords, Roles, Tokens, Users
+from ..deps import Caller, Factors, Limit, Passwords, Roles, Tokens, Users
 from ..schemas import (
     Me,
     PasswordSet,
@@ -138,6 +138,16 @@ async def set_password(
     new = data.password.get_secret_value() if data.password is not None else None
     password = await passwords.set_password(caller, user_id, new)
     return PasswordSetResult(password=password)
+
+
+@router.delete("/users/{user_id}/second-factor", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_second_factor(user_id: str, caller: Caller, factors: Factors) -> None:
+    """Remove a user's second factor and its recovery codes. It signs in to
+    the UI with its password alone until it sets up a new one, and its
+    sessions end. The caller must hold every right the user holds. `404`
+    when the user has none, `409` for the caller itself, who removes its
+    own in the UI with a code."""
+    factors.remove(caller, user_id)
 
 
 @router.get("/users/{user_id}/tokens")
