@@ -63,7 +63,7 @@ def forward(
         "subject": message.subject or compose.prefixed("Fwd:", original.subject)
     }
     if not quote:
-        return message.model_copy(update=changes), compose.Extras()
+        return message.model_copy(update=changes), compose.NO_EXTRAS
     if forward_as == "attachment":
         return message.model_copy(update=changes), compose.Extras(attached_message=raw)
     changes["text"] = compose.forwarded(original, compose.body_text(message) or None)

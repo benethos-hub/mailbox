@@ -11,19 +11,14 @@ from fastapi.responses import HTMLResponse, Response
 from ....data.models import CHANGE_KINDS, Webhook, WebhookCreate, WebhookUpdate
 from ....domain.rights import Access
 from ....domain.webhooks import WebhookService
-from ...services import Webhooks, get_accounts
-from ..deps import Actor, Viewer, account_names
+from ...services import Webhooks
+from ..deps import Actor, Viewer, account_names, accounts_for
 from ..filters import Field, filter_bar
 from ..forms import REFUSED, FormError, failing, model_of, text_of
 from ..session import show_once, take_once
 from ..templates import back, render
 
 router = APIRouter()
-
-
-def _readable(request: Request, caller: Access) -> list[Any]:
-    """The accounts a webhook of the caller can hear of."""
-    return get_accounts(request).list(caller, may="list_changes")
 
 
 @router.get("/webhooks")
@@ -73,7 +68,7 @@ def _new_webhook_page(
         err=err,
         typed=_typed(form) if form is not None else None,
         events=CHANGE_KINDS,
-        accounts=_readable(request, caller),
+        accounts=accounts_for(request, caller, "list_changes"),
     )
 
 
@@ -157,7 +152,7 @@ def _webhook_page(
         secret=take_once(request, f"secret:{webhook_id}"),
         typed=_typed(form) if form is not None else _shown(found),
         events=CHANGE_KINDS,
-        accounts=_readable(request, caller),
+        accounts=accounts_for(request, caller, "list_changes"),
         can_update=caller.allows("update_webhook"),
         can_renew=caller.allows("renew_webhook_secret"),
         can_delete=caller.allows("delete_webhook"),

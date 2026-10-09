@@ -16,13 +16,14 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 
 from ....common.plaintext import from_html
+from ....common.urls import path_and_query
 from ....data.models import Folder, FolderRole, Message, MessageFilter
 from ....domain.mailbox import MailboxService, find_folder
 from ....domain.rights import Access
 from ...responses import download
 from ...search import FIELDS, FLAGS, filter_from
-from ...services import Mailbox, get_accounts
-from ..deps import Viewer, account_of, emails_of
+from ...services import Mailbox
+from ..deps import Viewer, account_of, accounts_for, emails_of
 from ..errors import error_page
 from ..filters import Field, FilterBar, Kind, filter_bar
 from ..forms import REFUSED, first_problem
@@ -91,10 +92,6 @@ def _tree(folders: list[Folder]) -> list[tuple[Folder, int]]:
     return result
 
 
-def _readable_accounts(caller: Access, request: Request) -> list[Any]:
-    return get_accounts(request).list(caller, may="list_all_messages")
-
-
 @router.get("/mail")
 async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLResponse:
     """Every account's messages of one role, newest first."""
@@ -105,7 +102,7 @@ async def all_mail(request: Request, caller: Viewer, mailbox: Mailbox) -> HTMLRe
     except ValueError:
         role, problem = FolderRole.INBOX, f"Unknown folder: {role_name}"
     chosen = request.query_params.getlist("account")
-    accounts = _readable_accounts(caller, request)
+    accounts = accounts_for(request, caller, "list_all_messages")
     page = await mailbox.list_all_messages(
         caller,
         account_ids=chosen or None,
@@ -222,8 +219,7 @@ async def account_mail_page(
         open_as="mail",
         selectable=can["change"] or can["trash"] or can["purge"],
         here=(
-            str(request.url.path)
-            + (f"?{request.url.query}" if request.url.query else "")
+            path_and_query(str(request.url))
             if request.method == "GET"
             else mail_url(account_id, current.id)
         ),

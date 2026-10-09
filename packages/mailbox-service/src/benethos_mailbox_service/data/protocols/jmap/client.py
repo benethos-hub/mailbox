@@ -48,7 +48,6 @@ DEFAULT_PORT = 443
 MAX_REDIRECTS = 3
 # What the session limits when it says nothing (RFC 8620 2).
 DEFAULT_CONCURRENT = 4
-DEFAULT_CALLS = 16
 DEFAULT_GET = 500
 
 

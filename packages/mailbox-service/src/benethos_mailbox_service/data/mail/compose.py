@@ -64,12 +64,16 @@ class Extras:
     attached_message: bytes | None = None
 
 
+# A new message adds nothing. Frozen, so one is shared safely.
+NO_EXTRAS = Extras()
+
+
 def message(
     message: DraftMessage,
     sender: Recipient,
     date: datetime,
     message_id: str,
-    extras: Extras = Extras(),  # noqa: B008 (frozen, shared safely)
+    extras: Extras = NO_EXTRAS,
     *,
     draft: bool = False,
     reference: str | None = None,
