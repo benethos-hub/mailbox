@@ -60,6 +60,12 @@ def emails_of(accounts: Iterable[Account]) -> dict[str, str]:
     return {account.id: account.email for account in accounts}
 
 
+def accounts_for(request: Request, caller: Access, may: str) -> list[Account]:
+    """The accounts the caller may use for ``may``: those a webhook can
+    hear of, or those the mail search reads."""
+    return get_accounts(request).list(caller, may=may)
+
+
 def account_names(request: Request, caller: Access) -> dict[str, str]:
     """``emails_of`` every account the caller sees."""
     return emails_of(get_accounts(request).list(caller))

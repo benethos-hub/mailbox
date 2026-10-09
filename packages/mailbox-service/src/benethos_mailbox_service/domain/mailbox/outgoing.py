@@ -208,7 +208,7 @@ class Outgoing:
         which must be in a folder the caller may read. Returns the bytes,
         the Message-ID, the message as filled in and the original, if any."""
         account = self._calls.record(account_id)
-        extras = compose.Extras()
+        extras = compose.NO_EXTRAS
         original: Message | None = None
         reference = message.reference
         if reference is not None:

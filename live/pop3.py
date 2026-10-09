@@ -217,7 +217,7 @@ def check_starttls(run: Run, receiver: dict[str, str]) -> None:
     try:
         anyio.run(starttls)
         run.check("STARTTLS on 30110 logs in too", True)
-    except Exception as exc:  # noqa: BLE001  any failure is the answer
+    except Exception as exc:  # any failure is the answer
         run.check("STARTTLS on 30110 logs in too", False, type(exc).__name__)
 
 
