@@ -321,8 +321,7 @@ packages/mailbox-service/
         imap/, memory/, # one directory per provider (adapter),
         microsoft/,     #   provider.py the adapter, mappers.py the
         pop3/, jmap/,   #   translation, shapes.py what the provider
-        gmail/          #
-                        #   sends as JSON, the rest one module per
+        gmail/          #   sends as JSON, the rest one module per
                         #   subject.
                         #   imap: connect.py, mailbox.py (one session
                         #   and its folders), folders, messages, drafts,

@@ -268,8 +268,9 @@ next step appears under the last one:
 
 After connecting, the account page's **Change** card edits the servers,
 the display name and the password, for IMAP accounts. OAuth accounts have
-**Sign in again** and **Sign in again with a code** instead of a
-password. Nothing of this needs a new domain call: `discover`, `create`
+**Sign in again** and, where the provider offers codes, **Sign in again
+with a code** instead of a password. Nothing of this needs a new domain
+call: `discover`, `create`
 and `update` exist.
 
 ### 6.2 Creating, changing, removing

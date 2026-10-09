@@ -161,6 +161,7 @@ VERSION_EXAMPLES = [
     ("docs/CONCEPT.md", "status"),
     ("docs/ROADMAP.md", "status"),
     ("docs/MICROSOFT.md", "status"),
+    ("docs/GOOGLE.md", "status"),
     ("packages/mailbox-service/README.md", "status"),
     ("packages/mailbox-service/README.md", "tag"),
     ("packages/mailbox-service/README.md", "image"),

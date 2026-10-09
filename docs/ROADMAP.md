@@ -221,8 +221,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 - **`gmail` adapter with OAuth, own Google Cloud client per deployment
   (5.5)**, built: the client in the settings, the sign-in in the
   browser only, labels as folders with "All Mail", flags, moves,
-  trash and delete for good, drafts, sending, search in Gmail's
-  syntax (`docs/GOOGLE.md`). Checked live against a Gmail account
+  trash and delete for good, drafts, sending, the search filter as a
+  Gmail query (`docs/GOOGLE.md`). Checked live against a Gmail account
   (`live/gmail.py`)
 - **Gmail history in the worker**, built: `history.list` since a
   history id, polled

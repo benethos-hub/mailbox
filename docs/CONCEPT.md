@@ -448,7 +448,7 @@ to be reached:
 - **Each deployment brings its own OAuth client**, created by the operator in
   their own Google Cloud project. Google exempts personal use (the operator
   and a few people known to them, under 100 users) and Workspace apps set
-  to **Internal**. The configuration UI walks the operator through it.
+  to **Internal**. GOOGLE.md walks the operator through it.
 - **The publishing status must be "In production", not "Testing".** An
   external app in testing gets refresh tokens that expire after **7 days**,
   and every Gmail account would drop to `needs_reauth` once a week. In
@@ -542,7 +542,7 @@ an API token. POP3 is offered only where neither IMAP nor JMAP is.
 | **2026-10-01** | Exchange Online: EWS blocked by default | never build on EWS |
 | **end of 2026-12** | Exchange Online: SMTP AUTH basic auth off by default | send through Graph |
 | **2027-04-01** | Exchange Online: EWS removed | — |
-| recurring, 7 days | Gmail `users.watch` expires | the worker renews it |
+| recurring, 7 days | Gmail `users.watch` expires | not used: the worker polls `history.list` (5.5), Pub/Sub is an idea |
 | recurring, days | Graph subscriptions expire (planned, with push) | the worker renews them |
 
 ### 5.8 Autodiscovery
