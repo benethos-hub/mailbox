@@ -17,6 +17,33 @@ identity may have its own signature and reply-to.
 - Rights: may a user send as every identity of an account, or only as some?
   That could be a grant constraint like `recipients`.
 
+## A project app for Google, as for Microsoft
+
+With Microsoft every installation signs in through the project's app.
+For Gmail each one needs a Google client of its own, or an app
+password (docs/GOOGLE.md). A project app would spare that. It needs:
+
+- **Google's verification and a yearly security assessment (CASA)**,
+  since every Gmail scope that reads mail is restricted. Google charges
+  nothing, the approved labs do: quotes range from about 500 to a few
+  thousand dollars a year, and the review takes weeks. Further a privacy
+  policy, a verified domain and a demo video. Without verification a
+  client is limited to 100 users over its whole life, across every
+  installation.
+- **A way back for the browser.** Google offers no sign-in with a code
+  for Gmail. A project app reaches `localhost` only. A server needs a
+  redirect service run by the project, which passes the sign-in on to
+  the installation named in the state, as Home Assistant does with
+  my.home-assistant.io. PKCE keeps the code useless to that service.
+- **A single point of failure.** If Google suspends the app, every
+  installation loses Gmail at once.
+- **An open question:** whether an installation on the operator's own
+  server counts as "a server" under Google's assessment rule. To be
+  asked of Google before anything is built.
+
+Worth it once the project has users beyond the 100 a client of one's
+own allows, and a budget for the assessment.
+
 ## Gmail pushes through Cloud Pub/Sub
 
 Gmail tells of changes only through Cloud Pub/Sub: `users.watch` names a

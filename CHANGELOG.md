@@ -19,7 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   Setting keywords answers `501 not_supported`. The change feed follows
   Gmail's history, asked every `MAILBOX_SERVICE_SYNC_INTERVAL` seconds.
 - Looking up a Gmail address offers **Sign in with Google** first,
-  where the deployment has a Google client.
+  where the deployment has a Google client. The way over IMAP links to
+  Google's page for app passwords.
 
 ### Changed
 

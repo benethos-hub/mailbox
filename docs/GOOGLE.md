@@ -6,18 +6,38 @@
 
 Gmail and Google Workspace accounts connect in one of two ways:
 
+- **IMAP and SMTP with an app password**, with nothing to set up in
+  Google Cloud. The simple way, for most Gmail accounts (see below).
 - **Sign in with Google**, over the Gmail API. The person signs in at
   Google. The service keeps an encrypted refresh token, never a
   password. This needs a Google client of your own, set up once as
   below. Folders are Gmail's labels, and the change feed follows Gmail's
-  history.
-- **IMAP and SMTP with an app password**, with nothing to set up. Google
-  hands out app passwords only to accounts with 2-step verification. In
-  Google Workspace the administrator may turn them off.
+  history. For Google Workspace, an administrator sets up one client
+  for the whole organisation.
 
 The design is in [CONCEPT.md](CONCEPT.md), sections 5.3 and 5.5.
 
-## Why a client of your own
+## With an app password
+
+1. Turn on 2-step verification in the Google account:
+   <https://myaccount.google.com/signinoptions/twosv>. Google hands out
+   app passwords only then.
+2. Create an app password: <https://myaccount.google.com/apppasswords>.
+   Give it a name, e.g. "Mailbox", and copy the 16 letters Google shows.
+   Google shows them once.
+3. In the UI: **Accounts → Connect an account**, look up the Gmail
+   address, and enter the app password under **Gmail**. The servers
+   come from the service's presets.
+
+The account then works like any IMAP account. Gmail's labels show as
+IMAP folders, "All Mail" among them under `[Gmail]`.
+
+- Google revokes every app password when the account's password
+  changes. The account then asks for a new one.
+- In Google Workspace the administrator may turn app passwords off.
+  Then only the way through a client below remains.
+
+## With a Google client: why one of your own
 
 The project ships no Google app, unlike the one for Microsoft
 ([MICROSOFT.md](MICROSOFT.md)). The scope the Gmail API needs is one
