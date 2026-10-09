@@ -1,8 +1,9 @@
 """The second factor through the UI, the API and the host: a user of the
-check's own sets one up from the QR code's key, signs in with a code and
-with a recovery code, makes new codes and removes it. An administrator
-removes it from the user's page, the host with `users reset-totp`.
-Nothing here touches a mailbox."""
+check's own adds two devices from the keys beside their QR codes,
+renames one, signs in with a code of each and with a recovery code,
+makes new codes and removes its devices. An administrator removes one
+device and then all from the user's page, the host all with
+`users reset-totp`. Nothing here touches a mailbox."""
 
 from __future__ import annotations
 
@@ -57,7 +58,13 @@ class App:
         self._last = -1
 
     def code(self) -> str:
+        """The next code not shown before. The service takes one step
+        ahead at most: a later one waits for its time, as a person waits
+        for the app's next code."""
         step = max(totp.step_of(datetime.now(UTC)), self._last + 1)
+        ahead = step - 1 - totp.step_of(datetime.now(UTC))
+        if ahead > 0:
+            time.sleep(ahead * totp.STEP_SECONDS - time.time() % totp.STEP_SECONDS + 1)
         self._last = step
         return totp.code(self._secret, step)
 
@@ -74,12 +81,12 @@ def check_second_factor(
         try:
             with _browser(url) as own:
                 _choose_password(own, one_time["password"], password)
-                app = _set_up(run, own, password)
-                if app is None:
-                    return
-                codes = _sign_in_with_codes(run, url, password, app)
-                if codes:
-                    _remove_own(run, url, password, codes)
+                phone, codes = _add(run, own, "Phone", password)
+            if phone is None:
+                return
+            tablet, codes = _two_devices(run, url, api, user["id"], password, phone)
+            if tablet is not None and codes:
+                _remove_own(run, url, api, user["id"], password, tablet, codes)
             _removed_by_others(run, url, api, browser, password, user["id"], env)
         finally:
             api.delete(f"/v1/users/{user['id']}")
@@ -98,39 +105,56 @@ def _choose_password(own: httpx.Client, one_time: str, password: str) -> None:
     )
 
 
-def _set_up(run: Run, own: httpx.Client, password: str) -> App | None:
-    """The page Second factor, from the password to the recovery codes."""
+def _add(
+    run: Run, own: httpx.Client, name: str, password: str, code: str = ""
+) -> tuple[App | None, list[str]]:
+    """A device added on the page Second factor: its app, and the recovery
+    codes the first one brings."""
     page = own.get("/ui/second-factor")
-    run.check("the page Second factor offers the setup", "Off now" in page.text)
+    first = "No device yet" in page.text
     scan = own.post(
         "/ui/second-factor/begin",
-        data={"csrf_token": csrf_of(page.text), "password": password},
+        data={
+            "csrf_token": csrf_of(page.text),
+            "name": name,
+            "password": password,
+            "code": code,
+        },
     )
     key = re.search(r'<code class="secret">([^<]+)</code>', scan.text)
     if not run.check(
-        "it shows a QR code and the key",
+        f"adding {name} shows a QR code and the key",
         'src="data:image/svg+xml' in scan.text and key is not None,
     ):
-        return None
+        return None, []
     assert key is not None
     app = App(totp.from_base32(key.group(1).replace(" ", "")))
-    wrong = own.post(
-        "/ui/second-factor/confirm",
-        data={"csrf_token": csrf_of(scan.text), "code": "000000"},
-    )
-    run.check("a wrong first code is refused", "the code is not right" in wrong.text)
+    if first:
+        wrong = own.post(
+            "/ui/second-factor/confirm",
+            data={"csrf_token": csrf_of(scan.text), "code": "000000"},
+        )
+        run.check(
+            "a wrong first code is refused", "the code is not right" in wrong.text
+        )
     done = own.post(
         "/ui/second-factor/confirm",
         data={"csrf_token": csrf_of(scan.text), "code": app.code()},
     )
     codes = re.findall(CODES, done.text)
-    run.check(
-        "the first code turns it on and shows ten recovery codes once",
-        "Second factor on." in done.text
-        and len(codes) == 10
-        and codes[0] not in own.get("/ui/second-factor").text,
-    )
-    return app
+    if first:
+        run.check(
+            f"the first device, {name}, turns it on with ten recovery codes once",
+            "Second factor on." in done.text
+            and len(codes) == 10
+            and codes[0] not in own.get("/ui/second-factor").text,
+        )
+    else:
+        run.check(
+            f"{name} is added, without recovery codes",
+            f"Device {name} added." in done.text and not codes,
+        )
+    return app, codes
 
 
 def _code_page(browser: httpx.Client, code: str) -> httpx.Response:
@@ -142,9 +166,18 @@ def _code_page(browser: httpx.Client, code: str) -> httpx.Response:
     )
 
 
-def _sign_in_with_codes(run: Run, url: str, password: str, app: App) -> list[str]:
-    """A code of the app, then a recovery code of a new set. Returns the
-    codes of that set left."""
+def _devices(api: httpx.Client, user_id: str) -> dict[str, str]:
+    """The user's devices as the API lists them: name to id."""
+    answer = api.get(f"/v1/users/{user_id}/second-factor").json()
+    return {d["name"]: d["id"] for d in answer.get("devices", [])}
+
+
+def _two_devices(
+    run: Run, url: str, api: httpx.Client, user_id: str, password: str, phone: App
+) -> tuple[App | None, list[str]]:
+    """Signed in with the phone, a tablet added with its code and renamed,
+    new recovery codes. Then a code of the tablet and a recovery code sign
+    in. Returns the tablet and the recovery codes left."""
     with _browser(url) as browser:
         asked = ui_sign_in(browser, NAME, password)
         run.check(
@@ -153,41 +186,87 @@ def _sign_in_with_codes(run: Run, url: str, password: str, app: App) -> list[str
         )
         wrong = _code_page(browser, "000000")
         run.check("a wrong code comes back to it", "Wrong code" in wrong.text)
-        signed = _code_page(browser, app.code())
+        signed = _code_page(browser, phone.code())
         run.check(
-            "the code of the app signs in",
+            "the code of Phone signs in",
             signed.url.path == "/ui" and "Signed in as" in signed.text,
         )
+        tablet, _ = _add(run, browser, "Tablet", password, phone.code())
         page = browser.get("/ui/second-factor")
+        renamed = browser.post(
+            "/ui/second-factor/rename",
+            data={
+                "csrf_token": csrf_of(page.text),
+                "device": _devices(api, user_id).get("Tablet", ""),
+                "name": "Tablet 2",
+            },
+        )
+        run.check("rename the tablet", "Device renamed." in renamed.text)
+        run.check(
+            "the API lists both devices",
+            set(_devices(api, user_id)) == {"Phone", "Tablet 2"},
+        )
         fresh = browser.post(
             "/ui/second-factor/codes",
-            data={"csrf_token": csrf_of(page.text), "password": password},
+            data={"csrf_token": csrf_of(renamed.text), "password": password},
         )
         codes = re.findall(CODES, fresh.text)
         run.check("new recovery codes", len(codes) == 10)
+    if tablet is None:
+        return None, []
+    with _browser(url) as browser:
+        ui_sign_in(browser, NAME, password)
+        signed = _code_page(browser, tablet.code())
+        run.check("a code of Tablet 2 signs in", signed.url.path == "/ui")
     with _browser(url) as browser:
         ui_sign_in(browser, NAME, password)
         signed = _code_page(browser, codes[0].lower() if codes else "")
         run.check("a recovery code signs in", signed.url.path == "/ui")
-    return codes[1:]
+    return tablet, codes[1:]
 
 
-def _remove_own(run: Run, url: str, password: str, codes: list[str]) -> None:
+def _remove_own(
+    run: Run,
+    url: str,
+    api: httpx.Client,
+    user_id: str,
+    password: str,
+    tablet: App,
+    codes: list[str],
+) -> None:
+    """The phone removed with a code of the tablet, then the tablet, the
+    last one, with a recovery code."""
     with _browser(url) as browser:
         ui_sign_in(browser, NAME, password)
         _code_page(browser, codes[0])
+        devices = _devices(api, user_id)
         page = browser.get("/ui/second-factor")
         removed = browser.post(
             "/ui/second-factor/remove",
             data={
                 "csrf_token": csrf_of(page.text),
+                "device": devices.get("Phone", ""),
+                "password": password,
+                "code": tablet.code(),
+            },
+        )
+        run.check(
+            "its owner removes Phone with the password and a code of Tablet 2",
+            "Device removed." in removed.text
+            and set(_devices(api, user_id)) == {"Tablet 2"},
+        )
+        last = browser.post(
+            "/ui/second-factor/remove",
+            data={
+                "csrf_token": csrf_of(removed.text),
+                "device": devices.get("Tablet 2", ""),
                 "password": password,
                 "code": codes[1],
             },
         )
         run.check(
-            "its owner removes it with the password and a recovery code",
-            "Second factor removed." in removed.text,
+            "and the last one with a recovery code: the factor is off",
+            "The second factor is off." in last.text,
         )
     with _browser(url) as browser:
         again = ui_sign_in(browser, NAME, password)
@@ -203,28 +282,40 @@ def _removed_by_others(
     user_id: str,
     env: dict[str, str],
 ) -> None:
-    """Set up anew twice: removed by the administrator in the UI, then by
-    the host."""
+    """Two devices anew: the administrator removes one on the user's page,
+    then every one. One device anew: the host removes it."""
     with _browser(url) as own:
         ui_sign_in(own, NAME, password)
-        _set_up(run, own, password)
+        _, codes = _add(run, own, "Phone", password)
+        _add(run, own, "Tablet", password, codes[0] if codes else "")
     shown = api.get(f"/v1/users/{user_id}").json()
     run.check("the API says it has one", shown.get("second_factor") is True)
     page = browser.get(f"/ui/users/{user_id}")
-    removed = browser.post(
-        f"/ui/users/{user_id}/second-factor/remove",
+    run.check(
+        "the user's page lists the devices",
+        '<td class="name">Phone</td>' in page.text
+        and '<td class="name">Tablet</td>' in page.text,
+    )
+    phone = _devices(api, user_id).get("Phone", "")
+    one = browser.post(
+        f"/ui/users/{user_id}/second-factor/devices/{phone}/remove",
         data={"csrf_token": csrf_of(page.text)},
     )
     run.check(
-        "the administrator removes it on the user's page",
-        "Second factor removed." in removed.text,
+        "the administrator removes one device",
+        "Device removed." in one.text and set(_devices(api, user_id)) == {"Tablet"},
     )
+    every = browser.post(
+        f"/ui/users/{user_id}/second-factor/remove",
+        data={"csrf_token": csrf_of(one.text)},
+    )
+    run.check("and then every device", "Second factor removed." in every.text)
     gone = api.delete(f"/v1/users/{user_id}/second-factor")
     run.check("then the API finds none", gone.status_code == 404)
 
     with _browser(url) as own:
         ui_sign_in(own, NAME, password)
-        _set_up(run, own, password)
+        _add(run, own, "Phone", password)
     host = subprocess.run(
         [program("benethos-mailbox-service"), "users", "reset-totp", NAME],
         env=env,
@@ -238,17 +329,27 @@ def _removed_by_others(
         host.returncode == 0 and shown.get("second_factor") is False,
         host.stderr.strip()[-200:] if host.returncode else "",
     )
-    audit = api.get("/v1/audit", params={"record": user_id, "limit": 50}).json()
-    kinds = [(i["activity"], i["credential"]) for i in audit.get("items", [])]
+    audit = api.get("/v1/audit", params={"record": user_id, "limit": 100}).json()
+    kinds = {(i["activity"], i["credential"]) for i in audit.get("items", [])}
+    wanted = {
+        ("users.device_added", "password"),
+        ("users.device_renamed", "password"),
+        ("users.device_removed", "password"),
+        ("users.factor_removed", "host"),
+        ("auth.recovery_code_used", "password+recovery"),
+        ("users.codes_renewed", "password"),
+    }
     run.check(
-        "the audit names the setup, the sign-ins and the removals",
-        ("users.factor_set_up", "password") in kinds
-        and ("users.factor_removed", "host") in kinds
-        and ("auth.recovery_code_used", "password+recovery") in kinds
-        and ("users.codes_renewed", "password") in kinds,
+        "the audit names the devices, the sign-ins and the removals",
+        wanted <= kinds,
+        ", ".join(sorted(str(k) for k in wanted - kinds)),
     )
-    signed = api.get("/v1/audit", params={"activity": "auth.signed_in"}).json()
+    signed = api.get(
+        "/v1/audit", params={"activity": "auth.signed_in", "limit": 100}
+    ).json()
+    details = [i["detail"] for i in signed.get("items", [])]
     run.check(
-        "and a sign-in with the app's code",
-        any(i["credential"] == "password+totp" for i in signed.get("items", [])),
+        "and the sign-ins with the code of each device",
+        "signed in to the UI with a code of Phone" in details
+        and "signed in to the UI with a code of Tablet 2" in details,
     )

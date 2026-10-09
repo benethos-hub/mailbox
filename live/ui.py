@@ -12,12 +12,13 @@ It reads mail, opens the pages and follows their forms. It opens the
 status, adds and removes a webhook, shows the recovery key of its own
 service, reads its log, makes a user with a one-time password, and reads
 what it did in the audit, on its page, a user's page and the API. A user
-of its own sets up a second factor from the QR code's key, signs in with
-a code and a recovery code, makes new codes and removes it, and the
-admin and the host remove it too. It writes on the test accounts only:
-a folder and a draft on the first, which it removes again, and one mail
-from the first to the second, deleted for good on both sides.
-Credentials and mail content are never printed.
+of its own adds two devices of a second factor from the keys of their QR
+codes, signs in with a code of each and a recovery code, makes new
+codes and removes them, and the admin and the host remove them too. It
+writes on the test accounts only: a folder and a draft on the first,
+which it removes again, and one mail from the first to the second,
+deleted for good on both sides. Credentials and mail content are never
+printed.
 """
 
 from __future__ import annotations
