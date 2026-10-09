@@ -1,8 +1,8 @@
-"""Second factors of users: the TOTP secret, sealed, and the hashes of the
-recovery codes (docs/AUTHENTICATION.md 6).
+"""Second factors of users: the devices, each with its TOTP secret sealed,
+and the hashes of the user's recovery codes (docs/AUTHENTICATION.md 6).
 
-It only stores. The domain makes the secret and the codes, and decides
-who may set up or remove a factor.
+It only stores. The domain makes the secrets and the codes, and decides
+who may add or remove a device.
 """
 
 from __future__ import annotations
@@ -11,31 +11,42 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
+from ...errors import NotFoundError
 from .webhooks import Sealed
 
 
 @dataclass(frozen=True)
-class StoredFactor:
-    """A confirmed TOTP secret. ``last_step`` is the step of the last code
-    taken, none before the first sign-in with it."""
+class StoredDevice:
+    """A device of a user's second factor. ``last_step`` is the step of
+    the last code taken from it, none before the first."""
 
+    id: str
+    name: str
     secret: Sealed
-    confirmed_at: datetime
+    created_at: datetime
     last_step: int | None = None
+    last_used_at: datetime | None = None
 
 
 class SecondFactorRepository(Protocol):
-    def get(self, user_id: str) -> StoredFactor | None: ...
-
-    def set(self, user_id: str, factor: StoredFactor, codes: list[str]) -> None:
-        """The factor and the hashes of its recovery codes, in place of
-        any before."""
+    def devices(self, user_id: str) -> list[StoredDevice]:
+        """The user's devices, oldest first."""
         ...
 
-    def took(self, user_id: str, step: int) -> bool:
-        """Note a code of ``step`` as taken. False when a code of that
-        step or a later one was taken already: two requests with the same
-        code cannot both pass."""
+    def add(self, user_id: str, device: StoredDevice) -> None: ...
+
+    def rename(self, user_id: str, device_id: str, name: str) -> None:
+        """``NotFoundError`` for a device the user does not have."""
+        ...
+
+    def took(self, user_id: str, device_id: str, step: int, at: datetime) -> bool:
+        """Note a code of ``step`` of the device as taken at ``at``. False
+        when a code of that step or a later one was taken already: two
+        requests with the same code cannot both pass."""
+        ...
+
+    def remove(self, user_id: str, device_id: str) -> bool:
+        """One device. False when the user has none such."""
         ...
 
     def replace_codes(self, user_id: str, codes: list[str]) -> None: ...
@@ -48,31 +59,40 @@ class SecondFactorRepository(Protocol):
     def codes_left(self, user_id: str) -> int: ...
 
     def delete(self, user_id: str) -> bool:
-        """The factor and its codes. False when the user had none."""
+        """Every device and the codes. False when the user had no device."""
         ...
 
 
 class InMemorySecondFactorRepository:
     def __init__(self) -> None:
-        self._factors: dict[str, StoredFactor] = {}
+        self._devices: dict[str, dict[str, StoredDevice]] = {}
         # Per user: hash to when it was used, None while it is left.
         self._codes: dict[str, dict[str, datetime | None]] = {}
 
-    def get(self, user_id: str) -> StoredFactor | None:
-        return self._factors.get(user_id)
+    def devices(self, user_id: str) -> list[StoredDevice]:
+        held = self._devices.get(user_id, {}).values()
+        return sorted(held, key=lambda d: (d.created_at, d.id))
 
-    def set(self, user_id: str, factor: StoredFactor, codes: list[str]) -> None:
-        self._factors[user_id] = factor
-        self.replace_codes(user_id, codes)
+    def add(self, user_id: str, device: StoredDevice) -> None:
+        self._devices.setdefault(user_id, {})[device.id] = device
 
-    def took(self, user_id: str, step: int) -> bool:
-        factor = self._factors.get(user_id)
-        if factor is None:
+    def rename(self, user_id: str, device_id: str, name: str) -> None:
+        device = self._held(user_id, device_id)
+        self._devices[user_id][device_id] = replace(device, name=name)
+
+    def took(self, user_id: str, device_id: str, step: int, at: datetime) -> bool:
+        device = self._devices.get(user_id, {}).get(device_id)
+        if device is None:
             return False
-        if factor.last_step is not None and factor.last_step >= step:
+        if device.last_step is not None and device.last_step >= step:
             return False
-        self._factors[user_id] = replace(factor, last_step=step)
+        self._devices[user_id][device_id] = replace(
+            device, last_step=step, last_used_at=at
+        )
         return True
+
+    def remove(self, user_id: str, device_id: str) -> bool:
+        return self._devices.get(user_id, {}).pop(device_id, None) is not None
 
     def replace_codes(self, user_id: str, codes: list[str]) -> None:
         self._codes[user_id] = dict.fromkeys(codes)
@@ -89,4 +109,10 @@ class InMemorySecondFactorRepository:
 
     def delete(self, user_id: str) -> bool:
         self._codes.pop(user_id, None)
-        return self._factors.pop(user_id, None) is not None
+        return bool(self._devices.pop(user_id, None))
+
+    def _held(self, user_id: str, device_id: str) -> StoredDevice:
+        device = self._devices.get(user_id, {}).get(device_id)
+        if device is None:
+            raise NotFoundError(f"no device {device_id}")
+        return device

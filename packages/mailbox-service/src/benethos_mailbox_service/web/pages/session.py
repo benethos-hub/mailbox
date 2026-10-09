@@ -46,9 +46,10 @@ _WHILE_CHANGING = {PASSWORD_PAGE, f"{PATH}/logout"}
 
 @dataclass(frozen=True)
 class PendingSetup:
-    """A secret shown for a second factor, not confirmed yet. Never stored
-    before its first code."""
+    """A secret shown for a new device of the second factor, not confirmed
+    yet. Never stored before its first code."""
 
+    name: str
     secret: bytes
     until: datetime
 
@@ -63,10 +64,10 @@ class UiSession:
     last_seen: datetime
     # The sign-in before this session's, shown on the overview.
     previous_sign_in: datetime | None = None
-    # When the user's second factor was confirmed, None without one: the
-    # session ends once it changes.
-    factor: datetime | None = None
-    # A second factor being set up in this session.
+    # Which devices of a second factor the user had at the sign-in, None
+    # without one: the session ends once a device is added or removed.
+    factor: str | None = None
+    # A device of the second factor being added in this session.
     setup: PendingSetup | None = None
     # Shown on the next page only, e.g. a new token: kept here, never in a
     # URL, and gone once shown.

@@ -240,9 +240,9 @@ def test_reset_totp_command(
     assert user is not None
     access = services.auth.access_of(user.id)
     assert access is not None
-    secret = asyncio.run(services.factors.begin(access, first))
+    name, secret = asyncio.run(services.factors.begin(access, "Phone", first))
     code = totp.code(secret, totp.step_of(datetime.now(UTC)))
-    services.factors.confirm(access, secret, code)
+    services.factors.confirm(access, name, secret, code)
     services.close()
 
     assert main(["users", "reset-totp", "ADMIN"]) == 0

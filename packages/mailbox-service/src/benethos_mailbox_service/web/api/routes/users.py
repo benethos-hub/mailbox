@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from ....data.models import ApiToken, Page, Role, User
+from ....data.models import ApiToken, Page, Role, SecondFactor, User
 from ....domain.rights import permissions
 from ....domain.users import PasswordService, TokenService
 from ..deps import Caller, Factors, Limit, Passwords, Roles, Tokens, Users
@@ -140,14 +140,38 @@ async def set_password(
     return PasswordSetResult(password=password)
 
 
+@router.get("/users/{user_id}/second-factor")
+async def get_second_factor(
+    user_id: str, caller: Caller, factors: Factors
+) -> SecondFactor:
+    """The devices of a user's second factor, and how many recovery codes
+    are left. Never a secret. The user adds a device in the UI."""
+    return factors.of(caller, user_id)
+
+
 @router.delete("/users/{user_id}/second-factor", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_second_factor(user_id: str, caller: Caller, factors: Factors) -> None:
-    """Remove a user's second factor and its recovery codes. It signs in to
-    the UI with its password alone until it sets up a new one, and its
-    sessions end. The caller must hold every right the user holds. `404`
-    when the user has none, `409` for the caller itself, who removes its
-    own in the UI with a code."""
+    """Remove every device of a user's second factor and its recovery
+    codes. It signs in to the UI with its password alone until it adds a
+    new one, and its sessions end. The caller must hold every right the
+    user holds. `404` when the user has none, `409` for the caller itself,
+    who removes its own in the UI with a code."""
     factors.remove(caller, user_id)
+
+
+@router.delete(
+    "/users/{user_id}/second-factor/devices/{device_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def remove_factor_device(
+    user_id: str, device_id: str, caller: Caller, factors: Factors
+) -> None:
+    """Remove one device of a user's second factor: its codes work no more,
+    and the user's sessions end. With the last device the factor is off
+    and the recovery codes go too. The caller must hold every right the
+    user holds. `404` for a device the user does not have, `409` for the
+    caller itself."""
+    factors.remove_device(caller, user_id, device_id)
 
 
 @router.get("/users/{user_id}/tokens")

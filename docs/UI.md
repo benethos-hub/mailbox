@@ -306,15 +306,19 @@ tokens. A token is created in the Tokens card and shown once.
 
 The second factor ([AUTHENTICATION.md](AUTHENTICATION.md)) has a page of
 its own, **Second factor**, reached from the foot of the sidebar and the
-person's own user page. Off, it offers **Set up** after the password,
-then the QR code with the key as text and a field for the first code,
-then the ten recovery codes, shown once. On, it shows how many recovery
-codes are left, **Make new codes** after the password, and **Remove**
-with the password and a code. Another user's page says whether it has
-one, and offers **Remove second factor** to a user with
+person's own user page. It lists the devices with their name, when each
+was added and last used. **Add a device** asks for its name and the
+password, and with a device there already a code, then shows the QR
+code with the key as text and a field for the first code. The first
+device brings the ten recovery codes, shown once. **Rename a device**
+takes the new name, **Remove a device** the password and a code. The
+Recovery codes card says how many are left and makes new ones after
+the password. Another user's page lists its devices to a user with
+`get_second_factor`, with **Remove** for one to a user with
+`remove_factor_device` and **Remove every device** to a user with
 `remove_second_factor`. After the password, a user with a factor sees
 the code page, outside the layout as the sign-in is, which takes a code
-of the app or a recovery code.
+of any device or a recovery code.
 
 ### 6.4 Webhooks
 

@@ -24,7 +24,8 @@ Towards the callers of the service:
 | Password hashes | at once, for the whole service | 2 | the next one waits | `MAILBOX_SERVICE_PASSWORD_HASHES_AT_ONCE` |
 | UI session | per session | ends after 8 hours without a request | sign in again | `MAILBOX_SERVICE_SESSION_IDLE_HOURS` |
 | Code of a second factor | per pending sign-in, between the password and the code | 5 minutes, 5 wrong codes | sign in again with the password | fixed |
-| Second factor not confirmed | per session setting one up | 15 minutes from showing the QR code | start the setup again | fixed |
+| Second factor not confirmed | per session adding a device | 15 minutes from showing the QR code | start again | fixed |
+| Devices of a second factor | per user | 10 | `409` on adding one | fixed |
 | Discoveries | per user | 10 in any minute, each domain's findings kept a day | `429 rate_limited` | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE`, the day is fixed |
 | Sends | per user and account, under a grant | `max_sends_per_day` in any 24 hours | `429 send_limit_reached` | the grant |
 | Recipients | per send, under a grant | the grant's `recipients` | `403 recipient_not_allowed` | the grant |

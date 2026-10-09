@@ -9,10 +9,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - A second factor for the sign-in to the UI: a code of an authenticator
-  app (TOTP) after the password, a choice of each user. It is set up on
-  the page **Second factor** with a QR code, and comes with ten recovery
-  codes shown once. A password set by someone else is changed only
-  after the code. docs/AUTHENTICATION.md has the details.
+  app (TOTP) after the password, a choice of each user. A user holds it
+  on up to ten named devices, each with codes of its own, added,
+  renamed and removed on the page **Second factor** with a QR code. The
+  first device brings ten recovery codes shown once, a further one
+  needs a code. A password set by someone else is changed only after
+  the code. docs/AUTHENTICATION.md has the details.
 - Gmail and Google Workspace accounts over the Gmail API, with the
   kind of account `gmail`. They sign in with Google in the browser,
   through a Google client of the deployment's own, set up as
@@ -27,12 +29,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   where the deployment has a Google client. The way over IMAP links to
   Google's page for app passwords.
 - Each user in `/v1/users` says whether it has a second factor for the
-  UI sign-in, in `second_factor`. `DELETE /v1/users/{user_id}/second-factor`
-  (`remove_second_factor`, in `users.manage`) removes one, for a user
-  whose rights the caller holds, never for the caller itself. The
-  database moves to schema 18.
+  UI sign-in, in `second_factor`. `GET /v1/users/{user_id}/second-factor`
+  (`get_second_factor`, in `users.read`) lists its devices, never a
+  secret. `DELETE /v1/users/{user_id}/second-factor`
+  (`remove_second_factor`) removes every device,
+  `DELETE /v1/users/{user_id}/second-factor/devices/{device_id}`
+  (`remove_factor_device`) one, both in `users.manage`, for a user whose
+  rights the caller holds, never for the caller itself. The database
+  moves to schema 18.
 - `users reset-totp <name>` on the host removes a user's second factor,
-  for the last administrator who lost the app and the recovery codes.
+  for the last administrator who lost every device and the recovery
+  codes.
 
 ### Changed
 

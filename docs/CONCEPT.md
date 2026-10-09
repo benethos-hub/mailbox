@@ -1543,7 +1543,8 @@ included for a grant on every account. `user`, `outcome`, `recipient`
 | GET / POST | `/v1/users/{user_id}/tokens` | GET `users.read`, POST `users.manage`. POST returns the token once |
 | DELETE | `/v1/users/{user_id}/tokens/{token_id}` | `users.manage`. Revoke |
 | POST | `/v1/users/{user_id}/password` | `users.manage`. A password to change at the next sign-in, or a one-time password answered once |
-| DELETE | `/v1/users/{user_id}/second-factor` | `users.manage`. Removes the user's second factor ([AUTHENTICATION.md](AUTHENTICATION.md)), never the caller's own |
+| GET / DELETE | `/v1/users/{user_id}/second-factor` | GET `users.read`: the devices of the user's second factor ([AUTHENTICATION.md](AUTHENTICATION.md)), never a secret. DELETE `users.manage`: every device, never the caller's own |
+| DELETE | `/v1/users/{user_id}/second-factor/devices/{device_id}` | `users.manage`. One device, never the caller's own |
 | GET / POST | `/v1/roles` | GET `users.read`, POST `users.manage` |
 | GET / PUT / DELETE | `/v1/roles/{role_id}` | GET `users.read`, the others `users.manage` |
 | GET | `/v1/audit` | `audit` in `service`. The audit of administration, newest first ([AUDIT.md](AUDIT.md)) |

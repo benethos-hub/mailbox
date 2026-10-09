@@ -6,13 +6,22 @@ credentials (CONCEPT 7.5).
 
 from __future__ import annotations
 
-from .factors import CODE_TRIES, PENDING, SETUP, SecondFactors
+from .factors import (
+    CODE_TRIES,
+    MAX_DEVICE_NAME,
+    MAX_DEVICES,
+    PENDING,
+    SETUP,
+    SecondFactors,
+)
 from .passwords import Passwords
 from .service import MAX_NAME, AuthService, SignedIn, SignInState, TokenState
 from .throttle import SignInThrottle
 
 __all__ = [
     "CODE_TRIES",
+    "MAX_DEVICE_NAME",
+    "MAX_DEVICES",
     "PENDING",
     "SETUP",
     "AuthService",

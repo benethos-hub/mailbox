@@ -130,23 +130,69 @@ class PasswordSet(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
-class SecondFactorSetUp(Activity):
-    """The actor set up a second factor for itself. Nobody sets one up for
-    another user."""
+class DeviceAdded(Activity):
+    """The actor added a device to its second factor. The first turns it
+    on. Nobody adds one for another user."""
 
-    name: ClassVar[str] = "factor_set_up"
+    name: ClassVar[str] = "device_added"
     audited: ClassVar[bool] = True
 
+    device: str
+    first: bool
+
     def says(self) -> str:
-        return "set up a second factor"
+        added = f"added the device {self.device} to its second factor"
+        return f"{added}, which turns it on" if self.first else added
 
     def touched(self) -> str | None:
         return self.by.user_id
 
 
 @dataclass(frozen=True, kw_only=True)
+class DeviceRenamed(Activity):
+    name: ClassVar[str] = "device_renamed"
+    audited: ClassVar[bool] = True
+
+    before: str
+    after: str
+
+    def says(self) -> str:
+        return f"renamed its device {self.before} to {self.after}"
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class DeviceRemoved(Activity):
+    """One device of a second factor taken away, by its user or by a user
+    with ``users.manage``. With the last one the factor is off."""
+
+    name: ClassVar[str] = "device_removed"
+    audited: ClassVar[bool] = True
+
+    user: User
+    device: str
+    last: bool
+
+    def says(self) -> str:
+        if self.user.id == self.by.user_id:
+            removed = f"removed its device {self.device}"
+        else:
+            removed = f"removed the device {self.device} of {user(self.user)}"
+        return (
+            f"{removed}, the last one: the second factor is off"
+            if self.last
+            else removed
+        )
+
+    def touched(self) -> str | None:
+        return self.user.id
+
+
+@dataclass(frozen=True, kw_only=True)
 class SecondFactorRemoved(Activity):
-    """A second factor taken away: by its user, by a user with
+    """Every device of a second factor taken away: by a user with
     ``users.manage``, or on the host."""
 
     name: ClassVar[str] = "factor_removed"
@@ -155,9 +201,7 @@ class SecondFactorRemoved(Activity):
     user: User
 
     def says(self) -> str:
-        if self.user.id == self.by.user_id:
-            return "removed its second factor"
-        return f"removed the second factor of {user(self.user)}"
+        return f"removed every device of the second factor of {user(self.user)}"
 
     def touched(self) -> str | None:
         return self.user.id

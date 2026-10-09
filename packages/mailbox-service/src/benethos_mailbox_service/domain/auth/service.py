@@ -27,7 +27,7 @@ from ..activity import PASSWORD, SERVICE, ActivityLog, Actor, someone
 from ..activity import auth as said
 from ..activity import users as users_said
 from ..rights import Access
-from .factors import SecondFactors
+from .factors import SecondFactors, Taken
 from .passwords import MAX_LENGTH, Passwords
 from .throttle import SignInThrottle
 
@@ -82,9 +82,9 @@ class SignedIn:
     # The password was right, the code of the second factor comes next:
     # no session yet, a pending sign-in.
     needs_code: bool = False
-    # When the user's second factor was confirmed, None without one. The
-    # session keeps it and ends once the factor is set up anew or removed.
-    factor: datetime | None = None
+    # Which devices of a second factor the user has, None without one. The
+    # session keeps it and ends once a device is added or removed.
+    factor: str | None = None
 
 
 def hash_token(token: str) -> str:
@@ -174,20 +174,25 @@ class AuthService:
         user = self._live_user(user_id)
         key = _name_key(user.name)
         self._names.check(key)
-        kind = (
+        taken = (
             self.factors.check(user.id, code)
             if self.factors is not None and len(code) <= MAX_CODE and user.ui_sign_in
             else None
         )
-        if kind is None:
+        if taken is None:
             self._failed_source(source)
             self._failed_name(key, user, someone(source))
             self.activity.record(said.CodeFailed(by=someone(source), user=user))
             raise UnauthorizedError(WRONG_CODE)
-        return self._signed_in(user, key, source, WITH_FACTOR[kind])
+        return self._signed_in(user, key, source, PASSWORD, taken)
 
     def _signed_in(
-        self, user: User, key: str, source: str, credential: str
+        self,
+        user: User,
+        key: str,
+        source: str,
+        credential: str,
+        taken: Taken | None = None,
     ) -> SignedIn:
         """A sign-in that passed every step: the brakes cleared, the time
         stored, the audit told."""
@@ -196,11 +201,14 @@ class AuthService:
             raise UnauthorizedError(WRONG)
         self._throttle.succeeded(source)
         self._names.succeeded(key)
+        if taken is not None:
+            credential = WITH_FACTOR[taken.kind]
         by = Actor.signed_in(user.name, user.id, source, credential)
         with self.activity.atomic():
             previous = self.passwords.signed_in(user.id)
-            self.activity.record(said.UiSignIn(by=by))
-            if credential == WITH_FACTOR["recovery"] and self.factors is not None:
+            device = taken.device if taken is not None else None
+            self.activity.record(said.UiSignIn(by=by, device=device))
+            if taken is not None and taken.kind == "recovery" and self.factors:
                 left = self.factors.codes_left(user.id)
                 self.activity.record(said.RecoveryCodeUsed(by=by, left=left))
         return SignedIn(
@@ -211,8 +219,9 @@ class AuthService:
             factor=self.factor_stamp(user.id),
         )
 
-    def factor_stamp(self, user_id: str) -> datetime | None:
-        """When the user's second factor was confirmed, None without one."""
+    def factor_stamp(self, user_id: str) -> str | None:
+        """Which devices of a second factor the user has, None without
+        one."""
         return self.factors.stamp(user_id) if self.factors is not None else None
 
     async def confirm(self, access: Access, password: str) -> None:
@@ -252,7 +261,7 @@ class AuthService:
         user_id: str,
         stamp: datetime,
         *,
-        factor: datetime | None = None,
+        factor: str | None = None,
         source: str | None = None,
     ) -> Access:
         """What the user of a UI session may do now. Raises when the user

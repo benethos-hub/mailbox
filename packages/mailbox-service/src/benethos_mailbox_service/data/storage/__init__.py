@@ -21,7 +21,7 @@ from .credentials import (
 from .factors import (
     InMemorySecondFactorRepository,
     SecondFactorRepository,
-    StoredFactor,
+    StoredDevice,
 )
 from .idempotency import (
     IdempotencyRepository,
@@ -122,7 +122,7 @@ __all__ = [
     "SqliteUserRepository",
     "SqliteWebhookRepository",
     "Store",
-    "StoredFactor",
+    "StoredDevice",
     "StoredPassword",
     "StoredResult",
     "TokenRepository",

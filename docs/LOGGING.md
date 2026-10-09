@@ -140,7 +140,7 @@ the audit keeps as well are listed in [AUDIT.md](AUDIT.md) section 2.
 
 | Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | signed in to the UI | user, source, how: `password`, `password+totp`, `password+recovery` | after the code, for a user with a second factor |
+| INFO | signed in to the UI [with a code of D] | user, source, how: `password`, `password+totp`, `password+recovery`, the device | after the code, for a user with a second factor |
 | WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | |
 | WARNING | someone typed a wrong code to sign in to the UI as X | user, source | after the right password ([AUTHENTICATION.md](AUTHENTICATION.md) 3) |
 | WARNING | X signed in with a recovery code, N left | user, count, source | its app is gone or out of reach |
@@ -162,8 +162,10 @@ the sign-in throttle are in 5.9 with the other limits.
 | INFO | X deleted user Y and its N webhooks | actor, user, count | |
 | INFO | X changed its password | user | |
 | INFO | X set the password of Y / a one-time password for Y | actor, user | |
-| INFO | X set up a second factor | user | |
-| INFO | X removed its second factor / the second factor of Y | actor, user | the host too, with `users reset-totp` |
+| INFO | X added the device D to its second factor[, which turns it on] | user, device | the first device turns it on |
+| INFO | X renamed its device D to E | user, both names | |
+| INFO | X removed its device D / the device D of Y[, the last one: the second factor is off] | actor, user, device | |
+| INFO | X removed every device of the second factor of Y | actor, user | the host too, with `users reset-totp` |
 | INFO | X made new recovery codes for its second factor | user | |
 | INFO | X issued token Z for Y, with its expiry | actor, token name and id, user, expiry | |
 | INFO | X revoked token Z of Y | actor, token name and id, user | |
@@ -506,8 +508,10 @@ and that each is listed here.
 | `users.sign_in_allowed` | the host gave a user its UI sign-in back |
 | `users.password_changed` | a user changed its own password |
 | `users.password_set` | a password or one-time password set for a user |
-| `users.factor_set_up` | a user set up its second factor |
-| `users.factor_removed` | a second factor removed |
+| `users.device_added` | a device added to a second factor |
+| `users.device_renamed` | a device of a second factor renamed |
+| `users.device_removed` | a device of a second factor removed |
+| `users.factor_removed` | every device of a second factor removed |
 | `users.codes_renewed` | new recovery codes for a second factor |
 | `users.token_issued` | a token issued |
 | `users.token_revoked` | a token revoked |

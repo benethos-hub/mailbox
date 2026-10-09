@@ -165,12 +165,33 @@
 {% endcall %}
 {% endif %}
 
-{% if not is_me and can_remove_factor and sign_in.second_factor %}
-{% call card("Second factor", meta="Only " ~ user.name ~ " can set one up again.") %}
-  <div class="toolbar">
-    <span class="muted grow">Removing it lets {{ user.name }} sign in with the password alone, e.g. after the phone is lost. Its sessions end.</span>
-    {{ action("/ui/users/" ~ user.id ~ "/second-factor/remove", "Remove second factor", confirm="Remove the second factor of " ~ user.name ~ "?", cls="danger") }}
+{% if not is_me and factor and factor.devices %}
+{% call related("Second factor", count=factor.devices | length, meta="devices, " ~ factor.recovery_codes_left ~ " recovery codes left. Only " ~ user.name ~ " adds one.") %}
+  <div class="body tight">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Device</th><th>Added</th><th>Last used</th><th></th></tr></thead>
+        <tbody>
+          {% for device in factor.devices %}
+          <tr>
+            <td class="name">{{ device.name }}</td>
+            <td>{{ device.created_at | when }}</td>
+            <td>{{ device.last_used_at | when }}</td>
+            <td class="actions">
+              {% if can_remove_device %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/devices/" ~ device.id ~ "/remove", "Remove", confirm="Remove the device " ~ device.name ~ " of " ~ user.name ~ "? Its codes work no more.", cls="small danger") }}{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+  {% if can_remove_factor %}
+  <div class="body toolbar">
+    <span class="muted grow">Removing every device lets {{ user.name }} sign in with the password alone, e.g. after every device is lost. Its sessions end.</span>
+    {{ action("/ui/users/" ~ user.id ~ "/second-factor/remove", "Remove every device", confirm="Remove every device of the second factor of " ~ user.name ~ "?", cls="danger") }}
+  </div>
+  {% endif %}
 {% endcall %}
 {% endif %}
 

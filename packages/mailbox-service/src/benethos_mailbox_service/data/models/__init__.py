@@ -63,7 +63,15 @@ from .sending import (
     SendResult,
     SentMessage,
 )
-from .users import SERVICE_DESCRIPTION, ApiToken, Grant, Role, User
+from .users import (
+    SERVICE_DESCRIPTION,
+    ApiToken,
+    FactorDevice,
+    Grant,
+    Role,
+    SecondFactor,
+    User,
+)
 from .webhooks import (
     CHANGE_KINDS,
     CreatedWebhook,
@@ -84,6 +92,7 @@ __all__ = [
     "Capability",
     "Address",
     "ApiToken",
+    "FactorDevice",
     "Attachment",
     "AttachmentContent",
     "BatchItemResult",
@@ -122,6 +131,7 @@ __all__ = [
     "ProviderType",
     "Recipient",
     "Role",
+    "SecondFactor",
     "SEARCH_TEXT_PATTERN",
     "Security",
     "SendFilter",

@@ -1151,12 +1151,149 @@
       }
     },
     "/v1/users/{user_id}/second-factor": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Second Factor",
+        "description": "The devices of a user's second factor, and how many recovery codes\nare left. Never a secret. The user adds a device in the UI.",
+        "operationId": "get_second_factor",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecondFactor"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.read"
+      },
       "delete": {
         "tags": [
           "users"
         ],
         "summary": "Remove Second Factor",
-        "description": "Remove a user's second factor and its recovery codes. It signs in to\nthe UI with its password alone until it sets up a new one, and its\nsessions end. The caller must hold every right the user holds. `404`\nwhen the user has none, `409` for the caller itself, who removes its\nown in the UI with a code.",
+        "description": "Remove every device of a user's second factor and its recovery\ncodes. It signs in to the UI with its password alone until it adds a\nnew one, and its sessions end. The caller must hold every right the\nuser holds. `404` when the user has none, `409` for the caller itself,\nwho removes its own in the UI with a code.",
         "operationId": "remove_second_factor",
         "security": [
           {
@@ -1171,6 +1308,147 @@
             "schema": {
               "type": "string",
               "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      }
+    },
+    "/v1/users/{user_id}/second-factor/devices/{device_id}": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Remove Factor Device",
+        "description": "Remove one device of a user's second factor: its codes work no more,\nand the user's sessions end. With the last device the factor is off\nand the recovery codes go too. The caller must hold every right the\nuser holds. `404` for a device the user does not have, `409` for the\ncaller itself.",
+        "operationId": "remove_factor_device",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
             }
           }
         ],
@@ -10467,6 +10745,45 @@
         "title": "ErrorResponse",
         "description": "The body of every error the API raises itself."
       },
+      "FactorDevice": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Unique among the user's devices, e.g. Phone"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "Its last code taken, null for none yet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at"
+        ],
+        "title": "FactorDevice",
+        "description": "A device of a user's second factor: an authenticator app with a\nsecret of its own. Never the secret."
+      },
       "Folder": {
         "properties": {
           "id": {
@@ -11913,6 +12230,30 @@
         },
         "type": "object",
         "title": "RoleReplace"
+      },
+      "SecondFactor": {
+        "properties": {
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/FactorDevice"
+            },
+            "type": "array",
+            "title": "Devices",
+            "description": "Oldest first. A code of any of them signs in. Empty: none."
+          },
+          "recovery_codes_left": {
+            "type": "integer",
+            "title": "Recovery Codes Left",
+            "description": "Recovery codes not used yet, one set for every device"
+          }
+        },
+        "type": "object",
+        "required": [
+          "devices",
+          "recovery_codes_left"
+        ],
+        "title": "SecondFactor",
+        "description": "The second factor of a user's UI sign-in."
       },
       "Security": {
         "type": "string",

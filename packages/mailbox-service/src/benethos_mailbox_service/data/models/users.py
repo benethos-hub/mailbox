@@ -88,6 +88,29 @@ class Role(BaseModel):
     grants: list[Grant] = Field(default_factory=list)
 
 
+class FactorDevice(BaseModel):
+    """A device of a user's second factor: an authenticator app with a
+    secret of its own. Never the secret."""
+
+    id: str
+    name: str = Field(description="Unique among the user's devices, e.g. Phone")
+    created_at: datetime
+    last_used_at: datetime | None = Field(
+        default=None, description="Its last code taken, null for none yet"
+    )
+
+
+class SecondFactor(BaseModel):
+    """The second factor of a user's UI sign-in."""
+
+    devices: list[FactorDevice] = Field(
+        description="Oldest first. A code of any of them signs in. Empty: none."
+    )
+    recovery_codes_left: int = Field(
+        description="Recovery codes not used yet, one set for every device"
+    )
+
+
 class ApiToken(BaseModel):
     """An API token of a user. Only the SHA-256 hash of the token is kept."""
 
