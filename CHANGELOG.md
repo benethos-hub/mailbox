@@ -72,6 +72,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A session of the UI ends after 24 hours however it is used
+  (`MAILBOX_SERVICE_SESSION_MAX_HOURS`), and a user holds 10 at most: a
+  new sign-in ends the oldest (`MAILBOX_SERVICE_SESSIONS_PER_USER`). A
+  secret shown once, such as a new token, recovery codes or the
+  recovery key, waits 5 minutes for the page that shows it
+  (`MAILBOX_SERVICE_SHOWN_ONCE_MINUTES`).
 - `mailbox-client`: `list_messages` and `list_changes` take one
   account, `account_id` is required. `list_all_messages` and
   `list_all_changes` read every account. A change of the feed is the
@@ -102,7 +108,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A user's page in the UI has the tabs Rights, Access and Activity. The
   grant editor shows each grant as a line to change or remove. The
   Users list disables, enables, gives or takes a role of the ticked
-  users and names those it could not change.
+  users, all of them or none, and names those it could not change.
 - Each row of the UI's Accounts list links to the account's mail and
   sends. A message has its actions in its header and its keywords as
   chips, and Move asks for the folder in a dialog. The batch bar of a

@@ -423,7 +423,7 @@ def test_several_tokens_are_revoked_at_once_or_none(services: Services) -> None:
     assert all(t.revoked_at is not None for t in revoked)
 
 
-def test_a_batch_changes_each_user_it_may_and_names_the_others(
+def test_a_batch_changes_every_user_or_none_and_names_the_refused(
     services: Services,
 ) -> None:
     from benethos_mailbox_service.errors import BadRequestError
@@ -434,9 +434,12 @@ def test_a_batch_changes_each_user_it_may_and_names_the_others(
     narrow = Access("usr_n", "narrow", [], service=["users.manage"])
     wide = services.users.create_user(ADMIN, "wide", [], [], service=["admin"])
     done = services.users.change_users(narrow, [one.id, wide.id], "disable")
-    assert [u.name for u in done.changed] == ["one"]
+    assert done.changed == []
     [(name, why)] = done.refused
     assert name == "wide" and "lacks" in why
+    assert not services.users.get_user(ADMIN, one.id).disabled
+    alone = services.users.change_users(narrow, [one.id], "disable")
+    assert [u.name for u in alone.changed] == ["one"]
     with pytest.raises(BadRequestError):
         services.users.change_users(ADMIN, [one.id], "promote")
     with pytest.raises(BadRequestError):
@@ -456,3 +459,24 @@ def test_a_batch_counts_only_the_users_it_changed(services: Services) -> None:
     assert [u.name for u in disabled.changed] == ["one"]
     taken = services.users.change_users(ADMIN, [one.id, two.id], "take_role", "helper")
     assert taken.changed == [] and taken.refused == []
+
+
+def test_a_batch_leaves_an_administrator_counting_every_user() -> None:
+    """Each of two administrators could be disabled alone, not both."""
+    from benethos_mailbox_service.assembly import build_services
+    from benethos_mailbox_service.config import Settings
+    from benethos_mailbox_service.errors import ConflictError
+
+    from ...conftest import ADMIN
+
+    services = build_services(Settings(storage="memory"))
+    first = services.users.create_user(
+        ADMIN, "first", [], [], service=["admin"], ui_sign_in=True
+    )
+    second = services.users.create_user(
+        ADMIN, "second", [], [], service=["admin"], ui_sign_in=True
+    )
+    with pytest.raises(ConflictError, match="no enabled administrator"):
+        services.users.change_users(ADMIN, [first.id, second.id], "disable")
+    assert not services.users.get_user(ADMIN, first.id).disabled
+    assert not services.users.get_user(ADMIN, second.id).disabled

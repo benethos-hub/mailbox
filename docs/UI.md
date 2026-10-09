@@ -145,6 +145,12 @@ tick box of a batch whose actions sit in one bar above the table:
 mail lists have one, and Users (disable, enable, give a role, take a
 role, the role chosen in the bar).
 
+A batch of what the service keeps, users, tokens and devices, is all or
+nothing: it changes every ticked entry or none. Where one entry is
+refused, nothing changes, and the message names each refused entry
+with the reason. A batch of messages acts on the mail server, which
+cannot take back a part: it names the messages it could not change.
+
 Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Audit,
 Log, and Changes if it is built (6.6).
 
@@ -349,8 +355,9 @@ not for the signed-in user itself. Switched on, the Password card
 offers a one-time password. The Users list ticks users and disables,
 enables, gives or takes a role of all of them at once: each change goes
 through the domain as one change of that user would, recorded per
-user, and those the caller may not change are named with the reason.
-Nobody disables itself that way either. New role is an editor page too. It takes the path
+user. All or nothing (4.1): where the caller may not change one of
+them, none changes and those are named with the reason. Nobody
+disables itself that way either. New role is an editor page too. It takes the path
 `/ui/roles/new`, so the UI cannot open a role named `new`. It offers four
 templates that fill the form, Reader, Agent, Sender and Operator
 ([PERMISSIONS.md](PERMISSIONS.md) 8.7). Nothing is stored until the role
@@ -611,6 +618,8 @@ All four steps are done, as the roadmap's phase 4b records.
   users later, none for accounts, roles and webhooks (4.1, 4.2, 6.2).
 - 2026-10-09: the user page in tabs Rights, Access, Activity, the grant
   editor in lines, a batch of the Users list (6.3).
+- 2026-10-09: a batch of users, tokens or devices is all or nothing
+  (4.1).
 - 2026-10-09: Mail and Sends on each row of the Accounts list, Verify on
   the account page alone; the message's actions in its header, its
   keywords as chips (4.1, 4.4).

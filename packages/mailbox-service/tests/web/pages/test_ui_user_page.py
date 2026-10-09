@@ -135,9 +135,10 @@ def test_a_role_is_given_and_taken_and_the_caller_never_disabled(
     )
     assert services.users.get_user(ADMIN, one.id).roles == []
     mixed = post(ui, "/ui/users/batch", {"user": [one.id, me.id], "action": "disable"})
-    assert "1 user changed." in mixed.text
-    assert "Not changed: admin: a user cannot disable itself." in mixed.text
+    assert "Nothing changed. admin: a user cannot disable itself." in mixed.text
     assert not services.users.get_user(ADMIN, me.id).disabled
+    # All or nothing: the one the caller may disable stays enabled too.
+    assert not services.users.get_user(ADMIN, one.id).disabled
 
 
 def test_a_batch_needs_ticks_and_a_role_where_it_gives_one(ui: TestClient) -> None:

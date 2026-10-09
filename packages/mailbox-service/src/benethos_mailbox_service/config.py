@@ -124,8 +124,13 @@ class Settings(BaseSettings):
     sign_in_name_wait: int = Field(default=60, ge=1)
     # Password hashes running at once. Each takes 32 MiB.
     password_hashes_at_once: int = Field(default=2, ge=1)
-    # UI: hours a session lives without a request.
+    # UI: hours a session lives without a request, and at most, used or
+    # not. Sessions of one user at most: a new one ends the oldest.
     session_idle_hours: float = Field(default=8.0, gt=0)
+    session_max_hours: float = Field(default=24.0, gt=0)
+    sessions_per_user: int = Field(default=10, ge=1)
+    # UI: minutes a secret shown once waits for the page that shows it.
+    shown_once_minutes: float = Field(default=5.0, gt=0)
     # Autodiscovery: lookups a minute per user.
     discovery_per_minute: int = Field(default=10, ge=1)
     # The kinds of account that can be connected, a JSON list such as
