@@ -35,6 +35,8 @@ class Call(Generic[T]):
     json: dict[str, Any] | None = None
     headers: dict[str, str] = field(default_factory=dict)
     timeout: float = TIMEOUT
+    # The answer's bytes as they come, not JSON: ``read`` takes them.
+    raw: bool = False
 
     @property
     def timeouts(self) -> httpx.Timeout:

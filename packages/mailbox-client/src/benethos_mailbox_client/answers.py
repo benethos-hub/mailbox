@@ -31,7 +31,10 @@ def answer(response: httpx.Response) -> Any:
 def read(call: Call[T], response: httpx.Response) -> T:
     """What the caller gets of ``response``. An answer of another shape
     than the API describes, such as one without a field the call reads, is
-    an ``ApiError`` too, not an error deep inside the reading."""
+    an ``ApiError`` too, not an error deep inside the reading. A raw call
+    reads the bytes of the answer."""
+    if call.raw and not response.is_error:
+        return call.read(response.content)
     found = answer(response)
     try:
         return call.read(found)

@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import httpx
 import pytest
 
-from benethos_mailbox_client import Changes, Outcome, Page
+from benethos_mailbox_client import ApiError, Changes, Outcome, Page
 
 from ..fake_api import PAGE, FakeApi
 
@@ -93,3 +94,22 @@ async def test_delete_message(
     client = make_client(api)
     assert await client.delete_message("acc_1", "msg_1", permanent=permanent) is None
     assert api.call() == ("DELETE", "/v1/accounts/acc_1/messages/msg_1", query, None)
+
+
+async def test_get_message_raw_answers_the_bytes(make_client: Callable) -> None:
+    source = b"From: a@example.com\r\nSubject: Hi\r\n\r\nHello\r\n"
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/accounts/acc_1/messages/msg_1/raw"
+        return httpx.Response(
+            200, content=source, headers={"content-type": "message/rfc822"}
+        )
+
+    assert await make_client(answer).get_message_raw("acc_1", "msg_1") == source
+
+
+async def test_get_message_raw_reads_an_error_as_one(make_client: Callable) -> None:
+    api = FakeApi({"error": {"code": "not_found", "message": "no such message"}}, 404)
+    with pytest.raises(ApiError) as raised:
+        await make_client(api).get_message_raw("acc_1", "msg_9")
+    assert raised.value.code == "not_found"

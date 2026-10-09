@@ -70,6 +70,18 @@ def get_message(account_id: str, message_id: str) -> Call[dict[str, Any]]:
     return Call("GET", path("accounts", account_id, "messages", message_id), dict)
 
 
+def get_message_raw(account_id: str, message_id: str) -> Call[bytes]:
+    """The message as it came, in RFC 5322: headers, body and
+    attachments, the bytes as the provider holds them."""
+    return Call(
+        "GET",
+        path("accounts", account_id, "messages", message_id, "raw"),
+        bytes,
+        timeout=ATTACHMENT_TIMEOUT,
+        raw=True,
+    )
+
+
 def get_attachment(account_id: str, message_id: str, attachment_id: str) -> Call[Any]:
     """The attachment's bytes. Read as a stream, not as JSON."""
     return Call(

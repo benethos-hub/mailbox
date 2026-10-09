@@ -105,6 +105,7 @@ class MailboxClient:
     list_messages = awaiting(endpoints.list_messages)
     list_changes = awaiting(endpoints.list_changes)
     get_message = awaiting(endpoints.get_message)
+    get_message_raw = awaiting(endpoints.get_message_raw)
     update_messages = awaiting(endpoints.update_messages)
     trash_messages = awaiting(endpoints.trash_messages)
     delete_message = awaiting(endpoints.delete_message)
