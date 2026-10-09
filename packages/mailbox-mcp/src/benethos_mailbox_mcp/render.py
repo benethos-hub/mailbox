@@ -12,7 +12,7 @@ import re
 from html.parser import HTMLParser
 from typing import Any
 
-from .models import Changes, Folder, Me, MeAccount, Page, Sending, Sent
+from .models import Changes, Folder, Me, MeAccount, Outcome, Page, Sending, Sent
 
 # Content of these elements is never shown by a mail client.
 _INVISIBLE = {"script", "style", "head", "title", "template", "noscript"}
@@ -234,10 +234,21 @@ def changes(found: Changes) -> dict[str, Any]:
     """A page of the change feed. Ids and types only, nothing a sender
     wrote, so nothing to mark as foreign."""
     return {
-        "changes": found.changes,
+        "changes": [
+            {"type": c.type, "id": c.id, "account_id": c.account_id, "at": c.at}
+            for c in found.changes
+        ],
         "state": found.state,
         "more": found.more,
         "note": CHANGES_NOTE,
+    }
+
+
+def outcome(found: Outcome) -> dict[str, Any]:
+    """A batch: the ids done, and per failed id why not."""
+    return {
+        "done": found.done,
+        "failed": [{"id": f.id, "error": f.error} for f in found.failed],
     }
 
 

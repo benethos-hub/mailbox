@@ -9,11 +9,11 @@ from __future__ import annotations
 from typing import Any
 
 from ..calls import ATTACHMENT_TIMEOUT, Call, as_is, given, nothing, path
-from ..models import Changes, Outcome, Page
+from ..models import Change, Changes, Failed, Outcome, Page
 
 
 def list_messages(
-    account_id: str | None,
+    account_id: str,
     *,
     folder: str | None = None,
     text: str | None = None,
@@ -28,12 +28,11 @@ def list_messages(
     limit: int,
     cursor: str | None = None,
 ) -> Call[Page]:
-    """One account's messages, or with ``account_id`` None, those of
-    every account the caller may read. ``folder`` is an id or a role.
-    Across accounts it must be a role."""
+    """One account's messages, newest first. ``folder`` is an id or a
+    role. ``list_all_messages`` searches every account."""
     return Call(
         "GET",
-        _scoped(account_id, "messages"),
+        path("accounts", account_id, "messages"),
         page,
         params=given(
             {
@@ -114,14 +113,12 @@ def list_all_changes(
     )
 
 
-def list_changes(
-    account_id: str | None, *, since: str | None, limit: int
-) -> Call[Changes]:
-    """The changes of one account, or with ``account_id`` None, of every
-    account the caller may read, after the point ``since``."""
+def list_changes(account_id: str, *, since: str | None, limit: int) -> Call[Changes]:
+    """The changes of one account after the point ``since``.
+    ``list_all_changes`` follows every account."""
     return Call(
         "GET",
-        _scoped(account_id, "changes"),
+        path("accounts", account_id, "changes"),
         _changes,
         params=given({"since": since, "limit": limit}),
     )
@@ -242,12 +239,6 @@ def _batch(account_id: str, body: dict[str, Any]) -> Call[Outcome]:
     )
 
 
-def _scoped(account_id: str | None, what: str) -> str:
-    """``what`` of one account, or with ``account_id`` None, of every
-    account the caller may use."""
-    return path("accounts", account_id, what) if account_id else path(what)
-
-
 # --- the readings ---------------------------------------------------------------------
 
 
@@ -265,7 +256,12 @@ def page(found: dict[str, Any]) -> Page:
 def _changes(found: dict[str, Any]) -> Changes:
     return Changes(
         changes=[
-            {key: str(change[key]) for key in ("type", "id", "account_id", "at")}
+            Change(
+                type=str(change["type"]),
+                id=str(change["id"]),
+                account_id=str(change["account_id"]),
+                at=str(change["at"]),
+            )
             for change in found.get("changes", [])
         ],
         state=str(found["state"]),
@@ -281,6 +277,6 @@ def _outcome(found: dict[str, Any]) -> Outcome:
         else:
             error = item.get("error") or {}
             failed.append(
-                {"id": str(item["id"]), "error": error.get("message", "failed")}
+                Failed(id=str(item["id"]), error=str(error.get("message", "failed")))
             )
     return Outcome(done, failed)

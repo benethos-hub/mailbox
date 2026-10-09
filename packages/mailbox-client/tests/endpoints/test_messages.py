@@ -8,7 +8,7 @@ from collections.abc import Callable
 import httpx
 import pytest
 
-from benethos_mailbox_client import ApiError, Changes, Outcome, Page
+from benethos_mailbox_client import ApiError, Change, Changes, Failed, Outcome, Page
 
 from ..fake_api import PAGE, FakeApi
 
@@ -33,19 +33,19 @@ async def test_list_messages(make_client: Callable) -> None:
     assert found == Page([{"id": "msg_1"}], "c2", ["acc_2: timed out"])
 
 
-async def test_list_messages_of_every_account(make_client: Callable) -> None:
-    api = FakeApi({"items": []})
-    found = await make_client(api).list_messages(None, limit=5, cursor="c")
-    assert api.call() == ("GET", "/v1/messages", {"limit": "5", "cursor": "c"}, None)
-    assert found == Page([], None)
-
-
 async def test_list_changes(make_client: Callable) -> None:
     change = {"type": "message.created", "id": "msg_1", "account_id": "acc_1"}
     api = FakeApi({"changes": [{**change, "at": "t"}], "state": "s2", "more": True})
-    found = await make_client(api).list_changes(None, since="s1", limit=10)
-    assert api.call() == ("GET", "/v1/changes", {"since": "s1", "limit": "10"}, None)
-    assert found == Changes([{**change, "at": "t"}], "s2", True)
+    found = await make_client(api).list_changes("acc_1", since="s1", limit=10)
+    assert api.call() == (
+        "GET",
+        "/v1/accounts/acc_1/changes",
+        {"since": "s1", "limit": "10"},
+        None,
+    )
+    assert found == Changes(
+        [Change("message.created", "msg_1", "acc_1", "t")], "s2", True
+    )
 
 
 async def test_get_message(make_client: Callable) -> None:
@@ -71,9 +71,7 @@ async def test_update_messages(make_client: Callable) -> None:
             "changes": {"unread": False, "folder_ids": ["archive"]},
         },
     )
-    assert found == Outcome(
-        ["m1"], [{"id": "m2", "error": "failed"}, {"id": "m3", "error": "gone"}]
-    )
+    assert found == Outcome(["m1"], [Failed("m2", "failed"), Failed("m3", "gone")])
 
 
 async def test_trash_messages(make_client: Callable) -> None:

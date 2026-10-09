@@ -47,7 +47,7 @@ def feed_types(
             found = mailbox.list_changes(account_id, since=since, limit=200)
         except ApiError as exc:
             return [f"status {exc.status}"]
-        types = [c["type"] for c in found.changes if c["id"] == message_id]
+        types = [c.type for c in found.changes if c.id == message_id]
         if types or time.monotonic() > deadline:
             return types
         time.sleep(5)

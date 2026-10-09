@@ -45,8 +45,7 @@ async def search_messages(
     """Find mail, newest first. All filters narrow together. Without an
     account it searches every account you may read, and folder must be a
     role. Answers summaries. get_message reads one message."""
-    page = await client().list_messages(
-        account_id,
+    filters: dict[str, Any] = dict(
         folder=folder,
         text=text,
         sender=sender,
@@ -60,6 +59,10 @@ async def search_messages(
         limit=limit,
         cursor=cursor,
     )
+    if account_id is None:
+        page = await client().list_all_messages(**filters)
+    else:
+        page = await client().list_messages(account_id, **filters)
     return render.page(page)
 
 
@@ -85,7 +88,10 @@ async def whats_new(
     flags) or deleted, oldest first, ids only. Call once without since to
     get a state, later pass that state as since. With more, call again at
     once. get_message reads a new mail."""
-    found = await client().list_changes(account_id, since=since, limit=limit)
+    if account_id is None:
+        found = await client().list_all_changes(since=since, limit=limit)
+    else:
+        found = await client().list_changes(account_id, since=since, limit=limit)
     return render.changes(found)
 
 

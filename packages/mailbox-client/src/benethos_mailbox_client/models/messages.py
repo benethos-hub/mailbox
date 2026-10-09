@@ -31,13 +31,30 @@ class Page:
 
 
 @dataclass(frozen=True)
-class Changes:
-    """Changes after a point in the change feed, oldest first: type, id,
-    account_id and at, ids only."""
+class Change:
+    """One change of the change feed: ids only."""
 
-    changes: list[dict[str, str]]
+    type: str  # e.g. "message.created"
+    id: str
+    account_id: str
+    at: str
+
+
+@dataclass(frozen=True)
+class Changes:
+    """Changes after a point in the change feed, oldest first."""
+
+    changes: list[Change]
     state: str
     more: bool
+
+
+@dataclass(frozen=True)
+class Failed:
+    """An id a batch did not do, and why."""
+
+    id: str
+    error: str
 
 
 @dataclass(frozen=True)
@@ -45,4 +62,4 @@ class Outcome:
     """A batch: the ids done, and per failed id why not."""
 
     done: list[str]
-    failed: list[dict[str, str]]
+    failed: list[Failed]
