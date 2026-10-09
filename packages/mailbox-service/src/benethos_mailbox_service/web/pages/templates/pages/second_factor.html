@@ -123,7 +123,8 @@
 
 {% if factor.totp %}
 {% call card("Recovery codes", meta=factor.recovery_codes_left ~ " left. New ones replace them all.") %}
-  {% if factor.recovery_codes_left <= 2 %}<div class="notice warn">Few recovery codes are left. Make new ones.</div>{% endif %}
+  {% if factor.recovery_codes_left == 0 %}<div class="notice warn">No recovery codes are left. Make new ones.</div>
+  {% elif factor.recovery_codes_left <= 2 %}<div class="notice warn">Few recovery codes are left. Make new ones.</div>{% endif %}
   <form method="post" action="/ui/second-factor/codes">
     {{ csrf_field() }}
     <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />

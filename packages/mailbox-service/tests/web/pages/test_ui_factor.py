@@ -23,7 +23,7 @@ from ...ui_helpers import post, sign_in, try_sign_in
 pytestmark = pytest.mark.usefixtures("master_key")
 
 READER = Grant(accounts=["*"], allow=["mail.read"])
-CODES = r"<li>([0-9A-Z]{5}-[0-9A-Z]{5})</li>"
+CODES = r"<li>([0-9A-Z]{5}-[0-9A-Z]{5}-[0-9A-Z]{5})</li>"
 
 
 @pytest.fixture(autouse=True)
@@ -396,6 +396,8 @@ def test_new_recovery_codes_on_the_own_page(
     assert "New recovery codes." in fresh.text
     codes = re.findall(CODES, fresh.text)
     assert len(codes) == 10 and not set(codes) & set(old)
+    services.repositories.recovery_codes.delete(user_named(services, name).id)
+    assert "No recovery codes are left" in app_client.get("/ui/second-factor").text
 
 
 def test_the_recovery_key_needs_a_code_with_a_second_factor(

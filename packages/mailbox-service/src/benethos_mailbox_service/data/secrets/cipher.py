@@ -1,7 +1,10 @@
-"""AES-256-GCM and key derivation. The only module that imports ``cryptography``."""
+"""AES-256-GCM, key derivation and keyed hashes. The only module that
+imports ``cryptography``."""
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
 
 from cryptography.exceptions import InvalidTag
@@ -41,3 +44,8 @@ def derive(key: bytes, info: bytes) -> bytes:
     return HKDF(
         algorithm=hashes.SHA256(), length=KEY_BYTES, salt=None, info=info
     ).derive(key)
+
+
+def keyed_hash(key: bytes, data: bytes) -> str:
+    """The HMAC-SHA256 of ``data`` under ``key``, in hex."""
+    return hmac.new(key, data, hashlib.sha256).hexdigest()

@@ -71,7 +71,9 @@ class SecondFactors:
             return None
         if presented.strip().isdigit():
             device = self.totp.check(user_id, presented)
-            return Taken("totp", device) if device is not None else None
+            if device is not None:
+                return Taken("totp", device)
+        # A recovery code may be digits alone as well.
         return Taken("recovery") if self.recovery.use(user_id, presented) else None
 
     def added(self, user_id: str, first: bool) -> list[str]:

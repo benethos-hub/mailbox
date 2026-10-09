@@ -161,6 +161,15 @@ class CredentialVault:
     def unseal(self, label: str, sealed: Sealed) -> SecretStr:
         return self._open(f"the secret of {label}", sealed, _sealed_aad(label))
 
+    def keyed_hash(self, label: str, text: str) -> tuple[str, str]:
+        """An HMAC-SHA256 of ``text`` under a key derived from the data key
+        for ``label``, in hex, with the id of that data key. Without the
+        master key nobody can try guesses against it, e.g. against a
+        recovery code in a stolen database."""
+        key_id, dek = self._data_key()
+        key = cipher.derive(dek, f"keyed-hash:{label}".encode())
+        return key_id, cipher.keyed_hash(key, text.encode())
+
     def _open(self, what: str, sealed: Sealed, aad: bytes) -> SecretStr:
         """Decrypted with the data key and noted for masking. ``what``
         names the secret in an error."""

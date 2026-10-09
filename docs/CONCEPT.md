@@ -1647,7 +1647,9 @@ account and re-issuing every token.
 - **The KEK is deliberately not in the backup.** Restoring needs the KEK on
   the same machine, or the **recovery key** from the first start (7.3).
   Keep backup file and recovery key in different places. Either alone is
-  useless, which is the point.
+  useless, which is the point. The recovery codes of the second factor
+  are hashed under a key of the vault as well, so they too count only
+  with the same master key ([AUTHENTICATION.md](AUTHENTICATION.md) 6).
 - **`benethos-mailbox-service restore <file>`** refuses while the service runs,
   migrates an older schema forward, and refuses a newer one. On a new
   machine, `--recovery-key` also stores the KEK in the new key provider.

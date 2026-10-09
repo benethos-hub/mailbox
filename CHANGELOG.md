@@ -16,6 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   once, also as a text file to download. A further device, new
   recovery codes and the recovery key need a code. A password set by someone else is changed
   only after the code. docs/AUTHENTICATION.md has the details.
+  Recovery codes made before schema 19 are void: make new ones on the
+  page **Second factor** after the update.
 - Gmail and Google Workspace accounts over the Gmail API, with the
   kind of account `gmail`. They sign in with Google in the browser,
   through a Google client of the deployment's own, set up as
@@ -38,7 +40,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   /v1/users/{user_id}/second-factor/totp/{device_id}`
   (`remove_totp_device`) one TOTP device, both in `users.manage`, for a user whose
   rights the caller holds, never for the caller itself. The database
-  moves to schema 18.
+  moves to schema 19.
 - `users reset-second-factor <name>` on the host removes a user's second factor,
   for the last administrator who lost every device and the recovery
   codes.

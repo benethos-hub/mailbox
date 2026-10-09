@@ -230,6 +230,20 @@ def test_vault_round_trip() -> None:
         v.read("acc_1", "password")
 
 
+def test_a_keyed_hash_needs_the_data_key() -> None:
+    v = vault()
+    v.initialize()
+    key_id, hashed = v.keyed_hash("recovery-code", "text")
+    assert v.keyed_hash("recovery-code", "text") == (key_id, hashed)
+    assert v.keyed_hash("other", "text")[1] != hashed
+    assert v.keyed_hash("recovery-code", "other")[1] != hashed
+    elsewhere = vault()
+    elsewhere.initialize()
+    assert elsewhere.keyed_hash("recovery-code", "text")[1] != hashed
+    with pytest.raises(SetupRequiredError):
+        vault().keyed_hash("recovery-code", "text")
+
+
 def test_vault_initializes_once() -> None:
     v = vault()
     v.initialize()

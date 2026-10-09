@@ -167,16 +167,28 @@ device or all, never adds one. Devices can be renamed, at most 10.
 
 ## 6. Recovery codes
 
-Ten codes, each ten characters from a base32 alphabet without the
-letters easily mistaken, shown as `ABCDE-FGHJK`. They belong to the
+Ten codes, each fifteen characters from a base32 alphabet without the
+letters easily mistaken, shown as `ABCDE-FGHJK-MNPQR`. They belong to the
 second factor, not to a method or a device: they help whichever is
 lost. They are made with the first device and shown once, with a link
 to download them as a text file. The page holds the file as a data
 URI, so the service keeps nothing of them after showing them. Each
-holds 50 bits and works once.
+holds 75 bits and works once.
 
-- Stored as SHA-256 hashes, as tokens are: a random code of that
-  length needs no slow hash. Case, spaces and dashes do not count.
+- Stored as HMAC-SHA256 under a key derived from the data key, with
+  the user's id in what is hashed, and with the id of that data key.
+  Whoever steals the database without the master key cannot try a
+  single guess, and a guess made with it fits one user only. The check
+  is as fast as a plain hash. Case, spaces and dashes do not count.
+- The key is derived with HKDF from the data key, for this purpose
+  alone, and comes from the vault, never from the database. The
+  domain only gets a hash function handed in. Each row keeps the id of
+  the data key, so a later `keys rotate` can still check old codes or
+  void them.
+- After a restore on another machine the codes count only with the
+  same master key, as every other secret of the backup does.
+- A code of digits alone is tried as a code of the app first, then as a
+  recovery code.
 - The page shows how many are left. **New recovery codes** asks for the
   password and a code, of any device or an old recovery code, as adding
   a device does, and replaces the whole set. Whoever holds the password
@@ -195,14 +207,18 @@ factor is the third.
 
 ## 7. Where it changes the service
 
-**Data**, schema 18:
+**Data**, schemas 18 and 19:
 
 | Table | Columns |
 |---|---|
 | `totp_devices` | `id` (`tfa_` and 64 hex), `user_id` (references the user, deleted with it), `name`, the secret sealed with the data key (`key_id`, `nonce`, `ciphertext`), `created_at`, `last_step`, `last_used_at` |
-| `recovery_codes` | `user_id` (references the user, deleted with it), `hash`, `used_at` |
+| `recovery_codes` | `user_id` (references the user, deleted with it), `key_id` (the data key the hash came from), `hash`, `used_at` |
 
-A later method brings a table of its own. The secret is sealed with
+Schema 19 made the hashes of the recovery codes keyed. The plain
+SHA-256 hashes of schema 18 cannot become keyed ones, since the codes
+are never kept, so the migration deletes them and a user with a second
+factor makes new codes. No release held schema 18 then. A later method
+brings a table of its own. The secret is sealed with
 the data key as a webhook's secret is (CONCEPT 7.3), bound to its
 device. A backup holds both tables, the secrets as encrypted as the
 rest.
@@ -312,6 +328,10 @@ the mail accounts. A second factor there is the provider's.
   device (section 6).
 - The recovery key after the password and a code, for an administrator
   with a second factor (section 7).
+- Recovery codes of 75 bits, stored as an HMAC under a key from the
+  vault and bound to the user, the most secure of the variants. The old
+  codes deleted by the migration, since only the operator's own
+  database held any (section 6).
 - "Second factor" is the frame, TOTP one method in it, named
   "Authenticator app (TOTP)" in the UI and `totp` elsewhere. Passkeys
   may join as another method with the same recovery codes. The host

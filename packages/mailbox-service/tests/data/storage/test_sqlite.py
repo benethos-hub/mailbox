@@ -11,6 +11,7 @@ import pkgutil
 import re
 import sqlite3
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,7 @@ from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.storage import (
     Database,
+    SqliteRecoveryCodeRepository,
     SqliteRoleRepository,
     SqliteUserRepository,
 )
@@ -161,6 +163,33 @@ def test_nobody_loses_a_right_by_the_move(tmp_path: Path) -> None:
     operator = Access.for_user(users["operator"], {})
     assert operator.allows("create_account") and operator.allows("discover_account")
     assert operator.allows("verify_account", "acc_9")
+    db.close()
+
+
+def test_recovery_codes_of_schema_18_are_deleted(tmp_path: Path) -> None:
+    """Their plain SHA-256 hashes cannot become keyed ones: a user makes
+    new codes (docs/AUTHENTICATION.md 6)."""
+    path = tmp_path / "old.db"
+    Database(path).close()
+    raw = sqlite3.connect(path)
+    with raw:
+        raw.execute("DROP TABLE recovery_codes")
+        for statement in MIGRATIONS.step(18).statements[2:]:
+            raw.execute(statement)
+        raw.execute(
+            "INSERT INTO users (id, name, roles, grants)"
+            " VALUES ('usr_1', 'u', '[]', '[]')"
+        )
+        raw.execute("INSERT INTO recovery_codes (user_id, hash) VALUES ('usr_1', 'h')")
+        raw.execute("UPDATE meta SET value = '18' WHERE key = 'schema_version'")
+    raw.close()
+    db = Database(path)
+    assert db.query("SELECT * FROM recovery_codes") == []
+    columns = [r[1] for r in db.query("PRAGMA table_info(recovery_codes)")]
+    assert columns == ["user_id", "key_id", "hash", "used_at"]
+    codes = SqliteRecoveryCodeRepository(db)
+    assert codes.left("usr_1") == 0
+    assert codes.use("usr_1", "", "h", datetime.now(UTC)) is False
     db.close()
 
 
