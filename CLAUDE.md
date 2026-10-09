@@ -101,6 +101,15 @@ done. Update the roadmap in the same commit that finishes an item.
   draft there, sends one mail from it to the first test account and
   deletes it for good on both sides, and checks that the change feed
   learns of the sent copy through Graph delta queries.
+- Gmail accounts: a Google client of your own, `docs/GOOGLE.md`.
+  `uv run python live/gmail.py --connect` once (a person signs in in
+  the browser), then `uv run python live/gmail.py` checks the adapter
+  against the Gmail test account in `live/.env` with that client. It
+  makes a label inside a label, renames and removes them, writes,
+  replaces and deletes a draft, sends one mail from it to the first
+  test account, deleted for good there, stars, labels and archives the
+  copy in Sent, deletes it for good, and checks that the change feed
+  learns of it through Gmail's history.
 - A test mail server of our own: `sh containers/test-mail-server/setup.sh`
   makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
   `127.0.0.1:30xxx`, two accounts and a local test CA
@@ -151,6 +160,7 @@ docs/
   UI.md                   # how the pages look and behave, new page checklist
   REFACTORING.md          # how the layout came to be
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
+  GOOGLE.md               # connecting Gmail accounts, the Google client
   ROADMAP.md              # phases and their state
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test

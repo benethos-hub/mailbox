@@ -320,7 +320,8 @@ packages/mailbox-service/
                         #   the server, the login, the guard, SMTP
         imap/, memory/, # one directory per provider (adapter),
         microsoft/,     #   provider.py the adapter, mappers.py the
-        pop3/, jmap/    #   translation, shapes.py what the provider
+        pop3/, jmap/,   #   translation, shapes.py what the provider
+        gmail/          #
                         #   sends as JSON, the rest one module per
                         #   subject.
                         #   imap: connect.py, mailbox.py (one session
@@ -333,6 +334,11 @@ packages/mailbox-service/
                         #   microsoft: graph.py (Graph over
                         #   data/protocols/http), signin.py its
                         #   endpoints and the scopes it needs.
+                        #   gmail: api.py (the Gmail API over
+                        #   data/protocols/http), signin.py,
+                        #   reading.py (what the parts read alike),
+                        #   folders (labels), messages, sending
+                        #   (with the drafts), changes (history).
                         #   pop3: one inbox, a session per step
       storage/          # own records, one module per subject, table.py
                         #   for the in-memory ones, sqlite/ the database
@@ -584,7 +590,7 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas` for what it can beyond; `Capability` of `data/models/accounts.py`, `capabilities_of`), registry in `data/providers/registry.py`. The domain answers 501 for a missing protocol (`domain/accounts/abilities.py`) | memory, imap, microsoft, pop3, jmap (planned: gmail) | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas` for what it can beyond; `Capability` of `data/models/accounts.py`, `capabilities_of`), registry in `data/providers/registry.py`. The domain answers 501 for a missing protocol (`domain/accounts/abilities.py`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`) | in-memory, SQLite | another database |

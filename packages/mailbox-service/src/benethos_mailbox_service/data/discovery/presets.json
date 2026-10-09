@@ -7,6 +7,14 @@
       "mx_domains": ["google.com", "googlemail.com"],
       "candidates": [
         {
+          "provider": "gmail",
+          "credential": "oauth",
+          "oauth_provider": "gmail",
+          "hints": [
+            {"text": "Sign in with Google, through the Google client this deployment set up."}
+          ]
+        },
+        {
           "provider": "imap",
           "credential": "app_password",
           "servers": [

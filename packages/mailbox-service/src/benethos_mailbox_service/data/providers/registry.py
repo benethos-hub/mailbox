@@ -16,6 +16,8 @@ from ...errors import NotSupportedError
 from ..models import CredentialKind, MailServer, ProviderType, Security, ServerProtocol
 from ..protocols import Endpoints, Pick
 from .base import CredentialReader, ProviderSettings, Reads, TokenSource
+from .gmail import GmailProvider
+from .gmail import endpoints as gmail_endpoints
 from .guard import Pace
 from .imap import ImapProvider
 from .imap import probe as probe_imap
@@ -79,6 +81,7 @@ _REGISTRY: dict[
 # Providers that sign in with OAuth: they get a token source instead.
 _SIGNED_IN: dict[ProviderType, Callable[[ProviderSettings, TokenSource], Reads]] = {
     ProviderType.MICROSOFT: lambda _settings, tokens: MicrosoftProvider(tokens),
+    ProviderType.GMAIL: lambda _settings, tokens: GmailProvider(tokens),
 }
 
 
@@ -86,6 +89,7 @@ _SIGNED_IN: dict[ProviderType, Callable[[ProviderSettings, TokenSource], Reads]]
 # deployment's tenant or its like.
 _SIGN_IN: dict[ProviderType, Callable[[str | None], Endpoints]] = {
     ProviderType.MICROSOFT: microsoft_endpoints,
+    ProviderType.GMAIL: gmail_endpoints,
 }
 # The project's own apps: public clients, shipped with the service.
 _PROJECT_APPS = {ProviderType.MICROSOFT: MICROSOFT_CLIENT_ID}

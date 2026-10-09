@@ -75,8 +75,19 @@ def provider_factory(settings: Settings, fetcher: SafeFetcher) -> ProviderFactor
 
 def build_oauth(settings: Settings) -> dict[ProviderType, OAuthClient]:
     """The OAuth apps the settings name, one per provider. Without one,
-    the project's app, a public client (CONCEPT 5.4)."""
+    the project's app, a public client (CONCEPT 5.4), where there is one:
+    Google has none (CONCEPT 5.5)."""
     clients: dict[ProviderType, OAuthClient] = {}
+    google = settings.oauth_google_client_id
+    google_secret = settings.oauth_google_secret()
+    if google and google_secret is not None:
+        redact.note(google_secret.get_secret_value())
+        app = App(
+            endpoints=sign_in(ProviderType.GMAIL),
+            client_id=google,
+            client_secret=google_secret,
+        )
+        clients[ProviderType.GMAIL] = OAuthClient(app, ApiClient())
     own = settings.oauth_microsoft_client_id
     client_id = own or project_client_id(ProviderType.MICROSOFT)
     if client_id:

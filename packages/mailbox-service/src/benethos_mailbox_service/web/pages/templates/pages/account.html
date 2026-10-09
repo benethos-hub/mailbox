@@ -12,7 +12,7 @@
 {% block content %}
 {% set secret_name = "API token" if account.settings.get("auth") == "token" else "password" %}
 {% if account.status.value == "needs_reauth" %}
-<div class="notice err" role="alert">{% if signs_in_with_oauth %}{{ account.provider.value | capitalize }} no longer accepts this service's token: sign in again below.{% else %}The provider refused the stored {{ secret_name }}: enter the new one below.{% endif %}</div>
+<div class="notice err" role="alert">{% if signs_in_with_oauth %}{{ account.provider.value | signs_in_at }} no longer accepts this service's token: sign in again below.{% else %}The provider refused the stored {{ secret_name }}: enter the new one below.{% endif %}</div>
 {% endif %}
 
 {% set status_tag %}{% include "partials/account_status.html" %}{% endset %}
@@ -59,7 +59,7 @@
 </form>
 {% if signs_in_with_oauth %}
 <div class="fold toolbar">
-  <span class="muted grow">Signed in with {{ account.provider.value | capitalize }}. Sign in again after a password change or when access was revoked.</span>
+  <span class="muted grow">Signed in with {{ account.provider.value | signs_in_at }}. Sign in again after a password change or when access was revoked.</span>
   {% set browser = account.provider.value in in_browser %}
   {% if browser %}
   <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/start">
@@ -68,11 +68,13 @@
     <button class="{{ 'primary' if account.status.value == 'needs_reauth' else '' }}" type="submit">Sign in again</button>
   </form>
   {% endif %}
+  {% if account.provider.value in with_code %}
   <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/device">
     {{ csrf_field() }}
     <input type="hidden" name="account_id" value="{{ account.id }}" />
     <button class="{{ 'primary' if account.status.value == 'needs_reauth' and not browser else '' }}" type="submit">Sign in again with a code</button>
   </form>
+  {% endif %}
 </div>
 {% endif %}
 {% endcall %}

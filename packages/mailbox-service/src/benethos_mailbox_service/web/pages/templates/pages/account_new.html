@@ -48,21 +48,24 @@
 {% endmacro %}
 {# Two ways: in this browser, sent back to this service, or with a code
    entered at the provider on any device. The first only where the
-   provider can send the browser back here (``in_browser``). #}
+   provider can send the browser back here (``in_browser``), the second
+   only where it offers codes (``with_code``). #}
 {% macro sign_in_form(provider, hint="") %}
 {% if provider in in_browser %}
 <form class="inline" method="post" action="/ui/oauth/{{ provider }}/start">
   {{ csrf_field() }}
   <input type="hidden" name="login_hint" value="{{ hint }}" />
-  <button class="primary" type="submit">Sign in with {{ provider | capitalize }}</button>
+  <button class="primary" type="submit">Sign in with {{ provider | signs_in_at }}</button>
 </form>
 {% endif %}
+{% if provider in with_code %}
 <form class="inline" method="post" action="/ui/oauth/{{ provider }}/device">
   {{ csrf_field() }}
-  <button{% if provider not in in_browser %} class="primary"{% endif %} type="submit">Sign in {% if provider in in_browser %}with a code{% else %}with {{ provider | capitalize }} and a code{% endif %}</button>
+  <button{% if provider not in in_browser %} class="primary"{% endif %} type="submit">Sign in {% if provider in in_browser %}with a code{% else %}with {{ provider | signs_in_at }} and a code{% endif %}</button>
 </form>
+{% endif %}
 {% endmacro %}
-{% macro ways_hint(provider) %}{% if provider in in_browser %}In the browser, the provider sends you back to this service. Or sign in with a code on any device.{% else %}{{ provider | capitalize }} sends a browser back to this service only at localhost, so you sign in with a code on any device.{% endif %}{% endmacro %}
+{% macro ways_hint(provider) %}{% if provider in in_browser and provider in with_code %}In the browser, the provider sends you back to this service. Or sign in with a code on any device.{% elif provider in in_browser %}In the browser, the provider sends you back to this service.{% else %}{{ provider | signs_in_at }} sends a browser back to this service only at localhost, so you sign in with a code on any device.{% endif %}{% endmacro %}
 
 <section class="card">
   <header><h2>1. The address</h2></header>
@@ -101,7 +104,7 @@
   </header>
   <div class="body toolbar">
     {{ sign_in_form(candidate.oauth_provider, discovery.email) }}
-    <span class="muted">No password is needed. {{ candidate.oauth_provider | capitalize }} asks you, and this service keeps only a token it can renew. {{ ways_hint(candidate.oauth_provider) }}</span>
+    <span class="muted">No password is needed. {{ candidate.oauth_provider | signs_in_at }} asks you, and this service keeps only a token it can renew. {{ ways_hint(candidate.oauth_provider) }}</span>
   </div>
 </section>
 {% endfor %}

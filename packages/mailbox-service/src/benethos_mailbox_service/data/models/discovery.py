@@ -71,7 +71,8 @@ class Candidate(BaseModel):
     provider: ProviderType
     name: str | None = None
     credential: CredentialKind
-    # "google" or "microsoft" when the credential is an OAuth sign-in.
+    # The kind of account that signs in, "gmail" or "microsoft", when the
+    # credential is an OAuth sign-in.
     oauth_provider: str | None = None
     servers: list[MailServer] = Field(default_factory=list)
     hints: list[Hint] = Field(default_factory=list)

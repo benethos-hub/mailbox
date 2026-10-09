@@ -10,8 +10,11 @@ nothing else.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from email.header import Header
+from email.utils import formataddr, getaddresses
 from functools import cached_property
 from typing import Any
 
@@ -136,6 +139,29 @@ class ParsedMessage:
             )
             for part in self._parsed.attachments
         ]
+
+
+# Headers that hold addresses: a name in them is encoded on its own.
+_ADDRESS_HEADERS = frozenset({"from", "sender", "to", "cc", "bcc", "reply-to"})
+
+
+def from_headers(headers: Iterable[tuple[str, str]]) -> ParsedMessage:
+    """Headers alone, as an API hands them out decoded (Gmail's
+    metadata), parsed as a message without a body. Text beyond ASCII is
+    encoded again (RFC 2047) so the parser reads it as it would read
+    the message itself."""
+    lines = [f"{name}: {_encoded(name, value)}" for name, value in headers]
+    return ParsedMessage(("\r\n".join(lines) + "\r\n\r\n").encode("utf-8"))
+
+
+def _encoded(name: str, value: str) -> str:
+    value = " ".join(value.split())
+    if value.isascii():
+        return value
+    if name.lower() in _ADDRESS_HEADERS:
+        pairs = getaddresses([value])
+        return ", ".join(formataddr(pair, charset="utf-8") for pair in pairs)
+    return Header(value, "utf-8").encode()
 
 
 def _address(value: Any) -> Address:

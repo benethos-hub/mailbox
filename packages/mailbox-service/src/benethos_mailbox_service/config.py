@@ -23,7 +23,12 @@ ENV_FILE_VARIABLE = "MAILBOX_SERVICE_ENV_FILE"
 KEY_FILE_NAME = "master.key"
 # The settings that hold a path. A relative one counts from the folder
 # of the settings file.
-PATH_SETTINGS = ("data_dir", "key_file", "oauth_microsoft_client_secret_file")
+PATH_SETTINGS = (
+    "data_dir",
+    "key_file",
+    "oauth_microsoft_client_secret_file",
+    "oauth_google_client_secret_file",
+)
 
 
 class Settings(BaseSettings):
@@ -137,6 +142,13 @@ class Settings(BaseSettings):
     # Who may sign in: common (personal and work or school accounts),
     # consumers, organizations, or one tenant's id or domain.
     oauth_microsoft_tenant: str = "common"
+    # OAuth for Gmail and Google Workspace: a client the operator made in
+    # a Google Cloud project (CONCEPT 5.5, docs/GOOGLE.md). The project
+    # ships none. Without it, Gmail connects over IMAP with an app
+    # password. The secret from a file or from the environment.
+    oauth_google_client_id: str | None = None
+    oauth_google_client_secret: SecretStr | None = None
+    oauth_google_client_secret_file: Path | None = None
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -153,30 +165,56 @@ class Settings(BaseSettings):
             raise ValueError(
                 "imap_longest_pause must not be shorter than imap_first_pause"
             )
-        secret = self.oauth_microsoft_client_secret
-        if (
-            secret is not None and secret.get_secret_value()
-        ) or self.oauth_microsoft_client_secret_file is not None:
-            if not self.oauth_microsoft_client_id:
-                # The project's app has no secret: this one belongs to another.
-                raise ValueError(
-                    "a Microsoft client secret needs the client id of its app "
-                    "in oauth_microsoft_client_id"
-                )
+        microsoft = _named(
+            self.oauth_microsoft_client_secret,
+            self.oauth_microsoft_client_secret_file,
+        )
+        if microsoft and not self.oauth_microsoft_client_id:
+            # The project's app has no secret: this one belongs to another.
+            raise ValueError(
+                "a Microsoft client secret needs the client id of its app "
+                "in oauth_microsoft_client_id"
+            )
+        google = _named(
+            self.oauth_google_client_secret, self.oauth_google_client_secret_file
+        )
+        if google != bool(self.oauth_google_client_id):
+            raise ValueError(
+                "a Google client needs both its id in oauth_google_client_id "
+                "and its secret in oauth_google_client_secret or "
+                "oauth_google_client_secret_file"
+            )
         return self
 
     def oauth_microsoft_secret(self) -> SecretStr | None:
         """The client secret, from its file if one is named. None for a
         public client, which has none."""
-        if self.oauth_microsoft_client_secret_file is not None:
-            text = self.oauth_microsoft_client_secret_file.read_text(encoding="utf-8")
-            return SecretStr(text.strip())
-        secret = self.oauth_microsoft_client_secret
-        return secret if secret is not None and secret.get_secret_value() else None
+        return _secret(
+            self.oauth_microsoft_client_secret,
+            self.oauth_microsoft_client_secret_file,
+        )
+
+    def oauth_google_secret(self) -> SecretStr | None:
+        """The Google client's secret, from its file if one is named."""
+        return _secret(
+            self.oauth_google_client_secret, self.oauth_google_client_secret_file
+        )
 
     @property
     def database_path(self) -> Path:
         return (self.data_dir / "mailbox.db").resolve()
+
+
+def _named(secret: SecretStr | None, file: Path | None) -> bool:
+    """Whether a secret is set, in the environment or as a file."""
+    return bool(secret is not None and secret.get_secret_value()) or file is not None
+
+
+def _secret(secret: SecretStr | None, file: Path | None) -> SecretStr | None:
+    """A secret, from its file if one is named, else from the environment."""
+    if file is not None:
+        return SecretStr(file.read_text(encoding="utf-8").strip())
+    return secret if secret is not None and secret.get_secret_value() else None
 
 
 Origin = Literal["named", "working directory", "system"]

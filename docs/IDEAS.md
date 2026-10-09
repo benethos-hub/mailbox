@@ -17,6 +17,20 @@ identity may have its own signature and reply-to.
 - Rights: may a user send as every identity of an account, or only as some?
   That could be a grant constraint like `recipients`.
 
+## Gmail pushes through Cloud Pub/Sub
+
+Gmail tells of changes only through Cloud Pub/Sub: `users.watch` names a
+topic, Gmail publishes to it, and the watch runs out after 7 days unless
+renewed. Today the worker asks Gmail's history every
+`MAILBOX_SERVICE_SYNC_INTERVAL` seconds instead (CONCEPT 5.5).
+
+- Needs more of Google Cloud: a topic, a subscription, and the right of
+  Gmail's service account to publish to it.
+- A pull subscription works without a public address: the worker asks
+  the subscription and wakes the account's sync. A push subscription
+  needs an HTTPS endpoint the service would have to offer.
+- Gives `PUSH` and with it `wait_for_change`.
+
 ## One thread for every IDLE connection
 
 Today each watched account holds a thread while it waits in IDLE, at

@@ -80,6 +80,11 @@ def test_bundled_presets_are_consistent() -> None:
         assert preset.candidates or preset.hints, preset.id
         for candidate in preset.candidates:
             protocols = [s.protocol for s in candidate.servers]
+            if not protocols:
+                # A sign-in with OAuth to a provider's own API names none.
+                assert candidate.credential is CredentialKind.OAUTH, preset.id
+                assert candidate.oauth_provider == candidate.provider.value
+                continue
             # The server it reads mail from comes first.
             assert protocols[0].value == candidate.provider.value, preset.id
             for server in candidate.servers:
@@ -94,7 +99,10 @@ def test_bundled_presets_are_consistent() -> None:
 async def test_preset_source_by_domain() -> None:
     source = PresetSource()
     found = await source.lookup(Query("a@gmail.com", "gmail.com"))
-    [candidate] = found.candidates
+    google, candidate = found.candidates
+    assert google.provider is ProviderType.GMAIL
+    assert google.credential is CredentialKind.OAUTH
+    assert google.oauth_provider == "gmail" and google.servers == []
     assert candidate.name == "Gmail"
     assert candidate.source is DiscoverySourceName.PRESET
     assert candidate.credential is CredentialKind.APP_PASSWORD
@@ -280,8 +288,9 @@ async def test_mx_tries_the_next_host() -> None:
         lookup_mx=mx("mx.unknown.example", "alt4.aspmx.l.google.com"),
     )
     found = await source.lookup(QUERY)
-    assert found.candidates[0].provider is ProviderType.IMAP
-    assert found.candidates[0].name == "Gmail"
+    google, imap = found.candidates
+    assert google.provider is ProviderType.GMAIL
+    assert imap.provider is ProviderType.IMAP and imap.name == "Gmail"
 
 
 async def test_mx_to_a_provider_without_access() -> None:

@@ -400,6 +400,12 @@ class OAuthService:
             return False
         return not client.app.loopback_only or is_loopback(redirect_uri)
 
+    def with_code(self, provider: ProviderType) -> bool:
+        """Whether the provider offers a sign-in with a code on another
+        device. Google does not for Gmail."""
+        client = self._clients.get(provider)
+        return client is not None and client.app.endpoints.device_url is not None
+
     def sign_in_hosts(self) -> list[str]:
         """The hosts a browser is sent to for a sign-in."""
         return sorted(
