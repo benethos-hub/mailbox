@@ -8,11 +8,10 @@ import secrets
 import subprocess
 import sys
 from dataclasses import dataclass
-from typing import Any
 
 import httpx
 
-from benethos_mailbox_client import SyncMailboxClient
+from benethos_mailbox_client import Grant, SyncMailboxClient
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
 from benethos_mailbox_service.domain.rights.access import Access
@@ -94,22 +93,25 @@ def user_token(
     mailbox: SyncMailboxClient,
     account_ids: list[str],
     allow: list[str],
-    **constraints: Any,
+    *,
+    recipients: list[str] | None = None,
+    max_sends_per_day: int | None = None,
+    folders: list[str] | None = None,
 ) -> str:
-    """A user with ``allow`` on the accounts, and a token for it. User
-    names are unique, so each gets a random end."""
-    user = mailbox.request(
-        "POST",
-        "/v1/users",
-        json={
-            "name": f"live check {'+'.join(allow)} {secrets.token_hex(3)}",
-            "grants": [{"accounts": account_ids, "allow": allow, **constraints}],
-        },
+    """A user with ``allow`` on the accounts, narrowed as a grant narrows,
+    and a token for it. User names are unique, so each gets a random
+    end."""
+    grant = Grant(
+        tuple(account_ids),
+        tuple(allow),
+        recipients=tuple(recipients) if recipients is not None else None,
+        max_sends_per_day=max_sends_per_day,
+        folders=tuple(folders) if folders is not None else None,
     )
-    created = mailbox.request(
-        "POST", f"/v1/users/{user['id']}/tokens", json={"name": "live"}
+    user = mailbox.create_user(
+        f"live check {'+'.join(allow)} {secrets.token_hex(3)}", grants=[grant]
     )
-    return str(created["token"])
+    return mailbox.create_token(user.id, "live").secret.get_secret_value()
 
 
 def admin_token(services: Services, name: str = "live") -> str:
