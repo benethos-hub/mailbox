@@ -2,9 +2,9 @@
 {% from "components/ui.html" import breadcrumb, card, csrf_field with context %}
 {% block title %}Sign in with a code · {{ APP_NAME }}{% endblock %}
 {% block heading %}Sign in with a code{% endblock %}
-{% block subheading %}{{ breadcrumb([("Accounts", "/ui/accounts"), ("Sign in with " ~ (provider | capitalize), None)]) }}{% endblock %}
+{% block subheading %}{{ breadcrumb([("Accounts", "/ui/accounts"), ("Sign in with " ~ (provider | signs_in_at), None)]) }}{% endblock %}
 {% block content %}
-{% call card("Enter this code at " ~ (provider | capitalize), meta="valid until " ~ (sign_in.expires_at | when)) %}
+{% call card("Enter this code at " ~ (provider | signs_in_at), meta="valid until " ~ (sign_in.expires_at | when)) %}
   <p class="muted">Open the page below on any device, enter the code and sign in with the account to connect. This page goes on by itself once you did.</p>
   <code class="secret">{{ sign_in.user_code }}</code>
   <p><a href="{{ sign_in.verification_uri }}" target="_blank" rel="noreferrer noopener">{{ sign_in.verification_uri }}</a></p>

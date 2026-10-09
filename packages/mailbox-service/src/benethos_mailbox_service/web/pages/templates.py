@@ -81,6 +81,16 @@ def own_keywords(values: Iterable[str]) -> list[str]:
     return [value for value in values if not value.startswith("$")]
 
 
+# Who a person signs in at, by the kind of account.
+_SIGNS_IN_AT = {"gmail": "Google", "microsoft": "Microsoft"}
+
+
+def signs_in_at(provider: str) -> str:
+    """The company a person signs in at for an account of ``provider``:
+    Google for Gmail."""
+    return _SIGNS_IN_AT.get(provider, provider.capitalize())
+
+
 def segment(value: str) -> str:
     """Free text as one part of a path, e.g. a role name."""
     return quote(str(value), safe="")
@@ -96,6 +106,7 @@ templates.env.filters.update(
     or_missing=or_missing,
     own_keywords=own_keywords,
     segment=segment,
+    signs_in_at=signs_in_at,
 )
 templates.env.globals.update(APP_NAME="Mailbox", VERSION=__version__)
 

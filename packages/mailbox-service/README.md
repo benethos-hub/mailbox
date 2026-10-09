@@ -81,6 +81,9 @@ project's app or one of your own. Away from `localhost` the project's
 app signs in with a code only. For the browser there, register an app
 of your own:
 [docs/MICROSOFT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/MICROSOFT.md).
+Gmail accounts sign in with Google in the browser, through a Google
+client of your own, or connect over IMAP with an app password:
+[docs/GOOGLE.md](https://github.com/benethos-hub/mailbox/blob/main/docs/GOOGLE.md).
 
 ## Where things live
 
@@ -168,11 +171,14 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE` | `10` | autodiscovery lookups a minute per user |
 | `MAILBOX_SERVICE_DISCOVERY_ISPDB` | `true` | whether autodiscovery asks Thunderbird's ISPDB (tells Mozilla the domain) |
 | `MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS` | `[]` | JSON list of hosts that may resolve to private addresses, e.g. an internal mail server. Autodiscovery may look them up and accounts may use them. |
-| `MAILBOX_SERVICE_PROVIDERS` | | JSON list of the kinds of account that can be connected, of `imap`, `jmap`, `pop3` and `microsoft`, e.g. `["imap","jmap","pop3"]`. Empty: every kind. Accounts connected before keep working. |
+| `MAILBOX_SERVICE_PROVIDERS` | | JSON list of the kinds of account that can be connected, of `imap`, `jmap`, `pop3`, `microsoft` and `gmail`, e.g. `["imap","jmap","pop3"]`. Empty: every kind. Accounts connected before keep working. |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID` | | an Entra app of your own for Microsoft accounts. Without it, the project's app. |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET` | | its client secret, if it has one, or better: |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE` | | a file holding it |
 | `MAILBOX_SERVICE_OAUTH_MICROSOFT_TENANT` | `common` | who may sign in: `common`, `consumers`, `organizations` or one tenant |
+| `MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_ID` | | a Google client of your own for Gmail over the Gmail API. Without it, Gmail connects over IMAP. |
+| `MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_SECRET` | | its client secret, or better: |
+| `MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_SECRET_FILE` | | a file holding it |
 
 ## Logs
 

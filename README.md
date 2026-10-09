@@ -38,7 +38,7 @@ operations it was given, nothing more.
 
 <picture>
   <source srcset="assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
-  <img src="assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP and POP3, with the Gmail API planned.">
+  <img src="assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
 </picture>
 
 That makes a few things simple that are hard otherwise.
@@ -119,7 +119,7 @@ some folders, such as the invoices, and end after a week.
 - **Operation:** encrypted backup and restore, container images, compose
   files for operation with HTTPS through Caddy and MCP server instances.
 
-Planned next: threads across folders and Gmail. The order is in
+Planned next: threads across folders. The order is in
 [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Providers
@@ -129,7 +129,7 @@ Planned next: threads across folders and Gmail. The order is in
 | GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, own mail servers | IMAP + SMTP | app password | available |
 | Microsoft 365, Outlook.com | Microsoft Graph | OAuth, through the project's app or your own ([setup](docs/MICROSOFT.md)) | available |
 | Proton Mail | IMAP + SMTP through Proton Mail Bridge | Bridge password | IMAP, not tested |
-| Gmail / Google Workspace | Gmail API | OAuth, with your own Google Cloud client | planned |
+| Gmail / Google Workspace | Gmail API, or IMAP + SMTP | OAuth, with your own Google Cloud client ([setup](docs/GOOGLE.md)), or an app password | available |
 | Fastmail, Stalwart, other JMAP servers | JMAP | API token or password | available |
 | legacy mailboxes without IMAP | POP3 + SMTP: the inbox only, no folders, no read state, no search | password | available |
 
@@ -180,6 +180,8 @@ with the container image and the compose file.
   came to be
 - [docs/IDEAS.md](docs/IDEAS.md): collected, not decided
 - [docs/MICROSOFT.md](docs/MICROSOFT.md): connecting Microsoft accounts
+- [docs/GOOGLE.md](docs/GOOGLE.md): connecting Gmail accounts, the
+  Google client of your own
 - [docs/openapi.json](docs/openapi.json): the API contract. A running
   service shows it at `/docs`
 - [CHANGELOG.md](CHANGELOG.md)

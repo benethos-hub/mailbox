@@ -55,7 +55,7 @@ REST client can do too.
    protocols/  the wire, one library each: IMAP, POP3, SMTP, JMAP, OAuth,
                and http/:
                the SSRF guard, JSON to known hosts, webhook posts
-   providers/  imap · pop3 · jmap · microsoft · memory (gmail planned),
+   providers/  imap · pop3 · jmap · microsoft · gmail · memory,
                behind a registry
    storage/    own records: accounts, users, credentials
    secrets/    envelope encryption, key providers, password hashes
@@ -102,7 +102,7 @@ The data layer the same way (REFACTORING.md section 8):
   domain, for both front ends.
 - **The configuration UI** covers what a person has to do by hand:
   connecting accounts and entering app passwords, the OAuth round trip for
-  Microsoft (Gmail planned), users, roles and tokens, webhooks, the recovery
+  Microsoft and Gmail, users, roles and tokens, webhooks, the recovery
   key, the service log, and a status view of accounts and sync.
   Server-rendered pages, not in the OpenAPI document, under `/ui`. Forms
   carry CSRF protection, since a session cookie authenticates them.
@@ -256,7 +256,7 @@ account lacks.
 | `imap` | everything without a better API: GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, Zoho, own servers, Proton via Bridge | **IMAPClient** (protocol), the mail parser of **imap-tools** (messages) | BSD-3-Clause, Apache-2.0 | synchronous, run in a worker thread. Auth: password and app password, built. **XOAUTH2** waits for the token refresher (5.1) |
 | `smtp` | sending for `imap` and `pop3` accounts | stdlib **smtplib**, for now (decided 2026-09-24) | PSF | synchronous, run in a worker thread like IMAP, also XOAUTH2, built |
 | `microsoft` | Microsoft 365, Outlook.com | Microsoft Graph over **httpx** | — | OAuth 2.0, the only sensible route (5.4), built |
-| `gmail` | Gmail, Google Workspace | Gmail REST API over **httpx** | — | OAuth 2.0, no Google SDK needed (5.5), planned |
+| `gmail` | Gmail, Google Workspace | Gmail REST API over **httpx** | — | OAuth 2.0 with a Google client of the deployment's own, no Google SDK (5.5), built |
 | `jmap` | Fastmail, Stalwart, Cyrus, any JMAP server | JMAP (RFC 8620/8621) over **httpx** | — | password or API token. A second generic protocol next to IMAP (5.6), built |
 | `pop3` | legacy mailboxes | stdlib **poplib** | PSF | synchronous, worker thread, reduced (5.2), built |
 | `memory` | tests and development | — | — | built |
@@ -448,7 +448,7 @@ to be reached:
 - **Each deployment brings its own OAuth client**, created by the operator in
   their own Google Cloud project. Google exempts personal use (the operator
   and a few people known to them, under 100 users) and Workspace apps set
-  to **Internal**. The configuration UI walks the operator through it.
+  to **Internal**. GOOGLE.md walks the operator through it.
 - **The publishing status must be "In production", not "Testing".** An
   external app in testing gets refresh tokens that expire after **7 days**,
   and every Gmail account would drop to `needs_reauth` once a week. In
@@ -466,6 +466,28 @@ to be reached:
 The same consent screen covers the Gmail API and IMAP with XOAUTH2, so the
 API costs nothing extra in verification. That settles `gmail` over `imap`
 for Google accounts.
+
+**Built 2026-10-09** (`data/providers/gmail/`, docs/GOOGLE.md), checked
+live against a Gmail account (`live/gmail.py`):
+
+- The client goes into the settings, `MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_ID`
+  with its secret, like an own Microsoft app. Without it, Gmail is not
+  offered as a kind of account to sign in with, and the preset connects
+  Gmail over IMAP with an app password.
+- The scope is `https://mail.google.com/`, the only one that deletes for
+  good. `gmail.modify` covers all but that.
+- Google offers no sign-in with a code (RFC 8628) for Gmail scopes. The
+  browser is the only way, sent back to the redirect URI of the client.
+  The sign-in asks `access_type=offline` and `prompt=consent`, so every
+  sign-in hands out a refresh token.
+- Labels are folders (`LABELS`): the system labels with a role, and the
+  labels a person made, nested by their names (`a/b` in `a`). "All Mail"
+  is the folder `ALL_MAIL` with the role `all`. A message in the trash or
+  the spam is in that folder alone. `STARRED` and `UNREAD` are flags.
+  `IMPORTANT`, the categories and the chats are left out. Gmail has no
+  keywords: setting one answers 501.
+- Changes come from `history.list` since a history id, polled by the
+  worker (`DELTA`). Push through Pub/Sub is not built (IDEAS.md).
 
 ### 5.6 JMAP as a second generic protocol
 
@@ -520,7 +542,7 @@ an API token. POP3 is offered only where neither IMAP nor JMAP is.
 | **2026-10-01** | Exchange Online: EWS blocked by default | never build on EWS |
 | **end of 2026-12** | Exchange Online: SMTP AUTH basic auth off by default | send through Graph |
 | **2027-04-01** | Exchange Online: EWS removed | — |
-| recurring, 7 days | Gmail `users.watch` expires | the worker renews it |
+| recurring, 7 days | Gmail `users.watch` expires | not used: the worker polls `history.list` (5.5), Pub/Sub is an idea |
 | recurring, days | Graph subscriptions expire (planned, with push) | the worker renews them |
 
 ### 5.8 Autodiscovery
@@ -1895,7 +1917,8 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    `benethos-mailbox-mcp`, on ghcr.io the two images as well.
 3. **Gmail priority:** is Gmail needed early, or are GMX / web.de /
    T-Online over IMAP the main use? Microsoft accounts are supported
-   already (phase 5).
+   already (phase 5). **Answered 2026-10-08:** Gmail comes next after
+   the beta, built in phase 5 (5.5).
 4. **Sending from the MCP server:** decided 2026-09-24, both stay open,
    governed by rights (7.7).
 5. **Local cache:** list and search go straight to the provider in the

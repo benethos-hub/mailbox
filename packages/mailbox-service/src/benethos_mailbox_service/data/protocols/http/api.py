@@ -12,7 +12,7 @@ the caller, which knows what the provider means by it.
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -31,6 +31,9 @@ TIMEOUT = 30.0
 MAX_BYTES = 40 * MIB
 # A server that asks to be asked again later, or a gateway before it.
 BUSY = frozenset({429, 502, 503, 504})
+
+# A query: names and values, or pairs where a name repeats.
+Params = Mapping[str, str] | Sequence[tuple[str, str]]
 
 
 @dataclass(frozen=True)
@@ -96,7 +99,7 @@ class ApiClient:
         url: str,
         *,
         headers: Mapping[str, str] | None = None,
-        params: Mapping[str, str] | None = None,
+        params: Params | None = None,
         form: Mapping[str, str] | None = None,
         json_body: Any = None,
         content: bytes | None = None,
@@ -108,7 +111,7 @@ class ApiClient:
             method,
             target,
             headers=dict(headers or {}),
-            params=dict(params) if params else None,
+            params=_pairs(params) if params else None,
             data=dict(form) if form is not None else None,
             json=json_body,
             content=content,
@@ -125,3 +128,7 @@ class ApiClient:
 
     async def close(self) -> None:
         await self._client.aclose()
+
+
+def _pairs(params: Params) -> tuple[tuple[str, str], ...]:
+    return tuple(params.items()) if isinstance(params, Mapping) else tuple(params)

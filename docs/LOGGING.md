@@ -259,7 +259,7 @@ limits themselves, and how they work together, are in
 | WARNING | a request from S to P larger than N MB: refused | source, path, limit | `web/limits.py`, 413 |
 | WARNING | X sent too many requests, the last to P: limited to N a minute, refused for M seconds | token, session or source, path, rate, seconds | `web/limits.py`, 429 |
 | DEBUG | paced requests to H: waited N ms | host, wait | no activity: a technical line of the token bucket in front of a provider, which knows the server but not the account |
-| DEBUG | microsoft asked to wait N seconds (Retry-After) | seconds | no activity: a technical line of the Microsoft adapter |
+| DEBUG | microsoft asked to wait N seconds (Retry-After), gmail asked to wait N seconds | seconds | no activity: a technical line of the Microsoft or the Gmail adapter |
 | WARNING | account A could not be reached: the provider's reason | account, reason | the status line of 5.4, no activity of its own: a pause or a refusal for rate reaches the domain as an error, and the account's status changes once |
 
 A limit that keeps being hit is logged once per lockout or pause, not

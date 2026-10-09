@@ -94,7 +94,8 @@ async def list_messages(
         Query(
             description=(
                 "A folder id, or a role such as inbox. Left out: every folder "
-                "on a Microsoft or JMAP account, the inbox on IMAP and POP3."
+                "on a Microsoft, JMAP or Gmail account, the inbox on IMAP and "
+                "POP3."
             )
         ),
     ] = None,
@@ -229,9 +230,9 @@ async def update_draft(
     mailbox: Mailbox,
 ) -> MessageSummary:
     """Replace a draft as a whole. The answer names its id from now on:
-    an IMAP draft keeps its id, a Microsoft or JMAP draft gets a new one,
-    since the provider stores a new message. Stored attachments are
-    gone unless `keep_attachments` names them. A draft sent as it is
+    an IMAP draft keeps its id, a Microsoft, JMAP or Gmail draft gets a
+    new one, since the provider stores a new message. Stored attachments
+    are gone unless `keep_attachments` names them. A draft sent as it is
     stored, every attachment kept, is not stored again. An id that names
     no draft answers `404`."""
     return await mailbox.outgoing.update_draft(

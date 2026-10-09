@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "benethos-mailbox-service"
 version = "0.3.1"
-description = "Self-hosted REST API and web UI for all your mailboxes (IMAP, JMAP, POP3, Microsoft 365, Outlook.com): users, rights and encrypted credentials, a change feed, signed webhooks and an audit."
+description = "Self-hosted REST API and web UI for all your mailboxes (IMAP, JMAP, POP3, Gmail, Microsoft 365, Outlook.com): users, rights and encrypted credentials, a change feed, signed webhooks and an audit."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -18,6 +18,7 @@ keywords = [
     "jmap",
     "pop3",
     "smtp",
+    "gmail",
     "microsoft-graph",
     "outlook",
     "microsoft-365",
@@ -33,16 +34,26 @@ keywords = [
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Environment :: No Input/Output (Daemon)",
     "Environment :: Web Environment",
+    "Framework :: AsyncIO",
     "Framework :: FastAPI",
+    "Framework :: Pydantic :: 2",
     "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Communications :: Email",
+    "Topic :: Communications :: Email :: Post-Office :: IMAP",
+    "Topic :: Communications :: Email :: Post-Office :: POP3",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Typing :: Typed",
 ]
 dependencies = [

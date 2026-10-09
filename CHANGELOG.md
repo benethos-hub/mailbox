@@ -6,6 +6,28 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Gmail and Google Workspace accounts over the Gmail API, with the
+  kind of account `gmail`. They sign in with Google in the browser,
+  through a Google client of the deployment's own, set up as
+  docs/GOOGLE.md says and named in `MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_ID`
+  with its secret. Without one, Gmail connects over IMAP with an app
+  password as before.
+- In a Gmail account labels are folders, and a message can be in
+  several. "All Mail" is the folder `ALL_MAIL` with the role `all`.
+  Setting keywords answers `501 not_supported`. The change feed follows
+  Gmail's history, asked every `MAILBOX_SERVICE_SYNC_INTERVAL` seconds.
+- Looking up a Gmail address offers **Sign in with Google** first,
+  where the deployment has a Google client. The way over IMAP links to
+  Google's page for app passwords.
+
+### Changed
+
+- The UI names the company a person signs in at: "Sign in with
+  Google" for Gmail. It offers a sign-in with a code only where the
+  provider has one.
+
 ## [0.3.1] - 2026-10-08
 
 ### Added

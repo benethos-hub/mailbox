@@ -9,7 +9,7 @@ server.
 
 from __future__ import annotations
 
-from .api import Answer, ApiClient, refused
+from .api import Answer, ApiClient, Params, refused
 from .post import WebhookPoster, is_receiver_address
 from .safe import (
     Answered,
@@ -28,6 +28,7 @@ __all__ = [
     "Answered",
     "ApiClient",
     "HostCheck",
+    "Params",
     "Lookup",
     "Resolve",
     "SafeFetcher",

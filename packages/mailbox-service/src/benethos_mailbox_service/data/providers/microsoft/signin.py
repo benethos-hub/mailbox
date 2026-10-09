@@ -54,4 +54,6 @@ def endpoints(tenant: str | None = None) -> Endpoints:
         scopes=SCOPES,
         profile=PROFILE,
         device_url=f"{base}/devicecode",
+        # The code in the query of the address the browser comes back to.
+        authorize_params=(("response_mode", "query"),),
     )

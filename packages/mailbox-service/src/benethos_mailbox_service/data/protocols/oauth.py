@@ -62,7 +62,11 @@ class Endpoints:
     """Where a provider signs users in and hands out tokens, and what a
     mail adapter asks for. With ``profile``, the address of an account
     comes from there, else from the ID token. ``device_url`` hands out
-    codes for a sign-in on another device, None where there is none."""
+    codes for a sign-in on another device, None where there is none.
+    ``authorize_params``: what the provider needs beyond RFC 6749 to
+    send the browser back, and to hand out a refresh token, e.g.
+    Google's ``access_type=offline``. ``refresh_scopes``: whether a
+    refresh names the scopes again, as Microsoft wants it."""
 
     provider: str
     authorize_url: str
@@ -70,6 +74,8 @@ class Endpoints:
     scopes: tuple[str, ...]
     profile: Profile | None = None
     device_url: str | None = None
+    authorize_params: tuple[tuple[str, str], ...] = ()
+    refresh_scopes: bool = True
 
     @property
     def sign_in_scopes(self) -> tuple[str, ...]:
@@ -200,11 +206,11 @@ def authorize_url(
         "client_id": app.client_id,
         "response_type": "code",
         "redirect_uri": redirect_uri,
-        "response_mode": "query",
         "scope": " ".join(app.endpoints.sign_in_scopes),
         "state": state,
         "code_challenge": pkce.challenge,
         "code_challenge_method": "S256",
+        **dict(app.endpoints.authorize_params),
     }
     if login_hint:
         query["login_hint"] = login_hint
@@ -329,18 +335,20 @@ class OAuthClient:
     async def refresh(self, refresh_token: SecretStr) -> Tokens:
         """New tokens for a refresh token. The provider may hand out a new
         refresh token too. The old one may then stop working."""
+        endpoints = self.app.endpoints
         return await self._token(
             {
                 "grant_type": "refresh_token",
                 "refresh_token": refresh_token.get_secret_value(),
             },
-            self.app.endpoints.scopes,
+            endpoints.scopes if endpoints.refresh_scopes else None,
         )
 
     async def _token(
         self, grant: dict[str, str], scopes: tuple[str, ...] | None
     ) -> Tokens:
-        """``scopes`` None: the grant carries them already, as a device code."""
+        """``scopes`` None: the grant carries them already, as a device
+        code, or the provider takes them from the refresh token."""
         form = {**grant, "client_id": self.app.client_id}
         if scopes is not None:
             form["scope"] = " ".join(scopes)

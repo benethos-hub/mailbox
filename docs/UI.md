@@ -242,14 +242,15 @@ next step appears under the last one:
    sources (CONCEPT 5.8) and, from the domain, which OAuth providers this
    deployment offers.
 2. **How to connect.** One card per way, the recommended one first:
-   - a provider the deployment signs in with (Microsoft, later Google):
+   - a provider the deployment signs in with (Microsoft, Google):
      **Sign in with Microsoft**, the address as the login hint, no
      password field, and beside it **Sign in with a code**. That one
      opens a page with the code and the provider's link, which asks
      every few seconds by htmx and goes on to the account once the
      person signed in. **Check now** asks without script. Where the
      provider cannot send the browser back, as with the project's app
-     away from localhost, only the code is offered
+     away from localhost, only the code is offered. Google offers no
+     code for Gmail: **Sign in with Google** stands alone
    - a provider found with servers: the password field, the servers
      folded under **Servers**, with the source and whether it is trusted
    - nothing found: **Set up by hand** open at once, with the server
@@ -267,8 +268,9 @@ next step appears under the last one:
 
 After connecting, the account page's **Change** card edits the servers,
 the display name and the password, for IMAP accounts. OAuth accounts have
-**Sign in again** and **Sign in again with a code** instead of a
-password. Nothing of this needs a new domain call: `discover`, `create`
+**Sign in again** and, where the provider offers codes, **Sign in again
+with a code** instead of a password. Nothing of this needs a new domain
+call: `discover`, `create`
 and `update` exist.
 
 ### 6.2 Creating, changing, removing
