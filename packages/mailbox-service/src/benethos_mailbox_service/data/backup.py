@@ -25,8 +25,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import BinaryIO
 
+from benethos_mailbox_common.sizes import MIB
+
 from ..common.clock import iso, utc_now
-from ..common.sizes import MIB
 from .files import LockedError, create_private, exclusive_lock
 from .secrets import cipher
 from .storage import SCHEMA_VERSION, Store, inspect_file, migrate_file, service_lock

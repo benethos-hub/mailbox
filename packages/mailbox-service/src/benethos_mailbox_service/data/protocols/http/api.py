@@ -18,7 +18,8 @@ from typing import Any
 
 import httpx
 
-from ....common.sizes import MIB
+from benethos_mailbox_common.sizes import MIB
+
 from ....errors import (
     MailboxServiceError,
     ProviderError,

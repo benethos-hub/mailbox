@@ -4,7 +4,8 @@ sent back is the one stored."""
 
 from __future__ import annotations
 
-from ...common.sizes import MIB, megabytes
+from benethos_mailbox_common.sizes import MIB, megabytes
+
 from ...data.mail import convert
 from ...data.models import Address, DraftMessage, MessageReference, Recipient
 from ...errors import BadRequestError

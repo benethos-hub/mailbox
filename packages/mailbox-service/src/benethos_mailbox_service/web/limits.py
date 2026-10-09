@@ -27,8 +27,9 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from benethos_mailbox_common.sizes import MIB, megabytes
+
 from ..common.ratelimit import Clock, TokenBucket
-from ..common.sizes import MIB, megabytes
 from ..config import Settings
 from ..domain.activity import ActivityLog, Actor, someone
 from ..domain.activity import http as said

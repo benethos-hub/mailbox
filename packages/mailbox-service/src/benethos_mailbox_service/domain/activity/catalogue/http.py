@@ -7,7 +7,8 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ....common.sizes import megabytes
+from benethos_mailbox_common.sizes import megabytes
+
 from ....data.models import ActivityOutcome
 from ..base import Activity
 

@@ -18,7 +18,8 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager
 from typing import Any
 
-from ...common.sizes import MIB
+from benethos_mailbox_common.sizes import MIB
+
 from ...errors import (
     NotSupportedError,
     ProviderAuthError,

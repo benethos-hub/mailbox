@@ -6,7 +6,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-from ....common.sizes import MIB
+from benethos_mailbox_common.sizes import MIB
+
 from ...mail import parse
 
 DEFAULT_PORTS = {"tls": 993, "starttls": 143}
