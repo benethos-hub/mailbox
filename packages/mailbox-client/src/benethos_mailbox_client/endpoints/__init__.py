@@ -20,7 +20,7 @@ from .accounts import (
 from .compose import message_body
 from .discovery import discover_account, poll_device_oauth, start_device_oauth
 from .drafts import create_draft, delete_draft, list_drafts, update_draft
-from .folders import create_folder, list_folders
+from .folders import create_folder, delete_folder, list_folders, update_folder
 from .generic import request
 from .me import get_me
 from .messages import (
@@ -48,6 +48,7 @@ __all__ = [
     "create_draft",
     "create_folder",
     "delete_draft",
+    "delete_folder",
     "delete_message",
     "get_attachment",
     "get_me",
@@ -63,6 +64,7 @@ __all__ = [
     "send_message",
     "trash_messages",
     "update_draft",
+    "update_folder",
     "update_messages",
     "update_webhook",
 ]

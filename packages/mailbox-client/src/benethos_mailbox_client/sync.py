@@ -99,6 +99,8 @@ class SyncMailboxClient:
 
     list_folders = blocking(endpoints.list_folders)
     create_folder = blocking(endpoints.create_folder)
+    update_folder = blocking(endpoints.update_folder)
+    delete_folder = blocking(endpoints.delete_folder)
 
     # --- messages ---------------------------------------------------------------------
 

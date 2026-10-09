@@ -97,6 +97,8 @@ class MailboxClient:
 
     list_folders = awaiting(endpoints.list_folders)
     create_folder = awaiting(endpoints.create_folder)
+    update_folder = awaiting(endpoints.update_folder)
+    delete_folder = awaiting(endpoints.delete_folder)
 
     # --- messages ---------------------------------------------------------------------
 
