@@ -166,6 +166,12 @@ class MailboxClient:
     replace_role = awaiting(endpoints.replace_role)
     delete_role = awaiting(endpoints.delete_role)
 
+    # --- the second factor ------------------------------------------------------------
+
+    get_second_factor = awaiting(endpoints.get_second_factor)
+    remove_second_factor = awaiting(endpoints.remove_second_factor)
+    remove_totp_device = awaiting(endpoints.remove_totp_device)
+
     # --- attachments ------------------------------------------------------------------
 
     async def get_attachment(

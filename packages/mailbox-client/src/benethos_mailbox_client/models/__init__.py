@@ -16,6 +16,7 @@ from .discovery import (
     MailServer,
     SourceReport,
 )
+from .factors import SecondFactor, TotpDevice
 from .folders import Folder
 from .me import Me, MeAccount, Sending
 from .messages import Attachment, Changes, Outcome, Page
@@ -29,6 +30,8 @@ from .users import NewPassword, User
 from .webhooks import Webhook, WebhookSecret
 
 __all__ = [
+    "TotpDevice",
+    "SecondFactor",
     "Role",
     "Token",
     "NewToken",

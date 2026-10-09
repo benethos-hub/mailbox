@@ -168,6 +168,12 @@ class SyncMailboxClient:
     replace_role = blocking(endpoints.replace_role)
     delete_role = blocking(endpoints.delete_role)
 
+    # --- the second factor ------------------------------------------------------------
+
+    get_second_factor = blocking(endpoints.get_second_factor)
+    remove_second_factor = blocking(endpoints.remove_second_factor)
+    remove_totp_device = blocking(endpoints.remove_totp_device)
+
     # --- attachments ------------------------------------------------------------------
 
     def get_attachment(

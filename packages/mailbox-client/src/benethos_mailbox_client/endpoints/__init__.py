@@ -20,6 +20,7 @@ from .accounts import (
 from .compose import message_body
 from .discovery import discover_account, poll_device_oauth, start_device_oauth
 from .drafts import create_draft, delete_draft, list_drafts, update_draft
+from .factors import get_second_factor, remove_second_factor, remove_totp_device
 from .folders import create_folder, delete_folder, list_folders, update_folder
 from .generic import request
 from .me import get_me
@@ -51,6 +52,9 @@ from .users import (
 from .webhooks import renew_webhook_secret, update_webhook
 
 __all__ = [
+    "get_second_factor",
+    "remove_second_factor",
+    "remove_totp_device",
     "create_role",
     "delete_role",
     "get_role",

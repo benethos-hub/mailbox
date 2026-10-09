@@ -39,12 +39,14 @@ from .models import (
     Paged,
     Recipient,
     Role,
+    SecondFactor,
     Secret,
     Sending,
     Sent,
     SourceReport,
     StoredCredential,
     Token,
+    TotpDevice,
     User,
     Webhook,
     WebhookSecret,
@@ -57,6 +59,8 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "SecondFactor",
+    "TotpDevice",
     "Role",
     "NewToken",
     "Token",
