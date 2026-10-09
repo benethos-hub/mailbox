@@ -261,7 +261,9 @@ packages/mailbox-service/
                         #   what an adapter does not implement
       discovery/        # DiscoveryService: trust, ranking, cache, limits
       mailbox/          # MailboxService, the facade for mail: calls under
-                        #   our ids, the folders a grant reaches (reach),
+                        #   our ids, an account's folders and their
+                        #   roles (folders), the folders a grant
+                        #   reaches (reach),
                         #   lists across accounts (across, merge),
                         #   replies, sending and drafts (outgoing, its
                         #   checks), grant limits and the send audit

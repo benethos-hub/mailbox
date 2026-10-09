@@ -6,9 +6,10 @@ sending and drafts, the grant limits on sending and its audit.
 
 from __future__ import annotations
 
+from .folders import find_folder
 from .idempotency import Idempotency
 from .sending import SendControl
-from .service import MailboxService, find_folder
+from .service import MailboxService
 
 __all__ = [
     "Idempotency",

@@ -16,6 +16,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from ...data.models import ChangeRecord, Folder
+from ...errors import ForbiddenError, missing
 from ..rights import Access
 from .calls import Calls
 
@@ -67,6 +68,18 @@ async def reach_of(
     if folders is None:
         folders = await calls.call(account_id, lambda p: p.list_folders())
     return Reach(scopes, folders)
+
+
+def require_folder(reach: Reach, folder_id: str) -> None:
+    """A folder out of reach answers as one that does not exist."""
+    if folder_id not in reach.ids:
+        raise missing("folder", folder_id)
+
+
+def outside(operation: str, where: str) -> ForbiddenError:
+    return ForbiddenError(
+        f"missing right: {operation} {where}, outside the folders of the grants"
+    )
 
 
 def _within(folder: Folder, names: frozenset[str], by_id: dict[str, Folder]) -> bool:
