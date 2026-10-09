@@ -163,6 +163,7 @@ docs/
   REFACTORING.md          # how the layout came to be
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   GOOGLE.md               # connecting Gmail accounts, the Google client
+  AUTHENTICATION.md       # the factors of the UI sign-in: password, TOTP
   ROADMAP.md              # phases and their state
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test

@@ -108,14 +108,14 @@ its MCP server should offer, e.g. may send but the model should only
 draft. An option of the MCP server, such as leaving out the send tools,
 would do the same with less.
 
-## A second factor for the UI sign-in
+## More for the UI sign-in
 
-Postponed on 2026-09-27, after the password sign-in (CONCEPT 7.5).
+TOTP came on 2026-10-09 as a choice per user
+([AUTHENTICATION.md](AUTHENTICATION.md)). Left for later:
 
-- TOTP (RFC 6238) as a credential kind beside the password: set up with a
-  QR code, confirmed with a first code, with recovery codes shown once.
-- Or a passkey (WebAuthn), which needs no shared secret.
-- Open: required for users with `users.manage`, or a choice per user.
+- A switch for the operator that requires a second factor, for everyone
+  or for users with `users.manage` (AUTHENTICATION.md 8).
+- A passkey (WebAuthn), which needs no shared secret.
 
 ## The master key from systemd
 

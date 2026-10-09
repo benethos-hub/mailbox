@@ -172,6 +172,8 @@ with the container image and the compose file.
 - [docs/LIMITS.md](docs/LIMITS.md): every rate limit and how they work
   together
 - [docs/PERMISSIONS.md](docs/PERMISSIONS.md): users, roles and rights
+- [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md): signing in to the
+  configuration UI, the password and the second factor
 - [docs/LOGGING.md](docs/LOGGING.md) and [docs/AUDIT.md](docs/AUDIT.md):
   the service log and the audit of administration
 - [docs/UI.md](docs/UI.md): how the pages of the configuration UI look

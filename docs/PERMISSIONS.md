@@ -153,8 +153,9 @@ from becoming a way up:
   their own name. The audit then names the token.
 - **Disabled** ends every credential at once. Rights changes count from
   the next request.
-- Later: TOTP or a passkey as a second factor for UI users, OAuth client
-  credentials for machines (IDEAS). New credential kinds, the same
+- A second factor for UI users, TOTP, since 2026-10-09
+  ([AUTHENTICATION.md](AUTHENTICATION.md)). Later a passkey, OAuth
+  client credentials for machines (IDEAS). New credential kinds, the same
   rights.
 
 ## 7. Where the model shows
