@@ -127,8 +127,12 @@ class SyncMailboxClient:
 
     # --- webhooks ---------------------------------------------------------------------
 
+    list_webhooks = blocking(endpoints.list_webhooks)
+    create_webhook = blocking(endpoints.create_webhook)
+    get_webhook = blocking(endpoints.get_webhook)
     update_webhook = blocking(endpoints.update_webhook)
     renew_webhook_secret = blocking(endpoints.renew_webhook_secret)
+    delete_webhook = blocking(endpoints.delete_webhook)
 
     # --- accounts ---------------------------------------------------------------------
 

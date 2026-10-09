@@ -34,6 +34,7 @@ from .models import (
     MeAccount,
     NewPassword,
     NewToken,
+    NewWebhook,
     Outcome,
     Page,
     Paged,
@@ -49,6 +50,8 @@ from .models import (
     TotpDevice,
     User,
     Webhook,
+    WebhookDetail,
+    WebhookPost,
     WebhookSecret,
 )
 from .sync import SyncMailboxClient
@@ -59,6 +62,9 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "NewWebhook",
+    "WebhookDetail",
+    "WebhookPost",
     "SecondFactor",
     "TotpDevice",
     "Role",

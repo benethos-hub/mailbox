@@ -31,3 +31,32 @@ class WebhookSecret:
 
     webhook_id: str
     secret: Secret
+
+
+@dataclass(frozen=True)
+class NewWebhook:
+    """A webhook just made, and its signing secret, shown this once."""
+
+    webhook: Webhook
+    secret: Secret
+
+
+@dataclass(frozen=True)
+class WebhookPost:
+    """One post to a webhook's receiver: how many events it carried, what
+    the receiver answered (None: no answer), why it failed (None: it
+    went through)."""
+
+    delivery_id: str
+    at: datetime
+    events: int
+    status: int | None
+    error: str | None
+
+
+@dataclass(frozen=True)
+class WebhookDetail:
+    """A webhook with its last posts, newest first."""
+
+    webhook: Webhook
+    deliveries: tuple[WebhookPost, ...]

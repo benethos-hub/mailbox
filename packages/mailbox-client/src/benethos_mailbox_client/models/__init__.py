@@ -27,9 +27,12 @@ from .secrets import Secret
 from .sending import Recipient, Sent
 from .tokens import NewToken, Token
 from .users import NewPassword, User
-from .webhooks import Webhook, WebhookSecret
+from .webhooks import NewWebhook, Webhook, WebhookDetail, WebhookPost, WebhookSecret
 
 __all__ = [
+    "NewWebhook",
+    "WebhookDetail",
+    "WebhookPost",
     "TotpDevice",
     "SecondFactor",
     "Role",

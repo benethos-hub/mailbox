@@ -125,8 +125,12 @@ class MailboxClient:
 
     # --- webhooks ---------------------------------------------------------------------
 
+    list_webhooks = awaiting(endpoints.list_webhooks)
+    create_webhook = awaiting(endpoints.create_webhook)
+    get_webhook = awaiting(endpoints.get_webhook)
     update_webhook = awaiting(endpoints.update_webhook)
     renew_webhook_secret = awaiting(endpoints.renew_webhook_secret)
+    delete_webhook = awaiting(endpoints.delete_webhook)
 
     # --- accounts ---------------------------------------------------------------------
 

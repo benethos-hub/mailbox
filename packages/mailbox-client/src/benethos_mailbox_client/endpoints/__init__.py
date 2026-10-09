@@ -49,9 +49,20 @@ from .users import (
     set_password,
     update_user,
 )
-from .webhooks import renew_webhook_secret, update_webhook
+from .webhooks import (
+    create_webhook,
+    delete_webhook,
+    get_webhook,
+    list_webhooks,
+    renew_webhook_secret,
+    update_webhook,
+)
 
 __all__ = [
+    "create_webhook",
+    "delete_webhook",
+    "get_webhook",
+    "list_webhooks",
     "get_second_factor",
     "remove_second_factor",
     "remove_totp_device",
