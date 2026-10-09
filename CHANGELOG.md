@@ -126,6 +126,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The UI's Users list counts only the users a batch changed, not those
   that were as asked already.
 - `mailbox-client`: `Me` has the caller's `user_id` and `name`.
+- The text of a mail written as HTML only, on the mail page and as the
+  text part of a send, leaves out what its inline style hides as the
+  MCP server does: too small, too faint, off the page, cut to nothing,
+  or in the colour of its background. An end tag without its start tag
+  no longer ends hidden text early.
+- The MCP server's text of an HTML mail keeps a link's address after
+  its text and puts a dash before each list item, as the mail page
+  does.
 
 ## [0.3.1] - 2026-10-08
 

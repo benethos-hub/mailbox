@@ -20,7 +20,7 @@ LINES = (
     {"server", "transport"},
     {"tools"},
     {"client", "render", "pdf"},
-    {"models", "errors", "config"},
+    {"models", "errors", "config", "plaintext"},
 )
 # The same inside tools/.
 TOOL_LINES = (
