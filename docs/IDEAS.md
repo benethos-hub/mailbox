@@ -117,6 +117,41 @@ TOTP came on 2026-10-09 as a choice per user
   or for users with `users.manage` (AUTHENTICATION.md 8).
 - A passkey (WebAuthn), which needs no shared secret.
 
+## Beyond the static API token
+
+Collected 2026-10-09. Today the REST API takes a static bearer token
+(CONCEPT 7.5): random, stored as a hash, revocable, with an optional
+expiry. Whoever copies it from a settings file, a log or a proxy can use
+it until it is revoked or expires. Three steps, each building on the one
+before:
+
+1. **A life cycle for the token.** A maximum lifetime as a setting.
+   `POST /v1/tokens/{id}/rotate` makes a new token and keeps the old one
+   valid for a short overlap, so a client changes without an outage. A
+   response header warns of a near expiry, and `mailbox-client` and the
+   MCP server log it. A checksum in the token lets a leak scanner tell a
+   real token from noise. Nothing changes for a client, curl included.
+2. **Short-lived tokens from the service itself**, OAuth 2.0 with
+   `POST /v1/oauth/token`. A new credential kind of a user, an API
+   client: it holds a public key, and the client proves itself with
+   `private_key_jwt` (RFC 7523), so the service stores nothing a thief
+   could use. The grants `client_credentials` and `refresh_token`. An
+   access token lives about ten minutes. It stays opaque and hashed as
+   today rather than a JWT, so a revocation takes effect at once. A
+   refresh token changes with each use, and an old one used again
+   revokes the whole chain. `mailbox-client` fetches and renews the
+   tokens, and the MCP server gets this through it. The static token
+   stays for scripts.
+3. **Tokens bound to a key**, DPoP (RFC 9449). Each request carries a
+   small signed proof, so a stolen access token is of no use without the
+   private key. Most clients cannot do this, but `mailbox-client` is
+   ours, so every client of the project would.
+
+mTLS would bind a token to a certificate as well, but it depends on the
+proxy and on keeping certificates. On the side of the client, a token in
+the keyring of the operating system rather than in a `.env` file lowers
+the risk of a leak without any change to the protocol.
+
 ## The master key from systemd
 
 Left open on 2026-10-06, with the key file (CONCEPT 7.3). A service run
