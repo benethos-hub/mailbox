@@ -1020,3 +1020,34 @@ the answers the endpoint tests share.
    the roadmap.
 
 Built 2026-10-07, in that order.
+
+## 14. The client's records in parts
+
+Decided by the user on 2026-10-09, as step 0 of the client covering the
+whole API.
+
+### 14.1 Why
+
+`models.py` held every record of the client in one file. The client is
+to cover the whole API, with records for accounts, users, tokens,
+roles, webhooks, the audit and more. One file would pass 500 lines, and
+a record would sit far from the endpoints that read it.
+
+### 14.2 Target
+
+`models/` is a package, one module per resource as `endpoints/` is:
+`me`, `folders`, `messages`, `sending`, `secrets` and `webhooks`, and a
+module of its own for each resource that gets records later. Its
+`__init__.py` offers every record, so `from benethos_mailbox_client.models
+import Folder` and `from benethos_mailbox_client import Folder` stay as
+they are. The package keeps its line, at the bottom beside `errors`.
+The tests mirror the modules in `tests/models/` where a record has
+behaviour of its own, as `Secret` has.
+
+### 14.3 Order of work
+
+1. The package, the code moved as it was, `models.py` removed, every
+   test as before.
+2. The documents: ARCHITECTURE 3, this section.
+
+Built 2026-10-09, in that order.

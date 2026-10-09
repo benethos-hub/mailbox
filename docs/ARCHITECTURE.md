@@ -402,8 +402,17 @@ packages/mailbox-client/
                         #   checked before a client is made
     calls.py            # Call: the request an endpoint describes,
                         #   its path below /v1, the timeouts
-    models.py           # the records the clients answer with, Secret
-                        #   for what the service shows once
+    models/             # the records the clients answer with, one
+                        #   module per resource as in endpoints/, every
+                        #   one offered by its __init__.py
+      me.py             # the caller, its accounts, its sending limits
+      folders.py        # a folder
+      messages.py       # a page, the changes, a batch's outcome, an
+                        #   attachment's bytes
+      sending.py        # a recipient, what a send answered
+      secrets.py        # Secret: what the service shows once, kept out
+                        #   of repr and str
+      webhooks.py       # a webhook, its new signing secret
     errors.py           # MailboxError and its subclasses
 ```
 
