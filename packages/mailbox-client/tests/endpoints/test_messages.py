@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import httpx
 import pytest
 
-from benethos_mailbox_client import Changes, Outcome, Page
+from benethos_mailbox_client import ApiError, Changes, Outcome, Page
 
 from ..fake_api import PAGE, FakeApi
 
@@ -93,3 +94,68 @@ async def test_delete_message(
     client = make_client(api)
     assert await client.delete_message("acc_1", "msg_1", permanent=permanent) is None
     assert api.call() == ("DELETE", "/v1/accounts/acc_1/messages/msg_1", query, None)
+
+
+async def test_get_message_raw_answers_the_bytes(make_client: Callable) -> None:
+    source = b"From: a@example.com\r\nSubject: Hi\r\n\r\nHello\r\n"
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/accounts/acc_1/messages/msg_1/raw"
+        return httpx.Response(
+            200, content=source, headers={"content-type": "message/rfc822"}
+        )
+
+    assert await make_client(answer).get_message_raw("acc_1", "msg_1") == source
+
+
+async def test_get_message_raw_reads_an_error_as_one(make_client: Callable) -> None:
+    api = FakeApi({"error": {"code": "not_found", "message": "no such message"}}, 404)
+    with pytest.raises(ApiError) as raised:
+        await make_client(api).get_message_raw("acc_1", "msg_9")
+    assert raised.value.code == "not_found"
+
+
+async def test_list_all_messages_names_the_accounts(make_client: Callable) -> None:
+    api = FakeApi(PAGE)
+    found = await make_client(api).list_all_messages(
+        accounts=["acc_1", "acc_2"], folder="inbox", unread=True, limit=5
+    )
+    [request] = api.seen
+    assert request.url.path == "/v1/messages"
+    assert request.url.params.get_list("accounts") == ["acc_1", "acc_2"]
+    others = {k: v for k, v in request.url.params.items() if k != "accounts"}
+    assert others == {"folder": "inbox", "unread": "true", "limit": "5"}
+    assert found.not_answering == ["acc_2: timed out"]
+
+
+async def test_list_all_changes(make_client: Callable) -> None:
+    api = FakeApi({"changes": [], "state": "s1", "more": False})
+    found = await make_client(api).list_all_changes(since="s0")
+    assert api.call() == ("GET", "/v1/changes", {"since": "s0"}, None)
+    assert found == Changes(changes=[], state="s1", more=False)
+
+
+async def test_update_message_sends_only_what_changes(make_client: Callable) -> None:
+    api = FakeApi({"id": "msg_1", "keywords": ["work"]})
+    found = await make_client(api).update_message("acc_1", "msg_1", keywords=["work"])
+    assert api.call() == (
+        "PATCH",
+        "/v1/accounts/acc_1/messages/msg_1",
+        {},
+        {"keywords": ["work"]},
+    )
+    assert found["keywords"] == ["work"]
+
+
+async def test_batch_messages(make_client: Callable) -> None:
+    api = FakeApi({"results": [{"id": "m1", "ok": True}]})
+    found = await make_client(api).batch_messages(
+        "acc_1", ["m1"], "delete", permanent=True
+    )
+    assert api.call() == (
+        "POST",
+        "/v1/accounts/acc_1/messages/batch",
+        {},
+        {"ids": ["m1"], "action": "delete", "permanent": True},
+    )
+    assert found == Outcome(done=["m1"], failed=[])

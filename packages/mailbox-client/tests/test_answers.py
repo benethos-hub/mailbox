@@ -69,7 +69,7 @@ async def test_an_answer_that_is_not_json(make_client: Callable) -> None:
 async def test_an_answer_of_another_shape(make_client: Callable, body: object) -> None:
     client = make_client(lambda _: httpx.Response(200, json=body))
     with pytest.raises(ApiError) as exc:
-        await client.me()
+        await client.get_me()
     assert exc.value.code == "unexpected_response"
     assert exc.value.status == 200
 
@@ -115,4 +115,4 @@ async def test_a_connection_that_times_out_is_unreachable(
 async def test_every_error_is_a_mailbox_error(make_client: Callable) -> None:
     client = make_client(lambda _: httpx.Response(500, text="boom"))
     with pytest.raises(MailboxError):
-        await client.me()
+        await client.get_me()

@@ -1,6 +1,7 @@
 """Messages: listed and searched in one account or across every account
-the caller may read, the changes since a state, one message, an
-attachment, flags and moves for many at once, deleting. The page of
+the caller may read, the changes since a state, one message and its
+source, an attachment, flags, keywords and moves for one or many at
+once, deleting. The page of
 summaries is read here for the drafts as well."""
 
 from __future__ import annotations
@@ -53,6 +54,66 @@ def list_messages(
     )
 
 
+def list_all_messages(
+    *,
+    accounts: list[str] | None = None,
+    folder: str | None = None,
+    text: str | None = None,
+    sender: str | None = None,
+    to: str | None = None,
+    subject: str | None = None,
+    after: str | None = None,
+    before: str | None = None,
+    unread: bool | None = None,
+    starred: bool | None = None,
+    has_attachments: bool | None = None,
+    limit: int | None = None,
+    cursor: str | None = None,
+) -> Call[Page]:
+    """The messages of every account the caller may read, or of those in
+    ``accounts``, newest first. ``folder`` is a role such as ``inbox``.
+    ``after`` and ``before`` are days, YYYY-MM-DD."""
+    return Call(
+        "GET",
+        path("messages"),
+        page,
+        params=given(
+            {
+                "accounts": accounts,
+                "folder": folder,
+                "q": text,
+                "from": sender,
+                "to": to,
+                "subject": subject,
+                "after": after,
+                "before": before,
+                "unread": unread,
+                "starred": starred,
+                "has_attachments": has_attachments,
+                "limit": limit,
+                "cursor": cursor,
+            }
+        ),
+    )
+
+
+def list_all_changes(
+    *,
+    accounts: list[str] | None = None,
+    since: str | None = None,
+    limit: int | None = None,
+) -> Call[Changes]:
+    """The changes of every account the caller may read, or of those in
+    ``accounts``, after the point ``since``. Without it, only the state
+    to start from."""
+    return Call(
+        "GET",
+        path("changes"),
+        _changes,
+        params=given({"accounts": accounts, "since": since, "limit": limit}),
+    )
+
+
 def list_changes(
     account_id: str | None, *, since: str | None, limit: int
 ) -> Call[Changes]:
@@ -68,6 +129,18 @@ def list_changes(
 
 def get_message(account_id: str, message_id: str) -> Call[dict[str, Any]]:
     return Call("GET", path("accounts", account_id, "messages", message_id), dict)
+
+
+def get_message_raw(account_id: str, message_id: str) -> Call[bytes]:
+    """The message as it came, in RFC 5322: headers, body and
+    attachments, the bytes as the provider holds them."""
+    return Call(
+        "GET",
+        path("accounts", account_id, "messages", message_id, "raw"),
+        bytes,
+        timeout=ATTACHMENT_TIMEOUT,
+        raw=True,
+    )
 
 
 def get_attachment(account_id: str, message_id: str, attachment_id: str) -> Call[Any]:
@@ -97,6 +170,50 @@ def update_messages(
         changes["folder_ids"] = [folder_id]
     return _batch(
         account_id, {"ids": message_ids, "action": "update", "changes": given(changes)}
+    )
+
+
+def update_message(
+    account_id: str,
+    message_id: str,
+    *,
+    unread: bool | None = None,
+    starred: bool | None = None,
+    keywords: list[str] | None = None,
+    folder_ids: list[str] | None = None,
+) -> Call[dict[str, Any]]:
+    """Flags, keywords and folders of one message. ``keywords`` replaces
+    its list, ``folder_ids`` moves it, by id or by a role such as
+    ``archive``. Answers its summary, as the API describes it."""
+    return Call(
+        "PATCH",
+        path("accounts", account_id, "messages", message_id),
+        dict,
+        json=given(
+            {
+                "unread": unread,
+                "starred": starred,
+                "keywords": keywords,
+                "folder_ids": folder_ids,
+            }
+        ),
+    )
+
+
+def batch_messages(
+    account_id: str,
+    ids: list[str],
+    action: str,
+    *,
+    changes: dict[str, Any] | None = None,
+    permanent: bool | None = None,
+) -> Call[Outcome]:
+    """One action for up to 100 messages: ``update`` with ``changes`` as
+    ``update_message`` takes them, or ``delete``, with ``permanent`` for
+    good. ``update_messages`` and ``trash_messages`` are the usual ones."""
+    return _batch(
+        account_id,
+        {"ids": ids, "action": action, "changes": changes, "permanent": permanent},
     )
 
 

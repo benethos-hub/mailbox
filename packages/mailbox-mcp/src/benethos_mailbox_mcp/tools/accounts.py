@@ -23,7 +23,7 @@ async def list_accounts() -> list[dict[str, Any]]:
     allows it. `warning` marks an account where you may read mail and send
     it anywhere. `unsupported` names what an account cannot do, such as a
     POP3 mailbox without folders: tools for that fail there."""
-    me = await client().me()
+    me = await client().get_me()
     return [
         render.account(account, _capabilities(account.operations))
         for account in me.accounts

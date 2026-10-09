@@ -11,7 +11,7 @@ from ..models import Page
 from .messages import page
 
 
-def list_drafts(account_id: str, limit: int, cursor: str | None) -> Call[Page]:
+def list_drafts(account_id: str, limit: int, cursor: str | None = None) -> Call[Page]:
     return Call(
         "GET",
         path("accounts", account_id, "drafts"),

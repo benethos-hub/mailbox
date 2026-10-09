@@ -1862,8 +1862,14 @@ descriptions with httpx and differ only in `await`. They read errors,
 failures on the way and attachments in chunks the same way, through
 the same code.
 
-Its interface has no stability promise yet. It follows what the MCP
-server and the project's own checks need.
+**Decided 2026-10-09:** it covers the whole REST API, not only what the
+MCP server needs. Every operation is a method of both clients, named
+like its `operationId`, and a test holds every operation of
+`docs/openapi.json` to one, without exceptions. A new route is
+incomplete until the client has its method. A secret the service
+shows once comes as a `Secret`, kept out of `repr` and `str`.
+
+Its interface has no stability promise yet.
 
 ## 9. Technology
 

@@ -5,7 +5,7 @@ it answers is described in ``endpoints``."""
 
 from __future__ import annotations
 
-from types import EllipsisType, TracebackType
+from types import TracebackType
 from typing import Any, TypeVar
 
 import httpx
@@ -13,19 +13,9 @@ import httpx
 from . import endpoints
 from .answers import api_error, failure, read
 from .attachments import Collected, attachment
-from .calls import Call, timeouts
+from .calls import Call, blocking, timeouts
 from .environment import connection
-from .models import (
-    Attachment,
-    Changes,
-    Folder,
-    Me,
-    Outcome,
-    Page,
-    Sent,
-    Webhook,
-    WebhookSecret,
-)
+from .models import Attachment
 
 T = TypeVar("T")
 
@@ -101,65 +91,109 @@ class SyncMailboxClient:
         )
         return self.send(call)
 
-    # --- the caller and the accounts --------------------------------------------------
+    # --- the caller -------------------------------------------------------------------
 
-    def me(self) -> Me:
-        return self.send(endpoints.me())
+    get_me = blocking(endpoints.get_me)
+    list_permissions = blocking(endpoints.list_permissions)
 
     # --- folders ----------------------------------------------------------------------
 
-    def list_folders(self, account_id: str) -> list[Folder]:
-        return self.send(endpoints.list_folders(account_id))
-
-    def create_folder(
-        self, account_id: str, name: str, parent_id: str | None
-    ) -> Folder:
-        return self.send(endpoints.create_folder(account_id, name, parent_id))
+    list_folders = blocking(endpoints.list_folders)
+    create_folder = blocking(endpoints.create_folder)
+    update_folder = blocking(endpoints.update_folder)
+    delete_folder = blocking(endpoints.delete_folder)
 
     # --- messages ---------------------------------------------------------------------
 
-    def list_messages(
-        self,
-        account_id: str | None,
-        *,
-        folder: str | None = None,
-        text: str | None = None,
-        sender: str | None = None,
-        to: str | None = None,
-        subject: str | None = None,
-        after: str | None = None,
-        before: str | None = None,
-        unread: bool | None = None,
-        starred: bool | None = None,
-        has_attachments: bool | None = None,
-        limit: int,
-        cursor: str | None = None,
-    ) -> Page:
-        return self.send(
-            endpoints.list_messages(
-                account_id,
-                folder=folder,
-                text=text,
-                sender=sender,
-                to=to,
-                subject=subject,
-                after=after,
-                before=before,
-                unread=unread,
-                starred=starred,
-                has_attachments=has_attachments,
-                limit=limit,
-                cursor=cursor,
-            )
-        )
+    list_messages = blocking(endpoints.list_messages)
+    list_all_messages = blocking(endpoints.list_all_messages)
+    list_changes = blocking(endpoints.list_changes)
+    list_all_changes = blocking(endpoints.list_all_changes)
+    get_message = blocking(endpoints.get_message)
+    get_message_raw = blocking(endpoints.get_message_raw)
+    update_message = blocking(endpoints.update_message)
+    batch_messages = blocking(endpoints.batch_messages)
+    update_messages = blocking(endpoints.update_messages)
+    trash_messages = blocking(endpoints.trash_messages)
+    delete_message = blocking(endpoints.delete_message)
 
-    def list_changes(
-        self, account_id: str | None, *, since: str | None, limit: int
-    ) -> Changes:
-        return self.send(endpoints.list_changes(account_id, since=since, limit=limit))
+    # --- drafts and sending -----------------------------------------------------------
 
-    def get_message(self, account_id: str, message_id: str) -> dict[str, Any]:
-        return self.send(endpoints.get_message(account_id, message_id))
+    list_drafts = blocking(endpoints.list_drafts)
+    create_draft = blocking(endpoints.create_draft)
+    update_draft = blocking(endpoints.update_draft)
+    delete_draft = blocking(endpoints.delete_draft)
+    send_message = blocking(endpoints.send_message)
+    send_draft = blocking(endpoints.send_draft)
+
+    # --- webhooks ---------------------------------------------------------------------
+
+    list_webhooks = blocking(endpoints.list_webhooks)
+    create_webhook = blocking(endpoints.create_webhook)
+    get_webhook = blocking(endpoints.get_webhook)
+    update_webhook = blocking(endpoints.update_webhook)
+    renew_webhook_secret = blocking(endpoints.renew_webhook_secret)
+    delete_webhook = blocking(endpoints.delete_webhook)
+
+    # --- accounts ---------------------------------------------------------------------
+
+    list_accounts = blocking(endpoints.list_accounts)
+    create_account = blocking(endpoints.create_account)
+    get_account = blocking(endpoints.get_account)
+    update_account = blocking(endpoints.update_account)
+    delete_account = blocking(endpoints.delete_account)
+    verify_account = blocking(endpoints.verify_account)
+
+    # --- discovery and the sign-in with a code ----------------------------------------
+
+    discover_account = blocking(endpoints.discover_account)
+    start_device_oauth = blocking(endpoints.start_device_oauth)
+    poll_device_oauth = blocking(endpoints.poll_device_oauth)
+
+    # --- users ------------------------------------------------------------------------
+
+    list_users = blocking(endpoints.list_users)
+    create_user = blocking(endpoints.create_user)
+    get_user = blocking(endpoints.get_user)
+    update_user = blocking(endpoints.update_user)
+    delete_user = blocking(endpoints.delete_user)
+    set_password = blocking(endpoints.set_password)
+
+    # --- tokens -----------------------------------------------------------------------
+
+    list_tokens = blocking(endpoints.list_tokens)
+    create_token = blocking(endpoints.create_token)
+    revoke_token = blocking(endpoints.revoke_token)
+
+    # --- roles ------------------------------------------------------------------------
+
+    list_roles = blocking(endpoints.list_roles)
+    create_role = blocking(endpoints.create_role)
+    get_role = blocking(endpoints.get_role)
+    replace_role = blocking(endpoints.replace_role)
+    delete_role = blocking(endpoints.delete_role)
+
+    # --- the second factor ------------------------------------------------------------
+
+    get_second_factor = blocking(endpoints.get_second_factor)
+    remove_second_factor = blocking(endpoints.remove_second_factor)
+    remove_totp_device = blocking(endpoints.remove_totp_device)
+
+    # --- the audit --------------------------------------------------------------------
+
+    list_activity = blocking(endpoints.list_activity)
+
+    # --- the audit of sends -----------------------------------------------------------
+
+    list_sends = blocking(endpoints.list_sends)
+    list_all_sends = blocking(endpoints.list_all_sends)
+
+    # --- the service ------------------------------------------------------------------
+
+    get_status = blocking(endpoints.get_status)
+    health = blocking(endpoints.health)
+
+    # --- attachments ------------------------------------------------------------------
 
     def get_attachment(
         self, account_id: str, message_id: str, attachment_id: str, max_bytes: int
@@ -181,81 +215,3 @@ class SyncMailboxClient:
         except httpx.TransportError as exc:
             raise failure(exc, self.base_url, call.timeout) from None
         return attachment(response.headers, collected)
-
-    def update_messages(
-        self,
-        account_id: str,
-        message_ids: list[str],
-        *,
-        unread: bool | None = None,
-        starred: bool | None = None,
-        folder_id: str | None = None,
-    ) -> Outcome:
-        return self.send(
-            endpoints.update_messages(
-                account_id,
-                message_ids,
-                unread=unread,
-                starred=starred,
-                folder_id=folder_id,
-            )
-        )
-
-    def delete_message(
-        self, account_id: str, message_id: str, *, permanent: bool = False
-    ) -> None:
-        self.send(endpoints.delete_message(account_id, message_id, permanent=permanent))
-
-    def trash_messages(self, account_id: str, message_ids: list[str]) -> Outcome:
-        return self.send(endpoints.trash_messages(account_id, message_ids))
-
-    # --- drafts and sending -----------------------------------------------------------
-
-    def list_drafts(
-        self, account_id: str, limit: int, cursor: str | None = None
-    ) -> Page:
-        return self.send(endpoints.list_drafts(account_id, limit, cursor))
-
-    def create_draft(self, account_id: str, message: dict[str, Any]) -> dict[str, Any]:
-        return self.send(endpoints.create_draft(account_id, message))
-
-    def update_draft(
-        self,
-        account_id: str,
-        draft_id: str,
-        message: dict[str, Any],
-        keep_attachments: list[str] | None = None,
-    ) -> dict[str, Any]:
-        return self.send(
-            endpoints.update_draft(account_id, draft_id, message, keep_attachments)
-        )
-
-    def delete_draft(self, account_id: str, draft_id: str) -> None:
-        self.send(endpoints.delete_draft(account_id, draft_id))
-
-    def send_message(
-        self, account_id: str, message: dict[str, Any], idempotency_key: str
-    ) -> Sent:
-        return self.send(endpoints.send_message(account_id, message, idempotency_key))
-
-    def send_draft(self, account_id: str, draft_id: str, idempotency_key: str) -> Sent:
-        return self.send(endpoints.send_draft(account_id, draft_id, idempotency_key))
-
-    # --- webhooks ---------------------------------------------------------------------
-
-    def update_webhook(
-        self,
-        webhook_id: str,
-        *,
-        url: str | None = None,
-        events: list[str] | None = None,
-        accounts: list[str] | None | EllipsisType = ...,
-    ) -> Webhook:
-        return self.send(
-            endpoints.update_webhook(
-                webhook_id, url=url, events=events, accounts=accounts
-            )
-        )
-
-    def renew_webhook_secret(self, webhook_id: str) -> WebhookSecret:
-        return self.send(endpoints.renew_webhook_secret(webhook_id))

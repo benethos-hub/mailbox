@@ -16,11 +16,10 @@ import argparse
 import os
 import sys
 
-import httpx
 from checks.accounts import accounts, read_env, register
 from checks.run import Run
 
-from benethos_mailbox_client import SyncMailboxClient
+from benethos_mailbox_client import ApiError, SyncMailboxClient
 
 DEFAULT_URL = "http://127.0.0.1:8080"
 
@@ -38,42 +37,33 @@ def main() -> int:
         )
     env = read_env()
     run = Run()
-    with (
-        httpx.Client(
-            base_url=options.url,
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=60.0,
-        ) as client,
-        SyncMailboxClient(options.url, token) as mailbox,
-    ):
+    with SyncMailboxClient(options.url, token) as mailbox:
         for account in accounts(env)[: options.count]:
             print(f"\n== {account['email']}")
             account_id, outcome = register(mailbox, env, account)
-            if not run.check("in the service", account_id is not None, outcome):
+            if account_id is None:
+                run.check("in the service", False, outcome)
                 continue
-            base = f"/v1/accounts/{account_id}"
-            record = client.get(base).json()
-            run.check("its id", True, str(account_id))
-            verified = client.post(f"{base}/verify")
-            run.check(
-                "verify logs in over IMAP and SMTP",
-                verified.status_code == 200,
-                str(verified.status_code),
-            )
-            folders = client.get(f"{base}/folders")
-            roles = sorted(f["role"] for f in folders.json() if f.get("role"))
-            run.check(
-                "folders", folders.status_code == 200, ", ".join(roles) or "no roles"
-            )
-            inbox = client.get(f"{base}/messages", params={"limit": 3})
-            run.check(
-                "the inbox lists",
-                inbox.status_code == 200,
-                f"{len(inbox.json().get('items', []))} shown",
-            )
-            status = client.get(base).json().get("status", record.get("status"))
-            run.check("status", status == "connected", str(status))
+            run.check("in the service", True, outcome)
+            run.check("its id", True, account_id)
+            check_account(run, mailbox, account_id)
     return run.finish()
+
+
+def check_account(run: Run, mailbox: SyncMailboxClient, account_id: str) -> None:
+    """Verify, the folders, the newest of the inbox, the status: each a
+    check, a refusal of the API named with its code."""
+    try:
+        verified = mailbox.verify_account(account_id)
+        run.check("verify logs in over IMAP and SMTP", True, verified.status)
+        roles = sorted(f.role for f in mailbox.list_folders(account_id) if f.role)
+        run.check("folders", True, ", ".join(roles) or "no roles")
+        inbox = mailbox.list_messages(account_id, limit=3)
+        run.check("the inbox lists", True, f"{len(inbox.items)} shown")
+        status = mailbox.get_account(account_id).status
+        run.check("status", status == "connected", status)
+    except ApiError as exc:
+        run.check("the account answers", False, f"{exc.status} {exc.code}")
 
 
 if __name__ == "__main__":

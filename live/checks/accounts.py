@@ -103,28 +103,24 @@ def register(
     """The test account in the service, added through the API with IMAP and
     the SMTP server discovery finds: its id, and what happened. An account
     whose address the service has already is not added again."""
-    known = mailbox.request("GET", "/v1/accounts", params={"address": account["email"]})
-    for existing in known["items"]:
-        if existing.get("email", "").lower() == account["email"].lower():
-            return str(existing["id"]), "already there"
-    found = mailbox.request("POST", "/v1/discovery", json={"email": account["email"]})
+    known = mailbox.list_accounts(address=account["email"])
+    for existing in known.items:
+        if existing.email.lower() == account["email"].lower():
+            return existing.id, "already there"
+    found = mailbox.discover_account(account["email"])
     discovered: dict[str, Any] = next(
-        (c["settings"] for c in found.get("candidates", []) if c.get("settings")), {}
+        (c.settings for c in found.candidates if c.settings), {}
     )
     try:
-        created = mailbox.request(
-            "POST",
-            "/v1/accounts",
-            json={
-                "provider": "imap",
-                "email": account["email"],
-                "settings": imap_settings(env, account, discovered),
-                "credentials": {"password": account["password"]},
-            },
+        created = mailbox.create_account(
+            "imap",
+            account["email"],
+            settings=imap_settings(env, account, discovered),
+            credentials={"password": account["password"]},
         )
     except ApiError as exc:
         return None, f"{exc.status} {exc.message}"
-    return str(created["id"]), "added"
+    return created.id, "added"
 
 
 def register_all(

@@ -117,7 +117,7 @@ def started(operations: Iterable[str], transport_name: str, url: str) -> None:
 async def allowed_operations() -> set[str]:
     """Every operation the token may call on at least one account. Warns in
     the log where it may read mail and send it to any address."""
-    me = await client().me()
+    me = await client().get_me()
     for warning in render.warnings_of(me):
         logger.warning("%s", warning)
     found = set(me.operations)

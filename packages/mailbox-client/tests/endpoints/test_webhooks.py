@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from benethos_mailbox_client import Secret, Webhook
+from benethos_mailbox_client import Secret, Webhook, WebhookPost
 
 from ..fake_api import FakeApi
 
@@ -62,3 +62,55 @@ async def test_a_new_secret_is_kept_out_of_any_line(make_client: Callable) -> No
     assert renewed.secret.get_secret_value() == "whsec_new"
     assert "whsec_new" not in repr(renewed) and "whsec_new" not in str(renewed.secret)
     assert renewed.secret == Secret("whsec_new")
+
+
+async def test_list_webhooks(make_client: Callable) -> None:
+    api = FakeApi([WEBHOOK])
+    found = await make_client(api).list_webhooks(failing=True)
+    assert api.call() == ("GET", "/v1/webhooks", {"failing": "true"}, None)
+    assert [w.id for w in found] == ["whk_1"]
+
+
+async def test_a_new_webhooks_secret_comes_once(make_client: Callable) -> None:
+    api = FakeApi({**WEBHOOK, "secret": "whsec_first"}, status=201)
+    made = await make_client(api).create_webhook(
+        "https://hooks.example.org/x", events=["message.created"]
+    )
+    assert api.call() == (
+        "POST",
+        "/v1/webhooks",
+        {},
+        {"url": "https://hooks.example.org/x", "events": ["message.created"]},
+    )
+    assert made.webhook.id == "whk_1"
+    assert made.secret.get_secret_value() == "whsec_first"
+    assert "whsec_first" not in repr(made)
+
+
+async def test_get_webhook_with_its_posts(make_client: Callable) -> None:
+    post = {
+        "delivery_id": "dlv_1",
+        "at": "2026-10-09T12:05:00Z",
+        "events": 2,
+        "status": 503,
+        "error": "the receiver answered 503",
+    }
+    api = FakeApi({**WEBHOOK, "deliveries": [post]})
+    found = await make_client(api).get_webhook("whk_1")
+    assert api.call()[:2] == ("GET", "/v1/webhooks/whk_1")
+    assert found.webhook.url == WEBHOOK["url"]
+    assert found.deliveries == (
+        WebhookPost(
+            "dlv_1",
+            datetime(2026, 10, 9, 12, 5, tzinfo=UTC),
+            2,
+            503,
+            "the receiver answered 503",
+        ),
+    )
+
+
+async def test_delete_webhook(make_client: Callable) -> None:
+    api = FakeApi()
+    assert await make_client(api).delete_webhook("whk_1") is None
+    assert api.call() == ("DELETE", "/v1/webhooks/whk_1", {}, None)

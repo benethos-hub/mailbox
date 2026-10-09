@@ -69,3 +69,36 @@ BODY = message_body(
     html="<p>Hello</p>",
     reference=("msg_1", "reply"),
 )
+
+ACCOUNT = {
+    "id": "acc_1",
+    "provider": "imap",
+    "email": "me@example.com",
+    "display_name": None,
+    "status": "connected",
+    "credentials": [{"field": "password", "updated_at": "2026-10-01T00:00:00Z"}],
+    "settings": {"host": "imap.example.com", "port": 993},
+    "capabilities": ["flags", "folders"],
+}
+
+USER = {
+    "id": "usr_1",
+    "name": "desktop",
+    "roles": ["readers"],
+    "service": [],
+    "grants": [
+        {
+            "accounts": ["acc_1"],
+            "allow": ["mail.read", "send"],
+            "recipients": ["*@example.org"],
+            "max_sends_per_day": 20,
+            "expires_at": "2026-12-31T23:00:00Z",
+        }
+    ],
+    "disabled": False,
+    "ui_sign_in": False,
+    "has_password": False,
+    "must_change": False,
+    "last_sign_in_at": None,
+    "second_factor": False,
+}
