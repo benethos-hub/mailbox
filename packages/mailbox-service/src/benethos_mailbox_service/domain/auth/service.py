@@ -173,35 +173,48 @@ class AuthService:
 
     async def confirm(self, access: Access, password: str) -> None:
         """The signed-in user's password once more, before a step that
-        hands out much. A wrong one counts against the user's name as a
-        failed sign-in does."""
+        hands out much. A wrong one counts against the user's name and the
+        client address as a failed sign-in does."""
         user = self._users.get(access.user_id)
         key = _name_key(user.name)
-        self._names.check(key)
+        self._check_caller(access, key)
         matched = len(password) <= MAX_LENGTH and await self.passwords.matches(
             user.id, password
         )
         if not matched:
-            self._failed_name(key, user, Actor.of(access))
+            self._failed_caller(access, key, user)
             self.activity.record(said.ConfirmFailed(by=Actor.of(access)))
             raise BadRequestError("the password is not right")
 
     def confirm_code(self, access: Access, code: str) -> None:
         """A code of the signed-in user's second factor, before a step
-        that takes it away. A wrong one counts against the user's name as
-        a wrong password does."""
+        that takes it away. A wrong one counts against the user's name and
+        the client address as a wrong password does."""
         user = self._users.get(access.user_id)
         key = _name_key(user.name)
-        self._names.check(key)
+        self._check_caller(access, key)
         right = (
             self.factors is not None
             and len(code) <= MAX_CODE
             and self.factors.check(user.id, code) is not None
         )
         if not right:
-            self._failed_name(key, user, Actor.of(access))
+            self._failed_caller(access, key, user)
             self.activity.record(said.ConfirmFailed(by=Actor.of(access), what="code"))
             raise BadRequestError(WRONG_CODE)
+
+    def _check_caller(self, access: Access, key: str) -> None:
+        """``RateLimitedError`` while the caller's address or name is
+        locked out."""
+        if access.source is not None:
+            self._check_source(access.source)
+        self._names.check(key)
+
+    def _failed_caller(self, access: Access, key: str, user: User) -> None:
+        """A wrong confirmation, counted for the address and the name."""
+        if access.source is not None:
+            self._failed_source(access.source)
+        self._failed_name(key, user, Actor.of(access))
 
     def session_access(
         self,

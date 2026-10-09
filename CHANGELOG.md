@@ -72,6 +72,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A wrong password or code asked once more before a step, such as the
+  recovery key or new recovery codes, counts against the client address
+  as a failed sign-in does, not only against the name. Ten from one
+  address lock it out, whichever users they were for.
 - A session of the UI ends after 24 hours however it is used
   (`MAILBOX_SERVICE_SESSION_MAX_HOURS`), and a user holds 10 at most: a
   new sign-in ends the oldest (`MAILBOX_SERVICE_SESSIONS_PER_USER`). A
