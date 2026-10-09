@@ -22,9 +22,9 @@ from benethos_mailbox_service.data.storage import (
 )
 from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.passwords import Passwords
-from benethos_mailbox_service.domain.auth.service import (
+from benethos_mailbox_service.domain.auth.service import AuthService
+from benethos_mailbox_service.domain.auth.tokens import (
     TOKEN_PREFIX,
-    AuthService,
     hash_token,
     new_token,
 )

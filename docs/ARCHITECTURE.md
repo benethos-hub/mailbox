@@ -246,7 +246,10 @@ packages/mailbox-service/
                         #   rights and groups), Access (one caller)
       auth/             # proving who calls: AuthService, Passwords,
                         #   SignInThrottle, SecondFactors (the frame of
-                        #   the second factor), Totp and RecoveryCodes
+                        #   the second factor), Totp and RecoveryCodes,
+                        #   ApiTokens (tokens.py: issued, revoked, the
+                        #   one presented), what a sign-in to the UI
+                        #   answers (signin.py)
       users/            # UserService, RoleService, TokenService,
                         #   PasswordService, SecondFactorService,
                         #   TotpService, one
