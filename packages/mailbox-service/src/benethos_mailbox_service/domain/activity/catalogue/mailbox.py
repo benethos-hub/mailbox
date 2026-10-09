@@ -13,7 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
 
-from ....common.clock import log_time
+from benethos_mailbox_common.logs import log_time
+
 from ....common.text import plural
 from ....data.models import Account
 from ..base import Activity, Failure, account

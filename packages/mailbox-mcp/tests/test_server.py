@@ -13,6 +13,7 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
 from benethos_mailbox_client import MailboxClient
+from benethos_mailbox_common import redact
 from benethos_mailbox_mcp import __version__, cli, server
 from benethos_mailbox_mcp import tools as catalogue
 from benethos_mailbox_mcp.errors import (
@@ -265,6 +266,21 @@ def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
         cli.main([])
 
 
+def test_main_masks_both_tokens_in_every_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Neither the service's token nor the bearer token reaches a line."""
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "the-token-of-the-service")
+    monkeypatch.setenv("MAILBOX_MCP_BEARER_TOKEN", "the-bearer-token-of-mcp")
+
+    async def unreachable() -> set[str]:
+        raise ToolError("mailbox-service is not reachable")
+
+    monkeypatch.setattr(server, "allowed_operations", unreachable)
+    with pytest.raises(SystemExit):
+        cli.main([])
+    text = redact.redact("the-token-of-the-service, the-bearer-token-of-mcp")
+    assert text == "***, ***"
+
+
 def test_main_without_a_token() -> None:
     with pytest.raises(SystemExit, match="MAILBOX_SERVICE_TOKEN is not set"):
         cli.main([])
@@ -407,16 +423,25 @@ def test_the_mcp_library_logs_from_warning_on(monkeypatch: pytest.MonkeyPatch) -
     assert logging.getLogger("mcp").getEffectiveLevel() == logging.WARNING
 
 
-def test_every_line_has_the_time_as_the_service_writes_it() -> None:
-    """ISO 8601, local, to the millisecond, with the offset."""
+def test_every_line_is_written_as_the_service_writes_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The lines of ``benethos_mailbox_common.logs``: the time in ISO 8601,
+    local, to the millisecond, with the offset, and a noted secret
+    masked."""
+    root = logging.getLogger()
+    monkeypatch.setattr(root, "handlers", [])
+    monkeypatch.setattr(root, "level", root.level)
+    cli.configure_logging("INFO")
+    [handler] = root.handlers
+    redact.note("a-token-in-a-line")
     record = logging.makeLogRecord(
         {"created": 1790590342.1239, "name": "benethos_mailbox_mcp.server"}
     )
     record.levelname = "INFO"
-    record.msg = "started"
-    line = cli._Lines(cli.FORMAT).format(record)
+    record.msg = "started with a-token-in-a-line"
     assert re.fullmatch(
         r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.123[+-]\d\d:\d\d INFO     "
-        r"benethos_mailbox_mcp\.server: started",
-        line,
+        r"benethos_mailbox_mcp\.server: started with \*\*\*",
+        handler.format(record),
     )

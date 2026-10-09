@@ -6,8 +6,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from benethos_mailbox_common.logs import log_time
+
 from .. import __version__
-from ..common.clock import log_time, parse_iso
+from ..common.clock import parse_iso
 from ..config import load_settings
 from .common import (
     Commands,

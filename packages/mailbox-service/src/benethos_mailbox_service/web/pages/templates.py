@@ -18,8 +18,10 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
+from benethos_mailbox_common.logs import log_time
+
 from ... import __version__
-from ...common.clock import log_time, utc_now
+from ...common.clock import utc_now
 from ...common.text import plural
 from ...common.urls import path_and_query
 from ...data.models import Address

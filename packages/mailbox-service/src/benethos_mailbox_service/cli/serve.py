@@ -21,12 +21,12 @@ def run(args: argparse.Namespace) -> None:
 
     from .. import assembly
     from ..data.logbook import LogBook
-    from ..logs import log_config, short_source
+    from ..logs import log_config, source_of
 
     settings = load_settings(args.env_file)
     # Before the app is built: building it may warn already.
     # The log page names a source as the console does.
-    book = LogBook(source=short_source)
+    book = LogBook(source=source_of)
     config = log_config(settings.log_level, book)
     logging.config.dictConfig(config)
     # The log names the settings and the database once the app starts.

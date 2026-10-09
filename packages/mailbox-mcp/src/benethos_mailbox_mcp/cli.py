@@ -9,10 +9,12 @@ import argparse
 import logging
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
 
 import anyio
+
+from benethos_mailbox_common import redact
+from benethos_mailbox_common.logs import stderr_handler
 
 from . import __version__, config, server, tools, transport
 from .client import Connect, connector, from_environment
@@ -99,25 +101,12 @@ def _csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-# Each line: the time, the level, where it comes from and the message.
-FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
-
-
-class _Lines(logging.Formatter):
-    """The time as the service writes it in every line: ISO 8601, the
-    local time of this machine, to the millisecond, with the offset.
-    ``2026-09-28T10:12:22.123+02:00``."""
-
-    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
-        moment = datetime.fromtimestamp(record.created).astimezone()
-        return moment.isoformat(timespec="milliseconds")
-
-
 def configure_logging(level: str) -> None:
+    """The lines of the service's log (``benethos_mailbox_common.logs``):
+    short and in colour on a terminal, else plain, a noted secret masked."""
     # stderr only: on stdio, stdout carries the JSON-RPC stream.
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(_Lines(FORMAT))
-    logging.basicConfig(level=level, handlers=[handler])
+    package = __name__.rpartition(".")[0]
+    logging.basicConfig(level=level, handlers=[stderr_handler(package)])
     # httpx names every request with its URL at INFO, and a URL carries
     # search terms and message ids. The MCP library names each request.
     # The client keeps this log in its files.
@@ -145,6 +134,10 @@ def main(argv: list[str] | None = None) -> None:
     if loaded is not None:
         logger.info("Settings from %s", loaded)
     environment = from_environment()
+    # No line names either token. Noted, a slip still writes ***.
+    for secret in (environment.token, transport.token_from_env()):
+        if secret:
+            redact.note(secret)
     connect = connector(environment)
     try:
         operations = anyio.run(_at_start, connect)

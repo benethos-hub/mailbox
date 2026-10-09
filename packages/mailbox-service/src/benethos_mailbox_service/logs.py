@@ -5,97 +5,34 @@ Without its own configuration uvicorn sets up only its loggers. The
 service's records then had no handler: below WARNING they were dropped,
 above they came without time or source. Libraries log from WARNING on,
 so a debug level shows the service without the IMAP commands of a
-library. A secret the service holds is masked in every line
-(``benethos_mailbox_common.redact``).
+library. The lines are those of ``benethos_mailbox_common.logs``, a
+secret the service holds masked in every one. The access line of
+uvicorn is the service's own.
 """
 
 from __future__ import annotations
 
 import logging
-import os
-import sys
-from datetime import datetime
 from http import HTTPStatus
 from typing import Any
 
-from benethos_mailbox_common import redact
-
-from .common.clock import log_time
+from benethos_mailbox_common.logs import DIM, LEVELS, RESET, formatter, short_source
 
 PACKAGE = __name__.rpartition(".")[0]
-FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
-# As uvicorn names them. Its trace level is below debug.
-LEVELS = {
-    "critical": logging.CRITICAL,
-    "error": logging.ERROR,
-    "warning": logging.WARNING,
-    "info": logging.INFO,
-    "debug": logging.DEBUG,
-    "trace": 5,
-}
-
-
-class Redacting(logging.Formatter):
-    """Each line as written, a noted secret masked: in the message, its
-    arguments and a traceback alike. The time as every line writes it
-    (``log_time``): ``2026-09-28T10:12:22.123+02:00``."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        return redact.redact(super().format(record))
-
-    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
-        return log_time(datetime.fromtimestamp(record.created).astimezone())
-
-
-# ANSI colours, for a terminal only.
-_RESET = "\033[0m"
-_DIM = "\033[2m"
-_LEVEL_COLOURS = {
-    logging.DEBUG: "\033[34m",
-    logging.INFO: "\033[32m",
-    logging.WARNING: "\033[33m",
-    logging.ERROR: "\033[31m",
-    logging.CRITICAL: "\033[1;31m",
-}
-_SOURCE = "\033[36m"
 # As uvicorn colours a status: 2xx green, 3xx yellow, 4xx red, 5xx bold.
 _STATUS_COLOURS = {1: "", 2: "\033[32m", 3: "\033[33m", 4: "\033[31m", 5: "\033[1;31m"}
 # The access line of uvicorn: client, method, path, HTTP version, status.
 _ACCESS_ARGS = 5
-# The column of the source: the longest name of an activity,
-# ``activity.<area>.<name>``, has 32 characters (docs/LOGGING.md 7.2).
-SOURCE_WIDTH = 32
 
 
-class Console(Redacting):
-    """A line for a person at a terminal: the time dim, the level
-    in colour, the source short, an access line as method, path and the
-    status in colour. The time as in every other line."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        colour = _LEVEL_COLOURS.get(record.levelno, "")
-        head = (
-            f"{_DIM}{self.formatTime(record)}{_RESET} "
-            f"{colour}{record.levelname:<8}{_RESET} "
-            f"{_SOURCE}{short_source(record.name):<{SOURCE_WIDTH}}{_RESET} "
-        )
-        text = _access(record) or record.getMessage()
-        if record.exc_info:
-            text += "\n" + self.formatException(record.exc_info)
-        return redact.redact(head + text)
-
-
-def short_source(name: str) -> str:
-    """``domain.auth`` for the service's own loggers, ``http`` for the
-    access log, ``uvicorn`` for the server."""
-    if name == "uvicorn.access":
-        return "http"
-    if name.startswith("uvicorn"):
-        return "uvicorn"
-    return name.removeprefix(f"{PACKAGE}.")
+def source_of(name: str) -> str:
+    """The source of a line as the console names it: ``domain.auth``."""
+    return short_source(name, PACKAGE)
 
 
 def _access(record: logging.LogRecord) -> str | None:
+    """An access line of uvicorn on a terminal: method, path, the status
+    in colour, the client. None for any other record."""
     if record.name != "uvicorn.access" or not isinstance(record.args, tuple):
         return None
     if len(record.args) != _ACCESS_ARGS:
@@ -108,7 +45,7 @@ def _access(record: logging.LogRecord) -> str | None:
     except ValueError:
         phrase = ""
     colour = _STATUS_COLOURS.get(status // 100, "")
-    return f"{method} {path} {colour}{status} {phrase}{_RESET} {_DIM}{client}{_RESET}"
+    return f"{method} {path} {colour}{status} {phrase}{RESET} {DIM}{client}{RESET}"
 
 
 class WithoutQuery(logging.Filter):
@@ -124,23 +61,22 @@ class WithoutQuery(logging.Filter):
         return True
 
 
-def colours_wanted() -> bool:
-    """Colours on a terminal, unless ``NO_COLOR`` is set (no-color.org)."""
-    return sys.stderr.isatty() and "NO_COLOR" not in os.environ
-
-
 def log_config(
     level: str, book: logging.Handler | None = None, colours: bool | None = None
 ) -> dict[str, Any]:
     """The configuration for ``uvicorn.run(log_config=...)``, as
     ``logging.config.dictConfig`` takes it. ``book`` keeps the newest
     lines for the log page as well. ``colours`` gives the compact lines
-    of ``Console``, by default on a terminal. Elsewhere, in a container
-    log or the journal, each line is plain text."""
+    of ``Console``, by default on a terminal, with the access line of
+    ``_access``. Elsewhere, in a container log or the journal, each line
+    is plain text."""
     number = LEVELS[level.lower()]
-    if colours is None:
-        colours = colours_wanted()
-    plain = {"()": Console} if colours else {"()": Redacting, "fmt": FORMAT}
+    lines = {
+        "()": formatter,
+        "package": PACKAGE,
+        "colours": colours,
+        "line_of": _access,
+    }
     handlers: dict[str, Any] = {
         "stderr": {
             "class": "logging.StreamHandler",
@@ -159,7 +95,7 @@ def log_config(
         "version": 1,
         "disable_existing_loggers": False,
         # uvicorn sets the colours of these two by name when asked to.
-        "formatters": {"default": plain, "access": plain},
+        "formatters": {"default": lines, "access": lines},
         "filters": {"without_query": {"()": WithoutQuery}},
         "handlers": handlers,
         "root": {"level": logging.WARNING, "handlers": list(handlers)},
