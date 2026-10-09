@@ -42,6 +42,8 @@ def test_the_recovery_key_after_the_password(
     assert 'href="/ui/recovery-key"' in ui.get("/ui").text
     page = ui.get("/ui/recovery-key").text
     assert 'name="password" type="password"' in page and "<code" not in page
+    # Without a second factor the password alone does.
+    assert 'name="code"' not in page
 
     wrong = post(ui, "/ui/recovery-key", {"password": "not the password at all"})
     assert "the password is not right" in wrong.text and "<code" not in wrong.text

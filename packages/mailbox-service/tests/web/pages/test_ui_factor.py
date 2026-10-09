@@ -15,9 +15,9 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import ActivityFilter, Grant, User
-from benethos_mailbox_service.data.secrets import totp
+from benethos_mailbox_service.data.secrets import encode_recovery, totp
 
-from ...conftest import ADMIN, UI_PASSWORD, browser_user
+from ...conftest import ADMIN, UI_PASSWORD, browser_admin, browser_user
 from ...ui_helpers import post, sign_in, try_sign_in
 
 pytestmark = pytest.mark.usefixtures("master_key")
@@ -396,6 +396,30 @@ def test_new_recovery_codes_on_the_own_page(
     assert "New recovery codes." in fresh.text
     codes = re.findall(CODES, fresh.text)
     assert len(codes) == 10 and not set(codes) & set(old)
+
+
+def test_the_recovery_key_needs_a_code_with_a_second_factor(
+    app_client: TestClient, services: Services
+) -> None:
+    name, password = browser_admin(services)
+    secret, codes = with_factor(services, name)
+    try_sign_in(app_client, name, password)
+    code_form(app_client, codes[0])
+    assert 'name="code"' in app_client.get("/ui/recovery-key").text
+    for code in ("", "000000"):
+        refused = post(
+            app_client, "/ui/recovery-key", {"password": password, "code": code}
+        )
+        assert "the code is not right" in refused.text
+        assert '<code class="secret">' not in refused.text
+    shown = post(
+        app_client,
+        "/ui/recovery-key",
+        {"password": password, "code": code_after(secret)},
+    )
+    key = re.search(r'<code class="secret">([^<]+)</code>', shown.text)
+    assert key is not None
+    assert key.group(1) == encode_recovery(services.vault.master_key())
 
 
 # --- another user's page --------------------------------------------------------

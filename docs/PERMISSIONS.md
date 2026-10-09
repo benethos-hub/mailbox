@@ -139,7 +139,7 @@ from becoming a way up:
 - **Nobody locks itself out.** A user cannot delete or disable itself
   and cannot take its own UI sign-in.
 - **The recovery key and the service log are `admin` only**, the key
-  after the password again.
+  after the password again, and a code with a second factor.
 
 ## 6. Credentials and kinds of user
 

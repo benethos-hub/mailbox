@@ -346,7 +346,8 @@ account's last sync and last error in memory, so they are empty after a
 restart until the first pass.
 
 The recovery key page shows the key once after **Show**, with the
-warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again. The key is never
+warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again, and for a code when the
+user has a second factor ([AUTHENTICATION.md](AUTHENTICATION.md) 7). The key is never
 stored or logged, the log only says that it was shown and to whom.
 
 The Audit page lists the audit of administration of

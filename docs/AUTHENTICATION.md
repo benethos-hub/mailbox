@@ -184,8 +184,8 @@ holds 50 bits and works once.
 - A recovery code used at the sign-in is written to the audit as
   `auth.recovery_code_used`, a warning: it means a device is gone or
   out of reach.
-- A recovery code also confirms adding or removing a device and making
-  new codes, and is used up by it. Whoever lost every device and every
+- A recovery code also confirms adding or removing a device, making
+  new codes and showing the recovery key, and is used up by it. Whoever lost every device and every
   recovery code needs an administrator (section 5).
 
 **Decided 2026-10-09:** recovery codes and the host command, both. The
@@ -211,6 +211,11 @@ rest.
 had at the sign-in, as it keeps when the password was set. A device
 added or removed ends the sessions that started before. A rename does
 not.
+
+**The recovery key** (CONCEPT 7.3, [UI.md](UI.md) 6.5) opens every
+stored secret. Its page asks an administrator with a second factor for
+a code as well as the password: of any device or a recovery code.
+Without a second factor the password alone does, as before.
 
 **API:**
 
@@ -305,6 +310,8 @@ the mail accounts. A second factor there is the provider's.
   at most 10 (section 5).
 - New recovery codes after the password and a code, as a further
   device (section 6).
+- The recovery key after the password and a code, for an administrator
+  with a second factor (section 7).
 - "Second factor" is the frame, TOTP one method in it, named
   "Authenticator app (TOTP)" in the UI and `totp` elsewhere. Passkeys
   may join as another method with the same recovery codes. The host

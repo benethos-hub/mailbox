@@ -17,6 +17,12 @@
         <label for="f-password">Your password</label>
         <input id="f-password" name="password" type="password" autocomplete="current-password" required autofocus />
       </div>
+      {% if needs_code %}
+      <div class="field">
+        <label for="f-code">A code of any of your devices, or a recovery code</label>
+        <input id="f-code" name="code" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
+      </div>
+      {% endif %}
     </div>
     <div class="form-actions"><button class="primary" type="submit">Show</button></div>
   </form>

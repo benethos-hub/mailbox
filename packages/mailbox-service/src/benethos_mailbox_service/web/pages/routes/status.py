@@ -61,13 +61,16 @@ async def service_log(request: Request, caller: Viewer, log: Log) -> HTMLRespons
 
 
 @router.get("/recovery-key")
-async def recovery_key(request: Request, caller: Viewer) -> HTMLResponse:
+async def recovery_key(
+    request: Request, caller: Viewer, recovery: Recovery
+) -> HTMLResponse:
     caller.require("show_recovery_key")
     return render(
         request,
         "pages/recovery_key.html",
         page="recovery",
         key=take_once(request, "recovery_key"),
+        needs_code=recovery.needs_code(caller),
     )
 
 
@@ -77,10 +80,11 @@ async def show_recovery_key(
     caller: Actor,
     recovery: Recovery,
     password: Annotated[str, Form()] = "",
+    code: Annotated[str, Form()] = "",
 ) -> Response:
-    """The key after the password once more. Kept for the next page only,
-    never in the URL."""
+    """The key after the password once more, and a code with a second
+    factor. Kept for the next page only, never in the URL."""
     with failing(RECOVERY_PAGE):
-        key = await recovery.show(caller, password)
+        key = await recovery.show(caller, password, code)
     show_once(request, "recovery_key", key)
     return back(request, RECOVERY_PAGE)
