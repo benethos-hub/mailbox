@@ -383,14 +383,29 @@ packages/mailbox-client/
     endpoints/          # each endpoint once, one module per resource
                         #   of the API, with the readings of its
                         #   records. Sends nothing
-      me.py             # get_me(): the caller and its accounts
+      me.py             # get_me(): the caller and its accounts, the
+                        #   catalogue of rights
+      health.py         # whether the service answers
+      accounts.py       # list, connect, read, change, verify, remove
+      discovery.py      # discovery, the sign-in with a code
       folders.py        # the folders of an account
-      messages.py       # lists and search, changes, a message, an
-                        #   attachment, flags and moves, deleting;
-                        #   the page the drafts read too
+      messages.py       # lists and search in one account or across,
+                        #   changes, a message and its source, an
+                        #   attachment, flags, keywords and moves for
+                        #   one or many, deleting; the page the drafts
+                        #   read too
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a message, send a draft
-      webhooks.py       # change a webhook, a new signing secret
+      sends.py          # the audit of sends
+      users.py          # users, a password set
+      tokens.py         # a user's tokens
+      roles.py          # roles
+      rights.py         # grants read and written, for users and roles
+      factors.py        # a user's second factor
+      webhooks.py       # webhooks, a new signing secret
+      audit.py          # the audit of administration
+      status.py         # the state of the service
+      readings.py       # what the resources read alike: times, pages
       compose.py        # message_body: what drafts and sending share
       generic.py        # request(): any route, its JSON as it comes
     answers.py          # an answer read: its JSON, the error envelope
@@ -407,13 +422,26 @@ packages/mailbox-client/
                         #   module per resource as in endpoints/, every
                         #   one offered by its __init__.py
       me.py             # the caller, its accounts, its sending limits
+      health.py         # the service's health and version
+      accounts.py       # an account, its stored credentials
+      discovery.py      # what discovery found, a sign-in with a code
       folders.py        # a folder
       messages.py       # a page, the changes, a batch's outcome, an
                         #   attachment's bytes
       sending.py        # a recipient, what a send answered
+      sends.py          # a record of the audit of sends
+      rights.py         # a grant, the catalogue of rights
+      users.py          # a user, a password made for one
+      tokens.py         # a token, a new one with its secret
+      roles.py          # a role
+      factors.py        # a second factor and its devices
+      webhooks.py       # a webhook, its posts, a new one or a new
+                        #   signing secret
+      audit.py          # an activity of the audit
+      status.py         # the worker and the health of each account
+      paging.py         # Paged: a page of records and its cursor
       secrets.py        # Secret: what the service shows once, kept out
                         #   of repr and str
-      webhooks.py       # a webhook, its new signing secret
     errors.py           # MailboxError and its subclasses
 ```
 

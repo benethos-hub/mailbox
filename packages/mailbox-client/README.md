@@ -11,16 +11,18 @@
 
 The Python client of the REST API of
 [`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service),
-on PyPI as `benethos-mailbox-client`. It reads, searches, sorts, drafts
-and sends mail of the accounts the service holds, as far as its token
-allows. The MCP server of the project,
+on PyPI as `benethos-mailbox-client`. It covers the whole REST API: it
+reads, searches, sorts, drafts and sends mail of the accounts the
+service holds, and administers the service: accounts, users, roles,
+tokens, second factors, webhooks, the audit and the state of the
+service, as far as its token allows. Every operation of the API is a
+method of both clients, named like its `operationId`. The MCP server of the project,
 [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp),
 is built on it.
 
 It knows the service through its REST API alone, and needs nothing but
 [httpx](https://www.python-httpx.org/). The REST API follows the status
-above. This package's Python interface has no stability promise yet: it
-follows what the MCP server and the project's own checks need.
+above. This package's Python interface has no stability promise yet.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 
@@ -69,8 +71,30 @@ with SyncMailboxClient() as mailbox:
     mailbox.send_message("acc_...", body, idempotency_key="hello-1")
 ```
 
-`request(method, path, ...)` reaches any route of the API the methods do
-not cover and answers its JSON. The routes and their fields:
+Administering the service works the same way. A user with a grant and a
+token for it:
+
+```python
+from benethos_mailbox_client import Grant, SyncMailboxClient
+
+with SyncMailboxClient() as mailbox:
+    user = mailbox.create_user(
+        "desktop",
+        grants=[Grant(accounts=("acc_...",), allow=("mail.read", "drafts"))],
+    )
+    made = mailbox.create_token(user.id, "laptop")
+    print(made.secret.get_secret_value())  # shown this once
+```
+
+A secret the service shows once, a new token, a one-time password or a
+webhook's signing secret, comes as a `Secret`: `repr` and `str` show
+stars, so it reaches no log by accident, and `get_secret_value()` reads
+it. Lists that page answer `Paged`, with `next_cursor` for the next
+page.
+
+`request(method, path, ...)` sends any request and answers its JSON as
+it comes, e.g. for a field a record leaves out. The routes and their
+fields:
 [`docs/openapi.json`](https://github.com/benethos-hub/mailbox/blob/main/docs/openapi.json).
 
 The token travels in a header. Over http the client talks only to this
@@ -104,10 +128,12 @@ Everything the client raises is a `MailboxError`:
 
 Each endpoint is described once, in `endpoints/`, one module per
 resource of the API: its method, path, query, body and how its answer
-becomes a record. That package sends nothing. `MailboxClient` sends
-those requests with `httpx.AsyncClient`, `SyncMailboxClient` with
-`httpx.Client`, and a method of either is a line or two,
-`get_attachment`, which streams, a few more. What both share stands
+becomes a record of `models/`. That package sends nothing.
+`MailboxClient` sends those requests with `httpx.AsyncClient`,
+`SyncMailboxClient` with `httpx.Client`, and a method of either is one
+line made from its endpoint, with the endpoint's name, docstring and
+signature, `get_attachment`, which streams, a few more. A test holds
+every operation of the API to a method of both clients. What both share stands
 beside them: the address and the token (`environment.py`), the shape
 of a request (`calls.py`), how an answer or a failure is read
 (`answers.py`) and an attachment read in chunks (`attachments.py`).

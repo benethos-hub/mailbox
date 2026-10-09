@@ -56,6 +56,19 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `users reset-second-factor <name>` on the host removes a user's second factor,
   for the last administrator who lost every device and the recovery
   codes.
+- `mailbox-client` covers the whole REST API: every operation is a
+  method of both clients, named like its `operationId`. New are the
+  administration side (accounts, discovery and the sign-in with a
+  code, users and passwords, tokens, roles, second factors, webhooks,
+  the audit of administration and of sends, the state of the service,
+  the catalogue of rights, `health`), folders renamed, moved and
+  deleted, a message's source (`get_message_raw`), one message changed
+  (`update_message`), a batch (`batch_messages`) and the lists across
+  accounts (`list_all_messages`, `list_all_changes`, `list_all_sends`).
+  They answer records such as `Account`, `User`, `Grant`, `Role`,
+  `Token`, `Webhook` and `Activity`, a list that pages as `Paged`. A
+  secret shown once, a new token, a one-time password or a signing
+  secret, comes as a `Secret`, kept out of `repr` and `str`.
 
 ### Changed
 

@@ -363,6 +363,14 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   13)**, done 2026-10-07: `endpoints/` one module per resource, what
   both clients share in a module per subject, the tests in files like
   the modules
+- **The client covers the whole API**, decided 2026-10-09, done: the
+  records in `models/` one module per resource
+  ([REFACTORING.md](REFACTORING.md) 14), each method one line made from
+  its endpoint, every operation of `docs/openapi.json` a method of both
+  clients named like its `operationId`, held by a test without
+  exceptions. A secret shown once comes as a `Secret`. The live checks
+  administer through it (`live/checks/admin.py`, `accounts.py`,
+  `live/register.py`)
 
 ## Keeping this file current
 
