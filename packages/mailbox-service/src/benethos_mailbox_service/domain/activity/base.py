@@ -45,9 +45,12 @@ class Actor:
         )
 
     @classmethod
-    def signed_in(cls, name: str, user_id: str, source: str | None) -> Actor:
-        """A user who just signed in to the UI with its password."""
-        return cls(name, user_id, source=source, credential=PASSWORD)
+    def signed_in(
+        cls, name: str, user_id: str, source: str | None, credential: str = ""
+    ) -> Actor:
+        """A user who just signed in to the UI: with its password, or with
+        a second factor as well, as ``credential`` says."""
+        return cls(name, user_id, source=source, credential=credential or PASSWORD)
 
     def __str__(self) -> str:
         if self.user_id is None:

@@ -19,6 +19,7 @@ from .audit import Audit, audited
 from .base import (
     DISPATCHER,
     HOST,
+    PASSWORD,
     SERVICE,
     WORKER,
     Activity,
@@ -43,6 +44,7 @@ from .recorder import ActivityLog
 __all__ = [
     "DISPATCHER",
     "HOST",
+    "PASSWORD",
     "SERVICE",
     "WORKER",
     "Activity",

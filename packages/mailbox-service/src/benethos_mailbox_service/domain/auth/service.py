@@ -23,10 +23,11 @@ from ...errors import (
     SetupRequiredError,
     UnauthorizedError,
 )
-from ..activity import SERVICE, ActivityLog, Actor, someone
+from ..activity import PASSWORD, SERVICE, ActivityLog, Actor, someone
 from ..activity import auth as said
 from ..activity import users as users_said
 from ..rights import Access
+from .factors import SecondFactors
 from .passwords import MAX_LENGTH, Passwords
 from .throttle import SignInThrottle
 
@@ -56,7 +57,12 @@ NAME_LIMIT = 10
 NAME_WINDOW = timedelta(minutes=15)
 NAME_LOCKOUT = timedelta(minutes=1)
 WRONG = "wrong user name or password"
+WRONG_CODE = "the code is not right"
 MAX_NAME = 200
+# Longer than any code or recovery code, with room for spaces.
+MAX_CODE = 40
+# How the audit names a sign-in with a second factor.
+WITH_FACTOR = {"totp": "password+totp", "recovery": "password+recovery"}
 
 
 @dataclass(frozen=True)
@@ -71,6 +77,12 @@ class SignedIn:
     stamp: datetime
     # The sign-in before this one, to show the user.
     previous: datetime | None = None
+    # The password was right, the code of the second factor comes next:
+    # no session yet, a pending sign-in.
+    needs_code: bool = False
+    # When the user's second factor was confirmed, None without one. The
+    # session keeps it and ends once the factor is set up anew or removed.
+    factor: datetime | None = None
 
 
 def hash_token(token: str) -> str:
@@ -94,9 +106,11 @@ class AuthService:
         throttle: SignInThrottle | None = None,
         names: SignInThrottle | None = None,
         activity: ActivityLog | None = None,
+        factors: SecondFactors | None = None,
     ) -> None:
         """``throttle`` slows down a client address that fails to sign
-        in, ``names`` a user name, whatever the address."""
+        in, ``names`` a user name, whatever the address. Without
+        ``factors`` no user has a second factor."""
         self._users = users
         self._roles = roles
         self._tokens = tokens
@@ -106,6 +120,7 @@ class AuthService:
             limit=NAME_LIMIT, window=NAME_WINDOW, lockout=NAME_LOCKOUT, clock=clock
         )
         self.passwords = passwords
+        self.factors = factors
         self.activity = activity or ActivityLog(clock)
         # The unknown rights already logged, per user and names.
         self._told_unknown: set[tuple[str, frozenset[str]]] = set()
@@ -113,7 +128,9 @@ class AuthService:
     async def sign_in(self, name: str, password: str, *, source: str) -> SignedIn:
         """The user behind a name and a password. A wrong name, a wrong
         password and a disabled user answer alike, in the same time. The
-        source and the name are slowed down after failures."""
+        source and the name are slowed down after failures. A user with a
+        second factor is not signed in yet: ``needs_code``, and
+        ``sign_in_with_code`` next."""
         self._require_users()
         key = _name_key(name)
         self._check_source(source)
@@ -140,14 +157,61 @@ class AuthService:
                 )
             )
             raise UnauthorizedError(WRONG)
+        if self.factor_stamp(user.id) is not None:
+            # The failures counted so far stay until the code is right.
+            return SignedIn(
+                user.id, stored.must_change, stored.updated_at, needs_code=True
+            )
+        return self._signed_in(user, key, source, PASSWORD)
+
+    def sign_in_with_code(self, user_id: str, code: str, *, source: str) -> SignedIn:
+        """The second step of a sign-in, after the password: a code of the
+        user's app, or one of its recovery codes. A wrong one counts as a
+        failed sign-in for the source and the name."""
+        self._check_source(source)
+        user = self._live_user(user_id)
+        key = _name_key(user.name)
+        self._names.check(key)
+        kind = (
+            self.factors.check(user.id, code)
+            if self.factors is not None and len(code) <= MAX_CODE and user.ui_sign_in
+            else None
+        )
+        if kind is None:
+            self._failed_source(source)
+            self._failed_name(key, user, someone(source))
+            self.activity.record(said.CodeFailed(by=someone(source), user=user))
+            raise UnauthorizedError(WRONG_CODE)
+        return self._signed_in(user, key, source, WITH_FACTOR[kind])
+
+    def _signed_in(
+        self, user: User, key: str, source: str, credential: str
+    ) -> SignedIn:
+        """A sign-in that passed every step: the brakes cleared, the time
+        stored, the audit told."""
+        stored = self.passwords.stored(user.id)
+        if stored is None:
+            raise UnauthorizedError(WRONG)
         self._throttle.succeeded(source)
         self._names.succeeded(key)
+        by = Actor.signed_in(user.name, user.id, source, credential)
         with self.activity.atomic():
             previous = self.passwords.signed_in(user.id)
-            self.activity.record(
-                said.UiSignIn(by=Actor.signed_in(user.name, user.id, source))
-            )
-        return SignedIn(user.id, stored.must_change, stored.updated_at, previous)
+            self.activity.record(said.UiSignIn(by=by))
+            if credential == WITH_FACTOR["recovery"] and self.factors is not None:
+                left = self.factors.codes_left(user.id)
+                self.activity.record(said.RecoveryCodeUsed(by=by, left=left))
+        return SignedIn(
+            user.id,
+            stored.must_change,
+            stored.updated_at,
+            previous,
+            factor=self.factor_stamp(user.id),
+        )
+
+    def factor_stamp(self, user_id: str) -> datetime | None:
+        """When the user's second factor was confirmed, None without one."""
+        return self.factors.stamp(user_id) if self.factors is not None else None
 
     async def confirm(self, access: Access, password: str) -> None:
         """The signed-in user's password once more, before a step that
@@ -164,18 +228,43 @@ class AuthService:
             self.activity.record(said.ConfirmFailed(by=Actor.of(access)))
             raise BadRequestError("the password is not right")
 
+    def confirm_code(self, access: Access, code: str) -> None:
+        """A code of the signed-in user's second factor, before a step
+        that takes it away. A wrong one counts against the user's name as
+        a wrong password does."""
+        user = self._users.get(access.user_id)
+        key = _name_key(user.name)
+        self._names.check(key)
+        right = (
+            self.factors is not None
+            and len(code) <= MAX_CODE
+            and self.factors.check(user.id, code) is not None
+        )
+        if not right:
+            self._failed_name(key, user, Actor.of(access))
+            self.activity.record(said.ConfirmFailed(by=Actor.of(access), what="code"))
+            raise BadRequestError(WRONG_CODE)
+
     def session_access(
-        self, user_id: str, stamp: datetime, *, source: str | None = None
+        self,
+        user_id: str,
+        stamp: datetime,
+        *,
+        factor: datetime | None = None,
+        source: str | None = None,
     ) -> Access:
         """What the user of a UI session may do now. Raises when the user
-        is gone or disabled, or its password changed since the sign-in.
-        ``source`` is the client address of the request."""
+        is gone or disabled, or its password or its second factor changed
+        since the sign-in: ``stamp`` and ``factor`` are those of the
+        sign-in. ``source`` is the client address of the request."""
         user = self._live_user(user_id)
         if not user.ui_sign_in:
             raise UnauthorizedError("the user signs in to the API only")
         stored = self.passwords.stored(user_id)
         if stored is None or stored.updated_at != stamp:
             raise UnauthorizedError("the password changed: sign in again")
+        if self.factor_stamp(user_id) != factor:
+            raise UnauthorizedError("the second factor changed: sign in again")
         return self._access(user, source=source)
 
     def user_named(self, name: str) -> User | None:

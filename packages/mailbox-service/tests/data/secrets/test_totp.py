@@ -40,6 +40,9 @@ def test_the_secret_is_written_in_base32_without_padding() -> None:
     written = totp.base32(RFC_SECRET)
     assert "=" not in written
     assert base64.b32decode(written) == RFC_SECRET
+    assert totp.from_base32(written) == RFC_SECRET
+    secret = totp.new_secret()
+    assert totp.from_base32(totp.base32(secret)) == secret
 
 
 NOW = datetime(2026, 10, 9, 12, 0, 10, tzinfo=UTC)

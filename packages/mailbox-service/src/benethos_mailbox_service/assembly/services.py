@@ -18,7 +18,13 @@ from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import MailboxService
 from ..domain.sync import SyncService, SyncWorker
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
-from ..domain.users import PasswordService, RoleService, TokenService, UserService
+from ..domain.users import (
+    PasswordService,
+    RoleService,
+    SecondFactorService,
+    TokenService,
+    UserService,
+)
 from ..domain.webhooks import WebhookDispatcher, WebhookService
 
 
@@ -31,6 +37,7 @@ class Services:
     roles: RoleService
     tokens: TokenService
     passwords: PasswordService
+    factors: SecondFactorService
     mailbox: MailboxService
     discovery: DiscoveryService
     sync: SyncService

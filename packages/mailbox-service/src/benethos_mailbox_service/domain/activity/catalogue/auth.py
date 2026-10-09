@@ -53,14 +53,57 @@ class SignedOut(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class CodeFailed(Activity):
+    """A wrong code of the second factor after the right password. The
+    actor is not signed in yet, ``user`` is whose code it was meant to
+    be."""
+
+    name: ClassVar[str] = "code_failed"
+    audited: ClassVar[bool] = True
+    outcome: ClassVar[ActivityOutcome] = "refused"
+    level: ClassVar[int] = logging.WARNING
+
+    user: User
+
+    def says(self) -> str:
+        return f"typed a wrong code to sign in to the UI as {user(self.user)}"
+
+    def touched(self) -> str | None:
+        return self.user.id
+
+
+@dataclass(frozen=True, kw_only=True)
+class RecoveryCodeUsed(Activity):
+    """A recovery code instead of the app: the app is gone or out of
+    reach."""
+
+    name: ClassVar[str] = "recovery_code_used"
+    audited: ClassVar[bool] = True
+    level: ClassVar[int] = logging.WARNING
+
+    left: int
+
+    def says(self) -> str:
+        return f"signed in with a recovery code, {self.left} left"
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
 class ConfirmFailed(Activity):
+    """A wrong password, or code, typed again before a step that hands
+    out or takes away much."""
+
     name: ClassVar[str] = "confirm_failed"
     audited: ClassVar[bool] = True
     outcome: ClassVar[ActivityOutcome] = "refused"
     level: ClassVar[int] = logging.WARNING
 
+    what: str = "password"
+
     def says(self) -> str:
-        return "typed a wrong password to confirm a step"
+        return f"typed a wrong {self.what} to confirm a step"
 
 
 @dataclass(frozen=True, kw_only=True)

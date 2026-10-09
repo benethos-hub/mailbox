@@ -17,7 +17,7 @@ from ..data.secrets import CredentialVault, KeyProvider, PasswordHasher
 from ..data.storage import Repositories, open_repositories
 from ..domain.accounts import AccountService, Adapters, OAuthService
 from ..domain.activity import ActivityLog
-from ..domain.auth import AuthService, Passwords, SignInThrottle
+from ..domain.auth import AuthService, Passwords, SecondFactors, SignInThrottle
 from ..domain.changes import ChangeFeed
 from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import Idempotency, MailboxService, SendControl
@@ -27,6 +27,7 @@ from ..domain.users import (
     Effective,
     PasswordService,
     RoleService,
+    SecondFactorService,
     TokenService,
     UserRules,
     UserService,
@@ -93,6 +94,7 @@ def build_services(
             roles=services.roles,
             tokens=services.tokens,
             passwords=services.passwords,
+            factors=services.factors,
             mailbox=services.mailbox,
             discovery=discovery
             or providers.build_discovery(
@@ -168,12 +170,16 @@ class _Domain:
         self.sync = SyncService(
             adapters, repositories.index, feed=changes, clock=clock, activity=activity
         )
-        self.auth = _auth(base, password_hasher)
+        factors = SecondFactors(repositories.factors, vault, clock=clock)
+        self.auth = _auth(base, password_hasher, factors)
         self.sends = SendControl(
             repositories.sends, clock=clock, activity=activity, days=settings.audit_days
         )
         rules = UserRules(repositories.users, repositories.roles)
         self.passwords = PasswordService(repositories.users, self.auth, rules, activity)
+        self.factors = SecondFactorService(
+            repositories.users, self.auth, factors, rules, activity
+        )
         self.tokens = TokenService(repositories.tokens, self.auth, rules, activity)
         self.roles = RoleService(repositories.roles, rules, activity)
         self.users = UserService(
@@ -246,7 +252,9 @@ class _Domain:
         )
 
 
-def _auth(base: _Base, password_hasher: PasswordHasher | None) -> AuthService:
+def _auth(
+    base: _Base, password_hasher: PasswordHasher | None, factors: SecondFactors
+) -> AuthService:
     settings, repositories, clock = base.settings, base.repositories, base.clock
     lockout = timedelta(minutes=settings.sign_in_lockout_minutes)
     return AuthService(
@@ -270,6 +278,7 @@ def _auth(base: _Base, password_hasher: PasswordHasher | None) -> AuthService:
             clock=clock,
         ),
         activity=base.activity,
+        factors=factors,
     )
 
 

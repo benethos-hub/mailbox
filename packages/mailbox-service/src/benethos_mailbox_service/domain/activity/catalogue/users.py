@@ -130,6 +130,52 @@ class PasswordSet(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class SecondFactorSetUp(Activity):
+    """The actor set up a second factor for itself. Nobody sets one up for
+    another user."""
+
+    name: ClassVar[str] = "factor_set_up"
+    audited: ClassVar[bool] = True
+
+    def says(self) -> str:
+        return "set up a second factor"
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class SecondFactorRemoved(Activity):
+    """A second factor taken away: by its user, by a user with
+    ``users.manage``, or on the host."""
+
+    name: ClassVar[str] = "factor_removed"
+    audited: ClassVar[bool] = True
+
+    user: User
+
+    def says(self) -> str:
+        if self.user.id == self.by.user_id:
+            return "removed its second factor"
+        return f"removed the second factor of {user(self.user)}"
+
+    def touched(self) -> str | None:
+        return self.user.id
+
+
+@dataclass(frozen=True, kw_only=True)
+class RecoveryCodesRenewed(Activity):
+    name: ClassVar[str] = "codes_renewed"
+    audited: ClassVar[bool] = True
+
+    def says(self) -> str:
+        return "made new recovery codes for its second factor"
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
 class TokenIssued(Activity):
     name: ClassVar[str] = "token_issued"
     audited: ClassVar[bool] = True

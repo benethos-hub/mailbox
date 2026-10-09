@@ -165,9 +165,9 @@ the sessions that started before.
 | signed in with a code | `auth.signed_in`, credential `password+totp` | yes |
 | signed in with a recovery code | `auth.signed_in`, credential `password+recovery`, and `auth.recovery_code_used`, a warning | yes |
 | a wrong code at the sign-in | `auth.code_failed`, a warning | yes |
-| factor set up | `users.second_factor_set_up` | yes |
-| factor removed, by the person, a user or the host | `users.second_factor_removed` | yes |
-| new recovery codes | `users.recovery_codes_renewed` | yes |
+| factor set up | `users.factor_set_up` | yes |
+| factor removed, by the person, a user or the host | `users.factor_removed` | yes |
+| new recovery codes | `users.codes_renewed` | yes |
 
 Never a secret, a code or a recovery code in a line.
 

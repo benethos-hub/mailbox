@@ -34,6 +34,11 @@ def base32(secret: bytes) -> str:
     return base64.b32encode(secret).decode("ascii").rstrip("=")
 
 
+def from_base32(written: str) -> bytes:
+    """The secret back from what ``base32`` wrote."""
+    return base64.b32decode(written + "=" * (-len(written) % 8))
+
+
 def step_of(at: datetime) -> int:
     """The number of whole steps since 1970 at ``at``."""
     return int(at.timestamp()) // STEP_SECONDS

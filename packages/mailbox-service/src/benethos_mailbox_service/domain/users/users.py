@@ -168,9 +168,9 @@ class UserService:
         disabled: bool | None = None,
         ui_sign_in: bool | None = None,
     ) -> User:
-        """Switching ``ui_sign_in`` off deletes the password, which ends the
-        user's UI sessions. Nobody disables itself or takes its own UI
-        sign-in."""
+        """Switching ``ui_sign_in`` off deletes the password and the second
+        factor, which ends the user's UI sessions. Nobody disables itself
+        or takes its own UI sign-in."""
         user = self._rules.managed(access, "update_user", user_id)
         if name is not None:
             name = named("a user", name)
@@ -208,6 +208,7 @@ class UserService:
                 )
             if user.ui_sign_in and not updated.ui_sign_in:
                 self._auth.passwords.delete(user_id)
+                self._remove_factor(user_id)
                 self._activity.record(said.MadeApiUser(by=Actor.of(access), user=user))
         return updated
 
@@ -219,6 +220,7 @@ class UserService:
         with self._activity.atomic():
             self._tokens.delete_for_user(user_id)
             self._auth.passwords.delete(user_id)
+            self._remove_factor(user_id)
             # Its webhooks would post by nobody's rights, and nobody could
             # remove them.
             removed = self._webhooks.delete_for_user(user_id)
@@ -226,6 +228,11 @@ class UserService:
             self._activity.record(
                 said.UserDeleted(by=Actor.of(access), user=user, webhooks=removed)
             )
+
+    def _remove_factor(self, user_id: str) -> None:
+        """The second factor goes with the password."""
+        if self._auth.factors is not None:
+            self._auth.factors.remove(user_id)
 
     def _require_free(self, name: str, user_id: str | None = None) -> None:
         """A person signs in with the name: one user per name, whatever
