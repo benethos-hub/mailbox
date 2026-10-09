@@ -57,6 +57,9 @@ dependencies = [
     "mcp>=2.0.0,<3",
     # The REST client. Released with this package under the same version.
     "benethos-mailbox-client==0.3.1",
+    # What the MCP server shares with the service. Released with this
+    # package under the same version.
+    "benethos-mailbox-common==0.3.1",
     # PDF attachments reach the model as page images (pdf.py).
     "pypdfium2>=4.30",
     # The HTTP transport (transport.py); mcp brings it too.

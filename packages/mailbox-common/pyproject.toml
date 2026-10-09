@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "benethos-mailbox-common"
+version = "0.3.1"
+description = "What mailbox-service and mailbox-mcp of Mailbox share: mail as plain text, the folders of the operating system, the time of a log line, secrets masked in text, JSON for a hash."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Benedikt Oswald" }]
+keywords = [
+    "email",
+    "html-to-text",
+    "logging",
+    "redaction",
+    "self-hosted",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Communications :: Email",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+# It sees neither the service, nor the MCP server, nor the client.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common#readme"
+Repository = "https://github.com/benethos-hub/mailbox"
+Issues = "https://github.com/benethos-hub/mailbox/issues"
+Changelog = "https://github.com/benethos-hub/mailbox/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/benethos_mailbox_common"]

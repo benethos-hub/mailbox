@@ -1,0 +1,55 @@
+name: Publish one package to PyPI
+description: >-
+  Builds the package, checks what its wheel carries, and uploads it to
+  PyPI through Trusted Publishing. The job that uses it names the
+  environment and grants id-token: write.
+
+inputs:
+  package:
+    description: The distribution, e.g. benethos-mailbox-service
+    required: true
+  module:
+    description: Its module, e.g. benethos_mailbox_service
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.2.0
+
+    - name: Build sdist and wheel
+      shell: bash
+      env:
+        PACKAGE: ${{ inputs.package }}
+      run: uv build --package "$PACKAGE" --out-dir dist
+
+    # Once a version is on PyPI it cannot be replaced, so what the files
+    # carry is checked here, in front of the upload: the version the
+    # release names, the PEP 561 marker that makes type checkers read the
+    # package, and the license text.
+    - name: Check the version, py.typed and the license
+      shell: bash
+      env:
+        TAG: ${{ github.event.release.tag_name }}
+        MODULE: ${{ inputs.module }}
+      run: |
+        set -euo pipefail
+        wheel=$(ls dist/*.whl)
+        version=$(basename "$wheel" | cut -d- -f2)
+        if [ "v${version}" != "${TAG}" ]; then
+          echo "::error::the release ${TAG} does not match the package version ${version}"
+          exit 1
+        fi
+        for needed in "${MODULE}/py.typed" "${MODULE}-${version}.dist-info/licenses/LICENSE"; do
+          if ! unzip -l "$wheel" | grep -q "$needed"; then
+            echo "::error::${wheel} does not contain ${needed}"
+            unzip -l "$wheel"
+            exit 1
+          fi
+        done
+        echo "OK: ${wheel} is ${version} with py.typed and LICENSE"
+
+    - name: Publish to PyPI (Trusted Publishing)
+      shell: bash
+      run: uv publish --trusted-publishing always dist/*

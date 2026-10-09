@@ -18,8 +18,12 @@ updates:
           - "minor"
           - "patch"
 
+  # "/" reads the workflows. The composite action of publish.yml names
+  # its own versions.
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/pypi-package"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5

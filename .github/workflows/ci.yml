@@ -59,7 +59,7 @@ jobs:
 
   # Every other job installs from uv.lock. A user installs from PyPI, where
   # only the declared ranges in pyproject.toml count, and most of them have
-  # no upper bound. This job builds the three wheels and installs them into
+  # no upper bound. This job builds the four wheels and installs them into
   # a clean environment without the lockfile, then checks that both commands
   # start, the client imports, and the service still describes the same API.
   fresh-install:
@@ -70,7 +70,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v10.2.0
 
-      - name: Build the three wheels
+      - name: Build the four wheels
         run: uv build --all-packages --wheel
 
       - name: Install them into a clean environment (no lockfile) and start them
@@ -120,7 +120,7 @@ jobs:
           uv venv -p 3.11 /tmp/lowest
           uv pip install --python /tmp/lowest/bin/python --resolution lowest-direct \
             -e packages/mailbox-service -e packages/mailbox-client -e packages/mailbox-mcp \
-            "pytest>=9.1.1" "pytest-asyncio>=1.0"
+            -e packages/mailbox-common "pytest>=9.1.1" "pytest-asyncio>=1.0"
           uv pip list --python /tmp/lowest/bin/python
           /tmp/lowest/bin/python -m pytest -q -p no:cacheprovider
 
@@ -132,14 +132,14 @@ jobs:
             --vulnerability-service osv -r /tmp/lowest.txt
 
       # Alone, the MCP server may get older versions than beside the service,
-      # uvicorn for one. The client it needs comes from the repository: the
-      # two are released together.
+      # uvicorn for one. The client and the common package it needs come from
+      # the repository: they are released together.
       - name: The MCP server alone on its lowest versions
         run: |
           set -euo pipefail
           uv venv -p 3.11 /tmp/lowest-mcp
           uv pip install --python /tmp/lowest-mcp/bin/python --resolution lowest-direct \
-            -e packages/mailbox-client -e packages/mailbox-mcp \
+            -e packages/mailbox-client -e packages/mailbox-mcp -e packages/mailbox-common \
             "pytest>=9.1.1" "pytest-asyncio>=1.0"
           uv pip list --python /tmp/lowest-mcp/bin/python
           /tmp/lowest-mcp/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-mcp/tests
@@ -160,6 +160,16 @@ jobs:
             -e packages/mailbox-client "pytest>=9.1.1" "pytest-asyncio>=1.0"
           uv pip list --python /tmp/lowest-client/bin/python
           /tmp/lowest-client/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-client/tests
+
+      # The common package alone: the standard library and what it names.
+      - name: The common package alone on its lowest versions
+        run: |
+          set -euo pipefail
+          uv venv -p 3.11 /tmp/lowest-common
+          uv pip install --python /tmp/lowest-common/bin/python --resolution lowest-direct \
+            -e packages/mailbox-common "pytest>=9.1.1"
+          uv pip list --python /tmp/lowest-common/bin/python
+          /tmp/lowest-common/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-common/tests
 
   # Both images are built on every push, so a broken Dockerfile shows up
   # here and not first in a release.

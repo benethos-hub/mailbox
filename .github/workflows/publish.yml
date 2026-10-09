@@ -1,14 +1,15 @@
 name: Publish
 
 # Publishes a release when a GitHub release is published:
-#   * the three packages to PyPI, via Trusted Publishing (OIDC, no stored token)
+#   * the four packages to PyPI, via Trusted Publishing (OIDC, no stored token)
 #   * both container images to ghcr.io, via the automatic GITHUB_TOKEN
 # Everything carries the same version, and the release tag must name it:
-# vX.Y.Z publishes X.Y.Z of each package and image. The client has no image.
+# vX.Y.Z publishes X.Y.Z of each package and image. The client and the
+# common package have no image.
 #
-# One job per package and per image, so a failure in one does not withhold
-# the others. A version can be uploaded to PyPI only once, so the checks
-# run first and each wheel is inspected before its upload.
+# One job per package and per image. A package waits for those it needs,
+# the images for nothing. A version can be uploaded to PyPI only once, so
+# the checks run first and each wheel is inspected before its upload.
 #
 # `workflow_dispatch` builds the images alone and tags them `edge`. PyPI is
 # skipped there: a manual run carries no release tag to take a version from.
@@ -16,10 +17,10 @@ name: Publish
 # One-time setup on PyPI: a (pending) publisher per project with this
 # repository's owner and name and the workflow filename publish.yml, with
 # an environment named pypi- and the package: pypi-benethos-mailbox-service,
-# pypi-benethos-mailbox-client and pypi-benethos-mailbox-mcp. PyPI takes a
-# pending publisher (repository, workflow, environment) for one project
-# only, hence one environment each. On GitHub: the three environments under
-# Settings, Environments.
+# pypi-benethos-mailbox-client, pypi-benethos-mailbox-mcp and
+# pypi-benethos-mailbox-common. PyPI takes a pending publisher (repository,
+# workflow, environment) for one project only, hence one environment each.
+# On GitHub: the four environments under Settings, Environments.
 #
 # One-time setup on ghcr.io, possible only after the first push: a new
 # package is private even when its repository is public. Each image is
@@ -57,63 +58,82 @@ jobs:
           uv run mypy
           uv run pytest -q --cov --cov-fail-under=80
 
-  pypi-publish:
-    name: PyPI ${{ matrix.package }}
+  # One job per package, in the order of their dependencies: a package on
+  # PyPI that pins one not yet there cannot be installed. A job runs only
+  # when those it waits for uploaded, and test_packaging.py holds the order
+  # to the pyproject files. The client waits for the common package too,
+  # so it may come to need it. The steps are .github/actions/pypi-package.
+  pypi-common:
+    name: PyPI benethos-mailbox-common
     # A manual run has no version to publish, and PyPI rejects a re-upload.
     if: github.event_name == 'release'
-    needs: checks
+    needs: [checks]
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - package: benethos-mailbox-service
-            module: benethos_mailbox_service
-          - package: benethos-mailbox-client
-            module: benethos_mailbox_client
-          - package: benethos-mailbox-mcp
-            module: benethos_mailbox_mcp
     environment:
-      name: pypi-${{ matrix.package }}
-      url: https://pypi.org/p/${{ matrix.package }}
+      name: pypi-benethos-mailbox-common
+      url: https://pypi.org/p/benethos-mailbox-common
     permissions:
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/pypi-package
+        with:
+          package: benethos-mailbox-common
+          module: benethos_mailbox_common
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.2.0
+  pypi-client:
+    name: PyPI benethos-mailbox-client
+    # A manual run has no version to publish, and PyPI rejects a re-upload.
+    if: github.event_name == 'release'
+    needs: [checks, pypi-common]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-benethos-mailbox-client
+      url: https://pypi.org/p/benethos-mailbox-client
+    permissions:
+      id-token: write # required for Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/pypi-package
+        with:
+          package: benethos-mailbox-client
+          module: benethos_mailbox_client
 
-      - name: Build sdist and wheel
-        run: uv build --package ${{ matrix.package }} --out-dir dist
+  pypi-service:
+    name: PyPI benethos-mailbox-service
+    # A manual run has no version to publish, and PyPI rejects a re-upload.
+    if: github.event_name == 'release'
+    needs: [checks, pypi-common]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-benethos-mailbox-service
+      url: https://pypi.org/p/benethos-mailbox-service
+    permissions:
+      id-token: write # required for Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/pypi-package
+        with:
+          package: benethos-mailbox-service
+          module: benethos_mailbox_service
 
-      # Once a version is on PyPI it cannot be replaced, so what the files
-      # carry is checked here, in front of the upload: the version the
-      # release names, the PEP 561 marker that makes type checkers read the
-      # package, and the license text.
-      - name: Check the version, py.typed and the license
-        env:
-          TAG: ${{ github.event.release.tag_name }}
-          MODULE: ${{ matrix.module }}
-        run: |
-          set -euo pipefail
-          wheel=$(ls dist/*.whl)
-          version=$(basename "$wheel" | cut -d- -f2)
-          if [ "v${version}" != "${TAG}" ]; then
-            echo "::error::the release ${TAG} does not match the package version ${version}"
-            exit 1
-          fi
-          for needed in "${MODULE}/py.typed" "${MODULE}-${version}.dist-info/licenses/LICENSE"; do
-            if ! unzip -l "$wheel" | grep -q "$needed"; then
-              echo "::error::${wheel} does not contain ${needed}"
-              unzip -l "$wheel"
-              exit 1
-            fi
-          done
-          echo "OK: ${wheel} is ${version} with py.typed and LICENSE"
-
-      - name: Publish to PyPI (Trusted Publishing)
-        run: uv publish --trusted-publishing always dist/*
+  pypi-mcp:
+    name: PyPI benethos-mailbox-mcp
+    # A manual run has no version to publish, and PyPI rejects a re-upload.
+    if: github.event_name == 'release'
+    needs: [checks, pypi-client, pypi-common]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-benethos-mailbox-mcp
+      url: https://pypi.org/p/benethos-mailbox-mcp
+    permissions:
+      id-token: write # required for Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/pypi-package
+        with:
+          package: benethos-mailbox-mcp
+          module: benethos_mailbox_mcp
 
   ghcr-publish:
     name: Image ${{ matrix.image }}

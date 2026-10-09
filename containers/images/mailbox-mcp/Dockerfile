@@ -5,9 +5,9 @@
 #
 #   docker build -f containers/images/mailbox-mcp/Dockerfile .
 #
-# Only the MCP package and the client it is built on go into the image. It
-# reaches mail through the REST API of the service alone
-# (MAILBOX_SERVICE_URL, MAILBOX_SERVICE_TOKEN).
+# Only the MCP package, the client it is built on and the common package
+# go into the image. It reaches mail through the REST API of the service
+# alone (MAILBOX_SERVICE_URL, MAILBOX_SERVICE_TOKEN).
 
 # Base images are named in FROM directly, so Dependabot can update them.
 
