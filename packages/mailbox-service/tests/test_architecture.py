@@ -53,7 +53,8 @@ LIBRARY_HOMES = {
     "defusedxml": f"{PACKAGE}.data.discovery.autoconfig",
     "publicsuffixlist": f"{PACKAGE}.data.discovery.suffix",
     "jinja2": f"{PACKAGE}.web.pages.templates",
-    "platformdirs": f"{PACKAGE}.config",
+    # The folders of the operating system come from the common package.
+    "platformdirs": "benethos_mailbox_common.folders",
     "segno": f"{PACKAGE}.web.pages.qr",
 }
 

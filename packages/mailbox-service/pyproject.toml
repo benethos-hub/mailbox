@@ -88,8 +88,6 @@ dependencies = [
     # Autodiscovery: where a domain ends. Ships its own copy of the list.
     "publicsuffixlist>=1.0",
     "imapclient>=4.1.0",
-    # The folders of the operating system for settings and data (config.py).
-    "platformdirs>=4.3",
     # What the service shares with the MCP server. Released with this
     # package under the same version.
     "benethos-mailbox-common==0.3.1",

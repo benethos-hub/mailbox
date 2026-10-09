@@ -36,7 +36,12 @@ classifiers = [
     "Typing :: Typed",
 ]
 # It sees neither the service, nor the MCP server, nor the client.
-dependencies = []
+dependencies = [
+    # The minimum is a version without a known vulnerability: the job
+    # lowest-versions of ci.yml checks it against OSV.
+    # The folders of the operating system for settings and data (folders.py).
+    "platformdirs>=4.3",
+]
 
 [project.urls]
 Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common#readme"

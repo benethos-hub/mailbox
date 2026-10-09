@@ -159,6 +159,12 @@ requires-dist = [{ name = "httpx", specifier = ">=0.28" }]
 name = "benethos-mailbox-common"
 version = "0.3.1"
 source = { editable = "packages/mailbox-common" }
+dependencies = [
+    { name = "platformdirs" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "platformdirs", specifier = ">=4.3" }]
 
 [[package]]
 name = "benethos-mailbox-mcp"
@@ -169,7 +175,6 @@ dependencies = [
     { name = "benethos-mailbox-client" },
     { name = "benethos-mailbox-common" },
     { name = "mcp" },
-    { name = "platformdirs" },
     { name = "pydantic" },
     { name = "pypdfium2" },
     { name = "python-dotenv" },
@@ -183,7 +188,6 @@ requires-dist = [
     { name = "benethos-mailbox-client", editable = "packages/mailbox-client" },
     { name = "benethos-mailbox-common", editable = "packages/mailbox-common" },
     { name = "mcp", specifier = ">=2.0.0,<3" },
-    { name = "platformdirs", specifier = ">=4.3" },
     { name = "pydantic", specifier = ">=2.12" },
     { name = "pypdfium2", specifier = ">=4.30" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
@@ -207,7 +211,6 @@ dependencies = [
     { name = "imapclient" },
     { name = "jinja2" },
     { name = "keyring" },
-    { name = "platformdirs" },
     { name = "publicsuffixlist" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -230,7 +233,6 @@ requires-dist = [
     { name = "imapclient", specifier = ">=4.1.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "keyring", specifier = ">=25" },
-    { name = "platformdirs", specifier = ">=4.3" },
     { name = "publicsuffixlist", specifier = ">=1.0" },
     { name = "pydantic", specifier = ">=2.12" },
     { name = "pydantic-settings", specifier = ">=2.10" },

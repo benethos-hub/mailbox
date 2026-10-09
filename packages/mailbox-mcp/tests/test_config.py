@@ -11,7 +11,6 @@ import pytest
 from benethos_mailbox_mcp import cli, config
 
 # The real one: conftest.py puts the config folder into a test's own.
-CONFIG_FOLDER = config.config_folder
 
 
 @pytest.fixture
@@ -69,19 +68,6 @@ def test_a_named_file_must_exist(tmp_path: Path) -> None:
         config.settings_file(tmp_path / "missing.env")
     with pytest.raises(SystemExit, match="missing.env not found"):
         cli.main(["--env-file", str(tmp_path / "missing.env")])
-
-
-def test_one_system_folder_for_both_gets_one_below_it(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    import platformdirs
-
-    monkeypatch.setattr(platformdirs, "user_config_dir", lambda *a, **k: str(tmp_path))
-    monkeypatch.setattr(platformdirs, "user_data_dir", lambda *a, **k: str(tmp_path))
-    assert CONFIG_FOLDER() == tmp_path / "config"
-    other = tmp_path / "share"
-    monkeypatch.setattr(platformdirs, "user_data_dir", lambda *a, **k: str(other))
-    assert CONFIG_FOLDER() == tmp_path
 
 
 @pytest.mark.usefixtures("clean_environment")

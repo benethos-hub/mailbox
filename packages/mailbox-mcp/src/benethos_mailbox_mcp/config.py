@@ -6,8 +6,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import platformdirs
 from dotenv import dotenv_values
+
+from benethos_mailbox_common.folders import named_file, system_folders
 
 APP = "benethos-mailbox-mcp"
 # The layout of the repository, relative to the working directory.
@@ -20,13 +21,8 @@ PREFIXES = ("MAILBOX_MCP_", "MAILBOX_SERVICE_")
 
 
 def config_folder() -> Path:
-    """The config folder of the operating system for this user, never in
-    a roaming profile on Windows. Where the system has one folder for
-    config and data, as Windows and macOS do, the config gets its own
-    below it."""
-    config = Path(platformdirs.user_config_dir(APP, appauthor=False, roaming=False))
-    data = Path(platformdirs.user_data_dir(APP, appauthor=False, roaming=False))
-    return config / "config" if config == data else config
+    """The config folder of the operating system for this user."""
+    return system_folders(APP)[0]
 
 
 def settings_file(env_file: Path | None = None) -> Path | None:
@@ -34,8 +30,7 @@ def settings_file(env_file: Path | None = None) -> Path | None:
     ``MAILBOX_MCP_ENV_FILE`` names, which must exist. Else ``ENV_FILE`` in
     the working directory, else ``.env`` in the config folder of the
     operating system, when they exist."""
-    if env_file is None and (named := os.environ.get(ENV_FILE_VARIABLE)):
-        env_file = Path(named)
+    env_file = named_file(env_file, ENV_FILE_VARIABLE)
     if env_file is not None:
         if not env_file.is_file():
             raise FileNotFoundError(f"settings file {env_file} not found")

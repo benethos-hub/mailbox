@@ -10,9 +10,6 @@ from benethos_mailbox_service import __version__, config
 from benethos_mailbox_service.cli import main, parser
 from benethos_mailbox_service.config import Settings, load_settings
 
-# The real one: conftest.py puts the system's folders into a test's own.
-SYSTEM_FOLDERS = config.system_folders
-
 
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
@@ -243,7 +240,7 @@ def test_without_the_repository_the_folders_of_the_system(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     settings_folder(tmp_path, monkeypatch)
-    system, data = config.system_folders()  # in tmp_path, see conftest.py
+    system, data = config.system_folders(config.APP)  # in tmp_path, see conftest.py
     assert config.folders().origin == "system"
     assert load_settings().data_dir == data
     assert config.settings_file() is None
@@ -259,21 +256,6 @@ def test_without_the_repository_the_folders_of_the_system(
     assert config.settings_file() == (system / ".env").resolve()
     (system / ".env").write_text("MAILBOX_SERVICE_DATA_DIR=db\n", encoding="utf-8")
     assert load_settings().data_dir == system / "db"
-
-
-def test_one_system_folder_for_both_gets_one_below_it_for_each(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """As on Windows and macOS: a copy of the data never holds a key file
-    from the config folder."""
-    import platformdirs
-
-    monkeypatch.setattr(platformdirs, "user_config_dir", lambda *a, **k: str(tmp_path))
-    monkeypatch.setattr(platformdirs, "user_data_dir", lambda *a, **k: str(tmp_path))
-    assert SYSTEM_FOLDERS() == (tmp_path / "config", tmp_path / "data")
-    other = tmp_path / "share"
-    monkeypatch.setattr(platformdirs, "user_data_dir", lambda *a, **k: str(other))
-    assert SYSTEM_FOLDERS() == (tmp_path, other)
 
 
 def test_paths_names_the_folders_and_never_a_value(
@@ -293,7 +275,7 @@ def test_paths_names_the_folders_and_never_a_value(
     monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
     assert main(["paths"]) == 0
     out = capsys.readouterr().out
-    system, _ = config.system_folders()
+    system, _ = config.system_folders(config.APP)
     assert "the folders of the operating system" in out
     assert "(not there, the defaults apply)" in out
     assert f"Suggested: {(system / 'master.key').resolve()}" in out

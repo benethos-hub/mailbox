@@ -3,14 +3,14 @@ and the folders a command reads them from and keeps its data in."""
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Self
 
-import platformdirs
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from benethos_mailbox_common.folders import named_file, system_folders
 
 APP = "benethos-mailbox-service"
 # The layout of the repository, relative to the working directory. The
@@ -237,39 +237,20 @@ class Folders:
     data: Path
 
 
-def named_settings_file(env_file: Path | None = None) -> Path | None:
-    """A settings file named on purpose: ``env_file``, else the one
-    ``MAILBOX_SERVICE_ENV_FILE`` names. None without either."""
-    if env_file is not None:
-        return env_file
-    named = os.environ.get(ENV_FILE_VARIABLE)
-    return Path(named) if named else None
-
-
-def system_folders() -> tuple[Path, Path]:
-    """The config and the data folder of the operating system for this
-    user, never in a roaming profile on Windows. Where the system has one
-    folder for both, as Windows and macOS do, each gets its own below it,
-    so a copy of the data never carries a key file with it."""
-    config = Path(platformdirs.user_config_dir(APP, appauthor=False, roaming=False))
-    data = Path(platformdirs.user_data_dir(APP, appauthor=False, roaming=False))
-    if config == data:
-        return config / "config", data / "data"
-    return config, data
-
-
 def folders(env_file: Path | None = None) -> Folders:
     """The folders that apply, first found first: the settings file named
     on purpose, the repository's layout in the working directory where it
-    has either folder, else those of the operating system."""
-    named = named_settings_file(env_file)
+    has either folder, else those of the operating system. A file named
+    on purpose is ``env_file``, else the one ``MAILBOX_SERVICE_ENV_FILE``
+    names."""
+    named = named_file(env_file, ENV_FILE_VARIABLE)
     if named is not None:
         named = named.resolve()
         return Folders("named", named.parent, named, named.parent / DATA_DIR)
     local = Path(ENV_FILE)
     if local.parent.is_dir() or DATA_DIR.is_dir():
         return Folders("working directory", local.parent, local, DATA_DIR)
-    config, data = system_folders()
+    config, data = system_folders(APP)
     return Folders("system", config, config / ".env", data)
 
 

@@ -117,7 +117,7 @@ def no_configuration_from_this_machine(
     monkeypatch.setattr(config, "ENV_FILE", f"config/{config.APP}/no-such.env")
     system = tmp_path_factory.mktemp("system")
     monkeypatch.setattr(
-        config, "system_folders", lambda: (system / "config", system / "data")
+        config, "system_folders", lambda app: (system / "config", system / "data")
     )
     for name in list(os.environ):
         if name.startswith("MAILBOX_SERVICE_"):
