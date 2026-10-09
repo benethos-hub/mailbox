@@ -33,6 +33,7 @@ from .models import (
     Me,
     MeAccount,
     NewPassword,
+    NewToken,
     Outcome,
     Page,
     Paged,
@@ -42,6 +43,7 @@ from .models import (
     Sent,
     SourceReport,
     StoredCredential,
+    Token,
     User,
     Webhook,
     WebhookSecret,
@@ -54,6 +56,8 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "NewToken",
+    "Token",
     "NewPassword",
     "User",
     "Grant",

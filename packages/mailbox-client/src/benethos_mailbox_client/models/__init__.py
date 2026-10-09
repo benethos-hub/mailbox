@@ -23,10 +23,13 @@ from .paging import Paged
 from .rights import Grant
 from .secrets import Secret
 from .sending import Recipient, Sent
+from .tokens import NewToken, Token
 from .users import NewPassword, User
 from .webhooks import Webhook, WebhookSecret
 
 __all__ = [
+    "Token",
+    "NewToken",
     "User",
     "NewPassword",
     "Grant",

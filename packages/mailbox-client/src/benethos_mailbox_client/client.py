@@ -152,6 +152,12 @@ class MailboxClient:
     delete_user = awaiting(endpoints.delete_user)
     set_password = awaiting(endpoints.set_password)
 
+    # --- tokens -----------------------------------------------------------------------
+
+    list_tokens = awaiting(endpoints.list_tokens)
+    create_token = awaiting(endpoints.create_token)
+    revoke_token = awaiting(endpoints.revoke_token)
+
     # --- attachments ------------------------------------------------------------------
 
     async def get_attachment(

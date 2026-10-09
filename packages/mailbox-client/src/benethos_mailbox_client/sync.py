@@ -154,6 +154,12 @@ class SyncMailboxClient:
     delete_user = blocking(endpoints.delete_user)
     set_password = blocking(endpoints.set_password)
 
+    # --- tokens -----------------------------------------------------------------------
+
+    list_tokens = blocking(endpoints.list_tokens)
+    create_token = blocking(endpoints.create_token)
+    revoke_token = blocking(endpoints.revoke_token)
+
     # --- attachments ------------------------------------------------------------------
 
     def get_attachment(
