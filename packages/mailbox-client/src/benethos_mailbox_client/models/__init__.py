@@ -19,6 +19,7 @@ from .discovery import (
 )
 from .factors import SecondFactor, TotpDevice
 from .folders import Folder
+from .health import Health
 from .me import Me, MeAccount, Sending
 from .messages import Attachment, Changes, Outcome, Page
 from .paging import Paged
@@ -33,6 +34,7 @@ from .users import NewPassword, User
 from .webhooks import NewWebhook, Webhook, WebhookDetail, WebhookPost, WebhookSecret
 
 __all__ = [
+    "Health",
     "Permissions",
     "Worker",
     "Status",

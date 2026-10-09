@@ -189,6 +189,7 @@ class MailboxClient:
     # --- the service ------------------------------------------------------------------
 
     get_status = awaiting(endpoints.get_status)
+    health = awaiting(endpoints.health)
 
     # --- attachments ------------------------------------------------------------------
 

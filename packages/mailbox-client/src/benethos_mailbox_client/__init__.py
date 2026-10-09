@@ -30,6 +30,7 @@ from .models import (
     Discovery,
     Folder,
     Grant,
+    Health,
     Hint,
     MailServer,
     Me,
@@ -68,6 +69,7 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "Health",
     "Permissions",
     "AccountHealth",
     "Status",

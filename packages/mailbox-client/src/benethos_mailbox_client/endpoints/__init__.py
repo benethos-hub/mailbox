@@ -24,6 +24,7 @@ from .drafts import create_draft, delete_draft, list_drafts, update_draft
 from .factors import get_second_factor, remove_second_factor, remove_totp_device
 from .folders import create_folder, delete_folder, list_folders, update_folder
 from .generic import request
+from .health import health
 from .me import get_me, list_permissions
 from .messages import (
     batch_messages,
@@ -62,6 +63,7 @@ from .webhooks import (
 )
 
 __all__ = [
+    "health",
     "list_permissions",
     "get_status",
     "list_all_sends",

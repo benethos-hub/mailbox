@@ -191,6 +191,7 @@ class SyncMailboxClient:
     # --- the service ------------------------------------------------------------------
 
     get_status = blocking(endpoints.get_status)
+    health = blocking(endpoints.health)
 
     # --- attachments ------------------------------------------------------------------
 
