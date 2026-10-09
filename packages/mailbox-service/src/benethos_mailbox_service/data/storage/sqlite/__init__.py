@@ -15,6 +15,7 @@ from .database import (
     migrate_file,
     service_lock,
 )
+from .factors import SqliteSecondFactorRepository
 from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
 from .passwords import SqlitePasswordRepository
@@ -35,6 +36,7 @@ __all__ = [
     "SqlitePasswordRepository",
     "SqliteRoleRepository",
     "SqliteAuditRepository",
+    "SqliteSecondFactorRepository",
     "SqliteSendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",

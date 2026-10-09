@@ -19,6 +19,7 @@ from .credentials import (
     InMemoryKeyRepository,
     KeyRepository,
 )
+from .factors import InMemorySecondFactorRepository, SecondFactorRepository
 from .idempotency import IdempotencyRepository, InMemoryIdempotencyRepository
 from .index import InMemoryMessageIndexRepository, MessageIndexRepository
 from .passwords import InMemoryPasswordRepository, PasswordRepository
@@ -35,6 +36,7 @@ from .sqlite import (
     SqliteMessageIndexRepository,
     SqlitePasswordRepository,
     SqliteRoleRepository,
+    SqliteSecondFactorRepository,
     SqliteSendLogRepository,
     SqliteTokenRepository,
     SqliteUserRepository,
@@ -91,6 +93,7 @@ class Repositories:
     roles: RoleRepository
     tokens: TokenRepository
     passwords: PasswordRepository
+    factors: SecondFactorRepository
     keys: KeyRepository
     credentials: CredentialRepository
     index: MessageIndexRepository
@@ -117,6 +120,7 @@ def open_repositories(
             roles=InMemoryRoleRepository(),
             tokens=InMemoryTokenRepository(),
             passwords=InMemoryPasswordRepository(),
+            factors=InMemorySecondFactorRepository(),
             keys=InMemoryKeyRepository(),
             credentials=InMemoryCredentialRepository(),
             index=InMemoryMessageIndexRepository(),
@@ -133,6 +137,7 @@ def open_repositories(
         roles=SqliteRoleRepository(db),
         tokens=SqliteTokenRepository(db),
         passwords=SqlitePasswordRepository(db),
+        factors=SqliteSecondFactorRepository(db),
         keys=SqliteKeyRepository(db),
         credentials=SqliteCredentialRepository(db),
         index=SqliteMessageIndexRepository(db),
