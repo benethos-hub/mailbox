@@ -21,6 +21,7 @@ from .me import Me, MeAccount, Sending
 from .messages import Attachment, Changes, Outcome, Page
 from .paging import Paged
 from .rights import Grant
+from .roles import Role
 from .secrets import Secret
 from .sending import Recipient, Sent
 from .tokens import NewToken, Token
@@ -28,6 +29,7 @@ from .users import NewPassword, User
 from .webhooks import Webhook, WebhookSecret
 
 __all__ = [
+    "Role",
     "Token",
     "NewToken",
     "User",

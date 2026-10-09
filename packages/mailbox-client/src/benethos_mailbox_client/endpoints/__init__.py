@@ -37,6 +37,7 @@ from .messages import (
     update_message,
     update_messages,
 )
+from .roles import create_role, delete_role, get_role, list_roles, replace_role
 from .sending import send_draft, send_message
 from .tokens import create_token, list_tokens, revoke_token
 from .users import (
@@ -50,6 +51,11 @@ from .users import (
 from .webhooks import renew_webhook_secret, update_webhook
 
 __all__ = [
+    "create_role",
+    "delete_role",
+    "get_role",
+    "list_roles",
+    "replace_role",
     "create_token",
     "list_tokens",
     "revoke_token",

@@ -160,6 +160,14 @@ class SyncMailboxClient:
     create_token = blocking(endpoints.create_token)
     revoke_token = blocking(endpoints.revoke_token)
 
+    # --- roles ------------------------------------------------------------------------
+
+    list_roles = blocking(endpoints.list_roles)
+    create_role = blocking(endpoints.create_role)
+    get_role = blocking(endpoints.get_role)
+    replace_role = blocking(endpoints.replace_role)
+    delete_role = blocking(endpoints.delete_role)
+
     # --- attachments ------------------------------------------------------------------
 
     def get_attachment(

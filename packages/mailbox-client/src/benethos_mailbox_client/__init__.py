@@ -38,6 +38,7 @@ from .models import (
     Page,
     Paged,
     Recipient,
+    Role,
     Secret,
     Sending,
     Sent,
@@ -56,6 +57,7 @@ except PackageNotFoundError:  # pragma: no cover - running from a bare tree
     __version__ = "0.0.0"
 
 __all__ = [
+    "Role",
     "NewToken",
     "Token",
     "NewPassword",

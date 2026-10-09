@@ -158,6 +158,14 @@ class MailboxClient:
     create_token = awaiting(endpoints.create_token)
     revoke_token = awaiting(endpoints.revoke_token)
 
+    # --- roles ------------------------------------------------------------------------
+
+    list_roles = awaiting(endpoints.list_roles)
+    create_role = awaiting(endpoints.create_role)
+    get_role = awaiting(endpoints.get_role)
+    replace_role = awaiting(endpoints.replace_role)
+    delete_role = awaiting(endpoints.delete_role)
+
     # --- attachments ------------------------------------------------------------------
 
     async def get_attachment(
