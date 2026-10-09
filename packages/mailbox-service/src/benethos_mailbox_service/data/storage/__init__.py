@@ -18,11 +18,6 @@ from .credentials import (
     KeyRepository,
     WrappedKey,
 )
-from .factors import (
-    InMemorySecondFactorRepository,
-    SecondFactorRepository,
-    StoredDevice,
-)
 from .idempotency import (
     IdempotencyRepository,
     InMemoryIdempotencyRepository,
@@ -35,6 +30,7 @@ from .index import (
     MessageIndexRepository,
 )
 from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
+from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .repositories import Repositories, Store, open_repositories
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
@@ -46,16 +42,18 @@ from .sqlite import (
     SqliteIdempotencyRepository,
     SqliteMessageIndexRepository,
     SqlitePasswordRepository,
+    SqliteRecoveryCodeRepository,
     SqliteRoleRepository,
-    SqliteSecondFactorRepository,
     SqliteSendLogRepository,
     SqliteTokenRepository,
+    SqliteTotpRepository,
     SqliteUserRepository,
     SqliteWebhookRepository,
     inspect_file,
     migrate_file,
     service_lock,
 )
+from .totp import InMemoryTotpRepository, StoredTotpDevice, TotpRepository
 from .users import (
     InMemoryRoleRepository,
     InMemoryTokenRepository,
@@ -93,7 +91,8 @@ __all__ = [
     "InMemoryMessageIndexRepository",
     "InMemoryPasswordRepository",
     "InMemoryRoleRepository",
-    "InMemorySecondFactorRepository",
+    "InMemoryRecoveryCodeRepository",
+    "InMemoryTotpRepository",
     "InMemorySendLogRepository",
     "InMemoryTokenRepository",
     "InMemoryUserRepository",
@@ -108,7 +107,7 @@ __all__ = [
     "RoleRepository",
     "SCHEMA_VERSION",
     "Sealed",
-    "SecondFactorRepository",
+    "RecoveryCodeRepository",
     "SendLogRepository",
     "SqliteAccountRepository",
     "SqliteChangeLogRepository",
@@ -116,16 +115,18 @@ __all__ = [
     "SqliteMessageIndexRepository",
     "SqlitePasswordRepository",
     "SqliteRoleRepository",
-    "SqliteSecondFactorRepository",
+    "SqliteRecoveryCodeRepository",
+    "SqliteTotpRepository",
     "SqliteSendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",
     "SqliteWebhookRepository",
     "Store",
-    "StoredDevice",
+    "StoredTotpDevice",
     "StoredPassword",
     "StoredResult",
     "TokenRepository",
+    "TotpRepository",
     "UserRepository",
     "WebhookRecord",
     "WebhookRepository",

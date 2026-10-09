@@ -44,6 +44,7 @@ from .routes import (
     roles,
     sends,
     status,
+    totp,
     users,
     webhooks,
 )
@@ -71,6 +72,7 @@ AREAS = (
     audit,
     users,
     factor,
+    totp,
     roles,
     webhooks,
 )

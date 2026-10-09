@@ -11,6 +11,7 @@ from .passwords import PasswordService
 from .roles import RoleService
 from .rules import UserRules
 from .tokens import TokenService
+from .totp import TotpService
 from .users import UserService
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "SecondFactorService",
     "Sending",
     "TokenService",
+    "TotpService",
     "UserRules",
     "UserService",
 ]

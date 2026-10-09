@@ -31,6 +31,7 @@ from ..services import (
     Passwords,
     Roles,
     Tokens,
+    TotpDevices,
     Users,
     Webhooks,
 )
@@ -49,6 +50,7 @@ __all__ = [
     "SendSearch",
     "Since",
     "Tokens",
+    "TotpDevices",
     "Users",
     "Webhooks",
     "authenticate",

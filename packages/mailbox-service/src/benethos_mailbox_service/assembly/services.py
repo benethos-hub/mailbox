@@ -23,6 +23,7 @@ from ..domain.users import (
     RoleService,
     SecondFactorService,
     TokenService,
+    TotpService,
     UserService,
 )
 from ..domain.webhooks import WebhookDispatcher, WebhookService
@@ -38,6 +39,7 @@ class Services:
     tokens: TokenService
     passwords: PasswordService
     factors: SecondFactorService
+    totp: TotpService
     mailbox: MailboxService
     discovery: DiscoveryService
     sync: SyncService

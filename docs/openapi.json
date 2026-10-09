@@ -1156,7 +1156,7 @@
           "users"
         ],
         "summary": "Get Second Factor",
-        "description": "The devices of a user's second factor, and how many recovery codes\nare left. Never a secret. The user adds a device in the UI.",
+        "description": "A user's second factor: the devices of each method, TOTP so far, and\nhow many recovery codes are left. Never a secret. The user adds a\ndevice in the UI.",
         "operationId": "get_second_factor",
         "security": [
           {
@@ -1293,7 +1293,7 @@
           "users"
         ],
         "summary": "Remove Second Factor",
-        "description": "Remove every device of a user's second factor and its recovery\ncodes. It signs in to the UI with its password alone until it adds a\nnew one, and its sessions end. The caller must hold every right the\nuser holds. `404` when the user has none, `409` for the caller itself,\nwho removes its own in the UI with a code.",
+        "description": "Remove a user's whole second factor: every method and the recovery\ncodes. It signs in to the UI with its password alone until it adds a\ndevice again, and its sessions end. The caller must hold every right\nthe user holds. `404` when the user has none, `409` for the caller\nitself, who removes its own in the UI with a code.",
         "operationId": "remove_second_factor",
         "security": [
           {
@@ -1419,14 +1419,14 @@
         "x-permission": "users.manage"
       }
     },
-    "/v1/users/{user_id}/second-factor/devices/{device_id}": {
+    "/v1/users/{user_id}/second-factor/totp/{device_id}": {
       "delete": {
         "tags": [
           "users"
         ],
-        "summary": "Remove Factor Device",
-        "description": "Remove one device of a user's second factor: its codes work no more,\nand the user's sessions end. With the last device the factor is off\nand the recovery codes go too. The caller must hold every right the\nuser holds. `404` for a device the user does not have, `409` for the\ncaller itself.",
-        "operationId": "remove_factor_device",
+        "summary": "Remove Totp Device",
+        "description": "Remove one TOTP device, an authenticator app, of a user's second\nfactor: its codes work no more, and the user's sessions end. With the\nlast device the second factor is off and the recovery codes go too.\nThe caller must hold every right the user holds. `404` for a device\nthe user does not have, `409` for the caller itself.",
+        "operationId": "remove_totp_device",
         "security": [
           {
             "bearerAuth": []
@@ -10745,45 +10745,6 @@
         "title": "ErrorResponse",
         "description": "The body of every error the API raises itself."
       },
-      "FactorDevice": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Unique among the user's devices, e.g. Phone"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "last_used_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Used At",
-            "description": "Its last code taken, null for none yet"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "created_at"
-        ],
-        "title": "FactorDevice",
-        "description": "A device of a user's second factor: an authenticator app with a\nsecret of its own. Never the secret."
-      },
       "Folder": {
         "properties": {
           "id": {
@@ -12233,27 +12194,27 @@
       },
       "SecondFactor": {
         "properties": {
-          "devices": {
+          "totp": {
             "items": {
-              "$ref": "#/components/schemas/FactorDevice"
+              "$ref": "#/components/schemas/TotpDevice"
             },
             "type": "array",
-            "title": "Devices",
-            "description": "Oldest first. A code of any of them signs in. Empty: none."
+            "title": "Totp",
+            "description": "Authenticator apps (TOTP), oldest first. A code of any of them signs in. Empty: none."
           },
           "recovery_codes_left": {
             "type": "integer",
             "title": "Recovery Codes Left",
-            "description": "Recovery codes not used yet, one set for every device"
+            "description": "Recovery codes not used yet, one set for every method"
           }
         },
         "type": "object",
         "required": [
-          "devices",
+          "totp",
           "recovery_codes_left"
         ],
         "title": "SecondFactor",
-        "description": "The second factor of a user's UI sign-in."
+        "description": "The second factor of a user's UI sign-in: the devices of each\nmethod, and the recovery codes they share."
       },
       "Security": {
         "type": "string",
@@ -12659,6 +12620,45 @@
         ],
         "title": "TokenInfo",
         "description": "A token without its secret."
+      },
+      "TotpDevice": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Unique among the user's devices, e.g. Phone"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "Its last code taken, null for none yet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at"
+        ],
+        "title": "TotpDevice",
+        "description": "A TOTP device of a user's second factor: an authenticator app with\na secret of its own. Never the secret."
       },
       "UserCreate": {
         "properties": {

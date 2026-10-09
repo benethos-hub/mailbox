@@ -15,11 +15,12 @@ from .database import (
     migrate_file,
     service_lock,
 )
-from .factors import SqliteSecondFactorRepository
 from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
 from .passwords import SqlitePasswordRepository
+from .recovery_codes import SqliteRecoveryCodeRepository
 from .sends import SqliteSendLogRepository
+from .totp import SqliteTotpRepository
 from .users import SqliteRoleRepository, SqliteTokenRepository, SqliteUserRepository
 from .webhooks import SqliteWebhookRepository
 
@@ -36,7 +37,8 @@ __all__ = [
     "SqlitePasswordRepository",
     "SqliteRoleRepository",
     "SqliteAuditRepository",
-    "SqliteSecondFactorRepository",
+    "SqliteRecoveryCodeRepository",
+    "SqliteTotpRepository",
     "SqliteSendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",

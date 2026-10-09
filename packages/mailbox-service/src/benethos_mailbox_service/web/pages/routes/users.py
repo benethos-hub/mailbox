@@ -214,7 +214,7 @@ def _user_page(
         can_revoke=caller.allows("revoke_token"),
         can_set_password=caller.allows("set_password"),
         can_remove_factor=caller.allows("remove_second_factor"),
-        can_remove_device=caller.allows("remove_factor_device"),
+        can_remove_device=caller.allows("remove_totp_device"),
         factor=if_allowed(
             caller,
             "get_second_factor",

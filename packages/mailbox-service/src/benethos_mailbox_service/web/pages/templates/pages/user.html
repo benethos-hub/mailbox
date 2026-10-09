@@ -165,20 +165,20 @@
 {% endcall %}
 {% endif %}
 
-{% if not is_me and factor and factor.devices %}
-{% call related("Second factor", count=factor.devices | length, meta="devices, " ~ factor.recovery_codes_left ~ " recovery codes left. Only " ~ user.name ~ " adds one.") %}
+{% if not is_me and factor and factor.totp %}
+{% call related("Second factor", count=factor.totp | length, meta="authenticator apps (TOTP), " ~ factor.recovery_codes_left ~ " recovery codes left. Only " ~ user.name ~ " adds one.") %}
   <div class="body tight">
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Device</th><th>Added</th><th>Last used</th><th></th></tr></thead>
+        <thead><tr><th>Authenticator app</th><th>Added</th><th>Last used</th><th></th></tr></thead>
         <tbody>
-          {% for device in factor.devices %}
+          {% for device in factor.totp %}
           <tr>
             <td class="name">{{ device.name }}</td>
             <td>{{ device.created_at | when }}</td>
             <td>{{ device.last_used_at | when }}</td>
             <td class="actions">
-              {% if can_remove_device %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/devices/" ~ device.id ~ "/remove", "Remove", confirm="Remove the device " ~ device.name ~ " of " ~ user.name ~ "? Its codes work no more.", cls="small danger") }}{% endif %}
+              {% if can_remove_device %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/totp/" ~ device.id ~ "/remove", "Remove", confirm="Remove the device " ~ device.name ~ " of " ~ user.name ~ "? Its codes work no more.", cls="small danger") }}{% endif %}
             </td>
           </tr>
           {% endfor %}

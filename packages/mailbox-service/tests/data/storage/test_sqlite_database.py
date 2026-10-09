@@ -240,20 +240,20 @@ def test_reset_totp_command(
     assert user is not None
     access = services.auth.access_of(user.id)
     assert access is not None
-    name, secret = asyncio.run(services.factors.begin(access, "Phone", first))
+    name, secret = asyncio.run(services.totp.begin(access, "Phone", first))
     code = totp.code(secret, totp.step_of(datetime.now(UTC)))
-    services.factors.confirm(access, name, secret, code)
+    services.totp.confirm(access, name, secret, code)
     services.close()
 
-    assert main(["users", "reset-totp", "ADMIN"]) == 0
+    assert main(["users", "reset-second-factor", "ADMIN"]) == 0
     out, err = capsys.readouterr()
     assert out == "" and "Removed the second factor of admin" in err
     services = build_services(Settings())
     assert not services.factors.has(user.id)
     services.close()
-    assert main(["users", "reset-totp", "admin"]) == 1
+    assert main(["users", "reset-second-factor", "admin"]) == 1
     assert "admin has no second factor" in capsys.readouterr().err
-    assert main(["users", "reset-totp", "nobody"]) == 1
+    assert main(["users", "reset-second-factor", "nobody"]) == 1
     assert "no user is named nobody" in capsys.readouterr().err
 
 

@@ -4,7 +4,7 @@
 {% block heading %}Second factor{% endblock %}
 {% block subheading %}<div class="sub">A code of an authenticator app after your password, when you sign in to this UI</div>{% endblock %}
 {% block content %}
-{% set devices = factor.devices %}
+{% set devices = factor.totp %}
 {% if codes %}
 <section class="card">
   <header><h2>Recovery codes</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
@@ -21,7 +21,7 @@
   <img class="qr" src="{{ qr }}" alt="QR code of the device {{ setup.name }}" width="225" height="225" />
   <p class="muted">Where the camera cannot reach, type in this key:</p>
   <code class="secret">{{ secret }}</code>
-  <form method="post" action="/ui/second-factor/confirm">
+  <form method="post" action="/ui/second-factor/totp/confirm">
     {{ csrf_field() }}
     <div class="form-grid">
       <div class="field">
@@ -31,14 +31,14 @@
     </div>
     <div class="form-actions"><button class="primary" type="submit">{% if devices %}Add device{% else %}Turn on{% endif %}</button></div>
   </form>
-  <form method="post" action="/ui/second-factor/cancel">
+  <form method="post" action="/ui/second-factor/totp/cancel">
     {{ csrf_field() }}
     <button class="link" type="submit">Cancel</button>
   </form>
 {% endcall %}
 {% endif %}
 
-{% call related("Devices", count=devices | length, meta=("a code of any of them signs in" if devices else "off now: your password alone signs you in")) %}
+{% call related("Authenticator app (TOTP)", count=devices | length, meta=("devices: a code of any of them signs in" if devices else "off now: your password alone signs you in")) %}
   <div class="body tight">
     {% if devices %}
     <div class="table-scroll">
@@ -55,11 +55,11 @@
         </tbody>
       </table>
     </div>
-    {% else %}{{ empty("No device yet. Any authenticator app works: add one, scan its QR code, and keep the ten recovery codes it brings.") }}{% endif %}
+    {% else %}{{ empty("No device yet. Any authenticator app works: add a phone or a tablet, scan its QR code, and keep the ten recovery codes the first one brings.") }}{% endif %}
   </div>
   {% if not qr and devices | length < max_devices %}
   {% call new_row("Add a device", open=not devices) %}
-    <form method="post" action="/ui/second-factor/begin">
+    <form method="post" action="/ui/second-factor/totp/begin">
       {{ csrf_field() }}
       <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
       <div class="form-grid">
@@ -85,7 +85,7 @@
   {% endif %}
   {% if devices %}
   {% call new_row("Rename a device") %}
-    <form class="toolbar" method="post" action="/ui/second-factor/rename">
+    <form class="toolbar" method="post" action="/ui/second-factor/totp/rename">
       {{ csrf_field() }}
       <select name="device" aria-label="Device" required>
         {% for device in devices %}<option value="{{ device.id }}">{{ device.name }}</option>{% endfor %}
@@ -95,7 +95,7 @@
     </form>
   {% endcall %}
   {% call new_row("Remove a device") %}
-    <form method="post" action="/ui/second-factor/remove">
+    <form method="post" action="/ui/second-factor/totp/remove">
       {{ csrf_field() }}
       <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
       <div class="form-grid">
@@ -121,7 +121,7 @@
   {% endif %}
 {% endcall %}
 
-{% if devices %}
+{% if factor.totp %}
 {% call card("Recovery codes", meta=factor.recovery_codes_left ~ " left. New ones replace them all.") %}
   {% if factor.recovery_codes_left <= 2 %}<div class="notice warn">Few recovery codes are left. Make new ones.</div>{% endif %}
   <form method="post" action="/ui/second-factor/codes">

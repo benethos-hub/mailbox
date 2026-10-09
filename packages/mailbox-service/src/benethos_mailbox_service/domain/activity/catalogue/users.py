@@ -130,18 +130,19 @@ class PasswordSet(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
-class DeviceAdded(Activity):
-    """The actor added a device to its second factor. The first turns it
-    on. Nobody adds one for another user."""
+class TotpAdded(Activity):
+    """The actor added a TOTP device, an authenticator app, to its second
+    factor. The first device turns it on. Nobody adds one for another
+    user."""
 
-    name: ClassVar[str] = "device_added"
+    name: ClassVar[str] = "totp_added"
     audited: ClassVar[bool] = True
 
     device: str
     first: bool
 
     def says(self) -> str:
-        added = f"added the device {self.device} to its second factor"
+        added = f"added the authenticator app {self.device} to its second factor"
         return f"{added}, which turns it on" if self.first else added
 
     def touched(self) -> str | None:
@@ -149,26 +150,26 @@ class DeviceAdded(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
-class DeviceRenamed(Activity):
-    name: ClassVar[str] = "device_renamed"
+class TotpRenamed(Activity):
+    name: ClassVar[str] = "totp_renamed"
     audited: ClassVar[bool] = True
 
     before: str
     after: str
 
     def says(self) -> str:
-        return f"renamed its device {self.before} to {self.after}"
+        return f"renamed its authenticator app {self.before} to {self.after}"
 
     def touched(self) -> str | None:
         return self.by.user_id
 
 
 @dataclass(frozen=True, kw_only=True)
-class DeviceRemoved(Activity):
-    """One device of a second factor taken away, by its user or by a user
-    with ``users.manage``. With the last one the factor is off."""
+class TotpRemoved(Activity):
+    """One TOTP device taken away, by its user or by a user with
+    ``users.manage``. With the last device the second factor is off."""
 
-    name: ClassVar[str] = "device_removed"
+    name: ClassVar[str] = "totp_removed"
     audited: ClassVar[bool] = True
 
     user: User
@@ -177,9 +178,11 @@ class DeviceRemoved(Activity):
 
     def says(self) -> str:
         if self.user.id == self.by.user_id:
-            removed = f"removed its device {self.device}"
+            removed = f"removed its authenticator app {self.device}"
         else:
-            removed = f"removed the device {self.device} of {user(self.user)}"
+            removed = (
+                f"removed the authenticator app {self.device} of {user(self.user)}"
+            )
         return (
             f"{removed}, the last one: the second factor is off"
             if self.last
@@ -192,8 +195,8 @@ class DeviceRemoved(Activity):
 
 @dataclass(frozen=True, kw_only=True)
 class SecondFactorRemoved(Activity):
-    """Every device of a second factor taken away: by a user with
-    ``users.manage``, or on the host."""
+    """The whole second factor taken away, every method and the recovery
+    codes: by a user with ``users.manage``, or on the host."""
 
     name: ClassVar[str] = "factor_removed"
     audited: ClassVar[bool] = True

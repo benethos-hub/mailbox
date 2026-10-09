@@ -1,4 +1,4 @@
-"""Second factors of users in SQLite."""
+"""TOTP devices of users in SQLite."""
 
 from __future__ import annotations
 
@@ -6,23 +6,23 @@ import sqlite3
 from datetime import datetime
 
 from ....common.clock import iso, parse_iso
-from ..factors import StoredDevice
+from ..totp import StoredTotpDevice
 from ..webhooks import Sealed
 from .database import Database
 
 
-class SqliteSecondFactorRepository:
+class SqliteTotpRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
 
-    def devices(self, user_id: str) -> list[StoredDevice]:
+    def devices(self, user_id: str) -> list[StoredTotpDevice]:
         rows = self._db.query(
             "SELECT * FROM totp_devices WHERE user_id = ? ORDER BY created_at, id",
             (user_id,),
         )
         return [_device(row) for row in rows]
 
-    def add(self, user_id: str, device: StoredDevice) -> None:
+    def add(self, user_id: str, device: StoredTotpDevice) -> None:
         self._db.execute(
             "INSERT INTO totp_devices (id, user_id, name, key_id, nonce,"
             " ciphertext, created_at, last_step, last_used_at)"
@@ -68,44 +68,16 @@ class SqliteSecondFactorRepository:
             )
         )
 
-    def replace_codes(self, user_id: str, codes: list[str]) -> None:
-        with self._db.transaction() as db:
-            db.execute("DELETE FROM recovery_codes WHERE user_id = ?", (user_id,))
-            db.executemany(
-                "INSERT INTO recovery_codes (user_id, hash) VALUES (?, ?)",
-                [(user_id, code) for code in codes],
-            )
-
-    def use_code(self, user_id: str, code: str, at: datetime) -> bool:
-        return bool(
-            self._db.execute(
-                "UPDATE recovery_codes SET used_at = ?"
-                " WHERE user_id = ? AND hash = ? AND used_at IS NULL",
-                (iso(at), user_id, code),
-            )
-        )
-
-    def codes_left(self, user_id: str) -> int:
-        row = self._db.one(
-            "SELECT count(*) AS left FROM recovery_codes"
-            " WHERE user_id = ? AND used_at IS NULL",
-            (user_id,),
-        )
-        return int(row["left"]) if row is not None else 0
-
-    def delete(self, user_id: str) -> bool:
+    def remove_all(self, user_id: str) -> bool:
         # ON DELETE CASCADE does this with the user. Said here, so both
         # stores agree.
-        with self._db.transaction() as db:
-            db.execute("DELETE FROM recovery_codes WHERE user_id = ?", (user_id,))
-            removed = db.execute(
-                "DELETE FROM totp_devices WHERE user_id = ?", (user_id,)
-            ).rowcount
-        return bool(removed)
+        return bool(
+            self._db.execute("DELETE FROM totp_devices WHERE user_id = ?", (user_id,))
+        )
 
 
-def _device(row: sqlite3.Row) -> StoredDevice:
-    return StoredDevice(
+def _device(row: sqlite3.Row) -> StoredTotpDevice:
+    return StoredTotpDevice(
         id=row["id"],
         name=row["name"],
         secret=Sealed(row["key_id"], row["nonce"], row["ciphertext"]),

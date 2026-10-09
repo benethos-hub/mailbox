@@ -1,4 +1,4 @@
-"""The devices of the second factor: added, renamed and removed by their
+"""TOTP devices, an authenticator app each: added, renamed and removed by their
 owner, removed by an administrator or the host (docs/AUTHENTICATION.md
 4)."""
 
@@ -8,10 +8,8 @@ import pytest
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.secrets import totp
-from benethos_mailbox_service.domain.auth.factors import (
-    MAX_DEVICES,
-    RECOVERY_CODES,
-)
+from benethos_mailbox_service.domain.auth.recovery import RECOVERY_CODES
+from benethos_mailbox_service.domain.auth.totp import MAX_DEVICES
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ConflictError,
@@ -48,7 +46,7 @@ __all__ = ["clock", "services"]
 async def test_adding_asks_for_the_password(services: Services) -> None:
     access = access_of(services, await anna(services))
     with pytest.raises(BadRequestError):
-        await services.factors.begin(access, "Phone", "a wrong password, long enough")
+        await services.totp.begin(access, "Phone", "a wrong password, long enough")
     assert credentials(services, "auth.confirm_failed")
 
 
@@ -57,10 +55,10 @@ async def test_a_wrong_first_code_stores_nothing(
 ) -> None:
     user = await anna(services)
     access = access_of(services, user)
-    name, secret = await services.factors.begin(access, "Phone", SECRET)
+    name, secret = await services.totp.begin(access, "Phone", SECRET)
     wrong = totp.code(secret, totp.step_of(clock()) + 5)
     with pytest.raises(BadRequestError):
-        services.factors.confirm(access, name, secret, wrong)
+        services.totp.confirm(access, name, secret, wrong)
     assert not services.factors.has(user.id)
 
 
@@ -71,17 +69,17 @@ async def test_the_first_device_turns_the_factor_on(
     assert services.factors.has(user.id)
     assert len(codes) == RECOVERY_CODES == len(set(codes))
     state = services.factors.mine(access_of(services, user))
-    assert [d.name for d in state.devices] == ["Phone"]
-    assert state.devices[0].created_at == START
+    assert [d.name for d in state.totp] == ["Phone"]
+    assert state.totp[0].created_at == START
     assert state.recovery_codes_left == RECOVERY_CODES
-    assert details(services, "users.device_added") == [
-        "added the device Phone to its second factor, which turns it on"
+    assert details(services, "users.totp_added") == [
+        "added the authenticator app Phone to its second factor, which turns it on"
     ]
 
 
 async def test_the_secret_is_stored_sealed(services: Services, clock: Clock) -> None:
     user, secret, _ = await with_factor(services, clock)
-    [stored] = services.repositories.factors.devices(user.id)
+    [stored] = services.repositories.totp.devices(user.id)
     assert totp.base32(secret).encode() not in stored.secret.ciphertext
 
 
@@ -89,12 +87,12 @@ async def test_the_secret_is_stored_sealed(services: Services, clock: Clock) -> 
 async def test_a_device_needs_a_fitting_name(services: Services, name: str) -> None:
     access = access_of(services, await anna(services))
     with pytest.raises(BadRequestError):
-        await services.factors.begin(access, name, SECRET)
+        await services.totp.begin(access, name, SECRET)
 
 
 async def test_spaces_in_a_name_are_made_one(services: Services) -> None:
     access = access_of(services, await anna(services))
-    name, _ = await services.factors.begin(access, "  Old \n phone ", SECRET)
+    name, _ = await services.totp.begin(access, "  Old \n phone ", SECRET)
     assert name == "Old phone"
 
 
@@ -105,9 +103,9 @@ async def test_a_further_device_needs_a_code(services: Services, clock: Clock) -
     user, secret, _ = await with_factor(services, clock)
     access = access_of(services, user)
     with pytest.raises(BadRequestError, match="code"):
-        await services.factors.begin(access, "Tablet", SECRET)
+        await services.totp.begin(access, "Tablet", SECRET)
     with pytest.raises(BadRequestError, match="code"):
-        await services.factors.begin(access, "Tablet", SECRET, "000000")
+        await services.totp.begin(access, "Tablet", SECRET, "000000")
     second, codes = await add_device(
         services, user, clock, "Tablet", now_code(secret, clock)
     )
@@ -115,8 +113,8 @@ async def test_a_further_device_needs_a_code(services: Services, clock: Clock) -
     assert codes == []
     assert services.factors.mine(access).recovery_codes_left == RECOVERY_CODES
     assert second != secret
-    assert details(services, "users.device_added")[0] == (
-        "added the device Tablet to its second factor"
+    assert details(services, "users.totp_added")[0] == (
+        "added the authenticator app Tablet to its second factor"
     )
 
 
@@ -143,7 +141,7 @@ async def test_a_code_of_any_device_signs_in(services: Services, clock: Clock) -
         "signed in to the UI with a code of Tablet",
     ]
     state = services.factors.mine(access_of(services, user))
-    assert all(d.last_used_at == clock() for d in state.devices)
+    assert all(d.last_used_at == clock() for d in state.totp)
 
 
 async def test_names_are_unique_whatever_the_case(
@@ -151,7 +149,7 @@ async def test_names_are_unique_whatever_the_case(
 ) -> None:
     user, secret, _ = await with_factor(services, clock)
     with pytest.raises(ConflictError, match="named"):
-        await services.factors.begin(
+        await services.totp.begin(
             access_of(services, user), "PHONE", SECRET, now_code(secret, clock)
         )
 
@@ -161,7 +159,7 @@ async def test_at_most_ten_devices(services: Services, clock: Clock) -> None:
     for number in range(2, MAX_DEVICES + 1):
         await add_device(services, user, clock, f"Device {number}", codes[number - 2])
     with pytest.raises(ConflictError, match="at most"):
-        await services.factors.begin(
+        await services.totp.begin(
             access_of(services, user), "One too many", SECRET, codes[-1]
         )
 
@@ -172,8 +170,8 @@ async def test_adding_a_device_ends_the_sessions_before(
     user, _, codes = await with_factor(services, clock)
     before = services.auth.sign_in_with_code(user.id, codes[0], source=SOURCE)
     access = access_of(services, user)
-    name, tablet = await services.factors.begin(access, "Tablet", SECRET, codes[1])
-    _, stamp = services.factors.confirm(access, name, tablet, now_code(tablet, clock))
+    name, tablet = await services.totp.begin(access, "Tablet", SECRET, codes[1])
+    _, stamp = services.totp.confirm(access, name, tablet, now_code(tablet, clock))
     with pytest.raises(UnauthorizedError, match="second factor"):
         services.auth.session_access(user.id, before.stamp, factor=before.factor)
     # The session that added it carries on with the new stamp.
@@ -189,11 +187,11 @@ async def test_a_device_is_renamed_and_sessions_stay(
     user, _, codes = await with_factor(services, clock)
     signed = services.auth.sign_in_with_code(user.id, codes[0], source=SOURCE)
     access = access_of(services, user)
-    services.factors.rename(access, device_id(services, user, "Phone"), "Old phone")
-    assert [d.name for d in services.factors.mine(access).devices] == ["Old phone"]
+    services.totp.rename(access, device_id(services, user, "Phone"), "Old phone")
+    assert [d.name for d in services.factors.mine(access).totp] == ["Old phone"]
     services.auth.session_access(user.id, signed.stamp, factor=signed.factor)
-    assert details(services, "users.device_renamed") == [
-        "renamed its device Phone to Old phone"
+    assert details(services, "users.totp_renamed") == [
+        "renamed its authenticator app Phone to Old phone"
     ]
 
 
@@ -203,11 +201,11 @@ async def test_renaming_keeps_names_unique(services: Services, clock: Clock) -> 
     access = access_of(services, user)
     tablet = device_id(services, user, "Tablet")
     with pytest.raises(ConflictError):
-        services.factors.rename(access, tablet, "phone")
+        services.totp.rename(access, tablet, "phone")
     # Its own name in another case is no conflict.
-    services.factors.rename(access, tablet, "TABLET")
+    services.totp.rename(access, tablet, "TABLET")
     with pytest.raises(NotFoundError):
-        services.factors.rename(access, "tfa_unknown", "Other")
+        services.totp.rename(access, "tfa_unknown", "Other")
 
 
 # --- removing one's own ---------------------------------------------------------
@@ -221,20 +219,22 @@ async def test_the_owner_removes_a_device_with_password_and_code(
     access = access_of(services, user)
     tablet = device_id(services, user, "Tablet")
     with pytest.raises(BadRequestError):
-        await services.factors.remove_own(access, tablet, SECRET, "000000")
+        await services.totp.remove_own(access, tablet, SECRET, "000000")
     with pytest.raises(BadRequestError):
-        await services.factors.remove_own(
+        await services.totp.remove_own(
             access, tablet, "not the password at all", codes[1]
         )
     clock.step()
-    stamp = await services.factors.remove_own(
+    stamp = await services.totp.remove_own(
         access, tablet, SECRET, now_code(phone, clock)
     )
     assert stamp is not None
     state = services.factors.mine(access)
-    assert [d.name for d in state.devices] == ["Phone"]
+    assert [d.name for d in state.totp] == ["Phone"]
     assert state.recovery_codes_left == 9
-    assert details(services, "users.device_removed") == ["removed its device Tablet"]
+    assert details(services, "users.totp_removed") == [
+        "removed its authenticator app Tablet"
+    ]
 
 
 async def test_the_last_device_removed_turns_the_factor_off(
@@ -242,14 +242,14 @@ async def test_the_last_device_removed_turns_the_factor_off(
 ) -> None:
     user, _, codes = await with_factor(services, clock)
     access = access_of(services, user)
-    stamp = await services.factors.remove_own(
+    stamp = await services.totp.remove_own(
         access, device_id(services, user, "Phone"), SECRET, codes[0]
     )
     assert stamp is None
     assert not services.factors.has(user.id)
     assert services.factors.mine(access).recovery_codes_left == 0
-    assert details(services, "users.device_removed") == [
-        "removed its device Phone, the last one: the second factor is off"
+    assert details(services, "users.totp_removed") == [
+        "removed its authenticator app Phone, the last one: the second factor is off"
     ]
 
 
@@ -258,7 +258,7 @@ async def test_removing_an_unknown_device_is_refused(
 ) -> None:
     user, _, codes = await with_factor(services, clock)
     with pytest.raises(NotFoundError):
-        await services.factors.remove_own(
+        await services.totp.remove_own(
             access_of(services, user), "tfa_unknown", SECRET, codes[0]
         )
 
@@ -271,7 +271,7 @@ async def test_an_administrator_sees_the_devices_never_a_secret(
 ) -> None:
     user, secret, _ = await with_factor(services, clock)
     state = services.factors.of(ADMIN, user.id)
-    assert [d.name for d in state.devices] == ["Phone"]
+    assert [d.name for d in state.totp] == ["Phone"]
     assert totp.base32(secret) not in state.model_dump_json()
     nobody = services.users.create_user(ADMIN, "Nobody", [], [])
     with pytest.raises(ForbiddenError):
@@ -284,14 +284,14 @@ async def test_an_administrator_removes_one_device(
     user, _, codes = await with_factor(services, clock)
     await add_device(services, user, clock, "Tablet", codes[0])
     signed = services.auth.sign_in_with_code(user.id, codes[1], source=SOURCE)
-    services.factors.remove_device(ADMIN, user.id, device_id(services, user, "Phone"))
-    assert [d.name for d in services.factors.of(ADMIN, user.id).devices] == ["Tablet"]
+    services.totp.remove_device(ADMIN, user.id, device_id(services, user, "Phone"))
+    assert [d.name for d in services.factors.of(ADMIN, user.id).totp] == ["Tablet"]
     with pytest.raises(UnauthorizedError):
         services.auth.session_access(user.id, signed.stamp, factor=signed.factor)
     with pytest.raises(NotFoundError):
-        services.factors.remove_device(ADMIN, user.id, "tfa_unknown")
-    assert details(services, "users.device_removed")[0].startswith(
-        "removed the device Phone of Anna"
+        services.totp.remove_device(ADMIN, user.id, "tfa_unknown")
+    assert details(services, "users.totp_removed")[0].startswith(
+        "removed the authenticator app Phone of Anna"
     )
 
 
@@ -315,7 +315,7 @@ async def test_nobody_removes_its_own_without_a_code(services: Services) -> None
     with pytest.raises(ConflictError):
         services.factors.remove(access_of(services, boss), boss.id)
     with pytest.raises(ConflictError):
-        services.factors.remove_device(access_of(services, boss), boss.id, "tfa_x")
+        services.totp.remove_device(access_of(services, boss), boss.id, "tfa_x")
 
 
 async def test_removing_another_needs_its_rights(
@@ -329,7 +329,7 @@ async def test_removing_another_needs_its_rights(
     with pytest.raises(ForbiddenError):
         services.factors.remove(access_of(services, helper), user.id)
     with pytest.raises(ForbiddenError):
-        services.factors.remove_device(
+        services.totp.remove_device(
             access_of(services, helper), user.id, device_id(services, user, "Phone")
         )
     assert services.factors.has(user.id)

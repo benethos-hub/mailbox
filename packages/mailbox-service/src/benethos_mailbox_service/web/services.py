@@ -22,6 +22,7 @@ from ..domain.users import (
     RoleService,
     SecondFactorService,
     TokenService,
+    TotpService,
     UserService,
 )
 from ..domain.webhooks import WebhookService
@@ -38,6 +39,7 @@ class Services(Protocol):
     tokens: TokenService
     passwords: PasswordService
     factors: SecondFactorService
+    totp: TotpService
     mailbox: MailboxService
     discovery: DiscoveryService
     oauth: OAuthService
@@ -85,6 +87,10 @@ def get_factors(request: Request) -> SecondFactorService:
     return services_of(request).factors
 
 
+def get_totp(request: Request) -> TotpService:
+    return services_of(request).totp
+
+
 def get_oauth(request: Request) -> OAuthService:
     return services_of(request).oauth
 
@@ -122,6 +128,7 @@ Roles = Annotated[RoleService, Depends(get_roles)]
 Tokens = Annotated[TokenService, Depends(get_tokens)]
 Passwords = Annotated[PasswordService, Depends(get_passwords)]
 Factors = Annotated[SecondFactorService, Depends(get_factors)]
+TotpDevices = Annotated[TotpService, Depends(get_totp)]
 OAuth = Annotated[OAuthService, Depends(get_oauth)]
 Webhooks = Annotated[WebhookService, Depends(get_webhooks)]
 Status = Annotated[StatusService, Depends(get_status)]

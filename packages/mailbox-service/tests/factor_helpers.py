@@ -72,8 +72,8 @@ async def add_device(
     """A device added the way the page does it: its secret, and the
     recovery codes it brought."""
     access = access_of(services, user)
-    kept, secret = await services.factors.begin(access, name, SECRET, code)
-    codes, _ = services.factors.confirm(access, kept, secret, now_code(secret, clock))
+    kept, secret = await services.totp.begin(access, name, SECRET, code)
+    codes, _ = services.totp.confirm(access, kept, secret, now_code(secret, clock))
     return secret, codes
 
 
@@ -89,7 +89,7 @@ async def with_factor(
 
 
 def device_id(services: Services, user: User, name: str) -> str:
-    devices = services.factors.mine(access_of(services, user)).devices
+    devices = services.factors.mine(access_of(services, user)).totp
     return next(d.id for d in devices if d.name == name)
 
 

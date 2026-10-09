@@ -146,7 +146,7 @@ packages/mailbox-service/
       serve.py          # the REST API and the UI, the log first
       openapi.py        # the OpenAPI document on stdout
       paths.py          # where the settings and the data are
-      users.py          # create-admin, set-password, reset-totp
+      users.py          # create-admin, set-password, reset-second-factor
       keys.py           # init, import, generate
       backup.py         # write a backup, verify one
       restore.py        # replace the database with a backup
@@ -241,9 +241,11 @@ packages/mailbox-service/
       rights/           # who may do what: permissions (the catalogue of
                         #   rights and groups), Access (one caller)
       auth/             # proving who calls: AuthService, Passwords,
-                        #   SignInThrottle, SecondFactors
+                        #   SignInThrottle, SecondFactors (the frame of
+                        #   the second factor), Totp and RecoveryCodes
       users/            # UserService, RoleService, TokenService,
-                        #   PasswordService, SecondFactorService, one
+                        #   PasswordService, SecondFactorService,
+                        #   TotpService, one
                         #   module each, the
                         #   rules they share in rules.py, effective
                         #   rights in effective.py
@@ -602,7 +604,8 @@ noticing. Every change is measured against that.
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Folders for settings and data | `folders()` in `config.py` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
-| Authentication | credential kinds of a user (CONCEPT 7.5, [AUTHENTICATION.md](AUTHENTICATION.md)) | API token, password for the UI, TOTP after it (`data/secrets/totp.py`) | a passkey, OAuth client credentials |
+| Authentication | credential kinds of a user (CONCEPT 7.5, [AUTHENTICATION.md](AUTHENTICATION.md)) | API token, password for the UI | OAuth client credentials |
+| Second factor | `SecondFactors` in `domain/auth/factors.py`, the frame over its methods and the recovery codes | TOTP (`domain/auth/totp.py`, `data/secrets/totp.py`) | a further method beside it, e.g. passkeys |
 | QR code | `data_uri` in `web/pages/qr.py` | segno | another QR library |
 | Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints/`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py`, `sync.py` and the modules that read an answer |
 

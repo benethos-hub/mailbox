@@ -88,9 +88,9 @@ class Role(BaseModel):
     grants: list[Grant] = Field(default_factory=list)
 
 
-class FactorDevice(BaseModel):
-    """A device of a user's second factor: an authenticator app with a
-    secret of its own. Never the secret."""
+class TotpDevice(BaseModel):
+    """A TOTP device of a user's second factor: an authenticator app with
+    a secret of its own. Never the secret."""
 
     id: str
     name: str = Field(description="Unique among the user's devices, e.g. Phone")
@@ -101,13 +101,17 @@ class FactorDevice(BaseModel):
 
 
 class SecondFactor(BaseModel):
-    """The second factor of a user's UI sign-in."""
+    """The second factor of a user's UI sign-in: the devices of each
+    method, and the recovery codes they share."""
 
-    devices: list[FactorDevice] = Field(
-        description="Oldest first. A code of any of them signs in. Empty: none."
+    totp: list[TotpDevice] = Field(
+        description=(
+            "Authenticator apps (TOTP), oldest first. A code of any of them "
+            "signs in. Empty: none."
+        )
     )
     recovery_codes_left: int = Field(
-        description="Recovery codes not used yet, one set for every device"
+        description="Recovery codes not used yet, one set for every method"
     )
 
 

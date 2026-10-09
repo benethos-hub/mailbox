@@ -17,7 +17,14 @@ from ..data.secrets import CredentialVault, KeyProvider, PasswordHasher
 from ..data.storage import Repositories, open_repositories
 from ..domain.accounts import AccountService, Adapters, OAuthService
 from ..domain.activity import ActivityLog
-from ..domain.auth import AuthService, Passwords, SecondFactors, SignInThrottle
+from ..domain.auth import (
+    AuthService,
+    Passwords,
+    RecoveryCodes,
+    SecondFactors,
+    SignInThrottle,
+    Totp,
+)
 from ..domain.changes import ChangeFeed
 from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import Idempotency, MailboxService, SendControl
@@ -29,6 +36,7 @@ from ..domain.users import (
     RoleService,
     SecondFactorService,
     TokenService,
+    TotpService,
     UserRules,
     UserService,
 )
@@ -95,6 +103,7 @@ def build_services(
             tokens=services.tokens,
             passwords=services.passwords,
             factors=services.factors,
+            totp=services.totp,
             mailbox=services.mailbox,
             discovery=discovery
             or providers.build_discovery(
@@ -170,7 +179,10 @@ class _Domain:
         self.sync = SyncService(
             adapters, repositories.index, feed=changes, clock=clock, activity=activity
         )
-        factors = SecondFactors(repositories.factors, vault, clock=clock)
+        factors = SecondFactors(
+            Totp(repositories.totp, vault, clock=clock),
+            RecoveryCodes(repositories.recovery_codes, clock=clock),
+        )
         self.auth = _auth(base, password_hasher, factors)
         self.sends = SendControl(
             repositories.sends, clock=clock, activity=activity, days=settings.audit_days
@@ -180,6 +192,7 @@ class _Domain:
         self.factors = SecondFactorService(
             repositories.users, self.auth, factors, rules, activity
         )
+        self.totp = TotpService(repositories.users, self.auth, factors, rules, activity)
         self.tokens = TokenService(repositories.tokens, self.auth, rules, activity)
         self.roles = RoleService(repositories.roles, rules, activity)
         self.users = UserService(

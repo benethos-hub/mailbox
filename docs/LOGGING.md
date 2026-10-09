@@ -162,10 +162,10 @@ the sign-in throttle are in 5.9 with the other limits.
 | INFO | X deleted user Y and its N webhooks | actor, user, count | |
 | INFO | X changed its password | user | |
 | INFO | X set the password of Y / a one-time password for Y | actor, user | |
-| INFO | X added the device D to its second factor[, which turns it on] | user, device | the first device turns it on |
-| INFO | X renamed its device D to E | user, both names | |
-| INFO | X removed its device D / the device D of Y[, the last one: the second factor is off] | actor, user, device | |
-| INFO | X removed every device of the second factor of Y | actor, user | the host too, with `users reset-totp` |
+| INFO | X added the authenticator app D to its second factor[, which turns it on] | user, device | TOTP. The first device turns the second factor on |
+| INFO | X renamed its authenticator app D to E | user, both names | TOTP |
+| INFO | X removed its authenticator app D / the authenticator app D of Y[, the last one: the second factor is off] | actor, user, device | TOTP |
+| INFO | X removed every device of the second factor of Y | actor, user | every method and the recovery codes. The host too, with `users reset-second-factor` |
 | INFO | X made new recovery codes for its second factor | user | |
 | INFO | X issued token Z for Y, with its expiry | actor, token name and id, user, expiry | |
 | INFO | X revoked token Z of Y | actor, token name and id, user | |
@@ -508,10 +508,10 @@ and that each is listed here.
 | `users.sign_in_allowed` | the host gave a user its UI sign-in back |
 | `users.password_changed` | a user changed its own password |
 | `users.password_set` | a password or one-time password set for a user |
-| `users.device_added` | a device added to a second factor |
-| `users.device_renamed` | a device of a second factor renamed |
-| `users.device_removed` | a device of a second factor removed |
-| `users.factor_removed` | every device of a second factor removed |
+| `users.totp_added` | an authenticator app (TOTP) added to a second factor |
+| `users.totp_renamed` | an authenticator app (TOTP) renamed |
+| `users.totp_removed` | an authenticator app (TOTP) removed |
+| `users.factor_removed` | a whole second factor removed, every method |
 | `users.codes_renewed` | new recovery codes for a second factor |
 | `users.token_issued` | a token issued |
 | `users.token_revoked` | a token revoked |

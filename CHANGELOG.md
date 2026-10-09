@@ -8,14 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- A second factor for the sign-in to the UI: a code of an authenticator
-  app (TOTP) after the password, a choice of each user. A user holds it
-  on up to ten named devices, each with codes of its own, added,
-  renamed and removed on the page **Second factor** with a QR code. The
-  first device brings ten recovery codes shown once, also as a text
-  file to download, a further one
-  needs a code. A password set by someone else is changed only after
-  the code. docs/AUTHENTICATION.md has the details.
+- A second factor for the sign-in to the UI, a choice of each user. Its
+  first method is an authenticator app (TOTP): a code after the
+  password. A user holds it on up to ten named devices, each with codes
+  of its own, added, renamed and removed on the page **Second factor**
+  with a QR code. The first device brings ten recovery codes shown
+  once, also as a text file to download. A further device and new
+  recovery codes need a code. A password set by someone else is changed
+  only after the code. docs/AUTHENTICATION.md has the details.
 - Gmail and Google Workspace accounts over the Gmail API, with the
   kind of account `gmail`. They sign in with Google in the browser,
   through a Google client of the deployment's own, set up as
@@ -31,14 +31,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   Google's page for app passwords.
 - Each user in `/v1/users` says whether it has a second factor for the
   UI sign-in, in `second_factor`. `GET /v1/users/{user_id}/second-factor`
-  (`get_second_factor`, in `users.read`) lists its devices, never a
-  secret. `DELETE /v1/users/{user_id}/second-factor`
-  (`remove_second_factor`) removes every device,
-  `DELETE /v1/users/{user_id}/second-factor/devices/{device_id}`
-  (`remove_factor_device`) one, both in `users.manage`, for a user whose
+  (`get_second_factor`, in `users.read`) lists the devices of each
+  method, `totp` so far, never a secret. `DELETE
+  /v1/users/{user_id}/second-factor` (`remove_second_factor`) removes the
+  whole second factor, `DELETE
+  /v1/users/{user_id}/second-factor/totp/{device_id}`
+  (`remove_totp_device`) one TOTP device, both in `users.manage`, for a user whose
   rights the caller holds, never for the caller itself. The database
   moves to schema 18.
-- `users reset-totp <name>` on the host removes a user's second factor,
+- `users reset-second-factor <name>` on the host removes a user's second factor,
   for the last administrator who lost every device and the recovery
   codes.
 

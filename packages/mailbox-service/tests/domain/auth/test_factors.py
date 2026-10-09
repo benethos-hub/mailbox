@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.domain.auth.factors import (
+from benethos_mailbox_service.domain.auth.recovery import (
     RECOVERY_CODES,
     new_recovery_code,
     recovery_hash,

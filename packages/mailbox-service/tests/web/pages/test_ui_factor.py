@@ -48,8 +48,8 @@ def with_factor(services: Services, name: str) -> tuple[bytes, list[str]]:
     recovery codes."""
     access = services.auth.access_of(user_named(services, name).id)
     assert access is not None
-    kept, secret = asyncio.run(services.factors.begin(access, "Phone", UI_PASSWORD))
-    codes, _ = services.factors.confirm(access, kept, secret, code_after(secret, 0))
+    kept, secret = asyncio.run(services.totp.begin(access, "Phone", UI_PASSWORD))
+    codes, _ = services.totp.confirm(access, kept, secret, code_after(secret, 0))
     return secret, codes
 
 
@@ -75,7 +75,7 @@ def scanned(page: httpx.Response) -> bytes:
 
 
 def device_ids(services: Services, name: str) -> dict[str, str]:
-    devices = services.factors.of(ADMIN, user_named(services, name).id).devices
+    devices = services.factors.of(ADMIN, user_named(services, name).id).totp
     return {d.name: d.id for d in devices}
 
 
@@ -195,24 +195,26 @@ def test_the_first_device_shows_a_qr_code_then_the_recovery_codes_once(
 
     wrong = post(
         app_client,
-        "/ui/second-factor/begin",
+        "/ui/second-factor/totp/begin",
         {"name": "Phone", "password": "not it at all"},
     )
     assert "the password is not right" in wrong.text
 
     scan = post(
-        app_client, "/ui/second-factor/begin", {"name": "Phone", "password": password}
+        app_client,
+        "/ui/second-factor/totp/begin",
+        {"name": "Phone", "password": password},
     )
     assert 'src="data:image/svg+xml' in scan.text
     assert "Scan the code for Phone" in scan.text
     secret = scanned(scan)
 
-    refused = post(app_client, "/ui/second-factor/confirm", {"code": "000000"})
+    refused = post(app_client, "/ui/second-factor/totp/confirm", {"code": "000000"})
     assert "the code is not right" in refused.text
     assert 'src="data:image/svg+xml' in refused.text
 
     done = post(
-        app_client, "/ui/second-factor/confirm", {"code": code_after(secret, 0)}
+        app_client, "/ui/second-factor/totp/confirm", {"code": code_after(secret, 0)}
     )
     assert "Second factor on." in done.text
     codes = re.findall(CODES, done.text)
@@ -259,24 +261,24 @@ def test_a_further_device_needs_a_code(
     assert 'id="f-code"' in page
     refused = post(
         app_client,
-        "/ui/second-factor/begin",
+        "/ui/second-factor/totp/begin",
         {"name": "Tablet", "password": password, "code": "000000"},
     )
     assert "the code is not right" in refused.text
     taken = post(
         app_client,
-        "/ui/second-factor/begin",
+        "/ui/second-factor/totp/begin",
         {"name": "phone", "password": password, "code": codes[1]},
     )
     assert "a device named phone exists" in taken.text
     scan = post(
         app_client,
-        "/ui/second-factor/begin",
+        "/ui/second-factor/totp/begin",
         {"name": "Tablet", "password": password, "code": codes[2]},
     )
     tablet = scanned(scan)
     done = post(
-        app_client, "/ui/second-factor/confirm", {"code": code_after(tablet, 0)}
+        app_client, "/ui/second-factor/totp/confirm", {"code": code_after(tablet, 0)}
     )
     assert "Device Tablet added." in done.text
     assert not re.findall(CODES, done.text)
@@ -290,7 +292,9 @@ def test_a_device_is_renamed(app_client: TestClient, services: Services) -> None
     code_form(app_client, codes[0])
     phone = device_ids(services, name)["Phone"]
     renamed = post(
-        app_client, "/ui/second-factor/rename", {"device": phone, "name": "Old phone"}
+        app_client,
+        "/ui/second-factor/totp/rename",
+        {"device": phone, "name": "Old phone"},
     )
     assert "Device renamed." in renamed.text
     assert '<td class="name">Old phone</td>' in renamed.text
@@ -306,13 +310,13 @@ def test_removing_a_device_needs_password_and_code(
     phone = device_ids(services, name)["Phone"]
     refused = post(
         app_client,
-        "/ui/second-factor/remove",
+        "/ui/second-factor/totp/remove",
         {"device": phone, "password": password, "code": "0"},
     )
     assert "the code is not right" in refused.text
     removed = post(
         app_client,
-        "/ui/second-factor/remove",
+        "/ui/second-factor/totp/remove",
         {"device": phone, "password": password, "code": codes[1]},
     )
     assert "The second factor is off." in removed.text
@@ -328,7 +332,9 @@ def test_the_qr_code_carries_no_text(
     name, password = browser_user(services, READER)
     sign_in(app_client, name, password)
     scan = post(
-        app_client, "/ui/second-factor/begin", {"name": "Phone", "password": password}
+        app_client,
+        "/ui/second-factor/totp/begin",
+        {"name": "Phone", "password": password},
     )
     found = re.search(r'src="(data:image/svg\+xml[^"]+)"', scan.text)
     assert found is not None
@@ -344,10 +350,14 @@ def test_adding_a_device_signs_out_the_other_sessions(
     laptop = TestClient(app_client.app)
     sign_in(laptop, name, password)
     scan = post(
-        app_client, "/ui/second-factor/begin", {"name": "Phone", "password": password}
+        app_client,
+        "/ui/second-factor/totp/begin",
+        {"name": "Phone", "password": password},
     )
     post(
-        app_client, "/ui/second-factor/confirm", {"code": code_after(scanned(scan), 0)}
+        app_client,
+        "/ui/second-factor/totp/confirm",
+        {"code": code_after(scanned(scan), 0)},
     )
     assert app_client.get("/ui").status_code == 200
     assert laptop.get("/ui", follow_redirects=False).status_code == 303
@@ -356,10 +366,14 @@ def test_adding_a_device_signs_out_the_other_sessions(
 def test_a_setup_can_be_cancelled(app_client: TestClient, services: Services) -> None:
     name, password = browser_user(services, READER)
     sign_in(app_client, name, password)
-    post(app_client, "/ui/second-factor/begin", {"name": "Phone", "password": password})
-    page = post(app_client, "/ui/second-factor/cancel")
+    post(
+        app_client,
+        "/ui/second-factor/totp/begin",
+        {"name": "Phone", "password": password},
+    )
+    page = post(app_client, "/ui/second-factor/totp/cancel")
     assert "data:image/svg+xml" not in page.text and "No device yet" in page.text
-    late = post(app_client, "/ui/second-factor/confirm", {"code": "123456"})
+    late = post(app_client, "/ui/second-factor/totp/confirm", {"code": "123456"})
     assert "The setup ran out" in late.text
 
 
@@ -396,9 +410,9 @@ def test_an_administrator_removes_a_device_then_every_one(
     access = services.auth.access_of(user.id)
     assert access is not None
     kept, tablet = asyncio.run(
-        services.factors.begin(access, "Tablet", UI_PASSWORD, codes[0])
+        services.totp.begin(access, "Tablet", UI_PASSWORD, codes[0])
     )
-    services.factors.confirm(access, kept, tablet, code_after(tablet, 0))
+    services.totp.confirm(access, kept, tablet, code_after(tablet, 0))
     anna = TestClient(ui.app)
     try_sign_in(anna, name, password)
     code_form(anna, code_after(secret))
@@ -406,7 +420,7 @@ def test_an_administrator_removes_a_device_then_every_one(
     assert "a code of an authenticator app after the password" in page
     assert '<td class="name">Phone</td>' in page and "9 recovery codes left" in page
     phone = device_ids(services, name)["Phone"]
-    removed = post(ui, f"/ui/users/{user.id}/second-factor/devices/{phone}/remove")
+    removed = post(ui, f"/ui/users/{user.id}/second-factor/totp/{phone}/remove")
     assert "Device removed." in removed.text
     assert set(device_ids(services, name)) == {"Tablet"}
     assert anna.get("/ui", follow_redirects=False).status_code == 303
@@ -425,7 +439,7 @@ def test_a_reader_sees_the_devices_but_removes_none(
     sign_in(app_client, *browser_user(services, READER, service=["users.read"]))
     page = app_client.get(f"/ui/users/{user.id}").text
     assert '<td class="name">Phone</td>' in page
-    assert "second-factor/remove" not in page and "/devices/" not in page
+    assert "second-factor/remove" not in page and "/totp/" not in page
     refused = post(app_client, f"/ui/users/{user.id}/second-factor/remove")
     assert "missing right: remove_second_factor" in refused.text
     assert services.factors.has(user.id)
