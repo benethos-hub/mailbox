@@ -22,6 +22,8 @@ Three layers, and imports point down only:
 Beside them, read by every layer and importing none: `config.py`,
 `errors.py` and `common/`. Above them, allowed to reach anywhere because
 they assemble the service: `assembly/`, `cli/`, `__main__.py`, `logs.py`.
+Below all of it, a package of its own: `mailbox-common`, what the
+service shares with the MCP server (section 3).
 
 Inside a layer, packages by area (`domain/accounts/`) or by kind
 (`data/storage/`). Packages stand in lines, and a package imports only
@@ -160,29 +162,26 @@ packages/mailbox-service/
       services.py       # Services, as web/ and cli/ reach them
       lifecycle.py      # opened() for a command, serving() for the app
       web.py            # create_app, openapi_json
-    logs.py             # assembly: the log of serve, format, level, masking
+    logs.py             # assembly: the log of serve, its dictConfig for
+                        #   uvicorn, the access line, the lines of
+                        #   mailbox-common
     config.py           # cross-cutting: Settings (MAILBOX_SERVICE_* env and
                         #   the .env), the folders that apply: named,
-                        #   the repository's, the system's (platformdirs)
+                        #   the repository's, the system's (mailbox-common)
     errors.py           # cross-cutting: MailboxServiceError hierarchy, no HTTP
     common/             # cross-cutting: helpers several layers share,
-                        #   standard library and anyio only
+                        #   standard library, anyio and mailbox-common only
       secret.py         # random values and their digests: new_id (acc_,
                         #   usr_, ... + 64 hex), token, digest, hmac_hex,
                         #   same. Every length with its reason
-      canonical.py      # JSON one way: compact to send, canonical to
-                        #   hash
       opaque.py         # opaque ids and cursors: prefix + base64 JSON,
                         #   and base64 without padding, for passwords and
                         #   OAuth too
       clock.py          # utc_now, the default clock of the services,
-                        #   log_time: the time of every log line,
                         #   iso and parse_iso: a time as text, in UTC,
                         #   start_of_day and parse_day: a day as the
                         #   UI shows it, local
-      redact.py         # secrets noted once, masked in every text
       ratelimit.py      # pacing: a token bucket and a backoff
-      plaintext.py      # the text of an HTML body, for a mail and a page
       hosts.py          # host names in one form: ASCII, Unicode, syntax
       urls.py           # URLs read one way: host_of, is_loopback,
                         #   path_and_query
@@ -193,7 +192,6 @@ packages/mailbox-service/
                         #   old ones are due to go
       bounded.py        # trim: tables in memory with a cap
       locks.py          # KeyedLocks: one lock per key, for the services
-      sizes.py          # MIB, and a size in megabytes for a message
       chunks.py         # batched: a sequence in slices
     web/                # PRESENTATION: HTTP only, FastAPI lives here
       __init__.py       # install: both front ends, errors to the right one
@@ -492,7 +490,9 @@ packages/mailbox-mcp/
   src/benethos_mailbox_mcp/
     __main__.py         # python -m, calls cli.py
     cli.py              # the command line: options, MAILBOX_MCP_*, the
-                        #   log, the start over stdio or HTTP
+                        #   log in the lines of mailbox-common, its
+                        #   tokens noted for masking, the start over
+                        #   stdio or HTTP
     server.py           # build_server: the MCP library's server with
                         #   the tools the token's rights allow, each
                         #   logged when it fails
@@ -512,15 +512,14 @@ packages/mailbox-mcp/
       sending.py        # send a mail, send a draft
     render.py           # what the model sees of mail, marked as foreign
     pdf.py              # PDF pages as PNG (pypdfium2)
-    plaintext.py        # the visible text of an HTML body, the same
-                        #   file as the service's common/plaintext.py
     client.py           # the client package's MailboxClient, the
                         #   one way to the REST API
     models.py           # the client package's records
     errors.py           # ToolError, and the client's errors turned
                         #   into one for the model
     config.py           # the optional .env, put into the environment
-                        #   (platformdirs, python-dotenv)
+                        #   (python-dotenv), the folder of the system
+                        #   from mailbox-common
 ```
 
 The modules stand in lines, each importing only lines below:
@@ -549,6 +548,29 @@ may carry a description of its own and its bounds, in `Annotated` with
 `Field`. The server checks the bounds before the tool runs. Its test is
 in `tests/tools/`, against `httpx.MockTransport`, and the README's table
 names it.
+
+What the service and the MCP server both need is a package of its own,
+`mailbox-common`, since the MCP server cannot see the service. It sees
+neither of them, nor the client, and imports the standard library and
+platformdirs alone. Its `tests/test_architecture.py` checks that, and
+that no module of the service or the MCP server defines one of its
+functions again. Each module stands alone.
+
+```
+packages/mailbox-common/
+  src/benethos_mailbox_common/
+    plaintext.py        # the visible text of an HTML body: the mail page
+                        #   shows it, the model of the MCP server reads it
+    folders.py          # named_file, system_folders (platformdirs)
+    logs.py             # the lines of a log: format, levels, log_time,
+                        #   plain or in colour on a terminal, a
+                        #   program's own lines through line_of, the
+                        #   stderr handler
+    redact.py           # secrets noted once, masked in every text
+    canonical.py        # JSON one way: compact to send, canonical to
+                        #   hash
+    sizes.py            # MIB, and a size in megabytes for a message
+```
 
 ## 4. Where does it go?
 
@@ -652,11 +674,13 @@ noticing. Every change is measured against that.
 2. **Wire it in one place.** Which implementation is used is decided where
    the app is assembled (`create_app`, `build_services`, settings), never
    inside the code that uses it. That is also how tests swap in fakes.
-3. **The contract is the boundary.** Between the service and the other
-   two packages there is only the REST API. Neither the client nor the
-   MCP package depends on or imports the service package. The MCP
-   package's `tests/test_boundary.py` and the client's
-   `tests/test_architecture.py` check it.
+3. **The contract is the boundary.** Between the service and the
+   client or the MCP server there is only the REST API. Neither the
+   client nor the MCP package depends on or imports the service package.
+   The MCP package's `tests/test_boundary.py` and the client's
+   `tests/test_architecture.py` check it. `mailbox-common` lies below
+   the service and the MCP server and sees neither, so it is no way
+   from one to the other.
 
 **The seams, and what sits behind each:**
 
@@ -670,7 +694,7 @@ noticing. Every change is measured against that.
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
-| Folders for settings and data | `folders()` in `config.py` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
+| Folders for settings and data | `folders()` in `config.py`, `system_folders` in `folders.py` of `mailbox-common` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
 | Authentication | credential kinds of a user (CONCEPT 7.5, [AUTHENTICATION.md](AUTHENTICATION.md)) | API token, password for the UI | OAuth client credentials |
 | Second factor | `SecondFactors` in `domain/auth/factors.py`, the frame over its methods and the recovery codes | TOTP (`domain/auth/totp.py`, `data/secrets/totp.py`) | a further method beside it, e.g. passkeys |

@@ -1051,3 +1051,54 @@ behaviour of its own, as `Secret` has.
 2. The documents: ARCHITECTURE 3, this section.
 
 Built 2026-10-09, in that order.
+
+## 15. A fourth package, `mailbox-common`
+
+Decided by the user on 2026-10-09, first as an idea, then to be built.
+
+### 15.1 Why
+
+The MCP server cannot import the service, so what both need was kept
+twice: `plaintext.py` as the same file, held equal by a test, the
+folders of the operating system, the time and format of a log line,
+the canonical JSON of the idempotency key and the size in MiB. The
+MCP server's log had neither masking nor colours.
+
+### 15.2 Target
+
+A workspace member `packages/mailbox-common`, on PyPI as
+`benethos-mailbox-common` with the version of the others, pinned by the
+service and the MCP server. No image: the images of the service and the
+MCP server install it with them. It sees neither of them, nor the
+client, and imports the standard library and platformdirs alone.
+Decided with it: platformdirs lives there, and the client does not use
+it. Its modules are listed in ARCHITECTURE 3.
+
+The log moved as a whole, as the user decided during the work: the
+format, the levels, `log_time`, the plain and the coloured line and a
+stderr handler. The service keeps its dictConfig for uvicorn, the log
+page and its access line, which it hands the coloured line as
+`line_of`. The MCP server keeps stderr alone and the quiet libraries.
+So the two logs look alike by construction, and the MCP server notes
+its two tokens for masking.
+
+`publish.yml` uploads the packages in the order of their dependencies,
+as the user decided: common first, then the client and the service,
+then the MCP server. The client waits for common too, so it may come to
+need it. `test_packaging.py` holds the order to the pyproject files.
+
+### 15.3 Order of work
+
+0. The package, its pins, CI and `publish.yml`.
+1. `plaintext`, the copy and the test of equality removed.
+2. `system_folders` and `named_file`. Each program keeps its own search
+   order, since the service also looks for its data folder in the
+   working directory.
+3. `redact`.
+4. The log.
+5. `canonical`, now also the idempotency key of the MCP server.
+6. `sizes`.
+7. The rule that a function of the package exists once, and the
+   documents.
+
+Built 2026-10-09, in that order.

@@ -72,6 +72,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The service and the MCP server install a fourth package,
+  `benethos-mailbox-common`, of the same version: what both of them
+  need. The MCP server's log is written as the service's: in colour on
+  a terminal unless `NO_COLOR` is set, and its tokens masked as `***`.
 - A wrong password or code asked once more before a step, such as the
   recovery key or new recovery codes, counts against the client address
   as a failed sign-in does, not only against the name. Ten from one

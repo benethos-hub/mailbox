@@ -1673,7 +1673,8 @@ account and re-issuing every token.
 
 Its own package, `mailbox-mcp` (`benethos-mailbox-mcp` on PyPI), in the same uv workspace
 as the service (**decided 2026-09-24**). It depends on `mcp` and the
-Python client `mailbox-client` (8.2), `pypdfium2` for PDF pages, `platformdirs` and `python-dotenv` for its
+Python client `mailbox-client` (8.2), `mailbox-common`, which it shares
+with the service, `pypdfium2` for PDF pages, `python-dotenv` for its
 settings, and `uvicorn`, `starlette`, `anyio` and `pydantic`, which `mcp`
 brings too. It never depends on the service package or a mail library,
 so `uvx benethos-mailbox-mcp` stays small and the REST-only rule is
@@ -1876,7 +1877,7 @@ Its interface has no stability promise yet.
 | Area | Choice |
 |---|---|
 | Python | 3.11–3.14 |
-| Packaging | uv workspace with three distributions (service, client, MCP server), hatchling, `src/` layout |
+| Packaging | uv workspace with four distributions (service, client, MCP server, and what the service and the MCP server share), hatchling, `src/` layout |
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
 | Storage | SQLite (stdlib `sqlite3`) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |

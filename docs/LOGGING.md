@@ -316,8 +316,12 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 - Never a tool's arguments, never a search term, never mail content,
   never the token. `httpx` and the MCP library at `WARNING`, so no
   request URL is written.
-- Each line has the time of rule 6.9, the level, the source and the
-  message. Over HTTP, uvicorn's lines go through the same format.
+- Each line is written as the service writes it, by the same code in
+  `mailbox-common`: the time of rule 6.9, the level, the source and the
+  message, short and in colour on a terminal, plain elsewhere. A noted
+  secret is masked as `***`: the service's token and the bearer token
+  are noted at start, though no line names them. Over HTTP, uvicorn's
+  lines go through the same format.
 
 ## 6. Rules for writing a line
 
@@ -373,8 +377,8 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    machine, to the millisecond, with the offset:
    `2026-09-30T10:12:22.123+02:00`. That holds for the plain lines, the
    console, the log page, the MCP server's log and a time inside a
-   message, such as the end of a purge. `log_time` in
-   `common/clock.py` writes it. **Decided 2026-09-30.**
+   message, such as the end of a purge. `log_time` in `logs.py` of
+   `mailbox-common` writes it. **Decided 2026-09-30.**
 10. **An activity is one line.** A name or an address a caller chose may
     hold a line break. The recorder writes each break and each other
     control character as its escape, such as `\n` or `\u2028`, so no
