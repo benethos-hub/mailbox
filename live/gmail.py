@@ -22,7 +22,11 @@ replaces a draft and deletes it, and sends one mail from the Gmail test
 account to the first test account. There it is deleted for good. In
 Gmail the copy in Sent is starred, given the label, archived and deleted
 for good. The change feed must name it, which the service learns of
-through Gmail's history only. For that the worker polls every 20
+through Gmail's history only. Then the first test account sends one mail
+to the Gmail test account, with umlauts in its subject. It must arrive
+in the inbox, be found by a search, open with its body and source, be
+named by the change feed, and turn read. It is deleted for good in
+Gmail and in the first test account's sent folder. For that the worker polls every 20
 seconds while the check runs. At the end every mail of this check left
 in either account, of this run or an earlier one, is deleted for good,
 found by the subject's prefix. Credentials and mail content are never
@@ -130,12 +134,14 @@ def check(
     run: Run,
     client: httpx.Client,
     mailbox: SyncMailboxClient,
-    gmail_id: str,
+    gmail: dict[str, str],
     bot: dict[str, str],
     bot_id: str,
 ) -> None:
     """What the API answers is checked with ``client``. ``mailbox``, the
-    Python client, finds and deletes the test mail."""
+    Python client, finds and deletes the test mail. ``gmail``: the Gmail
+    test account's id and address."""
+    gmail_id = gmail["id"]
     base = f"/v1/accounts/{gmail_id}"
     print("\n== reading")
     verified = client.post(f"{base}/verify")
@@ -173,6 +179,14 @@ def check(
         _send_and_check(run, client, mailbox, gmail_id, bot, bot_id, since, subject)
     finally:
         _sweep(mailbox, [(bot_id, "inbox"), (gmail_id, None)])
+
+    print("\n== receiving, from the first test account only")
+    since = client.get(f"{base}/changes").json()["state"]
+    subject = f"{SUBJECT} {secrets.token_hex(4)} Grüße"
+    try:
+        _receive_and_check(run, client, mailbox, gmail, bot_id, since, subject)
+    finally:
+        _sweep(mailbox, [(bot_id, "sent"), (gmail_id, None)])
 
 
 def _folders(run: Run, client: httpx.Client, base: str) -> None:
@@ -275,6 +289,67 @@ def _send_and_check(
     run.check("and gone", gone.status_code == 404)
 
 
+def _receive_and_check(
+    run: Run,
+    client: httpx.Client,
+    mailbox: SyncMailboxClient,
+    gmail: dict[str, str],
+    bot_id: str,
+    since: str,
+    subject: str,
+) -> None:
+    base = f"/v1/accounts/{gmail['id']}"
+    sent = client.post(
+        f"/v1/accounts/{bot_id}/send",
+        json={
+            "to": [{"email": gmail["email"]}],
+            "subject": subject,
+            "text": "Sent to the Gmail test account by the live check. Grüße.",
+        },
+    )
+    if not run.check("the first test account sends", sent.status_code == 200):
+        return
+    found = messages_with_subject(
+        mailbox, gmail["id"], subject, folder="inbox", tries=40, pause=5
+    )
+    if not run.check("it arrives in the Gmail inbox", bool(found)):
+        return
+    message = found[0]
+    run.check(
+        "unread, in the inbox and All Mail",
+        message.get("unread") is True
+        and {"INBOX", "ALL_MAIL"} <= set(message.get("folder_ids", [])),
+    )
+    searched = client.get(
+        f"{base}/messages", params={"q": subject.split()[-2], "folder": "inbox"}
+    )
+    run.check(
+        "a search finds it",
+        message["id"] in [m["id"] for m in searched.json().get("items", [])],
+    )
+    opened = client.get(f"{base}/messages/{message['id']}").json()
+    run.check(
+        "it opens with its body",
+        "Grüße" in (opened.get("text_body") or "") and opened.get("subject") == subject,
+    )
+    raw = client.get(f"{base}/messages/{message['id']}/raw")
+    run.check("its source", raw.status_code == 200 and b"Subject:" in raw.content)
+    types = feed_types(
+        mailbox, gmail["id"], since, message["id"], wait=4 * SYNC_INTERVAL
+    )
+    run.check(
+        "the change feed names it",
+        "message.created" in types,
+        " ".join(types) or "nothing",
+    )
+    read = client.patch(f"{base}/messages/{message['id']}", json={"unread": False})
+    run.check("it turns read", read.status_code == 200 and not read.json()["unread"])
+    purged = client.delete(
+        f"{base}/messages/{message['id']}", params={"permanent": "true"}
+    )
+    run.check("deleted for good in Gmail", purged.status_code == 204)
+
+
 def _labels(run: Run, client: httpx.Client, base: str, copy: str) -> None:
     """Star the copy, give it a label, archive it, take the label off."""
     url = f"{base}/messages/{copy}"
@@ -336,7 +411,8 @@ def main() -> int:
             ):
                 return 1
             assert bot_id is not None
-            check(run, client, mailbox, account["id"], bot, bot_id)
+            gmail = {"id": str(account["id"]), "email": email}
+            check(run, client, mailbox, gmail, bot, bot_id)
     finally:
         stop(process)
     return run.finish()
