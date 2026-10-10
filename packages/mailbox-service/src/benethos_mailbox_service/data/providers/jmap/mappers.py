@@ -13,10 +13,9 @@ from collections.abc import Mapping
 from datetime import UTC, date, datetime, time
 from typing import Any
 
-from benethos_mailbox_common.values import canonical
+from benethos_mailbox_common.values import canonical, secret
 
 from ....common import opaque
-from ....common.secret import digest
 from ...mail import convert, parse
 from ...models import (
     Folder,
@@ -207,7 +206,7 @@ def scope(folder_id: str | None, search: MessageFilter | None) -> str:
     what = canonical.canonical(
         [folder_id, (search or MessageFilter()).model_dump(mode="json")]
     )
-    return digest(what)[:16]
+    return secret.digest(what)[:16]
 
 
 def cursor(scope_of: str, last_id: str, position: int) -> str:

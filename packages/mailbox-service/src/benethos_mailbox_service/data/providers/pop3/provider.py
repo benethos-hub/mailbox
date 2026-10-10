@@ -22,9 +22,10 @@ from typing import TypeVar
 
 import anyio
 
+from benethos_mailbox_common.values import secret
+
 from ....common.chunks import batched
 from ....common.ratelimit import Clock, Sleep
-from ....common.secret import digest
 from ....errors import (
     BadRequestError,
     MailboxServiceError,
@@ -207,7 +208,7 @@ class Pop3Provider(MailServerAdapter):
 
     async def folder_states(self) -> dict[str, str]:
         uids = await self._run(_unique_ids)
-        uids_digest = digest("\n".join(uids))[:32]
+        uids_digest = secret.digest("\n".join(uids))[:32]
         return {mappers.folder_id(): f"{len(uids)}.{uids_digest}"}
 
     async def folder_contents(self, folder_id: str) -> list[str]:

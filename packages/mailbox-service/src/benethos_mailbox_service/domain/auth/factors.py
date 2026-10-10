@@ -13,7 +13,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Literal
 
-from ...common.secret import digest
+from benethos_mailbox_common.values import secret
+
 from ...data.models import SecondFactor
 from .recovery import RecoveryCodes
 from .totp import Totp
@@ -52,7 +53,7 @@ class SecondFactors:
         session keeps it and ends once a device is added or removed. None
         without a second factor."""
         held = sorted(f"totp:{i}" for i in self.totp.ids(user_id))
-        return digest(",".join(held)) if held else None
+        return secret.digest(",".join(held)) if held else None
 
     def state(self, user_id: str) -> SecondFactor:
         return SecondFactor(

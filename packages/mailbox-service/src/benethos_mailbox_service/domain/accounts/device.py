@@ -13,7 +13,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from ...common.secret import token
+from benethos_mailbox_common.values import secret
+
 from ...data.models import Account, ProviderType
 from ...data.providers import DeviceCode, OAuthClient, Waiting
 from ...errors import BadRequestError, ProviderUnavailableError
@@ -81,7 +82,7 @@ class DeviceSignIns:
         code = await client.device_code()
         now = self._clock()
         interval = timedelta(seconds=code.interval)
-        sign_in_id = token()
+        sign_in_id = secret.token()
         expires_at = now + min(timedelta(seconds=code.expires_in), DEVICE_VALID_FOR)
         shown = DeviceSignIn(
             id=sign_in_id,

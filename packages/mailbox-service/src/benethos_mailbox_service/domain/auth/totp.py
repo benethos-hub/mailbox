@@ -13,8 +13,10 @@ from datetime import datetime, timedelta
 
 from pydantic import SecretStr
 
+# Named apart from a secret of its own.
+from benethos_mailbox_common.values import secret as secret_values
+
 from ...common.clock import utc_now
-from ...common.secret import new_id
 from ...data.models import TotpDevice
 from ...data.secrets import CredentialVault, totp
 from ...data.storage import StoredTotpDevice, TotpRepository
@@ -94,7 +96,7 @@ class Totp:
         step = totp.matching_step(secret, presented, now)
         if step is None:
             return False
-        device_id = new_id("tfa")
+        device_id = secret_values.new_id("tfa")
         sealed = self._vault.seal(_label(device_id), SecretStr(totp.base32(secret)))
         self._repository.add(
             user_id, StoredTotpDevice(device_id, name, sealed, now, last_step=step)

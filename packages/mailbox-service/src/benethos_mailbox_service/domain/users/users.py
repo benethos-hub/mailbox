@@ -6,7 +6,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...common.secret import new_id
+from benethos_mailbox_common.values import secret
+
 from ...data.models import Grant, Page, User
 from ...data.storage import (
     RoleRepository,
@@ -97,7 +98,7 @@ class UserService:
         name = named("a user", name)
         self._require_free(name)
         user = User(
-            id=new_id("usr"),
+            id=secret.new_id("usr"),
             name=name,
             service=list(ADMIN_SERVICE),
             ui_sign_in=True,
@@ -168,7 +169,7 @@ class UserService:
         name = named("a user", name)
         self._require_free(name)
         user = User(
-            id=new_id("usr"),
+            id=secret.new_id("usr"),
             name=name,
             roles=roles,
             service=service or [],

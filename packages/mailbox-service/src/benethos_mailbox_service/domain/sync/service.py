@@ -25,10 +25,10 @@ from datetime import datetime
 from typing import TypeVar
 
 from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.values import secret
 
 from ...common.clock import utc_now
 from ...common.locks import KeyedLocks
-from ...common.secret import new_id
 from ...data.providers import Capability, FolderChanges
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import (
@@ -53,7 +53,7 @@ T = TypeVar("T")
 
 
 def new_message_id() -> str:
-    return new_id("msg")
+    return secret.new_id("msg")
 
 
 @dataclass(frozen=True)

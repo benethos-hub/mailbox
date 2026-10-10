@@ -171,9 +171,6 @@ packages/mailbox-service/
     errors.py           # cross-cutting: MailboxServiceError hierarchy, no HTTP
     common/             # cross-cutting: helpers several layers share,
                         #   standard library, anyio and mailbox-common only
-      secret.py         # random values and their digests: new_id (acc_,
-                        #   usr_, ... + 64 hex), token, digest, hmac_hex,
-                        #   same. Every length with its reason
       opaque.py         # opaque ids and cursors: prefix + base64 JSON,
                         #   and base64 without padding, for passwords and
                         #   OAuth too
@@ -728,8 +725,8 @@ imapclient boundary), never by patching deep inside a library.
 - **Protocols** for seams: a repository, a provider, a key provider, a
   clock. A fake in a test fulfils the protocol, it patches nothing.
 - **Ids are opaque** to callers: a prefix and hex for records
-  (`common/secret.py`), a prefix and encoded JSON for cursors
-  (`common/opaque.py`). No caller takes one apart.
+  (`values/secret.py` of `mailbox-common`), a prefix and encoded JSON
+  for cursors (`common/opaque.py`). No caller takes one apart.
 - **`SecretStr` for every secret** the moment it is read, so it cannot
   be printed by accident. A secret in plain text is noted with
   `redact`, so it is masked if it ever reaches a line.

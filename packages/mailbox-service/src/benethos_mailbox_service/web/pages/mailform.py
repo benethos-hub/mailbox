@@ -18,8 +18,8 @@ from pydantic import ValidationError
 from starlette.datastructures import UploadFile
 
 from benethos_mailbox_common.mail import addresses
+from benethos_mailbox_common.values import secret
 
-from ...common.secret import SHORT, token
 from ...data.models import (
     Account,
     Address,
@@ -164,7 +164,7 @@ def show(
         error=error,
         # A new key each time the form is shown: a retry of this form, and
         # only that, is the same send.
-        idempotency_key=token(SHORT),
+        idempotency_key=secret.token(secret.SHORT),
         can_send=caller.allows(
             "send_draft" if draft_id else "send_message", account_id
         ),

@@ -15,8 +15,10 @@ from urllib.parse import urlsplit
 
 from pydantic import SecretStr
 
+# Named apart from a secret of its own.
+from benethos_mailbox_common.values import secret as secret_values
+
 from ...common.clock import utc_now
-from ...common.secret import new_id, token
 from ...common.urls import host_of
 from ...data.models import (
     CreatedWebhook,
@@ -64,8 +66,8 @@ class WebhookService:
         _check_url(request.url)
         for account_id in request.accounts or []:
             access.require("list_changes", account_id)
-        webhook_id = new_id("whk")
-        secret = SECRET_PREFIX + token()
+        webhook_id = secret_values.new_id("whk")
+        secret = SECRET_PREFIX + secret_values.token()
         webhook = Webhook(
             id=webhook_id,
             url=request.url,
@@ -195,7 +197,7 @@ class WebhookService:
         new one."""
         access.require("renew_webhook_secret")
         hook = self._own(access, webhook_id).webhook
-        secret = SECRET_PREFIX + token()
+        secret = SECRET_PREFIX + secret_values.token()
         sealed = self._vault.seal(sealed_label(webhook_id), SecretStr(secret))
         with self._activity.atomic():
             self._repository.set_secret(webhook_id, sealed)
