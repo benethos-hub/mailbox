@@ -12,6 +12,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   Registry as `io.github.benethos-hub/benethos-mailbox-mcp`, installed
   from PyPI with `uvx`. It asks for `MAILBOX_SERVICE_TOKEN`, and takes
   `MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_ALLOW_HTTP` if set.
+- Each release carries the MCP server as a Claude Desktop extension,
+  `benethos-mailbox-mcp.mcpb`. Claude Desktop installs it with uv and
+  Python of its own, and asks for the token, the address of the service
+  and whether plain http to another machine is allowed.
 
 ### Changed
 

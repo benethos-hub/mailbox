@@ -271,12 +271,12 @@ def test_every_package_is_published() -> None:
 def test_a_job_with_rights_of_its_own_still_reads_the_repository() -> None:
     """The permissions of a job replace the workflow's. Each job that
     names its own keeps ``contents: read``, which its checkout needs once
-    the repository is private."""
+    the repository is private, or ``contents: write``, which reads too."""
     for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):
         text = workflow.read_text("utf-8")
         blocks = re.findall(r"^    permissions:\n((?:      .*\n)+)", text, re.M)
         for block in blocks:
-            assert "contents: read" in block, workflow.name
+            assert re.search(r"contents: (read|write)", block), workflow.name
 
 
 def test_a_package_is_published_after_those_it_needs() -> None:
@@ -329,6 +329,7 @@ VERSION_EXAMPLES = [
     ("packages/mailbox-mcp/README.md", "tag"),
     ("packages/mailbox-mcp/README.md", "image"),
     (".github/publish/mcp-registry/server.json", "json"),
+    (".github/publish/mcpb/manifest.json", "json"),
     ("docs/openapi.json", "json"),
 ]
 

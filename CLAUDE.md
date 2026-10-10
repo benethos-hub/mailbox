@@ -162,12 +162,13 @@ containers/               # images/ (one folder per image), and one folder
                           #   versions, images,
                           #   publish.yml: on a release the four packages
                           #   to PyPI, in the order of their dependencies,
-                          #   both images to GHCR, and the MCP server's
-                          #   entry to the MCP Registry
+                          #   both images to GHCR, the MCP server's
+                          #   Claude Desktop bundle onto the release and
+                          #   its entry to the MCP Registry
 .github/publish/          # one folder per place a release is listed:
                           #   mcp-registry/server.json, the MCP server's
-                          #   entry, held to the package by
-                          #   test_mcp_registry.py
+                          #   entry (test_mcp_registry.py), mcpb/, its
+                          #   Claude Desktop bundle (test_mcpb.py)
 .github/actions/          # pypi-package/: the steps of one upload to PyPI
 docs/
   CONCEPT.md              # design
@@ -283,7 +284,8 @@ common package to it, the service the common package.
    Compare `MCP_PUBLISHER_VERSION` in `publish.yml` with the newest
    release of `modelcontextprotocol/registry`, which Dependabot cannot
    see. A newer one goes in with the checksum of
-   `mcp-publisher_linux_amd64.tar.gz` from its checksums file.
+   `mcp-publisher_linux_amd64.tar.gz` from its checksums file. Compare
+   `MCPB_VERSION` with the newest `@anthropic-ai/mcpb` on npm as well.
 2. Set `version` in the four packages' `pyproject.toml`, the pins
    `benethos-mailbox-client==X.Y.Z` and
    `benethos-mailbox-common[paths,settings]==X.Y.Z` in the MCP server's
@@ -299,6 +301,7 @@ common package to it, the service the common package.
    as the notes. The published release starts `publish.yml`, which
    uploads the four packages to PyPI and both images to GHCR.
 6. Check what shipped: the four packages on PyPI, each image's tags
-   `X.Y.Z`, `X.Y` and `latest` on the same revision, and the version in
-   the MCP Registry:
+   `X.Y.Z`, `X.Y` and `latest` on the same revision, the bundle
+   `benethos-mailbox-mcp-X.Y.Z.mcpb` and `benethos-mailbox-mcp.mcpb` on
+   the GitHub release, and the version in the MCP Registry:
    `https://registry.modelcontextprotocol.io/v0/servers?search=io.github.benethos-hub/benethos-mailbox-mcp`.
