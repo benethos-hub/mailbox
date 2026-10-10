@@ -35,7 +35,7 @@ done. Update the roadmap in the same commit that finishes an item.
 
 ## Environment
 
-- Windows, PowerShell or Bash. Python 3.11-3.14.
+- Windows, PowerShell or Bash. Python 3.11-3.15.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
 - Configuration: one folder per package under `config/`, e.g.
   `config/benethos-mailbox-service/.env` (not versioned) beside its
