@@ -49,9 +49,9 @@ The three layers and what each may import:
   that know nothing of the domain, the data or the web, with no I/O and
   no state beyond what a caller holds. Mostly what more than one layer
   needs, but a helper of that kind may live there when one layer needs
-  it, such as `trim` and `KeyedLocks`. It imports the standard library
-  and anyio, nothing else. `redact` is the one module with state of its
-  own, and its docstring says why.
+  it, such as `trim` and `KeyedLocks`. It imports the standard library,
+  anyio and `mailbox-common`, nothing else. What the MCP server needs as
+  well goes to `mailbox-common` (section 3).
 - **A helper exists once.** No module outside `common/` defines a
   function of a name `common/` holds, with or without a leading
   underscore. `test_code_rules.py` also names the copies a shared
@@ -545,26 +545,62 @@ names it.
 
 What the service and the MCP server both need is a package of its own,
 `mailbox-common`, since the MCP server cannot see the service. It sees
-neither of them, nor the client, and imports the standard library and
-platformdirs alone. Its `tests/test_architecture.py` checks that, and
-that no module of the service or the MCP server defines one of its
-functions again. Each module stands alone.
+neither of them, nor the client. It is made of groups, one per concern,
+so a group can be cut out as a package of its own later.
 
 ```
 packages/mailbox-common/
   src/benethos_mailbox_common/
-    plaintext.py        # the visible text of an HTML body: the mail page
+    __init__.py         # __version__, no group imported
+    mail/               # mail itself, nothing of Mailbox
+      plaintext.py      # the visible text of an HTML body: the mail page
                         #   shows it, the model of the MCP server reads it
-    folders.py          # named_file, system_folders (platformdirs)
-    logs.py             # the lines of a log: format, levels, log_time,
-                        #   plain or in colour on a terminal, a
-                        #   program's own lines through line_of, the
-                        #   stderr handler
-    redact.py           # secrets noted once, masked in every text
-    canonical.py        # JSON one way: compact to send, canonical to
-                        #   hash
-    sizes.py            # MIB, and a size in megabytes for a message
+      addresses.py      # readable: Name <email>, quoted for a form
+    log/                # the lines of a log and the secrets kept out
+      lines.py          # format, levels, log_time, plain or in colour
+                        #   on a terminal, a program's own lines through
+                        #   line_of, the stderr handler
+      redact.py         # secrets noted once, masked in every text
+    paths/              # where a program keeps its files (platformdirs)
+      folders.py        # named_file, system_folders: SystemFolders
+    values/             # values written one way
+      canonical.py      # JSON: compact to send, canonical to hash
+      sizes.py          # MIB, and a size in megabytes for a message
+      secret.py         # new_id, token, digest, hmac_hex, same. Every
+                        #   length with its reason
+      text.py           # text on one line: escaped for the log, joined
+                        #   for a header, has_break and ends_line for
+                        #   the wire, plural
 ```
+
+- **What goes in.** What at least two packages need. A guide, not a
+  rule, as for `common/` in section 2: what only the service needs
+  stays in its `common/`, and a helper may move once a second package
+  wants it. No test enforces it.
+- **A group stands alone.** A module imports only inside its group. A
+  group offers its modules in `__all__` (section 5, rules 3 and 4), and
+  a caller imports a module from its group, never deeper:
+  `from benethos_mailbox_common.log import lines`, then
+  `lines.stderr_handler(...)`. Where the module's name is taken in the
+  caller, it is imported under another, with a comment.
+- **Libraries.** The standard library alone, but for a group that names
+  a library. That library is an extra named after the group, never
+  after the library: `paths` brings platformdirs. A group's module
+  that misses its extra says which one. `all` names every extra. An
+  extra is worth it when a user of the package does not need the group,
+  or the library is heavy. Tests and CI install every extra, and CI
+  runs the package once without any.
+- **The pin is exact.** The service and the MCP server depend on
+  `benethos-mailbox-common[paths]==X.Y.Z`, the version of the release.
+  So groups, paths and extras may change inside a release, and an
+  operator never types an extra.
+- **A new module** goes into the group of its concern, with its test in
+  the same folder under `tests/`. It returns a record and takes plain
+  values (section 9).
+
+`tests/test_architecture.py` of the package checks the libraries, the
+groups and the imports of its callers, and that no module of the
+service or the MCP server defines one of its functions again.
 
 ## 4. Where does it go?
 
@@ -589,6 +625,7 @@ packages/mailbox-common/
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |
 | a helper that knows no layer | `common/`, if it is on the standard library and anyio, does no I/O and holds no state beyond what a caller holds. Else it is not a helper: it belongs to one layer |
+| a helper the MCP server needs as well | `mailbox-common`, in the group of its concern (section 3) |
 | a helper one layer needs | that layer, beside its caller |
 
 When none of these fits, the seam is missing. Add the seam first, then
@@ -727,6 +764,22 @@ imapclient boundary), never by patching deep inside a library.
 - **`SecretStr` for every secret** the moment it is read, so it cannot
   be printed by accident. A secret in plain text is noted with
   `redact`, so it is masked if it ever reaches a line.
+- **At a package boundary, values travel as named records, never as
+  tuples or dicts.** What one package returns to another is a frozen
+  dataclass (`frozen=True, slots=True`) with a name for every field.
+  What it takes in are plain values (`str`, `Path`, `int`), never a type
+  of the caller. Inside a package, between two private functions, a
+  tuple is fine.
+  Why: the caller reads `found.config`, not `found[0]`. A record can
+  gain a field without breaking a caller. mypy checks names and types,
+  where `tuple[Path, Path]` says nothing. Plain values at the entrance
+  keep `mailbox-common` free of the types of the packages above it.
+  Cost: one class per answer, one object per call, with slots a fraction
+  of a microsecond. The one exception is a hot loop, such as one record
+  per line while parsing thousands of messages. Decide there on purpose
+  and say why in the docstring.
+  Example: `benethos_mailbox_common.paths.folders`: `system_folders(app)`
+  returns `SystemFolders(config, data)`, not a tuple.
 
 ## 10. Errors
 

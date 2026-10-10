@@ -1102,3 +1102,38 @@ need it. `test_packaging.py` holds the order to the pyproject files.
    documents.
 
 Built 2026-10-09, in that order.
+
+### 15.4 Groups, and three more moves
+
+Decided by the user on 2026-10-10, before the first push of the
+package.
+
+- **Groups.** While the package is small, it splits into `mail`, `log`,
+  `paths` and `values`, so a group can be cut out as a package of its
+  own later. A module imports only inside its group. A group offers its
+  modules as namespaces, and a caller imports a module from its group.
+  `paths` rather than `system`, since the service has `domain/system/`
+  for the running service, and the group is about where files live.
+  Not chosen: a namespace package without `__init__.py`, which leaves
+  no `__version__` at the root.
+- **The rule of two packages.** Only what at least two packages need
+  goes in, as a guide (ARCHITECTURE 3).
+- **The extra `paths`, as a trial.** platformdirs became an extra named
+  after its group, and the package needs the standard library alone.
+- **Named records.** `system_folders` returns `SystemFolders`, and
+  ARCHITECTURE 9 names the rule for every package boundary.
+- **Three more moves.** `addresses.readable` for an address as people
+  read it, from four copies in the service and the MCP server. The
+  quoted form escapes a quote, which fixes a name read back by the mail
+  form. `values/secret.py` from the service, whose `digest` the MCP
+  server now uses for its idempotency key. Its bearer compare stays on
+  bytes, since a header is bytes a client chooses. `values/text.py`
+  from the service, whose `joined` keeps a sender's name, a subject and
+  a file name on one line in what the model reads.
+- **Left out.** `package_version` in `__init__.py`, which would put
+  logic there for four lines per package. The uvicorn start of the
+  service and the MCP server, about 15 lines each, until a third server
+  appears. httpx, pydantic, anyio and starlette, which the packages use
+  differently.
+
+Built 2026-10-10, in that order.

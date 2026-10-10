@@ -195,8 +195,9 @@ packages/
     tests/                # REST mocked with httpx.MockTransport
   mailbox-common/         # what the service and the MCP server share,
                           #   no image
-    src/benethos_mailbox_common/    # modules: docs/ARCHITECTURE.md
-    tests/                # in files like the modules
+    src/benethos_mailbox_common/    # groups, one per concern:
+                          #   docs/ARCHITECTURE.md
+    tests/                # in folders like the groups
 ```
 
 ## Architecture
