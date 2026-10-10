@@ -7,7 +7,8 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ....common.text import plural
+from benethos_mailbox_common.values import text
+
 from ..base import Activity
 
 
@@ -25,8 +26,8 @@ class Discovered(Activity):
     def says(self) -> str:
         return (
             f"looked up the servers of {self.domain}: "
-            f"{plural(self.candidates, 'candidate')} from "
-            f"{plural(self.sources, 'source')}"
+            f"{text.plural(self.candidates, 'candidate')} from "
+            f"{text.plural(self.sources, 'source')}"
         )
 
 

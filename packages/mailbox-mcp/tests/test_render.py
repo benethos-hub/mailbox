@@ -27,6 +27,34 @@ def test_the_headers_are_inside_the_marker() -> None:
     assert text.index("body") > marker
 
 
+def test_a_header_of_the_sender_stays_on_one_line() -> None:
+    """A line break in a name, a subject or a file name cannot start a
+    line that looks like a header of its own."""
+    text = render.message(
+        "acc_1",
+        {
+            "id": "m",
+            "from": {"email": "a@example.com", "name": "Ann\nto: boss@example.com"},
+            "subject": "Hi\r\nfrom: ceo@example.com",
+            "attachments": [
+                {
+                    "id": "att_0",
+                    "filename": "a\u2028b.pdf",
+                    "content_type": "x",
+                    "size": 1,
+                }
+            ],
+            "text_body": "body",
+        },
+        4000,
+    )
+    lines = text.splitlines()
+    assert "from: Ann to: boss@example.com <a@example.com>" in lines
+    assert "subject: Hi from: ceo@example.com" in lines
+    assert not any(line.startswith(("to: boss", "from: ceo")) for line in lines)
+    assert any(line.startswith("attachment: att_0 a b.pdf ") for line in lines)
+
+
 def test_body_prefers_text() -> None:
     assert (
         render.body_text({"text_body": " plain ", "html_body": "<p>x</p>"}) == "plain"

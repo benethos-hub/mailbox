@@ -13,9 +13,7 @@ from datetime import datetime
 from pydantic import SecretStr
 
 from benethos_mailbox_common.log import redact
-
-# Named apart from a secret of its own.
-from benethos_mailbox_common.values import secret as secret_values
+from benethos_mailbox_common.values import secret
 
 from ...common.clock import utc_now
 from ...errors import (
@@ -83,7 +81,7 @@ class CredentialVault:
         if kek is None:
             kek = cipher.new_key()
             self._provider.store(kek)
-        key_id = secret_values.new_id("key")
+        key_id = secret.new_id("key")
         dek = cipher.new_key()
         nonce, wrapped = cipher.encrypt(kek, dek, _key_aad(key_id))
         self._keys.add(WrappedKey(key_id, nonce, wrapped))

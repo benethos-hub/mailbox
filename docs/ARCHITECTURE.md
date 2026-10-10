@@ -182,9 +182,6 @@ packages/mailbox-service/
       hosts.py          # host names in one form: ASCII, Unicode, syntax
       urls.py           # URLs read one way: host_of, is_loopback,
                         #   path_and_query
-      text.py           # text on one line: escaped for the log, joined
-                        #   for a header, has_break and ends_line for
-                        #   the wire, plural
       retention.py      # Retention: how long records are kept, when the
                         #   old ones are due to go
       bounded.py        # trim: tables in memory with a cap

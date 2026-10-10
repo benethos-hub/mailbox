@@ -8,7 +8,8 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ....common.text import plural
+from benethos_mailbox_common.values import text
+
 from ..base import Activity, Failure
 
 
@@ -27,7 +28,7 @@ class WebhookCreated(Activity):
         accounts = (
             "every account"
             if self.accounts is None
-            else plural(self.accounts, "account")
+            else text.plural(self.accounts, "account")
         )
         return (
             f"created webhook {self.webhook_id} to {self.host} for "
@@ -126,7 +127,7 @@ class GaveUp(Activity):
 
     def says(self) -> str:
         return (
-            f"gave up on {plural(self.changes, 'change')} for webhook "
+            f"gave up on {text.plural(self.changes, 'change')} for webhook "
             f"{self.webhook_id} after {self.attempts} attempts"
         )
 

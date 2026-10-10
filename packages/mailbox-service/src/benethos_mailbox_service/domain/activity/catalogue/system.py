@@ -12,7 +12,9 @@ from typing import ClassVar
 
 from benethos_mailbox_common.log import lines
 
-from ....common.text import plural
+# Named apart from a text of its own.
+from benethos_mailbox_common.values import text as text_values
+
 from ..base import Activity, Failure
 
 
@@ -181,7 +183,7 @@ class AuditPurged(Activity):
 
     def says(self) -> str:
         return (
-            f"purged {plural(self.count, 'record')} older than "
+            f"purged {text_values.plural(self.count, 'record')} older than "
             f"{lines.log_time(self.before)} from the audit"
         )
 

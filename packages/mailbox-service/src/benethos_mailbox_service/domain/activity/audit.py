@@ -14,9 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from benethos_mailbox_common.log import redact
-
-# Named apart from a secret of its own.
-from benethos_mailbox_common.values import secret as secret_values
+from benethos_mailbox_common.values import secret
 
 from ...common.clock import utc_now
 from ...common.retention import Retention
@@ -64,7 +62,7 @@ class Audit:
         by = activity.by
         self._store.add(
             ActivityRecord(
-                id=secret_values.new_id("evt"),
+                id=secret.new_id("evt"),
                 at=activity.at or self._clock(),
                 activity=activity.kind(),
                 user_id=by.user_id,

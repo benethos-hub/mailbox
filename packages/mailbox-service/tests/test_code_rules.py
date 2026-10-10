@@ -152,14 +152,14 @@ def test_modules_and_classes_stay_small() -> None:
 
 # The copies the shared helpers replaced (docs/ARCHITECTURE.md 2), and
 # the one module that holds each now. None may come back elsewhere, under
-# its name or with a leading underscore.
+# its name or with a leading underscore. A helper of mailbox-common, such
+# as plural, is held once by that package's own test.
 REPLACED_COPIES = {
     "one_line": HELPERS,
     "loopback": HELPERS,
     "host_of": HELPERS,
     "day": HELPERS,
     "before": HELPERS,
-    "plural": HELPERS,
     "user_names": "web/pages/filters.py",
     "filter": "web/pages/filters.py",
 }

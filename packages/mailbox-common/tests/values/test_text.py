@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from benethos_mailbox_service.common.text import (
+from benethos_mailbox_common.values.text import (
     ends_line,
     escaped,
     has_break,

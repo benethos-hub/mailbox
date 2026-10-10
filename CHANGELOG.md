@@ -124,6 +124,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The MCP server writes a sender's name, a subject and a file name on
+  one line each. A line break in them could start a line inside the
+  mail's marker that looked like a header of its own.
 - The mail form of the UI shows a name with a double quote or a
   backslash in it so that a reply or a forward reads it back as it was.
 - A Gmail or Microsoft account whose OAuth app is missing from the

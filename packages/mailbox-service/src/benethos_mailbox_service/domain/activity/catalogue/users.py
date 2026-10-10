@@ -9,8 +9,8 @@ from datetime import datetime
 from typing import ClassVar
 
 from benethos_mailbox_common.log import lines
+from benethos_mailbox_common.values import text
 
-from ....common.text import plural
 from ....data.models import User
 from ..base import Activity, user
 
@@ -60,9 +60,8 @@ class UserDeleted(Activity):
     webhooks: int
 
     def says(self) -> str:
-        return (
-            f"deleted user {user(self.user)} and its {plural(self.webhooks, 'webhook')}"
-        )
+        webhooks = text.plural(self.webhooks, "webhook")
+        return f"deleted user {user(self.user)} and its {webhooks}"
 
     def touched(self) -> str | None:
         return self.user.id
@@ -332,5 +331,5 @@ def rights(service: Iterable[str], grants: int) -> str:
     """``1 grant``, or ``service admin, 1 grant`` with rights of the
     service."""
     names = ", ".join(service)
-    counted = plural(grants, "grant")
+    counted = text.plural(grants, "grant")
     return f"service {names}, {counted}" if names else counted

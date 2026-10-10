@@ -10,7 +10,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
-from ...common.text import ends_line
+# Named apart from text() of this module.
+from benethos_mailbox_common.values import text as text_values
+
 from ...errors import (
     BadRequestError,
     MailboxServiceError,
@@ -48,7 +50,7 @@ def refuse_line_ends(*values: str, what: str) -> None:
     start one of the caller's choosing (command injection). IMAP, POP3
     and SMTP quote a value, if at all, but keep CR, LF and NUL. ``what``
     names them in the refusal."""
-    if ends_line(*values):
+    if text_values.ends_line(*values):
         raise BadRequestError(f"{what} must not hold a line break")
 
 

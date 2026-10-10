@@ -13,6 +13,9 @@ from typing import Any
 
 from benethos_mailbox_common.mail import addresses, plaintext
 
+# Named apart from the parameter text of cut().
+from benethos_mailbox_common.values import text as text_values
+
 from .models import Changes, Folder, Me, MeAccount, Outcome, Page, Sending, Sent
 
 MARKER_NOTE = (
@@ -39,7 +42,11 @@ def body_text(message: dict[str, Any]) -> str:
 def address(value: dict[str, Any] | None) -> str:
     if not value:
         return "-"
-    return addresses.readable(value.get("name"), str(value.get("email", "")))
+    # A name is the sender's: one line, so it cannot fake a header.
+    name = value.get("name")
+    return addresses.readable(
+        text_values.joined(name) if name else None, str(value.get("email", ""))
+    )
 
 
 def summary(item: dict[str, Any]) -> dict[str, Any]:
@@ -78,10 +85,13 @@ def message(account_id: str, item: dict[str, Any], max_chars: int) -> str:
     ]
     if item.get("cc"):
         theirs.append(f"cc: {', '.join(address(a) for a in item['cc'])}")
-    theirs.append(f"subject: {item.get('subject') or ''}")
+    # The subject and a file name are the sender's: one line each, so
+    # neither can start a header line of its own inside the marker.
+    theirs.append(f"subject: {text_values.joined(item.get('subject') or '')}")
     for attachment in item.get("attachments", []):
+        filename = text_values.joined(attachment.get("filename") or "-")
         theirs.append(
-            f"attachment: {attachment['id']} {attachment.get('filename') or '-'} "
+            f"attachment: {attachment['id']} {filename} "
             f"({attachment.get('content_type')}, {attachment.get('size')} bytes)"
         )
     content = "\n".join(theirs) + "\n\n" + body
