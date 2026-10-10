@@ -271,21 +271,15 @@ A release is its own `release/X.Y.Z` branch and pull request. The four
 packages carry the same version. The MCP server pins the client and the
 common package to it, the service the common package.
 
-Once, before the first release with `mailbox-common`: the user adds on
-PyPI the pending publisher of the project `benethos-mailbox-common`
-(this repository, `publish.yml`, environment
-`pypi-benethos-mailbox-common`), and on GitHub that environment.
-Without it the upload of common fails, and the client, the service and
-the MCP server wait for it in vain. Remove this paragraph after that
-release.
-
 1. `uv lock --upgrade --dry-run`. If it moves anything, run
    `uv lock --upgrade` as a commit of its own, then all checks.
 2. Set `version` in the four packages' `pyproject.toml`, the pins
-   `benethos-mailbox-client==X.Y.Z` and `benethos-mailbox-common==X.Y.Z`
-   in the MCP server's and `benethos-mailbox-common==X.Y.Z` in the
-   service's, then `uv lock` and `uv sync`. `test_packaging.py` names every version example in the
-   documentation that still shows the old one.
+   `benethos-mailbox-client==X.Y.Z` and
+   `benethos-mailbox-common[paths,settings]==X.Y.Z` in the MCP server's
+   and `benethos-mailbox-common[paths,settings]==X.Y.Z` in the
+   service's, then `uv lock` and `uv sync`. `test_packaging.py` names
+   every version example in the documentation that still shows the old
+   one.
 3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`.
 4. Freeze the migrations new in this release: add `fingerprint(N)` of
    each to `RELEASED` in `tests/data/storage/test_sqlite.py`.
