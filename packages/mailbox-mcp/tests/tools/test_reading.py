@@ -46,7 +46,7 @@ async def test_search_passes_filters_and_answers_summaries(api: Callable) -> Non
             {
                 "id": "msg_1",
                 "account_id": "acc_1",
-                "date": "2026-09-24T10:00:00Z",
+                "date": "2026-09-24T10:00:00+00:00",
                 "from": "Alice <a@example.com>",
                 "subject": "Hi",
                 "unread": True,
@@ -88,7 +88,7 @@ async def test_whats_new_across_accounts(api: Callable) -> None:
     [call] = handler.calls
     assert call.params == {"since": "chs_MQ", "limit": "50"}
     assert result == {
-        "changes": [change],
+        "changes": [{**change, "at": "2026-09-25T10:00:00+00:00"}],
         "state": "chs_Mg",
         "more": True,
         "note": render.CHANGES_NOTE,

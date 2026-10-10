@@ -30,7 +30,7 @@ from checks.service import mailbox_of
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from benethos_mailbox_client import SyncMailboxClient
+from benethos_mailbox_client import MessageSummary, SyncMailboxClient
 from benethos_mailbox_service.assembly import build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
@@ -98,10 +98,10 @@ def connect(
     return ids
 
 
-def mine(mailbox: SyncMailboxClient, account_id: str) -> list[dict[str, Any]]:
+def mine(mailbox: SyncMailboxClient, account_id: str) -> list[MessageSummary]:
     """The mails of this check in the account."""
     items = mailbox.list_messages(account_id, limit=50).items
-    return [m for m in items if (m.get("subject") or "").startswith(TITLE)]
+    return [m for m in items if (m.subject or "").startswith(TITLE)]
 
 
 def check_inbox(run: Run, client: TestClient, receiver_id: str) -> None:
@@ -109,7 +109,7 @@ def check_inbox(run: Run, client: TestClient, receiver_id: str) -> None:
     mailbox = mailbox_of(client)
     leftovers = mine(mailbox, receiver_id)
     for old in leftovers:
-        mailbox.delete_message(receiver_id, old["id"], permanent=True)
+        mailbox.delete_message(receiver_id, old.id, permanent=True)
     if leftovers:
         print(f"      deleted {len(leftovers)} mail(s) of an earlier run")
     base = f"/v1/accounts/{receiver_id}"
@@ -147,13 +147,13 @@ def send_one(
     )
     mailbox = mailbox_of(client)
     arrived = polled(
-        lambda: [m for m in mine(mailbox, receiver_id) if m["subject"] == title],
+        lambda: [m for m in mine(mailbox, receiver_id) if m.subject == title],
         tries=10,
         pause=2.0,
     )
     if not run.check("the mail arrives in the second account", bool(arrived)):
         return None
-    return str(arrived[0]["id"])  # type: ignore[index]
+    return arrived[0].id if arrived else None
 
 
 def check_handling(
@@ -193,7 +193,7 @@ def check_handling(
     receiver_id = base.rsplit("/", 1)[1]
     run.check(
         "it is gone from the mailbox",
-        not [m for m in mine(mailbox_of(client), receiver_id) if m["id"] == message_id],
+        not [m for m in mine(mailbox_of(client), receiver_id) if m.id == message_id],
     )
     sync()
     later = client.get(f"{base}/changes", params={"since": changes["state"]}).json()

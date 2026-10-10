@@ -54,8 +54,45 @@ ME = {
 
 FOLDER = {"id": "fld_1", "name": "Inbox", "role": "inbox", "unread": 2, "total": 9}
 
+SUMMARY = {
+    "id": "msg_1",
+    "account_id": "acc_1",
+    "thread_id": "thr_1",
+    "folder_ids": ["fld_1"],
+    "subject": "Hi",
+    "from": {"email": "a@example.com", "name": "Ann"},
+    "to": [{"email": "me@example.com", "name": None}],
+    "date": "2026-10-01T08:00:00Z",
+    "snippet": "Hello",
+    "unread": True,
+    "starred": False,
+    "keywords": ["work"],
+    "has_attachments": True,
+}
+
+MESSAGE = {
+    **SUMMARY,
+    "cc": [{"email": "c@example.com"}],
+    "bcc": [],
+    "reply_to": [],
+    "message_id_header": "<m1@example.com>",
+    "in_reply_to": None,
+    "text_body": "Hello",
+    "html_body": "<p>Hello</p>",
+    "attachments": [
+        {
+            "id": "att_0",
+            "filename": "a.pdf",
+            "content_type": "application/pdf",
+            "size": 12,
+            "inline": False,
+        }
+    ],
+    "reference": None,
+}
+
 PAGE = {
-    "items": [{"id": "msg_1"}],
+    "items": [SUMMARY],
     "next_cursor": "c2",
     "incomplete": [{"account_id": "acc_2", "message": "timed out"}],
 }

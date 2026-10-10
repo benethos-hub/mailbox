@@ -171,9 +171,9 @@ def listed(trip: Trip) -> bool:
     if not run.check("the API lists it", found is not None):
         return False
     assert found is not None
-    run.check("it has a date", found.get("date") is not None, str(found.get("date")))
-    trip.message_id = found["id"]
-    trip.inbox_folder = found["folder_ids"][0]
+    run.check("it has a date", found.date is not None, str(found.date))
+    trip.message_id = found.id
+    trip.inbox_folder = found.folder_ids[0]
     types = feed_types(trip.mailbox, trip.account_id, trip.since, trip.message_id)
     run.check(
         "the change feed names it as created",

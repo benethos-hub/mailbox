@@ -27,7 +27,7 @@ async def test_list_drafts(api: Callable) -> None:
         "drafts": [
             {
                 "id": "msg_d",
-                "date": "2026-09-24T10:00:00Z",
+                "date": "2026-09-24T10:00:00+00:00",
                 "to": "Bob <bob@example.com>",
                 "subject": "Hello",
             }

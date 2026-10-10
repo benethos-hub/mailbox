@@ -169,14 +169,14 @@ def checks(
     copies = messages_with_subject(mailbox, sender_id, title, folder="sent")
     run.check(
         "a read copy is in its sent folder",
-        len(copies) == 1 and not copies[0]["unread"],
+        len(copies) == 1 and not copies[0].unread,
         str(len(copies)),
     )
 
     arrived = messages_with_subject(mailbox, receiver_id, title, folder="inbox")
     if not run.check("the mail arrives in the second account", bool(arrived)):
         return
-    message_id = arrived[0]["id"]
+    message_id = arrived[0].id
     url = f"{base}/messages/{message_id}"
 
     def named(kind: str, after: str) -> bool:
@@ -246,7 +246,7 @@ def checks(
         bool(polled(lambda: named("message.deleted", mark), tries=30, pause=1.0)),
     )
     for copy in copies:
-        mailbox.delete_message(sender_id, copy["id"], permanent=True)
+        mailbox.delete_message(sender_id, copy.id, permanent=True)
 
 
 def check_draft(run: Run, client: httpx.Client, base: str, message_id: str) -> None:

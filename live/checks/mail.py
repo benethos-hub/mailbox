@@ -5,9 +5,8 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable, Sequence
-from typing import Any
 
-from benethos_mailbox_client import ApiError, SyncMailboxClient
+from benethos_mailbox_client import ApiError, MessageSummary, SyncMailboxClient
 
 from .run import polled
 
@@ -19,15 +18,15 @@ def messages_with_subject(
     folder: str | None = None,
     tries: int = 10,
     pause: float = 3.0,
-) -> list[dict[str, Any]]:
+) -> list[MessageSummary]:
     """The messages with exactly ``subject`` in the account, polled through
     the API until one is there. Delivery takes a moment."""
 
-    def look() -> list[dict[str, Any]]:
+    def look() -> list[MessageSummary]:
         page = mailbox.list_messages(
             account_id, subject=subject, folder=folder, limit=10
         )
-        return [m for m in page.items if m.get("subject") == subject]
+        return [m for m in page.items if m.subject == subject]
 
     return polled(look, tries, pause) or []
 
@@ -70,7 +69,7 @@ def delete_for_good(
             account_id, folder=folder, subject=subject, limit=50
         )
         for message in page.items:
-            if fits(str(message.get("subject") or "")):
-                mailbox.delete_message(account_id, message["id"], permanent=True)
+            if fits(message.subject or ""):
+                mailbox.delete_message(account_id, message.id, permanent=True)
                 removed += 1
     return removed

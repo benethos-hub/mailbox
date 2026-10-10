@@ -20,7 +20,7 @@ async def test_create_draft(make_client: Callable) -> None:
     api = FakeApi({"id": "drf_1"})
     found = await make_client(api).create_draft("acc_1", BODY)
     assert api.call() == ("POST", "/v1/accounts/acc_1/drafts", {}, BODY)
-    assert found == {"id": "drf_1"}
+    assert found.id == "drf_1"
 
 
 @pytest.mark.parametrize(

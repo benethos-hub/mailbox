@@ -269,13 +269,13 @@ def _send_and_check(
         mailbox, bot_id, subject, folder="inbox", tries=40, pause=5
     )
     if run.check("it arrives", bool(found)):
-        mailbox.delete_message(bot_id, found[0]["id"], permanent=True)
+        mailbox.delete_message(bot_id, found[0].id, permanent=True)
     copies = messages_with_subject(
         mailbox, gmail_id, subject, folder="sent", tries=6, pause=5
     )
     if not run.check("the copy in Sent", bool(copies)):
         return
-    copy = copies[0]["id"]
+    copy = copies[0].id
     types = feed_types(mailbox, gmail_id, since, copy, wait=4 * SYNC_INTERVAL)
     run.check(
         "the change feed names it (Gmail history)",
@@ -317,35 +317,32 @@ def _receive_and_check(
     message = found[0]
     run.check(
         "unread, in the inbox and All Mail",
-        message.get("unread") is True
-        and {"INBOX", "ALL_MAIL"} <= set(message.get("folder_ids", [])),
+        message.unread is True and {"INBOX", "ALL_MAIL"} <= set(message.folder_ids),
     )
     searched = client.get(
         f"{base}/messages", params={"q": subject.split()[-2], "folder": "inbox"}
     )
     run.check(
         "a search finds it",
-        message["id"] in [m["id"] for m in searched.json().get("items", [])],
+        message.id in [m["id"] for m in searched.json().get("items", [])],
     )
-    opened = client.get(f"{base}/messages/{message['id']}").json()
+    opened = client.get(f"{base}/messages/{message.id}").json()
     run.check(
         "it opens with its body",
         "Grüße" in (opened.get("text_body") or "") and opened.get("subject") == subject,
     )
-    raw = client.get(f"{base}/messages/{message['id']}/raw")
+    raw = client.get(f"{base}/messages/{message.id}/raw")
     run.check("its source", raw.status_code == 200 and b"Subject:" in raw.content)
-    types = feed_types(
-        mailbox, gmail["id"], since, message["id"], wait=4 * SYNC_INTERVAL
-    )
+    types = feed_types(mailbox, gmail["id"], since, message.id, wait=4 * SYNC_INTERVAL)
     run.check(
         "the change feed names it",
         "message.created" in types,
         " ".join(types) or "nothing",
     )
-    read = client.patch(f"{base}/messages/{message['id']}", json={"unread": False})
+    read = client.patch(f"{base}/messages/{message.id}", json={"unread": False})
     run.check("it turns read", read.status_code == 200 and not read.json()["unread"])
     purged = client.delete(
-        f"{base}/messages/{message['id']}", params={"permanent": "true"}
+        f"{base}/messages/{message.id}", params={"permanent": "true"}
     )
     run.check("deleted for good in Gmail", purged.status_code == 204)
 

@@ -436,7 +436,8 @@ packages/mailbox-client/
       accounts.py       # an account, its stored credentials
       discovery.py      # what discovery found, a sign-in with a code
       folders.py        # a folder
-      messages.py       # a page, the changes, a batch's outcome, an
+      messages.py       # a message and its summary, a page, the
+                        #   changes, a batch's outcome, an
                         #   attachment's bytes
       sending.py        # a recipient, what a send answered
       sends.py          # a record of the audit of sends
