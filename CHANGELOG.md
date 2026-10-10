@@ -16,10 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   of its own, added, renamed and removed on the page **Second factor**
   with a QR code. The first device brings ten recovery codes shown
   once, also as a text file to download. A further device, new
-  recovery codes and the recovery key need a code. A password set by someone else is changed
-  only after the code. docs/AUTHENTICATION.md has the details.
-  Recovery codes made before schema 19 are void: make new ones on the
-  page **Second factor** after the update.
+  recovery codes and the recovery key need a code. A password set by
+  someone else is changed only after the code. docs/AUTHENTICATION.md
+  has the details. Recovery codes made before schema 19 are void: make
+  new ones on the page **Second factor** after the update.
 - Gmail and Google Workspace accounts over the Gmail API, with the
   kind of account `gmail`. They sign in with Google in the browser,
   through a Google client of the deployment's own, set up as
@@ -40,9 +40,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   /v1/users/{user_id}/second-factor` (`remove_second_factor`) removes the
   whole second factor, `DELETE
   /v1/users/{user_id}/second-factor/totp/{device_id}`
-  (`remove_totp_device`) one TOTP device, both in `users.manage`, for a user whose
-  rights the caller holds, never for the caller itself. The database
-  moves to schema 19.
+  (`remove_totp_device`) one TOTP device, both in `users.manage`, for a
+  user whose rights the caller holds, never for the caller itself. The
+  database moves to schema 19.
 - `PATCH /v1/webhooks/{webhook_id}` (`update_webhook`) changes a
   webhook's `url`, `events` or `accounts`. A field left out stays,
   `accounts` set to `null` is every account the owner may read. Its
@@ -55,9 +55,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   as `update_webhook` and `renew_webhook_secret`, with the records
   `Webhook` and `WebhookSecret`. The secret is a `Secret`, kept out of
   `repr` and `str`, read with `get_secret_value()`.
-- `users reset-second-factor <name>` on the host removes a user's second factor,
-  for the last administrator who lost every device and the recovery
-  codes.
+- `users reset-second-factor <name>` on the host removes a user's
+  second factor, for the last administrator who lost every device and
+  the recovery codes.
 - `mailbox-client` covers the whole REST API: every operation is a
   method of both clients, named like its `operationId`. New are the
   administration side (accounts, discovery and the sign-in with a
@@ -124,8 +124,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   the card's header, a pencil and a bin on each device, token and the
   folder shown. Several devices or tokens are ticked and removed or
   revoked together, all of them or none, devices after one password
-  and one code. A folder
-  is renamed and moved in one form, and a move asks first.
+  and one code. A folder is renamed and moved in one form, and a move
+  asks first.
 - A user's page in the UI has the tabs Rights, Access and Activity. The
   grant editor shows each grant as a line to change or remove. The
   Users list disables, enables, gives or takes a role of the ticked
