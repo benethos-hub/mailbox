@@ -13,10 +13,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
+from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.values import secret
+
 from ...common.clock import utc_now
-from ...common.redact import redact
 from ...common.retention import Retention
-from ...common.secret import new_id
 from ...data.models import ActivityFilter, ActivityRecord, Page
 from ...data.storage import AuditRepository
 from .. import paging
@@ -61,7 +62,7 @@ class Audit:
         by = activity.by
         self._store.add(
             ActivityRecord(
-                id=new_id("evt"),
+                id=secret.new_id("evt"),
                 at=activity.at or self._clock(),
                 activity=activity.kind(),
                 user_id=by.user_id,
@@ -72,7 +73,7 @@ class Audit:
                 outcome=activity.outcome,
                 # No line names a secret on purpose. One a library put
                 # into an error is masked here as in the log.
-                detail=redact(activity.detail()),
+                detail=redact.redact(activity.detail()),
             )
         )
         return purged

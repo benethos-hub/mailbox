@@ -1,6 +1,6 @@
-"""Random values and their digests: the ids of own records, the secrets
-the service hands out, and the hashes and signatures made of them. Every
-random value comes from the operating system's secure source.
+"""Random values and their digests: the ids of records, secrets to hand
+out, and the hashes and signatures made of them. Every random value
+comes from the operating system's secure source.
 
 How long a random value is stands here, with the reason:
 
@@ -23,7 +23,8 @@ SHORT = 24
 
 
 def new_id(prefix: str) -> str:
-    """For example ``acc_`` followed by 64 hex digits."""
+    """``prefix``, an underscore and 64 hex digits. The caller owns the
+    prefix, such as ``acc``."""
     return f"{prefix}_{secrets.token_hex(STRONG)}"
 
 

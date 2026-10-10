@@ -180,25 +180,6 @@ would pay off once one of these comes: services that live for one
 request, plugins found through entry points, or wiring chosen by the
 settings rather than in code.
 
-## A fourth package for what the others share
-
-The MCP server cannot import the service, so what both need is kept
-twice. `plaintext.py` is the same file in both, held equal by a test of
-the service. REFACTORING.md 9.1 names the other copies. A package of its
-own, such as `mailbox-common`, would hold them once.
-
-- Published to PyPI with the other three, at the same version: a
-  package on PyPI cannot depend on a Git or a path address. In the
-  workspace it is a member like the others.
-- Its own PyPI project and Trusted Publishing environment, a step in
-  `publish.yml`, the pin in the service and the MCP server as the MCP
-  server pins the client, and its place in the architecture tests. No
-  image of its own, as the client has none: the images of the service
-  and the MCP server install it with them.
-- The service and the MCP server may both see it. It sees neither, nor
-  the client.
-- Standard library only, like `common` of the service today.
-
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

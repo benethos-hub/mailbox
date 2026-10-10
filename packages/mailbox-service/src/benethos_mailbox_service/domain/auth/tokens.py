@@ -13,7 +13,8 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Literal
 
-from ...common.secret import digest, new_id
+from benethos_mailbox_common.values import secret
+
 from ...data.models import ApiToken, User
 from ...data.storage import TokenRepository, UserRepository
 from ...errors import BadRequestError, NotFoundError, UnauthorizedError
@@ -29,7 +30,7 @@ TokenState = Literal["active", "expired", "revoked"]
 
 
 def hash_token(token: str) -> str:
-    return digest(token)
+    return secret.digest(token)
 
 
 def new_token() -> str:
@@ -65,7 +66,7 @@ class ApiTokens:
             raise BadRequestError("the token would be expired already")
         plain = new_token()
         token = ApiToken(
-            id=new_id("tok"),
+            id=secret.new_id("tok"),
             user_id=user_id,
             name=name,
             token_hash=hash_token(plain),

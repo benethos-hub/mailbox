@@ -10,7 +10,8 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from ....common.secret import SHORT, same, token
+from benethos_mailbox_common.values import secret
+
 from ....domain.auth import SignedIn
 from ....errors import RateLimitedError, SetupRequiredError, UnauthorizedError
 from ...services import Passwords, get_auth
@@ -70,7 +71,7 @@ async def login_page(
         pass
     # Back at the sign-in, a pending one is given up.
     store_of(request).drop_pending(request.cookies.get(PENDING_COOKIE))
-    nonce = token(SHORT)
+    nonce = secret.token(secret.SHORT)
     response = render(
         request,
         "pages/login.html",
@@ -94,7 +95,7 @@ async def login(
     next: Annotated[str, Form()] = PATH,
 ) -> Response:
     expected = request.cookies.get(LOGIN_COOKIE) or ""
-    if not expected or not same(nonce, expected):
+    if not expected or not secret.same(nonce, expected):
         return _to_login("expired")
     try:
         signed = await get_auth(request).sign_in(
@@ -163,7 +164,7 @@ async def sign_in_with_code(
     store = store_of(request)
     pending_id = request.cookies.get(PENDING_COOKIE) or ""
     pending = store.pending(pending_id)
-    if pending is None or not same(nonce, pending.csrf):
+    if pending is None or not secret.same(nonce, pending.csrf):
         return _to_login("code_expired")
     try:
         signed = get_auth(request).sign_in_with_code(

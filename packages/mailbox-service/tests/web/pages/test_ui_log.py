@@ -10,14 +10,14 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_common.log import redact
 from benethos_mailbox_service.assembly import Services, build_services, create_app
-from benethos_mailbox_service.common import redact
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.logbook import LogBook
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.domain.system.servicelog import ServiceLog
 from benethos_mailbox_service.errors import BadRequestError, ForbiddenError
-from benethos_mailbox_service.logs import short_source
+from benethos_mailbox_service.logs import source_of
 
 from ...conftest import ADMIN, CHEAP, browser_admin, browser_user
 from ...ui_helpers import sign_in
@@ -29,7 +29,7 @@ SERVICE = logging.getLogger("benethos_mailbox_service.domain.users")
 def book() -> LogBook:
     """The lines behind the page, fed by the service's loggers at info,
     their sources named as ``serve`` names them."""
-    book = LogBook(source=short_source)
+    book = LogBook(source=source_of)
     package = logging.getLogger("benethos_mailbox_service")
     package.addHandler(book)
     package.setLevel(logging.INFO)

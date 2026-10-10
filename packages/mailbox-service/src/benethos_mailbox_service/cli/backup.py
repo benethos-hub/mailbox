@@ -6,8 +6,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from benethos_mailbox_common.log import lines
+
 from .. import __version__
-from ..common.clock import log_time, parse_iso
+from ..common.clock import parse_iso
 from ..config import load_settings
 from .common import (
     Commands,
@@ -56,7 +58,7 @@ def _verify(target: list[str], recovery_key: bool, env_file: Path | None) -> Non
     scratch = database.with_name(database.name + ".verifying")
     manifest = verify_backup(Path(target[1]), master, scratch)
     say(
-        f"OK: backup of {log_time(parse_iso(manifest.created_at))}, service "
+        f"OK: backup of {lines.log_time(parse_iso(manifest.created_at))}, service "
         f"{manifest.service_version}, schema {manifest.schema_version}"
     )
 
@@ -85,6 +87,6 @@ def _write(target: list[str], env_file: Path | None) -> None:
         )
     say(
         f"Backup written: schema {manifest.schema_version}, "
-        f"{log_time(parse_iso(manifest.created_at))}. "
+        f"{lines.log_time(parse_iso(manifest.created_at))}. "
         "It opens only with this master key or the recovery key."
     )

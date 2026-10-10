@@ -6,14 +6,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from ...common.canonical import canonical
-from ...common.secret import digest
+from benethos_mailbox_common.values import canonical, secret
 
 
 def fingerprint(*values: BaseModel | str | None) -> str:
     """The SHA-256 of the values as JSON, keys sorted, a model as the JSON
     the API reads."""
-    text = canonical(
+    text = canonical.canonical(
         [v.model_dump(mode="json") if isinstance(v, BaseModel) else v for v in values]
     )
-    return digest(text)
+    return secret.digest(text)

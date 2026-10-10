@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from benethos_mailbox_service.common import redact
+from benethos_mailbox_common.log import redact
 
 PASSWORD = "hunter2-but-longer"
 

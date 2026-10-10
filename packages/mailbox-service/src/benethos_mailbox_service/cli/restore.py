@@ -6,7 +6,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from ..common.clock import log_time, parse_iso
+from benethos_mailbox_common.log import lines
+
+from ..common.clock import parse_iso
 from ..config import load_settings
 from .common import Commands, UsageError, master_key, read_recovery_key, say
 
@@ -59,11 +61,11 @@ def run(args: argparse.Namespace) -> None:
             by=HOST,
             file=str(args.source),
             schema=manifest.schema_version,
-            made=log_time(parse_iso(manifest.created_at)),
+            made=lines.log_time(parse_iso(manifest.created_at)),
         )
     )
     say(
-        f"Restored the backup of {log_time(parse_iso(manifest.created_at))}. "
+        f"Restored the backup of {lines.log_time(parse_iso(manifest.created_at))}. "
         "The previous database "
         "was kept beside it. Accounts whose OAuth tokens changed since then "
         "need reconnecting."

@@ -34,8 +34,9 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from urllib.parse import urlsplit
 
+from benethos_mailbox_common.values import secret
+
 from ...common.clock import utc_now
-from ...common.secret import token
 from ...common.urls import is_loopback
 from ...data.models import Account, ProviderType
 from ...data.providers import OAuthClient, authorize_url, new_pkce
@@ -105,7 +106,7 @@ class OAuthService:
         if account is not None:
             login_hint = login_hint or account.email
         self._forget_old(access.user_id)
-        state = token()
+        state = secret.token()
         pkce = new_pkce()
         self._pending[state] = _Pending(
             provider=provider,

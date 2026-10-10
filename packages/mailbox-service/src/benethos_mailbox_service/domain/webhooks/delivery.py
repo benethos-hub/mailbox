@@ -22,11 +22,14 @@ from typing import Protocol
 
 import anyio
 
+from benethos_mailbox_common.values import canonical
+
+# Named apart from a secret of its own.
+from benethos_mailbox_common.values import secret as secret_values
+
 from ... import __version__
-from ...common.canonical import compact
 from ...common.clock import utc_now
 from ...common.ratelimit import backoff
-from ...common.secret import hmac_hex, new_id
 from ...data.models import ChangeRecord
 from ...data.secrets import CredentialVault
 from ...data.storage import (
@@ -93,7 +96,7 @@ def _of_the_account(record: ChangeRecord) -> bool:
 def signature(secret: str, timestamp: int, body: bytes) -> str:
     """The value of ``X-Mailbox-Signature`` for a body."""
     signed = f"{timestamp}.".encode() + body
-    return f"t={timestamp},v1={hmac_hex(secret, signed)}"
+    return f"t={timestamp},v1={secret_values.hmac_hex(secret, signed)}"
 
 
 @dataclass(frozen=True)
@@ -232,8 +235,8 @@ class WebhookDispatcher:
     ) -> str | None:
         """One post of ``batch``, kept in the delivery log. None when the
         receiver took it, else why not."""
-        delivery_id = new_id("dlv")
-        body = compact(
+        delivery_id = secret_values.new_id("dlv")
+        body = canonical.compact(
             {
                 "webhook_id": record.webhook.id,
                 "delivery_id": delivery_id,

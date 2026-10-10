@@ -15,7 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from ..common.redact import redact
+from benethos_mailbox_common.log import redact
 
 KEPT = 1000
 
@@ -61,7 +61,7 @@ class LogBook(logging.Handler):
                         record.levelname,
                         record.levelno,
                         self._source(record.name),
-                        redact(message),
+                        redact.redact(message),
                     )
                 )
         except Exception:  # a log that fails must not fail the caller

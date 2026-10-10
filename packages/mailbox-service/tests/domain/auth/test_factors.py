@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pytest
 
+from benethos_mailbox_common.values.secret import digest
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.common.secret import digest
 from benethos_mailbox_service.data.secrets import cipher
 from benethos_mailbox_service.data.storage import InMemoryRecoveryCodeRepository
 from benethos_mailbox_service.domain.auth import recovery

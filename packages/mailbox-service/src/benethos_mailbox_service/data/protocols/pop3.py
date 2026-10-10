@@ -18,7 +18,8 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager
 from typing import Any
 
-from ...common.sizes import MIB
+from benethos_mailbox_common.values import sizes
+
 from ...errors import (
     NotSupportedError,
     ProviderAuthError,
@@ -33,7 +34,7 @@ ConnectionFactory = Callable[[Server, float], Any]
 DEFAULT_PORTS = {"tls": 995, "starttls": 110}
 
 # A whole message larger than this is refused, as IMAP does.
-MAX_MESSAGE_BYTES = 40 * MIB
+MAX_MESSAGE_BYTES = 40 * sizes.MIB
 
 # poplib refuses a line longer than 2048 bytes. Mail breaks that limit of
 # RFC 5322 often enough, e.g. HTML in one line, and IMAP reads it. A

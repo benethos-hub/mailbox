@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from benethos_mailbox_service.common.canonical import canonical, compact
+from benethos_mailbox_common.values.canonical import canonical, compact
 
 
 def test_compact_keeps_the_text_and_the_order() -> None:

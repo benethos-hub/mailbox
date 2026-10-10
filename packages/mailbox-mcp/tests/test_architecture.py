@@ -20,7 +20,7 @@ LINES = (
     {"server", "transport"},
     {"tools"},
     {"client", "render", "pdf"},
-    {"models", "errors", "config", "plaintext"},
+    {"models", "errors", "config"},
 )
 # The same inside tools/.
 TOOL_LINES = (
@@ -40,7 +40,8 @@ LIBRARY_HOMES = {
     "starlette": {"transport"},
     "uvicorn": {"transport"},
     "mcp": {"server", "transport", "errors", "tools.base"},
-    "platformdirs": {"config"},
+    # The folders of the operating system come from the common package.
+    "platformdirs": set(),
     "dotenv": {"config"},
 }
 

@@ -25,8 +25,10 @@ from datetime import datetime, timedelta
 
 from fastapi import Request
 
+# Named apart from a secret of its own.
+from benethos_mailbox_common.values import secret as secret_values
+
 from ...common.clock import utc_now
-from ...common.secret import same, token
 from ...domain.auth import CODE_TRIES, PENDING, SignedIn
 from ...domain.rights import Access
 from ...errors import MailboxServiceError
@@ -154,12 +156,12 @@ class SessionStore:
         )
         for _, oldest in own[: max(0, len(own) - self._per_user + 1)]:
             del self._sessions[oldest]
-        session_id = token()
+        session_id = secret_values.token()
         self._sessions[session_id] = UiSession(
             user_id=signed.user_id,
             stamp=signed.stamp,
             must_change=signed.must_change,
-            csrf=token(),
+            csrf=secret_values.token(),
             last_seen=now,
             created=now,
             previous_sign_in=signed.previous,
@@ -194,9 +196,9 @@ class SessionStore:
         now = self._clock()
         for gone in [p for p, v in self._pending.items() if v.until <= now]:
             del self._pending[gone]
-        pending_id = token()
+        pending_id = secret_values.token()
         self._pending[pending_id] = PendingSignIn(
-            user_id, next, csrf=token(), until=now + PENDING
+            user_id, next, csrf=secret_values.token(), until=now + PENDING
         )
         return pending_id
 
@@ -324,4 +326,4 @@ def session_of(request: Request) -> UiSession:
 
 
 def csrf_ok(session: UiSession, presented: str | None) -> bool:
-    return presented is not None and same(presented, session.csrf)
+    return presented is not None and secret_values.same(presented, session.csrf)

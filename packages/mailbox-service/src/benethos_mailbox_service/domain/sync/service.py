@@ -24,10 +24,11 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
 
+from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.values import secret
+
 from ...common.clock import utc_now
 from ...common.locks import KeyedLocks
-from ...common.redact import redact
-from ...common.secret import new_id
 from ...data.providers import Capability, FolderChanges
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import (
@@ -52,7 +53,7 @@ T = TypeVar("T")
 
 
 def new_message_id() -> str:
-    return new_id("msg")
+    return secret.new_id("msg")
 
 
 @dataclass(frozen=True)
@@ -249,7 +250,9 @@ class SyncService:
                     counts = await self._sync_delta(account_id)
             except MailboxServiceError as exc:
                 self._states[account_id] = replace(
-                    state, last_error=redact(exc.message), last_error_at=self._clock()
+                    state,
+                    last_error=redact.redact(exc.message),
+                    last_error_at=self._clock(),
                 )
                 raise
             self._states[account_id] = SyncState(last_sync_at=self._clock())

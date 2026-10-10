@@ -1,7 +1,7 @@
-"""What the three distributions ship beside their code.
+"""What the four distributions ship beside their code.
 
 Each package carries a copy of the repository's LICENSE, since a wheel can
-only include files from its own folder, and all three are released
+only include files from its own folder, and all four are released
 together under one version. The documentation quotes that version in several
 places, and those examples must follow it.
 """
@@ -22,7 +22,9 @@ PACKAGES = [
     ROOT / "packages" / "mailbox-service",
     ROOT / "packages" / "mailbox-client",
     ROOT / "packages" / "mailbox-mcp",
+    ROOT / "packages" / "mailbox-common",
 ]
+SERVICE, CLIENT, MCP, COMMON = PACKAGES
 
 
 def _project(package: Path) -> dict[str, object]:
@@ -59,12 +61,49 @@ def test_the_packages_share_one_version() -> None:
     assert len(versions) == 1, versions
 
 
-def test_the_mcp_server_needs_the_client_of_its_own_version() -> None:
-    """They are released together. The MCP server pins the client to the
-    version beside it, so an install never mixes two releases."""
-    needs = _project(PACKAGES[2])["dependencies"]
+def _needs(package: Path) -> list[str]:
+    needs = _project(package)["dependencies"]
     assert isinstance(needs, list)
-    assert f"benethos-mailbox-client=={_version()}" in needs
+    return [str(need) for need in needs]
+
+
+@pytest.mark.parametrize(
+    ("package", "needed"),
+    [(MCP, CLIENT), (MCP, COMMON), (SERVICE, COMMON)],
+    ids=["mcp-client", "mcp-common", "service-common"],
+)
+def test_a_package_needs_another_of_its_own_version(
+    package: Path, needed: Path
+) -> None:
+    """They are released together. A package of the workspace pins
+    another to the version beside it, so an install never mixes two
+    releases. The pin may name extras: ``name[paths]==X.Y.Z``."""
+    pin = rf"{re.escape(str(_project(needed)['name']))}(\[[\w,]+\])?=={_version()}"
+    assert any(re.fullmatch(pin, need) for need in _needs(package))
+
+
+def _workspace_needs(package: Path) -> set[str]:
+    """The packages of the workspace that ``package`` depends on."""
+    names = {str(_project(p)["name"]) for p in PACKAGES}
+    return {
+        name
+        for need in _needs(package)
+        if (name := re.split(r"[=<>!~\[; ]", need, maxsplit=1)[0]) in names
+    }
+
+
+def test_a_pin_inside_the_workspace_is_exact() -> None:
+    """Every dependency on another package of the workspace names its
+    version with ``==``."""
+    names = {str(_project(p)["name"]) for p in PACKAGES}
+    loose = [
+        f"{package.name}: {need}"
+        for package in PACKAGES
+        for need in _needs(package)
+        if re.split(r"[=<>!~\[; ]", need, maxsplit=1)[0] in names
+        and f"=={_version()}" not in need
+    ]
+    assert not loose
 
 
 @pytest.mark.parametrize("package", PACKAGES, ids=lambda p: p.name)
@@ -105,7 +144,7 @@ SHARED_CLASSIFIERS = (
 
 def test_the_packages_describe_themselves_alike() -> None:
     """The same Python versions, author, status and links, so that PyPI
-    shows the three as one release. Each points to its own README."""
+    shows the four as one release. Each points to its own README."""
     projects = [_project(package) for package in PACKAGES]
     for key in ("requires-python", "authors"):
         values = {json.dumps(project[key]) for project in projects}
@@ -127,15 +166,52 @@ def test_the_packages_describe_themselves_alike() -> None:
     assert len(links) == 1, f"the links differ: {sorted(links)}"
 
 
-def test_every_package_is_published() -> None:
-    """publish.yml uploads each package to PyPI: its name, its module for
-    the check of the wheel, and an environment of its own, named after
-    the package, since PyPI takes a pending publisher for one project
-    only."""
+def _publish_jobs() -> dict[str, dict[str, object]]:
+    """The PyPI jobs of publish.yml by package: the job's name, the jobs
+    it waits for, its environment and the module it hands on."""
     text = (ROOT / ".github" / "workflows" / "publish.yml").read_text("utf-8")
-    jobs = re.findall(r"- package: (\S+)\n\s+module: (\S+)\n", text)
-    assert set(jobs) == {(str(_project(p)["name"]), _module(p)) for p in PACKAGES}
-    assert "name: pypi-${{ matrix.package }}" in text
+    jobs: dict[str, dict[str, object]] = {}
+    for job, body in re.findall(r"^  (pypi-\S+):\n((?:    .*\n|\n)+)", text, re.M):
+        package = re.search(r"^\s+package: (\S+)$", body, re.M)
+        module = re.search(r"^\s+module: (\S+)$", body, re.M)
+        environment = re.search(r"^      name: (\S+)$", body, re.M)
+        needs = re.search(r"^    needs: \[(.*)\]$", body, re.M)
+        assert package and module and environment and needs, job
+        jobs[package.group(1)] = {
+            "job": job,
+            "module": module.group(1),
+            "environment": environment.group(1),
+            "needs": {n.strip() for n in needs.group(1).split(",")},
+        }
+    return jobs
+
+
+def test_every_package_is_published() -> None:
+    """publish.yml uploads each package to PyPI in a job of its own: its
+    name, its module for the check of the wheel, and an environment of
+    its own, named after the package, since PyPI takes a pending
+    publisher for one project only."""
+    jobs = _publish_jobs()
+    assert set(jobs) == {str(_project(p)["name"]) for p in PACKAGES}
+    for package in PACKAGES:
+        name = str(_project(package)["name"])
+        assert jobs[name]["module"] == _module(package)
+        assert jobs[name]["environment"] == f"pypi-{name}"
+
+
+def test_a_package_is_published_after_those_it_needs() -> None:
+    """A package that reaches PyPI before one it pins cannot be
+    installed. Each job waits for the checks and for the jobs of the
+    packages it needs. The client waits for the common package too, so
+    it may come to need it without a change here."""
+    jobs = _publish_jobs()
+    for package in PACKAGES:
+        name = str(_project(package)["name"])
+        needed = _workspace_needs(package)
+        if package == CLIENT:
+            needed.add(str(_project(COMMON)["name"]))
+        wanted = {"checks"} | {str(jobs[n]["job"]) for n in needed}
+        assert jobs[name]["needs"] == wanted, name
 
 
 # Every place the documentation names the current version, as a file and a
@@ -167,6 +243,7 @@ VERSION_EXAMPLES = [
     ("packages/mailbox-service/README.md", "image"),
     ("packages/mailbox-client/README.md", "status"),
     ("packages/mailbox-mcp/README.md", "status"),
+    ("packages/mailbox-common/README.md", "status"),
     ("packages/mailbox-mcp/README.md", "tag"),
     ("packages/mailbox-mcp/README.md", "image"),
 ]

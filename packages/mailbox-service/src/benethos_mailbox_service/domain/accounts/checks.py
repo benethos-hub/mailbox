@@ -12,9 +12,10 @@ from collections.abc import Mapping
 
 from pydantic import SecretStr
 
-from ...common import redact
+from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.values import text
+
 from ...common.hosts import is_server
-from ...common.text import has_break
 from ...data.models import Account, ProviderType
 from ...data.protocols import HostCheck
 from ...data.providers import (
@@ -100,7 +101,7 @@ def one_line_name(name: str | None) -> None:
         raise BadRequestError(
             f"the display name is longer than {LONGEST_NAME} characters"
         )
-    if has_break(name):
+    if text.has_break(name):
         raise BadRequestError(
             "the display name must not hold a line break or a control character"
         )

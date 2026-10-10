@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from benethos_mailbox_service.common.secret import (
+from benethos_mailbox_common.values.secret import (
     SHORT,
     digest,
     hmac_hex,

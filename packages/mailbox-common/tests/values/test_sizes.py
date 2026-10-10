@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from benethos_mailbox_service.common.sizes import MIB, megabytes
+from benethos_mailbox_common.values.sizes import MIB, megabytes
 
 
 def test_megabytes_are_whole() -> None:

@@ -1206,7 +1206,7 @@ the data, rather than a readable file.
   as `***`, in the message and in a traceback alike. The same happens to
   an error text before it goes into an API answer, a page or an
   account's last sync error. Values shorter than 6 characters are not
-  masked, and the newest 256 are kept (`common/redact.py`).
+  masked, and the newest 256 are kept (`log/redact.py` of `mailbox-common`).
   Which events are logged, at which level and with which fields, and
   what never goes into a line: [LOGGING.md](LOGGING.md).
 - **Deletion:** removing an account deletes its credential rows.
@@ -1673,7 +1673,8 @@ account and re-issuing every token.
 
 Its own package, `mailbox-mcp` (`benethos-mailbox-mcp` on PyPI), in the same uv workspace
 as the service (**decided 2026-09-24**). It depends on `mcp` and the
-Python client `mailbox-client` (8.2), `pypdfium2` for PDF pages, `platformdirs` and `python-dotenv` for its
+Python client `mailbox-client` (8.2), `mailbox-common`, which it shares
+with the service, `pypdfium2` for PDF pages, `python-dotenv` for its
 settings, and `uvicorn`, `starlette`, `anyio` and `pydantic`, which `mcp`
 brings too. It never depends on the service package or a mail library,
 so `uvx benethos-mailbox-mcp` stays small and the REST-only rule is
@@ -1876,7 +1877,7 @@ Its interface has no stability promise yet.
 | Area | Choice |
 |---|---|
 | Python | 3.11–3.14 |
-| Packaging | uv workspace with three distributions (service, client, MCP server), hatchling, `src/` layout |
+| Packaging | uv workspace with four distributions (service, client, MCP server, and what the service and the MCP server share), hatchling, `src/` layout |
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
 | Storage | SQLite (stdlib `sqlite3`) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |

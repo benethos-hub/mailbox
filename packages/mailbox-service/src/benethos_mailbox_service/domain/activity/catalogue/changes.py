@@ -7,8 +7,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
 
-from ....common.clock import log_time
-from ....common.text import plural
+from benethos_mailbox_common.log import lines
+from benethos_mailbox_common.values import text
+
 from ..base import Activity
 
 
@@ -25,6 +26,6 @@ class ChangesPurged(Activity):
 
     def says(self) -> str:
         return (
-            f"purged {plural(self.count, 'change')} older than "
-            f"{log_time(self.before)} from the change log"
+            f"purged {text.plural(self.count, 'change')} older than "
+            f"{lines.log_time(self.before)} from the change log"
         )

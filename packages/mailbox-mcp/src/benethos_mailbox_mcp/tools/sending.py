@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from typing import Any
+
+from benethos_mailbox_common.values import canonical, secret
 
 from .. import render
 from .base import changes, client
@@ -14,12 +14,10 @@ from .compose import Action, Addresses, Html, OriginalId, Text, composed
 def _idempotency_key(tool: str, account_id: str, arguments: Any) -> str:
     """The same call gives the same key: the service answers a repeat within
     24 hours with the first result instead of sending twice. Written as the
-    service writes the fingerprint of a request (``canonical`` in its
-    ``common``): keys sorted, no spaces, ASCII."""
-    call = json.dumps(
-        [tool, account_id, arguments], sort_keys=True, separators=(",", ":")
-    )
-    return "mcp-" + hashlib.sha256(call.encode("utf-8")).hexdigest()
+    service writes the fingerprint of a request (``canonical``): keys
+    sorted, no spaces, ASCII."""
+    call = canonical.canonical([tool, account_id, arguments])
+    return "mcp-" + secret.digest(call)
 
 
 async def send_message(

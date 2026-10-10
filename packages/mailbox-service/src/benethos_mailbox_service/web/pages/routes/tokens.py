@@ -9,8 +9,9 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import Response
 
+from benethos_mailbox_common.values import text
+
 from ....common.clock import utc_now
-from ....common.text import plural
 from ...services import Tokens, Users
 from ..deps import Actor
 from ..forms import FormError, failing
@@ -71,4 +72,4 @@ async def revoke_tokens(
     here = access_tab(user_id)
     with failing(here):
         revoked = tokens.revoke_tokens(caller, user_id, token or [])
-    return back(request, here, f"{plural(len(revoked), 'token')} revoked.")
+    return back(request, here, f"{text.plural(len(revoked), 'token')} revoked.")

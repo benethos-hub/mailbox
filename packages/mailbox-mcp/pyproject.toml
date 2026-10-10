@@ -57,6 +57,9 @@ dependencies = [
     "mcp>=2.0.0,<3",
     # The REST client. Released with this package under the same version.
     "benethos-mailbox-client==0.3.1",
+    # What the MCP server shares with the service. Released with this
+    # package under the same version.
+    "benethos-mailbox-common[paths]==0.3.1",
     # PDF attachments reach the model as page images (pdf.py).
     "pypdfium2>=4.30",
     # The HTTP transport (transport.py); mcp brings it too.
@@ -66,8 +69,6 @@ dependencies = [
     "starlette>=1.3.1",
     "anyio>=4.14.2",
     "pydantic>=2.12",
-    # The settings folder of the operating system (config.py).
-    "platformdirs>=4.3",
     # The optional settings file (config.py), read as the service reads its own.
     "python-dotenv>=1.2.2",
 ]

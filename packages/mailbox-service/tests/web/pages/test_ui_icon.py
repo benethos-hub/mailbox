@@ -107,6 +107,7 @@ READMES = {
     "packages/mailbox-service/README.md": _RAW,
     "packages/mailbox-client/README.md": _RAW,
     "packages/mailbox-mcp/README.md": _RAW,
+    "packages/mailbox-common/README.md": _RAW,
 }
 
 

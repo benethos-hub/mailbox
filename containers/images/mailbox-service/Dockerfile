@@ -5,8 +5,9 @@
 #
 #   docker build -f containers/images/mailbox-service/Dockerfile .
 #
-# Only the service package goes into the image, installed from the lockfile
-# without the development tools. The MCP server is not part of it.
+# Only the service package and the common package go into the image,
+# installed from the lockfile without the development tools. The MCP server
+# is not part of it.
 
 # Base images are named in FROM directly, so Dependabot can update them.
 

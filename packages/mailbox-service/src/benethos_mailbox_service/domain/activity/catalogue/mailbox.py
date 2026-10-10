@@ -13,8 +13,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
 
-from ....common.clock import log_time
-from ....common.text import plural
+from benethos_mailbox_common.log import lines
+from benethos_mailbox_common.values import text
+
 from ....data.models import Account
 from ..base import Activity, Failure, account
 
@@ -31,7 +32,7 @@ class MessageSent(Activity):
     def says(self) -> str:
         return (
             f"sent a message from {account(self.account)} to "
-            f"{plural(self.recipients, 'recipient')}: {self.message}"
+            f"{text.plural(self.recipients, 'recipient')}: {self.message}"
         )
 
 
@@ -131,8 +132,8 @@ class SendsPurged(Activity):
 
     def says(self) -> str:
         return (
-            f"purged {plural(self.count, 'record')} older than "
-            f"{log_time(self.before)} from the audit of sends"
+            f"purged {text.plural(self.count, 'record')} older than "
+            f"{lines.log_time(self.before)} from the audit of sends"
         )
 
 

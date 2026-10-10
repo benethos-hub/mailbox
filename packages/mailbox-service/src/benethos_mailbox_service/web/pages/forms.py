@@ -9,7 +9,8 @@ from typing import Any, TypeVar
 from fastapi.responses import Response
 from pydantic import BaseModel, ValidationError
 
-from ...common.redact import redact
+from benethos_mailbox_common.log import redact
+
 from ...errors import MailboxServiceError
 
 # A refused form comes back with this status, what was typed, the reason.
@@ -83,4 +84,6 @@ def failing(path: str, prefix: str = "", again: Again | None = None) -> Iterator
     try:
         yield
     except (MailboxServiceError, FormError) as exc:
-        raise FormFailedError(path, redact(f"{prefix}{exc.message}"), again) from None
+        raise FormFailedError(
+            path, redact.redact(f"{prefix}{exc.message}"), again
+        ) from None

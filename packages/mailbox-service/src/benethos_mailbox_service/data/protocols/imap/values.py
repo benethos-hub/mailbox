@@ -6,13 +6,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-from ....common.sizes import MIB
+from benethos_mailbox_common.values import sizes
+
 from ...mail import parse
 
 DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
 # A whole message larger than this is refused, as Graph answers are.
-MAX_MESSAGE_BYTES = 40 * MIB
+MAX_MESSAGE_BYTES = 40 * sizes.MIB
 # Headers beyond this are cut off: a list reads many at once.
 MAX_HEADER_BYTES = 256 * 1024
 

@@ -11,13 +11,6 @@ def utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-def log_time(value: datetime) -> str:
-    """A time as every line of the log writes it, wherever it stands:
-    ISO 8601, the local time of this machine, to the millisecond, with the
-    offset. ``2026-09-28T10:12:22.123+02:00``."""
-    return value.astimezone().isoformat(timespec="milliseconds")
-
-
 def start_of_day(day: date) -> datetime:
     """Midnight at the start of ``day`` in the local time of this machine,
     the time the UI shows."""

@@ -18,9 +18,12 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
+from benethos_mailbox_common.log import lines
+from benethos_mailbox_common.mail import addresses as readable_addresses
+from benethos_mailbox_common.values import text
+
 from ... import __version__
-from ...common.clock import log_time, utc_now
-from ...common.text import plural
+from ...common.clock import utc_now
 from ...common.urls import path_and_query
 from ...data.models import Address
 from ...domain.rights import Access
@@ -60,8 +63,8 @@ def ago(value: datetime | None) -> str:
     if seconds < _MINUTE:
         return "just now"
     if seconds < _HOUR:
-        return f"{plural(int(seconds // _MINUTE), 'minute')} ago"
-    return f"{plural(int(seconds // _HOUR), 'hour')} ago"
+        return f"{text.plural(int(seconds // _MINUTE), 'minute')} ago"
+    return f"{text.plural(int(seconds // _HOUR), 'hour')} ago"
 
 
 _MINUTE, _HOUR, _DAY = 60, 3600, 86400
@@ -87,7 +90,7 @@ def address(value: Address | None) -> str:
     """``Name <email>``, or the email alone."""
     if value is None:
         return MISSING
-    return f"{value.name} <{value.email}>" if value.name else value.email
+    return readable_addresses.readable(value.name, value.email)
 
 
 def addresses(values: Iterable[Address] | None) -> str:
@@ -123,7 +126,7 @@ templates.env.filters.update(
     when=when,
     ago=ago,
     past=past,
-    moment=log_time,
+    moment=lines.log_time,
     size=size,
     address=address,
     addresses=addresses,

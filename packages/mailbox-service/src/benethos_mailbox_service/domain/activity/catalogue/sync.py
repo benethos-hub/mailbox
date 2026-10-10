@@ -6,7 +6,8 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ....common.text import plural
+from benethos_mailbox_common.values import text
+
 from ....data.models import Account
 from ..base import Activity, Failure, account
 
@@ -38,7 +39,7 @@ class Synced(Activity):
 
     def says(self) -> str:
         return (
-            f"synced {account(self.account)}: {plural(self.folders, 'folder')}, "
+            f"synced {account(self.account)}: {text.plural(self.folders, 'folder')}, "
             f"+{self.created} -{self.deleted} ~{self.updated}"
         )
 

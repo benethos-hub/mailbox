@@ -20,7 +20,8 @@ from typing import Any
 import anyio
 import httpx
 
-from ....common.canonical import compact
+from benethos_mailbox_common.values import canonical
+
 from ....errors import ProviderError
 from ..transport import Pick
 from .api import MAX_BYTES, TIMEOUT, Answer
@@ -134,7 +135,7 @@ class ServerClient:
             else host
         )
         if json_body is not None:
-            content = compact(json_body).encode()
+            content = canonical.compact(json_body).encode()
             headers = {**(headers or {}), "Content-Type": "application/json"}
         request = pinned_request(
             self._client,

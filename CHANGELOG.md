@@ -72,6 +72,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The service and the MCP server install a fourth package,
+  `benethos-mailbox-common`, of the same version: what both of them
+  need. The MCP server's log is written as the service's: in colour on
+  a terminal unless `NO_COLOR` is set, and its tokens masked as `***`.
 - A wrong password or code asked once more before a step, such as the
   recovery key or new recovery codes, counts against the client address
   as a failed sign-in does, not only against the name. Ten from one
@@ -120,6 +124,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The MCP server writes a sender's name, a subject and a file name on
+  one line each. A line break in them could start a line inside the
+  mail's marker that looked like a header of its own.
+- The mail form of the UI shows a name with a double quote or a
+  backslash in it so that a reply or a forward reads it back as it was.
 - A Gmail or Microsoft account whose OAuth app is missing from the
   settings no longer breaks every page of the UI. The Accounts list
   says it cannot be used, it counts as needing attention, and it can be

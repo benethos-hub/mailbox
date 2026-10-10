@@ -18,8 +18,9 @@ from dataclasses import replace
 from datetime import datetime
 from typing import TypeVar
 
+from benethos_mailbox_common.values import text
+
 from ...common.clock import utc_now
-from ...common.text import escaped
 from ...errors import MailboxServiceError
 from .audit import Audit
 from .base import SERVICE, Activity, Failure
@@ -121,7 +122,7 @@ class ActivityLog:
         log = logger_of(type(activity))
         # The line is only built when it is written.
         if log.isEnabledFor(level):
-            log.log(level, "%s", escaped(activity.line()), exc_info=exc_info)
+            log.log(level, "%s", text.escaped(activity.line()), exc_info=exc_info)
 
     def purge(self) -> None:
         """The audit's records older than the days to keep, removed, and

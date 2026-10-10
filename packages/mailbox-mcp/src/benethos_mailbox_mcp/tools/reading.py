@@ -7,7 +7,10 @@ from typing import Annotated, Any
 import anyio
 from pydantic import Field
 
-from .. import pdf, plaintext, render
+from benethos_mailbox_common.mail import plaintext
+from benethos_mailbox_common.values import sizes
+
+from .. import pdf, render
 from ..errors import ToolError
 from .base import MAX_LIMIT, ToolResult, client, reads, result
 
@@ -106,12 +109,12 @@ async def get_message(
     return render.message(account_id, item, max_chars)
 
 
-MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+MAX_ATTACHMENT_BYTES = 10 * sizes.MIB
 
 
 # An image goes to the model in one piece, base64 in the result. Larger
 # ones go by name only.
-MAX_IMAGE_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_BYTES = 5 * sizes.MIB
 
 
 MAX_PAGES = 10

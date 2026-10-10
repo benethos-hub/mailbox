@@ -16,10 +16,11 @@ from urllib.parse import urlencode
 
 from pydantic import SecretStr
 
-from ....common import redact
+from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.values import secret
+
 from ....common.clock import utc_now
 from ....common.opaque import to_base64
-from ....common.secret import token
 from ....errors import NotSupportedError, ProviderError
 from .. import wire
 from ..http import ApiClient
@@ -43,7 +44,7 @@ DEVICE_INTERVAL = 5
 def new_pkce() -> Pkce:
     """A code verifier and its S256 challenge (RFC 7636)."""
     # 64 bytes: 86 characters, within the 43 to 128 the RFC allows.
-    verifier = token(64)
+    verifier = secret.token(64)
     digest = hashlib.sha256(verifier.encode("ascii")).digest()
     return Pkce(verifier, to_base64(digest))
 

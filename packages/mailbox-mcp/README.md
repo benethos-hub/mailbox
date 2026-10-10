@@ -188,7 +188,8 @@ claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
 The server writes its log to stderr only, since over stdio stdout
 carries the MCP messages. An MCP client keeps that log in its own files.
 Each line has the time, the level, where it comes from and the message,
-the time as the service writes it. At start it names the settings file
+written as the service writes its own: in colour on a terminal unless
+`NO_COLOR` is set, plain elsewhere, its tokens masked as `***`. At start it names the settings file
 it read, the transport, the service's address and the tools it serves,
 and warns where its token may read mail and send it to any address. Over
 HTTP without `MAILBOX_MCP_BEARER_TOKEN` it warns as well. A tool that

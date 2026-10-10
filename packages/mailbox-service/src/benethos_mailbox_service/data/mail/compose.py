@@ -18,8 +18,9 @@ from typing import NamedTuple
 
 from pydantic import ValidationError
 
-from ...common.plaintext import from_html
-from ...common.text import joined
+from benethos_mailbox_common.mail import addresses, plaintext
+from benethos_mailbox_common.values import text
+
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
 from .fields import ascii_domain, wire_address
 from .fields import message_id as one_message_id
@@ -119,7 +120,7 @@ def _headers(
         mail[REFERENCE_HEADER] = reference
     if message.reply_to:
         mail["Reply-To"] = ", ".join(_address(r) for r in message.reply_to)
-    mail["Subject"] = joined(message.subject)
+    mail["Subject"] = text.joined(message.subject)
     # RFC 5322 requires both. Without Date clients show no date.
     mail["Date"] = format_datetime(date)
     mail["Message-ID"] = message_id
@@ -136,9 +137,9 @@ def _parts(mail: EmailMessage, message: DraftMessage, extras: Extras) -> None:
         mail.add_alternative(message.html, subtype="html")
     files = [(a.filename, a.content_type, a.data) for a in message.attachments]
     for filename, content_type, data in [*extras.attachments, *files]:
-        maintype, _, subtype = joined(content_type).partition("/")
+        maintype, _, subtype = text.joined(content_type).partition("/")
         mail.add_attachment(
-            data, maintype=maintype, subtype=subtype, filename=joined(filename)
+            data, maintype=maintype, subtype=subtype, filename=text.joined(filename)
         )
     if extras.attached_message is not None:
         original = message_from_bytes(extras.attached_message, policy=default)
@@ -150,7 +151,7 @@ def body_text(message: DraftMessage) -> str:
     text made from its HTML, for clients that show text alone."""
     if message.text:
         return message.text
-    return from_html(message.html) if message.html else ""
+    return plaintext.from_html(message.html) if message.html else ""
 
 
 class Outgoing(NamedTuple):
@@ -203,7 +204,7 @@ def references(original_raw: bytes) -> tuple[str | None, tuple[str, ...]]:
 def prefixed(prefix: str, subject: str | None) -> str:
     """``Re: Subject`` or ``Fwd: Subject``, not ``Re: Re: Subject``. On one
     line, whatever the original's subject carried."""
-    subject = joined(subject or "").strip()
+    subject = text.joined(subject or "").strip()
     if subject.lower().startswith(prefix.lower()):
         return subject
     return f"{prefix} {subject}".strip()
@@ -247,8 +248,7 @@ def _who(address: Address | None) -> str:
     """Who wrote the original, for people to read."""
     if address is None:
         return "unknown"
-    name = joined(address.name or "")
-    return f"{name} <{address.email}>" if name else address.email
+    return addresses.readable(text.joined(address.name or ""), address.email)
 
 
 def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
@@ -277,5 +277,7 @@ def _formatted(name: str | None, email: str) -> str:
     it came from, the domain in punycode."""
     local, _, domain = wire_address(email).rpartition("@")
     return str(
-        HeaderAddress(display_name=joined(name or ""), username=local, domain=domain)
+        HeaderAddress(
+            display_name=text.joined(name or ""), username=local, domain=domain
+        )
     )

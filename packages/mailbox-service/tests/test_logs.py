@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import io
 import logging
 import logging.config
 import re
-import sys
-from datetime import datetime
 
 import pytest
 
+from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.log.lines import LEVELS, SOURCE_WIDTH
 from benethos_mailbox_service import logs
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.common import redact
 from benethos_mailbox_service.data.logbook import LogBook
 from benethos_mailbox_service.data.models import Grant
 
@@ -86,21 +84,10 @@ def test_uvicorn_writes_to_the_same_stream(capsys: pytest.CaptureFixture[str]) -
     assert 'uvicorn.access: 127.0.0.1:5000 - "GET /health HTTP/1.1" 200' in err
 
 
-@pytest.mark.parametrize("level", sorted(logs.LEVELS))
+@pytest.mark.parametrize("level", sorted(LEVELS))
 def test_every_level_of_the_settings_is_known(level: str) -> None:
     configure(level)
-    assert logging.getLogger(logs.PACKAGE).level == logs.LEVELS[level]
-
-
-def test_every_line_writes_the_time_alike() -> None:
-    """ISO 8601, local, to the millisecond, with the offset: the plain
-    line and the terminal alike."""
-    record = logging.makeLogRecord({"created": 1790590342.1239})
-    local = datetime.fromtimestamp(1790590342.1239).astimezone()
-    offset = local.isoformat()[-6:]
-    expected = f"{local:%Y-%m-%dT%H:%M:%S}.123{offset}"
-    assert logs.Redacting().formatTime(record) == expected
-    assert logs.Console().formatTime(record) == expected
+    assert logging.getLogger(logs.PACKAGE).level == LEVELS[level]
 
 
 # --- at a terminal --------------------------------------------------------------------
@@ -114,8 +101,8 @@ def test_a_terminal_gets_short_lines_in_colour(
     logging.getLogger(f"{logs.PACKAGE}.main").warning("a warning")
     err = capsys.readouterr().err
     # One column for the source, wide enough for every activity.
-    signed = "activity.auth.signed_in".ljust(logs.SOURCE_WIDTH)
-    main = "main".ljust(logs.SOURCE_WIDTH)
+    signed = "activity.auth.signed_in".ljust(SOURCE_WIDTH)
+    main = "main".ljust(SOURCE_WIDTH)
     assert f"\033[32mINFO    \033[0m \033[36m{signed}\033[0m anna signed in" in err
     assert f"\033[33mWARNING \033[0m \033[36m{main}\033[0m a warning" in err
     assert re.search(
@@ -139,7 +126,7 @@ def test_an_access_line_names_the_status_in_colour(
         '%s - "%s %s HTTP/%s" %d', "127.0.0.1:5000", "GET", "/ui", "1.1", status
     )
     err = capsys.readouterr().err
-    http = "http".ljust(logs.SOURCE_WIDTH)
+    http = "http".ljust(SOURCE_WIDTH)
     assert f"\033[36m{http}\033[0m GET /ui {shown}\033[0m" in err
     assert "\033[2m127.0.0.1:5000\033[0m" in err
 
@@ -168,23 +155,7 @@ def test_a_coloured_line_masks_secrets_and_keeps_a_traceback(
     ],
 )
 def test_the_source_is_short(name: str, short: str) -> None:
-    assert logs.short_source(name) == short
-
-
-class Terminal(io.StringIO):
-    def isatty(self) -> bool:
-        return True
-
-
-def test_colours_on_a_terminal_unless_no_color(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("NO_COLOR", raising=False)
-    monkeypatch.setattr(sys, "stderr", Terminal())
-    assert logs.colours_wanted()
-    monkeypatch.setenv("NO_COLOR", "1")
-    assert not logs.colours_wanted()
-    monkeypatch.delenv("NO_COLOR")
-    monkeypatch.setattr(sys, "stderr", io.StringIO())
-    assert not logs.colours_wanted()
+    assert logs.source_of(name) == short
 
 
 @pytest.mark.parametrize("colours", [False, True])

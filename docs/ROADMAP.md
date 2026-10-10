@@ -371,6 +371,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   exceptions. A secret shown once comes as a `Secret`. The live checks
   administer through it (`live/checks/admin.py`, `accounts.py`,
   `live/register.py`)
+- **A fourth package, `mailbox-common` ([REFACTORING.md](REFACTORING.md)
+  15)**, decided 2026-10-09, done: what the service and the MCP server
+  both need, held once. The MCP server's log is the service's, with
+  colours and masking
 
 ## Keeping this file current
 

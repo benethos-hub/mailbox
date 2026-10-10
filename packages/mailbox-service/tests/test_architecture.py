@@ -28,9 +28,10 @@ LAYERS = {"data": 0, "domain": 1, "web": 2}
 # A module (config.py) or a package (common/).
 CROSS_CUTTING = {"config", "errors", "common"}
 
-# Shared helpers: the standard library, anyio and each other, nothing else.
+# Shared helpers: the standard library, anyio, the common package and each
+# other, nothing else.
 HELPERS = "common"
-HELPER_LIBRARIES = {"anyio"}
+HELPER_LIBRARIES = {"anyio", "benethos_mailbox_common"}
 
 # Assemble the app from the layers and may therefore reach anywhere.
 ASSEMBLY = {"assembly", "cli", "__main__", "logs"}
@@ -53,7 +54,8 @@ LIBRARY_HOMES = {
     "defusedxml": f"{PACKAGE}.data.discovery.autoconfig",
     "publicsuffixlist": f"{PACKAGE}.data.discovery.suffix",
     "jinja2": f"{PACKAGE}.web.pages.templates",
-    "platformdirs": f"{PACKAGE}.config",
+    # The folders of the operating system come from the common package.
+    "platformdirs": "benethos_mailbox_common.paths.folders",
     "segno": f"{PACKAGE}.web.pages.qr",
 }
 

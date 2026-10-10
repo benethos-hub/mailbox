@@ -20,7 +20,8 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from ....common.redact import redact
+from benethos_mailbox_common.log import redact
+
 from ....data.models import ProviderType
 from ....domain.accounts import DeviceSignIn
 from ....errors import MailboxServiceError
@@ -131,7 +132,7 @@ async def device_check(
             error = f"{kind.value} has not seen the sign-in yet."
             return _device_page(request, started, here, err=error)
     except MailboxServiceError as exc:
-        return _leave(request, back(request, here, error=redact(exc.message)))
+        return _leave(request, back(request, here, error=redact.redact(exc.message)))
     if account is None:
         return Response(status_code=204)
     page = f"/ui/accounts/{account.id}"

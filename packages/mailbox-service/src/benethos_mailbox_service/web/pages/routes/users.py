@@ -7,7 +7,8 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
-from ....common.text import plural
+from benethos_mailbox_common.values import text
+
 from ....common.urls import path_and_query
 from ....data.models import ActivityFilter
 from ....domain.rights import Access
@@ -110,7 +111,7 @@ async def change_users(
     refused = "; ".join(f"{name}: {why}" for name, why in done.refused)
     if refused:
         return back(request, here, None, f"Nothing changed. {refused}.")
-    message = f"{plural(len(done.changed), 'user')} changed."
+    message = f"{text.plural(len(done.changed), 'user')} changed."
     return back(request, here, message if done.changed else "Nothing to change.")
 
 

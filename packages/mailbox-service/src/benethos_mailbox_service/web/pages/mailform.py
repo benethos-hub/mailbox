@@ -17,7 +17,9 @@ from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 from starlette.datastructures import UploadFile
 
-from ...common.secret import SHORT, token
+from benethos_mailbox_common.mail import addresses
+from benethos_mailbox_common.values import secret
+
 from ...data.models import (
     Account,
     Address,
@@ -47,8 +49,9 @@ class ComposeError(FormError):
 
 
 def addresses_text(values: list[Address]) -> str:
-    """Addresses as the form shows them."""
-    return ", ".join(f'"{a.name}" <{a.email}>' if a.name else a.email for a in values)
+    """Addresses as the form shows them, a name quoted, so they come
+    back as they were."""
+    return ", ".join(addresses.readable(a.name, a.email, quoted=True) for a in values)
 
 
 def recipients(field: str, value: str) -> list[Recipient]:
@@ -161,7 +164,7 @@ def show(
         error=error,
         # A new key each time the form is shown: a retry of this form, and
         # only that, is the same send.
-        idempotency_key=token(SHORT),
+        idempotency_key=secret.token(secret.SHORT),
         can_send=caller.allows(
             "send_draft" if draft_id else "send_message", account_id
         ),

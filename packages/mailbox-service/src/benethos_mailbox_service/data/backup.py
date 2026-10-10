@@ -25,15 +25,16 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import BinaryIO
 
+from benethos_mailbox_common.values import sizes
+
 from ..common.clock import iso, utc_now
-from ..common.sizes import MIB
 from .files import LockedError, create_private, exclusive_lock
 from .secrets import cipher
 from .storage import SCHEMA_VERSION, Store, inspect_file, migrate_file, service_lock
 
 MAGIC = b"MAILBOX-SERVICE-BACKUP 2\n"
 MAGIC_1 = b"MAILBOX-SERVICE-BACKUP 1\n"
-BLOCK = MIB
+BLOCK = sizes.MIB
 _KEY_INFO = b"mailbox-service backup v1"
 # The longest manifest line read: it holds four short fields.
 _MANIFEST_BYTES = 4096

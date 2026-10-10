@@ -14,10 +14,11 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import Literal
 
+from benethos_mailbox_common.values import secret
+
 from ...common.clock import utc_now
 from ...common.locks import KeyedLocks
 from ...common.retention import Retention
-from ...common.secret import new_id
 from ...data.models import (
     Page,
     SendFilter,
@@ -82,7 +83,7 @@ class SendControl:
                 self._store.add(
                     SendRecord.model_validate(
                         {
-                            "id": new_id("snd"),
+                            "id": secret.new_id("snd"),
                             "created_at": self._clock(),
                             "user_id": access.user_id,
                             "credential_id": access.credential_id,

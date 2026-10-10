@@ -9,8 +9,10 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 
 from pydantic import SecretStr
 
+# Named apart from a secret of its own.
+from benethos_mailbox_common.values import secret as secret_values
+
 from ...common.hosts import address_problem
-from ...common.secret import new_id
 from ...data.models import Account, AccountStatus, Page, ProviderType
 from ...data.protocols import HostCheck
 from ...data.providers import ProviderSettings, Tokens, settings_defaults
@@ -168,7 +170,7 @@ class AccountService:
                 signed_in,
             )
         account = Account(
-            id=new_id("acc"),
+            id=secret_values.new_id("acc"),
             provider=provider,
             email=email,
             display_name=display_name,

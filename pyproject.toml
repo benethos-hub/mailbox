@@ -1,13 +1,14 @@
-# Workspace root. Not a package itself: it holds the three distributions
+# Workspace root. Not a package itself: it holds the four distributions
 # under packages/, the shared development tools and the tool configuration.
 #
 #   packages/mailbox-service  the service: REST API, adapters, credential store
 #   packages/mailbox-client   the Python client of the REST API
 #   packages/mailbox-mcp      the MCP server, on top of the client
+#   packages/mailbox-common   what the service and the MCP server share
 #
 # Neither the client nor the MCP package depends on the service package.
 # That is what keeps them REST clients: they cannot import an adapter
-# because they cannot see one.
+# because they cannot see one. The common package sees none of the others.
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -16,12 +17,14 @@ members = ["packages/*"]
 benethos-mailbox-service = { workspace = true }
 benethos-mailbox-mcp = { workspace = true }
 benethos-mailbox-client = { workspace = true }
+benethos-mailbox-common = { workspace = true }
 
 [dependency-groups]
 dev = [
     "benethos-mailbox-service",
     "benethos-mailbox-mcp",
     "benethos-mailbox-client",
+    "benethos-mailbox-common[all]",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.0",
     "pytest-cov>=7.1.0",
@@ -38,6 +41,7 @@ testpaths = [
     "packages/mailbox-service/tests",
     "packages/mailbox-client/tests",
     "packages/mailbox-mcp/tests",
+    "packages/mailbox-common/tests",
 ]
 asyncio_mode = "auto"
 # The packages have tests with the same file names (test_cli.py, ...).
@@ -48,6 +52,7 @@ source = [
     "benethos_mailbox_service",
     "benethos_mailbox_client",
     "benethos_mailbox_mcp",
+    "benethos_mailbox_common",
 ]
 branch = true
 
@@ -96,6 +101,7 @@ files = [
     "packages/mailbox-service/src",
     "packages/mailbox-client/src",
     "packages/mailbox-mcp/src",
+    "packages/mailbox-common/src",
     # The live checks run by hand: a break shows here, not in a run.
     "live",
 ]

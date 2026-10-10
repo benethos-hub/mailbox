@@ -4,6 +4,7 @@
 [![PyPI benethos-mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
 [![PyPI benethos-mailbox-mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20benethos-mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
 [![PyPI benethos-mailbox-client](https://img.shields.io/pypi/v/benethos-mailbox-client?label=PyPI%20benethos-mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
+[![PyPI benethos-mailbox-common](https://img.shields.io/pypi/v/benethos-mailbox-common?label=PyPI%20benethos-mailbox-common)](https://pypi.org/project/benethos-mailbox-common/)
 [![Container benethos-mailbox-service](https://img.shields.io/badge/ghcr.io-benethos--mailbox--service-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-service)
 [![Container benethos-mailbox-mcp](https://img.shields.io/badge/ghcr.io-benethos--mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
@@ -136,17 +137,19 @@ Planned next: threads across folders. The order is in
 Not supportable: Tuta, which offers no IMAP and no API. Details per
 provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
 
-## The three packages
+## The four packages
 
 | Package | What it is | Runs | Read more |
 |---|---|---|---|
 | `mailbox-service` | the service: REST API, configuration UI, users and rights, accounts, encrypted credentials, provider adapters, background sync | permanently | [packages/mailbox-service](packages/mailbox-service/README.md) |
 | `mailbox-client` | the Python client of the REST API, async and sync | inside your own code | [packages/mailbox-client](packages/mailbox-client/README.md) |
 | `mailbox-mcp` | the MCP server, on top of `mailbox-client` | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
+| `mailbox-common` | what the service and the MCP server share | installed with them | [packages/mailbox-common](packages/mailbox-common/README.md) |
 
-A release publishes all three to PyPI under the same version, as
-`benethos-mailbox-service`, `benethos-mailbox-client` and
-`benethos-mailbox-mcp`, and the service and the MCP server as container
+A release publishes all four to PyPI under the same version, as
+`benethos-mailbox-service`, `benethos-mailbox-client`,
+`benethos-mailbox-mcp` and `benethos-mailbox-common`, and the service
+and the MCP server as container
 images on ghcr.io. Each package has its own README. It explains how
 to install, start and configure it, for the service and the MCP server
 with the container image and the compose file.
@@ -193,7 +196,7 @@ with the container image and the compose file.
 
 ## Development
 
-One uv workspace, one lockfile, three distributions.
+One uv workspace, one lockfile, four distributions.
 
 ```
 uv sync

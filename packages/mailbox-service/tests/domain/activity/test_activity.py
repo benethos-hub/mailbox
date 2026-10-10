@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service import logs
+from benethos_mailbox_common.log.lines import SOURCE_WIDTH
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.assembly.lifecycle import _loop
 from benethos_mailbox_service.data.models import (
@@ -115,7 +115,7 @@ def test_each_activity_has_a_level_a_line_and_no_secret(cls: type[Activity]) -> 
     assert "name" in vars(cls), "each activity sets its name"
     assert NAME.fullmatch(cls.name), cls.name
     assert not cls.name.startswith(cls.area.rstrip("s") + "_"), "the area twice"
-    assert len(cls.source()) <= logs.SOURCE_WIDTH, cls.source()
+    assert len(cls.source()) <= SOURCE_WIDTH, cls.source()
     assert cls.level in LEVELS
     assert cls.says is not Activity.says, "says() writes the line"
     hints = typing.get_type_hints(cls)
