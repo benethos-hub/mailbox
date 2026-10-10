@@ -35,18 +35,19 @@ jobs:
       - name: Mypy (type check)
         run: uv run mypy
 
-  # The run on 3.14 measures the coverage and its floor as well. Before
-  # 3.14, measuring the branches took about as long again as the tests
-  # themselves. The name stays test (<version>), which main requires.
+  # The run on the newest version, 3.15, measures the coverage and its
+  # floor as well. Before 3.14, measuring the branches took about as long
+  # again as the tests themselves. The name stays test (<version>), which
+  # main requires.
   test:
     name: test (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
         include:
-          - python-version: "3.14"
+          - python-version: "3.15"
             coverage: true
     steps:
       - uses: actions/checkout@v7

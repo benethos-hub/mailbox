@@ -1876,7 +1876,7 @@ Its interface has no stability promise yet.
 
 | Area | Choice |
 |---|---|
-| Python | 3.11–3.14 |
+| Python | 3.11–3.15 |
 | Packaging | uv workspace with four distributions (service, client, MCP server, and what the service and the MCP server share), hatchling, `src/` layout |
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
 | Storage | SQLite (stdlib `sqlite3`) |

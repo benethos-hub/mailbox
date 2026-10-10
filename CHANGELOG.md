@@ -69,6 +69,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `Token`, `Webhook` and `Activity`, a list that pages as `Paged`. A
   secret shown once, a new token, a one-time password or a signing
   secret, comes as a `Secret`, kept out of `repr` and `str`.
+- Python 3.15. The packages support 3.11 to 3.15. The images stay on
+  3.14 until a Python 3.15 base image exists.
 
 ### Changed
 
