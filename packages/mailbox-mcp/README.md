@@ -143,8 +143,9 @@ in the settings folder of the operating system:
 `%LOCALAPPDATA%\benethos-mailbox-mcp\config` on Windows,
 `~/.config/benethos-mailbox-mcp` on Linux,
 `~/Library/Application Support/benethos-mailbox-mcp/config` on macOS.
-It sets only `MAILBOX_MCP_*` and `MAILBOX_SERVICE_*`. It holds the API
-token, so keep it readable by its owner alone. Template:
+It is read for `MAILBOX_MCP_*` and `MAILBOX_SERVICE_*` alone. A
+wrong value stops the start and names the setting. The file holds the
+API token, so keep it readable by its owner alone. Template:
 [config/benethos-mailbox-mcp/.env.example](https://github.com/benethos-hub/mailbox/blob/main/config/benethos-mailbox-mcp/.env.example).
 
 `MAILBOX_SERVICE_URL` takes `https` anywhere and `http` to this machine

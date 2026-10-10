@@ -1,22 +1,22 @@
-"""The command line of the MCP server: its options, the environment
-``MAILBOX_MCP_*`` and the settings file, the log, and the start over stdio
-or streamable HTTP.
+"""The command line of the MCP server: its options over the settings
+(``config``), the log, and the start over stdio or streamable HTTP.
 The tools and what the token may do are ``server``'s."""
 
 from __future__ import annotations
 
 import argparse
 import logging
-import os
 import sys
 from pathlib import Path
+from typing import get_args
 
 import anyio
+from pydantic import ValidationError
 
 from benethos_mailbox_common.log import lines, redact
 
 from . import __version__, config, server, tools, transport
-from .client import Connect, connector, from_environment
+from .client import Connect, Environment, connector, from_environment
 from .errors import MailboxError, ToolError
 
 logger = logging.getLogger(__name__)
@@ -31,19 +31,15 @@ async def _at_start(connect: Connect) -> set[str]:
             return await server.allowed_operations()
 
 
-TRANSPORTS = ("stdio", "streamable-http")
-LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
-
-
-def _env(name: str, default: str) -> str:
-    return os.environ.get(f"MAILBOX_MCP_{name}") or default
+TRANSPORTS = get_args(config.Transport)
+LOG_LEVELS = get_args(config.LogLevel)
 
 
 def _build_parser() -> argparse.ArgumentParser:
     """Options on the command line win over ``MAILBOX_MCP_*`` in the
     environment, which win over the settings file, which wins over the
-    defaults. The bearer token has no option: an argument shows in the
-    process list."""
+    defaults of ``config.Settings``. The bearer token has no option: an
+    argument shows in the process list."""
     parser = argparse.ArgumentParser(prog="benethos-mailbox-mcp")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
@@ -54,46 +50,56 @@ def _build_parser() -> argparse.ArgumentParser:
         f"{config.ENV_FILE} if it exists, else .env in the config folder of "
         "the operating system. The environment wins over it.",
     )
-    parser.add_argument(
-        "--transport", choices=TRANSPORTS, default=_env("TRANSPORT", "stdio")
-    )
-    parser.add_argument("--host", default=_env("HOST", "127.0.0.1"))
-    # A default given as text passes through type, so a bad port from the
-    # environment is refused like one on the command line.
-    parser.add_argument("--port", type=int, default=_env("PORT", "8000"))
-    parser.add_argument("--path", default=_env("PATH", "/mcp"))
+    # No defaults here: an option not given leaves its setting to the
+    # environment, the file and config.Settings.
+    parser.add_argument("--transport", choices=TRANSPORTS)
+    parser.add_argument("--host")
+    parser.add_argument("--port", type=int)
+    parser.add_argument("--path")
     parser.add_argument(
         "--allowed-hosts",
-        default=_env("ALLOWED_HOSTS", ""),
         help="comma-separated Host values, e.g. mcp.example.org:443",
     )
-    parser.add_argument(
-        "--allowed-origins",
-        default=_env("ALLOWED_ORIGINS", ""),
-        help="comma-separated Origin values",
-    )
-    parser.add_argument(
-        "--log-level",
-        default=_env("LOG_LEVEL", "INFO"),
-        type=str.upper,
-        choices=LOG_LEVELS,
-    )
+    parser.add_argument("--allowed-origins", help="comma-separated Origin values")
+    parser.add_argument("--log-level", type=str.upper, choices=LOG_LEVELS)
     return parser
 
 
-def _check_environment(
-    parser: argparse.ArgumentParser, args: argparse.Namespace
-) -> None:
-    """argparse checks choices on the command line only, not a default
-    read from the environment."""
-    for name, value, allowed in (
-        ("TRANSPORT", args.transport, TRANSPORTS),
-        ("LOG_LEVEL", args.log_level, LOG_LEVELS),
-    ):
-        if value not in allowed:
-            parser.error(
-                f"MAILBOX_MCP_{name} must be one of {', '.join(allowed)}, not {value!r}"
-            )
+def _settings(
+    parser: argparse.ArgumentParser, args: argparse.Namespace, found: Path | None
+) -> config.Settings:
+    """The settings, the options first. A wrong value is refused as
+    argparse refuses an option, with the setting's name. A token's value
+    is never shown."""
+    try:
+        return config.load_settings(
+            found,
+            transport=args.transport,
+            host=args.host,
+            port=args.port,
+            path=args.path,
+            allowed_hosts=args.allowed_hosts,
+            allowed_origins=args.allowed_origins,
+            log_level=args.log_level,
+        )
+    except ValidationError as exc:
+        problems = []
+        for error in exc.errors():
+            name = config.variable(str(error["loc"][0]))
+            shown = "" if "TOKEN" in name else f", not {error['input']!r}"
+            problems.append(f"{name}: {error['msg']}{shown}")
+        parser.error("; ".join(problems))
+
+
+def _service(settings: config.Settings) -> Environment:
+    """The service as the settings name it. Without an address, the
+    client's default."""
+    token = settings.service_token
+    return Environment(
+        url=(settings.service_url or from_environment().url).rstrip("/"),
+        token=token.get_secret_value() if token else "",
+        allow_http=settings.service_allow_http,
+    )
 
 
 def _csv(value: str) -> list[str]:
@@ -113,28 +119,22 @@ def configure_logging(level: str) -> None:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
-def _settings_file(argv: list[str] | None) -> Path | None:
-    """The settings file put into the environment, before the options read
-    their defaults from there."""
-    early = argparse.ArgumentParser(add_help=False)
-    early.add_argument("--env-file", type=Path, default=None)
-    try:
-        return config.load(early.parse_known_args(argv)[0].env_file)
-    except FileNotFoundError as exc:
-        sys.exit(f"benethos-mailbox-mcp: {exc}")
-
-
 def main(argv: list[str] | None = None) -> None:
-    loaded = _settings_file(argv)
     parser = _build_parser()
     args = parser.parse_args(argv)
-    _check_environment(parser, args)
-    configure_logging(args.log_level)
-    if loaded is not None:
-        logger.info("Settings from %s", loaded)
-    environment = from_environment()
+    try:
+        found = config.settings_file(args.env_file)
+    except FileNotFoundError as exc:
+        sys.exit(f"benethos-mailbox-mcp: {exc}")
+    settings = _settings(parser, args, found)
+    configure_logging(settings.log_level)
+    if found is not None:
+        logger.info("Settings from %s", found)
+    environment = _service(settings)
+    bearer = settings.bearer_token
+    token = bearer.get_secret_value() if bearer else None
     # No line names either token. Noted, a slip still writes ***.
-    for secret in (environment.token, transport.token_from_env()):
+    for secret in (environment.token, token):
         if secret:
             redact.note(secret)
     connect = connector(environment)
@@ -143,16 +143,17 @@ def main(argv: list[str] | None = None) -> None:
     except (MailboxError, ToolError) as exc:
         sys.exit(f"benethos-mailbox-mcp: {exc}")
     built = server.build_server(operations, connect)
-    server.started(operations, args.transport, environment.url)
-    if args.transport == "stdio":
-        transport.serve_stdio(built)
+    server.started(operations, settings.transport, environment.url)
+    if settings.transport == "stdio":
+        transport.serve_stdio(built, token)
         return
     transport.serve_http(
         built,
-        host=args.host,
-        port=args.port,
-        path=args.path,
-        allowed_hosts=_csv(args.allowed_hosts),
-        allowed_origins=_csv(args.allowed_origins),
-        log_level=args.log_level,
+        host=settings.host,
+        port=settings.port,
+        path=settings.path,
+        allowed_hosts=_csv(settings.allowed_hosts),
+        allowed_origins=_csv(settings.allowed_origins),
+        log_level=settings.log_level,
+        token=token,
     )

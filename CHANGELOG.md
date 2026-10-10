@@ -74,6 +74,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The MCP server reads its settings as the service does, through
+  `benethos-mailbox-common[settings]`, and no longer needs
+  `python-dotenv`. A wrong value in the environment or the settings
+  file stops the start and names the setting. The settings file no
+  longer changes the environment of the process.
 - The service and the MCP server install a fourth package,
   `benethos-mailbox-common`, of the same version: what both of them
   need. The MCP server's log is written as the service's: in colour on

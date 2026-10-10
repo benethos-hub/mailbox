@@ -24,7 +24,8 @@ version of the other packages, and the service and the MCP server pin
 it to their own.
 
 It needs the standard library alone. The extra `paths` brings
-platformdirs for the folders of the operating system, and `all` brings
-every extra.
+platformdirs for the folders of the operating system, `settings`
+pydantic-settings for a program's settings, and `all` brings every
+extra.
 
 It sees neither the service, nor the MCP server, nor the client.

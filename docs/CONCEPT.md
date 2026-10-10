@@ -1261,7 +1261,8 @@ the data, rather than a readable file.
   `config/benethos-mailbox-mcp/.env` in the working directory, else
   `.env` in its config folder of the operating system
   (`benethos-mailbox-mcp` in place of `benethos-mailbox-service` above).
-  It sets only `MAILBOX_MCP_*` and `MAILBOX_SERVICE_*`. The environment
+  It is read for `MAILBOX_MCP_*` and `MAILBOX_SERVICE_*` alone and
+  changes nothing of the process's environment. The environment
   wins over the file and the command line over both, so an MCP client
   that passes the settings in its own configuration is not affected. The
   file can hold the API token: it belongs in the config folder, readable
@@ -1674,9 +1675,9 @@ account and re-issuing every token.
 Its own package, `mailbox-mcp` (`benethos-mailbox-mcp` on PyPI), in the same uv workspace
 as the service (**decided 2026-09-24**). It depends on `mcp` and the
 Python client `mailbox-client` (8.2), `mailbox-common`, which it shares
-with the service, `pypdfium2` for PDF pages, `python-dotenv` for its
-settings, and `uvicorn`, `starlette`, `anyio` and `pydantic`, which `mcp`
-brings too. It never depends on the service package or a mail library,
+with the service and through which it reads its settings, `pypdfium2`
+for PDF pages, and `uvicorn`, `starlette`, `anyio` and `pydantic`, which
+`mcp` brings too. It never depends on the service package or a mail library,
 so `uvx benethos-mailbox-mcp` stays small and the REST-only rule is
 enforced by the dependency list itself. A test checks that no module
 imports the service.

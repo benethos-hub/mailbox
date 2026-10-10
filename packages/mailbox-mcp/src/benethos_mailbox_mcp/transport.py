@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import hmac
 import logging
-import os
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -30,11 +29,6 @@ _REFUSED = b'{"error":{"code":"unauthorized","message":"bearer token required"}}
 
 # Binds only this machine can reach.
 LOCALHOST_BINDS = frozenset({"127.0.0.1", "localhost", "::1"})
-
-
-def token_from_env() -> str | None:
-    """The bearer token. Unset or blank means no guard."""
-    return (os.environ.get(ENV_VAR) or "").strip() or None
 
 
 def bearer_middleware(app: ASGIApp, token: str) -> ASGIApp:
@@ -142,9 +136,9 @@ def run_http(app: ASGIApp, *, host: str, port: int, log_level: str) -> None:
     uvicorn.Server(config).run()
 
 
-def serve_stdio(server: MCPServer) -> None:
-    """Over the client's own pipes: no port, so no token."""
-    if token_from_env() is not None:
+def serve_stdio(server: MCPServer, token: str | None) -> None:
+    """Over the client's own pipes: no port, so no ``token``."""
+    if token is not None:
         logger.warning(
             "%s is set, but stdio has no port anyone could reach: the "
             "client owns this process, so the token is ignored",
@@ -163,9 +157,10 @@ def serve_http(
     allowed_hosts: list[str],
     allowed_origins: list[str],
     log_level: str,
+    token: str | None,
 ) -> None:
-    """Over streamable HTTP, behind the bearer guard where a token is set."""
-    token = token_from_env()
+    """Over streamable HTTP, behind the bearer guard where ``token`` is
+    set."""
     logger.info(
         "Starting mailbox-mcp (streamable HTTP) on http://%s:%s%s",
         host,

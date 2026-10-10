@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Literal, Self
 
 from pydantic import Field, SecretStr, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Named apart from folders() below.
 from benethos_mailbox_common.paths import folders as system
+from benethos_mailbox_common.settings import files
 
 APP = "benethos-mailbox-service"
 # The layout of the repository, relative to the working directory. The
@@ -32,15 +32,14 @@ PATH_SETTINGS = (
 )
 
 
-class Settings(BaseSettings):
+class Settings(files.FileSettings):
     """Every setting of the REST service. Prefix ``MAILBOX_SERVICE_``."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="MAILBOX_SERVICE_",
-        env_file=ENV_FILE,
-        extra="ignore",
-        populate_by_name=True,
-    )
+    model_config = {
+        "env_prefix": "MAILBOX_SERVICE_",
+        "env_file": ENV_FILE,
+        "populate_by_name": True,
+    }
 
     host: str = "127.0.0.1"
     port: int = Field(default=8080, ge=1, le=65535)
@@ -269,7 +268,7 @@ def load_settings(env_file: Path | None = None) -> Settings:
     where = folders(env_file)
     if where.origin == "named" and not where.env_file.is_file():
         raise FileNotFoundError(f"settings file {where.env_file} not found")
-    settings = Settings(_env_file=where.env_file if where.env_file.is_file() else None)
+    settings = files.load(Settings, where.env_file)
     if where.origin == "working directory":
         return settings
     moved: dict[str, Path] = {
