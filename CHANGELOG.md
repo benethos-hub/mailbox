@@ -165,6 +165,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The MCP server's text of an HTML mail keeps a link's address after
   its text and puts a dash before each list item, as the mail page
   does.
+- The text of an HTML mail keeps text whose colour and background are
+  alike only by a keyword such as `inherit` or `currentcolor`. Only
+  colours of their own count, such as `#fff`, `rgb(...)` or `white`.
+  `left` and `top` far off the page hide text only with `position`
+  `absolute`, `fixed` or `relative`.
+
+### Security
+
+- A secret shown once in the UI goes when its 5 minutes run out, at
+  the next request of its session or the next sign-in of anyone, not
+  only at the next page that could show it.
+- The audit keeps `auth.session_evicted` when a sign-in ends the
+  user's oldest session of the UI, and `users.change_refused` for each
+  user a batch of the Users list could not change.
 
 ## [0.3.1] - 2026-10-08
 

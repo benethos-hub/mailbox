@@ -29,6 +29,18 @@ _SMALLEST_PX = 2.0
 _SMALLEST_RELATIVE = 0.2
 # A text pushed this far left or up is off any screen.
 _FAR_OFF_PX = -500.0
+# Only these let ``left`` and ``top`` move an element.
+_POSITIONED = {"absolute", "fixed", "relative"}
+# Values of a colour that name no colour of their own. Two of them
+# alike say nothing about what a reader sees.
+_NOT_A_COLOUR = {
+    "inherit",
+    "initial",
+    "unset",
+    "revert",
+    "revert-layer",
+    "currentcolor",
+}
 
 
 def hides(style: str) -> bool:
@@ -43,7 +55,8 @@ def hides(style: str) -> bool:
         if colon:
             rules[name.strip().lower()] = " ".join(value.lower().split())
     size = _css_length(rules.get("font-size"))
-    indent = [_css_length(rules.get(key)) for key in ("text-indent", "left", "top")]
+    moved = ("left", "top") if rules.get("position") in _POSITIONED else ()
+    indent = [_css_length(rules.get(key)) for key in ("text-indent", *moved)]
     cut = any(
         _css_length(rules.get(key)) == (0.0, "px") for key in ("height", "max-height")
     )
@@ -56,10 +69,20 @@ def hides(style: str) -> bool:
         or (cut and rules.get("overflow") == "hidden")
         or rules.get("color") == "transparent"
         or (
-            "color" in rules
+            _colour(rules.get("color"))
             and rules["color"] == rules.get("background-color", rules.get("background"))
         )
     )
+
+
+def _colour(value: str | None) -> bool:
+    """Whether a CSS value is a colour of its own: ``#...``, ``rgb(...)``,
+    ``hsl(...)`` or a named colour. Not ``inherit`` and the like."""
+    if value is None:
+        return False
+    if value.startswith(("#", "rgb(", "rgba(", "hsl(", "hsla(")):
+        return True
+    return value.isalpha() and value not in _NOT_A_COLOUR
 
 
 def _css_length(value: str | None) -> tuple[float, str] | None:

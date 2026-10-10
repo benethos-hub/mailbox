@@ -282,7 +282,7 @@ class UserService:
         """One change to each of several users, as ``update_user`` makes
         it: within the caller's rights, recorded per user. Every user is
         changed or none (docs/UI.md 4.1): a user it cannot change is named
-        with the reason, and nothing changes. ``action`` is one of
+        with the reason, and recorded, and nothing changes. ``action`` is one of
         ``BATCH_ACTIONS``, the role ones with ``role``."""
         if action not in BATCH_ACTIONS:
             raise BadRequestError(f"no such change of users: {action}")
@@ -295,7 +295,18 @@ class UserService:
             try:
                 one = self._plan_one(access, user_id, action, role or "")
             except MailboxServiceError as exc:
-                refused.append((self._name_of(user_id), exc.message))
+                name = self._name_of(user_id)
+                refused.append((name, exc.message))
+                self._activity.record(
+                    said.UserChangeRefused(
+                        by=Actor.of(access),
+                        user_id=user_id,
+                        user_name=name,
+                        action=action,
+                        role=role,
+                        reason=exc.message,
+                    )
+                )
             else:
                 if one.changed:
                     planned.append(one)

@@ -127,7 +127,15 @@ def _session(
 ) -> Response:
     """The session of a sign-in that passed every step. A password set by
     someone else is changed first."""
-    session_id = store.create(signed)
+    opened = store.create(signed)
+    if opened.ended:
+        get_auth(request).sessions_ended(
+            signed.user_id,
+            source=client_address(request),
+            ended=opened.ended,
+            limit=store.per_user,
+        )
+    session_id = opened.id
     target = PASSWORD_PAGE if signed.must_change else local_path(next, PATH)
     response = RedirectResponse(target, status_code=303)
     _set(response, request, COOKIE, session_id)

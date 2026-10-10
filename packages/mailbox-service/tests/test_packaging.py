@@ -268,6 +268,17 @@ def test_every_package_is_published() -> None:
         assert jobs[name]["environment"] == f"pypi-{name}"
 
 
+def test_a_job_with_rights_of_its_own_still_reads_the_repository() -> None:
+    """The permissions of a job replace the workflow's. Each job that
+    names its own keeps ``contents: read``, which its checkout needs once
+    the repository is private."""
+    for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):
+        text = workflow.read_text("utf-8")
+        blocks = re.findall(r"^    permissions:\n((?:      .*\n)+)", text, re.M)
+        for block in blocks:
+            assert "contents: read" in block, workflow.name
+
+
 def test_a_package_is_published_after_those_it_needs() -> None:
     """A package that reaches PyPI before one it pins cannot be
     installed. Each job waits for the checks and for the jobs of the

@@ -329,7 +329,7 @@ def test_a_password_change_that_fails_says_why(
 def test_an_idle_session_expires() -> None:
     now = [NOW]
     store = SessionStore(clock=lambda: now[0])
-    session_id = store.create(SIGNED)
+    session_id = store.create(SIGNED).id
     now[0] += IDLE - timedelta(minutes=1)
     assert store.get(session_id) is not None
     now[0] += IDLE + timedelta(minutes=1)
@@ -341,7 +341,7 @@ def test_an_idle_session_expires() -> None:
 def test_the_idle_time_comes_from_the_settings(services: Services) -> None:
     now = [NOW]
     store = SessionStore(clock=lambda: now[0], idle=timedelta(minutes=5))
-    session_id = store.create(SIGNED)
+    session_id = store.create(SIGNED).id
     now[0] += timedelta(minutes=6)
     assert store.get(session_id) is None
     settings = Settings(storage="memory", session_idle_hours=0.5)
@@ -352,7 +352,7 @@ def test_the_idle_time_comes_from_the_settings(services: Services) -> None:
 def test_a_session_ends_after_a_day_however_used() -> None:
     now = [NOW]
     store = SessionStore(clock=lambda: now[0])
-    session_id = store.create(SIGNED)
+    session_id = store.create(SIGNED).id
     for _ in range(12):
         now[0] += timedelta(hours=2)
         assert store.get(session_id) is not None
@@ -364,21 +364,24 @@ def test_a_session_ends_after_a_day_however_used() -> None:
 def test_a_new_session_ends_the_oldest_of_its_user() -> None:
     now = [NOW]
     store = SessionStore(clock=lambda: now[0], per_user=3)
-    first = store.create(SIGNED)
-    other = store.create(SignedIn(user_id="usr_b", must_change=False, stamp=NOW))
+    first = store.create(SIGNED).id
+    other = store.create(SignedIn(user_id="usr_b", must_change=False, stamp=NOW)).id
     later = []
     for _ in range(3):
         now[0] += timedelta(minutes=1)
-        later.append(store.create(SIGNED))
+        later.append(store.create(SIGNED).id)
     assert store.get(first) is None
     assert all(store.get(s) is not None for s in later)
     assert store.get(other) is not None
+    now[0] += timedelta(minutes=1)
+    assert store.create(SIGNED).ended == 1
+    assert store.create(SignedIn("usr_b", False, NOW)).ended == 0
 
 
 def test_something_shown_once_waits_a_few_minutes() -> None:
     now = [NOW]
     store = SessionStore(clock=lambda: now[0], shown_once=timedelta(minutes=5))
-    session = store.get(store.create(SIGNED))
+    session = store.get(store.create(SIGNED).id)
     assert session is not None
     store.keep_once(session, "token", "secret one")
     store.keep_once(session, "key", "secret two")
@@ -387,6 +390,40 @@ def test_something_shown_once_waits_a_few_minutes() -> None:
     now[0] += timedelta(minutes=5)
     assert store.take_once(session, "other") is None
     assert session.once == {}
+
+
+def test_what_ran_out_goes_without_a_take() -> None:
+    now = [NOW]
+    store = SessionStore(clock=lambda: now[0], shown_once=timedelta(minutes=5))
+    shown = store.create(SIGNED).id
+    other = store.create(SignedIn("usr_b", False, NOW)).id
+    for session_id in (shown, other):
+        session = store.get(session_id)
+        assert session is not None
+        store.keep_once(session, "key", "recovery key")
+    now[0] += timedelta(minutes=6)
+    # The next request of the session drops it, before any page.
+    assert (session := store.get(shown)) is not None and session.once == {}
+    # The next sign-in of anyone drops it in every session.
+    store.create(SignedIn("usr_c", False, NOW))
+    assert store._sessions[other].once == {}
+
+
+def test_the_eleventh_sign_in_is_audited(
+    app_client: TestClient, services: Services
+) -> None:
+    app_client.app.state.ui_sessions = SessionStore(per_user=1)  # type: ignore[attr-defined]
+    name, password = browser_admin(services)
+    sign_in(app_client, name, password)
+    laptop = TestClient(app_client.app)
+    sign_in(laptop, name, password)
+    records = services.audit.list_activity(ADMIN, limit=10).items
+    [evicted] = [r for r in records if r.activity == "auth.session_evicted"]
+    assert evicted.user_name == name and evicted.outcome == "done"
+    assert evicted.detail == (
+        "signed in to the UI, which ended its oldest session: at most 1 at once"
+    )
+    assert app_client.get("/ui", follow_redirects=False).status_code == 303
 
 
 def test_the_session_limits_come_from_the_settings(services: Services) -> None:
@@ -405,9 +442,9 @@ def test_the_session_limits_come_from_the_settings(services: Services) -> None:
 def test_idle_sessions_are_swept_on_sign_in() -> None:
     now = [NOW]
     store = SessionStore(clock=lambda: now[0])
-    forgotten = store.create(SIGNED)
+    forgotten = store.create(SIGNED).id
     now[0] += IDLE + timedelta(minutes=1)
-    fresh = store.create(SIGNED)
+    fresh = store.create(SIGNED).id
     assert len(store) == 1
     assert store.get(fresh) is not None
     assert store.get(forgotten) is None
