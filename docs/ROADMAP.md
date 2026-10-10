@@ -1,6 +1,6 @@
 # Roadmap
 
-> **Beta, version 0.4.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.4.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -378,6 +378,14 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   the client answers records for messages, and a test holds every
   package boundary to named records ([REFACTORING.md](REFACTORING.md)
   16)
+- **The MCP server in the MCP Registry and as a Claude Desktop
+  extension (8)**, decided 2026-10-10, done: the entry
+  `io.github.benethos-hub/benethos-mailbox-mcp` names the PyPI package
+  and the extension `benethos-mailbox-mcp.mcpb`, which every release
+  carries. Both ask for the token alone, the address and plain http
+  are optional. `.github/publish/` holds the entry and the manifest,
+  each held by a test. `publish.yml` builds the extension after the
+  PyPI upload and publishes the entry last
 
 ## Keeping this file current
 

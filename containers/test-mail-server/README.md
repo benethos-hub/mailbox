@@ -5,6 +5,13 @@ for trying the adapters: IMAP, POP3, SMTP and JMAP, with two accounts and
 no real mail. It is a manual aid like the scripts in `live/`, never part
 of `uv run pytest`.
 
+**Contents**
+
+- [Set it up](#set-it-up)
+- [Ports](#ports)
+- [Use it with the service](#use-it-with-the-service)
+- [Run it](#run-it)
+
 ## Set it up
 
 Needs Docker with compose and `openssl`, on Linux, macOS or in WSL:

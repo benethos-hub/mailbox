@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Beta, version 0.4.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.4.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -25,6 +25,14 @@ It knows the service through its REST API alone, and needs nothing but
 above. This package's Python interface has no stability promise yet.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
+
+**Contents**
+
+- [Install](#install)
+- [Use](#use)
+- [Errors](#errors)
+- [Inside](#inside)
+- [License](#license)
 
 ## Install
 

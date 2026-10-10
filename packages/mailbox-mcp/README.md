@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-mcp)](https://pypi.org/project/benethos-mailbox-mcp/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Beta, version 0.4.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.4.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -30,6 +30,21 @@ with the client. Over streamable HTTP, it runs as a server of its own.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 
+**Contents**
+
+- [Install](#install)
+- [A token for it](#a-token-for-it)
+- [Claude Desktop](#claude-desktop)
+- [Claude Code](#claude-code)
+- [Without a client](#without-a-client)
+- [Options](#options)
+- [Over HTTP](#over-http)
+- [Log and timeouts](#log-and-timeouts)
+- [Container](#container)
+  - [With docker run](#with-docker-run)
+  - [Beside a service in operation](#beside-a-service-in-operation)
+- [Tools](#tools)
+
 ## Install
 
 For stdio there is nothing to install. An MCP client starts it with
@@ -47,6 +62,11 @@ benethos-mailbox-mcp`. The path is the folder with `pyproject.toml` and
 
 The container image is `ghcr.io/benethos-hub/benethos-mailbox-mcp`. See
 [Container](#container).
+
+The server is listed in the official MCP Registry as
+`io.github.benethos-hub/benethos-mailbox-mcp`, with the PyPI package
+and the Claude Desktop extension of the next section. An MCP client
+that reads the registry finds it there.
 
 ## A token for it
 
@@ -78,7 +98,18 @@ does not need.
 
 ## Claude Desktop
 
-In `claude_desktop_config.json` (Settings, Developer, Edit Config):
+The easiest way is the extension. Download
+[`benethos-mailbox-mcp.mcpb`](https://github.com/benethos-hub/mailbox/releases/latest/download/benethos-mailbox-mcp.mcpb)
+from the latest release and open the file with Claude Desktop. It asks
+for the token, and, where the service is not on this machine at
+`http://127.0.0.1:8080`, for its address and whether plain http to
+another machine is allowed. Claude Desktop installs the server with uv
+and Python of its own, so nothing else is needed. The service has to
+be running. Each release carries the extension under this name and as
+`benethos-mailbox-mcp-<version>.mcpb`.
+
+Without the extension, in `claude_desktop_config.json` (Settings,
+Developer, Edit Config):
 
 ```json
 {
@@ -211,7 +242,7 @@ The image `ghcr.io/benethos-hub/benethos-mailbox-mcp` serves over
 streamable HTTP on port 8000, as an unprivileged user, and the command
 below runs it on a read-only root file system. A client that starts
 the server over stdio needs no image.
-Tags: the version (`0.4.0`), the minor version (`0.4`) and `latest`.
+Tags: the version (`0.4.1`), the minor version (`0.4`) and `latest`.
 
 ### With docker run
 
@@ -229,7 +260,7 @@ docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
   -e MAILBOX_SERVICE_TOKEN=<token> \
   -e MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   -e MAILBOX_MCP_ALLOWED_HOSTS=127.0.0.1:8000,localhost:8000 \
-  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.4.0
+  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.4.1
 ```
 
 Inside the container the server binds to `0.0.0.0`. So

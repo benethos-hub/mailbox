@@ -1,6 +1,6 @@
 # Concept — Mailbox
 
-> **Status: draft, 2026-09-24. The software is beta, version 0.4.0.**
+> **Status: draft, 2026-09-24. The software is beta, version 0.4.1.**
 > Describes the target design. What is built today is marked in
 > [ROADMAP.md](ROADMAP.md). Facts about third-party products were taken
 > from their public documentation on 2026-09-24. Items marked
@@ -1742,6 +1742,21 @@ Principles:
 - Descriptions under 700 characters, compact output (no headers the model
   does not need, bodies truncated, HTML converted to text).
 - Every error surfaces as an MCP `ToolError` with the REST error message.
+
+**Decided 2026-10-10, how a client finds it:** the MCP server is listed
+in the official MCP Registry as `io.github.benethos-hub/benethos-mailbox-mcp`
+with two packages, the PyPI package started with `uvx` and a Claude
+Desktop extension, `benethos-mailbox-mcp.mcpb`, which every release
+carries. The extension pins the PyPI package of the same version and
+Claude Desktop installs it with uv and Python of its own. Both ask for
+`MAILBOX_SERVICE_TOKEN` alone, and take `MAILBOX_SERVICE_URL` (default
+`http://127.0.0.1:8080`) and `MAILBOX_SERVICE_ALLOW_HTTP` if set. The
+bearer token of the HTTP transport stays out, since a client starts the
+server over stdio, and the image is not in the entry. The package
+description is one sentence of at most 100 characters, the same on PyPI
+and in the entry. The entry and the manifest of the extension live in
+`.github/publish/`, each held by a test, and `publish.yml` builds the
+extension after the PyPI upload and publishes the entry last.
 
 ### 8.1 Operation
 

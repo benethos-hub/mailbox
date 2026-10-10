@@ -1,12 +1,23 @@
 # <img src="../../assets/logo/icon-3d.svg" alt="" height="36" align="absmiddle"> Mailbox in operation
 
-> **Beta, version 0.4.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.4.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
 The published images from the GitHub container registry, run with
 compose. Nothing is built, and no clone of the repository is needed:
 this folder is enough.
+
+**Contents**
+
+- [Get the folder](#get-the-folder)
+- [The first start](#the-first-start)
+- [Clients](#clients)
+- [MCP server instances](#mcp-server-instances)
+- [HTTPS](#https)
+- [Settings](#settings)
+- [Operation](#operation)
+- [From the compose file before](#from-the-compose-file-before)
 
 | File | What it is |
 |---|---|
@@ -51,7 +62,7 @@ The same by hand, from this folder:
 
 ```sh
 cp .env.example .env && chmod 600 .env          # then edit it
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.4.0
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.4.1
 
 mkdir -p caddy.d secrets/mcp secrets/tls && chmod 700 secrets secrets/mcp
 docker run --rm "$IMAGE" keys generate > secrets/master_key
