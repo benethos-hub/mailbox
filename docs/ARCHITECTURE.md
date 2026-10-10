@@ -113,7 +113,8 @@ The three layers and what each may import:
   a result or an error.
 
 `tests/test_architecture.py` checks the direction, the cross-cutting
-modules, that `common/` stays on the standard library and anyio, that FastAPI stays in
+modules, that `common/` stays on the standard library, anyio and
+`mailbox-common`, that FastAPI stays in
 `web/` (and `assembly/`), that providers are reached through the registry,
 that the domain picks no storage implementation, and that SQLite is
 reached through `data/storage/` alone. `tests/test_code_rules.py`
@@ -885,8 +886,9 @@ imapclient boundary), never by patching deep inside a library.
 - A module holds one subject, at most 500 lines, a class at most 30
   methods. The same holds for the tests and the live checks in `live/`.
   `test_architecture.py` of the client and the MCP server checks both
-  for its package and its tests, `test_code_rules.py` of the service
-  for the service, its tests and `live/`. Past that, the subject has
+  for its package and its tests, that of `mailbox-common` the length
+  of its modules, `test_code_rules.py` of the service for the
+  service, its tests and `live/`. Past that, the subject has
   parts, and each part is a module.
 - A package holds a handful of modules. Past that, it holds areas, and
   each area is a package.

@@ -934,7 +934,10 @@ Decided by the user: hard limits, without exceptions and without
 
 When the limits came in, one module was beyond them:
 `domain/mailbox/outgoing.py`, 504 lines. Its checks of a message went
-to `checks.py`.
+to `checks.py`. On 2026-10-09 the modules near the limit were split
+before they reached it (#123): `data/protocols/oauth.py` became a
+package, and the services of `auth`, `mailbox` and `accounts` gave
+parts to modules of their own.
 
 ### 12.4 After the list
 
@@ -1071,6 +1074,9 @@ A workspace member `packages/mailbox-common`, on PyPI as
 service and the MCP server. No image: the images of the service and the
 MCP server install it with them. It sees neither of them, nor the
 client, and imports the standard library and platformdirs alone.
+Since 15.4 and 16, platformdirs and pydantic-settings are extras,
+`paths` and `settings`, and the package needs the standard library
+alone.
 Decided with it: platformdirs lives there, and the client does not use
 it. Its modules are listed in ARCHITECTURE 3.
 
@@ -1137,3 +1143,26 @@ package.
   differently.
 
 Built 2026-10-10, in that order.
+
+## 16. Records, one settings base, the boundaries
+
+Decided by the user on 2026-10-10, built as #132.
+
+- **Records in the client.** A message is `Message`, a summary
+  `MessageSummary`, which `Message` extends, with `Address`,
+  `AttachedFile` and `Reference`, where each was a dict. The API's
+  `from` is `sender`, a time a `datetime`, `Change.at` too. What a
+  call sends stays as it was.
+- **One settings base.** pydantic-settings has one home, the group
+  `settings` of `mailbox-common` with the extra `settings`, as
+  platformdirs has `paths`. `FileSettings` and `load` read the
+  environment and a settings file. The service's and the MCP
+  server's `Settings` extend it. The MCP server has typed settings
+  and no python-dotenv. A settings file no longer changes the
+  environment of the process.
+- **The boundaries.** `tests/test_boundaries.py` of the service
+  checks all four packages: what a package hands on is a named
+  record, frozen and with slots, not a tuple or a dict. Each
+  exception stands in `ALLOWED` with its reason, and an entry that
+  no longer matches fails. The tuples of the domain became
+  `IssuedToken`, `OneTimePassword`, `TotpSetup` and `TotpConfirmed`.

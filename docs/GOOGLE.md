@@ -4,16 +4,18 @@
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
-Gmail and Google Workspace accounts connect in one of two ways:
+Gmail and Google Workspace accounts connect in one of two ways. With a
+Google client the person connects with one click, while the app
+password needs no client but two steps in the person's Google account.
 
-- **IMAP and SMTP with an app password**, with nothing to set up in
-  Google Cloud. The simple way, for most Gmail accounts (see below).
 - **Sign in with Google**, over the Gmail API. The person signs in at
   Google. The service keeps an encrypted refresh token, never a
   password. This needs a Google client of your own, set up once as
   below. Folders are Gmail's labels, and the change feed follows Gmail's
   history. For Google Workspace, an administrator sets up one client
   for the whole organisation.
+- **IMAP and SMTP with an app password**, with nothing to set up in
+  Google Cloud (see below).
 
 The design is in [CONCEPT.md](CONCEPT.md), sections 5.3 and 5.5.
 

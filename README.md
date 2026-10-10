@@ -27,12 +27,13 @@ info@ address at some hoster, maybe a Gmail account. Each speaks its own
 dialect: IMAP here, Microsoft Graph there. Every tool that wants to work
 with mail has to learn all of them and has to be given the passwords.
 
-Mailbox turns that around. It has three parts. `mailbox-service` runs on
+Mailbox turns that around. It has four packages. `mailbox-service` runs on
 your own machine or server and holds the connections to all accounts.
 Everything else talks to that service only, through one REST API that
 looks the same for every provider. `mailbox-client` is the Python
 client of that API, for scripts and apps. `mailbox-mcp`, the MCP
-server, builds on the client and opens the service to AI agents. The
+server, builds on the client and opens the service to AI agents.
+`mailbox-common` holds what the service and the MCP server share. The
 service decides who may do what. A script, an app or an AI agent gets
 a token of its own. That token opens exactly the accounts and
 operations it was given, nothing more.

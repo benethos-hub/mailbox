@@ -62,8 +62,8 @@ REST client can do too.
    discovery/  autodiscovery sources
    backup.py, files.py, logbook.py
  common/       CROSS-CUTTING ─ helpers every layer reads, beside
-               config.py and errors.py: ids, cursors, the clock,
-               masking of secrets, pacing
+               config.py and errors.py: cursors, the clock,
+               pacing
 ```
 
 **Decided 2026-09-28:** the domain is in packages by area
@@ -123,8 +123,9 @@ The data layer the same way (REFACTORING.md section 8):
   the session holds the id of its user. Every request loads that user
   anew, so a disabled or deleted user is signed out at once. Signing in
   starts a new session. A changed password ends every other session of
-  its user. Sessions end after 8 hours (a setting) without a request
-  and with a restart. A content security policy allows no inline script or style and
+  its user. Sessions end after 8 hours (a setting) without a request,
+  after 24 hours however used, and with a restart. A user holds 10 at
+  most, and a new sign-in ends the oldest. A content security policy allows no inline script or style and
   no framing. A form answers with a redirect (Post/Redirect/Get). Its
   message waits in the session and is shown once, never in the URL, so a
   link cannot put words into the UI. The sign-in page, which has no
@@ -912,7 +913,8 @@ request that fails stores nothing and may be tried again.
 
 Only the user who made a webhook sees, changes and removes it. A change
 keeps its deliveries and where its posts stand, so no event is lost or
-posted twice. `accounts` set to `null` is every account the owner may
+posted twice. A `PATCH` needs `list_changes` only on the accounts it
+adds. `accounts` set to `null` is every account the owner may
 read.
 
 Events: `message.created`, `message.updated`, `message.deleted`,

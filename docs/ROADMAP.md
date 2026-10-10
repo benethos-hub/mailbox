@@ -374,7 +374,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 - **A fourth package, `mailbox-common` ([REFACTORING.md](REFACTORING.md)
   15)**, decided 2026-10-09, done: what the service and the MCP server
   both need, held once. The MCP server's log is the service's, with
-  colours and masking
+  colours and masking. Since #132 it holds the settings base of both,
+  the client answers records for messages, and a test holds every
+  package boundary to named records ([REFACTORING.md](REFACTORING.md)
+  16)
 
 ## Keeping this file current
 

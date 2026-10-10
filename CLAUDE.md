@@ -194,7 +194,8 @@ packages/
     src/benethos_mailbox_client/    # modules: docs/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport, each
                           #   test for both clients, in files like
-                          #   the modules, endpoints/ for the package
+                          #   the modules, endpoints/ and models/
+                          #   for the packages
   mailbox-mcp/            # the MCP server, on top of mailbox-client
     src/benethos_mailbox_mcp/       # modules: docs/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport

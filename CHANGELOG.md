@@ -93,7 +93,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   secret shown once, such as a new token, recovery codes or the
   recovery key, waits 5 minutes for the page that shows it
   (`MAILBOX_SERVICE_SHOWN_ONCE_MINUTES`).
-- `mailbox-client`: `list_messages` and `list_changes` take one
+- **Breaking:** `mailbox-client`: `list_messages` and `list_changes` take one
   account, `account_id` is required. `list_all_messages` and
   `list_all_changes` read every account. A change of the feed is the
   record `Change` and a failed id of a batch the record `Failed`,
@@ -103,10 +103,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MessageSummary`, where each was a dict. The API's `from` is
   `sender`, a time a `datetime`, an address an `Address`, an attachment
   of a message an `AttachedFile`. `Change.at` is a `datetime` too.
-- `mailbox-client`: `me()` is now `get_me()`, named like its operation,
-  as every method of the client is. Each method is made from the
-  endpoint that describes its call, with that endpoint's name,
-  docstring and signature.
+- **Breaking:** `mailbox-client`: `me()` is now `get_me()`, named like
+  its operation, as every method of the client is.
 - The UI names the company a person signs in at: "Sign in with
   Google" for Gmail. It offers a sign-in with a code only where the
   provider has one.
@@ -123,7 +121,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Lists in the UI create at their head and act on their rows: a plus in
   the card's header, a pencil and a bin on each device, token and the
   folder shown. Several devices or tokens are ticked and removed or
-  revoked together, devices after one password and one code. A folder
+  revoked together, all of them or none, devices after one password
+  and one code. A folder
   is renamed and moved in one form, and a move asks first.
 - A user's page in the UI has the tabs Rights, Access and Activity. The
   grant editor shows each grant as a line to change or remove. The
