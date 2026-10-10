@@ -74,6 +74,27 @@ def test_the_social_preview_places_the_3d_logo_in_the_middle() -> None:
     assert "c2pa" not in page
 
 
+def test_the_png_icon_is_square_and_transparent() -> None:
+    # After a change of the 3D icon: uv run python assets/build.py --icon
+    build = _build()
+    png = build.ICON.read_bytes()
+    width, height = (int.from_bytes(png[at : at + 4], "big") for at in (16, 20))
+    assert (width, height) == build.ICON_SIZE == (512, 512)
+    # Colour type 6: RGB with an alpha channel.
+    assert png[25] == 6
+
+
+def test_the_png_icon_places_the_3d_icon_in_the_middle() -> None:
+    build = _build()
+    page = build.icon(build.ICON_SOURCE.read_text("utf-8"))
+    assert build.ICON_SOURCE.name == "icon-3d.svg"
+    # 216 by 224 drawn 512 high: 493.7 wide, 9.1 from the left.
+    assert 'x="9.14286" y="0" width="493.714" height="512"' in page
+    # No background: the icon follows the page directly.
+    assert "c2pa" not in page
+    assert page.splitlines()[1].startswith("<svg ")
+
+
 def test_the_architecture_diagram_has_the_size_of_its_page() -> None:
     # After a change of the diagram: uv run python assets/build.py --diagram
     build = _build()

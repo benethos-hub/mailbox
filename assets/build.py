@@ -14,6 +14,9 @@ without it:
   a Chromium browser (Chrome, Edge or Chromium), which ``--check``
   cannot repeat byte for byte. It goes up by hand, under Settings,
   General, Social preview.
+- ``logo/icon.png``, the 3D icon at 512 by 512 on no background, for
+  the MCP Registry and the Claude Desktop bundle. ``--icon`` renders it
+  the same way.
 - ``architecture/architecture.png`` and ``architecture-dark.png``, the
   diagram of the README, from ``architecture/architecture.html``.
   ``--diagram`` renders both the same way, at twice the size for sharp
@@ -161,10 +164,16 @@ def _browser() -> str:
 
 
 def _screenshot(
-    address: str, target: Path, size: tuple[int, int], scale: int = 1
+    address: str,
+    target: Path,
+    size: tuple[int, int],
+    scale: int = 1,
+    transparent: bool = False,
 ) -> None:
-    """Render a page as a PNG with a headless browser."""
+    """Render a page as a PNG with a headless browser. A transparent page
+    keeps its alpha channel instead of the browser's white."""
     width, height = size
+    background = ["--default-background-color=00000000"] if transparent else []
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
         subprocess.run(
             [
@@ -172,6 +181,7 @@ def _screenshot(
                 "--headless=new",
                 "--disable-gpu",
                 "--hide-scrollbars",
+                *background,
                 f"--force-device-scale-factor={scale}",
                 f"--user-data-dir={Path(folder) / 'profile'}",
                 f"--window-size={width},{height}",
@@ -190,6 +200,42 @@ def render_social() -> None:
         page = Path(folder) / "social-preview.svg"
         page.write_text(social(SOCIAL_SOURCE.read_text("utf-8")), "utf-8")
         _screenshot(page.as_uri(), SOCIAL, SOCIAL_SIZE)
+
+
+# --- the icon as PNG ------------------------------------------------------
+
+# For whom an SVG is not enough: the MCP Registry and the Claude Desktop
+# bundle of the MCP server.
+ICON = ASSETS / "logo/icon.png"
+ICON_SOURCE = ASSETS / "logo/icon-3d.svg"
+ICON_SIZE = (512, 512)
+
+
+def icon(svg: str) -> str:
+    """The 3D icon in the middle of a square page, as high as the page,
+    on no background."""
+    drawn = plain(svg)
+    found = _ROOT_SIZE.match(drawn)
+    if not found:
+        raise ValueError("the icon names no width and height")
+    size, _ = ICON_SIZE
+    width = size * float(found[2]) / float(found[3])
+    placed = (
+        f'{found[1]}x="{(size - width) / 2:g}" y="0" width="{width:g}" '
+        f'height="{size}"' + drawn[found.end() :]
+    )
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" '
+        f'height="{size}" viewBox="0 0 {size} {size}">\n{placed}</svg>\n'
+    )
+
+
+def render_icon() -> None:
+    """Render the icon as a PNG with a transparent background."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+        page = Path(folder) / "icon.svg"
+        page.write_text(icon(ICON_SOURCE.read_text("utf-8")), "utf-8")
+        _screenshot(page.as_uri(), ICON, ICON_SIZE, transparent=True)
 
 
 # --- the architecture diagram ---------------------------------------------
@@ -224,8 +270,14 @@ def main(arguments: list[str]) -> int:
     if arguments == ["--diagram"]:
         render_diagram()
         return 0
+    if arguments == ["--icon"]:
+        render_icon()
+        return 0
     if arguments:
-        print("usage: build.py [--check | --social | --diagram]", file=sys.stderr)
+        print(
+            "usage: build.py [--check | --social | --diagram | --icon]",
+            file=sys.stderr,
+        )
         return 2
     build()
     return 0

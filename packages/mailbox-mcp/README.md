@@ -10,6 +10,8 @@
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
+<!-- mcp-name: io.github.benethos-hub/benethos-mailbox-mcp -->
+
 The MCP server of Mailbox, on PyPI as `benethos-mailbox-mcp`. It gives
 Claude and other AI
 assistants your mailboxes, as far as its token allows. It searches and
