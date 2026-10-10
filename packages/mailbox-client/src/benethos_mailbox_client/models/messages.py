@@ -73,7 +73,7 @@ class Message(MessageSummary):
     reference: Reference | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Attachment:
     """An attachment's bytes, as far as the caller's limit allowed: with
     ``complete`` False, ``data`` stops at that limit."""
@@ -85,7 +85,7 @@ class Attachment:
     complete: bool = True
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Page:
     """A page of message summaries, of messages or of drafts."""
 
@@ -95,7 +95,7 @@ class Page:
     not_answering: list[str] = field(default_factory=list)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Change:
     """One change of the change feed: ids only."""
 
@@ -105,7 +105,7 @@ class Change:
     at: datetime
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Changes:
     """Changes after a point in the change feed, oldest first."""
 
@@ -114,7 +114,7 @@ class Changes:
     more: bool
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Failed:
     """An id a batch did not do, and why."""
 
@@ -122,7 +122,7 @@ class Failed:
     error: str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Outcome:
     """A batch: the ids done, and per failed id why not."""
 

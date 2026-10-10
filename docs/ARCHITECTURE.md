@@ -789,6 +789,11 @@ imapclient boundary), never by patching deep inside a library.
   and say why in the docstring.
   Example: `benethos_mailbox_common.paths.folders`: `system_folders(app)`
   returns `SystemFolders(config, data)`, not a tuple.
+  `tests/test_boundaries.py` of the service checks it for the four
+  packages: what each offers, and the methods of the domain services
+  the web layer reaches. Its `ALLOWED` names what stays, with the
+  reason, such as a lookup by key or the free JSON of an account's
+  settings.
 
 ## 10. Errors
 

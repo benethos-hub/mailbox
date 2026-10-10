@@ -187,6 +187,8 @@ packages/
                           #   service
       test_architecture.py  # checks the layering on every run
       test_code_rules.py    # logging, handlers, sizes, helpers once
+      test_boundaries.py    # records, not tuples, where a package
+                            #   hands values on, in all four
   mailbox-client/         # the Python client of the REST API, async and
                           #   sync, no image
     src/benethos_mailbox_client/    # modules: docs/ARCHITECTURE.md

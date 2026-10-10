@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class IndexEntry:
     id: str  # ours, stable
     native_id: str  # the provider's id of the current place

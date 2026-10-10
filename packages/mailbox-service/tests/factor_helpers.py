@@ -72,8 +72,11 @@ async def add_device(
     """A device added the way the page does it: its secret, and the
     recovery codes it brought."""
     access = access_of(services, user)
-    kept, secret = await services.totp.begin(access, name, SECRET, code)
-    codes, _ = services.totp.confirm(access, kept, secret, now_code(secret, clock))
+    begun = await services.totp.begin(access, name, SECRET, code)
+    kept, secret = begun.name, begun.secret
+    codes = (
+        services.totp.confirm(access, kept, secret, now_code(secret, clock))
+    ).recovery_codes
     return secret, codes
 
 

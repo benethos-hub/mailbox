@@ -15,7 +15,7 @@ from ...errors import NotFoundError
 from .webhooks import Sealed
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class StoredTotpDevice:
     """A TOTP device of a user. ``last_step`` is the step of the last code
     taken from it, none before the first."""

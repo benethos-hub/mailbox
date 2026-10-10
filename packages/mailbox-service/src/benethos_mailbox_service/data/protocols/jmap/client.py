@@ -51,7 +51,7 @@ DEFAULT_CONCURRENT = 4
 DEFAULT_GET = 500
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class JmapServer:
     """Where an account's session resource is."""
 
@@ -66,7 +66,7 @@ class JmapServer:
         return f"https://{host}:{self.port}{path}"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Session:
     """What the session resource says, its URLs as paths on the server."""
 

@@ -80,7 +80,7 @@ def connect_to(host: str, port: int, pick: Pick | None) -> str:
     return pick(host, port) if pick is not None else host
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Server:
     """A mail server, as IMAP and SMTP connect to it."""
 

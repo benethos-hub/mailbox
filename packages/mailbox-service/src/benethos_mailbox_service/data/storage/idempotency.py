@@ -12,7 +12,7 @@ from typing import Protocol
 from .table import drop_where
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class StoredResult:
     operation: str
     request_hash: str

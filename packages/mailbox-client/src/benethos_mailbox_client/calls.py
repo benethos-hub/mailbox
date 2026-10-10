@@ -23,7 +23,7 @@ T = TypeVar("T")
 P = ParamSpec("P")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Call(Generic[T]):
     """One request to the API, and how its answer becomes what the caller
     gets. ``read`` takes the JSON of the answer, None for no content."""

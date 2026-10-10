@@ -18,7 +18,7 @@ from ..sync import SyncService, SyncState, SyncWorker, WorkerState
 from ..webhooks import WebhookService
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class AccountHealth:
     account: Account
     sync: SyncState
@@ -40,7 +40,7 @@ class AccountHealth:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ServiceStatus:
     accounts: list[AccountHealth]
     # None when the worker is switched off.
@@ -57,7 +57,7 @@ class ServiceStatus:
         return [webhook for webhook in self.webhooks if webhook.last_error]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Attention:
     """Whether something waits for a person, for the dots of the sidebar."""
 

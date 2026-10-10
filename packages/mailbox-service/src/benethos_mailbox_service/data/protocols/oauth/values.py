@@ -13,7 +13,7 @@ from datetime import datetime
 from pydantic import SecretStr
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Profile:
     """Where a provider says whose mailbox an access token opens: a JSON
     document at ``url``, the address in the first of ``email`` that is
@@ -26,7 +26,7 @@ class Profile:
     scopes: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Endpoints:
     """Where a provider signs users in and hands out tokens, and what a
     mail adapter asks for. With ``profile``, the address of an account
@@ -52,7 +52,7 @@ class Endpoints:
         return self.scopes + (self.profile.scopes if self.profile else ())
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class App:
     """The OAuth client a deployment signs in with: one the operator
     registered, or the project's. Without a secret it is a public client,
@@ -65,7 +65,7 @@ class App:
     loopback_only: bool = False
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Identity:
     """Who signed in: as the provider's profile says, or else the ID token.
     Both come straight from the provider over verified TLS, so the token's
@@ -75,7 +75,7 @@ class Identity:
     name: str | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Tokens:
     access_token: SecretStr
     expires_at: datetime
@@ -83,7 +83,7 @@ class Tokens:
     identity: Identity | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DeviceCode:
     """A sign-in with a code (RFC 8628): the person enters ``user_code`` at
     ``verification_uri``, on any device. ``device_code`` asks for the
@@ -98,7 +98,7 @@ class DeviceCode:
     interval: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Waiting:
     """The person has not signed in yet. ``slow_down``: the provider asks
     to be asked less often."""
@@ -106,7 +106,7 @@ class Waiting:
     slow_down: bool = False
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Pkce:
     verifier: str
     challenge: str

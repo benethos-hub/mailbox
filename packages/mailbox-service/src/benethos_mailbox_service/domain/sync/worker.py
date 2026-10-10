@@ -48,7 +48,7 @@ WATCHERS = 50
 Sleep = Callable[[float], Awaitable[None]]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class WorkerState:
     """What the worker does, for the overview and `GET /v1/status`. In
     memory only."""

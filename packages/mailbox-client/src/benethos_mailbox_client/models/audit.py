@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Activity:
     """One activity of the audit. ``activity`` names it, e.g.
     ``users.token_revoked``, ``record`` is the id of what it touched,

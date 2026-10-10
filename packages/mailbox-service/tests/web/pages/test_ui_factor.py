@@ -48,8 +48,11 @@ def with_factor(services: Services, name: str) -> tuple[bytes, list[str]]:
     recovery codes."""
     access = services.auth.access_of(user_named(services, name).id)
     assert access is not None
-    kept, secret = asyncio.run(services.totp.begin(access, "Phone", UI_PASSWORD))
-    codes, _ = services.totp.confirm(access, kept, secret, code_after(secret, 0))
+    begun = asyncio.run(services.totp.begin(access, "Phone", UI_PASSWORD))
+    kept, secret = begun.name, begun.secret
+    codes = (
+        services.totp.confirm(access, kept, secret, code_after(secret, 0))
+    ).recovery_codes
     return secret, codes
 
 
@@ -435,10 +438,10 @@ def test_an_administrator_removes_a_device_then_every_one(
     user = user_named(services, name)
     access = services.auth.access_of(user.id)
     assert access is not None
-    kept, tablet = asyncio.run(
-        services.totp.begin(access, "Tablet", UI_PASSWORD, codes[0])
+    tablet = asyncio.run(services.totp.begin(access, "Tablet", UI_PASSWORD, codes[0]))
+    services.totp.confirm(
+        access, tablet.name, tablet.secret, code_after(tablet.secret, 0)
     )
-    services.totp.confirm(access, kept, tablet, code_after(tablet, 0))
     anna = TestClient(ui.app)
     try_sign_in(anna, name, password)
     code_form(anna, code_after(secret))

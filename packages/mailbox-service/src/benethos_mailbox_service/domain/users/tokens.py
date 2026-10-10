@@ -10,7 +10,7 @@ from ...data.storage import TokenRepository
 from ...errors import BadRequestError, missing
 from ..activity import ActivityLog, Actor
 from ..activity import users as said
-from ..auth import AuthService, TokenState
+from ..auth import AuthService, IssuedToken, TokenState
 from ..rights import Access
 from .rules import UserRules, named
 
@@ -42,11 +42,12 @@ class TokenService:
         user_id: str,
         name: str,
         expires_at: datetime | None = None,
-    ) -> tuple[ApiToken, str]:
+    ) -> IssuedToken:
         owner = self._rules.managed(access, "create_token", user_id)
         name = named("a token", name)
         with self._activity.atomic():
-            token, plain = self._auth.issue_token(user_id, name, expires_at)
+            issued = self._auth.issue_token(user_id, name, expires_at)
+            token = issued.token
             self._activity.record(
                 said.TokenIssued(
                     by=Actor.of(access),
@@ -56,7 +57,7 @@ class TokenService:
                     expires_at=token.expires_at,
                 )
             )
-        return token, plain
+        return issued
 
     def revoke_token(self, access: Access, user_id: str, token_id: str) -> ApiToken:
         owner = self._rules.managed(access, "revoke_token", user_id)

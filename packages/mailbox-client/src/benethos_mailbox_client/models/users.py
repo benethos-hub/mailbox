@@ -10,7 +10,7 @@ from .rights import Grant
 from .secrets import Secret
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class User:
     """Someone or something that calls the service. ``service`` are its
     rights bound to no account, ``ui_sign_in`` whether it may sign in to
@@ -29,7 +29,7 @@ class User:
     second_factor: bool
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class NewPassword:
     """A password set for a user, who must change it at its next sign-in.
     ``password`` is the one the service made, shown this once, None when

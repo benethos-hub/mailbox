@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class TotpDevice:
     """An authenticator app of a user, by the name it was given."""
 
@@ -17,7 +17,7 @@ class TotpDevice:
     last_used_at: datetime | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SecondFactor:
     """The devices of each method, TOTP so far, and how many recovery
     codes are left. No device: the password alone signs in."""

@@ -8,7 +8,7 @@ from datetime import datetime
 from .secrets import Secret
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Webhook:
     """A URL that hears of events. ``accounts`` None: every account its
     owner may read, accounts added later included."""
@@ -24,7 +24,7 @@ class Webhook:
     last_error: str | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class WebhookSecret:
     """A webhook's new signing secret, shown this once. The one before
     stops at once."""
@@ -33,7 +33,7 @@ class WebhookSecret:
     secret: Secret
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class NewWebhook:
     """A webhook just made, and its signing secret, shown this once."""
 
@@ -41,7 +41,7 @@ class NewWebhook:
     secret: Secret
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class WebhookPost:
     """One post to a webhook's receiver: how many events it carried, what
     the receiver answered (None: no answer), why it failed (None: it
@@ -54,7 +54,7 @@ class WebhookPost:
     error: str | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class WebhookDetail:
     """A webhook with its last posts, newest first."""
 

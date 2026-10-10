@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Worker:
     """The sync worker: every ``interval`` seconds, with ``push`` where a
     server offers it, ``watching`` accounts of at most ``watchers``."""
@@ -19,7 +19,7 @@ class Worker:
     watching: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class AccountHealth:
     """How an account fares: ``synced`` whether a pass does anything for
     it, ``watching`` whether a watcher waits for its server, ``attention``
@@ -37,7 +37,7 @@ class AccountHealth:
     attention: bool
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Status:
     """The worker, None when it is switched off, and the accounts."""
 

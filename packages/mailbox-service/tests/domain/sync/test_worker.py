@@ -4,6 +4,7 @@ alone, and starts and stops with the app."""
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 
 import anyio
 import pytest
@@ -194,13 +195,9 @@ def test_the_app_starts_and_stops_the_worker(
     imap_server: FakeMailBox,
 ) -> None:
     settings = Settings(storage="memory", sync_idle=False)
-    running = Services(
-        **{
-            **imap_services.__dict__,
-            "worker": SyncWorker(
-                imap_services.adapters, imap_services.sync, interval=300
-            ),
-        }
+    running = replace(
+        imap_services,
+        worker=SyncWorker(imap_services.adapters, imap_services.sync, interval=300),
     )
     with TestClient(create_app(settings, running)) as client:
         assert client.get("/health").status_code == 200

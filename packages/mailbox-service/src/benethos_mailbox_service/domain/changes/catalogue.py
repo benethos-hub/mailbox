@@ -15,7 +15,7 @@ from typing import ClassVar
 from ...data.models import ChangeKind
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MailboxChange:
     """What changed in one account's mailbox."""
 
@@ -31,7 +31,7 @@ class MailboxChange:
         return None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MessagesChanged(MailboxChange):
     """A change of messages: the three kinds the change feed answers.
     Webhooks hear of all five."""
@@ -48,28 +48,28 @@ class MessagesChanged(MailboxChange):
         return self.folders.get(record_id) or None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MessagesCreated(MessagesChanged):
     """Messages arrived."""
 
     kind: ClassVar[ChangeKind] = "message.created"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MessagesUpdated(MessagesChanged):
     """Messages moved, or their flags changed."""
 
     kind: ClassVar[ChangeKind] = "message.updated"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MessagesDeleted(MessagesChanged):
     """Messages are gone."""
 
     kind: ClassVar[ChangeKind] = "message.deleted"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MessageSent(MailboxChange):
     """A mail went out. ``message_id``: its copy in the sent folder, or
     else its Message-ID header."""
@@ -81,7 +81,7 @@ class MessageSent(MailboxChange):
         return [self.message_id]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class AccountNeedsSignIn(MailboxChange):
     """The provider refused the account's sign-in: a person signs in again."""
 

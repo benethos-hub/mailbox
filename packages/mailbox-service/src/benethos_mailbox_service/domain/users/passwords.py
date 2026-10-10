@@ -4,6 +4,7 @@ password made by the service."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 
 from benethos_mailbox_common.values import secret
@@ -19,6 +20,14 @@ from .rules import UserRules
 
 # A one-time password of 18 random bytes: 24 characters, 144 bits.
 ONE_TIME_BYTES = 18
+
+
+@dataclass(frozen=True, slots=True)
+class OneTimePassword:
+    """A user and the one-time password set for it, shown once."""
+
+    user: User
+    password: str
 
 
 class PasswordService:
@@ -73,7 +82,7 @@ class PasswordService:
         user = self._settable(access, user_id)
         return await self._force(user, None, Actor.of(access))
 
-    async def reset_password(self, name: str) -> tuple[User, str]:
+    async def reset_password(self, name: str) -> OneTimePassword:
         """A new one-time password for the user of this name, to be changed
         at the next sign-in. For the command line on the host only, when
         nobody who could set it can sign in: it checks no caller. An API
@@ -86,7 +95,7 @@ class PasswordService:
             with self._activity.atomic():
                 self._users.save(user)
                 self._activity.record(said.UiSignInAllowed(by=HOST, user=user))
-        return user, await self.one_time(user)
+        return OneTimePassword(user, await self.one_time(user))
 
     async def one_time(self, user: User) -> str:
         """A one-time password the host set, e.g. for a new administrator."""

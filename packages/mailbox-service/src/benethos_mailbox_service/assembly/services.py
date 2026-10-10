@@ -29,7 +29,7 @@ from ..domain.users import (
 from ..domain.webhooks import WebhookDispatcher, WebhookService
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Services:
     accounts: AccountService
     adapters: Adapters

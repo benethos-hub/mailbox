@@ -37,7 +37,7 @@ BUSY = frozenset({429, 502, 503, 504})
 Params = Mapping[str, str] | Sequence[tuple[str, str]]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Answer:
     status: int
     body: bytes

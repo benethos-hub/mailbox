@@ -12,7 +12,7 @@ from ..models import ChangeKind, Webhook
 from .table import Table
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Sealed:
     """A secret encrypted with the data key."""
 
@@ -21,7 +21,7 @@ class Sealed:
     ciphertext: bytes
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Delivery:
     """Where a webhook's delivery stands: the point in the event log it
     has posted up to, and the failed attempts of the next post."""
@@ -31,7 +31,7 @@ class Delivery:
     next_attempt_at: datetime | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Attempt:
     """One post to a webhook's receiver, for the delivery log."""
 
@@ -46,7 +46,7 @@ class Attempt:
     error: str | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class WebhookRecord:
     webhook: Webhook
     secret: Sealed

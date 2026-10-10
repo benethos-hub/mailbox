@@ -31,12 +31,11 @@ def _two_devices(services: Services, name: str) -> list[str]:
     assert user is not None
     access = services.auth.access_of(user.id)
     assert access is not None
-    kept, phone = asyncio.run(services.totp.begin(access, "Phone", UI_PASSWORD))
-    codes, _ = services.totp.confirm(access, kept, phone, _code(phone, 0))
-    kept, tablet = asyncio.run(
-        services.totp.begin(access, "Tablet", UI_PASSWORD, codes[0])
-    )
-    services.totp.confirm(access, kept, tablet, _code(tablet, 0))
+    begun = asyncio.run(services.totp.begin(access, "Phone", UI_PASSWORD))
+    kept, phone = begun.name, begun.secret
+    codes = services.totp.confirm(access, kept, phone, _code(phone, 0)).recovery_codes
+    begun = asyncio.run(services.totp.begin(access, "Tablet", UI_PASSWORD, codes[0]))
+    services.totp.confirm(access, begun.name, begun.secret, _code(begun.secret, 0))
     return codes
 
 
@@ -145,8 +144,8 @@ def test_tokens_are_made_at_the_head_and_revoked_in_their_row(
 
 def test_ticked_tokens_are_revoked_together(ui: TestClient, services: Services) -> None:
     user = services.users.create_user(ADMIN, "bot", [], [])
-    one, _ = services.auth.issue_token(user.id, "one")
-    two, _ = services.auth.issue_token(user.id, "two")
+    one = services.auth.issue_token(user.id, "one").token
+    two = services.auth.issue_token(user.id, "two").token
     url = f"/ui/users/{user.id}"
     page = ui.get(f"{url}?tab=access").text
     assert 'id="tokens-batch"' in page and page.count('form="tokens-batch"') == 2

@@ -56,7 +56,7 @@ def new_message_id() -> str:
     return secret.new_id("msg")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SyncState:
     """How the passes of one account went, since the service started.
     Kept in memory only."""

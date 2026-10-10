@@ -17,7 +17,7 @@ from ...errors import MailboxServiceError
 from ..rights import Access
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Actor:
     """Who acted: a user, with the name of its token when it came with
     one, and the client address of the request. Or a part of the service
@@ -73,7 +73,7 @@ def someone(source: str | None) -> Actor:
     return Actor("someone", source=source)
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, kw_only=True, slots=True)
 class Activity:
     """One activity. ``name`` is set by each class and stays when the class
     is renamed: the log, an operator's filters and the audit know it
@@ -135,7 +135,7 @@ class Activity:
         return f"{text}: {why}" if why else text
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, kw_only=True, slots=True)
 class Failure(Activity):
     """An activity that failed, with its error. One of ours is a warning
     with its message. Anything else the recorder writes as an error, with

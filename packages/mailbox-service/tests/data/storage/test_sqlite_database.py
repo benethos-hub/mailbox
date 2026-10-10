@@ -140,8 +140,9 @@ def test_everything_survives_a_restart(tmp_path: Path) -> None:
     settings = Settings(data_dir=tmp_path, storage="sqlite")
     first = build_services(settings, password_hasher=CHEAP)
     account = create_account(first.accounts, ProviderType.MEMORY, "a@example.com")
-    user, password = asyncio.run(first.users.create_admin("owner"))
-    _, token = first.auth.issue_token(user.id, "t")
+    made = asyncio.run(first.users.create_admin("owner"))
+    user, password = made.user, made.password
+    token = first.auth.issue_token(user.id, "t").plain
 
     first.close()
 
@@ -240,7 +241,8 @@ def test_reset_totp_command(
     assert user is not None
     access = services.auth.access_of(user.id)
     assert access is not None
-    name, secret = asyncio.run(services.totp.begin(access, "Phone", first))
+    begun = asyncio.run(services.totp.begin(access, "Phone", first))
+    name, secret = begun.name, begun.secret
     code = totp.code(secret, totp.step_of(datetime.now(UTC)))
     services.totp.confirm(access, name, secret, code)
     services.close()

@@ -8,7 +8,7 @@ from typing import Generic, TypeVar
 R = TypeVar("R")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Paged(Generic[R]):
     """A page of records: accounts, users, sends, the audit. With
     ``next_cursor`` the list goes on, asked with that cursor."""

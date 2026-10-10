@@ -15,7 +15,7 @@ from typing import Protocol
 from ..models import ChangeRecord
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class LoggedChange:
     seq: int
     record: ChangeRecord

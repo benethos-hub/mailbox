@@ -54,7 +54,8 @@ def test_a_user_its_changes_and_its_tokens(
     with caplog.at_level(logging.INFO):
         anna = services.users.create_user(ADMIN, "Anna", [], [READER])
         services.users.update_user(ADMIN, anna.id, name="Anna B", disabled=False)
-        token, plain = services.tokens.create_token(ADMIN, anna.id, "laptop")
+        issued = services.tokens.create_token(ADMIN, anna.id, "laptop")
+        token, plain = issued.token, issued.plain
         services.tokens.revoke_token(ADMIN, anna.id, token.id)
         services.tokens.revoke_token(ADMIN, anna.id, token.id)
     assert lines(caplog) == [
@@ -92,7 +93,8 @@ def test_a_token_that_is_revoked_or_of_a_disabled_user(
     services: Services, caplog: pytest.LogCaptureFixture
 ) -> None:
     anna = services.users.create_user(ADMIN, "Anna", [], [READER])
-    token, plain = services.tokens.create_token(ADMIN, anna.id, "laptop")
+    issued = services.tokens.create_token(ADMIN, anna.id, "laptop")
+    token, plain = issued.token, issued.plain
     services.users.update_user(ADMIN, anna.id, disabled=True)
     with pytest.raises(UnauthorizedError):
         services.auth.authenticate(plain, source="10.0.0.7")

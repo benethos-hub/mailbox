@@ -24,7 +24,7 @@ def service_url() -> str:
     return (os.environ.get(URL_ENV) or DEFAULT_URL).rstrip("/")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Environment:
     """What the environment says about the service, read at one moment:
     its address, the token, and whether http may go to another machine.
@@ -48,7 +48,7 @@ def from_environment() -> Environment:
     )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Connection:
     """Where the service is and the token that opens it, checked."""
 

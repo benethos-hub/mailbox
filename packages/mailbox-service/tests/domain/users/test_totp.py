@@ -55,7 +55,8 @@ async def test_a_wrong_first_code_stores_nothing(
 ) -> None:
     user = await anna(services)
     access = access_of(services, user)
-    name, secret = await services.totp.begin(access, "Phone", SECRET)
+    begun = await services.totp.begin(access, "Phone", SECRET)
+    name, secret = begun.name, begun.secret
     wrong = totp.code(secret, totp.step_of(clock()) + 5)
     with pytest.raises(BadRequestError):
         services.totp.confirm(access, name, secret, wrong)
@@ -92,7 +93,7 @@ async def test_a_device_needs_a_fitting_name(services: Services, name: str) -> N
 
 async def test_spaces_in_a_name_are_made_one(services: Services) -> None:
     access = access_of(services, await anna(services))
-    name, _ = await services.totp.begin(access, "  Old \n phone ", SECRET)
+    name = (await services.totp.begin(access, "  Old \n phone ", SECRET)).name
     assert name == "Old phone"
 
 
@@ -170,8 +171,9 @@ async def test_adding_a_device_ends_the_sessions_before(
     user, _, codes = await with_factor(services, clock)
     before = services.auth.sign_in_with_code(user.id, codes[0], source=SOURCE)
     access = access_of(services, user)
-    name, tablet = await services.totp.begin(access, "Tablet", SECRET, codes[1])
-    _, stamp = services.totp.confirm(access, name, tablet, now_code(tablet, clock))
+    begun = await services.totp.begin(access, "Tablet", SECRET, codes[1])
+    name, tablet = begun.name, begun.secret
+    stamp = services.totp.confirm(access, name, tablet, now_code(tablet, clock)).stamp
     with pytest.raises(UnauthorizedError, match="second factor"):
         services.auth.session_access(user.id, before.stamp, factor=before.factor)
     # The session that added it carries on with the new stamp.

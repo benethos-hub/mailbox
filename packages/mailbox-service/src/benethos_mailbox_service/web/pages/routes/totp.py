@@ -34,8 +34,8 @@ async def begin(
     code: Annotated[str, Form()] = "",
 ) -> Response:
     with failing(FACTOR_PAGE):
-        kept, secret = await totp.begin(caller, name, password, code)
-    session_of(request).totp = PendingTotp(kept, secret, utc_now() + SETUP)
+        begun = await totp.begin(caller, name, password, code)
+    session_of(request).totp = PendingTotp(begun.name, begun.secret, utc_now() + SETUP)
     return back(request, FACTOR_PAGE)
 
 
@@ -52,13 +52,13 @@ async def confirm(
         session.totp = None
         return back(request, FACTOR_PAGE, error="The setup ran out. Start again.")
     with failing(FACTOR_PAGE):
-        codes, stamp = totp.confirm(caller, setup.name, setup.secret, code)
+        confirmed = totp.confirm(caller, setup.name, setup.secret, code)
     # This session carries on with the new device, every other one of the
     # user ends at its next request.
-    session.factor = stamp
+    session.factor = confirmed.stamp
     session.totp = None
-    if codes:
-        show_once(request, CODES, "\n".join(codes))
+    if confirmed.recovery_codes:
+        show_once(request, CODES, "\n".join(confirmed.recovery_codes))
         return back(request, FACTOR_PAGE, f"Second factor on. {SIGNED_OUT}")
     return back(request, FACTOR_PAGE, f"Device {setup.name} added. {SIGNED_OUT}")
 

@@ -9,7 +9,7 @@ from datetime import datetime
 from .secrets import Secret
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Token:
     """A token of a user, never its secret. ``state`` is ``active``,
     ``expired`` or ``revoked``."""
@@ -24,7 +24,7 @@ class Token:
     revoked_at: datetime | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class NewToken:
     """A token just made, and its secret for the bearer header, shown this
     once: only its hash is kept."""

@@ -86,7 +86,7 @@ class Store(Protocol):
         ...
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Repositories:
     """One of each, on the same store."""
 

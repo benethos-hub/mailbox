@@ -32,9 +32,10 @@ def with_devices(services: Services, *names: str) -> User:
     assert access is not None
     code = ""
     for name in names:
-        kept, secret = asyncio.run(services.totp.begin(access, name, UI_PASSWORD, code))
+        begun = asyncio.run(services.totp.begin(access, name, UI_PASSWORD, code))
+        kept, secret = begun.name, begun.secret
         now = totp.code(secret, totp.step_of(datetime.now(UTC)))
-        codes, _ = services.totp.confirm(access, kept, secret, now)
+        codes = services.totp.confirm(access, kept, secret, now).recovery_codes
         code = codes[0] if codes else code
     return user
 
