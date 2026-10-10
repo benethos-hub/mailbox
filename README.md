@@ -178,7 +178,9 @@ the MCP server with the container image and the compose file.
 2. Open `http://127.0.0.1:8080/ui`, sign in as `admin` with the
    one-time password, choose a password of your own and connect your
    accounts.
-3. Give your scripts or your AI agent a user with the rights they need,
+3. Give your scripts or your AI agent a user with the rights they need
+   and a token
+   ([step by step](packages/mailbox-mcp/README.md#a-token-for-it)),
    and for an agent, add the MCP server to it. Claude Desktop installs
    it as an extension from the release, other clients start it with
    `uvx`: [packages/mailbox-mcp](packages/mailbox-mcp/README.md).
