@@ -22,7 +22,7 @@ PREFIXES = ("MAILBOX_MCP_", "MAILBOX_SERVICE_")
 
 def config_folder() -> Path:
     """The config folder of the operating system for this user."""
-    return folders.system_folders(APP)[0]
+    return folders.system_folders(APP).config
 
 
 def settings_file(env_file: Path | None = None) -> Path | None:

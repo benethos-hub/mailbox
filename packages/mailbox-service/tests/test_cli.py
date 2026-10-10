@@ -240,24 +240,25 @@ def test_without_the_repository_the_folders_of_the_system(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     settings_folder(tmp_path, monkeypatch)
-    system, data = config.system.system_folders(
-        config.APP
-    )  # in tmp_path, see conftest.py
+    # In tmp_path, see conftest.py.
+    found = config.system.system_folders(config.APP)
     assert config.folders().origin == "system"
-    assert load_settings().data_dir == data
+    assert load_settings().data_dir == found.data
     assert config.settings_file() is None
 
-    system.mkdir(parents=True)
-    (system / ".env").write_text(
+    found.config.mkdir(parents=True)
+    (found.config / ".env").write_text(
         "MAILBOX_SERVICE_KEY_PROVIDER=file\nMAILBOX_SERVICE_KEY_FILE=master.key\n",
         encoding="utf-8",
     )
     settings = load_settings()
-    assert settings.key_file == system / "master.key"
-    assert settings.data_dir == data
-    assert config.settings_file() == (system / ".env").resolve()
-    (system / ".env").write_text("MAILBOX_SERVICE_DATA_DIR=db\n", encoding="utf-8")
-    assert load_settings().data_dir == system / "db"
+    assert settings.key_file == found.config / "master.key"
+    assert settings.data_dir == found.data
+    assert config.settings_file() == (found.config / ".env").resolve()
+    (found.config / ".env").write_text(
+        "MAILBOX_SERVICE_DATA_DIR=db\n", encoding="utf-8"
+    )
+    assert load_settings().data_dir == found.config / "db"
 
 
 def test_paths_names_the_folders_and_never_a_value(
@@ -277,10 +278,10 @@ def test_paths_names_the_folders_and_never_a_value(
     monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
     assert main(["paths"]) == 0
     out = capsys.readouterr().out
-    system, _ = config.system.system_folders(config.APP)
+    found = config.system.system_folders(config.APP)
     assert "the folders of the operating system" in out
     assert "(not there, the defaults apply)" in out
-    assert f"Suggested: {(system / 'master.key').resolve()}" in out
+    assert f"Suggested: {(found.config / 'master.key').resolve()}" in out
 
 
 @pytest.mark.parametrize(

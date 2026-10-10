@@ -7,7 +7,11 @@ from pathlib import Path
 import platformdirs
 import pytest
 
-from benethos_mailbox_common.paths.folders import named_file, system_folders
+from benethos_mailbox_common.paths.folders import (
+    SystemFolders,
+    named_file,
+    system_folders,
+)
 
 VARIABLE = "MAILBOX_TEST_ENV_FILE"
 
@@ -34,10 +38,12 @@ def test_one_system_folder_for_both_gets_one_below_it(
     from the config folder."""
     monkeypatch.setattr(platformdirs, "user_config_dir", lambda *a, **k: str(tmp_path))
     monkeypatch.setattr(platformdirs, "user_data_dir", lambda *a, **k: str(tmp_path))
-    assert system_folders("app") == (tmp_path / "config", tmp_path / "data")
+    assert system_folders("app") == SystemFolders(
+        config=tmp_path / "config", data=tmp_path / "data"
+    )
     other = tmp_path / "share"
     monkeypatch.setattr(platformdirs, "user_data_dir", lambda *a, **k: str(other))
-    assert system_folders("app") == (tmp_path, other)
+    assert system_folders("app") == SystemFolders(config=tmp_path, data=other)
 
 
 def test_the_folders_are_the_apps_own(monkeypatch: pytest.MonkeyPatch) -> None:

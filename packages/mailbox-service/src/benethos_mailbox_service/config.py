@@ -251,8 +251,8 @@ def folders(env_file: Path | None = None) -> Folders:
     local = Path(ENV_FILE)
     if local.parent.is_dir() or DATA_DIR.is_dir():
         return Folders("working directory", local.parent, local, DATA_DIR)
-    config, data = system.system_folders(APP)
-    return Folders("system", config, config / ".env", data)
+    found = system.system_folders(APP)
+    return Folders("system", found.config, found.config / ".env", found.data)
 
 
 def settings_file(env_file: Path | None = None) -> Path | None:

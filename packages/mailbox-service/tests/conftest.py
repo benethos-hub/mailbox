@@ -119,7 +119,9 @@ def no_configuration_from_this_machine(
     monkeypatch.setattr(
         config.system,
         "system_folders",
-        lambda app: (system / "config", system / "data"),
+        lambda app: config.system.SystemFolders(
+            config=system / "config", data=system / "data"
+        ),
     )
     for name in list(os.environ):
         if name.startswith("MAILBOX_SERVICE_"):

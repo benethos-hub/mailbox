@@ -6,6 +6,7 @@ directory adds."""
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 import platformdirs
@@ -20,7 +21,17 @@ def named_file(env_file: Path | None, variable: str) -> Path | None:
     return Path(named) if named else None
 
 
-def system_folders(app: str) -> tuple[Path, Path]:
+@dataclass(frozen=True, slots=True)
+class SystemFolders:
+    """The folders of the operating system for one program and this user."""
+
+    # Settings and key files.
+    config: Path
+    # The database and what else the program keeps.
+    data: Path
+
+
+def system_folders(app: str) -> SystemFolders:
     """The config and the data folder of the operating system for ``app``
     and this user, never in a roaming profile on Windows. Where the system
     has one folder for both, as Windows and macOS do, each gets its own
@@ -28,5 +39,5 @@ def system_folders(app: str) -> tuple[Path, Path]:
     config = Path(platformdirs.user_config_dir(app, appauthor=False, roaming=False))
     data = Path(platformdirs.user_data_dir(app, appauthor=False, roaming=False))
     if config == data:
-        return config / "config", data / "data"
-    return config, data
+        return SystemFolders(config=config / "config", data=data / "data")
+    return SystemFolders(config=config, data=data)
