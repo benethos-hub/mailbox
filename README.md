@@ -164,9 +164,12 @@ A release publishes all four to PyPI under the same version, as
 `benethos-mailbox-service`, `benethos-mailbox-client`,
 `benethos-mailbox-mcp` and `benethos-mailbox-common`, and the service
 and the MCP server as container
-images on ghcr.io. Each package has its own README. It explains how
-to install, start and configure it, for the service and the MCP server
-with the container image and the compose file.
+images on ghcr.io. The MCP server is listed in the official MCP
+Registry as `io.github.benethos-hub/benethos-mailbox-mcp`, and every
+release carries it as a Claude Desktop extension,
+`benethos-mailbox-mcp.mcpb`. Each package has its own README. It
+explains how to install, start and configure it, for the service and
+the MCP server with the container image and the compose file.
 
 ## Getting started
 
@@ -176,8 +179,9 @@ with the container image and the compose file.
    one-time password, choose a password of your own and connect your
    accounts.
 3. Give your scripts or your AI agent a user with the rights they need,
-   and for an agent, add the MCP server to it:
-   [packages/mailbox-mcp](packages/mailbox-mcp/README.md).
+   and for an agent, add the MCP server to it. Claude Desktop installs
+   it as an extension from the release, other clients start it with
+   `uvx`: [packages/mailbox-mcp](packages/mailbox-mcp/README.md).
 
 ## Documentation
 

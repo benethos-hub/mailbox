@@ -63,6 +63,11 @@ benethos-mailbox-mcp`. The path is the folder with `pyproject.toml` and
 The container image is `ghcr.io/benethos-hub/benethos-mailbox-mcp`. See
 [Container](#container).
 
+The server is listed in the official MCP Registry as
+`io.github.benethos-hub/benethos-mailbox-mcp`, with the PyPI package
+and the Claude Desktop extension of the next section. An MCP client
+that reads the registry finds it there.
+
 ## A token for it
 
 The MCP server acts as one user of the service and can do exactly what
@@ -93,7 +98,18 @@ does not need.
 
 ## Claude Desktop
 
-In `claude_desktop_config.json` (Settings, Developer, Edit Config):
+The easiest way is the extension. Download
+[`benethos-mailbox-mcp.mcpb`](https://github.com/benethos-hub/mailbox/releases/latest/download/benethos-mailbox-mcp.mcpb)
+from the latest release and open the file with Claude Desktop. It asks
+for the token, and, where the service is not on this machine at
+`http://127.0.0.1:8080`, for its address and whether plain http to
+another machine is allowed. Claude Desktop installs the server with uv
+and Python of its own, so nothing else is needed. The service has to
+be running. Each release carries the extension under this name and as
+`benethos-mailbox-mcp-<version>.mcpb`.
+
+Without the extension, in `claude_desktop_config.json` (Settings,
+Developer, Edit Config):
 
 ```json
 {
