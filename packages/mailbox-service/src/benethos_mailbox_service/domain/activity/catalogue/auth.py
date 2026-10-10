@@ -51,6 +51,30 @@ class UiSignInFailed(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class SessionEvicted(Activity):
+    """A sign-in ended the oldest sessions of its user in the UI, which
+    holds a few at most. Many in a row may be a stolen password."""
+
+    name: ClassVar[str] = "session_evicted"
+    audited: ClassVar[bool] = True
+    level: ClassVar[int] = logging.WARNING
+
+    ended: int
+    limit: int
+
+    def says(self) -> str:
+        if self.ended == 1:
+            return "signed in to the UI, which ended its oldest session"
+        return f"signed in to the UI, which ended its {self.ended} oldest sessions"
+
+    def why(self) -> str:
+        return f"at most {self.limit} at once"
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
 class SignedOut(Activity):
     name: ClassVar[str] = "signed_out"
 

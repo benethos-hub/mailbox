@@ -144,6 +144,7 @@ the audit keeps as well are listed in [AUDIT.md](AUDIT.md) section 2.
 | WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | |
 | WARNING | someone typed a wrong code to sign in to the UI as X | user, source | after the right password ([AUTHENTICATION.md](AUTHENTICATION.md) 3) |
 | WARNING | X signed in with a recovery code, N left | user, count, source | its app is gone or out of reach |
+| WARNING | X signed in to the UI, which ended its oldest session: at most N at once | user, count, limit, source | a user holds a few sessions at most ([LIMITS.md](LIMITS.md)). Many in a row may be a stolen password |
 | INFO | signed out | user | |
 | WARNING | someone presented token T of U: reason | token name and id, user id, source, reason: revoked, expired or its user disabled | a token the service does not know counts against the sign-in throttle alone |
 | WARNING | a wrong password or code to confirm a step | user | |
@@ -157,6 +158,7 @@ the sign-in throttle are in 5.9 with the other limits.
 |---|---|---|---|
 | INFO | X created user Y: roles, rights, where it signs in | actor, user, roles, counts, ui_sign_in | |
 | INFO | X changed user Y: name, roles, grants, disabled, ui_sign_in | actor, user, the fields that changed | |
+| WARNING | X could not disable / enable / give role R to / take role R from user Y in a batch: reason | actor, user, action, role, reason | one per user a batch of the users list refused. Then it changes none |
 | INFO | X made Y an API user: its password is deleted | actor, user | when its UI sign-in is taken |
 | INFO | the host let Y sign in to the UI again | user | `users set-password` for an API user |
 | INFO | X deleted user Y and its N webhooks | actor, user, count | |
@@ -502,6 +504,7 @@ and that each is listed here.
 | `auth.sign_in_failed` | a failed sign-in to the UI |
 | `auth.code_failed` | a wrong code of the second factor at the sign-in |
 | `auth.recovery_code_used` | a sign-in with a recovery code |
+| `auth.session_evicted` | a sign-in that ended the user's oldest session |
 | `auth.signed_out` | a sign-out of the UI |
 | `auth.confirm_failed` | a wrong password or code to confirm a step |
 | `auth.token_refused` | a token that is revoked, expired or of a disabled user |
@@ -510,6 +513,7 @@ and that each is listed here.
 | `auth.name_braked` | a user name slowed down after failed sign-ins |
 | `users.created` | a user created |
 | `users.changed` | a user changed |
+| `users.change_refused` | a user a batch could not change |
 | `users.deleted` | a user deleted |
 | `users.made_api_user` | a user's UI sign-in taken |
 | `users.sign_in_allowed` | the host gave a user its UI sign-in back |

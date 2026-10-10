@@ -73,6 +73,7 @@ jobs:
       name: pypi-benethos-mailbox-common
       url: https://pypi.org/p/benethos-mailbox-common
     permissions:
+      contents: read
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
       - uses: actions/checkout@v7
@@ -91,6 +92,7 @@ jobs:
       name: pypi-benethos-mailbox-client
       url: https://pypi.org/p/benethos-mailbox-client
     permissions:
+      contents: read
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
       - uses: actions/checkout@v7
@@ -109,6 +111,7 @@ jobs:
       name: pypi-benethos-mailbox-service
       url: https://pypi.org/p/benethos-mailbox-service
     permissions:
+      contents: read
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
       - uses: actions/checkout@v7
@@ -127,6 +130,7 @@ jobs:
       name: pypi-benethos-mailbox-mcp
       url: https://pypi.org/p/benethos-mailbox-mcp
     permissions:
+      contents: read
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
       - uses: actions/checkout@v7

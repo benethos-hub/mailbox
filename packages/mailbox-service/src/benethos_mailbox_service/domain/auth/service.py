@@ -330,6 +330,15 @@ class AuthService:
             seconds = int(self._names.lockout.total_seconds())
             self.activity.record(said.NameBraked(by=by, user=user, seconds=seconds))
 
+    def sessions_ended(
+        self, user_id: str, *, source: str, ended: int, limit: int
+    ) -> None:
+        """A sign-in ended the oldest sessions of its user, which holds
+        ``limit`` at most. The web layer ends them, this logs it."""
+        user = self._users.get(user_id)
+        by = Actor.signed_in(user.name, user.id, source)
+        self.activity.record(said.SessionEvicted(by=by, ended=ended, limit=limit))
+
     def sign_out(self, access: Access) -> None:
         """The session of the UI ends. The web layer drops it, this logs it."""
         self.activity.record(said.SignedOut(by=Actor.of(access)))

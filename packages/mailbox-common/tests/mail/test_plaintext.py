@@ -66,10 +66,15 @@ def test_keeps_what_a_reader_sees() -> None:
         "opacity: 0.01",
         "text-indent:-9999px",
         "position:absolute; left:-9999px",
+        "position: fixed; top: -600px",
+        "position:relative;top:-600px",
         "max-height:0; overflow:hidden",
         "height: 0px;overflow: hidden",
         "color: transparent",
         "color:#FFF; background-color: #fff",
+        "color: white; background: white",
+        "color:rgb(1, 2, 3); background-color:rgb(1, 2, 3)",
+        "color:hsl(0 0% 100%); background-color:hsl(0 0% 100%)",
     ],
 )
 def test_text_hidden_by_its_style_is_left_out(style: str) -> None:
@@ -87,6 +92,13 @@ def test_text_hidden_by_its_style_is_left_out(style: str) -> None:
         "height:0",
         "overflow:hidden",
         "color:#333; background-color:#fff",
+        "color:inherit; background-color:inherit",
+        "color: initial; background-color: initial",
+        "color:unset; background-color:unset",
+        "color:revert; background-color:revert",
+        "color:currentColor; background-color:currentcolor",
+        "top:-600px",
+        "left: -9999px; position: static",
     ],
 )
 def test_text_a_reader_sees_stays(style: str) -> None:

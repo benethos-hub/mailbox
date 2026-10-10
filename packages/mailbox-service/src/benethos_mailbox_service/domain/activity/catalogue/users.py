@@ -11,7 +11,7 @@ from typing import ClassVar
 from benethos_mailbox_common.log import lines
 from benethos_mailbox_common.values import text
 
-from ....data.models import User
+from ....data.models import ActivityOutcome, User
 from ..base import Activity, user
 
 
@@ -49,6 +49,38 @@ class UserChanged(Activity):
 
     def touched(self) -> str | None:
         return self.user.id
+
+
+@dataclass(frozen=True, kw_only=True)
+class UserChangeRefused(Activity):
+    """A user that a batch of the users list could not change, so the
+    batch changed none. One for each such user, with the name the page
+    shows: the id when there is no such user."""
+
+    name: ClassVar[str] = "change_refused"
+    audited: ClassVar[bool] = True
+    outcome: ClassVar[ActivityOutcome] = "refused"
+    level: ClassVar[int] = logging.WARNING
+
+    user_id: str
+    user_name: str
+    # One of the batch's actions, the role ones with ``role``.
+    action: str
+    role: str | None = None
+    reason: str
+
+    def says(self) -> str:
+        did = {
+            "give_role": f"give role {self.role} to",
+            "take_role": f"take role {self.role} from",
+        }.get(self.action, self.action)
+        return f"could not {did} user {self.user_name} ({self.user_id}) in a batch"
+
+    def why(self) -> str:
+        return self.reason
+
+    def touched(self) -> str | None:
+        return self.user_id
 
 
 @dataclass(frozen=True, kw_only=True)

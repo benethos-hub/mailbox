@@ -105,6 +105,14 @@ class PendingSignIn:
     tries_left: int = CODE_TRIES
 
 
+@dataclass(frozen=True, slots=True)
+class Opened:
+    """A new session, and how many of its user's oldest it ended."""
+
+    id: str
+    ended: int
+
+
 class SignInRequiredError(Exception):
     """No valid session: the page answers with the sign-in page."""
 
@@ -140,21 +148,30 @@ class SessionStore:
         """How long a session lives at most, used or not."""
         return self._max_age
 
-    def create(self, signed: SignedIn) -> str:
+    @property
+    def per_user(self) -> int:
+        """How many sessions a user holds at most."""
+        return self._per_user
+
+    def create(self, signed: SignedIn) -> Opened:
         """A new session, with an id of its own: one the browser held
         before signing in is never taken over. The user's oldest sessions
         end, so it holds no more than its limit."""
         now = self._clock()
         # Sessions nobody came back to would stay for the life of the
-        # process. Each sign-in sweeps them.
+        # process, and what the others kept to show once until their
+        # next page. Each sign-in sweeps both.
         for stale in [s for s, v in self._sessions.items() if not self._alive(v, now)]:
             del self._sessions[stale]
+        for kept in self._sessions.values():
+            _forget_shown(kept, now)
         own = sorted(
             (v.created, s)
             for s, v in self._sessions.items()
             if v.user_id == signed.user_id
         )
-        for _, oldest in own[: max(0, len(own) - self._per_user + 1)]:
+        ended = own[: max(0, len(own) - self._per_user + 1)]
+        for _, oldest in ended:
             del self._sessions[oldest]
         session_id = secret_values.token()
         self._sessions[session_id] = UiSession(
@@ -167,7 +184,7 @@ class SessionStore:
             previous_sign_in=signed.previous,
             factor=signed.factor,
         )
-        return session_id
+        return Opened(session_id, len(ended))
 
     def _alive(self, session: UiSession, now: datetime) -> bool:
         """Not idle too long, and not older than the longest a session
@@ -185,9 +202,7 @@ class SessionStore:
     def take_once(self, session: UiSession, key: str) -> str | None:
         """What ``keep_once`` kept under ``key``, once, unless its time
         ran out. Whatever ran out goes too."""
-        now = self._clock()
-        for gone in [k for k, kept in session.once.items() if kept.until <= now]:
-            del session.once[gone]
+        _forget_shown(session, self._clock())
         kept = session.once.pop(key, None)
         return kept.value if kept is not None else None
 
@@ -241,6 +256,7 @@ class SessionStore:
         if session is None or not self._alive(session, now):
             self._sessions.pop(session_id, None)
             return None
+        _forget_shown(session, now)
         session.last_seen = now
         return session
 
@@ -251,6 +267,12 @@ class SessionStore:
     def __len__(self) -> int:
         """How many sessions it holds, idle ones not yet swept among them."""
         return len(self._sessions)
+
+
+def _forget_shown(session: UiSession, now: datetime) -> None:
+    """Drops what the session kept to show once and whose time ran out."""
+    for gone in [k for k, kept in session.once.items() if kept.until <= now]:
+        del session.once[gone]
 
 
 def store_of(request: Request) -> SessionStore:
