@@ -32,9 +32,10 @@ What the project is for: [the repository's README](https://github.com/benethos-h
 
 **Contents**
 
+- [Claude Desktop extension](#claude-desktop-extension)
 - [Install](#install)
 - [A token for it](#a-token-for-it)
-- [Claude Desktop](#claude-desktop)
+- [Claude Desktop without the extension](#claude-desktop-without-the-extension)
 - [Claude Code](#claude-code)
 - [Without a client](#without-a-client)
 - [Options](#options)
@@ -45,11 +46,50 @@ What the project is for: [the repository's README](https://github.com/benethos-h
   - [Beside a service in operation](#beside-a-service-in-operation)
 - [Tools](#tools)
 
+## Claude Desktop extension
+
+The easiest way for Claude Desktop. Nothing else has to be installed.
+Claude Desktop sets up the server with uv and Python of its own.
+
+Before you start you need:
+
+- `mailbox-service` running and reachable from this machine, with your
+  accounts connected
+- a token of a user with the rights the server should have, see
+  [A token for it](#a-token-for-it).
+
+Then:
+
+1. Download
+   [`benethos-mailbox-mcp.mcpb`](https://github.com/benethos-hub/mailbox/releases/latest/download/benethos-mailbox-mcp.mcpb)
+   from the latest release.
+2. Open the file with Claude Desktop, with a double click or in Claude
+   Desktop under Settings, Extensions. It shows the extension as
+   **Mailbox**. Install it.
+3. Fill in its settings:
+
+   | Field | What goes in |
+   |---|---|
+   | **Token** | The token. Required. |
+   | **Address of the service** | Where the service runs. Keep `http://127.0.0.1:8080` when it runs on this machine with its defaults. Otherwise its address, such as `https://mail.example.org`. |
+   | **Plain http to another machine** | Leave it off. Turn it on only for a service on another machine that has no https, such as one in a test machine of your own. The token then travels unencrypted. On this machine it is not needed. |
+
+4. Make sure the extension is enabled and start a new chat. Ask, for
+   example, which mail accounts it can see. The answer lists the
+   accounts the token has rights on.
+
+Each release carries the extension twice: as
+`benethos-mailbox-mcp.mcpb`, the link above, which always leads to the
+latest, and as `benethos-mailbox-mcp-<version>.mcpb`. An extension runs
+the version of the server it was made with. To update, download the
+newer file and open it the same way.
+
 ## Install
 
-For stdio there is nothing to install. An MCP client starts it with
-[uv](https://docs.astral.sh/uv/)'s `uvx benethos-mailbox-mcp` (see below).
-To have the command at hand:
+For Claude Desktop see [Claude Desktop extension](#claude-desktop-extension).
+For other clients there is nothing to install either. An MCP client
+starts it over stdio with [uv](https://docs.astral.sh/uv/)'s
+`uvx benethos-mailbox-mcp` (see below). To have the command at hand:
 
 ```sh
 uv tool install benethos-mailbox-mcp      # or: pipx install benethos-mailbox-mcp
@@ -65,15 +105,26 @@ The container image is `ghcr.io/benethos-hub/benethos-mailbox-mcp`. See
 
 The server is listed in the official MCP Registry as
 `io.github.benethos-hub/benethos-mailbox-mcp`, with the PyPI package
-and the Claude Desktop extension of the next section. An MCP client
+and the Claude Desktop extension. An MCP client
 that reads the registry finds it there.
 
 ## A token for it
 
 The MCP server acts as one user of the service and can do exactly what
 that user may. Give it a user of its own with only the rights it needs.
-Do this in the UI (Users, New user, then Tokens) or over the API. This
-example lets it read two accounts:
+In the UI, at `http://127.0.0.1:8080/ui`, signed in as an administrator:
+
+1. **Users**, **New user**. Give it a name, such as `claude-desktop`, and
+   leave **Signs in to** at "the API only, with tokens".
+2. Under **Grants**, tick the accounts it may use and its **Rights**,
+   such as `mail.read`. Leave the **Service rights** empty.
+3. **Create**. The new user's page opens.
+4. On its tab **Access**, under **Tokens**, **New token**. Say what it is
+   for, such as `laptop`. **Days valid** left empty means it does not
+   expire. **Create token**.
+5. Copy the token the page shows. It is shown this once.
+
+Over the API, this example lets it read two accounts:
 
 ```sh
 curl -X POST http://127.0.0.1:8080/v1/users \
@@ -85,10 +136,12 @@ curl -X POST http://127.0.0.1:8080/v1/users/<user id>/tokens \
 ```
 
 The second answer holds the token. It is shown this once. The account
-ids come from `GET /v1/accounts`. Rights that matter here: `mail.read` to
-read and to ask what is new, `mail.write` to sort and file, `drafts` to write drafts, `send` to
-send. A grant can limit sending to certain recipients and a number per
-day.
+ids come from `GET /v1/accounts`.
+
+Rights that matter here: `mail.read` to read and to ask what is new,
+`mail.write` to sort and file, `drafts` to write drafts, `send` to send.
+A grant can limit sending to certain recipients and a number per day
+(**Send only to** and **Sends per day** in the UI).
 
 The server needs no `accounts.read`. It learns its accounts from
 `/v1/me`, which every token may call. That answer names each account the
@@ -96,20 +149,9 @@ token has any right on, and what it may do there. `accounts.read` would
 add the full account records with the server settings, which the model
 does not need.
 
-## Claude Desktop
+## Claude Desktop without the extension
 
-The easiest way is the extension. Download
-[`benethos-mailbox-mcp.mcpb`](https://github.com/benethos-hub/mailbox/releases/latest/download/benethos-mailbox-mcp.mcpb)
-from the latest release and open the file with Claude Desktop. It asks
-for the token, and, where the service is not on this machine at
-`http://127.0.0.1:8080`, for its address and whether plain http to
-another machine is allowed. Claude Desktop installs the server with uv
-and Python of its own, so nothing else is needed. The service has to
-be running. Each release carries the extension under this name and as
-`benethos-mailbox-mcp-<version>.mcpb`.
-
-Without the extension, in `claude_desktop_config.json` (Settings,
-Developer, Edit Config):
+In `claude_desktop_config.json` (Settings, Developer, Edit Config):
 
 ```json
 {
