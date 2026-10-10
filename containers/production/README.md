@@ -8,6 +8,17 @@ The published images from the GitHub container registry, run with
 compose. Nothing is built, and no clone of the repository is needed:
 this folder is enough.
 
+**Contents**
+
+- [Get the folder](#get-the-folder)
+- [The first start](#the-first-start)
+- [Clients](#clients)
+- [MCP server instances](#mcp-server-instances)
+- [HTTPS](#https)
+- [Settings](#settings)
+- [Operation](#operation)
+- [From the compose file before](#from-the-compose-file-before)
+
 | File | What it is |
 |---|---|
 | `compose.yaml` | the service, and Caddy for HTTPS (profile `https`) |

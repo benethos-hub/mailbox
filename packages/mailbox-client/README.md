@@ -26,6 +26,14 @@ above. This package's Python interface has no stability promise yet.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 
+**Contents**
+
+- [Install](#install)
+- [Use](#use)
+- [Errors](#errors)
+- [Inside](#inside)
+- [License](#license)
+
 ## Install
 
 ```sh

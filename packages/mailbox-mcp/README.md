@@ -30,6 +30,21 @@ with the client. Over streamable HTTP, it runs as a server of its own.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 
+**Contents**
+
+- [Install](#install)
+- [A token for it](#a-token-for-it)
+- [Claude Desktop](#claude-desktop)
+- [Claude Code](#claude-code)
+- [Without a client](#without-a-client)
+- [Options](#options)
+- [Over HTTP](#over-http)
+- [Log and timeouts](#log-and-timeouts)
+- [Container](#container)
+  - [With docker run](#with-docker-run)
+  - [Beside a service in operation](#beside-a-service-in-operation)
+- [Tools](#tools)
+
 ## Install
 
 For stdio there is nothing to install. An MCP client starts it with

@@ -19,6 +19,19 @@ agents work with your mail through one door you control.
 > change of the API or the configuration is announced in the changelog.
 > Stored data is carried forward by migrations.
 
+**Contents**
+
+- [What it is for](#what-it-is-for)
+  - [Working with an AI agent in your mail](#working-with-an-ai-agent-in-your-mail)
+  - [More uses](#more-uses)
+- [What it can do today](#what-it-can-do-today)
+- [Providers](#providers)
+- [The four packages](#the-four-packages)
+- [Getting started](#getting-started)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Licence](#licence)
+
 ## What it is for
 
 Most people and small companies have more than one mail account: a

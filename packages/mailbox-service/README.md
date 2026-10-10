@@ -24,6 +24,20 @@ reach mail only through it, each with a token of its own.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 
+**Contents**
+
+- [Install](#install)
+- [First start](#first-start)
+- [Where things live](#where-things-live)
+- [Settings](#settings)
+- [Logs](#logs)
+- [Commands](#commands)
+- [Users, rights and tokens](#users-rights-and-tokens)
+- [Changes and webhooks](#changes-and-webhooks)
+- [Container](#container)
+  - [With docker run](#with-docker-run)
+  - [With compose](#with-compose)
+
 ## Install
 
 From PyPI, with [uv](https://docs.astral.sh/uv/) or pip:

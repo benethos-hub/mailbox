@@ -7,6 +7,11 @@
 The images, and the places they run in, each in a folder of its own.
 Each place keeps its secrets in its own `secrets/`, never versioned.
 
+**Contents**
+
+- [For development](#for-development)
+- [The images](#the-images)
+
 ```
 containers/
   images/                        # what the CI builds and publishes
