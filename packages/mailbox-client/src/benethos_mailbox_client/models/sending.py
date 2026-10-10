@@ -8,7 +8,7 @@ from dataclasses import dataclass
 Recipient = tuple[str, str | None]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Sent:
     message_id_header: str | None
     refused: list[str]

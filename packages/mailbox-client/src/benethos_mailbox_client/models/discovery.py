@@ -10,7 +10,7 @@ from typing import Any
 from .accounts import Account
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Hint:
     """A word for a person, e.g. where to make an app password."""
 
@@ -18,7 +18,7 @@ class Hint:
     url: str | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MailServer:
     """A server a candidate names: ``protocol`` imap, pop3, smtp or jmap,
     ``security`` tls, starttls or none. ``reachable`` None: not tried."""
@@ -33,7 +33,7 @@ class MailServer:
     capabilities: tuple[str, ...]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Candidate:
     """One way to connect the address: the kind of account, how it signs
     in (``credential``: password, app_password, api_token or oauth), where
@@ -50,7 +50,7 @@ class Candidate:
     settings: dict[str, Any]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SourceReport:
     """What one source of discovery answered: found, nothing or failed."""
 
@@ -59,7 +59,7 @@ class SourceReport:
     message: str | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Discovery:
     """The ways to connect an address, the recommended one first."""
 
@@ -70,7 +70,7 @@ class Discovery:
     sources: tuple[SourceReport, ...]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DeviceSignIn:
     """A sign-in with a code begun: the person enters ``user_code`` at
     ``verification_uri`` before ``expires_at``. Ask again with
@@ -83,7 +83,7 @@ class DeviceSignIn:
     interval: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DeviceSignInState:
     """Whether the person signed in: then the account, connected or
     signed in again."""

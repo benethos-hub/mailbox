@@ -31,7 +31,7 @@ from .migrations import MIGRATIONS, SCHEMA_VERSION
 IN_CHUNK = 500
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Migrated:
     """What opening the database did to its schema, for the log: the
     versions before and after, and what the migrations had to say."""

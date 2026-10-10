@@ -119,4 +119,4 @@ def admin_token(services: Services, name: str = "live") -> str:
     services in its own process."""
     caller = Access("usr_live_script", "live script", [], service=ADMIN_SERVICE)
     user = services.users.create_user(caller, name, [], [], service=[permissions.ADMIN])
-    return services.auth.issue_token(user.id, "live check")[1]
+    return services.auth.issue_token(user.id, "live check").plain

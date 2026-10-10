@@ -27,7 +27,7 @@ from .factors import SecondFactors, Taken
 from .passwords import MAX_LENGTH, Passwords
 from .signin import SignedIn, SignInState
 from .throttle import SignInThrottle
-from .tokens import ApiTokens, TokenState
+from .tokens import ApiTokens, IssuedToken, TokenState
 
 # A user name that fails this often in the window waits this long, from
 # any address: slower guessing at one account from many addresses, and
@@ -280,7 +280,7 @@ class AuthService:
 
     def issue_token(
         self, user_id: str, name: str, expires_at: datetime | None = None
-    ) -> tuple[ApiToken, str]:
+    ) -> IssuedToken:
         """A new token for a user. The plain token is returned once only."""
         return self._api_tokens.issue(user_id, name, expires_at)
 

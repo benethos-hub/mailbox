@@ -34,7 +34,7 @@ _NOT_IN_ADDRESS = re.compile(r"[\s\x00-\x1f\x7f]")
 ConnectionFactory = Callable[[Server, float], Any]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SmtpLogin:
     username: str
     secret: str

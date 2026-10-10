@@ -8,6 +8,8 @@ for another user.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from ...data.models import User
 from ...data.secrets import totp
 from ...data.storage import UserRepository
@@ -17,6 +19,24 @@ from ..activity import users as said
 from ..auth import AuthService, SecondFactors
 from ..rights import Access
 from .rules import UserRules
+
+
+@dataclass(frozen=True, slots=True)
+class TotpSetup:
+    """A device begun: its name as it is kept, and the secret to scan.
+    Nothing is stored yet."""
+
+    name: str
+    secret: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class TotpConfirmed:
+    """A device stored: the recovery codes the first device brings, shown
+    once, and the new stamp of the user's sessions."""
+
+    recovery_codes: list[str]
+    stamp: str
 
 
 class TotpService:
@@ -39,7 +59,7 @@ class TotpService:
 
     async def begin(
         self, access: Access, name: str, password: str, code: str = ""
-    ) -> tuple[str, bytes]:
+    ) -> TotpSetup:
         """A new secret for the caller to scan into a device called
         ``name``, after its password once more, and with a second factor
         on already, a code. Returns the name as it is kept and the secret.
@@ -49,11 +69,11 @@ class TotpService:
         await self._auth.confirm(access, password)
         if self._factors.has(user.id):
             self._auth.confirm_code(access, code)
-        return name, totp.new_secret()
+        return TotpSetup(name, totp.new_secret())
 
     def confirm(
         self, access: Access, name: str, secret: bytes, code: str
-    ) -> tuple[list[str], str]:
+    ) -> TotpConfirmed:
         """The device stored, once ``code`` is the secret's code now.
         Returns the recovery codes the first device of the second factor
         brings, to be shown once, and the new stamp, which keeps the
@@ -73,7 +93,7 @@ class TotpService:
         stamp = self._factors.stamp(user.id)
         if stamp is None:
             raise NotFoundError("the second factor is gone")
-        return codes, stamp
+        return TotpConfirmed(codes, stamp)
 
     def rename(self, access: Access, device_id: str, name: str) -> None:
         before = self._own_device(access, device_id)

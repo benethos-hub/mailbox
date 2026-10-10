@@ -23,7 +23,7 @@ def no_configuration_from_this_machine(
     """Neither the environment of this machine nor a settings file in the
     repository or in the config folder of the operating system."""
     for name in list(os.environ):
-        if name.startswith(config.PREFIXES):
+        if name.startswith(("MAILBOX_MCP_", "MAILBOX_SERVICE_")):
             monkeypatch.delenv(name)
     monkeypatch.setattr(config, "ENV_FILE", f"config/{config.APP}/no-such.env")
     system = tmp_path_factory.mktemp("system")

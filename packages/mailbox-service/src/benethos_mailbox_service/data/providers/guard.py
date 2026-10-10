@@ -22,11 +22,12 @@ from . import rules
 T = TypeVar("T")
 
 ATTEMPTS = 3
+BURST = 10
 FIRST_PAUSE = 30.0
 LONGEST_PAUSE = 900.0
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Pace:
     """How an adapter treats one account's server: a rate a minute, how
     many requests pass at once, how often a request is tried while the
@@ -35,7 +36,7 @@ class Pace:
     cautious, for servers nobody has told us about."""
 
     per_minute: float = 60.0
-    burst: int = 10
+    burst: int = BURST
     attempts: int = ATTEMPTS
     first_pause: float = FIRST_PAUSE
     longest_pause: float = LONGEST_PAUSE
@@ -48,7 +49,7 @@ class Guard:
     def __init__(
         self,
         per_minute: float,
-        burst: int = Pace.burst,
+        burst: int = BURST,
         clock: Clock = time.monotonic,
         sleep: Sleep = time.sleep,
         jitter: Callable[[float, float], float] | None = None,

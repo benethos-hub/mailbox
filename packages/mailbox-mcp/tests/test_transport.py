@@ -89,15 +89,6 @@ def test_a_websocket_is_closed_unseen() -> None:
     assert answer["reached"] is False
 
 
-def test_token_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv(transport.ENV_VAR, raising=False)
-    assert transport.token_from_env() is None
-    monkeypatch.setenv(transport.ENV_VAR, "   ")
-    assert transport.token_from_env() is None
-    monkeypatch.setenv(transport.ENV_VAR, " abc \n")
-    assert transport.token_from_env() == "abc"
-
-
 # --- host checks ----------------------------------------------------------------------
 
 
@@ -283,9 +274,9 @@ def test_stdio_ignores_a_token(
 @pytest.mark.parametrize(
     ("name", "value", "said"),
     [
-        ("TRANSPORT", "carrier-pigeon", "MAILBOX_MCP_TRANSPORT must be one of"),
-        ("LOG_LEVEL", "verbose", "MAILBOX_MCP_LOG_LEVEL must be one of"),
-        ("PORT", "eighty", "invalid int value: 'eighty'"),
+        ("TRANSPORT", "carrier-pigeon", "MAILBOX_MCP_TRANSPORT: Input should be"),
+        ("LOG_LEVEL", "verbose", "MAILBOX_MCP_LOG_LEVEL: Input should be"),
+        ("PORT", "eighty", "MAILBOX_MCP_PORT: Input should be a valid integer"),
     ],
 )
 def test_a_bad_value_from_the_environment(

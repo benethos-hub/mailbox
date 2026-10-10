@@ -111,7 +111,7 @@ class Fetched:
     body: bytes
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Answered:
     """An answer of any status, after redirects."""
 

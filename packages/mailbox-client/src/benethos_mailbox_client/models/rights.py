@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Grant:
     """Rights on accounts: ``accounts`` ids or ``*`` for every one,
     ``allow`` groups such as ``mail.read`` or single operations. The rest
@@ -23,7 +23,7 @@ class Grant:
     expires_at: datetime | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Permissions:
     """The catalogue of rights: each group and the operations it allows,
     and the groups of the service, named in a user's or a role's

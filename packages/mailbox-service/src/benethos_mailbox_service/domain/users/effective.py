@@ -15,7 +15,7 @@ from ..rights import Access
 READ_AND_SEND_ANYWHERE = "read_and_send_anywhere"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Sending:
     """One grant that allows sending from an account: to whom, how many in
     24 hours, and how many of those are left now (PERMISSIONS.md 8.8)."""
@@ -25,7 +25,7 @@ class Sending:
     sends_left: int | None  # None: no limit
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class AccountRights:
     """One account the caller may act on, and what it may do there."""
 
@@ -41,7 +41,7 @@ class AccountRights:
     capabilities: list[Capability] = field(default_factory=list)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class EffectiveRights:
     user_id: str
     name: str

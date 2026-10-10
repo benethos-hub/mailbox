@@ -56,12 +56,12 @@ def run(args: argparse.Namespace) -> None:
             )
             return
         if args.users_command == "create-admin":
-            user, password = anyio.run(services.users.create_admin, args.name)
-            done = f"Created user {user.id} ({user.name}) with every right"
+            made = anyio.run(services.users.create_admin, args.name)
+            done = f"Created user {made.user.id} ({made.user.name}) with every right"
         else:
             before = services.auth.user_named(args.name)
-            user, password = anyio.run(services.passwords.reset_password, args.name)
-            done = f"Gave {user.name} ({user.id}) a new password"
+            made = anyio.run(services.passwords.reset_password, args.name)
+            done = f"Gave {made.user.name} ({made.user.id}) a new password"
             if before is not None and not before.ui_sign_in:
                 done += ", and its UI sign-in, which was off,"
     say(
@@ -69,4 +69,4 @@ def run(args: argparse.Namespace) -> None:
         "one-time password, shown this once. The UI then asks for one of "
         "your own:"
     )
-    emit(password)
+    emit(made.password)

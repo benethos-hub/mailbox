@@ -186,7 +186,9 @@ jobs:
             -e packages/mailbox-common "pytest>=9.1.1"
           uv pip list --python /tmp/lowest-common/bin/python
           /tmp/lowest-common/bin/python -m pytest -q -p no:cacheprovider \
-            --ignore=packages/mailbox-common/tests/paths packages/mailbox-common/tests
+            --ignore=packages/mailbox-common/tests/paths \
+            --ignore=packages/mailbox-common/tests/settings \
+            packages/mailbox-common/tests
           uv pip install --python /tmp/lowest-common/bin/python --resolution lowest-direct \
             -e "packages/mailbox-common[all]"
           uv pip list --python /tmp/lowest-common/bin/python

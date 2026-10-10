@@ -191,7 +191,7 @@ async def check_writing(
                     "update_messages",
                     {
                         "account_id": account_id,
-                        "message_ids": [message["id"]],
+                        "message_ids": [message.id],
                         **changes,
                     },
                 )
@@ -211,45 +211,42 @@ async def check_writing(
             folder_id = (created.structured_content or {}).get("id")
             run.check("create_folder", not created.is_error and bool(folder_id))
 
-            starred = await update(starred=not message["starred"])
-            now = admin.get_message(account_id, message["id"])
+            starred = await update(starred=not message.starred)
+            now = admin.get_message(account_id, message.id)
             run.check(
                 "update_messages stars",
-                starred.get("done") == [message["id"]]
-                and now["starred"] is not message["starred"],
+                starred.get("done") == [message.id]
+                and now.starred is not message.starred,
                 str(starred.get("error", "")),
             )
-            await update(starred=message["starred"])
+            await update(starred=message.starred)
 
             if folder_id:
                 moved = await update(move_to=folder_id)
-                now = admin.get_message(account_id, message["id"])
+                now = admin.get_message(account_id, message.id)
                 run.check(
                     "update_messages moves into the new folder, the id stays",
-                    moved.get("done") == [message["id"]]
-                    and now.get("folder_ids") == [folder_id],
+                    moved.get("done") == [message.id] and now.folder_ids == [folder_id],
                     str(moved.get("error", "")),
                 )
 
             trashed = await update(trash=True)
-            now = admin.get_message(account_id, message["id"])
+            now = admin.get_message(account_id, message.id)
             trash = next(
                 (f.id for f in admin.list_folders(account_id) if f.role == "trash"),
                 None,
             )
             run.check(
                 "update_messages trashes",
-                trashed.get("done") == [message["id"]]
-                and now.get("folder_ids") == [trash],
+                trashed.get("done") == [message.id] and now.folder_ids == [trash],
                 str(trashed.get("error", "")),
             )
 
             back = await update(move_to="inbox")
-            now = admin.get_message(account_id, message["id"])
+            now = admin.get_message(account_id, message.id)
             run.check(
                 "update_messages moves back by role",
-                back.get("done") == [message["id"]]
-                and now.get("folder_ids") == [inbox.id],
+                back.get("done") == [message.id] and now.folder_ids == [inbox.id],
                 str(back.get("error", "")),
             )
 
@@ -261,7 +258,7 @@ async def check_writing(
                 "whats_new names the message as updated",
                 not news.is_error
                 and any(
-                    c["id"] == message["id"] and c["type"] == "message.updated"
+                    c["id"] == message.id and c["type"] == "message.updated"
                     for c in changes
                 ),
                 f"{len(changes)} changes",
@@ -270,11 +267,11 @@ async def check_writing(
         # Whatever failed above: the message back in the inbox as it was.
         admin.request(
             "PATCH",
-            f"/v1/accounts/{account_id}/messages/{message['id']}",
+            f"/v1/accounts/{account_id}/messages/{message.id}",
             json={
                 "folder_ids": [inbox.id],
-                "starred": message["starred"],
-                "unread": message["unread"],
+                "starred": message.starred,
+                "unread": message.unread,
             },
         )
         if folder_id:
@@ -312,7 +309,7 @@ async def check_drafts(
                 {
                     "account_id": account_id,
                     "text": "mailbox-service MCP draft check",
-                    "original_id": original["id"],
+                    "original_id": original.id,
                 },
             )
             draft = created.structured_content or {}
@@ -352,7 +349,7 @@ async def check_drafts(
                 text_of(replaced) if replaced.is_error else "",
             )
             refused = await session.call_tool(
-                "delete_draft", {"account_id": account_id, "draft_id": original["id"]}
+                "delete_draft", {"account_id": account_id, "draft_id": original.id}
             )
             run.check(
                 "delete_draft does not reach other mail",

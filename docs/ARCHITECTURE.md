@@ -166,8 +166,9 @@ packages/mailbox-service/
                         #   uvicorn, the access line, the lines of
                         #   mailbox-common
     config.py           # cross-cutting: Settings (MAILBOX_SERVICE_* env and
-                        #   the .env), the folders that apply: named,
-                        #   the repository's, the system's (mailbox-common)
+                        #   the .env, on the base of mailbox-common), the
+                        #   folders that apply: named, the repository's,
+                        #   the system's (mailbox-common)
     errors.py           # cross-cutting: MailboxServiceError hierarchy, no HTTP
     common/             # cross-cutting: helpers several layers share,
                         #   standard library, anyio and mailbox-common only
@@ -436,7 +437,8 @@ packages/mailbox-client/
       accounts.py       # an account, its stored credentials
       discovery.py      # what discovery found, a sign-in with a code
       folders.py        # a folder
-      messages.py       # a page, the changes, a batch's outcome, an
+      messages.py       # a message and its summary, a page, the
+                        #   changes, a batch's outcome, an
                         #   attachment's bytes
       sending.py        # a recipient, what a send answered
       sends.py          # a record of the audit of sends
@@ -511,9 +513,9 @@ packages/mailbox-mcp/
     models.py           # the client package's records
     errors.py           # ToolError, and the client's errors turned
                         #   into one for the model
-    config.py           # the optional .env, put into the environment
-                        #   (python-dotenv), the folder of the system
-                        #   from mailbox-common
+    config.py           # Settings (MAILBOX_MCP_* and the service's
+                        #   address and token), the optional .env and
+                        #   the folder of the system, from mailbox-common
 ```
 
 The modules stand in lines, each importing only lines below:
@@ -563,6 +565,10 @@ packages/mailbox-common/
       redact.py         # secrets noted once, masked in every text
     paths/              # where a program keeps its files (platformdirs)
       folders.py        # named_file, system_folders: SystemFolders
+    settings/           # a program's settings (pydantic-settings)
+      files.py          # FileSettings, the base of a program's
+                        #   Settings, and load: the command line, the
+                        #   environment, the file, the defaults
     values/             # values written one way
       canonical.py      # JSON: compact to send, canonical to hash
       sizes.py          # MIB, and a size in megabytes for a message
@@ -585,13 +591,15 @@ packages/mailbox-common/
   caller, it is imported under another, with a comment.
 - **Libraries.** The standard library alone, but for a group that names
   a library. That library is an extra named after the group, never
-  after the library: `paths` brings platformdirs. A group's module
+  after the library: `paths` brings platformdirs, `settings`
+  pydantic-settings. A group's module
   that misses its extra says which one. `all` names every extra. An
   extra is worth it when a user of the package does not need the group,
   or the library is heavy. Tests and CI install every extra, and CI
   runs the package once without any.
 - **The pin is exact.** The service and the MCP server depend on
-  `benethos-mailbox-common[paths]==X.Y.Z`, the version of the release.
+  `benethos-mailbox-common[paths,settings]==X.Y.Z`, the version of
+  the release.
   So groups, paths and extras may change inside a release, and an
   operator never types an extra.
 - **A new module** goes into the group of its concern, with its test in
@@ -726,6 +734,7 @@ noticing. Every change is measured against that.
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
 | Folders for settings and data | `folders()` in `config.py`, `system_folders` in `paths/folders.py` of `mailbox-common` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
+| Settings | `FileSettings` and `load` in `settings/files.py` of `mailbox-common`, the base of the service's and the MCP server's `Settings` | pydantic-settings | another reader of the environment and a settings file |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
 | Authentication | credential kinds of a user (CONCEPT 7.5, [AUTHENTICATION.md](AUTHENTICATION.md)) | API token, password for the UI | OAuth client credentials |
 | Second factor | `SecondFactors` in `domain/auth/factors.py`, the frame over its methods and the recovery codes | TOTP (`domain/auth/totp.py`, `data/secrets/totp.py`) | a further method beside it, e.g. passkeys |
@@ -780,6 +789,11 @@ imapclient boundary), never by patching deep inside a library.
   and say why in the docstring.
   Example: `benethos_mailbox_common.paths.folders`: `system_folders(app)`
   returns `SystemFolders(config, data)`, not a tuple.
+  `tests/test_boundaries.py` of the service checks it for the four
+  packages: what each offers, and the methods of the domain services
+  the web layer reaches. Its `ALLOWED` names what stays, with the
+  reason, such as a lookup by key or the free JSON of an account's
+  settings.
 
 ## 10. Errors
 

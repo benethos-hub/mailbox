@@ -74,6 +74,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The MCP server reads its settings as the service does, through
+  `benethos-mailbox-common[settings]`, and no longer needs
+  `python-dotenv`. A wrong value in the environment or the settings
+  file stops the start and names the setting. The settings file no
+  longer changes the environment of the process.
 - The service and the MCP server install a fourth package,
   `benethos-mailbox-common`, of the same version: what both of them
   need. The MCP server's log is written as the service's: in colour on
@@ -93,6 +98,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_all_changes` read every account. A change of the feed is the
   record `Change` and a failed id of a batch the record `Failed`,
   where both were a dict.
+- **Breaking:** `mailbox-client`: a message is the record `Message`,
+  a summary in a page, a changed message and a written draft the record
+  `MessageSummary`, where each was a dict. The API's `from` is
+  `sender`, a time a `datetime`, an address an `Address`, an attachment
+  of a message an `AttachedFile`. `Change.at` is a `datetime` too.
 - `mailbox-client`: `me()` is now `get_me()`, named like its operation,
   as every method of the client is. Each method is made from the
   endpoint that describes its call, with that endpoint's name,

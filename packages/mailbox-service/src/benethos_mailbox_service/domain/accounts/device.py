@@ -27,7 +27,7 @@ DEVICE_VALID_FOR = timedelta(minutes=30)
 SLOWER = timedelta(seconds=5)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DeviceSignIn:
     """A sign-in with a code: the person enters ``user_code`` at
     ``verification_uri``, then ``poll_device`` with ``id`` connects the

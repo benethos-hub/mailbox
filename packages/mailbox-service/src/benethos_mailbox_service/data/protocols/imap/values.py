@@ -18,7 +18,7 @@ MAX_MESSAGE_BYTES = 40 * sizes.MIB
 MAX_HEADER_BYTES = 256 * 1024
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class RawFolder:
     name: str
     delimiter: str | None
@@ -39,7 +39,7 @@ class FolderState:
     highest_modseq: int | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Namespace:
     """Where top-level folders of the user go (RFC 2342), e.g. ``INBOX.``
     on servers that keep all folders below the inbox, and its delimiter."""
@@ -67,7 +67,7 @@ class FetchedMessage(parse.ParsedMessage):
         self.flags = flags
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SearchCriteria:
     """IMAP SEARCH keys (RFC 3501 6.4.4). Fields left out do not narrow."""
 

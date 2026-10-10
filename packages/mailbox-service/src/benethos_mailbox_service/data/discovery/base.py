@@ -8,14 +8,14 @@ from typing import Protocol
 from ..models import Candidate, DiscoverySourceName, Hint
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Query:
     email: str
     # The domain of the address, lower case, IDN in ASCII (punycode).
     domain: str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Finding:
     """What one source found. Whether it counts as confirmed is decided in
     the domain, from the source and ``answered_by``."""

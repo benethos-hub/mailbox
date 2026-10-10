@@ -409,9 +409,9 @@ def test_several_tokens_are_revoked_at_once_or_none(services: Services) -> None:
 
     user = services.users.create_user(ADMIN, "bot", [], [])
     other = services.users.create_user(ADMIN, "other", [], [])
-    one, _ = services.auth.issue_token(user.id, "one")
-    two, _ = services.auth.issue_token(user.id, "two")
-    foreign, _ = services.auth.issue_token(other.id, "foreign")
+    one = services.auth.issue_token(user.id, "one").token
+    two = services.auth.issue_token(user.id, "two").token
+    foreign = services.auth.issue_token(other.id, "foreign").token
     with pytest.raises(NotFoundError):
         services.tokens.revoke_tokens(ADMIN, user.id, [one.id, foreign.id])
     listed = services.tokens.list_tokens(ADMIN, user.id)

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SendRecord:
     """One attempt to send from an account. ``operation`` is
     ``send_message`` or ``send_draft``, ``outcome`` ``sent``, ``denied`` or

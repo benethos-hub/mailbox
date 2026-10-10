@@ -60,7 +60,7 @@ class ChangedMessage:
     created: datetime | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FolderChanges:
     """What changed in one folder since a token, and the token to ask
     from next time."""

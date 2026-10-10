@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Protocol
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class StoredPassword:
     hash: str
     # Set by someone else, or made by create-admin: change it at sign-in.

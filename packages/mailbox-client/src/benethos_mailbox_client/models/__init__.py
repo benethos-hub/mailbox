@@ -1,8 +1,5 @@
 """The records the client answers with: small, frozen, in the terms of
-a caller rather than the fields of the API.
-
-A message, a summary in a page and a draft are not records: they stay
-the JSON of the API, which describes them in docs/openapi.json."""
+a caller rather than the fields of the API."""
 
 from __future__ import annotations
 
@@ -21,7 +18,19 @@ from .factors import SecondFactor, TotpDevice
 from .folders import Folder
 from .health import Health
 from .me import Me, MeAccount, Sending
-from .messages import Attachment, Change, Changes, Failed, Outcome, Page
+from .messages import (
+    Address,
+    AttachedFile,
+    Attachment,
+    Change,
+    Changes,
+    Failed,
+    Message,
+    MessageSummary,
+    Outcome,
+    Page,
+    Reference,
+)
 from .paging import Paged
 from .rights import Grant, Permissions
 from .roles import Role
@@ -62,7 +71,12 @@ __all__ = [
     "StoredCredential",
     "Account",
     "Paged",
+    "Address",
+    "AttachedFile",
     "Attachment",
+    "Message",
+    "MessageSummary",
+    "Reference",
     "Change",
     "Changes",
     "Failed",

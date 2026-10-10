@@ -285,7 +285,8 @@ def test_a_new_token_is_shown_once_and_never_in_the_url(
 
 def test_revoke_a_token(ui: TestClient, services: Services) -> None:
     user = services.users.create_user(ADMIN, "bot", [], [])
-    token, plain = services.auth.issue_token(user.id, "old")
+    issued = services.auth.issue_token(user.id, "old")
+    token, plain = issued.token, issued.plain
     url = f"/ui/users/{user.id}"
     assert "Revoke" in ui.get(f"{url}?tab=access").text
     revoked = post(ui, f"{url}/tokens/{token.id}/revoke")

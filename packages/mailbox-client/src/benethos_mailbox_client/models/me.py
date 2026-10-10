@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Sending:
     """One grant that allows sending from an account: to whom, how many in
     24 hours, how many of those are left. None: no narrowing."""
@@ -15,7 +15,7 @@ class Sending:
     left: int | None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MeAccount:
     id: str
     email: str
@@ -28,7 +28,7 @@ class MeAccount:
     capabilities: frozenset[str] | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Me:
     """The token's user: its accounts with what it may do on each, and
     what it may do beyond one account."""

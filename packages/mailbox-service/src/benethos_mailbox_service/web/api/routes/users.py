@@ -193,9 +193,9 @@ async def list_tokens(user_id: str, caller: Caller, tokens: Tokens) -> list[Toke
 async def create_token(
     user_id: str, data: TokenCreate, caller: Caller, tokens: Tokens
 ) -> TokenCreated:
-    token, plain = tokens.create_token(caller, user_id, data.name, data.expires_at)
-    info = _info(tokens, token)
-    return TokenCreated(**info.model_dump(), token=plain)
+    issued = tokens.create_token(caller, user_id, data.name, data.expires_at)
+    info = _info(tokens, issued.token)
+    return TokenCreated(**info.model_dump(), token=issued.plain)
 
 
 @router.delete("/users/{user_id}/tokens/{token_id}", status_code=204)

@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_client import SyncMailboxClient
+from benethos_mailbox_client import MessageSummary, SyncMailboxClient
 
 from .imap import OtherClient
 from .mail import messages_with_subject
@@ -25,7 +25,7 @@ DELIVERY_PAUSE = 3.0
 
 def find_by_subject(
     mailbox: SyncMailboxClient, account_id: str, subject: str
-) -> dict[str, Any] | None:
+) -> MessageSummary | None:
     found = messages_with_subject(
         mailbox, account_id, subject, tries=DELIVERY_TRIES, pause=DELIVERY_PAUSE
     )

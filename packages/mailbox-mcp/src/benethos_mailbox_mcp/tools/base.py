@@ -57,7 +57,7 @@ def client() -> MailboxClient:
     return found
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Tool:
     fn: Callable[..., Any]
     # What a client shows to a person.

@@ -89,7 +89,8 @@ def test_token_format() -> None:
 
 
 def test_issued_token_authenticates_as_its_user(service: AuthService, repos) -> None:
-    record, plain = service.issue_token("usr_reader", "laptop")
+    issued = service.issue_token("usr_reader", "laptop")
+    record, plain = issued.token, issued.plain
     assert record.token_hash == hash_token(plain)
     assert plain not in record.model_dump_json()
     access = service.authenticate(plain)
@@ -110,7 +111,8 @@ def test_missing_token(service: AuthService) -> None:
 
 
 def test_revoked_token(service: AuthService) -> None:
-    record, plain = service.issue_token("usr_reader", "laptop")
+    issued = service.issue_token("usr_reader", "laptop")
+    record, plain = issued.token, issued.plain
     service.revoke_token(record.id)
     service.revoke_token(record.id)  # idempotent
     with pytest.raises(UnauthorizedError, match="revoked"):
@@ -120,7 +122,8 @@ def test_revoked_token(service: AuthService) -> None:
 def test_a_revocation_during_an_authentication_stays(
     service: AuthService, repos, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    record, plain = service.issue_token("usr_reader", "laptop")
+    issued = service.issue_token("usr_reader", "laptop")
+    record, plain = issued.token, issued.plain
     tokens = repos[2]
     found = tokens.find_by_hash
 
@@ -144,9 +147,9 @@ def test_an_expiry_without_a_time_zone_is_refused(service: AuthService) -> None:
 
 
 def test_expired_token(service: AuthService, clock: Clock) -> None:
-    _, plain = service.issue_token(
-        "usr_reader", "t", expires_at=NOW + timedelta(days=1)
-    )
+    plain = (
+        service.issue_token("usr_reader", "t", expires_at=NOW + timedelta(days=1))
+    ).plain
     service.authenticate(plain)
     clock.now = NOW + timedelta(days=1)
     with pytest.raises(UnauthorizedError, match="expired"):
@@ -154,7 +157,7 @@ def test_expired_token(service: AuthService, clock: Clock) -> None:
 
 
 def test_disabled_user(service: AuthService, repos) -> None:
-    _, plain = service.issue_token("usr_reader", "t")
+    plain = service.issue_token("usr_reader", "t").plain
     users = repos[0]
     users.save(users.get("usr_reader").model_copy(update={"disabled": True}))
     with pytest.raises(UnauthorizedError, match="disabled"):
@@ -162,7 +165,7 @@ def test_disabled_user(service: AuthService, repos) -> None:
 
 
 def test_deleted_user(service: AuthService, repos) -> None:
-    _, plain = service.issue_token("usr_reader", "t")
+    plain = service.issue_token("usr_reader", "t").plain
     repos[0].save(User(id="usr_other", name="other"))
     repos[0].delete("usr_reader")
     with pytest.raises(UnauthorizedError):
@@ -243,7 +246,7 @@ def test_rights_that_do_not_exist_are_logged_once(
     anna = services.users.create_user(
         ADMIN, "Anna", [], [Grant(accounts=["*"], allow=["mail.read"])]
     )
-    _, plain = services.tokens.create_token(ADMIN, anna.id, "laptop")
+    plain = services.tokens.create_token(ADMIN, anna.id, "laptop").plain
     stored = services.repositories.users.get(anna.id)
     old = Grant(accounts=["*"], allow=["mail.read", "mail.teleport"])
     services.repositories.users.save(

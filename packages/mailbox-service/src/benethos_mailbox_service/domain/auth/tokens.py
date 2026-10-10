@@ -10,6 +10,7 @@ from __future__ import annotations
 import secrets
 import string
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
@@ -27,6 +28,14 @@ _ALPHABET = string.ascii_letters + string.digits
 _TOKEN_LENGTH = 64
 
 TokenState = Literal["active", "expired", "revoked"]
+
+
+@dataclass(frozen=True, slots=True)
+class IssuedToken:
+    """A new token: its record, and the token itself, shown once."""
+
+    token: ApiToken
+    plain: str
 
 
 def hash_token(token: str) -> str:
@@ -57,7 +66,7 @@ class ApiTokens:
 
     def issue(
         self, user_id: str, name: str, expires_at: datetime | None = None
-    ) -> tuple[ApiToken, str]:
+    ) -> IssuedToken:
         """A new token for a user. The plain token is returned once only."""
         self._users.get(user_id)
         if expires_at is not None and expires_at.utcoffset() is None:
@@ -74,7 +83,7 @@ class ApiTokens:
             expires_at=expires_at,
         )
         self._tokens.save(token)
-        return token, plain
+        return IssuedToken(token, plain)
 
     def revoke(self, token_id: str) -> ApiToken:
         token = self._tokens.get(token_id)

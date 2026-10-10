@@ -66,7 +66,7 @@ class Poster(Protocol):
     async def post(self, url: str, body: bytes, headers: dict[str, str]) -> int: ...
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Retries:
     attempts: int = 8
     first_retry: float = 30.0

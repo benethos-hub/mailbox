@@ -20,7 +20,7 @@ class Page(BaseModel, Generic[T]):
     next_cursor: str | None = None
 
 
-@dataclass(frozen=True, order=True)
+@dataclass(frozen=True, order=True, slots=True)
 class Before:
     """Where a list of records, newest first, continues: those older than
     ``at``, and of the same time those with a smaller ``id``."""

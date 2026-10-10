@@ -9,14 +9,14 @@ from typing import Protocol
 from .table import Table, drop_where
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class WrappedKey:
     key_id: str
     nonce: bytes
     ciphertext: bytes
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class EncryptedCredential:
     account_id: str
     field: str

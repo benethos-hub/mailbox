@@ -44,7 +44,7 @@ async def create_token(
                 f"Days valid must be a whole number from 1 to {MAX_TOKEN_DAYS}."
             )
         expires_at = utc_now() + timedelta(days=int(days)) if days else None
-        _, plain = tokens.create_token(caller, user_id, name, expires_at)
+        plain = tokens.create_token(caller, user_id, name, expires_at).plain
     # Shown on the next page, once, and never in the URL.
     show_once(request, f"token:{user_id}", plain)
     return back(request, here)

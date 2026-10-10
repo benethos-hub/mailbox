@@ -20,7 +20,7 @@ SALT_BYTES = 16
 KEY_BYTES = 32
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Scrypt:
     """Cost of one hash. The default is one of OWASP's scrypt settings:
     32 MiB of memory."""

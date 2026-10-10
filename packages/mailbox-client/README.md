@@ -49,7 +49,7 @@ async with MailboxClient() as mailbox:
     for account in me.accounts:
         page = await mailbox.list_messages(account.id, folder="inbox", limit=10)
         for summary in page.items:
-            print(account.email, summary["subject"])
+            print(account.email, summary.sender, summary.subject)
 ```
 
 For code without an event loop, `SyncMailboxClient` has the same

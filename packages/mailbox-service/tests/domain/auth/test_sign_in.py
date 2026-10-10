@@ -334,7 +334,8 @@ async def test_set_password_on_the_host_switches_the_ui_sign_in_on(
     services: Services,
 ) -> None:
     services.users.create_user(ADMIN, "Bot", [], [READER])
-    user, password = await services.passwords.reset_password("bot")
+    made = await services.passwords.reset_password("bot")
+    user, password = made.user, made.password
     assert user.ui_sign_in is True
     signed = await services.auth.sign_in("Bot", password, source="10.0.0.1")
     assert signed.must_change is True

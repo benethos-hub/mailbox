@@ -172,7 +172,7 @@ def _find(
     found = messages_with_subject(
         mailbox, account_id, subject, folder=folder, tries=tries, pause=5
     )
-    return str(found[0]["id"]) if found else None
+    return found[0].id if found else None
 
 
 def check(

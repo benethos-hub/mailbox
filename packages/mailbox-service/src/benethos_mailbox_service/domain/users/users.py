@@ -22,7 +22,7 @@ from ..activity import users as said
 from ..auth import AuthService
 from ..rights import ADMIN_SERVICE, Access, permissions
 from .effective import Effective, EffectiveRights
-from .passwords import PasswordService
+from .passwords import OneTimePassword, PasswordService
 from .rules import UserRules, named
 
 BY_NAME = paging.Order[User]("u_", lambda u: (u.name.casefold(), u.id))
@@ -31,7 +31,7 @@ BY_NAME = paging.Order[User]("u_", lambda u: (u.name.casefold(), u.id))
 BATCH_ACTIONS = ("disable", "enable", "give_role", "take_role")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class BatchOutcome:
     """What a batch did: the users it changed, or for each one it could
     not change, its name and why, and then it changed none. A user that
@@ -91,7 +91,7 @@ class UserService:
 
     # --- setup ----------------------------------------------------------------
 
-    async def create_admin(self, name: str) -> tuple[User, str]:
+    async def create_admin(self, name: str) -> OneTimePassword:
         """A user with every right, and a one-time password for it, to be
         changed at the first sign-in. For the command line on the host
         only: it checks no caller."""
@@ -106,7 +106,7 @@ class UserService:
         with self._activity.atomic():
             self._users.save(user)
             self._activity.record(said.UserCreated(by=HOST, user=user))
-        return user, await self._passwords.one_time(user)
+        return OneTimePassword(user, await self._passwords.one_time(user))
 
     # --- users ----------------------------------------------------------------
 

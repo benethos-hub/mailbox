@@ -12,7 +12,7 @@ from .recovery import HASH_LABEL, RecoveryCodes
 from .service import MAX_NAME, AuthService
 from .signin import SignedIn, SignInState
 from .throttle import SignInThrottle
-from .tokens import TokenState
+from .tokens import IssuedToken, TokenState
 from .totp import MAX_DEVICE_NAME, MAX_DEVICES, SETUP, Totp
 
 __all__ = [
@@ -25,6 +25,7 @@ __all__ = [
     "MAX_NAME",
     "Passwords",
     "HASH_LABEL",
+    "IssuedToken",
     "RecoveryCodes",
     "SecondFactors",
     "SignInThrottle",

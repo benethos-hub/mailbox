@@ -40,9 +40,10 @@ LIBRARY_HOMES = {
     "starlette": {"transport"},
     "uvicorn": {"transport"},
     "mcp": {"server", "transport", "errors", "tools.base"},
-    # The folders of the operating system come from the common package.
+    # The folders of the operating system and the settings file come from
+    # the common package.
     "platformdirs": set(),
-    "dotenv": {"config"},
+    "pydantic_settings": set(),
 }
 
 

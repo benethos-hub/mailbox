@@ -5,9 +5,8 @@ the audit, and the test mails deleted for good afterwards."""
 from __future__ import annotations
 
 import secrets
-from typing import Any
 
-from benethos_mailbox_client import SyncMailboxClient
+from benethos_mailbox_client import MessageSummary, SyncMailboxClient
 
 from .admin import user_token
 from .mail import delete_for_good, messages_with_subject
@@ -17,7 +16,7 @@ from .run import Run
 
 def arrived(
     admin: SyncMailboxClient, account_id: str, subject: str
-) -> list[dict[str, Any]]:
+) -> list[MessageSummary]:
     """The messages with ``subject`` in the account, once one is there."""
     return messages_with_subject(admin, account_id, subject, tries=20)
 
@@ -83,11 +82,12 @@ async def check_sending(
         )
         run.check("the sent draft arrived", bool(arrived(admin, receiver, subjects[1])))
         found = arrived(admin, receiver, subjects[2])
-        body = admin.get_message(receiver, found[0]["id"]) if found else {}
+        body = admin.get_message(receiver, found[0].id) if found else None
         run.check(
             "the HTML mail arrived with both parts, the text made from the HTML",
-            "<b" in (body.get("html_body") or "")
-            and (body.get("text_body") or "").strip() == "Hello HTML",
+            body is not None
+            and "<b" in (body.html_body or "")
+            and (body.text_body or "").strip() == "Hello HTML",
         )
     finally:
         delete_test_mails(admin, ids, subjects)

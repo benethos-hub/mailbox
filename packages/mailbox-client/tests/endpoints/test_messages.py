@@ -4,13 +4,56 @@ the same for both clients."""
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 import httpx
 import pytest
 
-from benethos_mailbox_client import ApiError, Change, Changes, Failed, Outcome, Page
+from benethos_mailbox_client import (
+    Address,
+    ApiError,
+    AttachedFile,
+    Change,
+    Changes,
+    Failed,
+    Message,
+    MessageSummary,
+    Outcome,
+    Page,
+    Reference,
+)
 
-from ..fake_api import PAGE, FakeApi
+from ..fake_api import MESSAGE, PAGE, SUMMARY, FakeApi
+
+AT = datetime(2026, 10, 1, 8, 0, tzinfo=UTC)
+# SUMMARY and MESSAGE of fake_api, as the client reads them.
+READ_SUMMARY = MessageSummary(
+    id="msg_1",
+    account_id="acc_1",
+    thread_id="thr_1",
+    folder_ids=["fld_1"],
+    subject="Hi",
+    sender=Address("a@example.com", "Ann"),
+    to=[Address("me@example.com")],
+    date=AT,
+    snippet="Hello",
+    unread=True,
+    starred=False,
+    keywords=["work"],
+    has_attachments=True,
+)
+READ_MESSAGE = Message(
+    **{name: getattr(READ_SUMMARY, name) for name in READ_SUMMARY.__slots__},
+    cc=[Address("c@example.com")],
+    bcc=[],
+    reply_to=[],
+    message_id_header="<m1@example.com>",
+    in_reply_to=None,
+    text_body="Hello",
+    html_body="<p>Hello</p>",
+    attachments=[AttachedFile("att_0", "a.pdf", "application/pdf", 12)],
+    reference=None,
+)
 
 
 async def test_list_messages(make_client: Callable) -> None:
@@ -30,12 +73,13 @@ async def test_list_messages(make_client: Callable) -> None:
         },
         None,
     )
-    assert found == Page([{"id": "msg_1"}], "c2", ["acc_2: timed out"])
+    assert found == Page([READ_SUMMARY], "c2", ["acc_2: timed out"])
 
 
 async def test_list_changes(make_client: Callable) -> None:
     change = {"type": "message.created", "id": "msg_1", "account_id": "acc_1"}
-    api = FakeApi({"changes": [{**change, "at": "t"}], "state": "s2", "more": True})
+    at = "2026-10-01T08:00:00+00:00"
+    api = FakeApi({"changes": [{**change, "at": at}], "state": "s2", "more": True})
     found = await make_client(api).list_changes("acc_1", since="s1", limit=10)
     assert api.call() == (
         "GET",
@@ -44,14 +88,31 @@ async def test_list_changes(make_client: Callable) -> None:
         None,
     )
     assert found == Changes(
-        [Change("message.created", "msg_1", "acc_1", "t")], "s2", True
+        [Change("message.created", "msg_1", "acc_1", AT)], "s2", True
     )
 
 
 async def test_get_message(make_client: Callable) -> None:
-    api = FakeApi({"id": "msg_1"})
-    assert await make_client(api).get_message("acc_1", "msg_1") == {"id": "msg_1"}
+    api = FakeApi(MESSAGE)
+    assert await make_client(api).get_message("acc_1", "msg_1") == READ_MESSAGE
     assert api.call() == ("GET", "/v1/accounts/acc_1/messages/msg_1", {}, None)
+
+
+async def test_a_message_reads_what_the_api_may_leave_out(
+    make_client: Callable,
+) -> None:
+    """The API requires the id alone. A draft names what it answers."""
+    reference = {"message_id": "msg_0", "action": "reply"}
+    api = FakeApi({"id": "drf_1", "from": None, "reference": reference})
+    found = await make_client(api).get_message("acc_1", "drf_1")
+    assert found.sender is None and found.date is None
+    assert found.to == [] and found.attachments == [] and not found.unread
+    assert found.reference == Reference("msg_0", "reply", "inline", True)
+
+
+def test_a_message_is_its_summary_and_more() -> None:
+    assert isinstance(READ_MESSAGE, MessageSummary)
+    assert READ_MESSAGE.subject == SUMMARY["subject"]
 
 
 async def test_update_messages(make_client: Callable) -> None:
@@ -142,7 +203,7 @@ async def test_update_message_sends_only_what_changes(make_client: Callable) -> 
         {},
         {"keywords": ["work"]},
     )
-    assert found["keywords"] == ["work"]
+    assert found.keywords == ["work"]
 
 
 async def test_batch_messages(make_client: Callable) -> None:

@@ -23,7 +23,7 @@ SEND_OPERATIONS = frozenset(permissions.GROUPS["send"])
 ADMIN_SERVICE = (permissions.ADMIN,)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SendLimit:
     """What one grant allows when sending: to whom and how often."""
 

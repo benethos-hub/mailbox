@@ -254,7 +254,7 @@ def admin_bearer(services: Services) -> dict[str, str]:
     administrator in a test."""
     name = f"api-admin-{next(_LIMITED)}"
     user = services.users.create_user(ADMIN, name, [], [], service=[permissions.ADMIN])
-    _, plain = services.auth.issue_token(user.id, "tests")
+    plain = services.auth.issue_token(user.id, "tests").plain
     return {"Authorization": f"Bearer {plain}"}
 
 
@@ -274,7 +274,7 @@ def bearer_for(
     user = services.users.create_user(
         ADMIN, name, roles or [], list(grants), service=service
     )
-    _, plain = services.auth.issue_token(user.id, "test")
+    plain = services.auth.issue_token(user.id, "test").plain
     return {"Authorization": f"Bearer {plain}"}
 
 

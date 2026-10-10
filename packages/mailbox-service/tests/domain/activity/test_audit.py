@@ -64,7 +64,8 @@ def test_the_activities_kept_are_those_audit_md_names() -> None:
 
 def test_what_a_person_did_is_kept_with_who_how_and_what(services: Services) -> None:
     anna = services.users.create_user(ADMIN, "Anna", [], [READER])
-    token, plain = services.tokens.create_token(ADMIN, anna.id, "laptop")
+    issued = services.tokens.create_token(ADMIN, anna.id, "laptop")
+    token, plain = issued.token, issued.plain
     services.tokens.revoke_token(ADMIN, anna.id, token.id)
     records = kept(services)
     assert [r.activity for r in records] == [
