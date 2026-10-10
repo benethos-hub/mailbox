@@ -171,30 +171,68 @@ def _minor(name: str) -> tuple[int, int]:
     return int(major), int(minor)
 
 
-def test_the_python_versions_are_those_ci_tests() -> None:
-    """The classifiers name the Python versions of the test matrix in
-    ci.yml, and requires-python its lowest. The newest measures the
-    coverage, and .python-version names it for the local environment.
-    A new version is added in all of them at once."""
-    text = (ROOT / ".github" / "workflows" / "ci.yml").read_text("utf-8")
-    matrix = re.search(r"^ +python-version: \[(.*)\]$", text, re.M)
+def _ci() -> str:
+    return (ROOT / ".github" / "workflows" / "ci.yml").read_text("utf-8")
+
+
+def _tested() -> list[str]:
+    """The Python versions of the test matrix in ci.yml, lowest first."""
+    matrix = re.search(r"^ +python-version: \[(.*)\]$", _ci(), re.M)
     assert matrix
-    tested = sorted((v.strip(' "') for v in matrix.group(1).split(",")), key=_minor)
-    measured = re.findall(
-        r'^ +- python-version: "(\S+)"\n +coverage: true$', text, re.M
-    )
-    project = _project(SERVICE)
-    classifiers = project["classifiers"]
+    return sorted((v.strip(' "') for v in matrix.group(1).split(",")), key=_minor)
+
+
+# A new Python version goes into the matrix, the classifiers, the coverage
+# run, .python-version and the documentation at once. The tests below
+# fail for each of them that is left behind.
+
+
+def test_the_classifiers_name_the_tested_versions() -> None:
+    """The four name the same, as test_the_packages_describe_themselves_alike
+    checks, so the service stands for all."""
+    classifiers = _project(SERVICE)["classifiers"]
     assert isinstance(classifiers, list)
     named = [
         found.group(1)
         for c in classifiers
         if (found := re.fullmatch(r"Programming Language :: Python :: (3\.\d+)", c))
     ]
-    assert sorted(named, key=_minor) == tested
-    assert project["requires-python"] == f">={tested[0]}"
-    assert measured == [tested[-1]]
-    assert (ROOT / ".python-version").read_text("utf-8").strip() == tested[-1]
+    assert sorted(named, key=_minor) == _tested()
+
+
+def test_the_lowest_tested_version_is_the_floor() -> None:
+    """requires-python allows the lowest version of the matrix, and each
+    step of lowest-versions installs on it."""
+    lowest = _tested()[0]
+    assert _project(SERVICE)["requires-python"] == f">={lowest}"
+    assert set(re.findall(r"uv venv -p (\S+) /tmp/lowest", _ci())) == {lowest}
+
+
+def test_the_newest_tested_version_measures_and_runs_locally() -> None:
+    """The coverage is measured on the newest version, and
+    .python-version names it for the local environment."""
+    newest = _tested()[-1]
+    measured = re.findall(
+        r'^ +- python-version: "(\S+)"\n +coverage: true$', _ci(), re.M
+    )
+    assert measured == [newest]
+    assert (ROOT / ".python-version").read_text("utf-8").strip() == newest
+
+
+@pytest.mark.parametrize(
+    ("relative", "pattern"),
+    [
+        ("CLAUDE.md", r"Python (3\.\d+)-(3\.\d+)\."),
+        ("docs/CONCEPT.md", r"^\| Python \| (3\.\d+)–(3\.\d+) \|$"),
+    ],
+    ids=["CLAUDE.md", "CONCEPT.md"],
+)
+def test_the_documentation_names_the_tested_versions(
+    relative: str, pattern: str
+) -> None:
+    tested = _tested()
+    text = (ROOT / relative).read_text("utf-8")
+    assert re.findall(pattern, text, re.M) == [(tested[0], tested[-1])]
 
 
 def _publish_jobs() -> dict[str, dict[str, object]]:
