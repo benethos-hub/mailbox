@@ -10,7 +10,8 @@ from typing import Literal, Self
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from benethos_mailbox_common.folders import named_file, system_folders
+# Named apart from folders() below.
+from benethos_mailbox_common.paths import folders as system
 
 APP = "benethos-mailbox-service"
 # The layout of the repository, relative to the working directory. The
@@ -243,14 +244,14 @@ def folders(env_file: Path | None = None) -> Folders:
     has either folder, else those of the operating system. A file named
     on purpose is ``env_file``, else the one ``MAILBOX_SERVICE_ENV_FILE``
     names."""
-    named = named_file(env_file, ENV_FILE_VARIABLE)
+    named = system.named_file(env_file, ENV_FILE_VARIABLE)
     if named is not None:
         named = named.resolve()
         return Folders("named", named.parent, named, named.parent / DATA_DIR)
     local = Path(ENV_FILE)
     if local.parent.is_dir() or DATA_DIR.is_dir():
         return Folders("working directory", local.parent, local, DATA_DIR)
-    config, data = system_folders(APP)
+    config, data = system.system_folders(APP)
     return Folders("system", config, config / ".env", data)
 
 

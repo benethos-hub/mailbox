@@ -13,8 +13,7 @@ from pathlib import Path
 
 import anyio
 
-from benethos_mailbox_common import redact
-from benethos_mailbox_common.logs import stderr_handler
+from benethos_mailbox_common.log import lines, redact
 
 from . import __version__, config, server, tools, transport
 from .client import Connect, connector, from_environment
@@ -102,11 +101,11 @@ def _csv(value: str) -> list[str]:
 
 
 def configure_logging(level: str) -> None:
-    """The lines of the service's log (``benethos_mailbox_common.logs``):
+    """The lines of the service's log (``benethos_mailbox_common.log.lines``):
     short and in colour on a terminal, else plain, a noted secret masked."""
     # stderr only: on stdio, stdout carries the JSON-RPC stream.
     package = __name__.rpartition(".")[0]
-    logging.basicConfig(level=level, handlers=[stderr_handler(package)])
+    logging.basicConfig(level=level, handlers=[lines.stderr_handler(package)])
     # httpx names every request with its URL at INFO, and a URL carries
     # search terms and message ids. The MCP library names each request.
     # The client keeps this log in its files.

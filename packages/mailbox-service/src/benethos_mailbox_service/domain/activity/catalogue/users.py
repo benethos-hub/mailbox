@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
 
-from benethos_mailbox_common.logs import log_time
+from benethos_mailbox_common.log import lines
 
 from ....common.text import plural
 from ....data.models import User
@@ -235,7 +235,7 @@ class TokenIssued(Activity):
 
     def says(self) -> str:
         expires = (
-            f"it expires {log_time(self.expires_at)}"
+            f"it expires {lines.log_time(self.expires_at)}"
             if self.expires_at is not None
             else "it does not expire"
         )

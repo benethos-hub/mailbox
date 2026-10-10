@@ -24,7 +24,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
 
-from benethos_mailbox_common.redact import redact
+from benethos_mailbox_common.log import redact
 
 from ...common.clock import utc_now
 from ...common.locks import KeyedLocks
@@ -250,7 +250,9 @@ class SyncService:
                     counts = await self._sync_delta(account_id)
             except MailboxServiceError as exc:
                 self._states[account_id] = replace(
-                    state, last_error=redact(exc.message), last_error_at=self._clock()
+                    state,
+                    last_error=redact.redact(exc.message),
+                    last_error_at=self._clock(),
                 )
                 raise
             self._states[account_id] = SyncState(last_sync_at=self._clock())

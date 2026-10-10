@@ -10,7 +10,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_common import redact
+from benethos_mailbox_common.log import redact
 from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.logbook import LogBook

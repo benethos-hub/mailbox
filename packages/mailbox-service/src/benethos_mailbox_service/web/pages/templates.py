@@ -18,7 +18,7 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from benethos_mailbox_common.logs import log_time
+from benethos_mailbox_common.log import lines
 
 from ... import __version__
 from ...common.clock import utc_now
@@ -125,7 +125,7 @@ templates.env.filters.update(
     when=when,
     ago=ago,
     past=past,
-    moment=log_time,
+    moment=lines.log_time,
     size=size,
     address=address,
     addresses=addresses,

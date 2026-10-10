@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
 
-from benethos_mailbox_common.logs import log_time
+from benethos_mailbox_common.log import lines
 
 from ....common.text import plural
 from ....data.models import Account
@@ -133,7 +133,7 @@ class SendsPurged(Activity):
     def says(self) -> str:
         return (
             f"purged {plural(self.count, 'record')} older than "
-            f"{log_time(self.before)} from the audit of sends"
+            f"{lines.log_time(self.before)} from the audit of sends"
         )
 
 

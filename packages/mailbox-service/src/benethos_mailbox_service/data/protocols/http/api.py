@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 
-from benethos_mailbox_common.sizes import MIB
+from benethos_mailbox_common.values import sizes
 
 from ....errors import (
     MailboxServiceError,
@@ -29,7 +29,7 @@ from .base import new_client, parse_url, read_capped, unreachable
 
 TIMEOUT = 30.0
 # Enough for a message with its attachments (25 MB) in base64.
-MAX_BYTES = 40 * MIB
+MAX_BYTES = 40 * sizes.MIB
 # A server that asks to be asked again later, or a gateway before it.
 BUSY = frozenset({429, 502, 503, 504})
 

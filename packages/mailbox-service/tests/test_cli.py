@@ -240,7 +240,9 @@ def test_without_the_repository_the_folders_of_the_system(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     settings_folder(tmp_path, monkeypatch)
-    system, data = config.system_folders(config.APP)  # in tmp_path, see conftest.py
+    system, data = config.system.system_folders(
+        config.APP
+    )  # in tmp_path, see conftest.py
     assert config.folders().origin == "system"
     assert load_settings().data_dir == data
     assert config.settings_file() is None
@@ -275,7 +277,7 @@ def test_paths_names_the_folders_and_never_a_value(
     monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
     assert main(["paths"]) == 0
     out = capsys.readouterr().out
-    system, _ = config.system_folders(config.APP)
+    system, _ = config.system.system_folders(config.APP)
     assert "the folders of the operating system" in out
     assert "(not there, the defaults apply)" in out
     assert f"Suggested: {(system / 'master.key').resolve()}" in out

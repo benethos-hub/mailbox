@@ -316,7 +316,7 @@ def test_the_lines_of_a_block_wait_for_its_end(
 
 
 def test_a_secret_noted_is_masked_in_the_record() -> None:
-    from benethos_mailbox_common import redact
+    from benethos_mailbox_common.log import redact
 
     redact.note("s3cret-in-an-error")
     clock = Clock()

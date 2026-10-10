@@ -13,7 +13,7 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
 from benethos_mailbox_client import MailboxClient
-from benethos_mailbox_common import redact
+from benethos_mailbox_common.log import redact
 from benethos_mailbox_mcp import __version__, cli, server
 from benethos_mailbox_mcp import tools as catalogue
 from benethos_mailbox_mcp.errors import (
@@ -426,7 +426,7 @@ def test_the_mcp_library_logs_from_warning_on(monkeypatch: pytest.MonkeyPatch) -
 def test_every_line_is_written_as_the_service_writes_it(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The lines of ``benethos_mailbox_common.logs``: the time in ISO 8601,
+    """The lines of ``benethos_mailbox_common.log.lines``: the time in ISO 8601,
     local, to the millisecond, with the offset, and a noted secret
     masked."""
     root = logging.getLogger()

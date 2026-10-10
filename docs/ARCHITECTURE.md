@@ -694,7 +694,7 @@ noticing. Every change is measured against that.
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
 | Secret encryption | `KeyProvider` in `data/secrets/keys.py` | keyring, file, env | a secret manager such as Vault |
-| Folders for settings and data | `folders()` in `config.py`, `system_folders` in `folders.py` of `mailbox-common` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
+| Folders for settings and data | `folders()` in `config.py`, `system_folders` in `paths/folders.py` of `mailbox-common` | named file, the repository's layout, the system's folders through platformdirs | another lookup, e.g. a system-wide folder |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
 | Authentication | credential kinds of a user (CONCEPT 7.5, [AUTHENTICATION.md](AUTHENTICATION.md)) | API token, password for the UI | OAuth client credentials |
 | Second factor | `SecondFactors` in `domain/auth/factors.py`, the frame over its methods and the recovery codes | TOTP (`domain/auth/totp.py`, `data/secrets/totp.py`) | a further method beside it, e.g. passkeys |

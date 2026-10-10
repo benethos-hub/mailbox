@@ -18,7 +18,7 @@ from typing import NamedTuple
 
 from pydantic import ValidationError
 
-from benethos_mailbox_common.plaintext import from_html
+from benethos_mailbox_common.mail import plaintext
 
 from ...common.text import joined
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
@@ -151,7 +151,7 @@ def body_text(message: DraftMessage) -> str:
     text made from its HTML, for clients that show text alone."""
     if message.text:
         return message.text
-    return from_html(message.html) if message.html else ""
+    return plaintext.from_html(message.html) if message.html else ""
 
 
 class Outgoing(NamedTuple):

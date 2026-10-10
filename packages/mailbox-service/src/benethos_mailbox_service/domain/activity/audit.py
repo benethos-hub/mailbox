@@ -13,7 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from benethos_mailbox_common.redact import redact
+from benethos_mailbox_common.log import redact
 
 from ...common.clock import utc_now
 from ...common.retention import Retention
@@ -73,7 +73,7 @@ class Audit:
                 outcome=activity.outcome,
                 # No line names a secret on purpose. One a library put
                 # into an error is masked here as in the log.
-                detail=redact(activity.detail()),
+                detail=redact.redact(activity.detail()),
             )
         )
         return purged

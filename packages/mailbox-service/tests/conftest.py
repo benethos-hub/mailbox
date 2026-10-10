@@ -15,7 +15,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from benethos_mailbox_common import redact
+from benethos_mailbox_common.log import redact
 from benethos_mailbox_service import config
 from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.assembly import providers as assembly
@@ -117,7 +117,9 @@ def no_configuration_from_this_machine(
     monkeypatch.setattr(config, "ENV_FILE", f"config/{config.APP}/no-such.env")
     system = tmp_path_factory.mktemp("system")
     monkeypatch.setattr(
-        config, "system_folders", lambda app: (system / "config", system / "data")
+        config.system,
+        "system_folders",
+        lambda app: (system / "config", system / "data"),
     )
     for name in list(os.environ):
         if name.startswith("MAILBOX_SERVICE_"):

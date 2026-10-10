@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
-from benethos_mailbox_common.sizes import megabytes
+from benethos_mailbox_common.values import sizes
 
 from ....data.models import ActivityOutcome
 from ..base import Activity
@@ -24,7 +24,9 @@ class BodyTooLarge(Activity):
     limit: int
 
     def says(self) -> str:
-        return f"sent a request to {self.path} larger than {megabytes(self.limit)}"
+        return (
+            f"sent a request to {self.path} larger than {sizes.megabytes(self.limit)}"
+        )
 
     def why(self) -> str:
         return "refused"

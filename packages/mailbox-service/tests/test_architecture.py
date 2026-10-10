@@ -55,7 +55,7 @@ LIBRARY_HOMES = {
     "publicsuffixlist": f"{PACKAGE}.data.discovery.suffix",
     "jinja2": f"{PACKAGE}.web.pages.templates",
     # The folders of the operating system come from the common package.
-    "platformdirs": "benethos_mailbox_common.folders",
+    "platformdirs": "benethos_mailbox_common.paths.folders",
     "segno": f"{PACKAGE}.web.pages.qr",
 }
 

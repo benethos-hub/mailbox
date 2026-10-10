@@ -1,6 +1,9 @@
 """mailbox-common: what the service and the MCP server of Mailbox both
-need, held once. Each module stands alone. Callers import the modules,
-such as ``benethos_mailbox_common.plaintext``."""
+need, held once, in groups, one per concern: ``mail``, ``log``, ``paths``
+and ``values``. A module imports only inside its group, so a group can
+be cut out as a package of its own. Callers import a module from its
+group, ``from benethos_mailbox_common.log import lines``, never deeper.
+This file imports no group."""
 
 from __future__ import annotations
 

@@ -22,7 +22,7 @@ from typing import Protocol
 
 import anyio
 
-from benethos_mailbox_common.canonical import compact
+from benethos_mailbox_common.values import canonical
 
 from ... import __version__
 from ...common.clock import utc_now
@@ -234,7 +234,7 @@ class WebhookDispatcher:
         """One post of ``batch``, kept in the delivery log. None when the
         receiver took it, else why not."""
         delivery_id = new_id("dlv")
-        body = compact(
+        body = canonical.compact(
             {
                 "webhook_id": record.webhook.id,
                 "delivery_id": delivery_id,

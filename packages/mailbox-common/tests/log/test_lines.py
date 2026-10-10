@@ -10,8 +10,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from benethos_mailbox_common import redact
-from benethos_mailbox_common.logs import (
+from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.log.lines import (
     FORMAT,
     SOURCE_WIDTH,
     Console,

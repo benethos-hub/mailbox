@@ -115,7 +115,7 @@ Allowed on purpose: user names, account addresses (an operator needs
 them), client addresses, our ids, folder names, counts, error messages
 of the service and of providers after masking.
 
-The masking of `redact.py` in `mailbox-common` stays the second line of
+The masking of `log/redact.py` in `mailbox-common` stays the second line of
 defence, not the first: a line is written as if there were no masking.
 
 ## 5. The activities
@@ -377,7 +377,7 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    machine, to the millisecond, with the offset:
    `2026-09-30T10:12:22.123+02:00`. That holds for the plain lines, the
    console, the log page, the MCP server's log and a time inside a
-   message, such as the end of a purge. `log_time` in `logs.py` of
+   message, such as the end of a purge. `log_time` in `log/lines.py` of
    `mailbox-common` writes it. **Decided 2026-09-30.**
 10. **An activity is one line.** A name or an address a caller chose may
     hold a line break. The recorder writes each break and each other

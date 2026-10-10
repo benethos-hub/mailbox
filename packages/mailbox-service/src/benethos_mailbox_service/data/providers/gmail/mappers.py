@@ -14,7 +14,7 @@ import html
 from datetime import UTC, date, datetime, time
 from typing import Any
 
-from benethos_mailbox_common.canonical import canonical
+from benethos_mailbox_common.values import canonical
 
 from ....common import opaque
 from ....common.secret import digest
@@ -200,7 +200,9 @@ def scope(folder_id: str | None, search: MessageFilter | None) -> str:
     """What a cursor belongs to: the folder and the search, shortened.
     Two that collide cost a page of the other search, never another
     account's mail."""
-    what = canonical([folder_id, (search or MessageFilter()).model_dump(mode="json")])
+    what = canonical.canonical(
+        [folder_id, (search or MessageFilter()).model_dump(mode="json")]
+    )
     return digest(what)[:16]
 
 

@@ -13,7 +13,7 @@ from collections.abc import Mapping
 from datetime import UTC, date, datetime, time
 from typing import Any
 
-from benethos_mailbox_common.canonical import canonical
+from benethos_mailbox_common.values import canonical
 
 from ....common import opaque
 from ....common.secret import digest
@@ -204,7 +204,9 @@ def scope(folder_id: str | None, search: MessageFilter | None) -> str:
     16 hex digits, 64 bits, to keep the cursor short. It only tells one
     search of a caller from another, so two that collide cost a cursor
     taken for the other search, never another account's mail."""
-    what = canonical([folder_id, (search or MessageFilter()).model_dump(mode="json")])
+    what = canonical.canonical(
+        [folder_id, (search or MessageFilter()).model_dump(mode="json")]
+    )
     return digest(what)[:16]
 
 

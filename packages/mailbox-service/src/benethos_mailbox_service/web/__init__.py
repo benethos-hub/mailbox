@@ -18,7 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 from starlette.exceptions import HTTPException
 
-from benethos_mailbox_common.redact import redact
+from benethos_mailbox_common.log import redact
 
 from ..errors import MailboxServiceError, RateLimitedError
 from . import api, pages
@@ -64,7 +64,7 @@ def _answer(request: Request, exc: MailboxServiceError) -> Response:
     """A domain error as the front end of the request answers it."""
     if not pages.owns(request):
         return api_error(exc)
-    page = error_page(request, status_of(exc), redact(exc.message))
+    page = error_page(request, status_of(exc), redact.redact(exc.message))
     if isinstance(exc, RateLimitedError):
         page.headers["Retry-After"] = str(exc.retry_after)
     return page

@@ -12,7 +12,7 @@ from datetime import datetime
 
 from pydantic import SecretStr
 
-from benethos_mailbox_common import redact
+from benethos_mailbox_common.log import redact
 
 from ...common.clock import utc_now
 from ...common.secret import new_id

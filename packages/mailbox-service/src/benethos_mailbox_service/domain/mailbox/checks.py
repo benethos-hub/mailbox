@@ -4,7 +4,7 @@ sent back is the one stored."""
 
 from __future__ import annotations
 
-from benethos_mailbox_common.sizes import MIB, megabytes
+from benethos_mailbox_common.values import sizes
 
 from ...data.mail import convert
 from ...data.models import Address, DraftMessage, MessageReference, Recipient
@@ -13,7 +13,7 @@ from ..rights import Access
 
 # What one message may carry.
 MAX_RECIPIENTS = 100
-MAX_ATTACHMENT_BYTES = 25 * MIB
+MAX_ATTACHMENT_BYTES = 25 * sizes.MIB
 
 
 def require(
@@ -27,7 +27,7 @@ def require(
         access.require("get_message", account_id)
     if sum(len(a.data) for a in message.attachments) > MAX_ATTACHMENT_BYTES:
         raise BadRequestError(
-            f"the attachments exceed {megabytes(MAX_ATTACHMENT_BYTES)}"
+            f"the attachments exceed {sizes.megabytes(MAX_ATTACHMENT_BYTES)}"
         )
 
 

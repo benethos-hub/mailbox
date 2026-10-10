@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_common.logs import SOURCE_WIDTH
+from benethos_mailbox_common.log.lines import SOURCE_WIDTH
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.assembly.lifecycle import _loop
 from benethos_mailbox_service.data.models import (

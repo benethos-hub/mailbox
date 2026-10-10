@@ -5,7 +5,7 @@ Without its own configuration uvicorn sets up only its loggers. The
 service's records then had no handler: below WARNING they were dropped,
 above they came without time or source. Libraries log from WARNING on,
 so a debug level shows the service without the IMAP commands of a
-library. The lines are those of ``benethos_mailbox_common.logs``, a
+library. The lines are those of ``benethos_mailbox_common.log.lines``, a
 secret the service holds masked in every one. The access line of
 uvicorn is the service's own.
 """
@@ -16,7 +16,7 @@ import logging
 from http import HTTPStatus
 from typing import Any
 
-from benethos_mailbox_common.logs import DIM, LEVELS, RESET, formatter, short_source
+from benethos_mailbox_common.log import lines
 
 PACKAGE = __name__.rpartition(".")[0]
 # As uvicorn colours a status: 2xx green, 3xx yellow, 4xx red, 5xx bold.
@@ -27,7 +27,7 @@ _ACCESS_ARGS = 5
 
 def source_of(name: str) -> str:
     """The source of a line as the console names it: ``domain.auth``."""
-    return short_source(name, PACKAGE)
+    return lines.short_source(name, PACKAGE)
 
 
 def _access(record: logging.LogRecord) -> str | None:
@@ -45,7 +45,8 @@ def _access(record: logging.LogRecord) -> str | None:
     except ValueError:
         phrase = ""
     colour = _STATUS_COLOURS.get(status // 100, "")
-    return f"{method} {path} {colour}{status} {phrase}{RESET} {DIM}{client}{RESET}"
+    reset, dim = lines.RESET, lines.DIM
+    return f"{method} {path} {colour}{status} {phrase}{reset} {dim}{client}{reset}"
 
 
 class WithoutQuery(logging.Filter):
@@ -70,9 +71,9 @@ def log_config(
     of ``Console``, by default on a terminal, with the access line of
     ``_access``. Elsewhere, in a container log or the journal, each line
     is plain text."""
-    number = LEVELS[level.lower()]
-    lines = {
-        "()": formatter,
+    number = lines.LEVELS[level.lower()]
+    line_format = {
+        "()": lines.formatter,
         "package": PACKAGE,
         "colours": colours,
         "line_of": _access,
@@ -95,7 +96,7 @@ def log_config(
         "version": 1,
         "disable_existing_loggers": False,
         # uvicorn sets the colours of these two by name when asked to.
-        "formatters": {"default": lines, "access": lines},
+        "formatters": {"default": line_format, "access": line_format},
         "filters": {"without_query": {"()": WithoutQuery}},
         "handlers": handlers,
         "root": {"level": logging.WARNING, "handlers": list(handlers)},

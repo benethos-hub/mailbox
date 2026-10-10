@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
-from benethos_mailbox_common.canonical import canonical
+from benethos_mailbox_common.values import canonical
 
 from .. import render
 from .base import changes, client
@@ -17,7 +17,7 @@ def _idempotency_key(tool: str, account_id: str, arguments: Any) -> str:
     24 hours with the first result instead of sending twice. Written as the
     service writes the fingerprint of a request (``canonical``): keys
     sorted, no spaces, ASCII."""
-    call = canonical([tool, account_id, arguments])
+    call = canonical.canonical([tool, account_id, arguments])
     return "mcp-" + hashlib.sha256(call.encode("utf-8")).hexdigest()
 
 

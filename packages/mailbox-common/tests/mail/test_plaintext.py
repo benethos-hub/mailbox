@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from benethos_mailbox_common.plaintext import from_html
+from benethos_mailbox_common.mail.plaintext import from_html
 
 HTML = """
 <html><head><style>p { color: red }</style><title>t</title></head><body>

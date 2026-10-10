@@ -8,8 +8,8 @@ import re
 
 import pytest
 
-from benethos_mailbox_common import redact
-from benethos_mailbox_common.logs import SOURCE_WIDTH
+from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.log.lines import LEVELS, SOURCE_WIDTH
 from benethos_mailbox_service import logs
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.logbook import LogBook
@@ -84,10 +84,10 @@ def test_uvicorn_writes_to_the_same_stream(capsys: pytest.CaptureFixture[str]) -
     assert 'uvicorn.access: 127.0.0.1:5000 - "GET /health HTTP/1.1" 200' in err
 
 
-@pytest.mark.parametrize("level", sorted(logs.LEVELS))
+@pytest.mark.parametrize("level", sorted(LEVELS))
 def test_every_level_of_the_settings_is_known(level: str) -> None:
     configure(level)
-    assert logging.getLogger(logs.PACKAGE).level == logs.LEVELS[level]
+    assert logging.getLogger(logs.PACKAGE).level == LEVELS[level]
 
 
 # --- at a terminal --------------------------------------------------------------------

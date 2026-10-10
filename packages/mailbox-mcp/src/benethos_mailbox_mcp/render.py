@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from benethos_mailbox_common.plaintext import from_html
+from benethos_mailbox_common.mail import plaintext
 
 from .models import Changes, Folder, Me, MeAccount, Outcome, Page, Sending, Sent
 
@@ -32,7 +32,7 @@ def body_text(message: dict[str, Any]) -> str:
     if message.get("text_body"):
         return str(message["text_body"]).strip()
     if message.get("html_body"):
-        return from_html(str(message["html_body"]))
+        return plaintext.from_html(str(message["html_body"]))
     return ""
 
 

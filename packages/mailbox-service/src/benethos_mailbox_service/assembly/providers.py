@@ -8,7 +8,7 @@ from functools import partial
 
 import anyio
 
-from benethos_mailbox_common import redact
+from benethos_mailbox_common.log import redact
 
 from ..config import Settings
 from ..data.discovery import default_sources, preset_hosts

@@ -7,7 +7,7 @@ from pathlib import Path
 import platformdirs
 import pytest
 
-from benethos_mailbox_common.folders import named_file, system_folders
+from benethos_mailbox_common.paths.folders import named_file, system_folders
 
 VARIABLE = "MAILBOX_TEST_ENV_FILE"
 

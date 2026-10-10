@@ -12,7 +12,7 @@ from collections.abc import Mapping
 
 from pydantic import SecretStr
 
-from benethos_mailbox_common import redact
+from benethos_mailbox_common.log import redact
 
 from ...common.hosts import is_server
 from ...common.text import has_break

@@ -27,7 +27,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from benethos_mailbox_common.sizes import MIB, megabytes
+from benethos_mailbox_common.values import sizes
 
 from ..common.ratelimit import Clock, TokenBucket
 from ..config import Settings
@@ -39,7 +39,7 @@ from .state import app_limits, app_services
 
 # The largest mail the service sends carries 25 MB of attachments, which
 # base64 in a JSON body makes about 34 MB.
-MAX_BODY = 40 * MIB
+MAX_BODY = 40 * sizes.MIB
 
 
 class BodyLimit:
@@ -82,7 +82,7 @@ class BodyLimit:
             )
         )
         return HTTPException(
-            413, f"the request is larger than {megabytes(self._limit)}"
+            413, f"the request is larger than {sizes.megabytes(self._limit)}"
         )
 
     @staticmethod
