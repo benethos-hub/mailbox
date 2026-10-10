@@ -124,6 +124,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The mail form of the UI shows a name with a double quote or a
+  backslash in it so that a reply or a forward reads it back as it was.
 - A Gmail or Microsoft account whose OAuth app is missing from the
   settings no longer breaks every page of the UI. The Accounts list
   says it cannot be used, it counts as needing attention, and it can be

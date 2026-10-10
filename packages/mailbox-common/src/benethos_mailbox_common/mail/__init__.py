@@ -3,6 +3,6 @@
 
 from __future__ import annotations
 
-from . import plaintext
+from . import addresses, plaintext
 
-__all__ = ["plaintext"]
+__all__ = ["addresses", "plaintext"]

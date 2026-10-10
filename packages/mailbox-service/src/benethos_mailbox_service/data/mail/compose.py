@@ -18,7 +18,7 @@ from typing import NamedTuple
 
 from pydantic import ValidationError
 
-from benethos_mailbox_common.mail import plaintext
+from benethos_mailbox_common.mail import addresses, plaintext
 
 from ...common.text import joined
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
@@ -248,8 +248,7 @@ def _who(address: Address | None) -> str:
     """Who wrote the original, for people to read."""
     if address is None:
         return "unknown"
-    name = joined(address.name or "")
-    return f"{name} <{address.email}>" if name else address.email
+    return addresses.readable(joined(address.name or ""), address.email)
 
 
 def with_bcc(raw: bytes, recipients: list[str]) -> bytes:

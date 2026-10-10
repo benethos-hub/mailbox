@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from benethos_mailbox_common.mail import plaintext
+from benethos_mailbox_common.mail import addresses, plaintext
 
 from .models import Changes, Folder, Me, MeAccount, Outcome, Page, Sending, Sent
 
@@ -39,8 +39,7 @@ def body_text(message: dict[str, Any]) -> str:
 def address(value: dict[str, Any] | None) -> str:
     if not value:
         return "-"
-    name, email = value.get("name"), value.get("email", "")
-    return f"{name} <{email}>" if name else str(email)
+    return addresses.readable(value.get("name"), str(value.get("email", "")))
 
 
 def summary(item: dict[str, Any]) -> dict[str, Any]:

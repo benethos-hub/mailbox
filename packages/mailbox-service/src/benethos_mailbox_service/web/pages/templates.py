@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from benethos_mailbox_common.log import lines
+from benethos_mailbox_common.mail import addresses as readable_addresses
 
 from ... import __version__
 from ...common.clock import utc_now
@@ -89,7 +90,7 @@ def address(value: Address | None) -> str:
     """``Name <email>``, or the email alone."""
     if value is None:
         return MISSING
-    return f"{value.name} <{value.email}>" if value.name else value.email
+    return readable_addresses.readable(value.name, value.email)
 
 
 def addresses(values: Iterable[Address] | None) -> str:
