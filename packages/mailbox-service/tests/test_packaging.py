@@ -166,6 +166,37 @@ def test_the_packages_describe_themselves_alike() -> None:
     assert len(links) == 1, f"the links differ: {sorted(links)}"
 
 
+def _minor(name: str) -> tuple[int, int]:
+    major, minor = name.split(".")
+    return int(major), int(minor)
+
+
+def test_the_python_versions_are_those_ci_tests() -> None:
+    """The classifiers name the Python versions of the test matrix in
+    ci.yml, and requires-python its lowest. The newest measures the
+    coverage, and .python-version names it for the local environment.
+    A new version is added in all of them at once."""
+    text = (ROOT / ".github" / "workflows" / "ci.yml").read_text("utf-8")
+    matrix = re.search(r"^ +python-version: \[(.*)\]$", text, re.M)
+    assert matrix
+    tested = sorted((v.strip(' "') for v in matrix.group(1).split(",")), key=_minor)
+    measured = re.findall(
+        r'^ +- python-version: "(\S+)"\n +coverage: true$', text, re.M
+    )
+    project = _project(SERVICE)
+    classifiers = project["classifiers"]
+    assert isinstance(classifiers, list)
+    named = [
+        found.group(1)
+        for c in classifiers
+        if (found := re.fullmatch(r"Programming Language :: Python :: (3\.\d+)", c))
+    ]
+    assert sorted(named, key=_minor) == tested
+    assert project["requires-python"] == f">={tested[0]}"
+    assert measured == [tested[-1]]
+    assert (ROOT / ".python-version").read_text("utf-8").strip() == tested[-1]
+
+
 def _publish_jobs() -> dict[str, dict[str, object]]:
     """The PyPI jobs of publish.yml by package: the job's name, the jobs
     it waits for, its environment and the module it hands on."""

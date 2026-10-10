@@ -35,7 +35,10 @@ done. Update the roadmap in the same commit that finishes an item.
 
 ## Environment
 
-- Windows, PowerShell or Bash. Python 3.11-3.15.
+- Windows, PowerShell or Bash. Python 3.11-3.15. `.python-version`
+  names the newest, which `uv sync` takes for `.venv` and CI measures
+  the coverage on. A new version goes into it, the CI matrix and the
+  classifiers at once, as `test_packaging.py` checks.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
 - Configuration: one folder per package under `config/`, e.g.
   `config/benethos-mailbox-service/.env` (not versioned) beside its
