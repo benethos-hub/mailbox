@@ -54,6 +54,26 @@ jobs:
         run: uv sync --frozen
 
       # Offline: providers are faked and the MCP tests mock the REST API.
+      # Without coverage: the job coverage measures it once.
+      - name: Run tests
+        run: uv run pytest -q
+
+  # Coverage and its floor on one version. Before 3.14, measuring the
+  # branches took about as long again as the tests themselves.
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Install dependencies (locked)
+        run: uv sync --frozen
+
       - name: Run tests with coverage
         run: uv run pytest -q --cov --cov-fail-under=80
 
