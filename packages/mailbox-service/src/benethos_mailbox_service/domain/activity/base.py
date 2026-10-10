@@ -92,7 +92,9 @@ class Activity:
     at: datetime | None = None
 
     def __init_subclass__(cls, **kwargs: object) -> None:
-        super().__init_subclass__(**kwargs)
+        # Named: slots=True makes a new class, which a bare super() of
+        # Python before 3.13 does not know.
+        super(Activity, cls).__init_subclass__(**kwargs)
         cls.area = cls.__module__.rpartition(".")[2]
 
     @classmethod
