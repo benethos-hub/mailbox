@@ -306,6 +306,8 @@ PATTERNS = {
     # The image tag of the minor line. It stays across a patch release and
     # moves with a minor one, so it is compared with the first two parts.
     "minor": r"the minor version\s+\(`(\d+\.\d+)`\)",
+    # A JSON file that repeats the version, such as the MCP Registry entry.
+    "json": r'"version": "(\d+\.\d+\.\d+)"',
 }
 VERSION_EXAMPLES = [
     ("README.md", "status"),
@@ -326,6 +328,8 @@ VERSION_EXAMPLES = [
     ("packages/mailbox-common/README.md", "status"),
     ("packages/mailbox-mcp/README.md", "tag"),
     ("packages/mailbox-mcp/README.md", "image"),
+    (".github/publish/mcp-registry/server.json", "json"),
+    ("docs/openapi.json", "json"),
 ]
 
 MINOR_EXAMPLES = [

@@ -6,6 +6,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- From this release on, the MCP server is listed in the official MCP
+  Registry as `io.github.benethos-hub/benethos-mailbox-mcp`, installed
+  from PyPI with `uvx`. It asks for `MAILBOX_SERVICE_TOKEN`, and takes
+  `MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_ALLOW_HTTP` if set.
+
+### Changed
+
+- The package description of `benethos-mailbox-mcp` is one sentence of
+  at most 100 characters, the same as in its registry entry.
+
 ## [0.4.0] - 2026-10-10
 
 ### Added

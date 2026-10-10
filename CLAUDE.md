@@ -146,7 +146,9 @@ assets/                   # logo/: the logo and the icon as they came,
                           #   static/img/, with --social the social
                           #   preview, with --diagram the diagram.
                           #   icons.py makes the UI's icon sprite
-                          #   from a pinned Bootstrap Icons package
+                          #   from a pinned Bootstrap Icons package.
+                          #   --icon renders logo/icon.png for the MCP
+                          #   Registry and the Claude Desktop bundle
 live/                     # manual checks against the test accounts,
                           #   what they share in live/checks/, one module
                           #   per subject
@@ -160,7 +162,12 @@ containers/               # images/ (one folder per image), and one folder
                           #   versions, images,
                           #   publish.yml: on a release the four packages
                           #   to PyPI, in the order of their dependencies,
-                          #   and both images to GHCR
+                          #   both images to GHCR, and the MCP server's
+                          #   entry to the MCP Registry
+.github/publish/          # one folder per place a release is listed:
+                          #   mcp-registry/server.json, the MCP server's
+                          #   entry, held to the package by
+                          #   test_mcp_registry.py
 .github/actions/          # pypi-package/: the steps of one upload to PyPI
 docs/
   CONCEPT.md              # design
@@ -273,6 +280,10 @@ common package to it, the service the common package.
 
 1. `uv lock --upgrade --dry-run`. If it moves anything, run
    `uv lock --upgrade` as a commit of its own, then all checks.
+   Compare `MCP_PUBLISHER_VERSION` in `publish.yml` with the newest
+   release of `modelcontextprotocol/registry`, which Dependabot cannot
+   see. A newer one goes in with the checksum of
+   `mcp-publisher_linux_amd64.tar.gz` from its checksums file.
 2. Set `version` in the four packages' `pyproject.toml`, the pins
    `benethos-mailbox-client==X.Y.Z` and
    `benethos-mailbox-common[paths,settings]==X.Y.Z` in the MCP server's
@@ -287,5 +298,7 @@ common package to it, the service the common package.
    then `gh release create vX.Y.Z --verify-tag` with the changelog section
    as the notes. The published release starts `publish.yml`, which
    uploads the four packages to PyPI and both images to GHCR.
-6. Check what shipped: the four packages on PyPI, and each image's tags
-   `X.Y.Z`, `X.Y` and `latest` on the same revision.
+6. Check what shipped: the four packages on PyPI, each image's tags
+   `X.Y.Z`, `X.Y` and `latest` on the same revision, and the version in
+   the MCP Registry:
+   `https://registry.modelcontextprotocol.io/v0/servers?search=io.github.benethos-hub/benethos-mailbox-mcp`.
