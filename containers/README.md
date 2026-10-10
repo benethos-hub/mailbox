@@ -94,8 +94,8 @@ version as the PyPI packages:
 | started by hand (Actions, Publish, Run workflow) | `edge` |
 
 - The service image holds the service package, the MCP image the MCP
-  server and the client, each installed from `uv.lock` without the
-  development tools.
+  server and the client, both the common package, each installed from
+  `uv.lock` without the development tools.
 - They run as user `mailbox` (uid 10001). The compose files of
   `development/` and `production/` add a read-only root file system, no capabilities
   and `no-new-privileges`, to Caddy as well, which keeps only

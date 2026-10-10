@@ -226,7 +226,9 @@ rest.
 **Sessions:** a session keeps which devices of which methods its user
 had at the sign-in, as it keeps when the password was set. A device
 added or removed ends the sessions that started before. A rename does
-not.
+not. A session ends after 8 hours without a request and after 24
+hours however used, and a user holds 10 at most
+([LIMITS.md](LIMITS.md)).
 
 **The recovery key** (CONCEPT 7.3, [UI.md](UI.md) 6.5) opens every
 stored secret. Its page asks an administrator with a second factor for

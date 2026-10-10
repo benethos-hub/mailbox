@@ -86,6 +86,10 @@ with SyncMailboxClient() as mailbox:
     print(made.secret.get_secret_value())  # shown this once
 ```
 
+A message comes as a `Message`, a message in a page, a changed one
+and a written draft as a `MessageSummary`, its sender and recipients
+as `Address` records.
+
 A secret the service shows once, a new token, a one-time password or a
 webhook's signing secret, comes as a `Secret`: `repr` and `str` show
 stars, so it reaches no log by accident, and `get_secret_value()` reads

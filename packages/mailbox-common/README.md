@@ -23,6 +23,12 @@ and extras may change between versions without notice. It carries the
 version of the other packages, and the service and the MCP server pin
 it to their own.
 
+Its modules are in five groups, one per concern: `mail` (addresses
+and the plain text of an HTML body), `log` (the log line and the
+masking of secrets), `paths` (the folders of the operating system),
+`settings` (a program's settings from the environment and a file)
+and `values` (secrets, sizes, text and canonical JSON).
+
 It needs the standard library alone. The extra `paths` brings
 platformdirs for the folders of the operating system, `settings`
 pydantic-settings for a program's settings, and `all` brings every
