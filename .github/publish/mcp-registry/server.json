@@ -12,12 +12,16 @@
     {
       "src": "https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/logo/icon-3d.svg",
       "mimeType": "image/svg+xml",
-      "sizes": ["any"]
+      "sizes": [
+        "any"
+      ]
     },
     {
       "src": "https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/logo/icon.png",
       "mimeType": "image/png",
-      "sizes": ["512x512"]
+      "sizes": [
+        "512x512"
+      ]
     }
   ],
   "packages": [
@@ -53,6 +57,14 @@
           "default": "false"
         }
       ]
+    },
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/benethos-hub/mailbox/releases/download/v0.4.0/benethos-mailbox-mcp-0.4.0.mcpb",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "transport": {
+        "type": "stdio"
+      }
     }
   ]
 }

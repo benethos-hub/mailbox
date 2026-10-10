@@ -341,14 +341,15 @@ jobs:
           gh release upload "$GITHUB_REF_NAME" "$versioned" benethos-mailbox-mcp.mcpb
 
   # The MCP server's entry in the MCP Registry, .github/publish/mcp-registry/
-  # server.json. The registry takes no upload: it checks the PyPI package
-  # when it takes the entry, and the README of this version on PyPI must
-  # carry the mcp-name line. So it waits for that upload. A pre-release is
-  # not listed, since an entry cannot be taken back.
+  # server.json. The registry takes no upload: it checks each package when
+  # it takes the entry. The README of this version on PyPI must carry the
+  # mcp-name line, and the bundle must be on the release with its checksum.
+  # So it waits for both. A pre-release is not listed, since an entry
+  # cannot be taken back.
   mcp-registry:
     name: MCP Registry
     if: github.event_name == 'release' && !github.event.release.prerelease
-    needs: [pypi-mcp]
+    needs: [pypi-mcp, mcpb-bundle]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -385,11 +386,26 @@ jobs:
           echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
           tar xzf mcp-publisher.tar.gz mcp-publisher
 
+      # The bundle's hash exists only now. The entry holds a placeholder,
+      # and the hash is taken from the very file the release carries.
+      - name: Fill in the bundle's checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          bundle="benethos-mailbox-mcp-${GITHUB_REF_NAME#v}.mcpb"
+          gh release download "$GITHUB_REF_NAME" --pattern "$bundle" --dir "$RUNNER_TEMP"
+          python3 .github/publish/mcp-registry/fill_bundle_checksum.py "$ENTRY" "$RUNNER_TEMP/$bundle"
+
       - name: Log in with the workflow's OIDC token
         run: ./mcp-publisher login github-oidc
 
       # The registry reads the version from PyPI's JSON API, which can
-      # report a fresh upload as missing for minutes.
+      # report a fresh upload as missing for minutes. It takes an entry
+      # whole or not at all, so a refusal that outlasts the attempts falls
+      # back to the entry without the bundle: the version is listed at
+      # least with PyPI, and the job still fails, so the refusal is looked
+      # at.
       - name: Publish the entry
         run: |
           set -euo pipefail
@@ -400,4 +416,8 @@ jobs:
             echo "attempt ${attempt} refused, trying again in 60 s"
             sleep 60
           done
+          echo "::warning::The registry refused the entry with the bundle, publishing it without"
+          python3 .github/publish/mcp-registry/fill_bundle_checksum.py --drop "$ENTRY"
+          ./mcp-publisher publish "$ENTRY"
+          echo "::error::Listed without the bundle. The refusals above say why."
           exit 1

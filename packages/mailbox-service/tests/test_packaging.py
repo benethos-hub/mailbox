@@ -308,6 +308,8 @@ PATTERNS = {
     "minor": r"the minor version\s+\(`(\d+\.\d+)`\)",
     # A JSON file that repeats the version, such as the MCP Registry entry.
     "json": r'"version": "(\d+\.\d+\.\d+)"',
+    # The file name of the Claude Desktop bundle a release carries.
+    "bundle": r"benethos-mailbox-mcp-(\d+\.\d+\.\d+)\.mcpb",
 }
 VERSION_EXAMPLES = [
     ("README.md", "status"),
@@ -329,6 +331,7 @@ VERSION_EXAMPLES = [
     ("packages/mailbox-mcp/README.md", "tag"),
     ("packages/mailbox-mcp/README.md", "image"),
     (".github/publish/mcp-registry/server.json", "json"),
+    (".github/publish/mcp-registry/server.json", "bundle"),
     (".github/publish/mcpb/manifest.json", "json"),
     ("docs/openapi.json", "json"),
 ]
