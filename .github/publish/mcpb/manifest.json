@@ -1,0 +1,142 @@
+{
+  "manifest_version": "0.4",
+  "name": "benethos-mailbox-mcp",
+  "display_name": "Mailbox",
+  "version": "0.4.0",
+  "description": "MCP server that gives AI agents your mailboxes through mailbox-service, within its token's rights.",
+  "long_description": "Gives Claude your mailboxes through mailbox-service, a service you run yourself: search and read mail, see what is new, look at attachments, sort, write drafts and send. The service decides what the token may do. It holds no mail password, and the mail stays between Claude and your service.",
+  "author": {
+    "name": "Benedikt Oswald"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benethos-hub/mailbox"
+  },
+  "homepage": "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp",
+  "documentation": "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp#readme",
+  "support": "https://github.com/benethos-hub/mailbox/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "uv",
+    "entry_point": "server.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "--frozen",
+        "server.py"
+      ],
+      "env": {
+        "MAILBOX_SERVICE_TOKEN": "${user_config.service_token}",
+        "MAILBOX_SERVICE_URL": "${user_config.service_url}",
+        "MAILBOX_SERVICE_ALLOW_HTTP": "${user_config.allow_http}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "list_accounts",
+      "description": "The mail accounts you may use: id, address and what you may do there (read, write, drafts, send)."
+    },
+    {
+      "name": "list_folders",
+      "description": "The folders of an account: id, name, role (inbox, sent, drafts, trash, junk, archive) and counts."
+    },
+    {
+      "name": "search_messages",
+      "description": "Find mail, newest first."
+    },
+    {
+      "name": "get_message",
+      "description": "Read one mail: headers, attachment ids and the body as plain text, cut to max_chars."
+    },
+    {
+      "name": "whats_new",
+      "description": "What changed since an earlier call: mail created, updated (moved, flags) or deleted, oldest first, ids only."
+    },
+    {
+      "name": "get_attachment",
+      "description": "Read an attachment."
+    },
+    {
+      "name": "update_messages",
+      "description": "Change mail of one account: mark read or unread, star, move to a folder or archive, or put into the trash."
+    },
+    {
+      "name": "create_folder",
+      "description": "Create a folder in an account."
+    },
+    {
+      "name": "list_drafts",
+      "description": "The drafts of an account, newest first."
+    },
+    {
+      "name": "create_draft",
+      "description": "Write a draft into the drafts folder."
+    },
+    {
+      "name": "update_draft",
+      "description": "Replace a draft as a whole: what is left out is gone afterwards, attachments too unless keep_attachments names them."
+    },
+    {
+      "name": "delete_draft",
+      "description": "Delete a draft for good."
+    },
+    {
+      "name": "send_message",
+      "description": "Send a mail at once."
+    },
+    {
+      "name": "send_draft",
+      "description": "Send a draft as it is stored."
+    }
+  ],
+  "user_config": {
+    "service_token": {
+      "type": "string",
+      "title": "Token",
+      "description": "An API token of mailbox-service, made on a user's page in its UI. The server acts with that user's rights.",
+      "sensitive": true,
+      "required": true
+    },
+    "service_url": {
+      "type": "string",
+      "title": "Address of the service",
+      "description": "Where mailbox-service runs.",
+      "default": "http://127.0.0.1:8080",
+      "required": false
+    },
+    "allow_http": {
+      "type": "boolean",
+      "title": "Plain http to another machine",
+      "description": "Send the token unencrypted to a service on another machine. Leave off and use https there.",
+      "default": false,
+      "required": false
+    }
+  },
+  "keywords": [
+    "model-context-protocol",
+    "ai-agents",
+    "llm",
+    "email",
+    "imap",
+    "jmap",
+    "pop3",
+    "gmail",
+    "outlook",
+    "microsoft-365"
+  ],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "linux",
+      "win32"
+    ],
+    "runtimes": {
+      "python": ">=3.11"
+    }
+  }
+}

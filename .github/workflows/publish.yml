@@ -3,6 +3,8 @@ name: Publish
 # Publishes a release when a GitHub release is published:
 #   * the four packages to PyPI, via Trusted Publishing (OIDC, no stored token)
 #   * both container images to ghcr.io, via the automatic GITHUB_TOKEN
+#   * the MCP server's Claude Desktop bundle (.mcpb) onto the release,
+#     after its package is on PyPI
 #   * the MCP server's entry to the MCP Registry, via the workflow's OIDC
 #     token, after its package is on PyPI and not for a pre-release
 # Everything carries the same version, and the release tag must name it:
@@ -269,6 +271,74 @@ jobs:
           print("OK:", ", ".join(platforms))
           print("   ", annotations["org.opencontainers.image.description"])
           PY
+
+  # The Claude Desktop bundle of the MCP server, .github/publish/mcpb/. It
+  # pins the MCP server's version on PyPI, so it is locked and packed once
+  # that is uploaded. It goes onto the release twice: under its version, and
+  # without, for a link that always reaches the newest full release.
+  mcpb-bundle:
+    name: Claude Desktop bundle
+    if: github.event_name == 'release'
+    needs: [pypi-mcp]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # attach the bundle to the release
+    env:
+      # Pinned. Dependabot cannot see a package npx fetches, so the bump is
+      # a release step in CLAUDE.md.
+      MCPB_VERSION: 2.1.2
+      MANIFEST: .github/publish/mcpb/manifest.json
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The write token is for the upload, nothing here pushes.
+          persist-credentials: false
+
+      - name: The release names the bundle's version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          version=$(python3 -c "import json, sys; print(json.load(open(sys.argv[1]))['version'])" "$MANIFEST")
+          if [ "v${version}" != "${TAG}" ]; then
+            echo "::error::the release ${TAG} does not match the bundle's version ${version}"
+            exit 1
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: Stage the bundle
+        run: python3 .github/publish/mcpb/build.py "$RUNNER_TEMP/bundle"
+
+      # PyPI's index can name a fresh upload a little later than the upload.
+      - name: Lock it to the version on PyPI
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            if uv lock --directory "$RUNNER_TEMP/bundle" --refresh-package benethos-mailbox-mcp; then
+              exit 0
+            fi
+            echo "attempt ${attempt} found no release yet, trying again in 30 s"
+            sleep 30
+          done
+          exit 1
+
+      - name: Validate and pack
+        run: |
+          set -euo pipefail
+          npx --yes "@anthropic-ai/mcpb@${MCPB_VERSION}" validate "$RUNNER_TEMP/bundle/manifest.json"
+          npx --yes "@anthropic-ai/mcpb@${MCPB_VERSION}" pack "$RUNNER_TEMP/bundle"             "benethos-mailbox-mcp-${GITHUB_REF_NAME#v}.mcpb"
+
+      - name: Attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          versioned="benethos-mailbox-mcp-${GITHUB_REF_NAME#v}.mcpb"
+          cp "$versioned" benethos-mailbox-mcp.mcpb
+          gh release upload "$GITHUB_REF_NAME" "$versioned" benethos-mailbox-mcp.mcpb
 
   # The MCP server's entry in the MCP Registry, .github/publish/mcp-registry/
   # server.json. The registry takes no upload: it checks the PyPI package
