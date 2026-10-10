@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "benethos-mailbox-service"
-version = "0.3.1"
+version = "0.4.0"
 description = "Self-hosted REST API and web UI for all your mailboxes (IMAP, JMAP, POP3, Gmail, Microsoft 365, Outlook.com): users, rights and encrypted credentials, a change feed, signed webhooks and an audit."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -91,7 +91,7 @@ dependencies = [
     # What the service shares with the MCP server, with the folders of
     # the system and its settings file. Released with this package under
     # the same version.
-    "benethos-mailbox-common[paths,settings]==0.3.1",
+    "benethos-mailbox-common[paths,settings]==0.4.0",
     # The QR code a person scans to set up a second factor (web/pages/qr.py).
     "segno>=1.6",
 ]
