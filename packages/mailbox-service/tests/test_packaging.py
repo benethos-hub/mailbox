@@ -77,8 +77,9 @@ def test_a_package_needs_another_of_its_own_version(
 ) -> None:
     """They are released together. A package of the workspace pins
     another to the version beside it, so an install never mixes two
-    releases."""
-    assert f"{_project(needed)['name']}=={_version()}" in _needs(package)
+    releases. The pin may name extras: ``name[paths]==X.Y.Z``."""
+    pin = rf"{re.escape(str(_project(needed)['name']))}(\[[\w,]+\])?=={_version()}"
+    assert any(re.fullmatch(pin, need) for need in _needs(package))
 
 
 def _workspace_needs(package: Path) -> set[str]:

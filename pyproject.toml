@@ -24,7 +24,7 @@ dev = [
     "benethos-mailbox-service",
     "benethos-mailbox-mcp",
     "benethos-mailbox-client",
-    "benethos-mailbox-common",
+    "benethos-mailbox-common[all]",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.0",
     "pytest-cov>=7.1.0",

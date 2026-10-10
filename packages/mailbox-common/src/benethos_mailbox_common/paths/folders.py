@@ -1,7 +1,10 @@
 """Where a program of Mailbox finds its settings file and its data: a file
 named on purpose, and the folders of the operating system for this user
 (CONCEPT 7.4). Each program decides the order and what its working
-directory adds."""
+directory adds.
+
+platformdirs comes with the extra ``paths``. Without it this module
+cannot be imported, and says which extra is missing."""
 
 from __future__ import annotations
 
@@ -9,7 +12,14 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-import platformdirs
+try:
+    import platformdirs
+except ModuleNotFoundError as missing:
+    raise ModuleNotFoundError(
+        "benethos_mailbox_common.paths needs the extra paths: "
+        "pip install 'benethos-mailbox-common[paths]'",
+        name=missing.name,
+    ) from missing
 
 
 def named_file(env_file: Path | None, variable: str) -> Path | None:

@@ -120,7 +120,7 @@ jobs:
           uv venv -p 3.11 /tmp/lowest
           uv pip install --python /tmp/lowest/bin/python --resolution lowest-direct \
             -e packages/mailbox-service -e packages/mailbox-client -e packages/mailbox-mcp \
-            -e packages/mailbox-common "pytest>=9.1.1" "pytest-asyncio>=1.0"
+            -e "packages/mailbox-common[all]" "pytest>=9.1.1" "pytest-asyncio>=1.0"
           uv pip list --python /tmp/lowest/bin/python
           /tmp/lowest/bin/python -m pytest -q -p no:cacheprovider
 
@@ -139,7 +139,8 @@ jobs:
           set -euo pipefail
           uv venv -p 3.11 /tmp/lowest-mcp
           uv pip install --python /tmp/lowest-mcp/bin/python --resolution lowest-direct \
-            -e packages/mailbox-client -e packages/mailbox-mcp -e packages/mailbox-common \
+            -e packages/mailbox-client -e packages/mailbox-mcp \
+            -e "packages/mailbox-common[all]" \
             "pytest>=9.1.1" "pytest-asyncio>=1.0"
           uv pip list --python /tmp/lowest-mcp/bin/python
           /tmp/lowest-mcp/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-mcp/tests
@@ -161,13 +162,20 @@ jobs:
           uv pip list --python /tmp/lowest-client/bin/python
           /tmp/lowest-client/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-client/tests
 
-      # The common package alone: the standard library and what it names.
-      - name: The common package alone on its lowest versions
+      # The common package alone. Without extras it needs the standard
+      # library only, and every group but those with an extra works. Then
+      # with every extra, on their lowest versions.
+      - name: The common package alone, without extras and with all
         run: |
           set -euo pipefail
           uv venv -p 3.11 /tmp/lowest-common
-          uv pip install --python /tmp/lowest-common/bin/python --resolution lowest-direct \
+          uv pip install --python /tmp/lowest-common/bin/python \
             -e packages/mailbox-common "pytest>=9.1.1"
+          uv pip list --python /tmp/lowest-common/bin/python
+          /tmp/lowest-common/bin/python -m pytest -q -p no:cacheprovider \
+            --ignore=packages/mailbox-common/tests/paths packages/mailbox-common/tests
+          uv pip install --python /tmp/lowest-common/bin/python --resolution lowest-direct \
+            -e "packages/mailbox-common[all]"
           uv pip list --python /tmp/lowest-common/bin/python
           /tmp/lowest-common/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-common/tests
 

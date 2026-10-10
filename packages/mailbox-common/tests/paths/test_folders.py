@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib
+import sys
 from pathlib import Path
 
 import platformdirs
@@ -57,3 +59,11 @@ def test_the_folders_are_the_apps_own(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(platformdirs, "user_data_dir", where)
     system_folders("benethos-x")
     assert asked == [("benethos-x", {"appauthor": False, "roaming": False})] * 2
+
+
+def test_without_the_extra_the_import_names_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """platformdirs comes with ``benethos-mailbox-common[paths]``."""
+    monkeypatch.setitem(sys.modules, "platformdirs", None)
+    monkeypatch.delitem(sys.modules, "benethos_mailbox_common.paths.folders")
+    with pytest.raises(ModuleNotFoundError, match=r"benethos-mailbox-common\[paths\]"):
+        importlib.import_module("benethos_mailbox_common.paths.folders")
