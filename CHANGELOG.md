@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-10
+
 ### Added
 
 - From this release on, the MCP server is listed in the official MCP
@@ -1501,7 +1503,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/benethos-hub/mailbox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/benethos-hub/mailbox/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/benethos-hub/mailbox/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/benethos-hub/mailbox/compare/v0.2.0...v0.3.0
