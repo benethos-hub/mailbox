@@ -86,10 +86,8 @@ def with_code(client: Any, code: str, command: Callable[[], Any]) -> list[Any]:
     return found
 
 
-def message_id(header_block: bytes) -> str | None:
-    return fields.message_id(
-        BytesHeaderParser().parsebytes(header_block).get("Message-ID")
-    )
+def thread_headers(header_block: bytes) -> fields.ThreadHeaders:
+    return fields.thread_headers(BytesHeaderParser().parsebytes(header_block).get)
 
 
 def quietly(command: Callable[[], Any]) -> None:

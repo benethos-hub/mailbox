@@ -11,10 +11,14 @@ A provider with stable ids needs no index. Where it reports changes per
 folder (``DELTA``, Graph delta queries), a pass asks each folder what
 changed since its last token and records that instead.
 
+Where the adapter has ``THREADS`` but no thread ids of its own (IMAP),
+the index keeps the threads too (``threads``).
+
 What a pass finds goes into the change feed: new messages as created,
-moved ones and, where the provider can tell, ones whose flags changed as
-updated, vanished ones as deleted. The first pass of an
-account records nothing, since the messages already there are not new.
+moved ones, ones whose thread went into another and, where the provider
+can tell, ones whose flags changed as updated, vanished ones as deleted.
+The first pass of an account records nothing, since the messages
+already there are not new.
 """
 
 from __future__ import annotations
@@ -29,7 +33,7 @@ from benethos_mailbox_common.values import secret
 
 from ...common.clock import utc_now
 from ...common.locks import KeyedLocks
-from ...data.providers import Capability, FolderChanges
+from ...data.providers import Capability, FolderChanges, ThreadHeaders
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import (
     ChangesExpiredError,
@@ -48,6 +52,7 @@ from ..changes import (
     MessagesUpdated,
 )
 from .passes import Counts, DeltaState, Seen, delta_state, index_changes, moves
+from .threads import REFERENCES, IndexThreads, new_thread_id
 
 T = TypeVar("T")
 
@@ -76,10 +81,13 @@ class SyncService:
         new_id: Callable[[], str] = new_message_id,
         clock: Callable[[], datetime] = utc_now,
         activity: ActivityLog | None = None,
+        references: int = REFERENCES,
+        new_thread: Callable[[], str] = new_thread_id,
     ) -> None:
         self._adapters = adapters
         self._index = index
         self._new_id = new_id
+        self._threads = IndexThreads(adapters, index, references, new_thread)
         self._feed = feed
         self._clock = clock
         self._activity = activity or ActivityLog(clock)
@@ -109,7 +117,8 @@ class SyncService:
     ) -> list[str]:
         """Our ids for provider ids, each with its folder. Unknown ones get a
         new id, with their ``Message-ID`` read right away: a message moved
-        before the next sync can only be followed by it."""
+        before the next sync can only be followed by it. Where the index
+        keeps threads, they join theirs at once."""
         places = list(places)
         if not self.mapped(account_id):
             return [native for native, _ in places]
@@ -119,15 +128,16 @@ class SyncService:
         if missing:
             headers = await self._headers(account_id, [n for n, _ in missing])
             added = [
-                IndexEntry(self._new_id(), n, f, headers.get(n)) for n, f in missing
+                IndexEntry(self._new_id(), n, f, _message_id(headers.get(n)))
+                for n, f in missing
             ]
             # Before the first sync, every message is still unknown.
             synced = bool(self._index.folder_states(account_id))
             self._index.add(account_id, added)
             # Read back: a sync may have added the same place meanwhile.
             known = self._index.by_native(account_id, natives)
+            ours = {e.id: e.folder_id for e in added}
             if synced:
-                ours = {e.id: e.folder_id for e in added}
                 self.changed(
                     MessagesCreated(
                         account_id,
@@ -135,6 +145,9 @@ class SyncService:
                         ours,
                     )
                 )
+            merged = self._threads.join(account_id, added, headers)
+            if synced:
+                self._report_merged(account_id, merged, set(ours))
         return [known[native].id for native in natives]
 
     async def resolve(
@@ -204,9 +217,14 @@ class SyncService:
             account_id, lambda p: p.flag_changes(folder_id, since, natives)
         )
 
+    def thread_ids(self, account_id: str, message_ids: list[str]) -> dict[str, str]:
+        """The thread of each message the index has one for. Empty where
+        the index keeps no threads."""
+        return self._threads.of(account_id, message_ids)
+
     async def _headers(
         self, account_id: str, natives: list[str]
-    ) -> dict[str, str | None]:
+    ) -> dict[str, ThreadHeaders]:
         """Best effort: without the headers the listing still works, the next
         sync reads them."""
         try:
@@ -337,21 +355,54 @@ class SyncService:
 
     async def _sync(self, account_id: str) -> Counts:
         """Compare the folders whose state changed with the index: what
-        arrived, left, moved, or changed its flags."""
+        arrived, left, moved, or changed its flags. Then thread what
+        arrived, and a portion of the entries without a thread."""
         states = await self._adapters.call(account_id, lambda p: p.folder_states())
         before = self._index.folder_states(account_id)
         changed = [f for f, state in states.items() if before.get(f) != state]
         vanished = [f for f in before if f not in states]
-        if not changed and not vanished:
-            return Counts(len(states))
-        seen = await self._seen(account_id, changed, vanished)
-        flagged = await self._flagged(account_id, changed, before, seen)
-        moved = moves(seen.left, seen.arrived, seen.headers)
-        changes = index_changes(states, seen, moved, self._new_id)
-        self._index.apply(account_id, changes)
-        if not before:
-            return Counts(len(states))
-        return self._report(account_id, seen, moved, changes, flagged, len(states))
+        counts = Counts(len(states))
+        merged: dict[str, str] = {}
+        created: set[str] = set()
+        if changed or vanished:
+            seen = await self._seen(account_id, changed, vanished)
+            flagged = await self._flagged(account_id, changed, before, seen)
+            moved = moves(seen)
+            changes = index_changes(states, seen, moved, self._new_id)
+            self._index.apply(account_id, changes)
+            if before:
+                counts = self._report(
+                    account_id, seen, moved, changes, flagged, len(states)
+                )
+            merged = self._threads.join(account_id, changes.added, seen.headers)
+            created = {e.id for e in changes.added}
+        merged.update(await self._threads.backfill(account_id))
+        if before:
+            reported = self._report_merged(account_id, merged, created)
+            counts = replace(counts, updated=counts.updated + reported)
+        return counts
+
+    # --- threads ----------------------------------------------------------------------
+
+    def _report_merged(
+        self, account_id: str, merged: dict[str, str], created: set[str]
+    ) -> int:
+        """Messages whose thread went into another, as updated. Those new
+        in this pass are reported as created already. Answers how many."""
+        entries = [
+            entry
+            for message_id in merged
+            if message_id not in created
+            and (entry := self._index.get(account_id, message_id)) is not None
+        ]
+        self.changed(
+            MessagesUpdated(
+                account_id,
+                [e.id for e in entries],
+                {e.id: e.folder_id for e in entries},
+            )
+        )
+        return len(entries)
 
     async def _seen(
         self, account_id: str, changed: list[str], vanished: list[str]
@@ -432,3 +483,7 @@ class SyncService:
             len(elsewhere + flagged),
             len(changes.removed),
         )
+
+
+def _message_id(headers: ThreadHeaders | None) -> str | None:
+    return headers.message_id if headers is not None else None

@@ -7,6 +7,7 @@ import pytest
 from imapclient.imapclient import _parse_untagged_response
 
 from benethos_mailbox_service.data.protocols.imap import ImapSession, Server
+from benethos_mailbox_service.data.providers import ThreadHeaders
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import (
     NotSupportedError,
@@ -59,13 +60,29 @@ async def test_message_headers(server: FakeMailBox) -> None:
     server.add(
         "INBOX", 21, make_message("No id").replace(b"Message-ID:", b"X-Old-Id:", 1)
     )
+    server.add(
+        "INBOX",
+        22,
+        make_message(
+            "Re: Folded",
+            extra_headers={
+                "In-Reply-To": "<b@example.com> (the message of Bob)",
+                "References": "<a@example.com> <b@example.com>",
+            },
+        ).replace(b"<a@example.com> <b", b"<a@example.com>\n <b", 1),
+    )
     imap = provider(server)
-    wanted = [mappers.message_id("INBOX", 7, uid) for uid in (1, 20, 21, 99)]
+    wanted = [mappers.message_id("INBOX", 7, uid) for uid in (1, 20, 21, 22, 99)]
     found = await imap.message_headers(wanted)
-    assert found[wanted[0]] == f"<{abs(hash('Invoice 1'))}@example.com>"
-    assert found[wanted[1]] == f"<{abs(hash('Folded'))}@example.com>"
-    assert found[wanted[2]] is None
-    assert wanted[3] not in found  # gone
+    assert found[wanted[0]] == ThreadHeaders(f"<{abs(hash('Invoice 1'))}@example.com>")
+    assert found[wanted[1]] == ThreadHeaders(f"<{abs(hash('Folded'))}@example.com>")
+    assert found[wanted[2]] == ThreadHeaders()
+    assert found[wanted[3]] == ThreadHeaders(
+        f"<{abs(hash('Re: Folded'))}@example.com>",
+        "<b@example.com>",
+        ("<a@example.com>", "<b@example.com>"),
+    )
+    assert wanted[4] not in found  # gone
     fetches = [c for c in server.calls if c[0] == "fetch"]
     assert fetches and all(c[2] == "message-id" for c in fetches)
 

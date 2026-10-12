@@ -233,7 +233,7 @@ async def test_contents_and_headers(
     server.calls.clear()
     headers = await adapter.message_headers([*contents, "junk"])
     assert set(headers) == set(contents)
-    assert all(h and h.startswith("<") for h in headers.values())
+    assert all((h.message_id or "").startswith("<") for h in headers.values())
     # Three sessions of at most two messages each.
     assert [c[0] for c in server.calls].count("quit") == 3
 

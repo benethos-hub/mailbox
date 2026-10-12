@@ -10501,7 +10501,8 @@
           "server_search",
           "push",
           "stable_ids",
-          "delta"
+          "delta",
+          "threads"
         ],
         "title": "Capability",
         "description": "What an account's adapter can do beyond reading its inbox. Where one\nis missing, the operations that need it answer `501 not_supported`."

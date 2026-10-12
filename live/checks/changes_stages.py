@@ -1,17 +1,17 @@
 """The stages of ``live/changes.py`` that change the test mail once it is
 there: flags, a folder of its own, a move by another client, replies and
-forwards, a batch, drafts, and deleting it."""
+forwards and the threads they make, a batch, drafts, and deleting it."""
 
 from __future__ import annotations
 
 import anyio
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_client import SyncMailboxClient
+from benethos_mailbox_client import MessageSummary, SyncMailboxClient
 
 from .changes_trip import Trip, find_by_subject
 from .imap import OtherClient
-from .mail import feed_types
+from .mail import feed_types, messages_with_subject
 from .run import Run
 
 FLAGGED = chr(92) + "Flagged"
@@ -260,7 +260,39 @@ def reply_and_forward(trip: Trip) -> bool:
         "$Forwarded" in other.flags("INBOX", subject),
         " ".join(other.flags("INBOX", subject)),
     )
+    if reply is not None and forward is not None:
+        threads(trip, reply, forward)
     return True
+
+
+def threads(trip: Trip, reply: MessageSummary, forward: MessageSummary) -> None:
+    """In each account the mail and the reply are one thread, across the
+    inbox and the sent folder. The forward begins a thread of its own."""
+    mailbox, run, subject = trip.mailbox, trip.run, trip.subject
+    original = mailbox.get_message(trip.account_id, trip.message_id).thread_id
+    copies = messages_with_subject(
+        mailbox, trip.account_id, f"Re: {subject}", folder="sent", tries=3
+    )
+    run.check(
+        "account 1: the mail in the inbox and the reply in sent are one thread",
+        original is not None and [c.thread_id for c in copies] == [original],
+        f"{original} {[c.thread_id for c in copies]}",
+    )
+    sent = (
+        mailbox.get_message(trip.sender_id, trip.sent_copy_id).thread_id
+        if trip.sent_copy_id
+        else None
+    )
+    run.check(
+        "account 2: the mail in sent and the reply in the inbox are one thread",
+        sent is not None and reply.thread_id == sent,
+        f"{sent} {reply.thread_id}",
+    )
+    run.check(
+        "the forward begins a thread of its own",
+        forward.thread_id is not None and forward.thread_id != reply.thread_id,
+        f"{forward.thread_id}",
+    )
 
 
 def batch(trip: Trip) -> bool:

@@ -19,6 +19,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   attached as they are. It needs the right to read that mail.
 - `/v1/me` says per account its `status`, whether it needs `attention`
   and when its last sync succeeded (`last_sync_at`).
+- Messages of IMAP accounts carry a `thread_id`. The service threads
+  them itself, across folders, by `Message-ID`, `In-Reply-To` and
+  `References`. Mail already known is threaded over the next sync
+  passes. A message that ties two threads together merges the younger
+  into the older, whose messages show as updated in the change feed.
+  IMAP accounts have the capability `threads`.
+  `MAILBOX_SERVICE_THREAD_REFERENCES` (20) sets how many of the
+  `References` of a message count. The database moves to schema 20.
 - The MCP server:
   - `update_messages` adds and takes off keywords and labels
     (`add_folders`, `remove_folders`, `add_keywords`,

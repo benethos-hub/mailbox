@@ -60,7 +60,8 @@ done. Update the roadmap in the same commit that finishes an item.
   (read-only) and
   `uv run python live/changes.py [--keep]` (sends one test mail from the
   second test account to the first, flags and moves it, replies,
-  forwards and sends a draft back to the second, makes and removes a
+  forwards and sends a draft back to the second, checks that the mail
+  and the reply are one thread in each account, makes and removes a
   folder, deletes it all for good, and checks the change feed and a
   webhook on a receiver at 127.0.0.1), test accounts in `live/.env` (not
   versioned, template `live/.env.example`).

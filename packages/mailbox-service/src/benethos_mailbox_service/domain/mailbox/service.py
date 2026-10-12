@@ -192,7 +192,8 @@ class MailboxService:
             # Only a draft of this service carries one. In a received mail
             # the header is the sender's.
             message = message.model_copy(update={"reference": None})
-        return public(message, message_id, account_id)
+        thread = self._calls.thread_of(account_id, message_id)
+        return public(message, message_id, account_id, thread)
 
     async def update_message(
         self,

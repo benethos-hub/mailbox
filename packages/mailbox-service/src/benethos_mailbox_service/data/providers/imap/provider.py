@@ -23,6 +23,7 @@ import anyio
 from ....common.chunks import batched
 from ....common.ratelimit import Clock, Sleep
 from ....errors import BadRequestError, MailboxServiceError, NotSupportedError
+from ...mail import ThreadHeaders
 from ...models import (
     AttachmentContent,
     Folder,
@@ -55,7 +56,10 @@ class ImapProvider(MailServerAdapter):
     account = "an IMAP account"
     ports = IMAP_PORTS
     # PUSH needs IDLE, which wait_for_change finds out after the login.
-    capabilities = frozenset({Capability.SEARCH, Capability.SERVER_SEARCH})
+    # THREADS: the domain threads the messages in its index.
+    capabilities = frozenset(
+        {Capability.SEARCH, Capability.SERVER_SEARCH, Capability.THREADS}
+    )
 
     def __init__(
         self,
@@ -146,10 +150,10 @@ class ImapProvider(MailServerAdapter):
             lambda box: sync.flag_changes(box, folder_id, since, message_ids)
         )
 
-    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+    async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         # Ids that are no id of this adapter are left out, like messages
         # that are gone.
-        found: dict[str, str | None] = {}
+        found: dict[str, ThreadHeaders] = {}
         for (folder, validity), by_uid in messages.by_folder(message_ids)[0].items():
             # One request per batch, so a long first sync never holds the
             # connection for long.

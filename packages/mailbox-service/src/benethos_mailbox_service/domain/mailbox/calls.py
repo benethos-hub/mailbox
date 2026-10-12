@@ -106,12 +106,14 @@ class Calls:
     async def published(
         self, account_id: str, items: list[MessageSummary]
     ) -> list[MessageSummary]:
-        """The provider's summaries with our ids and the account."""
+        """The provider's summaries with our ids, the account and, where
+        the index keeps them, the threads."""
         ids = await self._sync.public_ids(
             account_id, [(i.id, folder_of(i)) for i in items]
         )
+        threads = self._sync.thread_ids(account_id, ids)
         return [
-            public(item, our_id, account_id)
+            public(item, our_id, account_id, threads.get(our_id))
             for item, our_id in zip(items, ids, strict=True)
         ]
 
@@ -140,6 +142,11 @@ class Calls:
         """Record a change in the change feed."""
         self._sync.changed(change)
 
+    def thread_of(self, account_id: str, message_id: str) -> str | None:
+        """The thread the index has for a message, None where it keeps no
+        threads or has none for it yet."""
+        return self._sync.thread_ids(account_id, [message_id]).get(message_id)
+
     def forget(self, account_id: str, message_id: str) -> None:
         """A message is gone for good: its id answers 404 from now on."""
         was = self._sync.folder_of(account_id, message_id)
@@ -159,12 +166,15 @@ class Calls:
         )
         results: dict[str, MessageSummary | MailboxServiceError] = {}
         folders: dict[str, str] = {}
+        threads = self._sync.thread_ids(account_id, ids)
         for message_id, outcome in outcomes.items():
             if isinstance(outcome, MailboxServiceError):
                 results[message_id] = outcome
                 continue
             self._follow(account_id, message_id, natives[message_id], outcome)
-            results[message_id] = public(outcome, message_id, account_id)
+            results[message_id] = public(
+                outcome, message_id, account_id, threads.get(message_id)
+            )
             folders[message_id] = folder_of(outcome)
         self._sync.changed(MessagesUpdated(account_id, _done(results), folders))
         return results
@@ -277,6 +287,12 @@ def folder_of(message: MessageSummary) -> str:
     return message.folder_ids[0] if message.folder_ids else ""
 
 
-def public(message: S, message_id: str, account_id: str) -> S:
-    """A provider's message under our id, with its account."""
-    return message.model_copy(update={"id": message_id, "account_id": account_id})
+def public(
+    message: S, message_id: str, account_id: str, thread_id: str | None = None
+) -> S:
+    """A provider's message under our id, with its account, and with the
+    thread the index keeps for it where the provider names none."""
+    update = {"id": message_id, "account_id": account_id}
+    if thread_id is not None:
+        update["thread_id"] = thread_id
+    return message.model_copy(update=update)

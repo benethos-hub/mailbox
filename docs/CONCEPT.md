@@ -840,6 +840,17 @@ over the inbox, the sent folder and the archive. The service builds IMAP
 threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
 `References` in the id mapping (4.1).
 
+**Decided 2026-10-12, threads:** A thread lives in one account. Threads
+across accounts come later. For IMAP only the headers tie messages
+together, never the subject. When a late message ties two threads
+together, the younger one goes into the older one. Its id answers `404`
+from then on, and its messages show as updated in the change feed. POP3
+answers `501`. A thread lists at most 500 messages, and of the
+`References` of a message the last 20 count. Both are settings. The MCP
+server gets `get_thread` alone, which takes a message id or a thread id.
+The UI gets a card with the conversation on the message page and a list
+of the messages by threads.
+
 ### 6.4 Sending and drafts
 
 | Method | Path | Purpose |

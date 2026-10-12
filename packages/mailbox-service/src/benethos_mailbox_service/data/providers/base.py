@@ -11,6 +11,7 @@ from typing import Protocol, runtime_checkable
 from pydantic import SecretStr
 
 from ...errors import MailboxServiceError
+from ..mail import ThreadHeaders
 from ..models import (
     AttachmentContent,
     Capability,
@@ -126,9 +127,10 @@ class Reads(Protocol):
         """The ids of every message in the folder."""
         ...
 
-    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
-        """The ``Message-ID`` header of each message. Messages that are gone
-        are left out."""
+    async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
+        """The ``Message-ID`` of each message, and where the adapter reads
+        them, the headers that tie it to its conversation. Messages that are
+        gone are left out."""
         ...
 
     async def flag_changes(

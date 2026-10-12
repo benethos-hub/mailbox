@@ -10,17 +10,23 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 
 from ...common.clock import iso, parse_iso
-from ...data.storage import IndexChanges, IndexEntry
+from ...data.providers import ThreadHeaders
+from ...data.storage import IndexChanges, IndexEntry, ThreadChain
 
 
 @dataclass(frozen=True)
 class Seen:
     """What a pass found in the changed folders: the index entries there,
-    the folder each provider id is in now, and the Message-IDs read."""
+    the folder each provider id is in now, and the headers read."""
 
     entries: list[IndexEntry]
     present: dict[str, str]
-    headers: dict[str, str | None]
+    headers: dict[str, ThreadHeaders]
+
+    def message_id(self, native: str) -> str | None:
+        """The ``Message-ID`` read for a provider id, if any."""
+        found = self.headers.get(native)
+        return found.message_id if found is not None else None
 
     @property
     def arrived(self) -> list[str]:
@@ -76,18 +82,16 @@ def delta_state(stored: str | None) -> DeltaState | None:
     return None if at is None else DeltaState(str(value["token"]), at)
 
 
-def moves(
-    left: list[IndexEntry], arrived: list[str], headers: dict[str, str | None]
-) -> dict[IndexEntry, str]:
+def moves(seen: Seen) -> dict[IndexEntry, str]:
     """Which message that left is which one that arrived: same
     ``Message-ID``, and exactly one on each side."""
     gone: dict[str, list[IndexEntry]] = {}
-    for entry in left:
+    for entry in seen.left:
         if entry.header:
             gone.setdefault(entry.header, []).append(entry)
     came: dict[str, list[str]] = {}
-    for native in arrived:
-        header = headers.get(native)
+    for native in seen.arrived:
+        header = seen.message_id(native)
         if header:
             came.setdefault(header, []).append(native)
     return {
@@ -105,19 +109,30 @@ def index_changes(
 ) -> IndexChanges:
     """The index after a pass: headers read now, moves under their old
     ids, what left removed, what arrived added under a new id."""
-    present, headers = seen.present, seen.headers
+    present = seen.present
     changes = IndexChanges(states=states)
     for entry in seen.entries:
-        header = headers.get(entry.native_id)
+        header = seen.message_id(entry.native_id)
         if entry.native_id in present and entry.header is None and header:
             changes.updated.append(replace(entry, header=header))
     for old, native in moved.items():
-        changes.updated.append(IndexEntry(old.id, native, present[native], old.header))
+        changes.updated.append(
+            replace(old, native_id=native, folder_id=present[native])
+        )
     taken = set(moved.values())
     changes.removed = [e.id for e in seen.left if e not in moved]
     changes.added = [
-        IndexEntry(new_id(), n, present[n], headers.get(n))
+        IndexEntry(new_id(), n, present[n], seen.message_id(n))
         for n in seen.arrived
         if n not in taken
     ]
     return changes
+
+
+def chain(message_id: str, headers: ThreadHeaders, references: int) -> ThreadChain:
+    """The headers that tie a message to its conversation: its own
+    ``Message-ID``, the last ``references`` of its ``References`` and the
+    one it answers."""
+    kept = headers.references[-references:] if references > 0 else ()
+    named = (headers.message_id, *kept, headers.in_reply_to)
+    return ThreadChain(message_id, tuple(dict.fromkeys(h for h in named if h)))

@@ -179,7 +179,12 @@ class _Domain:
         settings, repositories = base.settings, base.repositories
         clock, activity = base.clock, base.activity
         self.sync = SyncService(
-            adapters, repositories.index, feed=changes, clock=clock, activity=activity
+            adapters,
+            repositories.index,
+            feed=changes,
+            clock=clock,
+            activity=activity,
+            references=settings.thread_references,
         )
         factors = SecondFactors(
             Totp(repositories.totp, vault, clock=clock),

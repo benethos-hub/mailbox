@@ -19,6 +19,7 @@ from datetime import datetime
 
 from ....common.clock import utc_now
 from ....errors import MailboxServiceError, ProviderError
+from ...mail import ThreadHeaders
 from ...models import (
     AttachmentContent,
     Folder,
@@ -111,7 +112,7 @@ class JmapProvider:
     async def folder_contents(self, folder_id: str) -> list[str]:
         return await self._changes.folder_contents(folder_id)
 
-    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+    async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         return await self._changes.message_headers(message_ids)
 
     async def flag_changes(

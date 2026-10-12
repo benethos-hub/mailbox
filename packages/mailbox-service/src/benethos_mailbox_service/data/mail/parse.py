@@ -21,7 +21,13 @@ from typing import Any
 from imap_tools import MailMessage
 
 from ..models import Address
-from .fields import OCTET_STREAM, message_id, message_ids, unicode_address
+from .fields import (
+    OCTET_STREAM,
+    ThreadHeaders,
+    message_id,
+    message_ids,
+    unicode_address,
+)
 
 
 @dataclass(frozen=True)
@@ -112,6 +118,10 @@ class ParsedMessage:
     def references(self) -> list[str]:
         """The ids References names, oldest first."""
         return message_ids(self.header("references"))
+
+    @property
+    def thread_headers(self) -> ThreadHeaders:
+        return ThreadHeaders(self.message_id, self.in_reply_to, tuple(self.references))
 
     @property
     def content_type(self) -> str:
