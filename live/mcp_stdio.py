@@ -6,7 +6,8 @@ Starts a service of its own on a free port, with a throwaway database and
 master key, adds the first two test accounts of ``live/.env`` through the
 API, and makes a user that may only read them. Then it starts
 ``benethos-mailbox-mcp`` over stdio with that user's token and calls the
-tools. A second user may also write: with it the check creates and renames
+tools, the conversation of a search hit among them. A second user may
+also write: with it the check creates and renames
 a folder in the first test account, adds and takes off a keyword, stars,
 moves and trashes the newest inbox message there, and puts everything
 back as it was. A label is refused there. whats_new must name those
@@ -25,6 +26,7 @@ from __future__ import annotations
 
 import base64
 import sys
+from typing import Any
 
 import anyio
 from checks.accounts import accounts, read_env, register_all
@@ -112,6 +114,7 @@ async def check_tools(run: Run, url: str, token: str, emails: set[str]) -> None:
                 and "</mail-content>" in body,
                 f"{len(body)} characters",
             )
+            await check_thread(run, session, first)
         await check_pdf(run, session)
         refused = await session.call_tool(
             "get_message", {"account_id": "acc_unknown", "message_id": "msg_x"}
@@ -120,6 +123,21 @@ async def check_tools(run: Run, url: str, token: str, emails: set[str]) -> None:
             "an unknown account is a tool error, not a crash",
             bool(refused.is_error) and "not found" in text_of(refused),
         )
+
+
+async def check_thread(run: Run, session: ClientSession, hit: dict[str, Any]) -> None:
+    """The conversation of a search hit, each mail marked as foreign."""
+    found = await session.call_tool(
+        "get_thread", {"account_id": hit["account_id"], "message_id": hit["id"]}
+    )
+    said = text_of(found)
+    run.check(
+        "get_thread reads the conversation of a search hit, marked as foreign",
+        not found.is_error
+        and f'source="{hit["account_id"]}/{hit["id"]}"' in said
+        and f"thread: {hit.get('thread_id')}" in said,
+        f"{said.count('<mail-content')} mail(s)",
+    )
 
 
 async def check_pdf(run: Run, session: ClientSession) -> None:

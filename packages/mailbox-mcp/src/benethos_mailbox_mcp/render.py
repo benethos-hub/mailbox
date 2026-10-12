@@ -28,6 +28,7 @@ from .models import (
     Page,
     Sending,
     Sent,
+    Thread,
 )
 
 MARKER_NOTE = (
@@ -72,6 +73,7 @@ def summary(item: MessageSummary) -> dict[str, Any]:
         "has_attachments": item.has_attachments,
         "folders": item.folder_ids,
         **({"keywords": item.keywords} if item.keywords else {}),
+        **({"thread_id": item.thread_id} if item.thread_id else {}),
     }
 
 
@@ -96,6 +98,8 @@ def message(account_id: str, item: Message, max_chars: int) -> str:
         f"account: {account_id}",
         f"folders: {', '.join(item.folder_ids) or '-'}",
     ]
+    if item.thread_id:
+        ours.append(f"thread: {item.thread_id}")
     if item.keywords:
         ours.append(f"keywords: {', '.join(item.keywords)}")
     if item.reference is not None:
@@ -120,6 +124,35 @@ def message(account_id: str, item: Message, max_chars: int) -> str:
         )
     content = "\n".join(theirs) + "\n\n" + body
     return "\n".join(ours) + "\n\n" + foreign(f"{account_id}/{item.id}", content)
+
+
+def thread(account_id: str, found: Thread, mails: list[Message], max_chars: int) -> str:
+    """A conversation as text: what the service knows of the thread, then
+    each mail as ``message`` shows it, oldest first, the bodies sharing
+    ``max_chars``."""
+    ours = [
+        f"thread: {found.id}",
+        f"account: {account_id}",
+        f"mails: {found.message_count}",
+        f"folders: {', '.join(found.folder_ids) or '-'}",
+    ]
+    left = found.message_count - len(mails)
+    if left > 0 or found.truncated:
+        older = (
+            "older mails"
+            if found.truncated
+            else "the oldest mail"
+            if left == 1
+            else f"the {left} oldest mails"
+        )
+        ours.append(f"note: {older} left out, the newest {len(mails)} follow")
+    share = max(MIN_SHARE, max_chars // max(1, len(mails)))
+    shown = [message(account_id, mail, share) for mail in mails]
+    return "\n".join(ours) + "\n\n" + "\n\n".join(shown)
+
+
+# The least of the body of one mail of a thread, however many there are.
+MIN_SHARE = 200
 
 
 def page(found: Page) -> dict[str, Any]:

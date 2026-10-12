@@ -37,6 +37,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   that names folders sees the messages of a thread in them. POP3 answers
   `501`. The Python client has `list_threads` and `get_thread`.
 - The MCP server:
+  - A new tool `get_thread` reads a conversation in every folder,
+    oldest first, from a mail of it such as a search hit or from its
+    thread id. The newest 20 mails come as plain text and share
+    `max_chars`. Search results and `get_message` name the thread of
+    a mail.
   - `update_messages` adds and takes off keywords and labels
     (`add_folders`, `remove_folders`, `add_keywords`,
     `remove_keywords`). At Gmail it labels a mail and leaves it in the

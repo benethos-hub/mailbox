@@ -71,7 +71,8 @@ done. Update the roadmap in the same commit that finishes an item.
   (stdio, `--transport streamable-http` for HTTP).
   For Claude Code and Claude Desktop see `packages/mailbox-mcp/README.md`.
   `uv run python live/mcp_stdio.py` checks it over stdio against the test
-  accounts, with a service and database of its own. The write tools create
+  accounts, with a service and database of its own. The read tools read
+  the conversation of a search hit as well. The write tools create
   a folder and star, move and trash a message of the first test account,
   then put everything back. They also rename the folder and add and
   take off a keyword. The draft tools write a reply draft there without

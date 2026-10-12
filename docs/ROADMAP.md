@@ -298,7 +298,7 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   read a thread, the domain reads one and lists the threads of a folder.
   Step 3 done: `GET .../threads` (`list_threads`) and
   `GET .../threads/{thread_id}` (`get_thread`) in `mail.read`, and both
-  on the Python client
+  on the Python client. Step 4 done: the MCP tool `get_thread`
 - **Users, roles and rights: the changes of
   [PERMISSIONS.md](PERMISSIONS.md) section 8**, decided 2026-10-05,
   done: the last administrator stays (8.3), service rights apart from

@@ -21,6 +21,7 @@ from benethos_mailbox_client import (
     Reference,
     Sending,
     Sent,
+    Thread,
 )
 
 __all__ = [
@@ -41,4 +42,5 @@ __all__ = [
     "Reference",
     "Sending",
     "Sent",
+    "Thread",
 ]
