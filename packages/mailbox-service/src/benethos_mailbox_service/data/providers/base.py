@@ -72,6 +72,16 @@ class FolderChanges:
     removed: list[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True, slots=True)
+class ThreadMessages:
+    """The messages of a thread, oldest first: the newest ones where the
+    thread holds more than were asked for."""
+
+    messages: list[MessageSummary]
+    # The thread holds more messages than these.
+    truncated: bool = False
+
+
 @runtime_checkable
 class Reads(Protocol):
     """What every adapter does: one connected account at one provider,
@@ -86,8 +96,8 @@ class Reads(Protocol):
     """
 
     # What the adapter declares beyond its protocols: SEARCH,
-    # SERVER_SEARCH, LABELS, STABLE_IDS, and SEND where it has a server to
-    # send through.
+    # SERVER_SEARCH, LABELS, STABLE_IDS, THREADS where the domain keeps
+    # them, and SEND where it has a server to send through.
     capabilities: frozenset[Capability]
 
     async def list_folders(self) -> list[Folder]: ...
@@ -250,12 +260,35 @@ class Deltas(Protocol):
         ...
 
 
+@runtime_checkable
+class Threads(Protocol):
+    """Keeps the threads of its messages, each message's ``thread_id``
+    the provider's own. Gives ``THREADS``."""
+
+    async def thread_messages(self, thread_id: str, limit: int) -> ThreadMessages:
+        """The messages of a thread in every folder, at most ``limit``.
+        Raises ``NotFoundError`` for a thread that is not there."""
+        ...
+
+
+@runtime_checkable
+class Summaries(Protocol):
+    """Reads the summaries of messages named by id, wherever they are. The
+    domain needs it for the threads it keeps itself (IMAP), which declare
+    ``THREADS`` beyond the protocols."""
+
+    async def summaries(self, message_ids: list[str]) -> dict[str, MessageSummary]:
+        """The summary of each message that is there, by id."""
+        ...
+
+
 # What each protocol gives callers to see.
 _GIVES: tuple[tuple[type, frozenset[Capability]], ...] = (
     (Writes, frozenset({Capability.FLAGS, Capability.FOLDERS})),
     (Drafts, frozenset({Capability.DRAFTS})),
     (Watches, frozenset({Capability.PUSH})),
     (Deltas, frozenset({Capability.DELTA})),
+    (Threads, frozenset({Capability.THREADS})),
 )
 
 

@@ -63,6 +63,20 @@ def list_messages(
     )
 
 
+def summaries(
+    box: Mailbox, folder: str, validity: int, by_uid: dict[int, str]
+) -> dict[str, MessageSummary]:
+    """The summaries of messages of one folder, by id. A renumbered
+    folder holds none of them any more."""
+    if box.session.select(folder) != validity:
+        return {}
+    return {
+        by_uid[int(m.uid)]: mappers.summary(m, folder, validity)
+        for m in box.session.messages.fetch_headers(sorted(by_uid))
+        if m.uid and int(m.uid) in by_uid
+    }
+
+
 def select_message(box: Mailbox, message_id: str) -> mappers.Place:
     """Select the message's folder. Where the id points."""
     place = mappers.parse_message_id(message_id)

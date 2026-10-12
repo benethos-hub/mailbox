@@ -24,7 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `References`. Mail already known is threaded over the next sync
   passes. A message that ties two threads together merges the younger
   into the older, whose messages show as updated in the change feed.
-  IMAP accounts have the capability `threads`.
+  Every kind of account but POP3 has the capability `threads`: Gmail,
+  JMAP and Microsoft keep the threads themselves.
   `MAILBOX_SERVICE_THREAD_REFERENCES` (20) sets how many of the
   `References` of a message count. The database moves to schema 20.
 - The MCP server:

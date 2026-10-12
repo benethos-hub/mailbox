@@ -229,6 +229,7 @@ class _Domain:
             self.sends,
             clock=clock,
             activity=activity,
+            thread_messages=settings.thread_messages,
         )
         self.deliveries = self._dispatcher(resolve)
 

@@ -56,6 +56,13 @@ class GmailMessage(wire.CamelShape):
     raw: Text = None
 
 
+class GmailThread(wire.CamelShape):
+    """A thread and its messages, oldest first."""
+
+    id: str
+    messages: list[GmailMessage] = []
+
+
 class Messages(wire.CamelShape):
     """A page of message ids, newest first."""
 

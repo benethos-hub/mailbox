@@ -2,6 +2,7 @@
 
 JSON over HTTPS. Ids are the server's own and stay when a message moves
 (``STABLE_IDS``), and a message can be in several folders (``LABELS``).
+Each message names its thread, which the server reads (``THREADS``).
 The sync asks what changed since a state (``DELTA``), and the server's
 event source tells when something did (``PUSH``).
 
@@ -31,7 +32,13 @@ from ...models import (
     SentMessage,
 )
 from ...protocols import Pick, ServerClient, jmap
-from ..base import Capability, CredentialReader, FolderChanges, ProviderSettings
+from ..base import (
+    Capability,
+    CredentialReader,
+    FolderChanges,
+    ProviderSettings,
+    ThreadMessages,
+)
 from . import drafts, folders, messages, sending
 from .account import JmapAccount
 from .changes import Changes
@@ -114,6 +121,9 @@ class JmapProvider:
 
     async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         return await self._changes.message_headers(message_ids)
+
+    async def thread_messages(self, thread_id: str, limit: int) -> ThreadMessages:
+        return await messages.thread_messages(self._account, thread_id, limit)
 
     async def flag_changes(
         self, folder_id: str, since: str, message_ids: list[str]

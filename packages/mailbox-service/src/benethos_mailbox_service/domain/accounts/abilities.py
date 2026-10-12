@@ -8,7 +8,17 @@ same for every kind of account.
 
 from __future__ import annotations
 
-from ...data.providers import Deletes, Deltas, Drafts, Reads, Sends, Watches, Writes
+from ...data.providers import (
+    Deletes,
+    Deltas,
+    Drafts,
+    Reads,
+    Sends,
+    Summaries,
+    Threads,
+    Watches,
+    Writes,
+)
 from ...errors import NotSupportedError
 
 
@@ -42,6 +52,18 @@ def watches(adapter: Reads) -> Watches:
     if isinstance(adapter, Watches):
         return adapter
     raise NotSupportedError("this account reports no change by itself: it is polled")
+
+
+def threads(adapter: Reads) -> Threads:
+    if isinstance(adapter, Threads):
+        return adapter
+    raise NotSupportedError("this account keeps no threads")
+
+
+def summaries(adapter: Reads) -> Summaries:
+    if isinstance(adapter, Summaries):
+        return adapter
+    raise NotSupportedError("this account keeps no threads")
 
 
 def deltas(adapter: Reads) -> Deltas:

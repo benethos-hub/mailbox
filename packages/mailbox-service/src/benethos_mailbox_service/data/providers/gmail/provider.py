@@ -5,7 +5,8 @@ token from its ``TokenSource``. A refused token is renewed once. If it is
 refused again, the account needs a new sign-in.
 
 Ids are Gmail's own and stay when a message moves (``STABLE_IDS``).
-Labels are folders, so a message can be in several (``LABELS``). The
+Labels are folders, so a message can be in several (``LABELS``). Each
+message names its thread, which Gmail reads as a whole (``THREADS``). The
 sync asks what changed since a history id (``DELTA``). There is no
 push: Gmail pushes through Cloud Pub/Sub only, which needs more of
 Google Cloud set up. The worker asks instead.
@@ -35,7 +36,7 @@ from ...models import (
     SentMessage,
 )
 from ...protocols import ApiClient
-from ..base import Capability, FolderChanges, TokenSource
+from ..base import Capability, FolderChanges, ThreadMessages, TokenSource
 from . import folders, messages, sending
 from .api import GmailApi
 from .changes import Changes
@@ -97,6 +98,9 @@ class GmailProvider:
 
     async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         return await self._changes.message_headers(message_ids)
+
+    async def thread_messages(self, thread_id: str, limit: int) -> ThreadMessages:
+        return await messages.thread_messages(self._api, thread_id, limit)
 
     async def flag_changes(
         self, folder_id: str, since: str, message_ids: list[str]

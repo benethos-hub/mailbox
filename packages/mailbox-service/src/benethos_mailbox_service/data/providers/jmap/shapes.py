@@ -54,6 +54,13 @@ class Email(wire.CamelShape):
     message_id: Annotated[list[str] | None, wire.OrNone] = None
 
 
+class Thread(wire.CamelShape):
+    """A thread: its emails, oldest first (RFC 8621 3)."""
+
+    id: str
+    email_ids: list[str] = []
+
+
 class Identity(wire.CamelShape):
     """An identity to send as (RFC 8621 6)."""
 

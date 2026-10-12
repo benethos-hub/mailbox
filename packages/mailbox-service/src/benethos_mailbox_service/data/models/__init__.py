@@ -64,6 +64,7 @@ from .sending import (
     SendResult,
     SentMessage,
 )
+from .threads import Thread, ThreadSummary
 from .users import (
     SERVICE_DESCRIPTION,
     ApiToken,
@@ -136,6 +137,8 @@ __all__ = [
     "Role",
     "SecondFactor",
     "TotpDevice",
+    "Thread",
+    "ThreadSummary",
     "SEARCH_TEXT_PATTERN",
     "Security",
     "SendFilter",

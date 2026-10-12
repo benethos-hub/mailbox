@@ -11,7 +11,7 @@ from email import message_from_bytes
 from email.policy import default
 from email.utils import getaddresses
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 
 import httpx
 
@@ -282,6 +282,10 @@ class FakeGraph:
         if "$filter" in query and query["$filter"].startswith("internetMessageId eq '"):
             header = query["$filter"].split("'", 1)[1][:-1].replace("''", "'")
             found = [m for m in found if m["internetMessageId"] == header]
+        if "$filter" in query and query["$filter"].startswith("conversationId eq '"):
+            conversation = query["$filter"].split("'", 1)[1][:-1].replace("''", "'")
+            found = [m for m in found if m["conversationId"] == conversation]
+            assert "$orderby" not in query, "Graph refuses an order beside it"
         if "$search" in query:
             words = query["$search"].strip('"').lower()
             found = [
@@ -300,8 +304,15 @@ class FakeGraph:
             page = [{**m, "id": REST + m["id"]} for m in page]
         body: dict[str, Any] = {"value": page}
         if skip + top < len(found):
+            more = (
+                {"$filter": query["$filter"]}
+                if "conversationId" in str(query.get("$filter"))
+                else {}
+            )
+            rest = f"&{urlencode(more)}" if more else ""
             body["@odata.nextLink"] = (
                 f"https://graph.microsoft.com{path}?%24top={top}&%24skip={skip + top}"
+                + rest
             )
         return _json(200, body)
 

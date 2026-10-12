@@ -18,10 +18,10 @@ from ...models import (
 )
 from ...protocols import jmap
 from .. import rules
-from ..base import Capability
+from ..base import Capability, ThreadMessages
 from . import mappers
 from .account import JmapAccount
-from .shapes import Email
+from .shapes import Email, Thread
 
 # --- listing and reading ----------------------------------------------------------
 
@@ -82,6 +82,24 @@ async def _page(account: JmapAccount, query: dict[str, Any]) -> list[jmap.Invoca
             },
             "g",
         ),
+    )
+
+
+async def thread_messages(
+    account: JmapAccount, thread_id: str, limit: int
+) -> ThreadMessages:
+    """The thread names its emails, the newest are read."""
+    if not mappers.is_id(thread_id):
+        raise missing("thread", thread_id)
+    got = await account.one("Thread/get", {"ids": [thread_id]}, jmap.Got[Thread])
+    if not got.items:
+        raise missing("thread", thread_id)
+    ids = got.items[0].email_ids
+    wanted = ids[-limit:]
+    found = await account.emails(wanted, mappers.SUMMARY_PROPERTIES)
+    return ThreadMessages(
+        [mappers.summary(found[i]) for i in wanted if i in found],
+        truncated=len(ids) > limit,
     )
 
 

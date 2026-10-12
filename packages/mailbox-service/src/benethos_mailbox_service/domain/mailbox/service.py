@@ -1,8 +1,8 @@
 """Folders and messages: of one account, and across accounts.
 
 The service callers use for mail. Provider calls under our ids are
-``calls``. The folders are ``folders``, sending and drafts
-``outgoing``, both reached through this service.
+``calls``. The folders are ``folders``, the threads ``threads``, sending
+and drafts ``outgoing``, all reached through this service.
 """
 
 from __future__ import annotations
@@ -31,6 +31,8 @@ from ...data.models import (
     MessageSummary,
     MessageUpdate,
     Page,
+    Thread,
+    ThreadSummary,
 )
 from ...errors import BadRequestError, MailboxServiceError, missing_message
 from ..accounts import Adapters
@@ -44,6 +46,7 @@ from .idempotency import Idempotency
 from .outgoing import Outgoing
 from .reach import Reach, outside, reach_of, require_folder
 from .sending import SendControl
+from .threads import THREAD_MESSAGES, Threads
 
 # The keyword of a draft, \Draft on IMAP.
 DRAFT_KEYWORD = "$draft"
@@ -60,11 +63,13 @@ class MailboxService:
         sends: SendControl,
         clock: Callable[[], datetime] = utc_now,
         activity: ActivityLog | None = None,
+        thread_messages: int = THREAD_MESSAGES,
     ) -> None:
         self._calls = Calls(adapters, sync)
         self._changes = sync.feed
         self._across = AcrossAccounts(self._calls)
         self._folders = Folders(self._calls)
+        self._threads = Threads(self._calls, self._folders, thread_messages)
         # Sending, drafts and the audit of sends: mailbox.outgoing.send_message.
         self.outgoing = Outgoing(self._calls, idempotency, sends, clock, activity)
 
@@ -194,6 +199,26 @@ class MailboxService:
             message = message.model_copy(update={"reference": None})
         thread = self._calls.thread_of(account_id, message_id)
         return public(message, message_id, account_id, thread)
+
+    async def list_threads(
+        self,
+        access: Access,
+        account_id: str,
+        *,
+        folder_id: str,
+        limit: int,
+        cursor: str | None,
+    ) -> Page[ThreadSummary]:
+        """The threads of a folder, newest first: ``threads``."""
+        return await self._threads.list_threads(
+            access, account_id, folder_id=folder_id, limit=limit, cursor=cursor
+        )
+
+    async def get_thread(
+        self, access: Access, account_id: str, thread_id: str
+    ) -> Thread:
+        """A thread with the messages the caller may see, oldest first."""
+        return await self._threads.get_thread(access, account_id, thread_id)
 
     async def update_message(
         self,

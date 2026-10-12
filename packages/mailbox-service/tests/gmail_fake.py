@@ -85,14 +85,18 @@ class FakeGmail:
         return label_id
 
     def add_message(
-        self, labels: tuple[str, ...] = ("INBOX", "UNREAD"), **fields: Any
+        self,
+        labels: tuple[str, ...] = ("INBOX", "UNREAD"),
+        thread: str | None = None,
+        **fields: Any,
     ) -> str:
-        """A message that arrived, with ``source(**fields)``."""
+        """A message that arrived, with ``source(**fields)``, in a thread of
+        its own or in ``thread``."""
         number = next(self.numbers)
         message_id = f"{number:016x}"
         self.messages[message_id] = {
             "id": message_id,
-            "threadId": f"t{number:015x}",
+            "threadId": thread or f"{number + 0xF00:016x}",
             "labelIds": list(labels),
             "raw": source(**fields),
             "internalDate": str(1788000000000 + number * 1000),
@@ -144,7 +148,18 @@ class FakeGmail:
                 return self._messages_route(method, rest, query, body)
             case _, ["drafts", *rest]:
                 return self._drafts_route(method, rest, body)
+            case "GET", ["threads", thread_id]:
+                return self._thread(thread_id, query)
         return _not_routed()
+
+    def _thread(self, thread_id: str, query: dict[str, list[str]]) -> httpx.Response:
+        """Every message of the thread, oldest first, as ``_get`` answers."""
+        ids = [i for i, m in self.messages.items() if m["threadId"] == thread_id]
+        if not ids:
+            return _missing()
+        ids.sort(key=lambda i: int(self.messages[i]["internalDate"]))
+        found = [json.loads(self._get(i, query).content) for i in ids]
+        return _ok({"id": thread_id, "messages": found})
 
     def _labels_route(self, method: str, rest: list[str], body: Any) -> httpx.Response:
         match method, rest:

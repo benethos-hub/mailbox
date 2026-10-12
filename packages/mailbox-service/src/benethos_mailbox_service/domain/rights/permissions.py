@@ -35,6 +35,8 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "get_message",
         "get_message_raw",
         "get_attachment",
+        "list_threads",
+        "get_thread",
         "list_changes",
         "list_all_changes",
     ),
