@@ -200,9 +200,10 @@ packages/
       test_code_rules.py    # logging, handlers, sizes, helpers once
       test_boundaries.py    # records, not tuples, where a package
                             #   hands values on, in all four
-      test_readmes.py       # every README's links lead somewhere, and
-                            #   one of two sections or more lists them
-                            #   in its contents at the top
+      test_readmes.py       # the links of every README, of docs/ and
+                            #   of this file lead somewhere, and a
+                            #   README of two sections or more lists
+                            #   them in its contents at the top
   mailbox-client/         # the Python client of the REST API, async and
                           #   sync, no image
     src/benethos_mailbox_client/    # modules: docs/ARCHITECTURE.md
