@@ -11,7 +11,8 @@ folders (``THREADS``).
 Sending and drafts go as MIME, composed by ``data.mail.compose`` like for
 any other provider: a draft is created from MIME and replaced by creating
 a new one, since Graph cannot change a draft's MIME in place. A mail is
-sent as such a draft, whose id its copy in Sent Items keeps. A message
+sent as such a draft, whose id its copy in Sent Items keeps. A draft
+too large for one request gets its files one by one (``uploads``). A message
 is read from its MIME too, so its bodies, headers and attachments are
 what the other providers answer.
 
@@ -25,7 +26,6 @@ preference. The adapter looks their immutable ids up.
 
 from __future__ import annotations
 
-import base64
 import time
 from collections.abc import Callable
 from datetime import datetime
@@ -60,7 +60,7 @@ from ..base import (
     ThreadMessages,
     TokenSource,
 )
-from . import mappers
+from . import mappers, uploads
 from .graph import Graph, id_, own_path
 from .shapes import Batch, Item, Listing, MailFolder
 from .shapes import Message as GraphMessage
@@ -239,12 +239,8 @@ class MicrosoftProvider:
         headers. Recipients the headers do not name are the Bcc ones: they
         go in a Bcc header, which Exchange takes out before delivery
         **(unverified)**. A draft that cannot be sent is deleted again."""
-        draft = await self._graph.read(
-            GraphMessage,
-            "POST",
-            "/me/messages",
-            content=base64.b64encode(compose.with_bcc(raw, recipients)),
-            content_type="text/plain",
+        draft = await uploads.create_draft(
+            self._graph, compose.with_bcc(raw, recipients), self._delete_for_good
         )
         try:
             await self._graph.call("POST", f"/me/messages/{id_(draft.id)}/send")
@@ -269,13 +265,7 @@ class MicrosoftProvider:
     async def save_draft(self, raw: bytes, replaces: str | None) -> MessageSummary:
         if replaces is not None:
             await self._draft(replaces)
-        item = await self._graph.read(
-            GraphMessage,
-            "POST",
-            "/me/messages",
-            content=base64.b64encode(raw),
-            content_type="text/plain",
-        )
+        item = await uploads.create_draft(self._graph, raw, self._delete_for_good)
         if replaces is not None:
             await rules.replaced(
                 item.id,

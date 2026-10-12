@@ -108,3 +108,10 @@ class Failure(wire.CamelShape):
     """Graph's error body."""
 
     error: Annotated[ErrorDetail | None, wire.OrNone] = None
+
+
+class UploadSession(wire.CamelShape):
+    """Where the ranges of a large file go. The URL carries its own
+    authorization: it is never logged."""
+
+    upload_url: str

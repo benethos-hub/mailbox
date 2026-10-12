@@ -268,6 +268,48 @@ def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
     return head + b"\r\nBcc: " + ", ".join(hidden).encode() + separator + body
 
 
+class Attached(NamedTuple):
+    """A part attached to a message, as a provider takes it on its own."""
+
+    filename: str | None
+    content_type: str
+    data: bytes
+    content_id: str | None
+    inline: bool
+
+
+def without_attachments(raw: bytes) -> tuple[bytes, list[Attached]]:
+    """``raw`` without the parts attached to it, and those parts, for a
+    provider that takes a large message's attachments one by one. The
+    headers and the body stay as they are."""
+    mail = message_from_bytes(raw, policy=SMTP)
+    if not mail.is_multipart():
+        return raw, []
+    parts = list(mail.iter_attachments())
+    if not parts:
+        return raw, []
+    taken = {id(part) for part in parts}
+    mail.set_payload([part for part in mail.iter_parts() if id(part) not in taken])
+    return mail.as_bytes(), [_attached(part) for part in parts]
+
+
+def _attached(part: EmailMessage) -> Attached:
+    found: object
+    if part.get_content_type() == "message/rfc822":
+        # A forwarded mail: its bytes as they are, not decoded.
+        inner = part.get_payload(0)
+        found = inner.as_bytes() if isinstance(inner, EmailMessage) else b""
+    else:
+        found = part.get_payload(decode=True)
+    return Attached(
+        filename=part.get_filename(),
+        content_type=part.get_content_type(),
+        data=found if isinstance(found, bytes) else b"",
+        content_id=part["Content-ID"],
+        inline=part.get_content_disposition() == "inline",
+    )
+
+
 def _address(recipient: Recipient) -> str:
     return _formatted(recipient.name, recipient.email)
 

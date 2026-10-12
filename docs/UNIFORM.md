@@ -229,7 +229,10 @@ larger piece that is neither, and runs on its own.
 - **Microsoft refuses mail above about 3 MB** with a general provider
   error, while the domain allows 25 MiB of attachments. Graph takes at
   most 4 MB per request, and the MIME travels in base64. Larger mail
-  needs Graph's upload sessions. *Work.*
+  needs Graph's upload sessions. *Work.* Done: a mail above 2.5 MiB is
+  stored without its files, which follow one by one. A file below
+  3,000,000 bytes goes in one request, a larger one through an upload
+  session, in ranges.
 - **A send without SMTP answers `409`** on IMAP and POP3, JMAP without
   submission `501`. Rule R2: `501` for both.
 
@@ -364,7 +367,7 @@ Step 1 is done. Each step is one pull request or more.
       mail, and the check sends none to it.
 3. **Work**, each on its own:
    1. Microsoft sends large mail through upload sessions. Last, since it
-      moves the most code.
+      moves the most code. Done.
    2. IMAP orders the steps of a change of flags and folder. Done.
 4. **One test suite for all adapters** (section 7), first with today's
    capabilities.

@@ -384,7 +384,10 @@ an app password is the credential to ask for.
   so its bodies, `in_reply_to` and attachments, inline images among
   them, are those the other providers answer. Graph's own body is HTML
   for a plain text mail, and Graph lists no attachments for a mail with
-  inline images only.
+  inline images only. Graph takes at most 4 MB per request: a larger
+  draft is created without its files, which follow one by one, a file
+  of 3 MB or more through an upload session in ranges, the ways
+  Microsoft documents.
   Bcc recipients travel in a Bcc header **(unverified: that Exchange takes
   it out before delivery)**. Keywords are categories. `$answered` and the
   other system keywords have no place: setting or taking one off answers

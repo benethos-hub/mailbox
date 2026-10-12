@@ -354,7 +354,9 @@ packages/mailbox-service/
                         #   messages, drafts, sending, changes.
                         #   microsoft: graph.py (Graph over
                         #   data/protocols/http), signin.py its
-                        #   endpoints and the scopes it needs.
+                        #   endpoints and the scopes it needs,
+                        #   uploads.py (a draft too large for one
+                        #   request, its files one by one).
                         #   gmail: api.py (the Gmail API over
                         #   data/protocols/http), signin.py,
                         #   reading.py (what the parts read alike),

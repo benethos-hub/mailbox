@@ -13,6 +13,7 @@ import pytest
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
+    ProviderError,
     ProviderUnavailableError,
 )
 
@@ -143,3 +144,57 @@ async def test_a_draft_not_sent_goes_again(
         await provider.send(SENT, "me@example.org", ["bob@example.org"])
     [draft] = graph.messages.values()
     assert draft["isDraft"]
+
+
+# --- large mail -----------------------------------------------------------------------
+
+SESSION = 3_000_000
+
+
+def large() -> bytes:
+    """A mail beyond one Graph request: a file below the size of an upload
+    session and one above it."""
+    mail = mime("Files")
+    mail.add_attachment(b"s" * (SESSION - 1), "text", "plain", filename="small.txt")
+    mail.add_attachment(b"L" * 4_000_000, "application", "zip", filename="large.zip")
+    return mail.as_bytes()
+
+
+async def test_a_large_mail_sends_its_files_one_by_one(graph: FakeGraph) -> None:
+    """No request goes beyond Graph's limit: the fake would answer 413."""
+    result = await adapter(graph).send(large(), "me@example.org", ["bob@example.org"])
+    [sent] = graph.sent
+    files = {
+        part.get_filename(): part.get_payload(decode=True)
+        for part in message_from_bytes(sent, policy=default).iter_attachments()
+    }
+    assert files == {"small.txt": b"s" * (SESSION - 1), "large.zip": b"L" * 4_000_000}
+    puts = [r for r in graph.requests if r.method == "PUT"]
+    assert len(puts) == 2 and graph.sessions == {}
+    assert result.sent_copy is not None
+
+
+async def test_a_large_draft_keeps_its_files(graph: FakeGraph) -> None:
+    provider = adapter(graph)
+    saved = await provider.save_draft(large(), None)
+    message = await provider.get_message(saved.id)
+    assert [a.filename for a in message.attachments] == ["small.txt", "large.zip"]
+
+
+async def test_a_file_that_cannot_go_takes_the_draft_back(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refused(request: httpx.Request, session: str) -> httpx.Response:
+        return httpx.Response(
+            500, json={"error": {"code": "ErrorInternalServerError", "message": "x"}}
+        )
+
+    monkeypatch.setattr(graph, "_upload", refused)
+    with pytest.raises(ProviderError, match="x"):
+        await adapter(graph).send(large(), "me@example.org", ["bob@example.org"])
+    assert graph.messages == {} and graph.sent == []
+
+
+async def test_a_small_mail_is_one_request(graph: FakeGraph) -> None:
+    await adapter(graph).save_draft(mime("Short").as_bytes(), None)
+    assert not [r for r in graph.requests if "attachments" in r.url.path]

@@ -121,6 +121,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   without `MOVE` and `UIDPLUS`, answers `501` before anything changes.
   It stored the flags and then refused the move. A move that fails after
   the flags were stored says so in its error.
+- A Microsoft account sends and saves mail above about 3 MB, up to the
+  25 MiB of attachments the service allows. It answered a provider
+  error, since Graph takes at most 4 MB per request. Such a mail is
+  stored without its files, which follow one by one, a large one in
+  ranges.
 
 ## [0.4.1] - 2026-10-10
 
