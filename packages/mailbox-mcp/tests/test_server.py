@@ -319,6 +319,7 @@ HINTS = {
     "list_folders": ("List folders", True, None, None, True),
     "search_messages": ("Search mail", True, None, None, True),
     "get_message": ("Read a message", True, None, None, True),
+    "get_thread": ("Read a conversation", True, None, None, True),
     "whats_new": ("What is new", True, None, None, True),
     "get_attachment": ("Get an attachment", True, None, None, True),
     "update_messages": ("Change messages", False, True, True, True),

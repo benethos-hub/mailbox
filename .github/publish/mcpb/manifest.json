@@ -53,6 +53,10 @@
       "description": "Read one mail: headers, attachment ids and the body as plain text, cut to max_chars."
     },
     {
+      "name": "get_thread",
+      "description": "Read a conversation: its mails in every folder, oldest first, each as plain text."
+    },
+    {
       "name": "whats_new",
       "description": "What changed since an earlier call: mail created, updated (moved, flags) or deleted, oldest first, ids only."
     },

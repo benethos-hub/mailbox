@@ -338,6 +338,7 @@ the tools that fit:
 | `list_folders` | `mail.read` | folders with id, name, role, parent and counts |
 | `search_messages` | `mail.read` | find mail by text, sender, recipient, subject, days, flags, attachments, in one account or all |
 | `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default, with its folders and keywords, and for a draft the mail it answers |
+| `get_thread` | `mail.read` | a conversation in every folder, oldest first, from a mail of it such as a search hit or from its thread id: the newest 20 mails as plain text, sharing `max_chars`, 12,000 by default |
 | `get_attachment` | `mail.read` | an attachment: images up to 5 MiB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 4 megapixels a page and 12 together), text as text, HTML as the text a reader sees, both cut to `max_chars`, 20,000 by default. Other types and larger images by name only. An image, PDF or text above 10 MiB is refused. |
 | `whats_new` | `mail.read` | mail created, updated or deleted since the `state` of an earlier call, ids only, in one account or all |
 | `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), add and take off keywords, add and take off labels where a mail can be in several folders (Gmail, JMAP), or into the trash |

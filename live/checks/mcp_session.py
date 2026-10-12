@@ -20,6 +20,7 @@ READ_TOOLS = {
     "list_folders",
     "search_messages",
     "get_message",
+    "get_thread",
     "get_attachment",
     "whats_new",
 }

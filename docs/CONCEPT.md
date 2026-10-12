@@ -1733,7 +1733,7 @@ one or two `operationId`s.
 | `list_folders` | read | `list_folders` |
 | `search_messages` | read | `list_all_messages` across accounts, or `list_messages` for one |
 | `get_message` | read | `get_message`, body shortened, `max_chars` param |
-| `get_thread` | read | `get_thread`, **planned** with threads (6.3) |
+| `get_thread` | read | `get_thread`, then `get_message` for the newest 20 mails: a conversation as text, from a mail of it or its thread id (6.3) |
 | `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
 | `whats_new` | read | `list_all_changes` across accounts, or `list_changes` for one, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash, add and take off keywords and labels |
