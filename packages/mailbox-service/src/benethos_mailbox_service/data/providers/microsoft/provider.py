@@ -5,6 +5,9 @@ asks for immutable ids, so a message keeps its id when it moves
 (``STABLE_IDS``). A refused token is renewed once. If it is refused
 again, the account needs a new sign-in.
 
+Each message names its conversation, which Graph lists across the
+folders (``THREADS``).
+
 Sending and drafts go as MIME, composed by ``data.mail.compose`` like for
 any other provider: ``sendMail`` sends and keeps the copy in Sent Items, a
 draft is created from MIME and replaced by creating a new one. Graph cannot
@@ -46,7 +49,13 @@ from ...models import (
 )
 from ...protocols import ApiClient
 from .. import rules
-from ..base import Capability, ChangedMessage, FolderChanges, TokenSource
+from ..base import (
+    Capability,
+    ChangedMessage,
+    FolderChanges,
+    ThreadMessages,
+    TokenSource,
+)
 from . import mappers
 from .graph import Graph, id_, own_path
 from .shapes import Attachment, Batch, Item, Listing, MailFolder
@@ -377,6 +386,36 @@ class MicrosoftProvider:
     ) -> list[str]:
         """Graph reports changes through delta queries instead."""
         return []
+
+    async def thread_messages(self, thread_id: str, limit: int) -> ThreadMessages:
+        """A conversation's messages in every folder, filtered by its id.
+        Graph refuses an order beside this filter, so they are sorted here,
+        and of a longer conversation the pages read first are kept
+        **(unverified)**."""
+        conversation = thread_id.replace("'", "''")
+        params = {
+            "$select": mappers.SUMMARY_FIELDS,
+            "$filter": f"conversationId eq '{conversation}'",
+            "$top": str(PAGE_SIZE),
+        }
+        body = await self._graph.read(
+            Listing[GraphMessage], "GET", "/me/messages", params=params
+        )
+        found = list(body.value)
+        link = body.next_link
+        while link and len(found) <= limit:
+            body = await self._graph.read(Listing[GraphMessage], "GET", own_path(link))
+            found += body.value
+            link = body.next_link
+        if not found:
+            raise missing("thread", thread_id)
+        every = sorted(
+            (mappers.summary(item) for item in found),
+            key=lambda m: (m.date is None, m.date),
+        )
+        return ThreadMessages(
+            every[-limit:], truncated=bool(link) or len(every) > limit
+        )
 
     async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         """Twenty to a JSON batch. A message that is gone is left out."""

@@ -222,6 +222,14 @@ class SyncService:
         the index keeps no threads."""
         return self._threads.of(account_id, message_ids)
 
+    def keeps_threads(self, account_id: str) -> bool:
+        """Whether the index keeps the account's threads."""
+        return self._threads.kept(account_id)
+
+    def thread_entries(self, account_id: str, thread_id: str) -> list[IndexEntry]:
+        """The index entries of a thread, in the order they came."""
+        return self._index.in_thread(account_id, thread_id)
+
     async def _headers(
         self, account_id: str, natives: list[str]
     ) -> dict[str, ThreadHeaders]:

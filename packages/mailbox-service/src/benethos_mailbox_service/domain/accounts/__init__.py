@@ -5,7 +5,16 @@ caller's rights (``AccountService``), the live adapter of each
 
 from __future__ import annotations
 
-from .abilities import deletes, deltas, drafts, sends, watches, writes
+from .abilities import (
+    deletes,
+    deltas,
+    drafts,
+    sends,
+    summaries,
+    threads,
+    watches,
+    writes,
+)
 from .adapters import Adapters
 from .device import DeviceSignIn
 from .oauth import OAuthService
@@ -20,6 +29,8 @@ __all__ = [
     "deltas",
     "drafts",
     "sends",
+    "summaries",
+    "threads",
     "watches",
     "writes",
 ]

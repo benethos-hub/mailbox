@@ -169,6 +169,26 @@ class ImapProvider(MailServerAdapter):
             lambda: self._verified(self._session, lambda: self._login(self._session))
         )
 
+    # --- Summaries --------------------------------------------------------------------
+
+    async def summaries(self, message_ids: list[str]) -> dict[str, MessageSummary]:
+        """Folder by folder, in batches like the headers."""
+        found: dict[str, MessageSummary] = {}
+        for (folder, validity), by_uid in messages.by_folder(message_ids)[0].items():
+            for batch in batched(list(by_uid), HEADER_BATCH):
+                wanted = {uid: by_uid[uid] for uid in batch}
+                found.update(
+                    await self._run(
+                        partial(
+                            messages.summaries,
+                            folder=folder,
+                            validity=validity,
+                            by_uid=wanted,
+                        )
+                    )
+                )
+        return found
+
     async def close(self) -> None:
         self._idle.closing()
         await self._in_thread(self._close)

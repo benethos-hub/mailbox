@@ -8,6 +8,7 @@ from ....errors import (
     MailboxServiceError,
     NotFoundError,
     NotSupportedError,
+    missing,
     missing_message,
 )
 from ...mail import convert, parse
@@ -20,10 +21,10 @@ from ...models import (
     Page,
 )
 from .. import rules
-from ..base import Capability
+from ..base import Capability, ThreadMessages
 from . import mappers, reading
 from .api import GmailApi, id_
-from .shapes import GmailMessage, Messages
+from .shapes import GmailMessage, GmailThread, Messages
 
 
 async def list_messages(
@@ -52,6 +53,22 @@ async def list_messages(
         items=[found[i] for i in ids if i in found],
         next_cursor=mappers.cursor(scope, token) if token else None,
     )
+
+
+async def thread_messages(api: GmailApi, thread_id: str, limit: int) -> ThreadMessages:
+    """Gmail answers every message of a thread at once, in every label."""
+    if not reading.is_id(thread_id):
+        raise missing("thread", thread_id)
+    params = reading.metadata_params(mappers.SUMMARY_HEADERS)
+    try:
+        found = await api.read(
+            GmailThread, "GET", f"/threads/{id_(thread_id)}", params=params
+        )
+    except NotFoundError:
+        raise missing("thread", thread_id) from None
+    known = await reading.known_folders(api)
+    every = [mappers.summary(m, known) for m in found.messages]
+    return ThreadMessages(every[-limit:], truncated=len(every) > limit)
 
 
 async def get_message(api: GmailApi, message_id: str) -> Message:

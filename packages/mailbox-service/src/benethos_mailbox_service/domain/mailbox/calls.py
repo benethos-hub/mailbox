@@ -21,6 +21,7 @@ from ...data.models import (
     Page,
 )
 from ...data.providers import Reads
+from ...data.storage import IndexEntry
 from ...errors import MailboxServiceError, MessageNotFoundError, missing_message
 from ..accounts import Adapters, deletes, writes
 from ..changes import MailboxChange, MessagesDeleted, MessagesUpdated
@@ -141,6 +142,14 @@ class Calls:
     def changed(self, change: MailboxChange) -> None:
         """Record a change in the change feed."""
         self._sync.changed(change)
+
+    def keeps_threads(self, account_id: str) -> bool:
+        """Whether the index keeps the account's threads (IMAP)."""
+        return self._sync.keeps_threads(account_id)
+
+    def thread_entries(self, account_id: str, thread_id: str) -> list[IndexEntry]:
+        """The index entries of a thread the index keeps."""
+        return self._sync.thread_entries(account_id, thread_id)
 
     def thread_of(self, account_id: str, message_id: str) -> str | None:
         """The thread the index has for a message, None where it keeps no

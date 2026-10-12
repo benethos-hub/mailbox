@@ -95,14 +95,16 @@ class FakeJmap(MailMethods):
         mailbox: str = "inbox",
         keywords: dict[str, bool] | None = None,
         received: str | None = None,
+        thread: str | None = None,
     ) -> str:
+        """An email in a thread of its own, or in ``thread``."""
         email_id = next(self.ids)
         blob_id = next(self.blob_ids)
         self.blobs[blob_id] = raw
         self.emails[email_id] = {
             "id": email_id,
             "blobId": blob_id,
-            "threadId": f"t{email_id}",
+            "threadId": thread or f"t{email_id}",
             "mailboxIds": {mailbox: True},
             "keywords": dict(keywords or {}),
             "receivedAt": received or f"2026-09-{len(self.emails) + 1:02d}T10:00:00Z",

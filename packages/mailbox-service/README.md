@@ -169,6 +169,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_SYNC_INTERVAL` | `300` | seconds between two polls of every folder. `0` switches the sync off. |
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | wait for the server to report a change: IMAP IDLE, with a second connection per account, or a JMAP server's event source |
 | `MAILBOX_SERVICE_SYNC_WATCHERS` | `50` | accounts watched at once. An IMAP account holds a thread of its own while it waits in IDLE. Further accounts are polled only. |
+| `MAILBOX_SERVICE_THREAD_MESSAGES` | `500` | the messages a thread lists at most, the newest |
 | `MAILBOX_SERVICE_THREAD_REFERENCES` | `20` | threads the service keeps itself (IMAP): of the `References` of a message, the last ones kept to find its thread |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
 | `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audits of sends and of administration keep a record. `0` keeps every record. |

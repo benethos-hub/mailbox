@@ -87,6 +87,8 @@ class Settings(files.FileSettings):
     # thread of its own, outside the pool that answers requests. Further
     # accounts are polled only.
     sync_watchers: int = Field(default=50, ge=1)
+    # Threads: the messages a thread lists at most, the newest.
+    thread_messages: int = Field(default=500, ge=1)
     # Threads the service keeps itself (IMAP): of the References of a
     # message, the last ones kept to find its thread.
     thread_references: int = Field(default=20, ge=0)

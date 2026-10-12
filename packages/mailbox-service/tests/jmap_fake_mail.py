@@ -14,7 +14,7 @@ ACCOUNT = "acc1"
 
 
 class MailMethods:
-    """Mailbox/get, Mailbox/set, Email/query, Email/get, Email/set,
+    """Mailbox/get, Mailbox/set, Email/query, Email/get, Thread/get, Email/set,
     Email/import and Email/changes. ``FakeJmap`` holds the state they work
     on and adds mailboxes, emails and changes."""
 
@@ -162,6 +162,26 @@ class MailMethods:
                         if i in self.emails
                     ],
                     "notFound": [i for i in ids if i not in self.emails],
+                },
+            )
+        ]
+
+    def thread_get(self, args: dict[str, Any], using: list[str]) -> list[Any]:
+        """Each thread's emails in the order they came."""
+        found = []
+        for thread_id in args["ids"]:
+            ids = [i for i, e in self.emails.items() if e["threadId"] == thread_id]
+            if ids:
+                found.append({"id": thread_id, "emailIds": ids})
+        missing = [t for t in args["ids"] if t not in {f["id"] for f in found}]
+        return [
+            (
+                "Thread/get",
+                {
+                    "accountId": ACCOUNT,
+                    "state": self.state,
+                    "list": found,
+                    "notFound": missing,
                 },
             )
         ]
