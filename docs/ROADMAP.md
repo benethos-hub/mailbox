@@ -20,6 +20,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [4b](#phase-4b--ui-rework) | UI rework | **done** |
 | [4c](#phase-4c--api-users) | API users | **done** |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | in progress |
+| [5a](#phase-5a--one-way-to-operate-every-mailbox) | One way to operate every mailbox | planned |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
 
@@ -398,6 +399,31 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   file, `reply_to`, attachments as base64 and of other mail (the API
   gained `attachments_from`), the tool `update_folder`, and how each
   account fares in `list_accounts` (the API's `/v1/me` gained it)
+
+## Phase 5a – One way to operate every mailbox
+
+Decided 2026-10-12 (5.11). Every mailbox is operated the same way,
+and what an account cannot do answers `501`, announced by its
+capabilities. [UNIFORM.md](UNIFORM.md) section 5 holds the work in
+order, each step one pull request or more:
+
+1. **Bugs without a live check**, against today's documentation
+2. **Bugs with a live check**: Gmail threads a reply, Microsoft answers
+   the text body, `in_reply_to`, the sent copy and inline attachments
+3. **Microsoft sends large mail through upload sessions**, and IMAP
+   orders the steps of a change of flags and folder
+4. **One test suite for all adapters**
+5. **The finer capabilities**, read from the server and stored with the
+   account, checked by the domain for every operation
+6. **The values**: `date` and `received`, the inbox as the list without a
+   folder and the role `all`, server notes out of `keywords`, the lists
+   of marks, the provider's spelling of keywords, `has_attachments`
+7. **IMAP emulates `all`** where the server has no `\All`
+8. **The UI and the MCP server know no providers**: the operations of
+   an account from the API, the marks from `mailbox-common`
+9. **Setting up an account, described by the domain**
+
+Steps 5 to 8 change the contract and ship together as 0.5.0.
 
 ## Keeping this file current
 

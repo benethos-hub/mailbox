@@ -180,6 +180,25 @@ would pay off once one of these comes: services that live for one
 request, plugins found through entry points, or wiring chosen by the
 settings rather than in code.
 
+## Parts of words in every search
+
+The search runs on the provider's server, so how text matches differs
+per provider: IMAP finds parts of words, Microsoft beginnings of words,
+Gmail whole words only (docs/UNIFORM.md, decision 6.7). A search for
+`rechnung` finds "Stromrechnung" on IMAP alone, and "Rechnungsnummer"
+on IMAP and Microsoft. Finding parts of words on every account needs
+the service to search itself.
+
+- **An index of the headers.** The message index also keeps subject,
+  sender and recipients. `sender`, `to` and `subject` then find parts of
+  words on every account, while `text` stays the provider's. For the
+  first time the service would keep content of the mail, if only
+  headers: the backup, the deletion of an account and the sync carry
+  it along.
+- **An index of the whole text.** The same for the body. Far more
+  storage and time to sync, and the mail's content at rest in the
+  service.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,
