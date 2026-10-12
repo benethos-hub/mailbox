@@ -163,6 +163,11 @@ async def test_pop3_keeps_no_threads(
 ) -> None:
     with pytest.raises(NotSupportedError, match="threads"):
         await pop3_services.mailbox.get_thread(ADMIN, pop3_account_id, "thr_x")
+    # Its inbox by threads as well, not an empty page.
+    with pytest.raises(NotSupportedError, match="threads"):
+        await pop3_services.mailbox.list_threads(
+            ADMIN, pop3_account_id, folder_id="inbox", limit=20, cursor=None
+        )
 
 
 async def test_a_jmap_thread_comes_from_the_server(

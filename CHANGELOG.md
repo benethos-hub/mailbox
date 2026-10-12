@@ -66,6 +66,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The Claude Desktop extension and the registry entry say that the
   setting for plain http is not needed for localhost or https.
 
+### Fixed
+
+- `list_threads` answers `501` on a POP3 account, as `get_thread` does,
+  instead of an empty page.
+
 ## [0.4.1] - 2026-10-10
 
 ### Added

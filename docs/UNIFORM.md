@@ -328,7 +328,7 @@ Nothing of it is started. Each step is one pull request or more.
 
 1. **Bugs without a live check**, together on a branch of their own,
    against today's documentation:
-   1. POP3 `list_threads` answers `501`.
+   1. POP3 `list_threads` answers `501`. Done.
    2. A Gmail draft keeps its `reference`.
    3. Microsoft answers `501` for `$` keywords.
    4. The Microsoft cursor checks its query.
