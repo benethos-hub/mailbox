@@ -37,6 +37,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - After a reply or a forward the service adds `$answered` or
   `$forwarded` to the original instead of writing its keywords anew, so
   a keyword another client set meanwhile stays.
+- The Claude Desktop extension and the registry entry say that the
+  setting for plain http is not needed for localhost or https.
 
 ## [0.4.1] - 2026-10-10
 
