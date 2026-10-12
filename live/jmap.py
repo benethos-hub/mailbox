@@ -12,9 +12,10 @@ what it reports in between came through the server's push. Then:
    copy in its sent folder,
 2. the push wakes the worker, and the change feed of the second names the
    mail as created,
-3. the second reads it, marks it read and starred with a keyword, puts it
-   in a new folder as well as the inbox and back, renames and deletes that
-   folder, and the change feed names the mail as updated,
+3. the second reads it and its thread, marks it read and starred with a
+   keyword, puts it in a new folder as well as the inbox and back,
+   renames and deletes that folder, and the change feed names the mail
+   as updated,
 4. a reply draft is stored, replaced and deleted,
 5. the mail goes to the trash and then for good, and the change feed
    names it as deleted. The sent copy is deleted for good as well.
@@ -37,7 +38,7 @@ from typing import Any
 import httpx
 from checks.accounts import read_env, test_server_accounts
 from checks.admin import bootstrap
-from checks.mail import delete_for_good, messages_with_subject
+from checks.mail import delete_for_good, messages_with_subject, thread_holds
 from checks.processes import free_port, service_env, start_service, stop
 from checks.run import Run, polled
 
@@ -187,11 +188,7 @@ def checks(
         "the push brings it into the change feed",
         bool(polled(lambda: named("message.created", since), tries=30, pause=1.0)),
     )
-    message = client.get(url).json()
-    run.check(
-        "it reads the whole mail",
-        "live/jmap.py" in (message.get("text_body") or ""),
-    )
+    check_read(run, client, base, message_id)
 
     mark = client.get(f"{base}/changes").json()["state"]
     flagged = client.patch(
@@ -254,6 +251,24 @@ def checks(
     )
     for copy in copies:
         mailbox.delete_message(sender_id, copy.id, permanent=True)
+
+
+def check_read(run: Run, client: httpx.Client, base: str, message_id: str) -> None:
+    """The whole mail, and the thread the server keeps: it holds the mail,
+    the inbox lists it."""
+    message = client.get(f"{base}/messages/{message_id}").json()
+    run.check(
+        "it reads the whole mail",
+        "live/jmap.py" in (message.get("text_body") or ""),
+    )
+    thread_id = message.get("thread_id")
+    held, said = thread_holds(client, base, message_id)
+    run.check("its thread holds it (Thread/get)", held, said)
+    listed = client.get(f"{base}/threads", params={"folder": "inbox"}).json()
+    run.check(
+        "the inbox lists its thread",
+        thread_id in [t["id"] for t in listed.get("items", [])],
+    )
 
 
 def check_draft(run: Run, client: httpx.Client, base: str, message_id: str) -> None:

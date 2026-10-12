@@ -109,8 +109,8 @@ done. Update the roadmap in the same commit that finishes an item.
   person enters at Microsoft. It makes and removes a folder and a reply
   draft there, sends one mail from it to the first test account and
   deletes it for good on both sides, gives the sent copy a keyword and
-  takes it off, and checks that the change feed learns of the sent copy
-  through Graph delta queries.
+  takes it off, reads its conversation, and checks that the change feed
+  learns of the sent copy through Graph delta queries.
 - Gmail accounts: a Google client of your own, `docs/GOOGLE.md`.
   `uv run python live/gmail.py --connect` once (a person signs in in
   the browser), then `uv run python live/gmail.py` checks the adapter
@@ -118,7 +118,8 @@ done. Update the roadmap in the same commit that finishes an item.
   makes a label inside a label, renames and removes them, writes,
   replaces and deletes a draft, sends one mail from it to the first
   test account, deleted for good there, stars, labels, unlabels and
-  labels again and archives the copy in Sent, deletes it for good, and
+  labels again, reads the thread of and archives the copy in Sent,
+  deletes it for good, and
   checks that the change feed learns of it through Gmail's history. Then the first test account
   sends one mail to it, which must arrive in the inbox, be found, open
   and turn read, and is deleted for good on both sides.
@@ -130,7 +131,8 @@ done. Update the roadmap in the same commit that finishes an item.
   the second, read, found by the sync and deleted for good.
   `uv run python live/jmap.py` checks the JMAP adapter against it, with a
   service of its own as a process: one mail from the first account to the
-  second, reported by push, changed, put in a folder and back, a draft,
+  second, reported by push, its thread read, changed, put in a folder
+  and back, a draft,
   then deleted for good on both sides.
 ## Project layout
 

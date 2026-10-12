@@ -28,6 +28,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   JMAP and Microsoft keep the threads themselves.
   `MAILBOX_SERVICE_THREAD_REFERENCES` (20) sets how many of the
   `References` of a message count. The database moves to schema 20.
+- `GET /v1/accounts/{account_id}/threads/{thread_id}` (`get_thread`)
+  answers a thread with its messages in every folder, oldest first. A
+  longer thread lists its newest `MAILBOX_SERVICE_THREAD_MESSAGES` (500)
+  and says `truncated`. `GET /v1/accounts/{account_id}/threads`
+  (`list_threads`) answers the threads of a `folder`, each where its
+  newest message in the folder is. Both are in `mail.read`, and a grant
+  that names folders sees the messages of a thread in them. POP3 answers
+  `501`. The Python client has `list_threads` and `get_thread`.
 - The MCP server:
   - `update_messages` adds and takes off keywords and labels
     (`add_folders`, `remove_folders`, `add_keywords`,

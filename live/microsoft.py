@@ -28,7 +28,8 @@ connected through the UI. The check then reads folders and mail, makes a
 folder and a reply draft and removes them, and sends one mail from the
 Microsoft test account to the first test account, which it deletes for
 good on both sides afterwards. Its copy in Sent Items gets a keyword, an
-Outlook category, which is taken off again. At the end every mail of this check left
+Outlook category, which is taken off again, and its conversation must
+hold it. At the end every mail of this check left
 in either account, of this run or an earlier one, is deleted for good,
 found by the subject's prefix. The change feed must name the copy in
 Sent Items, which the service learns of through Graph delta queries only.
@@ -49,7 +50,12 @@ from typing import Any
 import httpx
 from checks.accounts import accounts, read_env, register
 from checks.admin import Admin, bootstrap
-from checks.mail import delete_for_good, feed_types, messages_with_subject
+from checks.mail import (
+    delete_for_good,
+    feed_types,
+    messages_with_subject,
+    thread_holds,
+)
 from checks.processes import service_env, start_service, stop
 from checks.run import Run
 from checks.service import Service
@@ -309,6 +315,8 @@ def _send_and_check(
         )
     if run.check("the copy in Sent Items", copy is not None):
         _keywords(run, client, base, str(copy))
+        held, said = thread_holds(client, base, str(copy))
+        run.check("its conversation holds it, by conversationId", held, said)
         # Deleted for good straight from Sent Items: the adapter goes through
         # the trash, since Graph's delete outside it only moves there. Right
         # after a move Exchange may not find the message yet, so three tries.

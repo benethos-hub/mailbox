@@ -21,7 +21,8 @@ label inside a label, renames the outer one and removes both, writes and
 replaces a draft and deletes it, and sends one mail from the Gmail test
 account to the first test account. There it is deleted for good. In
 Gmail the copy in Sent is starred, given the label, which is taken off
-alone and added again, archived and deleted for good. The change feed
+alone and added again, and its thread must hold it. Then it is archived
+and deleted for good. The change feed
 must name it, which the service learns of through Gmail's history only.
 Then the first test account sends one mail to the Gmail test account,
 with umlauts in its subject. It must arrive
@@ -47,7 +48,12 @@ from typing import Any
 import httpx
 from checks.accounts import accounts, read_env, register
 from checks.admin import Admin, bootstrap
-from checks.mail import delete_for_good, feed_types, messages_with_subject
+from checks.mail import (
+    delete_for_good,
+    feed_types,
+    messages_with_subject,
+    thread_holds,
+)
 from checks.processes import service_env, start_service, stop
 from checks.run import Run
 from checks.service import Service
@@ -284,6 +290,8 @@ def _send_and_check(
         " ".join(types) or "nothing",
     )
     _labels(run, client, base, copy)
+    held, said = thread_holds(client, base, copy)
+    run.check("its thread holds it (threads.get)", held, said)
     purged = client.delete(f"{base}/messages/{copy}", params={"permanent": "true"})
     run.check("deleted for good", purged.status_code == 204, str(purged.status_code))
     gone = client.get(f"{base}/messages/{copy}")

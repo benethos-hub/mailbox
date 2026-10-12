@@ -1,10 +1,13 @@
 """Finding a test mail through the API, the change feed of a message,
-and deleting test mail for good. Through the Python client."""
+the thread of a message, and deleting test mail for good. Through the
+Python client, or the HTTP client a check holds."""
 
 from __future__ import annotations
 
 import time
 from collections.abc import Callable, Sequence
+from typing import Any
+from urllib.parse import quote
 
 from benethos_mailbox_client import ApiError, MessageSummary, SyncMailboxClient
 
@@ -50,6 +53,22 @@ def feed_types(
         if types or time.monotonic() > deadline:
             return types
         time.sleep(5)
+
+
+def thread_holds(client: Any, base: str, message_id: str) -> tuple[bool, str]:
+    """Whether the thread a message names holds it, read through the API
+    below ``base`` (``/v1/accounts/{id}``), and what the answers were."""
+    found = client.get(f"{base}/messages/{message_id}")
+    thread_id = found.json().get("thread_id") if found.status_code == 200 else None
+    if not thread_id:
+        return False, f"{found.status_code}, no thread"
+    thread = client.get(f"{base}/threads/{quote(thread_id, safe='')}")
+    ids = (
+        [m["id"] for m in thread.json().get("messages", [])]
+        if thread.status_code == 200
+        else []
+    )
+    return message_id in ids, f"{thread.status_code}, {len(ids)} message(s)"
 
 
 def delete_for_good(
