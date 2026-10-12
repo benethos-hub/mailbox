@@ -489,7 +489,8 @@ live against a Gmail account (`live/gmail.py`):
   is the folder `ALL_MAIL` with the role `all`. A message in the trash or
   the spam is in that folder alone. `STARRED` and `UNREAD` are flags.
   `IMPORTANT`, the categories and the chats are left out. Gmail has no
-  keywords: setting one answers 501.
+  keywords: setting one answers 501. A draft reads `$draft`, from its
+  label `DRAFT`, as on the other providers.
 - Changes come from `history.list` since a history id, polled by the
   worker (`DELTA`). Push through Pub/Sub is not built (IDEAS.md).
 

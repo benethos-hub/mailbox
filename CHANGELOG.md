@@ -70,6 +70,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - `list_threads` answers `501` on a POP3 account, as `get_thread` does,
   instead of an empty page.
+- A Gmail draft carries the keyword `$draft`, as on the other providers,
+  and `get_message` names the mail it answers (`reference`). It was
+  always null on Gmail.
 
 ## [0.4.1] - 2026-10-10
 

@@ -31,6 +31,9 @@ UNREAD = "UNREAD"
 STARRED = "STARRED"
 # "All Mail": no label of Gmail's, so an id that is none either.
 ALL_MAIL = "ALL_MAIL"
+# The keyword of a draft, as JMAP names it: Gmail keeps no keywords, but
+# a draft carries the label ``DRAFT``.
+DRAFT_KEYWORD = "$draft"
 
 # The system labels that are folders, with their role and name.
 SYSTEM = {
@@ -138,7 +141,7 @@ def _labels(message: GmailMessage, known: set[str]) -> dict[str, Any]:
         "folder_ids": folder_ids(labels, known),
         "unread": UNREAD in labels,
         "starred": STARRED in labels,
-        "keywords": [],
+        "keywords": [DRAFT_KEYWORD] if DRAFT in labels else [],
     }
 
 
