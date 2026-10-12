@@ -73,6 +73,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A Gmail draft carries the keyword `$draft`, as on the other providers,
   and `get_message` names the mail it answers (`reference`). It was
   always null on Gmail.
+- A Microsoft account answers `501` when a change sets or takes off a
+  keyword with `$`, such as `$answered`, which Outlook keeps no place
+  for. It answered success and stored nothing.
 
 ## [0.4.1] - 2026-10-10
 

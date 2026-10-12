@@ -13,6 +13,7 @@ from benethos_mailbox_service.errors import (
     BadRequestError,
     ConflictError,
     NotFoundError,
+    NotSupportedError,
     ProviderUnavailableError,
 )
 
@@ -54,6 +55,37 @@ async def test_categories_added_and_taken_off(graph: FakeGraph) -> None:
     # Those it keeps as Outlook spells them, one it has not added twice.
     assert graph.messages[message_id]["categories"] == ["Work", "urgent"]
     assert changed.keywords == ["work", "urgent"]
+
+
+async def test_keywords_with_a_dollar_answer_501(graph: FakeGraph) -> None:
+    """Outlook keeps no `$answered`: refused, and nothing else changed."""
+    message_id = graph.add_message(categories=["Work"])
+    draft_id = graph.add_message(isDraft=True)
+    provider = adapter(graph)
+    for changes in (
+        MessageUpdate(unread=False, add_keywords=["$answered"]),
+        MessageUpdate(keywords=["work", "$junk"]),
+        MessageUpdate(remove_keywords=["$draft"]),
+    ):
+        target = draft_id if changes.remove_keywords else message_id
+        [refused] = (await provider.update_messages([target], changes)).values()
+        assert isinstance(refused, NotSupportedError)
+    assert graph.messages[message_id]["isRead"] is False
+    assert graph.messages[message_id]["categories"] == ["Work"]
+    # What it has already, or has not, is no change.
+    [kept] = (
+        await provider.update_messages(
+            [draft_id],
+            MessageUpdate(keywords=["$draft", "Plan"], remove_keywords=None),
+        )
+    ).values()
+    assert not isinstance(kept, Exception) and kept.keywords == ["plan", "$draft"]
+    [same] = (
+        await provider.update_messages(
+            [message_id], MessageUpdate(remove_keywords=["$answered"])
+        )
+    ).values()
+    assert not isinstance(same, Exception)
 
 
 async def test_a_graph_message_is_in_one_folder(graph: FakeGraph) -> None:

@@ -330,7 +330,7 @@ Nothing of it is started. Each step is one pull request or more.
    against today's documentation:
    1. POP3 `list_threads` answers `501`. Done.
    2. A Gmail draft keeps its `reference`. Done.
-   3. Microsoft answers `501` for `$` keywords.
+   3. Microsoft answers `501` for `$` keywords. Done.
    4. The Microsoft cursor checks its query.
    5. `list_all_messages` names an account without the role in
       `incomplete`.

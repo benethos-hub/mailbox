@@ -122,7 +122,7 @@ def test_text_goes_into_the_search() -> None:
     assert rest == MessageFilter(unread=True)
 
 
-def test_system_keywords_are_not_stored() -> None:
+def test_the_patch_body_leaves_system_keywords_out() -> None:
     body = mappers.changes(False, True, ["$answered", "Work"])
     assert body == {
         "isRead": True,

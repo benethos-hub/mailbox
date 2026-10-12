@@ -381,7 +381,8 @@ an app password is the credential to ask for.
   MIME and replaced by a new one, since Graph cannot change a draft's MIME.
   Bcc recipients travel in a Bcc header **(unverified: that Exchange takes
   it out before delivery)**. Keywords are categories. `$answered` and the
-  other system keywords have no place and are not stored. A next-page
+  other system keywords have no place: setting or taking one off answers
+  `501`. A next-page
   cursor is a Graph path below `/me/` and never leaves the Graph host.
   No push yet.
 - Seen live with a personal account: `$search` ignores the preference for

@@ -4,7 +4,8 @@ Graph's query parameters. Pure functions.
 Graph names flags differently: ``isRead`` is the inverse of ``unread``, a
 star is ``flag.flagStatus == "flagged"``, keywords are ``categories``, and
 a draft carries ``isDraft``. Keywords with ``$`` are this project's system
-keywords. Graph has no place for them, so they are not stored.
+keywords. Graph has no place for them: setting or taking one off answers
+``501``, and ``$draft`` is read from ``isDraft``.
 """
 
 from __future__ import annotations
@@ -148,6 +149,32 @@ def changes(
     if keywords is not None:
         body["categories"] = [k for k in keywords if not k.startswith("$")]
     return body
+
+
+def touches_marks(changes: MessageUpdate) -> bool:
+    """Whether ``changes`` name a keyword with ``$``, which Outlook keeps
+    no place for."""
+    named = [
+        *(changes.keywords or []),
+        *(changes.add_keywords or []),
+        *(changes.remove_keywords or []),
+    ]
+    return any(k.startswith("$") for k in named)
+
+
+def marks_changed(item: GraphMessage, changes: MessageUpdate) -> list[str]:
+    """The keywords with ``$`` that ``changes`` would set or take off
+    ``item``. Outlook keeps none but ``$draft``, which it sets itself."""
+    present = {k for k in keywords(item) if k.startswith("$")}
+    if changes.keywords is not None:
+        wanted = {k.lower() for k in changes.keywords if k.startswith("$")}
+    else:
+        added = {k.lower() for k in changes.add_keywords or [] if k.startswith("$")}
+        removed = {
+            k.lower() for k in changes.remove_keywords or [] if k.startswith("$")
+        }
+        wanted = (present | added) - removed
+    return sorted(wanted ^ present)
 
 
 def categories_after(item: GraphMessage, changes: MessageUpdate) -> list[str]:

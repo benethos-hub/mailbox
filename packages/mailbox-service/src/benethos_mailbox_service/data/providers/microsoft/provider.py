@@ -32,6 +32,7 @@ from ....errors import (
     BadRequestError,
     ConflictError,
     MailboxServiceError,
+    NotSupportedError,
     ProviderError,
     missing,
 )
@@ -310,8 +311,16 @@ class MicrosoftProvider:
             target = rules.move_target(changes, self.capabilities)
             path = f"/me/messages/{id_(message_id)}"
             item = None
-            if changes.add_keywords or changes.remove_keywords:
+            if mappers.touches_marks(changes):
+                # Refused before anything changes.
                 item = await self._summary_of(path)
+                if changed := mappers.marks_changed(item, changes):
+                    raise NotSupportedError(
+                        "outlook keeps no keywords with $, only its categories: "
+                        + ", ".join(changed)
+                    )
+            if changes.add_keywords or changes.remove_keywords:
+                item = item or await self._summary_of(path)
                 categories = mappers.categories_after(item, changes)
                 patch = {**body, **mappers.changes(None, None, categories)}
             else:
