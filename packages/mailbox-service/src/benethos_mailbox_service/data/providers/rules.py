@@ -151,7 +151,7 @@ def move_target(
 
 
 # Failures that stop a batch as a whole: the connection or the login, not
-# one message.
+# one message. Once some messages are done, they answer for the rest.
 FATAL = (ProviderAuthError, ProviderUnavailableError)
 
 
@@ -160,13 +160,17 @@ async def per_id(
 ) -> dict[str, R | MailboxServiceError]:
     """``one`` for each id, with the outcome or the failure per id. A
     failed login or connection stops everything and raises, as the
-    contract of ``update_messages`` and ``delete_messages`` says."""
+    contract of ``update_messages`` and ``delete_messages`` says. Once
+    some ids are done, it is the failure of the rest instead, so the
+    answer names what was done."""
     results: dict[str, R | MailboxServiceError] = {}
-    for message_id in ids:
+    for n, message_id in enumerate(ids):
         try:
             results[message_id] = await one(message_id)
-        except FATAL:
-            raise
+        except FATAL as exc:
+            if not results:
+                raise
+            return {**results, **dict.fromkeys(ids[n:], exc)}
         except MailboxServiceError as exc:
             results[message_id] = exc
     return results

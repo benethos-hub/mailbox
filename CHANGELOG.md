@@ -95,6 +95,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   one back and answers the error, so one draft stays. Where even that
   fails, the error names the new draft. On IMAP without `UIDPLUS` it
   answers `501` before storing anything. It could leave both drafts.
+- A batch whose connection or login fails after some messages are done
+  answers those as done and the rest with the failure. It answered only
+  the failure, though the first messages were changed. A delete for good
+  on Microsoft that stops in the trash says so.
 
 ## [0.4.1] - 2026-10-10
 

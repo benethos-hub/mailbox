@@ -342,7 +342,8 @@ Nothing of it is started. Each step is one pull request or more.
       deleted, the answer still names the new one. Done: the new one is
       taken back, and only where that fails too the error names it.
    9. A batch across IMAP folders, and Microsoft's delete for good,
-      answer what was done before a step failed.
+      answer what was done before a step failed. Done, for the batches
+      of every adapter.
    10. The list across accounts pages IMAP messages without skipping
        or repeating them, though IMAP orders by UID.
 2. **Bugs with a live check** against the test accounts, in this order:

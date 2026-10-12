@@ -17,6 +17,13 @@ class MailboxServiceError(Exception):
         super().__init__(message)
         self.message = message
 
+    def noting(self, note: str) -> MailboxServiceError:
+        """The same failure, with what is so now added to its message, as
+        a step that failed after another one was done."""
+        self.message = f"{self.message}: {note}"
+        self.args = (self.message,)
+        return self
+
 
 class NotFoundError(MailboxServiceError):
     code = "not_found"

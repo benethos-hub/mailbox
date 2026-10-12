@@ -376,10 +376,16 @@ class MicrosoftProvider:
         if trash is None:
             trash = await self._graph.role_id(FolderRole.TRASH)
         path = f"/me/messages/{id_(message_id)}"
+        moved = None
         if (await self._graph.placed(path)).parent_folder_id != trash:
-            item = await self._graph.move(Item, path, trash)
-            path = f"/me/messages/{id_(item.id)}"
-        await self._graph.call("DELETE", path)
+            moved = await self._graph.move(Item, path, trash)
+            path = f"/me/messages/{id_(moved.id)}"
+        try:
+            await self._graph.call("DELETE", path)
+        except MailboxServiceError as exc:
+            if moved is None:
+                raise
+            raise exc.noting("the message is in the trash now") from None
 
     # --- for the sync worker ------------------------------------------------------
     # Ids are stable: the domain keeps no id mapping for this provider, so

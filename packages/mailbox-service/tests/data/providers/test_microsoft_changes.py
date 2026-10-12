@@ -3,6 +3,8 @@ messages and folders."""
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 import pytest
 
@@ -109,6 +111,27 @@ async def test_trash_then_for_good(graph: FakeGraph) -> None:
     assert isinstance(again, ConflictError)
     [gone] = (await provider.delete_messages([message_id], permanent=True)).values()
     assert gone is None and message_id not in graph.messages
+
+
+async def test_a_delete_for_good_that_stops_says_where_it_is(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    message_id = graph.add_message()
+    provider = adapter(graph)
+    real = provider._graph.call
+
+    async def call(method: str, path: str, **kwargs: Any) -> Any:
+        if method == "DELETE":
+            raise BadRequestError("graph refused it")
+        return await real(method, path, **kwargs)
+
+    monkeypatch.setattr(provider._graph, "call", call)
+    [failed] = (await provider.delete_messages([message_id], permanent=True)).values()
+    assert isinstance(failed, BadRequestError)
+    assert failed.message == "graph refused it: the message is in the trash now"
+    assert (
+        graph.messages[message_id]["parentFolderId"] == graph.well_known["deleteditems"]
+    )
 
 
 async def test_message_headers_come_in_one_batch(graph: FakeGraph) -> None:
