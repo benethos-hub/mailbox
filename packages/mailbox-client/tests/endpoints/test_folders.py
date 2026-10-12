@@ -6,14 +6,17 @@ from collections.abc import Callable
 
 from benethos_mailbox_client import Folder
 
-from ..fake_api import FOLDER, FakeApi
+from ..fake_api import FOLDER, SUBFOLDER, FakeApi
 
 
 async def test_list_folders(make_client: Callable) -> None:
-    api = FakeApi([FOLDER])
+    api = FakeApi([FOLDER, SUBFOLDER])
     found = await make_client(api).list_folders("acc_1")
     assert api.call() == ("GET", "/v1/accounts/acc_1/folders", {}, None)
-    assert found == [Folder("fld_1", "Inbox", "inbox", 2, 9)]
+    assert found == [
+        Folder("fld_1", "Inbox", "inbox", 2, 9),
+        Folder("fld_2", "2026", None, 2, 9, parent_id="fld_1"),
+    ]
 
 
 async def test_create_folder(make_client: Callable) -> None:

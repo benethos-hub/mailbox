@@ -208,13 +208,20 @@ def checks(
     made = client.post(folders_url, json={"name": name})
     folder_id = made.json().get("id", "?")
     run.check("a new folder", made.status_code == 201, str(made.status_code))
-    both = client.patch(url, json={"folder_ids": ["inbox", folder_id]}).json()
+    both = client.patch(url, json={"add_folder_ids": [folder_id]}).json()
     run.check(
-        "in the inbox and the new folder at once, the id stays",
+        "added to the new folder, still in the inbox, the id stays",
         both.get("id") == message_id and len(both.get("folder_ids", [])) == 2,
     )
-    back = client.patch(url, json={"folder_ids": ["inbox"]}).json()
-    run.check("back in the inbox alone", len(back.get("folder_ids", [])) == 1)
+    back = client.patch(url, json={"remove_folder_ids": [folder_id]}).json()
+    run.check(
+        "taken out of it, in the inbox alone",
+        back.get("folder_ids") != [folder_id] and len(back.get("folder_ids", [])) == 1,
+    )
+    run.check(
+        "never out of its last folder",
+        client.patch(url, json={"remove_folder_ids": ["inbox"]}).status_code == 400,
+    )
     renamed = client.patch(f"{folders_url}/{folder_id}", json={"name": f"{name} 2"})
     removed = client.delete(f"{folders_url}/{folder_id}")
     run.check(

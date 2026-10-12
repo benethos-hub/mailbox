@@ -6,11 +6,13 @@ Starts a service of its own on a free port, with a throwaway database and
 master key, adds the first two test accounts of ``live/.env`` through the
 API, and makes a user that may only read them. Then it starts
 ``benethos-mailbox-mcp`` over stdio with that user's token and calls the
-tools. A second user may also write: with it the check creates a folder in
-the first test account, stars, moves and trashes the newest inbox message
-there, and puts everything back as it was. whats_new must name those
-changes. A third user may write drafts:
-it writes, replaces and deletes a reply draft. Nothing is sent. A fourth
+tools. A second user may also write: with it the check creates and renames
+a folder in the first test account, adds and takes off a keyword, stars,
+moves and trashes the newest inbox message there, and puts everything
+back as it was. A label is refused there. whats_new must name those
+changes. A third user may write drafts: it writes a reply draft without
+the quote, with a file and a reply-to, replaces it with the file taken
+from the stored draft, and deletes it. Nothing is sent. A fourth
 user may send: it sends one mail twice with the same call, one draft and
 one HTML mail, from the first test account to the second only, and
 deletes them for good afterwards. Two more users check that a grant's
@@ -21,30 +23,21 @@ deleted at the end. Credentials and mail content are never printed.
 
 from __future__ import annotations
 
-import secrets
+import base64
 import sys
-from typing import Any
 
 import anyio
 from checks.accounts import accounts, read_env, register_all
 from checks.admin import user_token
 from checks.mcp_sending import check_constraints, check_sending
-from checks.mcp_session import mcp_session, text_of
+from checks.mcp_session import READ_TOOLS, mcp_session, text_of
+from checks.mcp_writing import check_writing
 from checks.run import Run
 from checks.service import throwaway_service
 from mcp import ClientSession
 
-from benethos_mailbox_client import ApiError, SyncMailboxClient
+from benethos_mailbox_client import SyncMailboxClient
 
-READ_TOOLS = {
-    "list_accounts",
-    "list_folders",
-    "search_messages",
-    "get_message",
-    "get_attachment",
-    "whats_new",
-}
-WRITE_TOOLS = READ_TOOLS | {"update_messages", "create_folder"}
 DRAFT_TOOLS = READ_TOOLS | {
     "list_drafts",
     "create_draft",
@@ -166,125 +159,6 @@ async def check_pdf(run: Run, session: ClientSession) -> None:
     print("SKIP  no PDF attachment in the test accounts")
 
 
-async def check_writing(
-    run: Run, url: str, token: str, admin: SyncMailboxClient, account_id: str
-) -> None:
-    """Folder, star, move and trash through the tools, then all put back."""
-    inbox = next(f for f in admin.list_folders(account_id) if f.role == "inbox")
-    newest = admin.list_messages(account_id, folder=inbox.id, limit=1).items
-    if not newest:
-        print("SKIP  no message in the inbox of the first test account")
-        return
-    message = newest[0]
-    folder_id = None
-    try:
-        async with mcp_session(url, token) as session:
-            tools = {tool.name for tool in (await session.list_tools()).tools}
-            run.check(
-                "a token that may write sees the write tools too",
-                tools == WRITE_TOOLS,
-                ", ".join(sorted(tools - READ_TOOLS)),
-            )
-
-            async def update(**changes: Any) -> dict[str, Any]:
-                result = await session.call_tool(
-                    "update_messages",
-                    {
-                        "account_id": account_id,
-                        "message_ids": [message.id],
-                        **changes,
-                    },
-                )
-                found: dict[str, Any] = result.structured_content or {}
-                if result.is_error:
-                    found = {"error": text_of(result)}
-                return found
-
-            start = await session.call_tool("whats_new", {"account_id": account_id})
-            since = (start.structured_content or {}).get("state")
-            run.check("whats_new hands out a state", not start.is_error and bool(since))
-
-            created = await session.call_tool(
-                "create_folder",
-                {"account_id": account_id, "name": f"mcp-live-{secrets.token_hex(4)}"},
-            )
-            folder_id = (created.structured_content or {}).get("id")
-            run.check("create_folder", not created.is_error and bool(folder_id))
-
-            starred = await update(starred=not message.starred)
-            now = admin.get_message(account_id, message.id)
-            run.check(
-                "update_messages stars",
-                starred.get("done") == [message.id]
-                and now.starred is not message.starred,
-                str(starred.get("error", "")),
-            )
-            await update(starred=message.starred)
-
-            if folder_id:
-                moved = await update(move_to=folder_id)
-                now = admin.get_message(account_id, message.id)
-                run.check(
-                    "update_messages moves into the new folder, the id stays",
-                    moved.get("done") == [message.id] and now.folder_ids == [folder_id],
-                    str(moved.get("error", "")),
-                )
-
-            trashed = await update(trash=True)
-            now = admin.get_message(account_id, message.id)
-            trash = next(
-                (f.id for f in admin.list_folders(account_id) if f.role == "trash"),
-                None,
-            )
-            run.check(
-                "update_messages trashes",
-                trashed.get("done") == [message.id] and now.folder_ids == [trash],
-                str(trashed.get("error", "")),
-            )
-
-            back = await update(move_to="inbox")
-            now = admin.get_message(account_id, message.id)
-            run.check(
-                "update_messages moves back by role",
-                back.get("done") == [message.id] and now.folder_ids == [inbox.id],
-                str(back.get("error", "")),
-            )
-
-            news = await session.call_tool(
-                "whats_new", {"account_id": account_id, "since": since}
-            )
-            changes = (news.structured_content or {}).get("changes", [])
-            run.check(
-                "whats_new names the message as updated",
-                not news.is_error
-                and any(
-                    c["id"] == message.id and c["type"] == "message.updated"
-                    for c in changes
-                ),
-                f"{len(changes)} changes",
-            )
-    finally:
-        # Whatever failed above: the message back in the inbox as it was.
-        admin.request(
-            "PATCH",
-            f"/v1/accounts/{account_id}/messages/{message.id}",
-            json={
-                "folder_ids": [inbox.id],
-                "starred": message.starred,
-                "unread": message.unread,
-            },
-        )
-        if folder_id:
-            try:
-                admin.request(
-                    "DELETE", f"/v1/accounts/{account_id}/folders/{folder_id}"
-                )
-                removed = ""
-            except ApiError as exc:
-                removed = str(exc)
-            run.check("the test folder removed again", not removed, removed)
-
-
 async def check_drafts(
     run: Run, url: str, token: str, admin: SyncMailboxClient, account_id: str, to: str
 ) -> None:
@@ -310,6 +184,15 @@ async def check_drafts(
                     "account_id": account_id,
                     "text": "mailbox-service MCP draft check",
                     "original_id": original.id,
+                    "quote": False,
+                    "reply_to": [to],
+                    "attachments": [
+                        {
+                            "filename": "mcp-live.txt",
+                            "content_type": "text/plain",
+                            "data": base64.b64encode(b"mcp live check").decode(),
+                        }
+                    ],
                 },
             )
             draft = created.structured_content or {}
@@ -320,6 +203,17 @@ async def check_drafts(
                 and str(draft.get("subject", "")).startswith("Re:"),
                 text_of(created) if created.is_error else "",
             )
+            stored = admin.get_message(account_id, draft_id) if draft_id else None
+            run.check(
+                "without the quote, with a file and a reply-to, and it answers",
+                stored is not None
+                and "wrote:" not in (stored.text_body or "")
+                and [a.filename for a in stored.attachments] == ["mcp-live.txt"]
+                and [a.email.lower() for a in stored.reply_to] == [to.lower()]
+                and stored.reference is not None
+                and stored.reference.message_id == original.id,
+            )
+            attached = stored.attachments[0].id if stored and stored.attachments else ""
             listed = await session.call_tool("list_drafts", {"account_id": account_id})
             run.check(
                 "list_drafts has it",
@@ -336,6 +230,11 @@ async def check_drafts(
                     "to": [to],
                     "subject": "mailbox-service MCP draft check",
                     "text": "second version",
+                    "original_id": original.id,
+                    "quote": False,
+                    "attach_from": [
+                        {"message_id": draft_id, "attachment_id": attached}
+                    ],
                 },
             )
             read = await session.call_tool(
@@ -347,6 +246,11 @@ async def check_drafts(
                 and (replaced.structured_content or {}).get("id") == draft_id
                 and "second version" in text_of(read),
                 text_of(replaced) if replaced.is_error else "",
+            )
+            run.check(
+                "attach_from takes the file of a stored mail, the link stays",
+                "mcp-live.txt" in text_of(read)
+                and f"answers: {original.id} (reply)" in text_of(read),
             )
             refused = await session.call_tool(
                 "delete_draft", {"account_id": account_id, "draft_id": original.id}

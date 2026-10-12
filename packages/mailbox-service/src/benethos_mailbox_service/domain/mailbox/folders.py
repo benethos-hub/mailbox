@@ -119,12 +119,19 @@ class Folders:
     async def with_roles_resolved(
         self, account_id: str, changes: MessageUpdate
     ) -> MessageUpdate:
-        """The changes with every role among ``folder_ids`` resolved."""
-        if not changes.folder_ids or not any(is_role(f) for f in changes.folder_ids):
+        """The changes with every role among the folders they name
+        resolved."""
+        if not any(is_role(f) for f in changes.named_folders()):
             return changes
         folders = await self.all(account_id)
-        resolved = [_resolved(folders, wanted) for wanted in changes.folder_ids]
-        return changes.model_copy(update={"folder_ids": resolved})
+        fields = ("folder_ids", "add_folder_ids", "remove_folder_ids")
+        return changes.model_copy(
+            update={
+                field: [_resolved(folders, wanted) for wanted in named]
+                for field in fields
+                if (named := getattr(changes, field))
+            }
+        )
 
     async def _reach(
         self,

@@ -22,6 +22,7 @@ from ...models import (
     Message,
     MessageFilter,
     MessageSummary,
+    MessageUpdate,
 )
 from .shapes import Attachment as GraphAttachment
 from .shapes import MailFolder, Recipient, Recipients
@@ -147,6 +148,16 @@ def changes(
     if keywords is not None:
         body["categories"] = [k for k in keywords if not k.startswith("$")]
     return body
+
+
+def categories_after(item: GraphMessage, changes: MessageUpdate) -> list[str]:
+    """The categories of ``item`` once ``changes`` add and take off
+    keywords, those it keeps spelled as Outlook has them."""
+    removed = {k.lower() for k in changes.remove_keywords or []}
+    kept = [c for c in item.categories if c and c.lower() not in removed]
+    present = {c.lower() for c in kept}
+    added = [k for k in changes.add_keywords or [] if k.lower() not in present]
+    return kept + added
 
 
 def _graph_day(value: date) -> str:

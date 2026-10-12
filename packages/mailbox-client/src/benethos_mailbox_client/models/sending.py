@@ -12,3 +12,21 @@ Recipient = tuple[str, str | None]
 class Sent:
     message_id_header: str | None
     refused: list[str]
+
+
+@dataclass(frozen=True, slots=True)
+class OutgoingFile:
+    """A file to attach to a draft or a message to send."""
+
+    filename: str
+    data: bytes
+    content_type: str = "application/octet-stream"
+
+
+@dataclass(frozen=True, slots=True)
+class AttachmentSource:
+    """An attachment of another message of the same account, to attach as
+    it is."""
+
+    message_id: str
+    attachment_id: str

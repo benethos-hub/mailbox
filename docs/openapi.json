@@ -10335,6 +10335,25 @@
         ],
         "title": "Attachment"
       },
+      "AttachmentSource": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "attachment_id": {
+            "type": "string",
+            "title": "Attachment Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "attachment_id"
+        ],
+        "title": "AttachmentSource",
+        "description": "An attachment of another message of the same account, attached as\nit is, with its name and type."
+      },
       "BatchItemResult": {
         "properties": {
           "id": {
@@ -10902,6 +10921,15 @@
             },
             "type": "array",
             "title": "Attachments"
+          },
+          "attachments_from": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentSource"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Attachments From",
+            "description": "Attachments of other messages of this account, by id, attached before those of `attachments`. Needs the right to read them."
           }
         },
         "type": "object",
@@ -10986,6 +11014,15 @@
             },
             "type": "array",
             "title": "Attachments"
+          },
+          "attachments_from": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentSource"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Attachments From",
+            "description": "Attachments of other messages of this account, by id, attached before those of `attachments`. Needs the right to read them."
           },
           "keep_attachments": {
             "items": {
@@ -11473,6 +11510,30 @@
             "type": "array",
             "title": "Capabilities",
             "description": "What the account can do beyond reading its inbox, as in `Account`. Without `flags`, `folders` or `search` (a POP3 account) those operations answer `501`."
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountStatus",
+            "description": "`needs_reauth`: someone has to sign in to the provider again. `unreachable`: the provider cannot be reached.",
+            "default": "connected"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At",
+            "description": "The last sync pass that succeeded, null for none since the service started or where none runs."
+          },
+          "attention": {
+            "type": "boolean",
+            "title": "Attention",
+            "description": "Whether a person should look: the account is not connected or its last sync pass failed. Calls on it may fail until then.",
+            "default": false
           }
         },
         "type": "object",
@@ -12013,6 +12074,40 @@
             "title": "Keywords",
             "description": "Replaces the list of keywords."
           },
+          "add_keywords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "pattern": "^[!#$&'+\\-.0-9A-Z^_a-z|~]{1,100}$"
+                },
+                "type": "array",
+                "maxItems": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add Keywords",
+            "description": "Added to the keywords it has. Not beside `keywords`."
+          },
+          "remove_keywords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "pattern": "^[!#$&'+\\-.0-9A-Z^_a-z|~]{1,100}$"
+                },
+                "type": "array",
+                "maxItems": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remove Keywords",
+            "description": "Taken off the keywords it has. Not beside `keywords`."
+          },
           "folder_ids": {
             "anyOf": [
               {
@@ -12029,6 +12124,38 @@
             ],
             "title": "Folder Ids",
             "description": "The folders the message is to be in, by id or by a role such as `archive`. A change moves it, and the id stays. An IMAP message is in exactly one folder."
+          },
+          "add_folder_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add Folder Ids",
+            "description": "Folders the message is to be in as well, by id or by a role, such as a Gmail label. Only where a message can be in several folders (`labels`). Not beside `folder_ids`."
+          },
+          "remove_folder_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remove Folder Ids",
+            "description": "Folders the message is to leave, by id or by a role. Only where a message can be in several folders (`labels`), and one folder at least stays. Not beside `folder_ids`."
           }
         },
         "type": "object",
@@ -12143,6 +12270,15 @@
             },
             "type": "array",
             "title": "Attachments"
+          },
+          "attachments_from": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentSource"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Attachments From",
+            "description": "Attachments of other messages of this account, by id, attached before those of `attachments`. Needs the right to read them."
           }
         },
         "type": "object",

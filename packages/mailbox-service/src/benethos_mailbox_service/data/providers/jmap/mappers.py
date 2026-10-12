@@ -136,9 +136,9 @@ def keyword_patch(
         patch[_path(SEEN)] = None if changes.unread else True
     if changes.starred is not None:
         patch[_path(FLAGGED)] = True if changes.starred else None
-    if changes.keywords is not None:
-        wanted = {k.lower() for k in changes.keywords}
-        present = set(keywords(current))
+    present = set(keywords(current))
+    wanted = changes.keywords_after(present)
+    if wanted is not None:
         for keyword in wanted - present:
             patch[_path(keyword)] = True
         for keyword in present - wanted:

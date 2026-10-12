@@ -301,22 +301,28 @@ class MicrosoftProvider:
             target = rules.move_target(changes, self.capabilities)
             path = f"/me/messages/{id_(message_id)}"
             item = None
-            if body:
+            if changes.add_keywords or changes.remove_keywords:
+                item = await self._summary_of(path)
+                categories = mappers.categories_after(item, changes)
+                patch = {**body, **mappers.changes(None, None, categories)}
+            else:
+                patch = body
+            if patch:
                 item = await self._graph.read(
-                    GraphMessage, "PATCH", path, json_body=body
+                    GraphMessage, "PATCH", path, json_body=patch
                 )
             if target is not None:
                 item = await self._graph.move(GraphMessage, path, target)
             if item is None:
-                item = await self._graph.read(
-                    GraphMessage,
-                    "GET",
-                    path,
-                    params={"$select": mappers.SUMMARY_FIELDS},
-                )
+                item = await self._summary_of(path)
             return mappers.summary(item)
 
         return await rules.per_id(message_ids, one)
+
+    async def _summary_of(self, path: str) -> GraphMessage:
+        return await self._graph.read(
+            GraphMessage, "GET", path, params={"$select": mappers.SUMMARY_FIELDS}
+        )
 
     async def delete_messages(
         self, message_ids: list[str], permanent: bool

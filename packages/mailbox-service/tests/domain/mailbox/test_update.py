@@ -71,6 +71,47 @@ def test_new_keywords_need_a_server_that_keeps_them() -> None:
         assert add == ["work"]
 
 
+def test_keywords_added_and_taken_off() -> None:
+    add, remove = mappers.flag_changes(
+        ("\\Seen", "$Forwarded", "Work"),
+        MessageUpdate(add_keywords=["work", "Urgent"], remove_keywords=["$forwarded"]),
+        ANY_KEYWORD,
+    )
+    # One it has already is not added again, whatever its case.
+    assert add == ["Urgent"]
+    assert remove == ["$Forwarded"]
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"keywords": ["a"], "add_keywords": ["b"]},
+        {"keywords": [], "remove_keywords": ["b"]},
+        {"folder_ids": ["inbox"], "add_folder_ids": ["f1"]},
+        {"folder_ids": ["inbox"], "remove_folder_ids": ["f1"]},
+        {"add_keywords": ["Work"], "remove_keywords": ["work"]},
+        {"add_folder_ids": ["f1"], "remove_folder_ids": ["f1"]},
+        {"add_keywords": ["$seen"]},
+        {"remove_keywords": ["$flagged"]},
+    ],
+)
+def test_a_list_is_replaced_or_changed_not_both(fields: dict[str, list[str]]) -> None:
+    with pytest.raises(ValidationError):
+        MessageUpdate.model_validate(fields)
+
+
+def test_what_a_message_has_once_changed() -> None:
+    change = MessageUpdate(add_keywords=["Work"], remove_keywords=["$junk"])
+    assert change.keywords_after(["$junk", "$answered"]) == {"$answered", "work"}
+    assert change.folders_after(["inbox"]) is None
+    labels = MessageUpdate(add_folder_ids=["f2", "f1"], remove_folder_ids=["inbox"])
+    assert labels.folders_after(["inbox", "f1"]) == ["f1", "f2"]
+    assert labels.keywords_after(["work"]) is None
+    assert labels.named_folders() == ["f2", "f1", "inbox"]
+    assert MessageUpdate(folder_ids=["a", "a"]).folders_after(["b"]) == ["a"]
+    assert MessageUpdate(keywords=["Work"]).keywords_after(["x"]) == {"work"}
+
+
 @pytest.mark.parametrize("keyword", ["two words", "\\Seen", "a(b", "", "x" * 101])
 def test_invalid_keywords_are_refused(keyword: str) -> None:
     with pytest.raises(ValueError):
@@ -99,6 +140,21 @@ async def test_update_on_the_server(server: FakeMailBox) -> None:
     # Written in a folder selected read-write, then read back without \Seen.
     assert ("select", "INBOX", False) in server.calls
     assert server.calls[-1][2] == "header"
+
+
+async def test_keywords_added_on_the_server_keep_the_others(
+    server: FakeMailBox,
+) -> None:
+    imap = provider(server)
+    message_id = mappers.message_id("INBOX", 7, 3)
+    await update(imap, message_id, MessageUpdate(keywords=["$forwarded", "work"]))
+    summary = await update(
+        imap,
+        message_id,
+        MessageUpdate(add_keywords=["Urgent"], remove_keywords=["$forwarded"]),
+    )
+    assert summary.keywords == ["urgent", "work"]
+    assert set(server.folders["INBOX"].messages[3][1]) == {"Urgent", "work"}
 
 
 async def test_an_empty_update_writes_nothing(server: FakeMailBox) -> None:
@@ -134,6 +190,18 @@ def test_patch_a_message(client: TestClient, account_id: str) -> None:
     assert (body["unread"], body["keywords"]) == (False, ["$forwarded"])
     again = client.get(f"/v1/accounts/{account_id}/messages/m0").json()
     assert again["unread"] is False
+
+
+def test_patch_adds_and_takes_off_keywords(client: TestClient, account_id: str) -> None:
+    url = f"/v1/accounts/{account_id}/messages/m0"
+    client.patch(url, json={"keywords": ["work", "$junk"]})
+    answer = client.patch(
+        url, json={"add_keywords": ["Urgent"], "remove_keywords": ["$junk"]}
+    )
+    assert answer.status_code == 200
+    assert answer.json()["keywords"] == ["urgent", "work"]
+    mixed = client.patch(url, json={"keywords": ["a"], "add_keywords": ["b"]})
+    assert mixed.status_code == 422
 
 
 def test_patch_refuses_a_bad_keyword(client: TestClient, account_id: str) -> None:

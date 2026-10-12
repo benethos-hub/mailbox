@@ -35,7 +35,7 @@ from .paging import Paged
 from .rights import Grant, Permissions
 from .roles import Role
 from .secrets import Secret
-from .sending import Recipient, Sent
+from .sending import AttachmentSource, OutgoingFile, Recipient, Sent
 from .sends import SendRecord
 from .status import AccountHealth, Status, Worker
 from .tokens import NewToken, Token
@@ -73,6 +73,7 @@ __all__ = [
     "Paged",
     "Address",
     "AttachedFile",
+    "AttachmentSource",
     "Attachment",
     "Message",
     "MessageSummary",
@@ -84,6 +85,7 @@ __all__ = [
     "Me",
     "MeAccount",
     "Outcome",
+    "OutgoingFile",
     "Page",
     "Recipient",
     "Secret",

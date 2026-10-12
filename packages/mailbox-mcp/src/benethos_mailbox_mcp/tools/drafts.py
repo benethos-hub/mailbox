@@ -8,7 +8,19 @@ from pydantic import Field
 
 from .. import render
 from .base import MAX_LIMIT, changes, client, reads
-from .compose import Action, Addresses, Html, OriginalId, Text, composed
+from .compose import (
+    Action,
+    Addresses,
+    AttachFrom,
+    Attachments,
+    ForwardAs,
+    Html,
+    OriginalId,
+    Quote,
+    ReplyTo,
+    Text,
+    composed,
+)
 
 
 async def list_drafts(
@@ -38,12 +50,31 @@ async def create_draft(
     html: Html = None,
     original_id: OriginalId = None,
     action: Action = "reply",
+    quote: Quote = True,
+    forward_as: ForwardAs = "inline",
+    reply_to: ReplyTo = None,
+    attachments: Attachments = None,
+    attach_from: AttachFrom = None,
 ) -> dict[str, Any]:
     """Write a draft into the drafts folder. Nothing is sent. With
     original_id it answers or forwards that message: the service adds
     recipients of a reply, the subject prefix and the quote. Recipients may
     stay empty."""
-    body = composed(to, cc, bcc, subject, text, html, original_id, action)
+    body = composed(
+        to,
+        cc,
+        bcc,
+        subject,
+        text,
+        html,
+        original_id,
+        action,
+        reply_to=reply_to,
+        quote=quote,
+        forward_as=forward_as,
+        attachments=attachments,
+        attach_from=attach_from,
+    )
     return render.draft(await client().create_draft(account_id, body))
 
 
@@ -58,6 +89,11 @@ async def update_draft(
     html: Html = None,
     original_id: OriginalId = None,
     action: Action = "reply",
+    quote: Quote = True,
+    forward_as: ForwardAs = "inline",
+    reply_to: ReplyTo = None,
+    attachments: Attachments = None,
+    attach_from: AttachFrom = None,
     keep_attachments: Annotated[
         list[str] | None,
         Field(description="Ids of the stored draft's attachments to keep"),
@@ -65,9 +101,25 @@ async def update_draft(
 ) -> dict[str, Any]:
     """Replace a draft as a whole: what is left out is gone afterwards,
     attachments too unless keep_attachments names them. Read it with
-    get_message first to keep parts of it. Use the id it answers with from
-    now on: some providers store the draft under a new one."""
-    body = composed(to, cc, bcc, subject, text, html, original_id, action)
+    get_message first to keep parts of it. A draft that answers a message
+    keeps that link with original_id, action and quote=false, as its text
+    holds the quote already. Use the id it answers with from now on: some
+    providers store the draft under a new one."""
+    body = composed(
+        to,
+        cc,
+        bcc,
+        subject,
+        text,
+        html,
+        original_id,
+        action,
+        reply_to=reply_to,
+        quote=quote,
+        forward_as=forward_as,
+        attachments=attachments,
+        attach_from=attach_from,
+    )
     return render.draft(
         await client().update_draft(account_id, draft_id, body, keep_attachments)
     )

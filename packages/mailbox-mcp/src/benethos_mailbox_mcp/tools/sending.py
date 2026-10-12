@@ -8,7 +8,19 @@ from benethos_mailbox_common.values import canonical, secret
 
 from .. import render
 from .base import changes, client
-from .compose import Action, Addresses, Html, OriginalId, Text, composed
+from .compose import (
+    Action,
+    Addresses,
+    AttachFrom,
+    Attachments,
+    ForwardAs,
+    Html,
+    OriginalId,
+    Quote,
+    ReplyTo,
+    Text,
+    composed,
+)
 
 
 def _idempotency_key(tool: str, account_id: str, arguments: Any) -> str:
@@ -30,13 +42,32 @@ async def send_message(
     html: Html = None,
     original_id: OriginalId = None,
     action: Action = "reply",
+    quote: Quote = True,
+    forward_as: ForwardAs = "inline",
+    reply_to: ReplyTo = None,
+    attachments: Attachments = None,
+    attach_from: AttachFrom = None,
 ) -> dict[str, Any]:
     """Send a mail at once. It cannot be taken back. With original_id it
     answers or forwards that message, and a reply without recipients goes
     to its sender. The same call repeated within 24 hours sends nothing and
     answers the first result. refused lists recipients the server did not
     take."""
-    body = composed(to, cc, bcc, subject, text, html, original_id, action)
+    body = composed(
+        to,
+        cc,
+        bcc,
+        subject,
+        text,
+        html,
+        original_id,
+        action,
+        reply_to=reply_to,
+        quote=quote,
+        forward_as=forward_as,
+        attachments=attachments,
+        attach_from=attach_from,
+    )
     key = _idempotency_key("send_message", account_id, body)
     return render.sent(await client().send_message(account_id, body, key))
 

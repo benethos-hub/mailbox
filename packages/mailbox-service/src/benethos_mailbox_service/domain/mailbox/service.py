@@ -204,7 +204,7 @@ class MailboxService:
         access.require("update_message", account_id)
         changes = await self._folders.with_roles_resolved(account_id, changes)
         await self._require_reached(
-            access, "update_message", account_id, message_id, changes.folder_ids
+            access, "update_message", account_id, message_id, changes.named_folders()
         )
         return await self._calls.update_one(account_id, message_id, changes)
 
@@ -234,7 +234,11 @@ class MailboxService:
             changes = await self._folders.with_roles_resolved(account_id, batch.changes)
             outcomes = dict(
                 await self._outside(
-                    access, "update_message", account_id, batch.ids, changes.folder_ids
+                    access,
+                    "update_message",
+                    account_id,
+                    batch.ids,
+                    changes.named_folders(),
                 )
             )
             rest = [i for i in batch.ids if i not in outcomes]

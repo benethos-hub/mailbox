@@ -27,7 +27,8 @@ owner only. The first run makes that user with `users create-admin`.
 connected through the UI. The check then reads folders and mail, makes a
 folder and a reply draft and removes them, and sends one mail from the
 Microsoft test account to the first test account, which it deletes for
-good on both sides afterwards. At the end every mail of this check left
+good on both sides afterwards. Its copy in Sent Items gets a keyword, an
+Outlook category, which is taken off again. At the end every mail of this check left
 in either account, of this run or an earlier one, is deleted for good,
 found by the subject's prefix. The change feed must name the copy in
 Sent Items, which the service learns of through Graph delta queries only.
@@ -63,6 +64,8 @@ DATA = Path("data/live-microsoft")
 PORT = 8080
 URL = f"http://localhost:{PORT}"
 WAIT = 600
+# A keyword of this check alone, set and taken off again.
+KEYWORD = "mailbox-live"
 
 
 def _secret_file(name: str, make: Any) -> str:
@@ -305,6 +308,7 @@ def _send_and_check(
             " ".join(types) or "nothing",
         )
     if run.check("the copy in Sent Items", copy is not None):
+        _keywords(run, client, base, str(copy))
         # Deleted for good straight from Sent Items: the adapter goes through
         # the trash, since Graph's delete outside it only moves there. Right
         # after a move Exchange may not find the message yet, so three tries.
@@ -325,6 +329,23 @@ def _send_and_check(
             "and not in the trash",
             _find(mailbox, ms_id, "trash", subject, tries=1) is None,
         )
+
+
+def _keywords(run: Run, client: httpx.Client, base: str, copy: str) -> None:
+    """A keyword on the copy, an Outlook category, added and taken off."""
+    url = f"{base}/messages/{copy}"
+    added = client.patch(url, json={"add_keywords": [KEYWORD]})
+    run.check(
+        "a keyword added, as an Outlook category",
+        added.status_code == 200 and KEYWORD in added.json().get("keywords", []),
+        str(added.status_code),
+    )
+    taken = client.patch(url, json={"remove_keywords": [KEYWORD]})
+    run.check(
+        "and taken off again",
+        taken.status_code == 200 and KEYWORD not in taken.json().get("keywords", []),
+        str(taken.status_code),
+    )
 
 
 def main() -> int:

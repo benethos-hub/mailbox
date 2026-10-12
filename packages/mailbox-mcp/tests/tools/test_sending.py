@@ -6,8 +6,12 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Callable
 
+import pytest
+
 from benethos_mailbox_mcp import server
+from benethos_mailbox_mcp.errors import ToolError
 from benethos_mailbox_mcp.tools import sending
+from benethos_mailbox_mcp.tools.compose import FromMessage, NewFile
 
 SENT = {"message_id_header": "<m1@example.com>", "sent_copy_id": "msg_s", "refused": []}
 SEND_DRAFT = "/v1/accounts/acc_1/drafts/msg_d/send"
@@ -46,6 +50,55 @@ async def test_a_reply_by_reference(api: Callable) -> None:
     await sending.send_message("acc_1", text="Thanks", original_id="msg_1")
     body = handler.calls[0].body
     assert body["reference"] == {"message_id": "msg_1", "action": "reply"}
+
+
+async def test_a_reply_without_the_quote_and_a_forward_as_a_file(
+    api: Callable,
+) -> None:
+    handler = api(SENT)
+    await sending.send_message("acc_1", text="Yes.", original_id="msg_1", quote=False)
+    await sending.send_message(
+        "acc_1",
+        to=["bob@example.com"],
+        original_id="msg_1",
+        action="forward",
+        forward_as="attachment",
+    )
+    assert [call.body["reference"] for call in handler.calls] == [
+        {"message_id": "msg_1", "action": "reply", "quote": False},
+        {"message_id": "msg_1", "action": "forward", "forward_as": "attachment"},
+    ]
+
+
+async def test_attachments_and_a_reply_to(api: Callable) -> None:
+    handler = api(SENT)
+    await sending.send_message(
+        "acc_1",
+        to=["bob@example.com"],
+        reply_to=["Office <office@example.com>"],
+        attachments=[
+            NewFile(filename="a.ics", content_type="text/calendar", data="QkVHSU4=")
+        ],
+        attach_from=[FromMessage(message_id="msg_2", attachment_id="att_0")],
+    )
+    body = handler.calls[0].body
+    assert body["reply_to"] == [{"email": "office@example.com", "name": "Office"}]
+    assert body["attachments"] == [
+        {"filename": "a.ics", "content_type": "text/calendar", "data": "QkVHSU4="}
+    ]
+    assert body["attachments_from"] == [
+        {"message_id": "msg_2", "attachment_id": "att_0"}
+    ]
+
+
+async def test_an_attachment_that_is_not_base64(api: Callable) -> None:
+    api(SENT)
+    with pytest.raises(ToolError, match="not base64: the data of a.txt"):
+        await sending.send_message(
+            "acc_1",
+            to=["bob@example.com"],
+            attachments=[NewFile(filename="a.txt", data="no base64!")],
+        )
 
 
 async def test_refused_recipients_are_named(api: Callable) -> None:

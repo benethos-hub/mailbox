@@ -71,6 +71,26 @@ async def test_an_account_that_can_do_everything_names_no_limits(
     assert shown["can"] == ["read", "drafts"] and "unsupported" not in shown
 
 
+@pytest.mark.parametrize(
+    ("status", "says"),
+    [("needs_reauth", "sign in to the provider again"), ("connected", "last sync")],
+)
+async def test_an_account_that_needs_a_look(
+    api: Callable, status: str, says: str
+) -> None:
+    ailing = {
+        **ME["accounts"][0],
+        "status": status,
+        "attention": True,
+        "last_sync_at": "2026-10-01T08:00:00Z",
+    }
+    api(routes={"/v1/me": {**ME, "accounts": [ailing]}})
+    [shown] = await accounts.list_accounts()
+    assert says in shown["attention"]
+    assert shown["last_sync"] == "2026-10-01T08:00:00+00:00"
+    assert shown.get("status") == (None if status == "connected" else status)
+
+
 async def test_an_api_error_keeps_its_message(make_client: Callable) -> None:
     """The server turns it into a ToolError for the model (test_server)."""
     make_client(

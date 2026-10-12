@@ -12,3 +12,5 @@ class Folder:
     role: str | None
     unread: int | None
     total: int | None
+    # The folder it is in, None at the top.
+    parent_id: str | None = None

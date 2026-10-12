@@ -70,6 +70,8 @@ def summary(item: MessageSummary) -> dict[str, Any]:
         "unread": item.unread,
         "starred": item.starred,
         "has_attachments": item.has_attachments,
+        "folders": item.folder_ids,
+        **({"keywords": item.keywords} if item.keywords else {}),
     }
 
 
@@ -89,7 +91,15 @@ def message(account_id: str, item: Message, max_chars: int) -> str:
     marker, inside it what the sender wrote, the headers and the attachment
     names as much as the body, which is cut to ``max_chars``."""
     body, note = cut(body_text(item), max_chars)
-    ours = [f"id: {item.id}", f"account: {account_id}"]
+    ours = [
+        f"id: {item.id}",
+        f"account: {account_id}",
+        f"folders: {', '.join(item.folder_ids) or '-'}",
+    ]
+    if item.keywords:
+        ours.append(f"keywords: {', '.join(item.keywords)}")
+    if item.reference is not None:
+        ours.append(f"answers: {item.reference.message_id} ({item.reference.action})")
     if note:
         ours.append(f"note: body {note}")
     theirs = [
@@ -162,6 +172,7 @@ def folder(found: Folder) -> dict[str, Any]:
         "id": found.id,
         "name": found.name,
         "role": found.role,
+        "parent": found.parent_id,
         "unread": found.unread,
         "total": found.total,
     }
@@ -186,6 +197,18 @@ ACCOUNT_LIMITS = {
 }
 
 
+# Why an account waits for a person, by its status: what the model tells
+# the user instead of retrying.
+ATTENTION = {
+    "needs_reauth": (
+        "Someone has to sign in to the provider again in the service's UI. "
+        "Tools on this account fail until then."
+    ),
+    "unreachable": "The provider cannot be reached. Tools on it may fail.",
+    "connected": "Its last sync failed. Tools on it may fail.",
+}
+
+
 def account(found: MeAccount, can: list[str]) -> dict[str, Any]:
     able = found.capabilities
     if able is not None and "drafts" not in able:
@@ -204,6 +227,12 @@ def account(found: MeAccount, can: list[str]) -> dict[str, Any]:
         shown["sending"] = [sending(limit) for limit in found.sending]
     if "read_and_send_anywhere" in found.warnings:
         shown["warning"] = READ_AND_SEND_WARNING
+    if found.status != "connected":
+        shown["status"] = found.status
+    if found.attention:
+        shown["attention"] = ATTENTION.get(found.status, ATTENTION["connected"])
+        if found.last_sync_at is not None:
+            shown["last_sync"] = found.last_sync_at.isoformat()
     return shown
 
 

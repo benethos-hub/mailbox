@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.data.models import Grant, ProviderType
+from benethos_mailbox_service.data.models import AccountStatus, Grant, ProviderType
 from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import Access
+from benethos_mailbox_service.domain.sync import SyncState
+from benethos_mailbox_service.domain.users.effective import Effective
 
 from ...conftest import bearer_for, create_account
 from ...ui_helpers import sign_in
 
+AT = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 READ_A = {"accounts": ["acc_a"], "allow": ["mail.read"]}
 # As the API answers it: constraints not set are null.
 READ_A_OUT = {
@@ -56,9 +61,44 @@ def test_me_for_a_limited_user(app_client: TestClient, services: Services) -> No
                 "send",
                 "stable_ids",
             ],
+            "status": "connected",
+            "last_sync_at": None,
+            "attention": False,
         }
     ]
     assert me["operations"] == []
+
+
+def test_me_tells_how_an_account_fares(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    headers = bearer_for(services, Grant(accounts=[account_id], allow=["mail.read"]))
+
+    def account() -> tuple[str, bool]:
+        [found] = app_client.get("/v1/me", headers=headers).json()["accounts"]
+        return found["status"], found["attention"]
+
+    assert account() == ("connected", False)
+    services.repositories.accounts.set_status(account_id, AccountStatus.NEEDS_REAUTH)
+    assert account() == ("needs_reauth", True)
+
+
+def test_a_failed_sync_pass_asks_for_attention(
+    services: Services, account_id: str
+) -> None:
+    states = {account_id: SyncState(last_sync_at=AT)}
+    effective = Effective(services.adapters, synced=states.__getitem__)
+    reader = Access("usr_r", "r", [Grant(accounts=[account_id], allow=["mail.read"])])
+
+    def fares() -> tuple[datetime | None, bool]:
+        [account] = effective.rights(reader, None, []).accounts
+        return account.last_sync_at, account.attention
+
+    assert fares() == (AT, False)
+    states[account_id] = SyncState(
+        last_sync_at=AT, last_error="503 from server", last_error_at=AT
+    )
+    assert fares() == (AT, True)
 
 
 def warnings_of(

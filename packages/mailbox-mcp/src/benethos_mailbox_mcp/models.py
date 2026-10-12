@@ -1,5 +1,5 @@
-"""The records the REST client answers with, as the client package
-defines them."""
+"""The records of the REST client, what it answers with and what it
+takes, as the client package defines them."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from benethos_mailbox_client import (
     Address,
     AttachedFile,
     Attachment,
+    AttachmentSource,
     Changes,
     Folder,
     Me,
@@ -14,8 +15,10 @@ from benethos_mailbox_client import (
     Message,
     MessageSummary,
     Outcome,
+    OutgoingFile,
     Page,
     Recipient,
+    Reference,
     Sending,
     Sent,
 )
@@ -24,6 +27,7 @@ __all__ = [
     "Address",
     "AttachedFile",
     "Attachment",
+    "AttachmentSource",
     "Changes",
     "Folder",
     "Me",
@@ -31,8 +35,10 @@ __all__ = [
     "Message",
     "MessageSummary",
     "Outcome",
+    "OutgoingFile",
     "Page",
     "Recipient",
+    "Reference",
     "Sending",
     "Sent",
 ]

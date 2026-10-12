@@ -55,6 +55,7 @@ from .messages import (
 )
 from .paging import AccountFailure, Before, MessagePage, Page
 from .sending import (
+    AttachmentSource,
     DraftMessage,
     MessageReference,
     OutgoingAttachment,
@@ -96,6 +97,7 @@ __all__ = [
     "ApiToken",
     "Attachment",
     "AttachmentContent",
+    "AttachmentSource",
     "BatchItemResult",
     "BatchResult",
     "Candidate",

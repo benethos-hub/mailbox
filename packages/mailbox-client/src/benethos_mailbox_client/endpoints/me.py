@@ -8,6 +8,7 @@ from typing import Any
 
 from ..calls import Call, path
 from ..models import Me, MeAccount, Permissions, Sending
+from .readings import maybe_time
 
 
 def get_me() -> Call[Me]:
@@ -42,6 +43,9 @@ def _me(found: dict[str, Any]) -> Me:
                 capabilities=(
                     frozenset(a["capabilities"]) if "capabilities" in a else None
                 ),
+                status=a.get("status", "connected"),
+                last_sync_at=maybe_time(a.get("last_sync_at")),
+                attention=bool(a.get("attention", False)),
             )
             for a in found.get("accounts", [])
         ],

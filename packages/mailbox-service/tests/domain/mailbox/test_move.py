@@ -147,3 +147,18 @@ async def test_bad_targets(
     with pytest.raises(error):
         await update(provider(server), MESSAGE, MessageUpdate(folder_ids=folder_ids))
     assert 3 in server.folders["INBOX"].messages
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        MessageUpdate(add_folder_ids=[SENT]),
+        MessageUpdate(add_folder_ids=[SENT], remove_folder_ids=["INBOX"]),
+    ],
+)
+async def test_an_imap_message_is_moved_not_given_more_folders(
+    server: FakeMailBox, change: MessageUpdate
+) -> None:
+    with pytest.raises(BadRequestError, match="exactly one folder"):
+        await update(provider(server), MESSAGE, change)
+    assert 3 in server.folders["INBOX"].messages

@@ -62,11 +62,15 @@
     },
     {
       "name": "update_messages",
-      "description": "Change mail of one account: mark read or unread, star, move to a folder or archive, or put into the trash."
+      "description": "Change mail of one account: mark read or unread, star, move, archive, label, add and remove keywords, or put into the trash."
     },
     {
       "name": "create_folder",
       "description": "Create a folder in an account."
+    },
+    {
+      "name": "update_folder",
+      "description": "Rename a folder or move it, with the mail and folders inside."
     },
     {
       "name": "list_drafts",

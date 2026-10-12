@@ -208,7 +208,7 @@ class _Domain:
             repositories.webhooks,
             self.auth,
             self.passwords,
-            Effective(adapters, sent=self.sends.sent_recently),
+            Effective(adapters, sent=self.sends.sent_recently, synced=self.sync.state),
             rules,
             activity,
         )

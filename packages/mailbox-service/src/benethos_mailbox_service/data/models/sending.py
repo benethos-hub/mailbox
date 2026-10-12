@@ -27,6 +27,14 @@ class OutgoingAttachment(BaseModel):
     data: Base64Bytes = Field(description="The content, base64-encoded.")
 
 
+class AttachmentSource(BaseModel):
+    """An attachment of another message of the same account, attached as
+    it is, with its name and type."""
+
+    message_id: str
+    attachment_id: str
+
+
 class DraftMessage(BaseModel):
     """A draft: a message that may still lack recipients. The service sets
     From, Date and Message-ID."""
@@ -48,6 +56,14 @@ class DraftMessage(BaseModel):
         description="HTML, sent beside a text part (multipart/alternative).",
     )
     attachments: list[OutgoingAttachment] = Field(default_factory=list)
+    attachments_from: list[AttachmentSource] = Field(
+        default_factory=list,
+        max_length=20,
+        description=(
+            "Attachments of other messages of this account, by id, attached "
+            "before those of `attachments`. Needs the right to read them."
+        ),
+    )
 
     def recipients(self) -> list[str]:
         """Every address the message goes to, each once."""

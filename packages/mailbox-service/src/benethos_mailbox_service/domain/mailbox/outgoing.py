@@ -91,6 +91,7 @@ class Outgoing:
     async def _send(
         self, access: Access, account_id: str, message: OutgoingMessage
     ) -> SendResult:
+        message = await self._with_sources(access, account_id, message)
         raw, message_id, message, original = await self._compose(
             access, account_id, message, draft=False
         )
@@ -281,7 +282,9 @@ class Outgoing:
         show it too. Called after the message went out, where a failure is
         logged."""
         keyword = replies.answered_keyword(reference)
-        changes = MessageUpdate(keywords=sorted({*original.keywords, keyword}))
+        if keyword in original.keywords:
+            return
+        changes = MessageUpdate(add_keywords=[keyword])
         await self._calls.update_one(account_id, reference.message_id, changes)
 
     # --- drafts ---------------------------------------------------------------------
@@ -301,6 +304,7 @@ class Outgoing:
         """Store a draft in the drafts folder, composed like a message to
         send. A reference is filled in now and remembered for the send."""
         checks.require(access, "create_draft", account_id, draft)
+        draft = await self._with_sources(access, account_id, draft)
         raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
         checks.limited(composed.recipients())
         saved = await self._calls.call(
@@ -333,9 +337,10 @@ class Outgoing:
             # Stored as it is: the provider is left alone.
             stored = await self._calls.message(account_id, draft_id)
             return await self._calls.published_one(account_id, stored)
+        draft = await self._with_sources(access, account_id, draft)
         if keep_attachments:
             kept = [
-                await self._kept_attachment(account_id, draft_id, attachment_id)
+                await self._attachment(account_id, draft_id, attachment_id)
                 for attachment_id in keep_attachments
             ]
             draft = draft.model_copy(update={"attachments": kept + draft.attachments})
@@ -347,10 +352,35 @@ class Outgoing:
         self._calls.relocate(account_id, draft_id, saved)
         return await self._calls.published_one(account_id, saved)
 
-    async def _kept_attachment(
-        self, account_id: str, draft_id: str, attachment_id: str
+    async def _with_sources(self, access: Access, account_id: str, message: M) -> M:
+        """``message`` with the attachments it names of other messages
+        fetched, before its own. Each message must be in a folder the
+        caller may read attachments in."""
+        if not message.attachments_from:
+            return message
+        reach = await reach_of(self._calls, access, "get_attachment", account_id)
+        fetched = []
+        for source in message.attachments_from:
+            if reach is not None:
+                holder = await self._calls.message(account_id, source.message_id)
+                if not reach.sees(holder.folder_ids):
+                    raise missing_message(source.message_id)
+            fetched.append(
+                await self._attachment(
+                    account_id, source.message_id, source.attachment_id
+                )
+            )
+        attachments = [*fetched, *message.attachments]
+        checks.sized(attachments)
+        return message.model_copy(
+            update={"attachments": attachments, "attachments_from": []}
+        )
+
+    async def _attachment(
+        self, account_id: str, message_id: str, attachment_id: str
     ) -> OutgoingAttachment:
-        found = await self._calls.attachment(account_id, draft_id, attachment_id)
+        """An attachment of a stored message, to attach again."""
+        found = await self._calls.attachment(account_id, message_id, attachment_id)
         return OutgoingAttachment(
             filename=found.filename or attachment_id,
             content_type=found.content_type,

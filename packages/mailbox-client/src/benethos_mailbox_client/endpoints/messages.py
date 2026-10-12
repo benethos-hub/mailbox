@@ -171,10 +171,23 @@ def update_messages(
     unread: bool | None = None,
     starred: bool | None = None,
     folder_id: str | None = None,
+    add_keywords: list[str] | None = None,
+    remove_keywords: list[str] | None = None,
+    add_folder_ids: list[str] | None = None,
+    remove_folder_ids: list[str] | None = None,
 ) -> Call[Outcome]:
-    """Flags and a move for many messages at once. ``folder_id`` may be
-    a role such as ``archive``."""
-    changes: dict[str, Any] = {"unread": unread, "starred": starred}
+    """Flags, keywords and folders of many messages at once. ``folder_id``
+    moves them. ``add_folder_ids`` and ``remove_folder_ids`` put them into
+    folders and take them out, where a message can be in several, such as
+    Gmail's labels. Each folder may be a role such as ``archive``."""
+    changes: dict[str, Any] = {
+        "unread": unread,
+        "starred": starred,
+        "add_keywords": add_keywords,
+        "remove_keywords": remove_keywords,
+        "add_folder_ids": add_folder_ids,
+        "remove_folder_ids": remove_folder_ids,
+    }
     if folder_id is not None:
         changes["folder_ids"] = [folder_id]
     return _batch(
@@ -190,10 +203,15 @@ def update_message(
     starred: bool | None = None,
     keywords: list[str] | None = None,
     folder_ids: list[str] | None = None,
+    add_keywords: list[str] | None = None,
+    remove_keywords: list[str] | None = None,
+    add_folder_ids: list[str] | None = None,
+    remove_folder_ids: list[str] | None = None,
 ) -> Call[MessageSummary]:
     """Flags, keywords and folders of one message. ``keywords`` replaces
     its list, ``folder_ids`` moves it, by id or by a role such as
-    ``archive``. Answers its summary."""
+    ``archive``. The ``add_`` and ``remove_`` lists change the keywords and
+    folders it has instead. Answers its summary."""
     return Call(
         "PATCH",
         path("accounts", account_id, "messages", message_id),
@@ -204,6 +222,10 @@ def update_message(
                 "starred": starred,
                 "keywords": keywords,
                 "folder_ids": folder_ids,
+                "add_keywords": add_keywords,
+                "remove_keywords": remove_keywords,
+                "add_folder_ids": add_folder_ids,
+                "remove_folder_ids": remove_folder_ids,
             }
         ),
     )
