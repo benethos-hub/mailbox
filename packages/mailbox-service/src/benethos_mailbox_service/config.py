@@ -87,6 +87,9 @@ class Settings(files.FileSettings):
     # thread of its own, outside the pool that answers requests. Further
     # accounts are polled only.
     sync_watchers: int = Field(default=50, ge=1)
+    # Threads the service keeps itself (IMAP): of the References of a
+    # message, the last ones kept to find its thread.
+    thread_references: int = Field(default=20, ge=0)
     # Webhooks: how many times a post is tried before its events are
     # dropped, the pause after the first failure in seconds, doubled after
     # each further one up to the longest, and how long a receiver may take.

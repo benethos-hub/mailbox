@@ -39,6 +39,8 @@ class Capability(StrEnum):
     # Reports what changed in a folder since a token, folder_changes (for
     # Microsoft: Graph delta queries).
     DELTA = "delta"
+    # Messages carry the thread of their conversation, across folders.
+    THREADS = "threads"
 
 
 class AccountStatus(StrEnum):

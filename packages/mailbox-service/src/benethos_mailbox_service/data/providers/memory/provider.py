@@ -8,7 +8,7 @@ from ....errors import (
     missing,
     missing_message,
 )
-from ...mail import convert, parse
+from ...mail import ThreadHeaders, convert, parse
 from ...models import (
     AttachmentContent,
     Folder,
@@ -266,9 +266,13 @@ class MemoryProvider:
     ) -> list[str]:
         return []
 
-    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+    async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         wanted = set(message_ids)
-        return {m.id: m.message_id_header for m in self.messages if m.id in wanted}
+        return {
+            m.id: ThreadHeaders(m.message_id_header)
+            for m in self.messages
+            if m.id in wanted
+        }
 
     async def verify(self) -> None:
         return None

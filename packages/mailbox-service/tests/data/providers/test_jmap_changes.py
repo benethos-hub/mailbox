@@ -8,6 +8,7 @@ import json
 import pytest
 
 from benethos_mailbox_service.data.models import MessageUpdate
+from benethos_mailbox_service.data.providers import ThreadHeaders
 from benethos_mailbox_service.data.providers.jmap import JmapProvider
 from benethos_mailbox_service.errors import (
     BadRequestError,
@@ -294,7 +295,7 @@ async def test_folder_states_and_contents(jmap: JmapProvider, server: FakeJmap) 
         await jmap.folder_contents("bad id")
     assert await jmap.flag_changes("inbox", "x", [one]) == []
     assert await jmap.message_headers([one, "m999"]) == {
-        one: "<" + str(abs(hash("One"))) + "@example.com>"
+        one: ThreadHeaders("<" + str(abs(hash("One"))) + "@example.com>")
     }
 
 

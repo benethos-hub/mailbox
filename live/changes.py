@@ -16,7 +16,8 @@ Writes, on the first two test accounts in ``live/.env`` and nowhere else:
    and, where the server offers CONDSTORE, flags it the same way: the
    change feed names that,
 7. replies and forwards through the API, back to account 2 only, and
-   checks the flags on the original,
+   checks the flags on the original, and that in each account the mail
+   and the reply are one thread across the inbox and the sent folder,
 8. renames and deletes the folder, runs a batch, stores, replaces and
    deletes a reply draft, and sends a draft to account 2,
 9. deletes the mail through the API, into the trash, then for good, and

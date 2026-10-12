@@ -22,7 +22,11 @@ from benethos_mailbox_service.data.protocols.oauth import (
     authorize_url,
     new_pkce,
 )
-from benethos_mailbox_service.data.providers import build_provider, sign_in
+from benethos_mailbox_service.data.providers import (
+    ThreadHeaders,
+    build_provider,
+    sign_in,
+)
 from benethos_mailbox_service.data.providers.gmail import GmailProvider
 from benethos_mailbox_service.data.providers.microsoft import (
     endpoints as microsoft_endpoints,
@@ -124,7 +128,7 @@ async def test_the_contents_and_the_message_ids(gmail: FakeGmail) -> None:
     provider = adapter(gmail)
     assert await provider.folder_contents("INBOX") == [message_id]
     assert await provider.message_headers([message_id, "00000000000000ff"]) == {
-        message_id: "<one@example.com>"
+        message_id: ThreadHeaders("<one@example.com>")
     }
 
 

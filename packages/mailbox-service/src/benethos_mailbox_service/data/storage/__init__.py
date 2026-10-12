@@ -28,6 +28,7 @@ from .index import (
     IndexEntry,
     InMemoryMessageIndexRepository,
     MessageIndexRepository,
+    ThreadChain,
 )
 from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
@@ -102,6 +103,7 @@ __all__ = [
     "KeyRepository",
     "LoggedChange",
     "MessageIndexRepository",
+    "ThreadChain",
     "PasswordRepository",
     "Repositories",
     "RoleRepository",

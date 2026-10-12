@@ -276,8 +276,9 @@ packages/mailbox-service/
                         #   fingerprint of a request (idempotency,
                         #   fingerprint)
       sync/             # SyncService (stable message ids, the sync pass),
-                        #   what a pass finds (passes), SyncWorker
-                        #   (polling and IDLE)
+                        #   what a pass finds (passes), the threads the
+                        #   index keeps (threads), SyncWorker (polling
+                        #   and IDLE)
       changes/          # what changed in a mailbox, for clients:
                         #   MailboxChange, one class per kind, ChangeFeed
       webhooks/         # WebhookService, WebhookDispatcher (signed posts,

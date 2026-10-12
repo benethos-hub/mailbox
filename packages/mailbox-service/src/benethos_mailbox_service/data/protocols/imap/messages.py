@@ -9,13 +9,14 @@ from typing import TYPE_CHECKING, Any
 from ....common.chunks import batched
 from ....common.clock import utc_now
 from ....errors import BadRequestError, NotSupportedError, ProviderError
+from ...mail import ThreadHeaders
 from ..transport import text
 from .responses import (
     capabilities,
     flags,
-    message_id,
     new_uids,
     part,
+    thread_headers,
     translated,
     with_code,
 )
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from .session import ImapSession
 
 _HEADER = f"BODY.PEEK[HEADER]<0.{MAX_HEADER_BYTES}>"
-_MESSAGE_ID = "BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)]"
+_THREAD_HEADERS = "BODY.PEEK[HEADER.FIELDS (MESSAGE-ID IN-REPLY-TO REFERENCES)]"
 # Control characters, not allowed in a search text.
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 # UIDs per FETCH ... (CHANGEDSINCE n). A command line of a few kilobytes
@@ -92,12 +93,13 @@ class Messages:
         found = self._fetch([uid], [self._whole()]).get(uid)
         return self._body(uid, found) if found is not None else None
 
-    def fetch_message_ids(self, uids: list[int]) -> dict[int, str | None]:
-        """The ``Message-ID`` header of each UID in the selected folder. Reads
-        only that header and never sets ``\\Seen``."""
+    def fetch_thread_headers(self, uids: list[int]) -> dict[int, ThreadHeaders]:
+        """The ``Message-ID``, ``In-Reply-To`` and ``References`` of each UID
+        in the selected folder. Reads only those headers and never sets
+        ``\\Seen``."""
         return {
-            uid: message_id(part(data, b"BODY[HEADER.FIELDS"))
-            for uid, data in self._fetch(uids, [_MESSAGE_ID]).items()
+            uid: thread_headers(part(data, b"BODY[HEADER.FIELDS"))
+            for uid, data in self._fetch(uids, [_THREAD_HEADERS]).items()
         }
 
     def _whole(self) -> str:

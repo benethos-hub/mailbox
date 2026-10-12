@@ -32,7 +32,7 @@ from ....errors import (
     NotSupportedError,
     missing_message,
 )
-from ...mail import convert, parse
+from ...mail import ThreadHeaders, convert, parse
 from ...models import (
     AttachmentContent,
     CredentialKind,
@@ -215,19 +215,19 @@ class Pop3Provider(MailServerAdapter):
         mappers.check_folder(folder_id)
         return [mappers.message_id(uid) for uid in await self._run(_unique_ids)]
 
-    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+    async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         wanted = {}
         for message_id in message_ids:
             try:
                 wanted[mappers.unique_id(message_id)] = message_id
             except MailboxServiceError:
                 continue  # no id of this adapter: left out, as one that is gone
-        found: dict[str, str | None] = {}
+        found: dict[str, ThreadHeaders] = {}
         # One session per batch, so a long first sync never holds the
         # mailbox for long.
         for uids in batched(list(wanted), HEADER_BATCH):
             batch = {uid: wanted[uid] for uid in uids}
-            found.update(await self._run(partial(_message_ids, wanted=batch)))
+            found.update(await self._run(partial(_thread_headers, wanted=batch)))
         return found
 
     async def flag_changes(
@@ -324,12 +324,15 @@ def _message(session: Pop3Session, uid: str, message_id: str) -> bytes:
     return session.message(number)
 
 
-def _message_ids(session: Pop3Session, wanted: dict[str, str]) -> dict[str, str | None]:
-    """The Message-ID header of each wanted message that is there."""
-    found: dict[str, str | None] = {}
+def _thread_headers(
+    session: Pop3Session, wanted: dict[str, str]
+) -> dict[str, ThreadHeaders]:
+    """The headers of each wanted message that is there."""
+    found: dict[str, ThreadHeaders] = {}
     for uid, number in _numbers(session).items():
         if uid in wanted:
-            found[wanted[uid]] = parse.ParsedMessage(session.headers(number)).message_id
+            parsed = parse.ParsedMessage(session.headers(number))
+            found[wanted[uid]] = parsed.thread_headers
     return found
 
 

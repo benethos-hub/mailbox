@@ -3,6 +3,9 @@ protocol produced them."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
 from ...errors import BadRequestError
 
 # The content type of an attachment that names none.
@@ -20,6 +23,26 @@ def message_ids(value: object) -> list[str]:
     """The ``Message-ID`` tokens of a header that lists them, such as
     References, whether folded or not."""
     return str(value or "").split()
+
+
+@dataclass(frozen=True, slots=True)
+class ThreadHeaders:
+    """The headers that tie a message to its conversation: its own
+    ``Message-ID``, the one it answers and the ``References``, oldest
+    first."""
+
+    message_id: str | None = None
+    in_reply_to: str | None = None
+    references: tuple[str, ...] = ()
+
+
+def thread_headers(header: Callable[[str], object]) -> ThreadHeaders:
+    """The three headers, read by name with ``header``."""
+    return ThreadHeaders(
+        message_id(header("Message-ID")),
+        next(iter(message_ids(header("In-Reply-To"))), None),
+        tuple(message_ids(header("References"))),
+    )
 
 
 def ascii_domain(email: str) -> str:

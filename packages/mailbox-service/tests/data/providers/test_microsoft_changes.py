@@ -87,7 +87,7 @@ async def test_message_headers_come_in_one_batch(graph: FakeGraph) -> None:
     posted = [r for r in graph.requests[before:] if r.method == "POST"]
     assert [r.url.path for r in posted] == ["/v1.0/$batch"]
     assert set(found) == set(ids)
-    assert all(v is not None and v.startswith("<") for v in found.values())
+    assert all((v.message_id or "").startswith("<") for v in found.values())
 
 
 async def test_for_good_from_the_inbox(graph: FakeGraph) -> None:

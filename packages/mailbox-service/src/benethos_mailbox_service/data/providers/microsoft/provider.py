@@ -32,7 +32,7 @@ from ....errors import (
     ProviderError,
     missing,
 )
-from ...mail import compose, convert, parse
+from ...mail import ThreadHeaders, compose, convert, parse
 from ...models import (
     AttachmentContent,
     Folder,
@@ -378,14 +378,17 @@ class MicrosoftProvider:
         """Graph reports changes through delta queries instead."""
         return []
 
-    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+    async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         """Twenty to a JSON batch. A message that is gone is left out."""
         urls = [
             f"/me/messages/{id_(message_id)}?$select=internetMessageId"
             for message_id in message_ids
         ]
         found = await self._graph.batch(urls, Batch[GraphMessage])
-        return {message_ids[n]: body.internet_message_id for n, body in found.items()}
+        return {
+            message_ids[n]: ThreadHeaders(body.internet_message_id)
+            for n, body in found.items()
+        }
 
     async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
         """A delta query of the folder's messages. The token is Graph's

@@ -12,6 +12,7 @@ from datetime import datetime
 import anyio
 
 from ....errors import ProviderUnavailableError, missing
+from ...mail import ThreadHeaders
 from ...protocols import jmap
 from ..base import ChangedMessage, FolderChanges
 from . import mappers
@@ -68,10 +69,12 @@ class Changes:
         _, ids = await self._contents(folder_id)
         return ids
 
-    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+    async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         found = await self._account.emails(message_ids, ["messageId"])
         return {
-            message_id: f"<{email.message_id[0]}>" if email.message_id else None
+            message_id: ThreadHeaders(
+                f"<{email.message_id[0]}>" if email.message_id else None
+            )
             for message_id, email in found.items()
         }
 

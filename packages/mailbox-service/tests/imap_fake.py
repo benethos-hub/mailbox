@@ -300,7 +300,10 @@ class FakeMailBox(FolderCommands):
             if "FLAGS" in items:
                 data[b"FLAGS"] = tuple(f.encode() for f in flags)
             if kind == "message-id":
-                data[b"BODY[HEADER.FIELDS (MESSAGE-ID)]"] = _message_id_block(head)
+                [asked] = [i for i in items if "HEADER.FIELDS" in i]
+                names = asked.split("(", 1)[1].rstrip(")]").split()
+                key = asked.replace("BODY.PEEK[", "BODY[").encode()
+                data[key] = _fields_block(head, names)
             elif kind == "header":
                 data[b"BODY[HEADER]<0>"] = head[: _partial(items, "BODY.PEEK[HEADER]")]
             else:
@@ -374,14 +377,15 @@ def filled_server() -> FakeMailBox:
     return box
 
 
-def _message_id_block(head: bytes) -> bytes:
-    """The Message-ID header with the lines folded into it, as a server
-    answers ``BODY[HEADER.FIELDS (MESSAGE-ID)]``."""
+def _fields_block(head: bytes, names: list[str]) -> bytes:
+    """The headers named, with the lines folded into them, as a server
+    answers ``BODY[HEADER.FIELDS (MESSAGE-ID ...)]``."""
+    wanted = tuple(f"{name.lower()}:".encode() for name in names)
     block = b""
     inside = False
     for line in head.split(b"\n"):
         if not line[:1].isspace():
-            inside = line.lower().startswith(b"message-id:")
+            inside = line.lower().startswith(wanted)
         if inside:
             block += line + b"\r\n"
     return block + b"\r\n"
@@ -415,7 +419,7 @@ def _matches(
             name, value = str(words[position]), str(words[position + 1])
             position += 2
             if name.lower() == "message-id":
-                ok = value.encode() in _message_id_block(raw)
+                ok = value.encode() in _fields_block(raw, ["Message-ID"])
             else:
                 ok = value.lower() in str(mail.get(name, "")).lower()
         elif key == "UID":

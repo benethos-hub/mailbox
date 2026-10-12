@@ -16,6 +16,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 from ....errors import ChangesExpiredError, NotFoundError, ProviderError
+from ...mail import ThreadHeaders
 from ..base import ChangedMessage, FolderChanges
 from . import mappers, reading
 from .api import GmailApi
@@ -38,11 +39,13 @@ class Changes:
         await reading.require_folder(self._api, folder_id)
         return await reading.ids(self._api, reading.folder_params(folder_id))
 
-    async def message_headers(self, message_ids: list[str]) -> dict[str, str | None]:
+    async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         params = reading.metadata_params(("Message-ID",))
         found = await reading.messages(self._api, message_ids, params)
         return {
-            i: next((h.value for h in m.payload.headers), None) if m.payload else None
+            i: ThreadHeaders(
+                next((h.value for h in m.payload.headers), None) if m.payload else None
+            )
             for i, m in found.items()
         }
 

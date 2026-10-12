@@ -1,9 +1,10 @@
 """What the sync worker asks of the mailbox, each a sequence under the
-lock: the state of each folder, its contents, the Message-ID headers,
-and with CONDSTORE which flags changed."""
+lock: the state of each folder, its contents, the headers that tie a
+message to its conversation, and with CONDSTORE which flags changed."""
 
 from __future__ import annotations
 
+from ...mail import ThreadHeaders
 from ...protocols import SearchCriteria
 from . import mappers
 from .mailbox import Mailbox
@@ -53,10 +54,10 @@ def folder_contents(box: Mailbox, folder_id: str) -> list[str]:
 
 def message_headers(
     box: Mailbox, folder: str, validity: int, uids: list[int]
-) -> dict[str, str | None]:
+) -> dict[str, ThreadHeaders]:
     if box.session.select(folder) != validity:
         return {}  # renumbered: these ids are gone
     return {
-        mappers.message_id(folder, validity, uid): header
-        for uid, header in box.session.messages.fetch_message_ids(uids).items()
+        mappers.message_id(folder, validity, uid): headers
+        for uid, headers in box.session.messages.fetch_thread_headers(uids).items()
     }
