@@ -183,6 +183,8 @@ The decisions that shape every endpoint.
 - **Rights per user, per account, per operation** (7.5), with tokens as one
   kind of credential.
 - **Cursor pagination everywhere**, with an opaque `next_cursor`.
+- **Every mailbox is operated the same way.** What an account cannot do
+  answers `501`, announced by its capabilities (5.11).
 
 ## 4. Resource model
 
@@ -737,6 +739,69 @@ To be kept in mind from the first IMAP line on, and covered by tests:
 - **Dates** in every format a `Date` header has ever carried. Stored and
   returned in UTC with offset.
 
+### 5.11 One way to operate every mailbox
+
+**Decided 2026-10-12, not built yet.** From outside, every mailbox is
+operated the same way. Whatever is common behaves identically on every
+account. Whatever an account cannot do answers an error, and the
+account says so in advance. Nothing is silently ignored, and no value
+silently means something else.
+
+An inventory of every adapter found where the API breaks this today.
+[UNIFORM.md](UNIFORM.md) holds it, with the decisions, the reasons and
+the work in order. Until that work is done, sections 5 and 6 describe
+the API as it is. The rules:
+
+1. **One meaning.** Every field, filter and operation means the same on
+   every account. Where a provider cannot deliver it, the adapter does
+   not approximate it. The capability is missing instead.
+2. **Missing means `501`.** Never `200` with nothing done, never `400`,
+   `404` or `409` for "the provider cannot".
+3. **Announced in advance.** Every `501` follows from a missing
+   capability. The domain checks it once for every operation, from one
+   table of what each operation needs.
+4. **Capabilities follow the server.** IMAP and JMAP servers are asked
+   what they offer when an account connects and when it is verified.
+   The capabilities are stored with the account.
+5. **Unknown is not false.** A missing capability says that a field
+   carries nothing. The value itself stays as it is.
+6. **All or nothing.** An operation that answers an error has changed
+   nothing. Where that cannot be guaranteed, the answer names what was
+   done.
+7. **The service fills gaps only where the result is the same.** It
+   emulates the folder `all` on Microsoft and on IMAP servers without
+   `\All`.
+8. **Provider specifics stay out of the common fields.** Notes a server
+   keeps for itself, such as `$hasnoattachment`, leave `keywords`.
+
+The capabilities become finer, each guarding one thing: `read_state`,
+`stars`, `keywords`, `marks` (two lists, the marks of RFC 8621 an
+account reads and those it writes), `folders`, `move`, `trash`, `purge`,
+`labels`, `search`, `drafts`, `send`, `sent_copy`, `threads`, `push`
+and `external_changes`. `flags` goes. `stable_ids`, `delta` and
+`server_search` leave the API.
+
+Further decisions: `date` is the Date header everywhere, and a new
+field `received` carries the received time, by which lists sort and
+filter. A list without a folder is the inbox on every account, and the
+role `all` searches everywhere but the trash and junk. Keywords keep the
+provider's spelling. `has_attachments` counts real attachments, not
+inline images, the same way everywhere. Each provider groups threads by
+its own rules. A reply answers whether the original was marked.
+
+**The search runs on the provider's server.** How text matches is
+therefore the provider's: every account finds whole words, IMAP also
+parts of words, Microsoft beginnings of words. The contract promises
+whole words.
+
+**The UI and the MCP server know no providers.** The API answers per
+account the operations its caller can run there, capabilities and
+rights together. The UI and the MCP server only ask that list, and the
+marks with their words come from `mailbox-common`. Setting up an
+account is the one place that knows the kinds of account. Later the
+domain describes each kind's connection, and the UI draws the form
+from it.
+
 ## 6. REST API
 
 Base path `/v1`, JSON, bearer authentication on everything except
@@ -1010,7 +1075,7 @@ not followed.
 
 | Parameter | Meaning |
 |---|---|
-| `folder` | folder id, or a role such as `inbox`. Left out: every folder on a Microsoft or JMAP account, the inbox on IMAP and POP3 |
+| `folder` | folder id, or a role such as `inbox`. Left out: every folder on a Gmail, Microsoft or JMAP account, the inbox on IMAP and POP3. To become the inbox everywhere (5.11) |
 | `q` | free text (subject, addresses, body where the provider can) |
 | `from`, `to`, `subject` | structured filters |
 | `after`, `before` | days, `YYYY-MM-DD`: `after` includes its day, `before` does not. The audits take a time with a zone instead |
@@ -1026,7 +1091,9 @@ filter.
 
 Rules of the implementation (built before phase 3):
 
-- Text filters are case-insensitive parts, as IMAP `SEARCH` compares them.
+- Text filters are case-insensitive. On IMAP they match parts of words,
+  as IMAP `SEARCH` compares them. Gmail, Microsoft and JMAP search their
+  own index, which matches whole words or their beginnings (5.11).
   They hold no control characters (`422`): IMAP clients quote search text
   but keep line breaks, which would end the command and start another.
 - `after` and `before` are days, as IMAP searches by day: `after` includes
