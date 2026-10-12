@@ -9,9 +9,11 @@ Each message names its conversation, which Graph lists across the
 folders (``THREADS``).
 
 Sending and drafts go as MIME, composed by ``data.mail.compose`` like for
-any other provider: ``sendMail`` sends and keeps the copy in Sent Items, a
-draft is created from MIME and replaced by creating a new one. Graph cannot
-change a draft's MIME in place.
+any other provider: a draft is created from MIME and replaced by creating
+a new one, since Graph cannot change a draft's MIME in place. A mail is
+sent as such a draft, whose id its copy in Sent Items keeps. A message
+is read from its MIME too, so its bodies, headers and attachments are
+what the other providers answer.
 
 The wire, the well-known folders and Graph's errors are in ``graph``.
 
@@ -60,7 +62,7 @@ from ..base import (
 )
 from . import mappers
 from .graph import Graph, id_, own_path
-from .shapes import Attachment, Batch, Item, Listing, MailFolder
+from .shapes import Batch, Item, Listing, MailFolder
 from .shapes import Message as GraphMessage
 
 # A page of folders or of message ids, as many as Graph hands out at once.
@@ -211,40 +213,19 @@ class MicrosoftProvider:
         ]
 
     async def get_message(self, message_id: str) -> Message:
-        path = f"/me/messages/{id_(message_id)}"
-        item = await self._graph.read(
-            GraphMessage, "GET", path, params={"$select": mappers.MESSAGE_FIELDS}
-        )
-        attachments: list[Attachment] = []
-        if item.has_attachments:
-            attachments = await self._graph.all(
-                Listing[Attachment],
-                f"{path}/attachments",
-                {"$select": "id,name,contentType,size,isInline"},
-            )
-        found = mappers.message(item, attachments)
-        if item.is_draft:
-            # What a draft answers lives in its MIME only.
-            thread = convert.thread_fields(
-                parse.ParsedMessage(await self.get_raw(message_id))
-            )
-            found = found.model_copy(
-                update={k: thread[k] for k in ("reference", "in_reply_to")}
-            )
-        return found
+        """What Graph knows of the message, and what its MIME says: the
+        bodies, the headers and the attachments as the mail has them, read
+        as for any other provider. Graph's own fields would answer
+        Exchange's HTML for a plain text mail, and no attachments for a mail
+        with inline images only."""
+        item = await self._summary_of(f"/me/messages/{id_(message_id)}")
+        return mappers.message(item, await self.get_raw(message_id))
 
     async def get_attachment(
         self, message_id: str, attachment_id: str
     ) -> AttachmentContent:
-        path = f"/me/messages/{id_(message_id)}/attachments/{id_(attachment_id)}"
-        item = await self._graph.read(Attachment, "GET", path)
-        content = item.content_bytes
-        data = (
-            base64.b64decode(content)
-            if content
-            else (await self._graph.call("GET", f"{path}/$value")).body
-        )
-        return mappers.attachment_content(item, data)
+        parsed = parse.ParsedMessage(await self.get_raw(message_id))
+        return convert.attachment(parsed, attachment_id)
 
     async def get_raw(self, message_id: str) -> bytes:
         return (
@@ -252,17 +233,30 @@ class MicrosoftProvider:
         ).body
 
     async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
-        """Graph takes the recipients from the MIME headers, and keeps the
-        copy in Sent Items itself. Recipients the headers do not name are
-        the Bcc ones: they go in a Bcc header, which Exchange takes out
-        before delivery **(unverified)**."""
-        await self._graph.call(
+        """The way Microsoft documents to learn the sent copy: the MIME is
+        saved as a draft, which is sent. The copy in Sent Items keeps the
+        draft's immutable id. Graph takes the recipients from the MIME
+        headers. Recipients the headers do not name are the Bcc ones: they
+        go in a Bcc header, which Exchange takes out before delivery
+        **(unverified)**. A draft that cannot be sent is deleted again."""
+        draft = await self._graph.read(
+            GraphMessage,
             "POST",
-            "/me/sendMail",
+            "/me/messages",
             content=base64.b64encode(compose.with_bcc(raw, recipients)),
             content_type="text/plain",
         )
-        return SentMessage()
+        try:
+            await self._graph.call("POST", f"/me/messages/{id_(draft.id)}/send")
+        except MailboxServiceError as exc:
+            try:
+                await self._delete_for_good(draft.id)
+            except MailboxServiceError:
+                raise exc.noting(f"it stays as the draft {draft.id}") from None
+            raise
+        roles = await self._graph.folder_roles()
+        sent = next((k for k, v in roles.items() if v is FolderRole.SENT), None)
+        return SentMessage(sent_copy=mappers.sent_copy(draft, sent))
 
     # --- drafts ---------------------------------------------------------------------
 

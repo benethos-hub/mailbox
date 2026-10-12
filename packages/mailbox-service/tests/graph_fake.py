@@ -32,8 +32,10 @@ class FakeGraph:
             self.well_known[name] = folder_id
         self.messages: dict[str, dict[str, Any]] = {}
         self.raws: dict[str, bytes] = {}
-        self.attachments: dict[str, list[dict[str, Any]]] = {}
+        # The MIME of each draft sent, and what the next send answers
+        # in place of 202.
         self.sent: list[bytes] = []
+        self.send_answer: httpx.Response | None = None
         self.requests: list[httpx.Request] = []
         # Tokens the fake accepts. Any other answers 401.
         self.tokens = {TOKEN}
@@ -58,7 +60,9 @@ class FakeGraph:
         }
         return folder_id
 
-    def add_message(self, folder: str = "inbox", **fields: Any) -> str:
+    def add_message(
+        self, folder: str = "inbox", raw: bytes | None = None, **fields: Any
+    ) -> str:
         message_id = next(self.ids)
         self.messages[message_id] = {
             "id": message_id,
@@ -79,9 +83,13 @@ class FakeGraph:
             **fields,
         }
         self.raws[message_id] = (
-            f"Message-ID: <{message_id}@example.com>\r\nSubject: "
-            f"{self.messages[message_id]['subject']}\r\n\r\nHi there\r\n"
-        ).encode()
+            raw
+            or (
+                f"Message-ID: <{message_id}@example.com>\r\nSubject: "
+                f"{self.messages[message_id]['subject']}\r\n"
+                "Content-Type: text/plain\r\n\r\nHi there\r\n"
+            ).encode()
+        )
         self.messages[message_id].setdefault("createdDateTime", self.now())
         self.touch(message_id)
         return message_id
@@ -121,9 +129,6 @@ class FakeGraph:
             return self._folders(method, path[1:], query, request)
         if path[0] == "messages":
             return self._messages(method, path[1:], query, request)
-        if path == ["sendMail"] and method == "POST":
-            self.sent.append(base64.b64decode(request.content))
-            return httpx.Response(202)
         return _error(400, "BadRequest", f"unknown call {method} {url.path}")
 
     def _batch(self, request: httpx.Request) -> httpx.Response:
@@ -344,8 +349,8 @@ class FakeGraph:
             message["parentFolderId"] = target["id"]
             self.touch(message["id"])
             return _json(201, message)
-        if rest[0] == "attachments":
-            return self._attachments(message["id"], rest[1:])
+        if rest == ["send"] and method == "POST":
+            return self._send(message)
         return _error(400, "BadRequest", "unknown message call")
 
     def _one_message(
@@ -369,17 +374,17 @@ class FakeGraph:
             return httpx.Response(204)
         return _error(400, "BadRequest", "unknown message call")
 
-    def _attachments(self, message_id: str, rest: list[str]) -> httpx.Response:
-        """The attachments of a message without their content, or one with."""
-        items = self.attachments.get(message_id, [])
-        if not rest:
-            return _list(
-                {k: v for k, v in a.items() if k != "contentBytes"} for a in items
-            )
-        match = next((a for a in items if a["id"] == rest[0]), None)
-        if match is None:
-            return _error(404, "ErrorItemNotFound", "attachment not found")
-        return _json(200, match)
+    def _send(self, message: dict[str, Any]) -> httpx.Response:
+        """A draft sent: its copy in Sent Items keeps the immutable id."""
+        if self.send_answer is not None:
+            answer, self.send_answer = self.send_answer, None
+            return answer
+        if not message["isDraft"]:
+            return _error(400, "ErrorInvalidOperation", "not a draft")
+        self.sent.append(self.raws[message["id"]])
+        message.update(parentFolderId=self.well_known["sentitems"], isDraft=False)
+        self.touch(message["id"])
+        return httpx.Response(202)
 
     def _draft(self, raw: bytes) -> httpx.Response:
         parsed = message_from_bytes(raw, policy=default)

@@ -90,7 +90,7 @@ one guards exactly one thing:
 | `search` | the filters of `list_messages` | yes | no | yes | yes | yes |
 | `drafts` | drafts | with a drafts folder | no | yes | yes | yes |
 | `send` | sending | with SMTP | with SMTP | yes | yes | with submission |
-| `sent_copy` | a sent mail is kept and its id answered | with a sent folder | no | yes | to build (4.5) | with a sent folder |
+| `sent_copy` | a sent mail is kept and its id answered | with a sent folder | no | yes | yes | with a sent folder |
 | `threads` | `thread_id`, `list_threads`, `get_thread` | yes, the service's own | no | yes | yes | yes |
 | `push` | changes arrive within seconds | with IDLE | no | no | no | with an event source |
 | `external_changes` | the change feed sees read state, stars and keywords changed by other clients | with CONDSTORE | no | yes | yes | yes |
@@ -217,7 +217,9 @@ larger piece that is neither, and runs on its own.
   the original's thread. To confirm live. *Bug.*
 - **Microsoft answers no `sent_copy_id`**, although Exchange keeps the
   copy (`microsoft/provider.py:259`). The `message.sent` record then
-  carries the Message-ID header in place of a message id. *Bug.*
+  carries the Message-ID header in place of a message id. *Bug.* Done:
+  the mail is sent as a draft, whose immutable id the copy keeps, the
+  way Microsoft documents.
 - **POP3 keeps no sent copy**, while `send_message` is documented as
   keeping one. JMAP without a sent folder keeps none either, without a
   word. Capability `sent_copy`. *Concept (section 3).*
@@ -265,11 +267,15 @@ larger piece that is neither, and runs on its own.
   where the body is known.
 - **Microsoft answers HTML only.** A plain text mail has
   `text_body: null` and Exchange's HTML in `html_body`. Graph answers the
-  text with `Prefer: outlook.body-content-type="text"`. *Bug.*
+  text with `Prefer: outlook.body-content-type="text"`. *Bug.* Done,
+  otherwise than proposed: the text Graph answers is Exchange's
+  conversion, which no other provider gives. A message is read from its
+  MIME, as on Gmail and IMAP.
 - **Microsoft answers `in_reply_to: null`** on every mail but drafts.
-  *Bug.*
+  *Bug.* Done, from the MIME.
 - **Microsoft lists no attachments for a mail whose only parts are
-  inline images**, so they cannot be downloaded. *Bug.*
+  inline images**, so they cannot be downloaded. *Bug.* Done, from the
+  MIME. Attachment ids are then those of the other providers.
 
 ### 4.9 Threads
 
@@ -349,9 +355,12 @@ Step 1 is done. Each step is one pull request or more.
 2. **Bugs with a live check** against the test accounts, in this order:
    1. Gmail sends a reply and a draft with the original's `threadId`.
       Done, checked live.
-   2. Microsoft answers the text body and `in_reply_to`.
+   2. Microsoft answers the text body and `in_reply_to`. Done, from
+      the MIME, checked live.
    3. Microsoft answers the sent copy's id, and lists the attachments
-      of a mail with inline images only.
+      of a mail with inline images only. Done. The sent copy is checked
+      live, the inline images offline: the test account holds no such
+      mail, and the check sends none to it.
 3. **Work**, each on its own:
    1. Microsoft sends large mail through upload sessions. Last, since it
       moves the most code.

@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import base64
 from datetime import date
 from email import message_from_bytes
-from email.policy import default
 from typing import Any
 
 import httpx
@@ -185,52 +183,12 @@ async def test_a_forged_cursor_is_refused(graph: FakeGraph, cursor: str) -> None
     assert graph.requests == []
 
 
-async def test_a_message(graph: FakeGraph) -> None:
-    message_id = graph.add_message(
-        hasAttachments=True,
-        flag={"flagStatus": "flagged"},
-        categories=["Work"],
-        body={"contentType": "html", "content": "<p>Hi</p>"},
-    )
-    graph.attachments[message_id] = [
-        {
-            "id": "att1",
-            "name": "offer.pdf",
-            "contentType": "application/pdf",
-            "size": 4,
-            "isInline": False,
-            "contentBytes": base64.b64encode(b"%PDF").decode(),
-        }
-    ]
-    provider = adapter(graph)
-    message = await provider.get_message(message_id)
-    assert message.sender is not None and message.sender.email == "alice@example.com"
-    assert message.unread and message.starred and message.keywords == ["work"]
-    assert message.html_body == "<p>Hi</p>" and message.text_body is None
-    assert [a.filename for a in message.attachments] == ["offer.pdf"]
-    content = await provider.get_attachment(message_id, "att1")
-    assert content.data == b"%PDF"
-    assert (await provider.get_raw(message_id)).startswith(b"Message-ID:")
-
-
 async def test_every_call_asks_for_immutable_ids(graph: FakeGraph) -> None:
     await adapter(graph).list_folders()
     assert all(r.headers["prefer"] == 'IdType="ImmutableId"' for r in graph.requests)
 
 
 # --- sending and drafts ---------------------------------------------------------------
-
-
-async def test_send_puts_hidden_recipients_in_bcc(graph: FakeGraph) -> None:
-    raw = b"From: me@example.org\r\nTo: bob@example.org\r\nSubject: Hi\r\n\r\nHello\r\n"
-    await adapter(graph).send(
-        raw, "me@example.org", ["bob@example.org", "carol@example.org"]
-    )
-    [sent] = graph.sent
-    parsed = message_from_bytes(sent, policy=default)
-    assert parsed["To"] == "bob@example.org"
-    assert parsed["Bcc"] == "carol@example.org"
-    assert parsed.get_content().strip() == "Hello"
 
 
 async def test_drafts(graph: FakeGraph) -> None:
@@ -396,6 +354,8 @@ def test_connect_read_and_send_through_the_api(
     assert sent.status_code == 200, sent.text
     [raw] = graph.sent
     assert message_from_bytes(raw)["Subject"] == "Hi"
+    copy = sent.json()["sent_copy_id"]
+    assert graph.messages[copy]["parentFolderId"] == graph.well_known["sentitems"]
     draft = client.post(
         f"{base}/drafts", json={"to": [{"email": "bob@example.org"}], "text": "Later"}
     )

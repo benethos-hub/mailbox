@@ -1,5 +1,5 @@
 """What Microsoft Graph sends, as shapes: mail folders, messages,
-attachments, lists and errors. Every field but the id may be missing:
+lists and errors. Every field but the id may be missing:
 each call names the fields it asks for with ``$select``."""
 
 from __future__ import annotations
@@ -58,11 +58,6 @@ class Flag(wire.CamelShape):
     flag_status: Text = None
 
 
-class ItemBody(wire.CamelShape):
-    content_type: Text = None
-    content: Text = None
-
-
 class Message(wire.CamelShape):
     id: str
     conversation_id: Text = None
@@ -70,9 +65,6 @@ class Message(wire.CamelShape):
     subject: Text = None
     sender: Annotated[Recipient | None, wire.OrNone] = Field(None, alias="from")
     to_recipients: Recipients = []
-    cc_recipients: Recipients = []
-    bcc_recipients: Recipients = []
-    reply_to: Recipients = []
     received_date_time: When = None
     created_date_time: When = None
     body_preview: Text = None
@@ -82,18 +74,8 @@ class Message(wire.CamelShape):
     has_attachments: Yes = None
     is_draft: Yes = None
     internet_message_id: Text = None
-    body: Annotated[ItemBody | None, wire.OrNone] = None
     # In a delta query: the message left the folder or is gone.
     removed: dict[str, object] | None = Field(None, alias="@removed")
-
-
-class Attachment(wire.CamelShape):
-    id: str
-    name: Text = None
-    content_type: Text = None
-    size: Count = None
-    is_inline: Yes = None
-    content_bytes: Text = None
 
 
 class Listing(wire.CamelShape, Generic[T]):
