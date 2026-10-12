@@ -179,14 +179,7 @@ class AcrossAccounts:
     ) -> list[MessageSummary]:
         """The newest ``limit`` of the windows, under our ids. Each
         account's position moves past what it gave."""
-        merged = [
-            (item, account_id)
-            for account_id, window in chunks.items()
-            for chunk in window
-            for item in chunk.items
-        ]
-        merged.sort(key=lambda pair: merge.newest_first(pair[0]))
-        taken = merged[:limit]
+        taken = merge.newest_of(chunks, limit)
         published: dict[str, list[MessageSummary]] = {}
         for account_id, window in chunks.items():
             mine = [item for item, owner in taken if owner == account_id]

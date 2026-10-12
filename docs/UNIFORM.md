@@ -324,10 +324,10 @@ larger piece that is neither, and runs on its own.
 
 ## 5. Work in order
 
-Nothing of it is started. Each step is one pull request or more.
+Step 1 is done. Each step is one pull request or more.
 
 1. **Bugs without a live check**, together on a branch of their own,
-   against today's documentation:
+   against today's documentation. Done:
    1. POP3 `list_threads` answers `501`. Done.
    2. A Gmail draft keeps its `reference`. Done.
    3. Microsoft answers `501` for `$` keywords. Done.
@@ -345,7 +345,7 @@ Nothing of it is started. Each step is one pull request or more.
       answer what was done before a step failed. Done, for the batches
       of every adapter.
    10. The list across accounts pages IMAP messages without skipping
-       or repeating them, though IMAP orders by UID.
+       or repeating them, though IMAP orders by UID. Done.
 2. **Bugs with a live check** against the test accounts, in this order:
    1. Gmail sends a reply and a draft with the original's `threadId`.
    2. Microsoft answers the text body and `in_reply_to`.

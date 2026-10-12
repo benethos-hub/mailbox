@@ -407,7 +407,7 @@ and what an account cannot do answers `501`, announced by its
 capabilities. [UNIFORM.md](UNIFORM.md) section 5 holds the work in
 order, each step one pull request or more:
 
-1. **Bugs without a live check**, against today's documentation
+1. **Bugs without a live check**, against today's documentation, done
 2. **Bugs with a live check**: Gmail threads a reply, Microsoft answers
    the text body, `in_reply_to`, the sent copy and inline attachments
 3. **Microsoft sends large mail through upload sessions**, and IMAP

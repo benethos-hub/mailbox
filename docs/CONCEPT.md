@@ -1139,6 +1139,9 @@ advisor" need, whichever account it went to.
   belong to one account.
 - The accounts are asked in parallel, the results merged by date, newest
   first. The cursor is opaque and carries the position in every account.
+  Each account gives the start of its own list: IMAP lists by arrival,
+  so an old mail filed late may come a page early, but no message is
+  skipped or given twice. Each page is newest first.
 - **One slow or failing account does not fail the request.** The answer is
   marked incomplete and says which account failed and why:
 

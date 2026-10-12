@@ -99,6 +99,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   answers those as done and the rest with the failure. It answered only
   the failure, though the first messages were changed. A delete for good
   on Microsoft that stops in the trash says so.
+- `GET /v1/messages` across accounts no longer skips or repeats a mail of
+  an IMAP account between pages. IMAP lists by arrival, and an old mail
+  filed late threw the pages off. Each page is still newest first.
 
 ## [0.4.1] - 2026-10-10
 
