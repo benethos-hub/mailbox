@@ -4,8 +4,8 @@
 differently per provider today and sets the rules that end that. The
 decisions are in section 6, and section 7 names what the change
 carries along. Section 8 makes the UI and the MCP server independent
-of the providers. Section 5 is the work list.
-The rules go into CONCEPT.md, the work into the roadmap.
+of the providers. Section 5 is the work list. The rules stand in
+CONCEPT 5.11, the work in ROADMAP phase 5a.
 
 Contents:
 [1. The principle](#1-the-principle) ·
@@ -73,8 +73,8 @@ provider has, and what a server notes for itself, stays out of the API.
 
 Today one capability often covers things that differ per provider.
 `flags` covers read state, stars and keywords, although Gmail has no
-keywords and Microsoft has no `$` keywords. The finer
-set, where each one guards exactly one thing:
+keywords and Microsoft has no `$` keywords. The finer set, where each
+one guards exactly one thing:
 
 | Capability | Means | IMAP | POP3 | Gmail | Microsoft | JMAP |
 |---|---|---|---|---|---|---|
@@ -109,6 +109,11 @@ So `marks` is not one capability but two lists on the account: the
 marks it reads and the marks it writes. Writing a mark outside the
 second list answers `501`. A mark outside the first list never appears,
 and its absence means nothing.
+
+`refused` (decision 6.1) needs a capability as well: whether the
+provider names the recipients it refuses while sending, as SMTP does.
+Gmail, Microsoft and JMAP report them later, as a bounce mail. Its name
+is settled with step 5 of section 5.
 
 `stable_ids`, `delta` and `server_search` describe how the service works
 inside, not what a client can do. They leave the API (decision
@@ -183,8 +188,8 @@ larger piece that is neither, and runs on its own.
 
 ### 4.4 Search and attachments
 
-- **IMAP matches parts of words** ("ail" finds "mail"), as CONCEPT 6.6
-  promises. **Gmail and Microsoft match whole words or prefixes**, JMAP
+- **IMAP matches parts of words** ("ail" finds "mail"), as IMAP `SEARCH`
+  compares. **Gmail and Microsoft match whole words or prefixes**, JMAP
   as its server does. No adapter can make the provider's index match
   parts of words. *Concept (6.7).*
 - **On Microsoft, `sender`, `to` or `subject` switch the list to Graph's
@@ -319,8 +324,7 @@ larger piece that is neither, and runs on its own.
 
 ## 5. Work in order
 
-Nothing of it is started. Each step is a pull request of its own,
-unless it says otherwise.
+Nothing of it is started. Each step is one pull request or more.
 
 1. **Bugs without a live check**, together on a branch of their own,
    against today's documentation:
@@ -393,8 +397,8 @@ Decided 2026-10-12, each with the options weighed and why.
    `$answered`. Exchange keeps "answered" and "forwarded" in a property
    of its own (`PidTagLastVerbExecuted`), readable through Graph's
    extended properties and very likely writable, which is not checked.
-   (a) Microsoft reads and writes it, Gmail lacks `marks`. (b) Both lack
-   `marks`.
+   (a) Microsoft reads and writes it, Gmail writes no marks. (b) Neither
+   writes marks.
    *Decided: (a), subject to a live check* against the Microsoft
    test account. If it fails, (b) holds for Microsoft. Either way, the
    send answers whether the original was marked, and the account's
@@ -519,9 +523,8 @@ Decided 2026-10-12, each with the options weighed and why.
 ## 8. The UI and the MCP server without provider knowledge
 
 **Decided 2026-10-12: U1 to U5, and U6 after the rest.** The rules
-above make the API the same
-for every account. The UI and the MCP server should then know nothing
-about providers either: what they show and offer follows from the API's
+above make the API the same for every account. The UI and the MCP
+server then know nothing about providers either: what they show and offer follows from the API's
 answers alone. A new adapter, or a capability that changes, then needs
 no change in either.
 
@@ -580,12 +583,12 @@ for every set of offered operations: an account without `move`, without
 `keywords`, with marks read only. The provider's own adapter is then
 tested at the API, not in the UI.
 
-**U6. Setting up an account, described by the domain.** Optional. Each
+**U6. Setting up an account, described by the domain.** Each
 kind of account describes its connection: the fields, their defaults
 and hints, the ways to sign in. The UI draws the form from it. Then a
 new adapter needs no new template. It is the one place the UI still
-knows providers, and the change is the largest of the six, so it can
-come later.
+knows providers, and the change is the largest of the six, so it
+comes last.
 
 U1 to U5 belong to section 5, step 8. U6 follows as the last step,
 once the rest is done.

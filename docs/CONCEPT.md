@@ -250,7 +250,8 @@ domain decides that, and `GET /v1/accounts/{id}` lists the capabilities
 so a client can tell in advance. `/v1/me` names them per account as well. Since
 2026-10-06 they include `flags` (read state, stars, keywords), `folders`
 (more than the inbox: folders, moving, the trash) and `search` (a filtered
-list). Every adapter but `pop3` has all three. The UI offers no action an
+list). Every adapter but `pop3` has all three. Gmail has `flags` but
+keeps no keywords (5.5), one of the gaps 5.11 closes. The UI offers no action an
 account cannot do, and the MCP server's `list_accounts` names what an
 account lacks.
 
@@ -778,8 +779,8 @@ The capabilities become finer, each guarding one thing: `read_state`,
 `stars`, `keywords`, `marks` (two lists, the marks of RFC 8621 an
 account reads and those it writes), `folders`, `move`, `trash`, `purge`,
 `labels`, `search`, `drafts`, `send`, `sent_copy`, `threads`, `push`
-and `external_changes`. `flags` goes. `stable_ids`, `delta` and
-`server_search` leave the API.
+and `external_changes`, and one for `refused`, named with the work.
+`flags` goes. `stable_ids`, `delta` and `server_search` leave the API.
 
 Further decisions: `date` is the Date header everywhere, and a new
 field `received` carries the received time, by which lists sort and
@@ -791,8 +792,8 @@ its own rules. A reply answers whether the original was marked.
 
 **The search runs on the provider's server.** How text matches is
 therefore the provider's: every account finds whole words, IMAP also
-parts of words, Microsoft beginnings of words. The contract promises
-whole words.
+parts of words, Microsoft beginnings of words **(to verify)**. The
+contract promises whole words.
 
 **The UI and the MCP server know no providers.** The API answers per
 account the operations its caller can run there, capabilities and

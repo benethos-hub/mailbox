@@ -405,7 +405,7 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 Decided 2026-10-12 (5.11). Every mailbox is operated the same way,
 and what an account cannot do answers `501`, announced by its
 capabilities. [UNIFORM.md](UNIFORM.md) section 5 holds the work in
-order, each step a pull request of its own:
+order, each step one pull request or more:
 
 1. **Bugs without a live check**, against today's documentation
 2. **Bugs with a live check**: Gmail threads a reply, Microsoft answers
