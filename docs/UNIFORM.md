@@ -370,7 +370,11 @@ Step 1 is done. Each step is one pull request or more.
       moves the most code. Done.
    2. IMAP orders the steps of a change of flags and folder. Done.
 4. **One test suite for all adapters** (section 7), first with today's
-   capabilities.
+   capabilities. Done: `tests/integration/test_conformance.py` holds
+   every kind of mailbox to the rules through the API, and
+   `tests/data/providers/test_conformance.py` holds each adapter to its
+   contract towards the domain. What falls short today is a strict
+   expected failure that names its place here.
 5. **Capabilities.** The finer set of section 3, read from the server
    (R4), stored as decision 6.11 says, checked by the domain for every
    operation (R3), `501` for every lack (R2). The client, the UI and

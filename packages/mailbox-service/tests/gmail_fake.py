@@ -88,17 +88,18 @@ class FakeGmail:
         self,
         labels: tuple[str, ...] = ("INBOX", "UNREAD"),
         thread: str | None = None,
+        raw: bytes | None = None,
         **fields: Any,
     ) -> str:
-        """A message that arrived, with ``source(**fields)``, in a thread of
-        its own or in ``thread``."""
+        """A message that arrived, with ``raw`` or ``source(**fields)``, in
+        a thread of its own or in ``thread``."""
         number = next(self.numbers)
         message_id = f"{number:016x}"
         self.messages[message_id] = {
             "id": message_id,
             "threadId": thread or f"{number + 0xF00:016x}",
             "labelIds": list(labels),
-            "raw": source(**fields),
+            "raw": raw or source(**fields),
             "internalDate": str(1788000000000 + number * 1000),
         }
         self._record(messagesAdded=[{"message": self._ref(message_id)}])
