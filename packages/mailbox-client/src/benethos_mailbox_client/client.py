@@ -104,6 +104,8 @@ class MailboxClient:
     # --- messages ---------------------------------------------------------------------
 
     list_messages = awaiting(endpoints.list_messages)
+    list_threads = awaiting(endpoints.list_threads)
+    get_thread = awaiting(endpoints.get_thread)
     list_all_messages = awaiting(endpoints.list_all_messages)
     list_changes = awaiting(endpoints.list_changes)
     list_all_changes = awaiting(endpoints.list_all_changes)

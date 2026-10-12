@@ -18,6 +18,8 @@ from ....data.models import (
     MessageSummary,
     MessageUpdate,
     Page,
+    Thread,
+    ThreadSummary,
 )
 from ...responses import download
 from ..deps import Caller, Limit, Mailbox, Search
@@ -73,6 +75,36 @@ async def update_message(
 ) -> MessageSummary:
     """Mark read or unread, star, set keywords. Fields left out stay."""
     return await mailbox.update_message(caller, account_id, message_id, changes)
+
+
+@router.get("/threads")
+async def list_threads(
+    account_id: str,
+    caller: Caller,
+    mailbox: Mailbox,
+    folder: Annotated[str, Query(description="A folder id, or a role such as inbox.")],
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    cursor: str | None = None,
+) -> Page[ThreadSummary]:
+    """The threads of a folder, newest first. Each is listed where its
+    newest message in the folder is, with what the caller may see of the
+    whole thread. A page is a page of the folder's messages, so it may hold
+    fewer threads than `limit`. A later page leaves out what an earlier
+    one listed. POP3 answers `501`."""
+    return await mailbox.list_threads(
+        caller, account_id, folder_id=folder, limit=limit, cursor=cursor
+    )
+
+
+@router.get("/threads/{thread_id}")
+async def get_thread(
+    account_id: str, thread_id: str, caller: Caller, mailbox: Mailbox
+) -> Thread:
+    """A thread with its messages in every folder, oldest first, those the
+    caller may see. A message names its thread in `thread_id`. A longer
+    thread lists its newest messages and says `truncated`. POP3 answers
+    `501`."""
+    return await mailbox.get_thread(caller, account_id, thread_id)
 
 
 @after_drafts.post("/messages/batch")

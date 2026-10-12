@@ -7,8 +7,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.assembly import Services
+from benethos_mailbox_service.assembly import Services, create_app
+from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.domain.rights.access import Access
@@ -18,7 +20,7 @@ from benethos_mailbox_service.errors import (
     NotSupportedError,
 )
 
-from ...conftest import ADMIN
+from ...conftest import ADMIN, admin_bearer
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from ...jmap_fake import FakeJmap
 from ..sync.test_threads import header
@@ -214,3 +216,27 @@ async def test_a_folder_out_of_reach_lists_no_threads(
             limit=10,
             cursor=None,
         )
+
+
+# --- the API -------------------------------------------------------------------------
+
+
+def test_the_routes_answer_threads(
+    jmap_services: Services, jmap_account_id: str, jmap_server: FakeJmap
+) -> None:
+    jmap_server.add_email(make_message("Hello"), thread="T1")
+    jmap_server.add_email(make_message("Re: Hello"), mailbox="sent", thread="T1")
+    app = create_app(Settings(storage="memory"), jmap_services)
+    client = TestClient(app, headers=admin_bearer(jmap_services))
+    base = f"/v1/accounts/{jmap_account_id}/threads"
+    listed = client.get(base, params={"folder": "inbox"})
+    assert listed.status_code == 200, listed.text
+    [summary] = [t for t in listed.json()["items"] if t["id"] == "T1"]
+    assert (summary["message_count"], summary["truncated"]) == (2, False)
+    assert "messages" not in summary
+    one = client.get(f"{base}/T1")
+    assert one.status_code == 200
+    assert [m["subject"] for m in one.json()["messages"]] == ["Hello", "Re: Hello"]
+    assert client.get(f"{base}/T9").json()["error"]["code"] == "not_found"
+    assert client.get(base).status_code == 422  # a folder is needed
+    assert client.get(base, params={"folder": "inbox", "limit": 51}).status_code == 422

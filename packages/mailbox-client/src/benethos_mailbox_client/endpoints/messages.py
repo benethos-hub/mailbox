@@ -324,9 +324,9 @@ def message(found: dict[str, Any]) -> Message:
     reference = found.get("reference")
     return Message(
         **_summary_fields(found),
-        cc=_addresses(found.get("cc")),
-        bcc=_addresses(found.get("bcc")),
-        reply_to=_addresses(found.get("reply_to")),
+        cc=addresses(found.get("cc")),
+        bcc=addresses(found.get("bcc")),
+        reply_to=addresses(found.get("reply_to")),
         message_id_header=found.get("message_id_header"),
         in_reply_to=found.get("in_reply_to"),
         text_body=found.get("text_body"),
@@ -347,7 +347,7 @@ def _summary_fields(found: dict[str, Any]) -> dict[str, Any]:
         "folder_ids": [str(f) for f in found.get("folder_ids") or []],
         "subject": found.get("subject"),
         "sender": _address(sender) if sender else None,
-        "to": _addresses(found.get("to")),
+        "to": addresses(found.get("to")),
         "date": maybe_time(found.get("date")),
         "snippet": found.get("snippet"),
         "unread": bool(found.get("unread")),
@@ -361,7 +361,7 @@ def _address(found: dict[str, Any]) -> Address:
     return Address(email=str(found["email"]), name=found.get("name"))
 
 
-def _addresses(found: list[dict[str, Any]] | None) -> list[Address]:
+def addresses(found: list[dict[str, Any]] | None) -> list[Address]:
     return [_address(item) for item in found or []]
 
 

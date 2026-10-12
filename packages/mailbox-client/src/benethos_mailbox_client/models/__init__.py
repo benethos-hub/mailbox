@@ -38,6 +38,7 @@ from .secrets import Secret
 from .sending import AttachmentSource, OutgoingFile, Recipient, Sent
 from .sends import SendRecord
 from .status import AccountHealth, Status, Worker
+from .threads import Thread, ThreadSummary
 from .tokens import NewToken, Token
 from .users import NewPassword, User
 from .webhooks import NewWebhook, Webhook, WebhookDetail, WebhookPost, WebhookSecret
@@ -71,6 +72,8 @@ __all__ = [
     "StoredCredential",
     "Account",
     "Paged",
+    "Thread",
+    "ThreadSummary",
     "Address",
     "AttachedFile",
     "AttachmentSource",

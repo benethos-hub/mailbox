@@ -407,6 +407,7 @@ packages/mailbox-client/
                         #   attachment, flags, keywords and moves for
                         #   one or many, deleting; the page the drafts
                         #   read too
+      threads.py        # the threads of a folder, one thread
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a message, send a draft
       sends.py          # the audit of sends
@@ -442,6 +443,7 @@ packages/mailbox-client/
       messages.py       # a message and its summary, a page, the
                         #   changes, a batch's outcome, an
                         #   attachment's bytes
+      threads.py        # a thread and its summary
       sending.py        # a recipient, what a send answered
       sends.py          # a record of the audit of sends
       rights.py         # a grant, the catalogue of rights

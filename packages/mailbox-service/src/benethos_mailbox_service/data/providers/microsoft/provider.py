@@ -388,9 +388,9 @@ class MicrosoftProvider:
         return []
 
     async def thread_messages(self, thread_id: str, limit: int) -> ThreadMessages:
-        """A conversation's messages in every folder, filtered by its id.
-        Graph refuses an order beside this filter, so they are sorted here,
-        and of a longer conversation the pages read first are kept
+        """A conversation's messages in every folder, filtered by its id,
+        seen live. Graph refuses an order beside this filter, so they are
+        sorted here. Of a longer conversation the pages read first are kept
         **(unverified)**."""
         conversation = thread_id.replace("'", "''")
         params = {
