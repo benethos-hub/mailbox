@@ -40,7 +40,12 @@ def update_folder(
         if retried and new in names(raws):
             return box.folder(new)  # the first try renamed it
         raise missing("folder", folder_id)
-    new = full_name(box, raws, name, parent_id)
+    if parent_id == box.folder(old).parent_id:
+        # Where it is: below a folder that holds no messages and is not
+        # listed, it stays there.
+        new = in_place(box, raws, old, name)
+    else:
+        new = full_name(box, raws, name, parent_id)
     if new == old:
         return box.folder(old)
     if new in names(raws):
@@ -74,6 +79,16 @@ def full_name(box: Mailbox, raws: list[Any], name: str, parent_id: str | None) -
     if not found:
         raise NotSupportedError("the mail server has no folder hierarchy")
     return parent + found + name
+
+
+def in_place(box: Mailbox, raws: list[Any], old: str, name: str) -> str:
+    """The server's name for ``old`` renamed to ``name`` where it is."""
+    found = delimiter(box, raws)
+    if found and found in name:
+        raise BadRequestError(f"a folder name cannot contain {found!r}: use parent_id")
+    if found and found in old:
+        return old.rsplit(found, 1)[0] + found + name
+    return box.session.folders.personal_namespace().prefix + name
 
 
 def delimiter(box: Mailbox, raws: list[Any]) -> str | None:

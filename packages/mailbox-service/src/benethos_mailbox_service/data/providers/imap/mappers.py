@@ -140,6 +140,7 @@ def folders(raws: list[RawFolder], prefix: str = "") -> list[Folder]:
     localised names for roles no flag claimed. ``prefix``: that of the
     user's personal namespace, such as ``INBOX.``."""
     found = [f for f in (folder(raw, prefix) for raw in raws) if f is not None]
+    found = _below_listed(found, raws, prefix)
     claimed = {f.role for f in found if f.role is not None}
     names = {f.id: f.name.casefold() for f in found}
     result = []
@@ -150,6 +151,29 @@ def folders(raws: list[RawFolder], prefix: str = "") -> list[Folder]:
                     one = one.model_copy(update={"role": role})
                     claimed.add(role)
                     break
+        result.append(one)
+    return result
+
+
+def _below_listed(
+    found: list[Folder], raws: list[RawFolder], prefix: str
+) -> list[Folder]:
+    """Each folder below the nearest one listed. A folder that holds no
+    messages (``\\Noselect``) is not listed, so its subfolders go to the
+    one above it, or to the top."""
+    listed = {f.id for f in found}
+    marks = {folder_id(raw.name): raw.delimiter for raw in raws}
+    result = []
+    for one in found:
+        parent = one.parent_id
+        mark = marks.get(one.id)
+        while parent is not None and parent not in listed:
+            name = folder_name(parent)
+            above = name.rsplit(mark, 1)[0] if mark and mark in name else None
+            top = above is None or above + (mark or "") == prefix
+            parent = None if top or above is None else folder_id(above)
+        if parent != one.parent_id:
+            one = one.model_copy(update={"parent_id": parent})
         result.append(one)
     return result
 

@@ -84,6 +84,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `GET /v1/messages` with a `folder` role names each account without such
   a folder in `incomplete`, on the first page, as `not_found`. It left
   them out without a word.
+- An IMAP folder below one that holds no messages (`\Noselect`), which
+  is not listed, names the nearest listed folder above as `parent_id`,
+  or none. It named the unlisted one. Renamed, it stays where it is on
+  the server.
 
 ## [0.4.1] - 2026-10-10
 

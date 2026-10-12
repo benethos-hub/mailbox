@@ -335,6 +335,7 @@ Nothing of it is started. Each step is one pull request or more.
    5. `list_all_messages` names an account without the role in
       `incomplete`. Done.
    6. IMAP keeps no `\Noselect` folder as a `parent_id`, or lists it.
+      Done: its subfolders go below the nearest listed folder.
    7. After an expired JMAP state, the messages of the gap are reported
       as created.
    8. A replaced draft never leaves two: where the old one cannot be
