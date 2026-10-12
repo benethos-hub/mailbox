@@ -327,15 +327,17 @@ class FakeGmail:
     def _send(self, body: dict[str, Any]) -> httpx.Response:
         raw = base64.urlsafe_b64decode(body["raw"] + "==")
         self.sent.append(raw)
-        message_id = self._stored(raw, ["SENT"])
+        message_id = self._stored(raw, ["SENT"], body.get("threadId"))
         return _ok(self._ref(message_id))
 
-    def _stored(self, raw: bytes, labels: list[str]) -> str:
+    def _stored(self, raw: bytes, labels: list[str], thread: str | None = None) -> str:
+        """As Gmail does: a message joins the thread it is told, else one
+        of its own, whatever its headers say."""
         number = next(self.numbers)
         message_id = f"{number:016x}"
         self.messages[message_id] = {
             "id": message_id,
-            "threadId": f"t{number:015x}",
+            "threadId": thread or f"t{number:015x}",
             "labelIds": labels,
             "raw": raw,
             "internalDate": str(1788000000000 + number * 1000),
@@ -356,7 +358,7 @@ class FakeGmail:
         if draft_id is not None and draft_id not in self.drafts:
             return _missing()
         raw = base64.urlsafe_b64decode(body["message"]["raw"] + "==")
-        message_id = self._stored(raw, ["DRAFT"])
+        message_id = self._stored(raw, ["DRAFT"], body["message"].get("threadId"))
         if draft_id is None:
             draft_id = f"r{next(self.numbers)}"
         else:
@@ -388,7 +390,10 @@ def _matches(message: dict[str, Any], term: str) -> bool:
     term = term.removeprefix("-")
     labels = set(message["labelIds"])
     text = message["raw"].decode().lower()
-    if term == "is:unread":
+    if term.startswith("rfc822msgid:"):
+        wanted = term.removeprefix("rfc822msgid:").strip("<>").lower()
+        hit = f"<{wanted}>" in _header(text, "message-id")
+    elif term == "is:unread":
         hit = "UNREAD" in labels
     elif term == "is:starred":
         hit = "STARRED" in labels

@@ -348,6 +348,7 @@ Step 1 is done. Each step is one pull request or more.
        or repeating them, though IMAP orders by UID. Done.
 2. **Bugs with a live check** against the test accounts, in this order:
    1. Gmail sends a reply and a draft with the original's `threadId`.
+      Done, checked live.
    2. Microsoft answers the text body and `in_reply_to`.
    3. Microsoft answers the sent copy's id, and lists the attachments
       of a mail with inline images only.

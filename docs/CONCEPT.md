@@ -492,6 +492,9 @@ live against a Gmail account (`live/gmail.py`):
   `IMPORTANT`, the categories and the chats are left out. Gmail has no
   keywords: setting one answers 501. A draft reads `$draft`, from its
   label `DRAFT`, as on the other providers.
+- A reply and its draft name the thread of the mail they answer, found
+  by its `Message-ID` (`rfc822msgid:`). Gmail threads a reply only when
+  told the thread, besides `In-Reply-To`, `References` and the subject.
 - Changes come from `history.list` since a history id, polled by the
   worker (`DELTA`). Push through Pub/Sub is not built (IDEAS.md).
 

@@ -27,8 +27,11 @@ must name it, which the service learns of through Gmail's history only.
 Then the first test account sends one mail to the Gmail test account,
 with umlauts in its subject. It must arrive
 in the inbox, be found by a search, open with its body and source, be
-named by the change feed, and turn read. It is deleted for good in
-Gmail and in the first test account's sent folder. For that the worker polls every 20
+named by the change feed, and turn read. A reply draft to it and a
+reply sent back to the first test account must each be in its thread:
+Gmail puts them there only when told. The draft is deleted, the reply
+deleted for good on both sides. The mail is deleted for good in Gmail
+and in the first test account's sent folder. For that the worker polls every 20
 seconds while the check runs. At the end every mail of this check left
 in either account, of this run or an earlier one, is deleted for good,
 found by the subject's prefix. Credentials and mail content are never
@@ -193,7 +196,7 @@ def check(
     try:
         _receive_and_check(run, client, mailbox, gmail, bot_id, since, subject)
     finally:
-        _sweep(mailbox, [(bot_id, "sent"), (gmail_id, None)])
+        _sweep(mailbox, [(bot_id, "sent"), (bot_id, "inbox"), (gmail_id, None)])
 
 
 def _folders(run: Run, client: httpx.Client, base: str) -> None:
@@ -245,7 +248,10 @@ def _sweep(mailbox: SyncMailboxClient, places: list[tuple[str, str | None]]) -> 
     """What this check left of its mails, deleted for good: a mail that
     arrived after the check gave up, or one of an earlier run."""
     removed = delete_for_good(
-        mailbox, places, SUBJECT, matches=lambda found: found.startswith(SUBJECT)
+        mailbox,
+        places,
+        SUBJECT,
+        matches=lambda found: found.removeprefix("Re: ").startswith(SUBJECT),
     )
     if removed:
         print(f"      cleanup: {removed} mail(s) of the check deleted for good")
@@ -350,10 +356,61 @@ def _receive_and_check(
     )
     read = client.patch(f"{base}/messages/{message.id}", json={"unread": False})
     run.check("it turns read", read.status_code == 200 and not read.json()["unread"])
+    _reply_and_check(run, client, mailbox, base, opened, bot_id)
     purged = client.delete(
         f"{base}/messages/{message.id}", params={"permanent": "true"}
     )
     run.check("deleted for good in Gmail", purged.status_code == 204)
+
+
+def _reply_and_check(
+    run: Run,
+    client: httpx.Client,
+    mailbox: SyncMailboxClient,
+    base: str,
+    original: dict[str, Any],
+    bot_id: str,
+) -> None:
+    """A reply draft and a reply to the mail from the first test account,
+    each in the thread of the mail it answers. Gmail puts it there only
+    when told the thread. The reply goes back to the first test account,
+    and both copies are deleted for good."""
+    reference = {"message_id": original["id"], "action": "reply"}
+    thread = original.get("thread_id")
+    made = client.post(
+        f"{base}/drafts", json={"reference": reference, "text": "A draft."}
+    )
+    if run.check("a reply draft", made.status_code in (200, 201)):
+        draft = client.get(f"{base}/messages/{made.json()['id']}").json()
+        run.check("in the thread it answers", draft.get("thread_id") == thread)
+        run.check(
+            "it names what it answers",
+            (draft.get("reference") or {}).get("message_id") == original["id"],
+        )
+        gone = client.delete(f"{base}/drafts/{made.json()['id']}")
+        run.check("the draft deleted", gone.status_code == 204)
+    sent = client.post(
+        f"{base}/send",
+        json={"reference": reference, "text": "Answered by the live check."},
+    )
+    if not run.check("a reply", sent.status_code == 200, str(sent.status_code)):
+        return
+    copy = sent.json().get("sent_copy_id")
+    if run.check("its copy in Sent", bool(copy)):
+        mine = client.get(f"{base}/messages/{copy}").json()
+        run.check(
+            "in the thread it answers, as Gmail shows it",
+            bool(thread) and mine.get("thread_id") == thread,
+        )
+        held, said = thread_holds(client, base, original["id"])
+        run.check("the thread holds both", held, said)
+        purged = client.delete(f"{base}/messages/{copy}", params={"permanent": "true"})
+        run.check("the copy deleted for good", purged.status_code == 204)
+    back = messages_with_subject(
+        mailbox, bot_id, f"Re: {original['subject']}", folder="inbox", tries=40, pause=5
+    )
+    if run.check("the reply arrives", bool(back)):
+        mailbox.delete_message(bot_id, back[0].id, permanent=True)
 
 
 def _labels(run: Run, client: httpx.Client, base: str, copy: str) -> None:
