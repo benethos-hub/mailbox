@@ -5,18 +5,23 @@ id of its own at Gmail, but the API names it by the id of the message
 that holds it: that message has the label ``DRAFT``. Gmail gives a
 draft a new message when it is replaced, so a replaced draft gets a
 new id.
+
+Gmail puts a reply into the thread of the mail it answers only when it
+is told the thread, besides ``In-Reply-To``, ``References`` and a
+matching subject. A reply and its draft name it, found by the answered
+mail's ``Message-ID``.
 """
 
 from __future__ import annotations
 
 from ....common.opaque import to_base64
 from ....errors import MailboxServiceError, NotFoundError, missing
-from ...mail import compose
+from ...mail import compose, parse
 from ...models import MessageSummary, Page, SentMessage
 from . import mappers, reading
 from .api import GmailApi, id_
 from .messages import list_messages
-from .shapes import Draft, Drafts, GmailMessage
+from .shapes import Draft, Drafts, GmailMessage, Messages
 
 
 async def send(
@@ -25,7 +30,9 @@ async def send(
     """Gmail takes the recipients from the headers. Those the headers do
     not name are the Bcc ones: they go in a Bcc header, which Gmail takes
     out before delivery and keeps in the copy."""
-    body = {"raw": to_base64(compose.with_bcc(raw, recipients))}
+    body = await _in_thread(
+        api, raw, {"raw": to_base64(compose.with_bcc(raw, recipients))}
+    )
     sent = await api.read(GmailMessage, "POST", "/messages/send", json_body=body)
     # Sent: from here on nothing may fail, or a client would send again.
     try:
@@ -42,7 +49,7 @@ async def list_drafts(
 
 
 async def save_draft(api: GmailApi, raw: bytes, replaces: str | None) -> MessageSummary:
-    body = {"message": {"raw": to_base64(raw)}}
+    body = {"message": await _in_thread(api, raw, {"raw": to_base64(raw)})}
     if replaces is None:
         draft = await api.read(Draft, "POST", "/drafts", json_body=body)
     else:
@@ -65,6 +72,24 @@ async def delete_draft(api: GmailApi, draft_id: str) -> None:
         await api.call("DELETE", f"/drafts/{id_(gmail_id)}")
     except NotFoundError:
         raise missing("draft", draft_id) from None
+
+
+async def _in_thread(
+    api: GmailApi, raw: bytes, message: dict[str, str]
+) -> dict[str, str]:
+    """``message`` with the thread of the mail ``raw`` answers, where
+    Gmail has that mail."""
+    answered = parse.ParsedMessage(raw).in_reply_to
+    if not answered:
+        return message
+    params = [
+        ("q", f"rfc822msgid:{answered.strip('<>')}"),
+        ("maxResults", "1"),
+        ("includeSpamTrash", "true"),
+    ]
+    found = await api.read(Messages, "GET", "/messages", params=params)
+    thread = next((m.thread_id for m in found.messages if m.thread_id), None)
+    return {**message, "threadId": thread} if thread else message
 
 
 async def _draft_message(api: GmailApi, draft_id: str) -> GmailMessage:

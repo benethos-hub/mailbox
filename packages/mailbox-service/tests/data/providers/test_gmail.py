@@ -390,6 +390,28 @@ async def test_only_a_draft_is_a_draft(gmail: FakeGmail) -> None:
         await provider.save_draft(b"Subject: x\r\n\r\n", message_id)
 
 
+async def test_a_reply_joins_the_thread_it_answers(gmail: FakeGmail) -> None:
+    """Gmail threads a reply only when told the thread: found by the
+    Message-ID it answers. A mail answering nothing Gmail has starts one."""
+    original = gmail.add_message(subject="Plan", message_id="<plan@example.com>")
+    thread = gmail.messages[original]["threadId"]
+    provider = adapter(gmail)
+    reply = (
+        b"From: me@gmail.com\r\nTo: alice@example.com\r\nSubject: Re: Plan\r\n"
+        b"In-Reply-To: <plan@example.com>\r\n"
+        b"References: <plan@example.com>\r\n\r\nYes"
+    )
+    sent = await provider.send(reply, "me@gmail.com", ["alice@example.com"])
+    assert sent.sent_copy is not None and sent.sent_copy.thread_id == thread
+    draft = await provider.save_draft(reply, None)
+    assert draft.thread_id == thread
+    replaced = await provider.save_draft(reply.replace(b"Yes", b"Sure"), draft.id)
+    assert replaced.thread_id == thread
+    elsewhere = reply.replace(b"<plan@example.com>", b"<other@example.com>")
+    alone = await provider.send(elsewhere, "me@gmail.com", ["alice@example.com"])
+    assert alone.sent_copy is not None and alone.sent_copy.thread_id != thread
+
+
 async def test_a_send_names_the_hidden_recipients(gmail: FakeGmail) -> None:
     raw = b"From: me@gmail.com\r\nTo: a@example.com\r\nSubject: Hi\r\n\r\nHello"
     sent = await adapter(gmail).send(

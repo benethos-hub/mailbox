@@ -124,7 +124,8 @@ done. Update the roadmap in the same commit that finishes an item.
   deletes it for good, and
   checks that the change feed learns of it through Gmail's history. Then the first test account
   sends one mail to it, which must arrive in the inbox, be found, open
-  and turn read, and is deleted for good on both sides.
+  and turn read. A reply draft to it and a reply sent back must be in
+  its thread. All is deleted for good on both sides.
 - A test mail server of our own: `sh containers/test-mail-server/setup.sh`
   makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
   `127.0.0.1:30xxx`, two accounts and a local test CA

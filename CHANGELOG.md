@@ -102,6 +102,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `GET /v1/messages` across accounts no longer skips or repeats a mail of
   an IMAP account between pages. IMAP lists by arrival, and an old mail
   filed late threw the pages off. Each page is still newest first.
+- A reply sent or drafted through a Gmail account joins the thread of
+  the mail it answers, in Gmail and in `get_thread`. Gmail started a
+  thread of its own for it, since it threads a reply only when told.
 
 ## [0.4.1] - 2026-10-10
 
