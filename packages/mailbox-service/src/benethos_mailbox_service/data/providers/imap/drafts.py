@@ -4,8 +4,15 @@ found."""
 
 from __future__ import annotations
 
-from ....errors import NotFoundError, ProviderError, missing
+from ....errors import (
+    MailboxServiceError,
+    NotFoundError,
+    NotSupportedError,
+    ProviderError,
+    missing,
+)
 from ...models import FolderRole, MessageSummary, Page
+from .. import rules
 from . import mappers
 from .mailbox import Mailbox
 from .messages import append, get_raw, list_messages, open_writable
@@ -22,6 +29,11 @@ def save_draft(
     drafts = _drafts_folder(box)
     # Checked before the new one is stored: a wrong id changes nothing.
     old = _draft_place(replaces, drafts) if replaces else None
+    if old is not None and not box.session.messages.can_expunge():
+        # The old one could not go: refused before the new one is stored.
+        raise NotSupportedError(
+            "the mail server offers no UIDPLUS: a draft cannot be replaced"
+        )
     if old is not None and not retried:
         # A retried step may have removed it already, after it stored
         # the new one, which append then finds by its Message-ID.
@@ -32,11 +44,23 @@ def save_draft(
     if saved is None:
         raise ProviderError("the draft was stored but cannot be found again")
     if old is not None:
-        try:
-            _delete_draft_at(box, old)
-        except NotFoundError:
-            pass  # gone already: a retried step removed it before the drop
+        _replaced(box, old, saved.id)
     return saved
+
+
+def _replaced(box: Mailbox, old: mappers.Place, new_id: str) -> None:
+    """The old draft goes. Where it cannot, the new one goes again, as
+    ``rules.replaced`` does for the other providers."""
+    try:
+        _delete_draft_at(box, old)
+    except NotFoundError:
+        pass  # gone already: a retried step removed it before the drop
+    except MailboxServiceError as exc:
+        try:
+            _delete_draft_at(box, mappers.parse_message_id(new_id))
+        except MailboxServiceError:
+            raise rules.kept_both(exc, new_id) from exc
+        raise
 
 
 def get_draft(box: Mailbox, draft_id: str) -> bytes:

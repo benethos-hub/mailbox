@@ -41,6 +41,7 @@ from benethos_mailbox_service.errors import (
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
+    ProviderError,
     ProviderUnavailableError,
 )
 
@@ -251,6 +252,33 @@ async def test_drafts(graph: FakeGraph) -> None:
     assert b"Second" in await provider.get_draft(replaced.id)
     await provider.delete_draft(replaced.id)
     assert replaced.id not in graph.messages
+
+
+async def test_a_draft_not_replaced_leaves_one(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The old one cannot go: the new one goes again, and the error says
+    so. Where even that fails, it names the new one."""
+    provider = adapter(graph)
+    raw = b"Subject: Plan\r\nContent-Type: text/plain\r\n\r\nFirst\r\n"
+    saved = await provider.save_draft(raw, None)
+    real = provider._delete_for_good
+    stuck = {saved.id}
+
+    async def delete(message_id: str, trash: str | None = None) -> None:
+        if message_id in stuck:
+            raise ProviderUnavailableError("graph is busy")
+        await real(message_id, trash)
+
+    monkeypatch.setattr(provider, "_delete_for_good", delete)
+    with pytest.raises(ProviderUnavailableError, match="busy"):
+        await provider.save_draft(raw, saved.id)
+    assert list(graph.messages) == [saved.id]
+    # Even the new one cannot go.
+    monkeypatch.setattr(provider, "_delete_for_good", lambda *_: delete(saved.id))
+    with pytest.raises(ProviderError, match="replacing it stays beside it"):
+        await provider.save_draft(raw, saved.id)
+    assert len(graph.messages) == 2
 
 
 async def test_draft_calls_reach_drafts_only(graph: FakeGraph) -> None:

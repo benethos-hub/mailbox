@@ -339,7 +339,8 @@ Nothing of it is started. Each step is one pull request or more.
    7. After an expired JMAP state, the messages of the gap are reported
       as created. Done, for Gmail and Microsoft as well.
    8. A replaced draft never leaves two: where the old one cannot be
-      deleted, the answer still names the new one.
+      deleted, the answer still names the new one. Done: the new one is
+      taken back, and only where that fails too the error names it.
    9. A batch across IMAP folders, and Microsoft's delete for good,
       answer what was done before a step failed.
    10. The list across accounts pages IMAP messages without skipping

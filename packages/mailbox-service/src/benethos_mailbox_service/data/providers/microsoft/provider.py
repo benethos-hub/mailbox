@@ -283,7 +283,11 @@ class MicrosoftProvider:
             content_type="text/plain",
         )
         if replaces is not None:
-            await self._delete_for_good(replaces)
+            await rules.replaced(
+                item.id,
+                lambda: self._delete_for_good(replaces),
+                lambda: self._delete_for_good(item.id),
+            )
         return mappers.summary(item)
 
     async def get_draft(self, draft_id: str) -> bytes:

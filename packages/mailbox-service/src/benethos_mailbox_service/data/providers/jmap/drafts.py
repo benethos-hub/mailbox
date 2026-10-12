@@ -50,7 +50,11 @@ async def save_draft(
     if stored is None:
         raise ProviderError("the draft was stored but cannot be found again")
     if replaces is not None:
-        await _destroy(account, replaces, missing_ok=True)
+        await rules.replaced(
+            stored.id,
+            lambda: _destroy(account, replaces, missing_ok=True),
+            lambda: _destroy(account, stored.id),
+        )
     return mappers.summary(stored)
 
 

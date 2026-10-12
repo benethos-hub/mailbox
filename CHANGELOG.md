@@ -91,6 +91,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - When Gmail, Microsoft or a JMAP server forgot the state of the last
   sync, the mail that arrived since then is reported as
   `message.created`. It was taken as known and never reported.
+- `update_draft` that cannot delete the draft it replaces takes the new
+  one back and answers the error, so one draft stays. Where even that
+  fails, the error names the new draft. On IMAP without `UIDPLUS` it
+  answers `501` before storing anything. It could leave both drafts.
 
 ## [0.4.1] - 2026-10-10
 

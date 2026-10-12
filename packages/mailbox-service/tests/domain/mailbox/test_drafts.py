@@ -30,7 +30,11 @@ from benethos_mailbox_service.data.providers import (
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
-from benethos_mailbox_service.errors import ConflictError, NotFoundError
+from benethos_mailbox_service.errors import (
+    ConflictError,
+    NotFoundError,
+    NotSupportedError,
+)
 
 from ...conftest import ADMIN, bearer_for, create_account
 from ...data.providers.test_imap import provider
@@ -127,6 +131,19 @@ async def test_replacing_a_draft_that_is_gone_stores_nothing(box: FakeMailBox) -
         await imap.save_draft(draft_bytes("Two"), first.id)
     assert [c for c in box.calls if c[0] == "append"] == appends
     assert (await imap.list_drafts(limit=10, cursor=None)).items == []
+
+
+async def test_without_uidplus_a_draft_is_not_replaced(box: FakeMailBox) -> None:
+    """The old one could not go: refused before the new one is stored."""
+    imap = provider(box)
+    first = await imap.save_draft(draft_bytes("One"), None)
+    box.announced = ["IMAP4REV1", "MOVE"]
+    appends = [c for c in box.calls if c[0] == "append"]
+    with pytest.raises(NotSupportedError, match="UIDPLUS"):
+        await imap.save_draft(draft_bytes("Two"), first.id)
+    assert [c for c in box.calls if c[0] == "append"] == appends
+    page = await imap.list_drafts(limit=10, cursor=None)
+    assert [m.subject for m in page.items] == ["One"]
 
 
 async def test_a_draft_reads_back_as_stored(box: FakeMailBox) -> None:

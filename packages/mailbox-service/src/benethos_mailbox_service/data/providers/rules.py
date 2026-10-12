@@ -23,6 +23,7 @@ from ...errors import (
     ConflictError,
     MailboxServiceError,
     ProviderAuthError,
+    ProviderError,
     ProviderUnavailableError,
 )
 from ..models import Folder, FolderRole, MessageFilter, MessageUpdate
@@ -97,6 +98,31 @@ class After:
 
 def role_folder(folders: list[Folder], role: FolderRole) -> Folder | None:
     return next((f for f in folders if f.role is role), None)
+
+
+async def replaced(
+    new_id: str,
+    drop_old: Callable[[], Awaitable[None]],
+    drop_new: Callable[[], Awaitable[None]],
+) -> None:
+    """A draft stored anew drops the one it replaces. Where that fails,
+    the new one goes again, so the replacing changed nothing. Where even
+    that fails, the error names the new one beside the old."""
+    try:
+        await drop_old()
+    except MailboxServiceError as exc:
+        try:
+            await drop_new()
+        except MailboxServiceError:
+            raise kept_both(exc, new_id) from exc
+        raise
+
+
+def kept_both(failure: MailboxServiceError, new_id: str) -> ProviderError:
+    """A replaced draft that stayed, beside the new one."""
+    return ProviderError(
+        f"{failure.message}: the draft {new_id} replacing it stays beside it"
+    )
 
 
 def require_role_folder(folders: list[Folder], role: FolderRole) -> Folder:
