@@ -337,7 +337,7 @@ Nothing of it is started. Each step is one pull request or more.
    6. IMAP keeps no `\Noselect` folder as a `parent_id`, or lists it.
       Done: its subfolders go below the nearest listed folder.
    7. After an expired JMAP state, the messages of the gap are reported
-      as created.
+      as created. Done, for Gmail and Microsoft as well.
    8. A replaced draft never leaves two: where the old one cannot be
       deleted, the answer still names the new one.
    9. A batch across IMAP folders, and Microsoft's delete for good,

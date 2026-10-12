@@ -51,7 +51,15 @@ from ..changes import (
     MessagesDeleted,
     MessagesUpdated,
 )
-from .passes import Counts, DeltaState, Seen, delta_state, index_changes, moves
+from .passes import (
+    Counts,
+    DeltaPass,
+    DeltaState,
+    Seen,
+    delta_state,
+    index_changes,
+    moves,
+)
 from .threads import REFERENCES, IndexThreads, new_thread_id
 
 T = TypeVar("T")
@@ -314,60 +322,39 @@ class SyncService:
         folders = await self._adapters.call(account_id, lambda p: p.folder_states())
         before = self._index.folder_states(account_id)
         states: dict[str, str] = {}
-        seen: dict[str, datetime | None] = {}  # id -> created
-        removed: set[str] = set()
-        where: dict[str, str] = {}  # id -> the folder it was seen in
-        # id -> the folder it left. Empty where several folders say so: a
-        # provider that cannot tell where a deleted message was (JMAP)
-        # reports it removed from each.
-        gone_from: dict[str, str] = {}
-        arrived_new: set[str] = set()  # in folders asked for the first time
-        since: dict[str, datetime] = {}
+        found = DeltaPass()
         for folder_id in folders:
             last = delta_state(before.get(folder_id))
+            expired = None  # since when, where the provider forgot the token
             try:
-                found = await self._folder_changes(
+                changes = await self._folder_changes(
                     account_id, folder_id, last.token if last else None
                 )
             except ChangesExpiredError:
-                last = None
-                found = await self._folder_changes(account_id, folder_id, None)
-            states[folder_id] = DeltaState(found.token, now).stored()
-            for message in found.changed:
-                where[message.id] = folder_id
-            if last is None:
-                arrived_new |= {m.id for m in found.changed}
-                continue
-            for message in found.changed:
-                seen[message.id] = message.created
-                since[message.id] = last.at
-            removed |= set(found.removed)
-            for message_id in found.removed:
-                was = gone_from.setdefault(message_id, folder_id)
-                if was != folder_id:
-                    gone_from[message_id] = ""
+                expired, last = (last.at if last else None), None
+                changes = await self._folder_changes(
+                    account_id, folder_id, None, expired
+                )
+            states[folder_id] = DeltaState(changes.token, now).stored()
+            found.add(folder_id, changes, last, expired)
         self._index.apply(account_id, IndexChanges(states=states))
         if not before:
             return Counts(len(folders))
-        # Deleted: removed and seen nowhere. Moved: removed here, seen there.
-        created = [
-            i
-            for i, at in seen.items()
-            if i not in removed and at is not None and at >= since[i]
-        ]
-        updated = [i for i in seen if i not in created]
-        updated += sorted((removed & arrived_new) - set(seen))
-        deleted = sorted(removed - set(seen) - arrived_new)
-        self.changed(MessagesCreated(account_id, created, where))
-        self.changed(MessagesUpdated(account_id, updated, where))
-        self.changed(MessagesDeleted(account_id, deleted, gone_from))
+        created, updated, deleted = found.outcome()
+        self.changed(MessagesCreated(account_id, created, found.where))
+        self.changed(MessagesUpdated(account_id, updated, found.where))
+        self.changed(MessagesDeleted(account_id, deleted, found.gone_from))
         return Counts(len(folders), len(created), len(updated), len(deleted))
 
     async def _folder_changes(
-        self, account_id: str, folder_id: str, token: str | None
+        self,
+        account_id: str,
+        folder_id: str,
+        token: str | None,
+        since: datetime | None = None,
     ) -> FolderChanges:
         return await self._adapters.call(
-            account_id, lambda p: deltas(p).folder_changes(folder_id, token)
+            account_id, lambda p: deltas(p).folder_changes(folder_id, token, since)
         )
 
     async def _sync(self, account_id: str) -> Counts:

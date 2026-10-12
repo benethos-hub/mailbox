@@ -193,5 +193,7 @@ class JmapProvider:
     async def wait_for_change(self, timeout: float) -> bool:
         return await self._changes.wait_for_change(timeout)
 
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
-        return await self._changes.folder_changes(folder_id, token)
+    async def folder_changes(
+        self, folder_id: str, token: str | None, since: datetime | None = None
+    ) -> FolderChanges:
+        return await self._changes.folder_changes(folder_id, token, since)

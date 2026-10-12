@@ -78,7 +78,9 @@ class Changes:
             for message_id, email in found.items()
         }
 
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+    async def folder_changes(
+        self, folder_id: str, token: str | None, since: datetime | None = None
+    ) -> FolderChanges:
         """The token is the state of the account's emails. JMAP tells what
         changed in the account, not in a folder: a message counts as changed
         in the folder it is in now and as removed from every other one, so a
@@ -87,7 +89,11 @@ class Changes:
             raise missing("folder", folder_id)
         if token is None:
             state, ids = await self._contents(folder_id)
-            return FolderChanges(state, [ChangedMessage(i) for i in ids])
+            new = set((await self._contents(folder_id, since))[1]) if since else set()
+            now = self._now()
+            return FolderChanges(
+                state, [ChangedMessage(i, now if i in new else None) for i in ids]
+            )
         changes = await self._changes(token)
         changed: list[ChangedMessage] = []
         removed = list(changes.destroyed)
@@ -121,14 +127,20 @@ class Changes:
             raise ProviderUnavailableError("the JMAP server closed its event stream")
         return False
 
-    async def _contents(self, folder_id: str) -> tuple[str, list[str]]:
+    async def _contents(
+        self, folder_id: str, after: datetime | None = None
+    ) -> tuple[str, list[str]]:
         """The state of the account's emails, then the ids of every message
-        in the folder. The state is read first: a message that arrives while
-        the folder is read counts again with the next changes."""
+        in the folder, or of those received ``after``. The state is read
+        first: a message that arrives while the folder is read counts again
+        with the next changes."""
         owner = await self._account.id()
+        found: dict[str, str] = {"inMailbox": folder_id}
+        if after is not None:
+            found["after"] = mappers.utc_date(after)
         query = {
             "accountId": owner,
-            "filter": {"inMailbox": folder_id},
+            "filter": found,
             "sort": mappers.SORT,
             "limit": QUERY_PAGE,
         }

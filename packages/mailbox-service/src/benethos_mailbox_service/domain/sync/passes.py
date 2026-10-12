@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 from ...common.clock import iso, parse_iso
-from ...data.providers import ThreadHeaders
+from ...data.providers import FolderChanges, ThreadHeaders
 from ...data.storage import IndexChanges, IndexEntry, ThreadChain
 
 
@@ -80,6 +80,65 @@ def delta_state(stored: str | None) -> DeltaState | None:
     except (ValueError, TypeError, KeyError):
         return None
     return None if at is None else DeltaState(str(value["token"]), at)
+
+
+@dataclass
+class DeltaPass:
+    """What the folders of one delta pass told, folder by folder, and what
+    was created, updated and deleted by it."""
+
+    seen: dict[str, datetime | None] = field(default_factory=dict)  # -> created
+    since: dict[str, datetime] = field(default_factory=dict)
+    removed: set[str] = field(default_factory=set)
+    where: dict[str, str] = field(default_factory=dict)  # -> its folder now
+    # -> the folder it left. Empty where several folders say so: a provider
+    # that cannot tell where a deleted message was (JMAP) reports it
+    # removed from each.
+    gone_from: dict[str, str] = field(default_factory=dict)
+    known: set[str] = field(default_factory=set)  # listed, not reported
+
+    def add(
+        self,
+        folder_id: str,
+        found: FolderChanges,
+        last: DeltaState | None,
+        expired: datetime | None,
+    ) -> None:
+        """One folder's changes since ``last``. Without it, the folder is
+        listed whole: known before, or new in a folder asked for the first
+        time. After a forgotten token (``expired``), what came since then
+        is new."""
+        for message in found.changed:
+            self.where[message.id] = folder_id
+            at = message.created
+            if last is not None:
+                self.seen[message.id] = at
+                self.since[message.id] = last.at
+            elif expired is not None and at is not None and at >= expired:
+                self.seen[message.id] = at
+                self.since[message.id] = expired
+            else:
+                self.known.add(message.id)
+        if last is None:
+            return
+        self.removed |= set(found.removed)
+        for message_id in found.removed:
+            was = self.gone_from.setdefault(message_id, folder_id)
+            if was != folder_id:
+                self.gone_from[message_id] = ""
+
+    def outcome(self) -> tuple[list[str], list[str], list[str]]:
+        """Created, updated and deleted. Deleted: removed and seen nowhere.
+        Moved: removed here, seen there."""
+        created = [
+            i
+            for i, at in self.seen.items()
+            if i not in self.removed and at is not None and at >= self.since[i]
+        ]
+        updated = [i for i in self.seen if i not in created]
+        updated += sorted((self.removed & self.known) - set(self.seen))
+        deleted = sorted(self.removed - set(self.seen) - self.known)
+        return created, updated, deleted
 
 
 def moves(seen: Seen) -> dict[IndexEntry, str]:

@@ -1957,6 +1957,13 @@ One that is new to a folder counts as created when Graph dates its
 creation after the last pass, else as updated. A message that arrives
 while a pass runs may therefore count as updated.
 
+A provider can forget the token of the last pass: Graph and Gmail after
+a while, a JMAP server when it keeps no more changes. The folder is then
+read whole, and the messages that arrived since the last pass count as
+created: Graph dates each, Gmail and JMAP are asked for those received
+since then. The rest is known already. What was deleted in the gap is
+not reported.
+
 **Fallback without the service**, for development and tests only:
 a test harness can run the service app and the MCP client in one process
 via `httpx.ASGITransport`. The REST contract stays the same, there is just

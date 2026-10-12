@@ -61,6 +61,20 @@ async def test_the_sync_reports_what_changed(
     )
 
 
+async def test_mail_of_a_forgotten_state_is_reported(
+    jmap_services: Services, jmap_account_id: str, jmap_server: FakeJmap
+) -> None:
+    """The server forgot the state of the last pass: the folders are read
+    whole, and what arrived since then is new, the rest known."""
+    await jmap_services.sync.sync_account(jmap_account_id)
+    new = jmap_server.add_email(make_message("New"), received="2099-01-01T00:00:00Z")
+    jmap_server.oldest = jmap_server.counter + 1
+    await jmap_services.sync.sync_account(jmap_account_id)
+    assert recorded(jmap_services, jmap_account_id) == [
+        ("message.created", new, "inbox")
+    ]
+
+
 async def test_a_sync_without_changes_asks_once(
     jmap_services: Services, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:

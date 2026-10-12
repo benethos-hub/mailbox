@@ -191,7 +191,12 @@ def query_filter(folder_id: str | None, search: MessageFilter | None) -> dict[st
 
 
 def _midnight(day: date) -> str:
-    return datetime.combine(day, time(), UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return utc_date(datetime.combine(day, time(), UTC))
+
+
+def utc_date(moment: datetime) -> str:
+    """A moment as JMAP's ``UTCDate``."""
+    return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 # Newest first, as every list of the API.

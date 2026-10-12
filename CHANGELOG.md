@@ -88,6 +88,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   is not listed, names the nearest listed folder above as `parent_id`,
   or none. It named the unlisted one. Renamed, it stays where it is on
   the server.
+- When Gmail, Microsoft or a JMAP server forgot the state of the last
+  sync, the mail that arrived since then is reported as
+  `message.created`. It was taken as known and never reported.
 
 ## [0.4.1] - 2026-10-10
 

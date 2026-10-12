@@ -253,10 +253,14 @@ class Deltas(Protocol):
     """Tells what changed in a folder since a token, instead of the sync
     comparing the folder's contents. Gives ``DELTA``."""
 
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+    async def folder_changes(
+        self, folder_id: str, token: str | None, since: datetime | None = None
+    ) -> FolderChanges:
         """What changed in the folder since ``token``. Without a token every
         message counts as changed. A token the provider no longer knows
-        raises ``ChangesExpiredError``."""
+        raises ``ChangesExpiredError``. Without a token but with ``since``,
+        after such an error, the messages that arrived since then carry
+        ``created``."""
         ...
 
 

@@ -114,6 +114,15 @@ async def test_a_message_deleted_for_good_is_removed(gmail: FakeGmail) -> None:
     assert found.changed == [] and found.removed == [message_id]
 
 
+async def test_after_a_forgotten_history_the_new_ones_say_so(gmail: FakeGmail) -> None:
+    older, newer = gmail.add_message(), gmail.add_message()
+    seconds = int(gmail.messages[older]["internalDate"]) // 1000
+    since = datetime.fromtimestamp(seconds + 0.5, UTC)
+    found = await adapter(gmail).folder_changes("INBOX", None, since)
+    created = {m.id: m.created for m in found.changed}
+    assert created[older] is None and created[newer] is not None
+
+
 async def test_a_history_gmail_no_longer_keeps(gmail: FakeGmail) -> None:
     provider = adapter(gmail)
     gmail.oldest = gmail.history_id + 1

@@ -26,6 +26,7 @@ from __future__ import annotations
 import base64
 import time
 from collections.abc import Callable
+from datetime import datetime
 from urllib.parse import urlencode
 
 from ....errors import (
@@ -442,10 +443,13 @@ class MicrosoftProvider:
             for n, body in found.items()
         }
 
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+    async def folder_changes(
+        self, folder_id: str, token: str | None, since: datetime | None = None
+    ) -> FolderChanges:
         """A delta query of the folder's messages. The token is Graph's
         deltaLink, below ``/v1.0``. A message moved out of the folder comes
-        as removed, one moved in as changed, under the same immutable id."""
+        as removed, one moved in as changed, under the same immutable id.
+        Every message carries when it came, so ``since`` asks nothing more."""
         if token is None:
             body = await self._graph.read(
                 Listing[GraphMessage],
