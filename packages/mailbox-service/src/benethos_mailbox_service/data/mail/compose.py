@@ -10,6 +10,7 @@ from datetime import datetime
 from email import message_from_bytes
 from email.headerregistry import Address as HeaderAddress
 from email.message import EmailMessage
+from email.message import Message as MimePart
 from email.parser import BytesHeaderParser, BytesParser
 from email.policy import SMTP, default
 from email.utils import format_datetime, getaddresses, make_msgid
@@ -281,7 +282,9 @@ class Attached(NamedTuple):
 def without_attachments(raw: bytes) -> tuple[bytes, list[Attached]]:
     """``raw`` without the parts attached to it, and those parts, for a
     provider that takes a large message's attachments one by one. The
-    headers and the body stay as they are."""
+    headers and the body stay as they are. A body left alone in its
+    ``multipart/mixed`` takes the container's place, as a message
+    without attachments has it."""
     mail = message_from_bytes(raw, policy=SMTP)
     if not mail.is_multipart():
         return raw, []
@@ -289,8 +292,24 @@ def without_attachments(raw: bytes) -> tuple[bytes, list[Attached]]:
     if not parts:
         return raw, []
     taken = {id(part) for part in parts}
-    mail.set_payload([part for part in mail.iter_parts() if id(part) not in taken])
+    kept: list[MimePart] = [p for p in mail.iter_parts() if id(p) not in taken]
+    if len(kept) == 1:
+        _take_place(mail, kept[0])
+    else:
+        payload: list[MimePart | str] = list(kept)
+        mail.set_payload(payload)
     return mail.as_bytes(), [_attached(part) for part in parts]
+
+
+def _take_place(mail: EmailMessage, body: MimePart) -> None:
+    """``body`` as the whole of ``mail``: its content headers and payload
+    in place of the container's."""
+    for name in {n for n in mail.keys() if n.lower().startswith("content-")}:
+        del mail[name]
+    for name, value in body.items():
+        if name.lower().startswith("content-"):
+            mail[name] = value
+    mail.set_payload(body.get_payload())
 
 
 def _attached(part: EmailMessage) -> Attached:

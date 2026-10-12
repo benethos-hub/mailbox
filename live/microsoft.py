@@ -32,9 +32,11 @@ under the Message-ID the send answered. The send names its copy in Sent
 Items, whose text and file are as sent. A reply to that copy goes to
 the first test account as well, and its own copy names what it answers.
 The copy gets a keyword, an Outlook category, which is taken off again,
-and its conversation must hold it. A mail of about 7 MB follows, beyond
-one Graph request: one file goes in one request, the other through an
-upload session, and both sides must hold them whole. At the end every mail of this check
+and its conversation must hold it. ``--large`` reads, then sends one mail
+of about 7 MB alone, beyond one Graph request: one file goes in one
+request, the other through an upload session, and both sides must hold
+them whole. Outlook.com blocked the test account once after several
+sends in a day, so it stays a run of its own. At the end every mail of this check
 left in either account, of this run or an earlier one, is deleted for
 good, found by the subject. The change feed must name the copy in
 Sent Items, which the service learns of through Graph delta queries only.
@@ -182,9 +184,11 @@ def check(
     ms_id: str,
     bot: dict[str, str],
     bot_id: str,
+    large_only: bool = False,
 ) -> None:
     """What the API answers is checked with ``client``. ``mailbox``, the
-    Python client, finds and deletes the test mail."""
+    Python client, finds and deletes the test mail. ``large_only`` reads,
+    then sends the large mail alone."""
     base = f"/v1/accounts/{ms_id}"
     print("\n== reading")
     verified = client.post(f"{base}/verify")
@@ -210,6 +214,9 @@ def check(
     searched = client.get(f"{base}/messages", params={"q": "zz-no-such-mail-zz"})
     run.check("a search", searched.status_code == 200)
     inline(run, client, base)
+    if large_only:
+        _large_only(run, client, mailbox, ms_id, bot, bot_id)
+        return
 
     print("\n== folders")
     made = client.post(f"{base}/folders", json={"name": "mailbox-service live check"})
@@ -267,8 +274,8 @@ def _sending(
     bot: dict[str, str],
     bot_id: str,
 ) -> None:
-    """A mail and a large one to the first test account, and whatever is
-    left of them deleted for good."""
+    """A mail and a reply to the first test account, and whatever is left
+    of them deleted for good."""
     base = f"/v1/accounts/{ms_id}"
     print("\n== sending, to the first test account only")
     since = client.get(f"{base}/changes").json()["state"]
@@ -276,8 +283,25 @@ def _sending(
     try:
         sending = (ms_id, since, subject)
         send_and_check(run, client, mailbox, sending, bot, bot_id, 4 * SYNC_INTERVAL)
-        print("\n== a large mail, to the first test account only")
-        large(run, client, mailbox, base, bot, bot_id, f"{subject} large")
+    finally:
+        _sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")])
+
+
+def _large_only(
+    run: Run,
+    client: httpx.Client,
+    mailbox: SyncMailboxClient,
+    ms_id: str,
+    bot: dict[str, str],
+    bot_id: str,
+) -> None:
+    """The large mail alone, one send: Outlook.com blocked the test account
+    once after several sends in a day."""
+    base = f"/v1/accounts/{ms_id}"
+    print("\n== a large mail, to the first test account only")
+    subject = f"{SUBJECT} {secrets.token_hex(4)} large"
+    try:
+        large(run, client, mailbox, base, bot, bot_id, subject)
     finally:
         _sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")])
 
@@ -301,6 +325,9 @@ def main() -> int:
         "--connect", action="store_true", help="connect the test account"
     )
     parser.add_argument("--project", action="store_true", help="with the project's app")
+    parser.add_argument(
+        "--large", action="store_true", help="read, then send the large mail alone"
+    )
     options = parser.parse_args()
     env = read_env()
     email = (env.get("LIVE_MICROSOFT_EMAIL") or "").strip().lower()
@@ -336,7 +363,7 @@ def main() -> int:
             ):
                 return 1
             assert bot_id is not None
-            check(run, client, mailbox, account["id"], bot, bot_id)
+            check(run, client, mailbox, account["id"], bot, bot_id, options.large)
     finally:
         stop(process)
     return run.finish()

@@ -116,8 +116,9 @@ done. Update the roadmap in the same commit that finishes an item.
   the first test account too and names what it answers. It gives the
   sent copy a keyword and takes it off, reads its conversation, and
   checks that the change feed learns of the sent copy through Graph
-  delta queries. A mail of about 7 MB follows, its files one by one, a
-  large one through an upload session, and must arrive whole. Where a
+  delta queries. With `--large` it reads, then sends one mail of about
+  7 MB alone, its files one by one, a large one through an upload
+  session, which must arrive whole. Where a
   mail of the inbox has inline images, they must be listed and
   download.
 - Gmail accounts: a Google client of your own, `docs/GOOGLE.md`.
