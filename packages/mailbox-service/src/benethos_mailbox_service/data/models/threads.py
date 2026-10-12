@@ -15,7 +15,11 @@ class ThreadSummary(BaseModel):
 
     id: str
     account_id: str
-    subject: str | None = Field(default=None, description="Of the newest message.")
+    subject: str | None = Field(
+        default=None,
+        description="Of the newest message. In the threads of a folder, of the "
+        "newest one in that folder, which places the thread in the list.",
+    )
     participants: list[Address] = Field(
         default_factory=list,
         description="Who wrote and who was written to, each once, in the "
@@ -24,8 +28,16 @@ class ThreadSummary(BaseModel):
     )
     message_count: int = Field(description="The messages listed.")
     unread_count: int
-    date: datetime | None = Field(default=None, description="Of the newest message.")
-    snippet: str | None = Field(default=None, description="Of the newest message.")
+    date: datetime | None = Field(
+        default=None,
+        description="Of the newest message. In the threads of a folder, of the "
+        "newest one in that folder, which places the thread in the list.",
+    )
+    snippet: str | None = Field(
+        default=None,
+        description="Of the newest message. In the threads of a folder, of the "
+        "newest one in that folder, which places the thread in the list.",
+    )
     folder_ids: list[str] = Field(
         default_factory=list, description="The folders of its messages, each once."
     )

@@ -1,6 +1,7 @@
 {% from "components/ui.html" import pager %}
 {# A page of the threads of one folder: each row opens its conversation,
-   from the folder ``current``. #}
+   from the folder ``current``, and names the folders of its messages by
+   ``tag_names``. #}
 {% if threads %}
 <div class="table-scroll">
   <table>
@@ -18,6 +19,7 @@
         <td>{{ t.date | when }}</td>
         <td>
           {% if t.message_count > 1 %}<span class="tag">{{ t.message_count }} messages</span>{% endif %}
+          {% if t.folder_ids | length > 1 %}{% for f in t.folder_ids %}<span class="tag">{{ tag_names.get(f, f) }}</span>{% endfor %}{% endif %}
           {% if t.unread_count %}<span class="tag">{{ t.unread_count }} unread</span>{% endif %}
         </td>
       </tr>

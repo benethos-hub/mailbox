@@ -40,7 +40,7 @@
       <dt>Flags</dt>
       <dd>
         {{ "unread" if message.unread else "read" }}{% if message.starred %}, starred{% endif %}
-        {% for keyword in message.keywords if keyword not in own %}<span class="tag">{{ keyword }}</span> {% endfor %}
+        {% for flag in message.keywords | protocol_flags %}<span class="tag">{{ flag }}</span> {% endfor %}
       </dd>
       {% endif %}
       <dt>Id</dt><dd class="mono">{{ message.id }}</dd>

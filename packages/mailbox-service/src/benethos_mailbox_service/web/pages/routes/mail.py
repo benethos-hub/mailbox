@@ -237,6 +237,7 @@ async def account_mail_page(
         bar=mail_bar(request, keep=[("folder", current.id)]),
         messages=messages,
         threads=threads,
+        tag_names={f.id: f.name for f in folders},
         views=_views(account_id, current.id) if can["threads"] else [],
         view="threads" if by_threads else "messages",
         pages=page_links(request, more),

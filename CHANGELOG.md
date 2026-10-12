@@ -33,7 +33,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   longer thread lists its newest `MAILBOX_SERVICE_THREAD_MESSAGES` (500)
   and says `truncated`. `GET /v1/accounts/{account_id}/threads`
   (`list_threads`) answers the threads of a `folder`, each where its
-  newest message in the folder is. Both are in `mail.read`, and a grant
+  newest message in the folder is, with that message's subject, date
+  and snippet. Both are in `mail.read`, and a grant
   that names folders sees the messages of a thread in them. POP3 answers
   `501`. The Python client has `list_threads` and `get_thread`.
 - The UI lists a folder by conversations where the account keeps

@@ -314,3 +314,37 @@ async def test_a_listing_threads_what_the_sync_has_not_yet(
     assert len(page.items) == 4
     [mail_1] = [t for t in page.items if t.subject == "Re: Re: Mail 1"]
     assert mail_1.message_count == 2  # Re: Mail 1 in Sent is not listed yet
+
+
+async def test_a_thread_shows_in_each_folder_by_its_mail_there(
+    imap_services: Services, imap_account_id: str, conversation: FakeMailBox
+) -> None:
+    """Mail 1 and Re: Re: Mail 1 in the inbox, Re: Mail 1 in Sent: one
+    thread, in both lists, each row by the newest message of its folder."""
+    threads = await synced(imap_services, imap_account_id)
+    mailbox = imap_services.mailbox
+    [inbox] = [
+        t
+        for t in (
+            await mailbox.list_threads(
+                ADMIN, imap_account_id, folder_id="inbox", limit=50, cursor=None
+            )
+        ).items
+        if t.id == threads["Mail 1"]
+    ]
+    [sent] = (
+        await mailbox.list_threads(
+            ADMIN, imap_account_id, folder_id=SENT, limit=50, cursor=None
+        )
+    ).items
+    assert sent.id == inbox.id
+    assert (inbox.subject, inbox.date) == (
+        "Re: Re: Mail 1",
+        datetime(2026, 9, 11, tzinfo=UTC),
+    )
+    assert (sent.subject, sent.date) == (
+        "Re: Mail 1",
+        datetime(2026, 9, 10, tzinfo=UTC),
+    )
+    assert sent.message_count == inbox.message_count == 3
+    assert sent.folder_ids == inbox.folder_ids == [INBOX, SENT]

@@ -70,7 +70,8 @@ class Threads:
         cursor: str | None,
     ) -> Page[ThreadSummary]:
         """The threads of a folder, newest first, each where its newest
-        message in the folder is. A page is a page of the folder's
+        message in the folder is, with that message's subject, date and
+        snippet. A page is a page of the folder's
         messages, so it may hold fewer threads than ``limit``. ``folder_id``
         may also be a role such as ``inbox``."""
         access.require("list_threads", account_id)
@@ -91,8 +92,17 @@ class Threads:
             thread = _visible(account_id, thread_id, read, reach, own)
             if thread is None or (cursor and _listed_before(thread, folder, listed)):
                 continue
+            # Its row shows the newest message in the folder, where it stands.
+            here = next(m for m in listed if m.thread_id == thread_id)
             found.append(
-                ThreadSummary.model_validate(thread.model_dump(exclude={"messages"}))
+                ThreadSummary.model_validate(
+                    {
+                        **thread.model_dump(exclude={"messages"}),
+                        "subject": here.subject,
+                        "date": here.date,
+                        "snippet": here.snippet,
+                    }
+                )
             )
         return Page[ThreadSummary](items=found, next_cursor=page.next_cursor)
 
