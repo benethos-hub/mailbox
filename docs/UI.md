@@ -219,7 +219,10 @@ A message shows its keywords in a card of their own, as chips, and the
 list shows them as tags. Whoever may change the message removes one
 with the x on its chip and adds one with the field beside them.
 Keywords starting with `$`, such as `$answered`, belong to the mail
-protocol: they show beside the flags and are not changed in the UI.
+protocol: they show beside the flags, in words where they have one
+(answered, forwarded, draft, junk), and are not changed in the UI. Those
+a server notes for itself, such as `$hasnoattachment` or `$notjunk`, do
+not show.
 
 ### 4.5 The filter bar
 

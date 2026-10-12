@@ -70,7 +70,8 @@ class Threads:
         cursor: str | None,
     ) -> Page[ThreadSummary]:
         """The threads of a folder, newest first, each where its newest
-        message in the folder is. A page is a page of the folder's
+        message in the folder is, with that message's subject, date and
+        snippet. A page is a page of the folder's
         messages, so it may hold fewer threads than ``limit``. ``folder_id``
         may also be a role such as ``inbox``."""
         access.require("list_threads", account_id)
@@ -84,14 +85,24 @@ class Threads:
         )
         listed = (await self._calls.published_page(account_id, page)).items
         ids = list(dict.fromkeys(m.thread_id for m in listed if m.thread_id))
+        own = self._calls.record(account_id).email
         read = await self._read(account_id, ids)
         found: list[ThreadSummary] = []
         for thread_id in ids:
-            thread = _visible(account_id, thread_id, read, reach)
+            thread = _visible(account_id, thread_id, read, reach, own)
             if thread is None or (cursor and _listed_before(thread, folder, listed)):
                 continue
+            # Its row shows the newest message in the folder, where it stands.
+            here = next(m for m in listed if m.thread_id == thread_id)
             found.append(
-                ThreadSummary.model_validate(thread.model_dump(exclude={"messages"}))
+                ThreadSummary.model_validate(
+                    {
+                        **thread.model_dump(exclude={"messages"}),
+                        "subject": here.subject,
+                        "date": here.date,
+                        "snippet": here.snippet,
+                    }
+                )
             )
         return Page[ThreadSummary](items=found, next_cursor=page.next_cursor)
 
@@ -103,7 +114,8 @@ class Threads:
             read = await self._from_index(account_id, [thread_id])
         else:
             read = {thread_id: await self._from_provider(account_id, thread_id)}
-        return _visible(account_id, thread_id, read, reach)
+        own = self._calls.record(account_id).email
+        return _visible(account_id, thread_id, read, reach, own)
 
     async def _read(self, account_id: str, thread_ids: list[str]) -> Found:
         """The newest messages of each thread of a list, some at once. A
@@ -169,7 +181,7 @@ class Threads:
 
 
 def _visible(
-    account_id: str, thread_id: str, read: Found, reach: Reach | None
+    account_id: str, thread_id: str, read: Found, reach: Reach | None, own: str
 ) -> Thread | None:
     """A thread read, with the messages in reach. None without one."""
     messages, truncated = read.get(thread_id, ([], False))
@@ -177,7 +189,7 @@ def _visible(
         messages = [m for m in messages if reach.sees(m.folder_ids)]
     if not messages:
         return None
-    return thread_of(thread_id, account_id, messages, truncated)
+    return thread_of(thread_id, account_id, messages, truncated, own)
 
 
 def thread_of(
@@ -185,13 +197,17 @@ def thread_of(
     account_id: str,
     messages: list[MessageSummary],
     truncated: bool = False,
+    own: str | None = None,
 ) -> Thread:
-    """A thread from its messages, oldest first."""
+    """A thread from its messages, oldest first. Its participants leave
+    out the account's ``own`` address, unless nobody else took part."""
     newest = messages[-1]
     people: dict[str, Address] = {}
     for message in messages:
         for address in [*([message.sender] if message.sender else []), *message.to]:
             people.setdefault(address.email.lower(), address)
+    others = {k: a for k, a in people.items() if k != (own or "").lower()}
+    people = others or people
     return Thread(
         id=thread_id,
         account_id=account_id,

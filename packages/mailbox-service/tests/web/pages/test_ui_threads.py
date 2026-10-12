@@ -43,12 +43,16 @@ def test_a_folder_listed_by_conversations(
     assert (
         ">Conversations</a>" in messages and 'aria-current="page">Messages' in messages
     )
+    assert "<th>Folder</th>" not in messages
     listed = client.get(f"{url}&view=threads")
     assert listed.status_code == 200, listed.text
     page = listed.text
     assert 'aria-current="page">Conversations' in page
     assert f'/ui/accounts/{jmap_account_id}/threads/T1?folder=inbox"' in page
     assert "2 messages" in page
+    # The folders of its messages, by name.
+    assert '<span class="tag">Inbox</span>' in page
+    assert '<span class="tag">Sent</span>' in page
     # No search and no batch for conversations.
     assert 'name="q"' not in page and 'id="batch"' not in page
 

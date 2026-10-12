@@ -13272,7 +13272,7 @@
               }
             ],
             "title": "Subject",
-            "description": "Of the newest message."
+            "description": "Of the newest message. In the threads of a folder, of the newest one in that folder, which places the thread in the list."
           },
           "participants": {
             "items": {
@@ -13280,7 +13280,7 @@
             },
             "type": "array",
             "title": "Participants",
-            "description": "Who wrote and who was written to, each once, in the order they first appear."
+            "description": "Who wrote and who was written to, each once, in the order they first appear. The account's own address only where nobody else took part."
           },
           "message_count": {
             "type": "integer",
@@ -13302,7 +13302,7 @@
               }
             ],
             "title": "Date",
-            "description": "Of the newest message."
+            "description": "Of the newest message. In the threads of a folder, of the newest one in that folder, which places the thread in the list."
           },
           "snippet": {
             "anyOf": [
@@ -13314,7 +13314,7 @@
               }
             ],
             "title": "Snippet",
-            "description": "Of the newest message."
+            "description": "Of the newest message. In the threads of a folder, of the newest one in that folder, which places the thread in the list."
           },
           "folder_ids": {
             "items": {
@@ -13369,7 +13369,7 @@
               }
             ],
             "title": "Subject",
-            "description": "Of the newest message."
+            "description": "Of the newest message. In the threads of a folder, of the newest one in that folder, which places the thread in the list."
           },
           "participants": {
             "items": {
@@ -13377,7 +13377,7 @@
             },
             "type": "array",
             "title": "Participants",
-            "description": "Who wrote and who was written to, each once, in the order they first appear."
+            "description": "Who wrote and who was written to, each once, in the order they first appear. The account's own address only where nobody else took part."
           },
           "message_count": {
             "type": "integer",
@@ -13399,7 +13399,7 @@
               }
             ],
             "title": "Date",
-            "description": "Of the newest message."
+            "description": "Of the newest message. In the threads of a folder, of the newest one in that folder, which places the thread in the list."
           },
           "snippet": {
             "anyOf": [
@@ -13411,7 +13411,7 @@
               }
             ],
             "title": "Snippet",
-            "description": "Of the newest message."
+            "description": "Of the newest message. In the threads of a folder, of the newest one in that folder, which places the thread in the list."
           },
           "folder_ids": {
             "items": {
