@@ -4,6 +4,7 @@ server, POP3 without."""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
@@ -11,10 +12,12 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.data.models import Address, Grant, MessageSummary
 from benethos_mailbox_service.data.providers import ThreadMessages
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.data.providers.jmap import JmapProvider
+from benethos_mailbox_service.data.storage import InMemoryMessageIndexRepository
+from benethos_mailbox_service.domain.mailbox.threads import thread_of
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import (
     ForbiddenError,
@@ -105,10 +108,8 @@ async def test_an_imap_thread_across_folders_oldest_first(
     assert thread.unread_count == 3
     assert thread.date == datetime(2026, 9, 11, tzinfo=UTC)
     assert thread.folder_ids == [INBOX, SENT]
-    assert [p.email for p in thread.participants] == [
-        "alice@example.com",
-        "me@example.com",
-    ]
+    # The account's own address me@example.com is left out.
+    assert [p.email for p in thread.participants] == ["alice@example.com"]
     assert not thread.truncated
 
 
@@ -287,3 +288,29 @@ def test_the_routes_answer_threads(
     assert client.get(f"{base}/T9").json()["error"]["code"] == "not_found"
     assert client.get(base).status_code == 422  # a folder is needed
     assert client.get(base, params={"folder": "inbox", "limit": 51}).status_code == 422
+
+
+def test_the_own_address_stays_where_nobody_else_took_part() -> None:
+    me = Address(email="Me@example.com")
+    alone = MessageSummary(id="m1", **{"from": me}, to=[me])
+    assert thread_of("t", "acc", [alone], own="me@example.com").participants == [me]
+
+
+async def test_a_listing_threads_what_the_sync_has_not_yet(
+    imap_services: Services, imap_account_id: str, conversation: FakeMailBox
+) -> None:
+    """As after the migration: known messages without a thread get theirs
+    when they are listed, before the sync comes to them."""
+    await imap_services.sync.sync_account(imap_account_id)
+    index = imap_services.index
+    assert isinstance(index, InMemoryMessageIndexRepository)
+    own = index._entries[imap_account_id]
+    for message_id, entry in own.items():
+        own[message_id] = replace(entry, thread_id=None)
+    index._links.clear()
+    page = await imap_services.mailbox.list_threads(
+        ADMIN, imap_account_id, folder_id="inbox", limit=50, cursor=None
+    )
+    assert len(page.items) == 4
+    [mail_1] = [t for t in page.items if t.subject == "Re: Re: Mail 1"]
+    assert mail_1.message_count == 2  # Re: Mail 1 in Sent is not listed yet

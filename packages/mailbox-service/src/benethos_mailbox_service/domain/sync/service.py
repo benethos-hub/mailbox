@@ -118,25 +118,34 @@ class SyncService:
         """Our ids for provider ids, each with its folder. Unknown ones get a
         new id, with their ``Message-ID`` read right away: a message moved
         before the next sync can only be followed by it. Where the index
-        keeps threads, they join theirs at once."""
+        keeps threads, they join theirs at once, and so do known ones the
+        sync has not threaded yet."""
         places = list(places)
         if not self.mapped(account_id):
             return [native for native, _ in places]
         natives = [native for native, _ in places]
         known = self._index.by_native(account_id, natives)
         missing = [(n, f) for n, f in dict(places).items() if n not in known]
-        if missing:
-            headers = await self._headers(account_id, [n for n, _ in missing])
-            added = [
-                IndexEntry(self._new_id(), n, f, _message_id(headers.get(n)))
-                for n, f in missing
-            ]
-            # Before the first sync, every message is still unknown.
-            synced = bool(self._index.folder_states(account_id))
+        waiting = (
+            [e for e in known.values() if e.thread_id is None]
+            if self._threads.kept(account_id)
+            else []
+        )
+        if not missing and not waiting:
+            return [known[native].id for native in natives]
+        wanted = [n for n, _ in missing] + [e.native_id for e in waiting]
+        headers = await self._headers(account_id, wanted)
+        added = [
+            IndexEntry(self._new_id(), n, f, _message_id(headers.get(n)))
+            for n, f in missing
+        ]
+        # Before the first sync, every message is still unknown.
+        synced = bool(self._index.folder_states(account_id))
+        ours = {e.id: e.folder_id for e in added}
+        if added:
             self._index.add(account_id, added)
             # Read back: a sync may have added the same place meanwhile.
             known = self._index.by_native(account_id, natives)
-            ours = {e.id: e.folder_id for e in added}
             if synced:
                 self.changed(
                     MessagesCreated(
@@ -145,9 +154,9 @@ class SyncService:
                         ours,
                     )
                 )
-            merged = self._threads.join(account_id, added, headers)
-            if synced:
-                self._report_merged(account_id, merged, set(ours))
+        merged = self._threads.join(account_id, [*added, *waiting], headers)
+        if synced:
+            self._report_merged(account_id, merged, set(ours))
         return [known[native].id for native in natives]
 
     async def resolve(
@@ -397,20 +406,9 @@ class SyncService:
     ) -> int:
         """Messages whose thread went into another, as updated. Those new
         in this pass are reported as created already. Answers how many."""
-        entries = [
-            entry
-            for message_id in merged
-            if message_id not in created
-            and (entry := self._index.get(account_id, message_id)) is not None
-        ]
-        self.changed(
-            MessagesUpdated(
-                account_id,
-                [e.id for e in entries],
-                {e.id: e.folder_id for e in entries},
-            )
-        )
-        return len(entries)
+        moved = self._threads.moved(account_id, merged, created)
+        self.changed(MessagesUpdated(account_id, list(moved), moved))
+        return len(moved)
 
     async def _seen(
         self, account_id: str, changed: list[str], vanished: list[str]

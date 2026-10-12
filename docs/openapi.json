@@ -13280,7 +13280,7 @@
             },
             "type": "array",
             "title": "Participants",
-            "description": "Who wrote and who was written to, each once, in the order they first appear."
+            "description": "Who wrote and who was written to, each once, in the order they first appear. The account's own address only where nobody else took part."
           },
           "message_count": {
             "type": "integer",
@@ -13377,7 +13377,7 @@
             },
             "type": "array",
             "title": "Participants",
-            "description": "Who wrote and who was written to, each once, in the order they first appear."
+            "description": "Who wrote and who was written to, each once, in the order they first appear. The account's own address only where nobody else took part."
           },
           "message_count": {
             "type": "integer",

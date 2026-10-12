@@ -102,6 +102,18 @@ class IndexThreads:
             ],
         )
 
+    def moved(
+        self, account_id: str, merged: dict[str, str], created: set[str]
+    ) -> dict[str, str]:
+        """Of the messages whose thread went into another, those not new
+        in this pass, each with its folder."""
+        return {
+            entry.id: entry.folder_id
+            for message_id in merged
+            if message_id not in created
+            and (entry := self._index.get(account_id, message_id)) is not None
+        }
+
     def _thread(self, account_id: str, chains: list[ThreadChain]) -> dict[str, str]:
         merged: dict[str, str] = {}
         for part in batched(chains, THREADED_AT_ONCE):

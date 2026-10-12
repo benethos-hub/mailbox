@@ -19,7 +19,8 @@ class ThreadSummary(BaseModel):
     participants: list[Address] = Field(
         default_factory=list,
         description="Who wrote and who was written to, each once, in the "
-        "order they first appear.",
+        "order they first appear. The account's own address only where "
+        "nobody else took part.",
     )
     message_count: int = Field(description="The messages listed.")
     unread_count: int

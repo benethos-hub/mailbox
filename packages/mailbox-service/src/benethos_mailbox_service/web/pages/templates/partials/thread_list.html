@@ -17,7 +17,7 @@
         </td>
         <td>{{ t.date | when }}</td>
         <td>
-          <span class="tag">{{ t.message_count }} {{ "message" if t.message_count == 1 else "messages" }}</span>
+          {% if t.message_count > 1 %}<span class="tag">{{ t.message_count }} messages</span>{% endif %}
           {% if t.unread_count %}<span class="tag">{{ t.unread_count }} unread</span>{% endif %}
         </td>
       </tr>
