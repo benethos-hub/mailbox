@@ -29,6 +29,7 @@ from benethos_mailbox_service.data.providers import (
     Reads,
     TokenSource,
     build_provider,
+    rules,
 )
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider, mappers
 from benethos_mailbox_service.data.providers.microsoft import (
@@ -150,10 +151,18 @@ async def test_messages_newest_first_and_paged(graph: FakeGraph) -> None:
     provider = adapter(graph)
     page = await provider.list_messages(graph.well_known["inbox"], limit=2, cursor=None)
     assert [m.id for m in page.items] == [third, second]
-    assert page.next_cursor is not None and page.next_cursor.startswith("/me/")
-    more = await provider.list_messages(None, limit=2, cursor=page.next_cursor)
+    assert page.next_cursor is not None
+    inbox = graph.well_known["inbox"]
+    more = await provider.list_messages(inbox, limit=2, cursor=page.next_cursor)
     assert [m.id for m in more.items] == [first]
     assert more.next_cursor is None
+    # Graph's next page carries its own query: another folder or search
+    # with it would answer the first list's page.
+    for folder, search in ((None, None), (inbox, MessageFilter(unread=True))):
+        with pytest.raises(BadRequestError, match="invalid cursor"):
+            await provider.list_messages(
+                folder, limit=2, cursor=page.next_cursor, search=search
+            )
 
 
 @pytest.mark.parametrize(
@@ -167,8 +176,11 @@ async def test_messages_newest_first_and_paged(graph: FakeGraph) -> None:
     ],
 )
 async def test_a_forged_cursor_is_refused(graph: FakeGraph, cursor: str) -> None:
-    with pytest.raises(BadRequestError, match="invalid cursor"):
-        await adapter(graph).list_messages(None, limit=5, cursor=cursor)
+    # As it stands, and wrapped as a cursor of this list would be.
+    bound = rules.bound_cursor("m_", rules.cursor_scope(None, None), cursor)
+    for value in (cursor, bound):
+        with pytest.raises(BadRequestError, match="invalid cursor"):
+            await adapter(graph).list_messages(None, limit=5, cursor=value)
     assert graph.requests == []
 
 

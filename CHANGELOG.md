@@ -76,6 +76,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A Microsoft account answers `501` when a change sets or takes off a
   keyword with `$`, such as `$answered`, which Outlook keeps no place
   for. It answered success and stored nothing.
+- The `next_cursor` of a Microsoft account belongs to its folder and
+  search, as on the other providers. Sent with another folder or filter,
+  it answered the first list's next page. Now it answers `400
+  invalid_cursor`. A cursor handed out before this version is refused
+  once.
 
 ## [0.4.1] - 2026-10-10
 

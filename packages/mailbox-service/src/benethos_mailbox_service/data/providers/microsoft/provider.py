@@ -26,7 +26,7 @@ from __future__ import annotations
 import base64
 import time
 from collections.abc import Callable
-from urllib.parse import unquote, urlencode
+from urllib.parse import urlencode
 
 from ....errors import (
     BadRequestError,
@@ -146,10 +146,12 @@ class MicrosoftProvider:
         search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
         query, rest = mappers.query(search)
+        # Graph's next page carries the query it was asked with: bound to
+        # the folder and the search, so another list's cursor is refused.
+        scope = rules.cursor_scope(folder_id, search)
         if cursor:
-            body = await self._graph.read(
-                Listing[GraphMessage], "GET", own_path(cursor)
-            )
+            path = own_path(rules.cursor_value("m_", cursor, scope))
+            body = await self._graph.read(Listing[GraphMessage], "GET", path)
         else:
             path = (
                 f"/me/mailFolders/{id_(folder_id)}/messages"
@@ -161,13 +163,15 @@ class MicrosoftProvider:
                 Listing[GraphMessage], "GET", path, params=params
             )
         found = body.value
-        if "$search" in query or (cursor and "search=" in unquote(cursor)):
+        if "$search" in query:
             found = await self._immutable(found)
         items = [mappers.summary(item) for item in found]
         link = body.next_link
         return Page[MessageSummary](
             items=[item for item in items if mappers.keeps(item, rest)],
-            next_cursor=own_path(link) if link else None,
+            next_cursor=rules.bound_cursor("m_", scope, own_path(link))
+            if link
+            else None,
         )
 
     async def _immutable(self, items: list[GraphMessage]) -> list[GraphMessage]:

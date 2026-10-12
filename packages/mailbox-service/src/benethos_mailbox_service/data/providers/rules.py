@@ -15,6 +15,9 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TypeVar
 
+from benethos_mailbox_common.values import canonical, secret
+
+from ...common import opaque
 from ...errors import (
     BadRequestError,
     ConflictError,
@@ -22,7 +25,7 @@ from ...errors import (
     ProviderAuthError,
     ProviderUnavailableError,
 )
-from ..models import Folder, FolderRole, MessageUpdate
+from ..models import Folder, FolderRole, MessageFilter, MessageUpdate
 from .base import Capability
 
 R = TypeVar("R")
@@ -57,6 +60,30 @@ def no_folder_left() -> BadRequestError:
 def invalid_cursor() -> BadRequestError:
     """A cursor the adapter did not hand out, or one from another list."""
     return BadRequestError("invalid cursor")
+
+
+def cursor_scope(folder_id: str | None, search: MessageFilter | None) -> str:
+    """What a cursor belongs to: the folder and the search, shortened.
+    Two that collide cost a page of the other search, never another
+    account's mail."""
+    what = canonical.canonical(
+        [folder_id, (search or MessageFilter()).model_dump(mode="json")]
+    )
+    return secret.digest(what)[:16]
+
+
+def bound_cursor(prefix: str, scope: str, value: str) -> str:
+    """A provider's next page, bound to the list it belongs to."""
+    return opaque.encode(prefix, [scope, value])
+
+
+def cursor_value(prefix: str, cursor: str, scope: str) -> str:
+    """The provider's next page of a cursor of this list. Another list's
+    cursor, or one made up, is refused."""
+    parts = opaque.fields(prefix, cursor, str, str)
+    if parts is None or parts[0] != scope or not parts[1]:
+        raise invalid_cursor()
+    return str(parts[1])
 
 
 @dataclass(frozen=True)
