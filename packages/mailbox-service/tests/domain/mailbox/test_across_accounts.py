@@ -139,9 +139,19 @@ def test_a_cursor_continues_its_own_search_alone(world: World) -> None:
 
 
 def test_folder_role_per_account(world: World) -> None:
-    _, client, _, _ = world
+    _, client, ids, _ = world
     archive = _walk(client, limit=10, folder="archive")
     assert archive == [["c6", "c4"]]
+    # The accounts without an archive are named, not left out.
+    body = client.get("/v1/messages", params={"limit": 10, "folder": "archive"})
+    assert body.json()["incomplete"] == [
+        {
+            "account_id": account_id,
+            "code": "not_found",
+            "message": "the account has no archive folder",
+        }
+        for account_id in ids[:2]
+    ]
     inbox = [s for page in _walk(client, limit=10, folder="inbox") for s in page]
     assert "c6" not in inbox
     assert inbox[0] == "b10"

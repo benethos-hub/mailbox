@@ -81,6 +81,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   it answered the first list's next page. Now it answers `400
   invalid_cursor`. A cursor handed out before this version is refused
   once.
+- `GET /v1/messages` with a `folder` role names each account without such
+  a folder in `incomplete`, on the first page, as `not_found`. It left
+  them out without a word.
 
 ## [0.4.1] - 2026-10-10
 

@@ -333,7 +333,7 @@ Nothing of it is started. Each step is one pull request or more.
    3. Microsoft answers `501` for `$` keywords. Done.
    4. The Microsoft cursor checks its query. Done.
    5. `list_all_messages` names an account without the role in
-      `incomplete`.
+      `incomplete`. Done.
    6. IMAP keeps no `\Noselect` folder as a `parent_id`, or lists it.
    7. After an expired JMAP state, the messages of the gap are reported
       as created.
