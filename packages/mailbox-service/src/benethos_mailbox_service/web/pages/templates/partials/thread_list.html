@@ -1,0 +1,31 @@
+{% from "components/ui.html" import pager %}
+{# A page of the threads of one folder: each row opens its conversation,
+   from the folder ``current``. #}
+{% if threads %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>With</th><th>Subject</th><th>Date</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for t in threads %}
+      <tr class="{{ 'unread' if t.unread_count }}">
+        <td>{{ t.participants[:3] | addresses }}{% if t.participants | length > 3 %} and {{ t.participants | length - 3 }} more{% endif %}</td>
+        <td class="name">
+          <a href="/ui/accounts/{{ account.id }}/threads/{{ t.id | segment }}?{{ [('folder', current.id)] | urlencode }}">{{ t.subject | or_missing }}</a>
+          {% if t.snippet %}<span class="sub">{{ t.snippet }}</span>{% endif %}
+        </td>
+        <td>{{ t.date | when }}</td>
+        <td>
+          <span class="tag">{{ t.message_count }} {{ "message" if t.message_count == 1 else "messages" }}</span>
+          {% if t.unread_count %}<span class="tag">{{ t.unread_count }} unread</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">No conversations.</div>
+{% endif %}
+{{ pager(pages) }}

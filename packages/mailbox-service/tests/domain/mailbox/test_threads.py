@@ -12,12 +12,15 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.data.providers import ThreadMessages
 from benethos_mailbox_service.data.providers.imap import mappers
+from benethos_mailbox_service.data.providers.jmap import JmapProvider
 from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import (
     ForbiddenError,
     NotFoundError,
     NotSupportedError,
+    ProviderUnavailableError,
 )
 
 from ...conftest import ADMIN, admin_bearer
@@ -202,6 +205,50 @@ async def test_the_threads_of_a_folder_page_by_page(
         cursor = page.next_cursor
     # Mail 1 on the last page belongs to a thread shown on the first.
     assert shown == [threads[f"Mail {n}"] for n in (1, 4, 3, 2)]
+
+
+async def test_an_imap_list_reads_every_thread_in_one_go(
+    imap_services: Services, imap_account_id: str, conversation: FakeMailBox
+) -> None:
+    await synced(imap_services, imap_account_id)
+    conversation.calls.clear()
+    page = await imap_services.mailbox.list_threads(
+        ADMIN, imap_account_id, folder_id="inbox", limit=50, cursor=None
+    )
+    assert len(page.items) == 4
+    headers = [c for c in conversation.calls if c[0] == "fetch" and c[2] == "header"]
+    # The page itself, then the summaries in the inbox and in Sent.
+    assert len(headers) == 3
+
+
+async def test_a_thread_gone_meanwhile_leaves_the_list(
+    jmap_services: Services,
+    jmap_account_id: str,
+    jmap_server: FakeJmap,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    jmap_server.add_email(make_message("Hello"), thread="T1")
+    real = JmapProvider.thread_messages
+
+    async def gone(self: JmapProvider, thread_id: str, limit: int) -> ThreadMessages:
+        if thread_id == "T1":
+            raise NotFoundError("thread T1 not found")
+        return await real(self, thread_id, limit)
+
+    monkeypatch.setattr(JmapProvider, "thread_messages", gone)
+    page = await jmap_services.mailbox.list_threads(
+        ADMIN, jmap_account_id, folder_id="inbox", limit=10, cursor=None
+    )
+    assert page.items and "T1" not in [t.id for t in page.items]
+
+    async def down(self: JmapProvider, thread_id: str, limit: int) -> ThreadMessages:
+        raise ProviderUnavailableError("the server does not answer")
+
+    monkeypatch.setattr(JmapProvider, "thread_messages", down)
+    with pytest.raises(ProviderUnavailableError):
+        await jmap_services.mailbox.list_threads(
+            ADMIN, jmap_account_id, folder_id="inbox", limit=10, cursor=None
+        )
 
 
 async def test_a_folder_out_of_reach_lists_no_threads(

@@ -109,4 +109,16 @@
     {% if body %}<pre class="mail-body">{{ body }}</pre>{% else %}<div class="empty">No text.</div>{% endif %}
   </div>
 </section>
+
+{% if others %}
+<section class="card">
+  <header>
+    <h2>In this conversation</h2><span class="meta">{{ others | length }} more</span>
+    <span class="right">{{ link_button("/ui/accounts/" ~ account.id ~ "/threads/" ~ (thread.id | segment), "Open the conversation", "envelope-open") }}</span>
+  </header>
+  {% with messages=others, emails=none, selectable=false, open_as="mail", pages=(none, none), fields={} %}
+  <div class="body tight">{% include "partials/message_list.html" %}</div>
+  {% endwith %}
+</section>
+{% endif %}
 {% endblock %}

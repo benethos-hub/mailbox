@@ -291,14 +291,14 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
     `GET /v1/audit` with `audit` in `service`, the Audit page and the
     Recent activity card
   - recovery key, status: moved to phase 4b
-- Threads (6.3): for IMAP built across folders from the id mapping,
-  which then also keeps `In-Reply-To` and `References`. Decided
-  2026-10-12, in five steps. Step 1 done: IMAP messages carry the
-  `thread_id` the index keeps. Step 2 done: Gmail, JMAP and Microsoft
-  read a thread, the domain reads one and lists the threads of a folder.
-  Step 3 done: `GET .../threads` (`list_threads`) and
-  `GET .../threads/{thread_id}` (`get_thread`) in `mail.read`, and both
-  on the Python client. Step 4 done: the MCP tool `get_thread`
+- **Threads (6.3)**, decided 2026-10-12, done in five steps: IMAP
+  messages carry the `thread_id` the index keeps, built across folders
+  from `Message-ID`, `In-Reply-To` and `References`. Gmail, JMAP and
+  Microsoft read their own. `GET .../threads` (`list_threads`) and
+  `GET .../threads/{thread_id}` (`get_thread`) in `mail.read`, both on
+  the Python client, the MCP tool `get_thread`, and in the UI a folder
+  listed by conversations, the page of a conversation and the card of
+  the others below a message. Threads across accounts come later
 - **Users, roles and rights: the changes of
   [PERMISSIONS.md](PERMISSIONS.md) section 8**, decided 2026-10-05,
   done: the last administrator stays (8.3), service rights apart from
