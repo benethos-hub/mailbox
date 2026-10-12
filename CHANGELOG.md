@@ -117,6 +117,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A send through a Microsoft account answers `sent_copy_id`, and
   `message.sent` in the change feed names the copy. Both carried the
   `Message-ID` header before.
+- A change of an IMAP message that sets flags and moves it, on a server
+  without `MOVE` and `UIDPLUS`, answers `501` before anything changes.
+  It stored the flags and then refused the move. A move that fails after
+  the flags were stored says so in its error.
 
 ## [0.4.1] - 2026-10-10
 

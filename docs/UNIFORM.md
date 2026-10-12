@@ -316,7 +316,8 @@ larger piece that is neither, and runs on its own.
 - **An IMAP change of flags and folder in one request** stores the
   flags, then fails the move with `501`. IMAP has no transaction over
   both, so R6 can only order the steps: check the move first, then
-  store. *Work.*
+  store. *Work.* Done: the move is checked before the first `STORE`,
+  and a move that fails after it says the flags are changed.
 - **Other partial effects with an error**: a batch across IMAP folders
   fails after earlier folders are done. Microsoft's delete for good moves
   to the trash, then deletes, and can stop in between. Rule R6. *Bug.*
@@ -364,7 +365,7 @@ Step 1 is done. Each step is one pull request or more.
 3. **Work**, each on its own:
    1. Microsoft sends large mail through upload sessions. Last, since it
       moves the most code.
-   2. IMAP orders the steps of a change of flags and folder.
+   2. IMAP orders the steps of a change of flags and folder. Done.
 4. **One test suite for all adapters** (section 7), first with today's
    capabilities.
 5. **Capabilities.** The finer set of section 3, read from the server
