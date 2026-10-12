@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import imaplib
+
 import pytest
 
 from benethos_mailbox_service.data.models import MessageUpdate
@@ -11,6 +13,7 @@ from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
     NotSupportedError,
+    ProviderError,
 )
 
 from ...data.providers.test_imap import provider
@@ -68,10 +71,31 @@ async def test_move_with_uidplus_expunges_only_this_message(
 
 
 async def test_no_move_without_move_or_uidplus(server: FakeMailBox) -> None:
+    """Refused before the flags are stored: nothing changes."""
     server.announced = ["IMAP4REV1"]
+    _, flags = server.folders["INBOX"].messages[3]
     with pytest.raises(NotSupportedError, match="neither MOVE nor UIDPLUS"):
-        await update(provider(server), MESSAGE, MessageUpdate(folder_ids=[SENT]))
-    assert 3 in server.folders["INBOX"].messages
+        await update(
+            provider(server),
+            MESSAGE,
+            MessageUpdate(folder_ids=[SENT], starred=True, unread=False),
+        )
+    assert server.folders["INBOX"].messages[3][1] == flags
+    assert not [c for c in server.calls if c[0] == "store"]
+
+
+async def test_a_move_failing_after_the_flags_says_so(
+    server: FakeMailBox, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refused(uids: list[int], target: str) -> bytes:
+        raise imaplib.IMAP4.error("NO [SERVERBUG] the move failed")
+
+    monkeypatch.setattr(server, "move", refused)
+    with pytest.raises(ProviderError, match="the flags are changed, the folder is not"):
+        await update(
+            provider(server), MESSAGE, MessageUpdate(folder_ids=[SENT], starred=True)
+        )
+    assert "\\Flagged" in server.folders["INBOX"].messages[3][1]
 
 
 async def test_without_copyuid_found_by_message_id(server: FakeMailBox) -> None:

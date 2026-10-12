@@ -153,20 +153,18 @@ def update_in_folder(
     box: Mailbox, folder: str, validity: int, uids: list[int], changes: MessageUpdate
 ) -> dict[int, MessageSummary | MailboxServiceError]:
     """One folder's share of an update: one SELECT, one STORE per set
-    of flag changes, one MOVE."""
+    of flag changes, one MOVE. IMAP has no transaction over the flags and
+    the folder: what can refuse is asked before the first STORE, and a
+    move that fails after it says the flags are changed."""
     found, permanent = open_writable(box, folder, validity, uids)
     results = _missing(uids, found)
     if not found:
         return results
     target = _move_target(box, changes, folder)
-    plans: dict[tuple[tuple[str, ...], tuple[str, ...]], list[int]] = {}
-    for uid, message in found.items():
-        add, remove = mappers.flag_changes(message.flags, changes, permanent)
-        if add or remove:
-            plans.setdefault((tuple(add), tuple(remove)), []).append(uid)
-    for (to_add, to_remove), plan_uids in plans.items():
-        box.session.messages.store_flags(plan_uids, list(to_add), list(to_remove))
-    if plans:
+    if target is not None:
+        box.session.messages.require_move()
+    stored_any = _store(box, found, changes, permanent)
+    if stored_any:
         stored = list(found)
         found = {int(m.uid): m for m in box.session.messages.fetch_headers(stored)}
         # Expunged by another client between the two fetches.
@@ -176,13 +174,37 @@ def update_in_folder(
             {uid: mappers.summary(m, folder, validity) for uid, m in found.items()}
         )
         return results
-    moved = _move(box, found, target)
+    try:
+        moved = _move(box, found, target)
+    except MailboxServiceError as exc:
+        if stored_any:
+            raise exc.noting("the flags are changed, the folder is not") from None
+        raise
     for uid, message in found.items():
         # Not found in the target at once: the next sync follows it.
         results[uid] = moved.get(uid) or mappers.summary(
             message, folder, validity
         ).model_copy(update={"folder_ids": [mappers.folder_id(target)]})
     return results
+
+
+def _store(
+    box: Mailbox,
+    found: dict[int, Any],
+    changes: MessageUpdate,
+    permanent: frozenset[str],
+) -> bool:
+    """The flag changes, one STORE per set of them. Each set is worked out
+    before the first STORE, so a refused keyword changes nothing. Whether
+    any was stored."""
+    plans: dict[tuple[tuple[str, ...], tuple[str, ...]], list[int]] = {}
+    for uid, message in found.items():
+        add, remove = mappers.flag_changes(message.flags, changes, permanent)
+        if add or remove:
+            plans.setdefault((tuple(add), tuple(remove)), []).append(uid)
+    for (to_add, to_remove), plan_uids in plans.items():
+        box.session.messages.store_flags(plan_uids, list(to_add), list(to_remove))
+    return bool(plans)
 
 
 def delete_in_folder(

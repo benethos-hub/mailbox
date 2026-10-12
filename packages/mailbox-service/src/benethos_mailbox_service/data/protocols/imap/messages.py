@@ -152,11 +152,16 @@ class Messages:
 
                 reported = with_code(client, "COPYUID", copy_and_expunge)
             else:
-                raise NotSupportedError(
-                    "the mail server offers neither MOVE nor UIDPLUS: moving "
-                    "would expunge other deleted messages of the folder too"
-                )
+                raise _cannot_move()
         return new_uids(reported)
+
+    def require_move(self) -> None:
+        """Refuses before anything changes where ``move`` would: without
+        ``MOVE`` and ``UIDPLUS``."""
+        with translated():
+            announced = capabilities(self._session.client())
+        if "MOVE" not in announced and "UIDPLUS" not in announced:
+            raise _cannot_move()
 
     def can_expunge(self) -> bool:
         """Whether one message can be deleted for good (``UIDPLUS``)."""
@@ -232,3 +237,10 @@ def _text_keys(criteria: SearchCriteria) -> list[Any]:
                 raise BadRequestError("search text must not hold control characters")
             query += [key, value]
     return query
+
+
+def _cannot_move() -> NotSupportedError:
+    return NotSupportedError(
+        "the mail server offers neither MOVE nor UIDPLUS: moving "
+        "would expunge other deleted messages of the folder too"
+    )
