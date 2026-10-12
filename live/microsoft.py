@@ -32,7 +32,11 @@ under the Message-ID the send answered. The send names its copy in Sent
 Items, whose text and file are as sent. A reply to that copy goes to
 the first test account as well, and its own copy names what it answers.
 The copy gets a keyword, an Outlook category, which is taken off again,
-and its conversation must hold it. At the end every mail of this check
+and its conversation must hold it. ``--large`` reads, then sends one mail
+of about 7 MB alone, beyond one Graph request: one file goes in one
+request, the other through an upload session, and both sides must hold
+them whole. Outlook.com blocked the test account once after several
+sends in a day, so it stays a run of its own. At the end every mail of this check
 left in either account, of this run or an earlier one, is deleted for
 good, found by the subject. The change feed must name the copy in
 Sent Items, which the service learns of through Graph delta queries only.
@@ -43,7 +47,6 @@ IMAP IDLE. Credentials and mail content are never printed.
 from __future__ import annotations
 
 import argparse
-import base64
 import os
 import secrets
 import sys
@@ -56,12 +59,10 @@ from checks.accounts import accounts, read_env, register
 from checks.admin import Admin, bootstrap
 from checks.mail import (
     delete_for_good,
-    feed_types,
-    messages_with_subject,
-    thread_holds,
 )
+from checks.microsoft_mail import inline, large, send_and_check
 from checks.processes import service_env, start_service, stop
-from checks.run import Run, polled
+from checks.run import Run
 from checks.service import Service
 
 from benethos_mailbox_client import SyncMailboxClient
@@ -74,11 +75,6 @@ DATA = Path("data/live-microsoft")
 PORT = 8080
 URL = f"http://localhost:{PORT}"
 WAIT = 600
-# A keyword of this check alone, set and taken off again.
-KEYWORD = "mailbox-live"
-# What the mail of the check says, and the file it carries.
-TEXT = "Sent by the live check; deleted again at once."
-FILE = b"A file of the mailbox-service live check."
 
 
 def _secret_file(name: str, make: Any) -> str:
@@ -181,16 +177,6 @@ def connect_with_code(client: httpx.Client, email: str) -> int:
     return 1
 
 
-def _find(
-    mailbox: SyncMailboxClient, account_id: str, folder: str, subject: str, tries: int
-) -> str | None:
-    """The id of the message with ``subject`` in the folder, once it is there."""
-    found = messages_with_subject(
-        mailbox, account_id, subject, folder=folder, tries=tries, pause=5
-    )
-    return found[0].id if found else None
-
-
 def check(
     run: Run,
     client: httpx.Client,
@@ -198,16 +184,19 @@ def check(
     ms_id: str,
     bot: dict[str, str],
     bot_id: str,
+    large_only: bool = False,
 ) -> None:
     """What the API answers is checked with ``client``. ``mailbox``, the
-    Python client, finds and deletes the test mail."""
+    Python client, finds and deletes the test mail. ``large_only`` reads,
+    then sends the large mail alone."""
     base = f"/v1/accounts/{ms_id}"
     print("\n== reading")
     verified = client.post(f"{base}/verify")
     if not run.check(
         "the token works",
         verified.status_code == 200,
-        f"{verified.status_code} {verified.json().get('error', {}).get('code', '')}",
+        f"{verified.status_code} {verified.json().get('error', {}).get('code', '')}: "
+        f"{verified.json().get('error', {}).get('message', '')}",
     ):
         print("connect the account again with --connect, then run this again")
         return
@@ -224,7 +213,10 @@ def check(
         run.check("its source", raw.status_code == 200 and b":" in raw.content[:200])
     searched = client.get(f"{base}/messages", params={"q": "zz-no-such-mail-zz"})
     run.check("a search", searched.status_code == 200)
-    _inline(run, client, base)
+    inline(run, client, base)
+    if large_only:
+        _large_only(run, client, mailbox, ms_id, bot, bot_id)
+        return
 
     print("\n== folders")
     made = client.post(f"{base}/folders", json={"name": "mailbox-service live check"})
@@ -271,11 +263,45 @@ def check(
                 deleted = client.delete(f"{base}/drafts/{current['id']}")
                 run.check("delete it", deleted.status_code == 204)
 
+    _sending(run, client, mailbox, ms_id, bot, bot_id)
+
+
+def _sending(
+    run: Run,
+    client: httpx.Client,
+    mailbox: SyncMailboxClient,
+    ms_id: str,
+    bot: dict[str, str],
+    bot_id: str,
+) -> None:
+    """A mail and a reply to the first test account, and whatever is left
+    of them deleted for good."""
+    base = f"/v1/accounts/{ms_id}"
     print("\n== sending, to the first test account only")
     since = client.get(f"{base}/changes").json()["state"]
     subject = f"{SUBJECT} {secrets.token_hex(4)}"
     try:
-        _send_and_check(run, client, mailbox, ms_id, bot, bot_id, since, subject)
+        sending = (ms_id, since, subject)
+        send_and_check(run, client, mailbox, sending, bot, bot_id, 4 * SYNC_INTERVAL)
+    finally:
+        _sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")])
+
+
+def _large_only(
+    run: Run,
+    client: httpx.Client,
+    mailbox: SyncMailboxClient,
+    ms_id: str,
+    bot: dict[str, str],
+    bot_id: str,
+) -> None:
+    """The large mail alone, one send: Outlook.com blocked the test account
+    once after several sends in a day."""
+    base = f"/v1/accounts/{ms_id}"
+    print("\n== a large mail, to the first test account only")
+    subject = f"{SUBJECT} {secrets.token_hex(4)} large"
+    try:
+        large(run, client, mailbox, base, bot, bot_id, subject)
     finally:
         _sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")])
 
@@ -293,167 +319,15 @@ def _sweep(mailbox: SyncMailboxClient, places: list[tuple[str, str | None]]) -> 
         print(f"      cleanup: {removed} mail(s) of the check deleted for good")
 
 
-def _send_and_check(
-    run: Run,
-    client: httpx.Client,
-    mailbox: SyncMailboxClient,
-    ms_id: str,
-    bot: dict[str, str],
-    bot_id: str,
-    since: str,
-    subject: str,
-) -> None:
-    base = f"/v1/accounts/{ms_id}"
-    data = base64.b64encode(FILE).decode()
-    sent = client.post(
-        f"{base}/send",
-        json={
-            "to": [{"email": bot["email"]}],
-            "subject": subject,
-            "text": TEXT,
-            "attachments": [{"filename": "check.txt", "data": data}],
-        },
-    )
-    if not run.check("send", sent.status_code == 200, str(sent.status_code)):
-        return
-    header = sent.json().get("message_id_header")
-    # Outlook.com may take minutes to deliver, seen live.
-    arrived = _find(mailbox, bot_id, "inbox", subject, tries=60)
-    if run.check("it arrives", arrived is not None):
-        there = client.get(f"/v1/accounts/{bot_id}/messages/{arrived}").json()
-        said = there.get("message_id_header") == header
-        run.check("under the Message-ID the send answered", said)
-        mailbox.delete_message(bot_id, str(arrived), permanent=True)
-    copy = _find(mailbox, ms_id, "sent", subject, tries=6)
-    run.check(
-        "the send answered the copy's id",
-        copy is not None and sent.json().get("sent_copy_id") == copy,
-    )
-    if copy is not None:
-        types = feed_types(mailbox, ms_id, since, copy, wait=4 * SYNC_INTERVAL)
-        run.check(
-            "the change feed names the copy in Sent Items (Graph delta)",
-            "message.created" in types,
-            " ".join(types) or "nothing",
-        )
-    if run.check("the copy in Sent Items", copy is not None):
-        _contents(run, client, base, str(copy))
-        _reply(run, client, mailbox, (base, str(copy), header, subject), bot, bot_id)
-        _keywords(run, client, base, str(copy))
-        held, said = thread_holds(client, base, str(copy))
-        run.check("its conversation holds it, by conversationId", held, said)
-        # Deleted for good straight from Sent Items: the adapter goes through
-        # the trash, since Graph's delete outside it only moves there. Right
-        # after a move Exchange may not find the message yet, so three tries.
-        for attempt in range(3):
-            purged = client.delete(
-                f"{base}/messages/{copy}", params={"permanent": "true"}
-            )
-            if purged.status_code == 204:
-                break
-            error = purged.json().get("error", {})
-            code, text = error.get("code"), error.get("message")
-            print(f"      try {attempt + 1}: {purged.status_code} {code}: {text}")
-            time.sleep(3)
-        run.check(
-            "deleted for good", purged.status_code == 204, f"after {attempt + 1} tries"
-        )
-        run.check(
-            "and not in the trash",
-            _find(mailbox, ms_id, "trash", subject, tries=1) is None,
-        )
-
-
-def _inline(run: Run, client: httpx.Client, base: str) -> None:
-    """Inline images of a mail in the inbox, where one has them, listed
-    and downloaded. Graph lists none for a mail with inline images only."""
-    listed = client.get(f"{base}/messages", params={"folder": "inbox", "limit": 20})
-    for item in listed.json().get("items", []):
-        url = f"{base}/messages/{item['id']}"
-        files = client.get(url).json().get("attachments", [])
-        inline = [a for a in files if a["inline"]]
-        if inline:
-            data = client.get(f"{url}/attachments/{inline[0]['id']}")
-            run.check(
-                "an inline image listed, and it downloads",
-                data.status_code == 200 and len(data.content) == inline[0]["size"],
-                str(data.status_code),
-            )
-            return
-    print("      no mail with inline images among the inbox's first 20")
-
-
-def _contents(run: Run, client: httpx.Client, base: str, copy: str) -> None:
-    """The copy read from its MIME: the text as sent, no HTML, the file."""
-    found = client.get(f"{base}/messages/{copy}").json()
-    run.check(
-        "its text as sent, no HTML",
-        (found.get("text_body") or "").strip() == TEXT and not found.get("html_body"),
-    )
-    files = [a for a in found.get("attachments", []) if a["filename"] == "check.txt"]
-    if run.check("its file listed", len(files) == 1):
-        data = client.get(f"{base}/messages/{copy}/attachments/{files[0]['id']}")
-        run.check("and it downloads", data.content == FILE, str(data.status_code))
-
-
-def _reply(
-    run: Run,
-    client: httpx.Client,
-    mailbox: SyncMailboxClient,
-    original: tuple[str, str, str | None, str],
-    bot: dict[str, str],
-    bot_id: str,
-) -> None:
-    """A reply to the copy, to the first test account: its own copy names
-    the Message-ID it answers. ``original`` is the base, the copy's id,
-    its Message-ID and its subject."""
-    base, copy, header, subject = original
-    sent = client.post(
-        f"{base}/send",
-        json={
-            "reference": {"message_id": copy, "action": "reply", "quote": False},
-            "to": [{"email": bot["email"]}],
-            "text": "Answered by the live check.",
-        },
-    )
-    if not run.check("a reply to it", sent.status_code == 200, str(sent.status_code)):
-        return
-    reply = sent.json().get("sent_copy_id")
-
-    def answers() -> str | None:
-        found = client.get(f"{base}/messages/{reply}")
-        return found.json().get("in_reply_to") if found.status_code == 200 else None
-
-    said = polled(answers, 5, 3) if reply else None
-    run.check("its copy names what it answers", bool(header) and said == header)
-    back = _find(mailbox, bot_id, "inbox", f"Re: {subject}", tries=60)
-    if run.check("the reply arrives", back is not None):
-        mailbox.delete_message(bot_id, str(back), permanent=True)
-
-
-def _keywords(run: Run, client: httpx.Client, base: str, copy: str) -> None:
-    """A keyword on the copy, an Outlook category, added and taken off."""
-    url = f"{base}/messages/{copy}"
-    added = client.patch(url, json={"add_keywords": [KEYWORD]})
-    run.check(
-        "a keyword added, as an Outlook category",
-        added.status_code == 200 and KEYWORD in added.json().get("keywords", []),
-        str(added.status_code),
-    )
-    taken = client.patch(url, json={"remove_keywords": [KEYWORD]})
-    run.check(
-        "and taken off again",
-        taken.status_code == 200 and KEYWORD not in taken.json().get("keywords", []),
-        str(taken.status_code),
-    )
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--connect", action="store_true", help="connect the test account"
     )
     parser.add_argument("--project", action="store_true", help="with the project's app")
+    parser.add_argument(
+        "--large", action="store_true", help="read, then send the large mail alone"
+    )
     options = parser.parse_args()
     env = read_env()
     email = (env.get("LIVE_MICROSOFT_EMAIL") or "").strip().lower()
@@ -489,7 +363,7 @@ def main() -> int:
             ):
                 return 1
             assert bot_id is not None
-            check(run, client, mailbox, account["id"], bot, bot_id)
+            check(run, client, mailbox, account["id"], bot, bot_id, options.large)
     finally:
         stop(process)
     return run.finish()

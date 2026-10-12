@@ -37,6 +37,9 @@ GRAPH = "https://graph.microsoft.com"
 VERSION = "/v1.0"
 # Requests in one JSON batch, Graph's limit.
 BATCH_SIZE = 20
+# The bytes of one PUT to an upload session: a multiple of 320 KiB, below
+# the 4 MB Graph takes per request.
+UPLOAD_RANGE = 10 * 320 * 1024
 # Ids that survive a move (CONCEPT 4.1), asked for on every request.
 IMMUTABLE_IDS = 'IdType="ImmutableId"'
 
@@ -154,6 +157,26 @@ class Graph:
                 if reply.status == 200 and reply.body is not None:
                     bodies[int(reply.id)] = reply.body
         return bodies
+
+    async def upload(self, url: str, data: bytes) -> None:
+        """A file in ranges, in order, to an upload session's own URL. It
+        carries its authorization, so no token goes with it. The URL is
+        never logged or named in an error."""
+        total = len(data)
+        for start in range(0, total, UPLOAD_RANGE):
+            part = data[start : start + UPLOAD_RANGE]
+            end = start + len(part) - 1
+            answer = await self._http.request(
+                "PUT",
+                url,
+                headers={
+                    "Content-Type": "application/octet-stream",
+                    "Content-Range": f"bytes {start}-{end}/{total}",
+                },
+                content=part,
+            )
+            if not answer.ok:
+                raise _failure(answer)
 
     async def move(self, shape: type[S], path: str, destination: str) -> S:
         """Moves the folder or message at ``path``. Graph answers with it

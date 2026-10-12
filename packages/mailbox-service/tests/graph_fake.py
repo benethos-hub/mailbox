@@ -16,6 +16,10 @@ from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 import httpx
 
 TOKEN = "good-token"
+# What Graph takes in one request, and the least an upload session takes.
+REQUEST_LIMIT = 4 * 1024 * 1024
+SESSION_MINIMUM = 3_000_000
+UPLOADS = "outlook.office.com"
 # How the fake marks an id that is not immutable.
 REST = "rest-"
 WELL_KNOWN = ("inbox", "sentitems", "drafts", "deleteditems", "junkemail")
@@ -36,6 +40,9 @@ class FakeGraph:
         # in place of 202.
         self.sent: list[bytes] = []
         self.send_answer: httpx.Response | None = None
+        # Files added to a message one by one, and open upload sessions.
+        self.files: dict[str, list[dict[str, Any]]] = {}
+        self.sessions: dict[str, dict[str, Any]] = {}
         self.requests: list[httpx.Request] = []
         # Tokens the fake accepts. Any other answers 401.
         self.tokens = {TOKEN}
@@ -114,12 +121,17 @@ class FakeGraph:
         if self.next_answer is not None:
             answer, self.next_answer = self.next_answer, None
             return answer
+        url = urlsplit(str(request.url))
+        if url.netloc == UPLOADS:
+            # The session's URL carries its authorization.
+            return self._upload(request, url.path.rsplit("/", 1)[-1])
         if request.headers.get("authorization") not in {
             f"Bearer {t}" for t in self.tokens
         }:
             return _error(401, "InvalidAuthenticationToken", "expired")
-        url = urlsplit(str(request.url))
         assert url.netloc == "graph.microsoft.com", url.netloc
+        if len(request.content) > REQUEST_LIMIT:
+            return _error(413, "RequestEntityTooLarge", "the request is too large")
         if url.path == "/v1.0/$batch":
             return self._batch(request)
         path = [unquote(p) for p in url.path.removeprefix("/v1.0/me/").split("/")]
@@ -341,7 +353,7 @@ class FakeGraph:
         if not rest:
             return self._one_message(method, message, request)
         if rest == ["$value"]:
-            return httpx.Response(200, content=self.raws[message["id"]])
+            return httpx.Response(200, content=self.mime(message["id"]))
         if rest == ["move"]:
             target = self._folder(json.loads(request.content)["destinationId"])
             if target is None:
@@ -351,6 +363,8 @@ class FakeGraph:
             return _json(201, message)
         if rest == ["send"] and method == "POST":
             return self._send(message)
+        if rest[0] == "attachments" and method == "POST":
+            return self._attach(message, rest[1:], json.loads(request.content))
         return _error(400, "BadRequest", "unknown message call")
 
     def _one_message(
@@ -374,6 +388,61 @@ class FakeGraph:
             return httpx.Response(204)
         return _error(400, "BadRequest", "unknown message call")
 
+    def mime(self, message_id: str) -> bytes:
+        """The message's MIME, with the files added one by one."""
+        files = self.files.get(message_id, [])
+        if not files:
+            return self.raws[message_id]
+        parsed = message_from_bytes(self.raws[message_id], policy=default)
+        for file in files:
+            maintype, _, subtype = file["contentType"].partition("/")
+            parsed.add_attachment(
+                file["data"], maintype, subtype, filename=file["name"]
+            )
+        return parsed.as_bytes()
+
+    def _attach(
+        self, message: dict[str, Any], rest: list[str], body: dict[str, Any]
+    ) -> httpx.Response:
+        """A file in one request, or an upload session for a large one."""
+        if not rest:
+            data = base64.b64decode(body.pop("contentBytes"))
+            self.files.setdefault(message["id"], []).append({**body, "data": data})
+            return _json(201, {"id": f"file-{len(self.files[message['id']])}"})
+        item = body["AttachmentItem"]
+        if item["size"] < SESSION_MINIMUM:
+            return _error(
+                400,
+                "ErrorAttachmentSizeShouldNotBeLessThanMinimumSize",
+                "too small for an upload session",
+            )
+        session = f"s{len(self.sessions) + 1}"
+        self.sessions[session] = {"message": message["id"], "item": item, "data": b""}
+        url = f"https://{UPLOADS}/api/v2.0/AttachmentSessions/{session}"
+        return _json(
+            201, {"uploadUrl": f"{url}?authtoken=t", "nextExpectedRanges": ["0-"]}
+        )
+
+    def _upload(self, request: httpx.Request, session: str) -> httpx.Response:
+        """A range of a file, in order, without a token of the account."""
+        assert "authorization" not in request.headers
+        assert len(request.content) <= REQUEST_LIMIT
+        open_ = self.sessions[session]
+        span, _, total = (
+            request.headers["content-range"].removeprefix("bytes ").partition("/")
+        )
+        start = int(span.split("-")[0])
+        assert start == len(open_["data"]), "ranges come in order"
+        open_["data"] += request.content
+        if len(open_["data"]) < int(total):
+            return _json(200, {"nextExpectedRanges": [str(len(open_["data"]))]})
+        item = open_["item"]
+        self.files.setdefault(open_["message"], []).append(
+            {**item, "data": open_["data"]}
+        )
+        del self.sessions[session]
+        return httpx.Response(201)
+
     def _send(self, message: dict[str, Any]) -> httpx.Response:
         """A draft sent: its copy in Sent Items keeps the immutable id."""
         if self.send_answer is not None:
@@ -381,7 +450,7 @@ class FakeGraph:
             return answer
         if not message["isDraft"]:
             return _error(400, "ErrorInvalidOperation", "not a draft")
-        self.sent.append(self.raws[message["id"]])
+        self.sent.append(self.mime(message["id"]))
         message.update(parentFolderId=self.well_known["sentitems"], isDraft=False)
         self.touch(message["id"])
         return httpx.Response(202)

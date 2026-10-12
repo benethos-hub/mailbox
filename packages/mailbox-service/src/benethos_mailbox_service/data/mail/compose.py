@@ -10,6 +10,7 @@ from datetime import datetime
 from email import message_from_bytes
 from email.headerregistry import Address as HeaderAddress
 from email.message import EmailMessage
+from email.message import Message as MimePart
 from email.parser import BytesHeaderParser, BytesParser
 from email.policy import SMTP, default
 from email.utils import format_datetime, getaddresses, make_msgid
@@ -266,6 +267,66 @@ def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
     if not hidden:
         return raw
     return head + b"\r\nBcc: " + ", ".join(hidden).encode() + separator + body
+
+
+class Attached(NamedTuple):
+    """A part attached to a message, as a provider takes it on its own."""
+
+    filename: str | None
+    content_type: str
+    data: bytes
+    content_id: str | None
+    inline: bool
+
+
+def without_attachments(raw: bytes) -> tuple[bytes, list[Attached]]:
+    """``raw`` without the parts attached to it, and those parts, for a
+    provider that takes a large message's attachments one by one. The
+    headers and the body stay as they are. A body left alone in its
+    ``multipart/mixed`` takes the container's place, as a message
+    without attachments has it."""
+    mail = message_from_bytes(raw, policy=SMTP)
+    if not mail.is_multipart():
+        return raw, []
+    parts = list(mail.iter_attachments())
+    if not parts:
+        return raw, []
+    taken = {id(part) for part in parts}
+    kept: list[MimePart] = [p for p in mail.iter_parts() if id(p) not in taken]
+    if len(kept) == 1:
+        _take_place(mail, kept[0])
+    else:
+        payload: list[MimePart | str] = list(kept)
+        mail.set_payload(payload)
+    return mail.as_bytes(), [_attached(part) for part in parts]
+
+
+def _take_place(mail: EmailMessage, body: MimePart) -> None:
+    """``body`` as the whole of ``mail``: its content headers and payload
+    in place of the container's."""
+    for name in {n for n in mail.keys() if n.lower().startswith("content-")}:
+        del mail[name]
+    for name, value in body.items():
+        if name.lower().startswith("content-"):
+            mail[name] = value
+    mail.set_payload(body.get_payload())
+
+
+def _attached(part: EmailMessage) -> Attached:
+    found: object
+    if part.get_content_type() == "message/rfc822":
+        # A forwarded mail: its bytes as they are, not decoded.
+        inner = part.get_payload(0)
+        found = inner.as_bytes() if isinstance(inner, EmailMessage) else b""
+    else:
+        found = part.get_payload(decode=True)
+    return Attached(
+        filename=part.get_filename(),
+        content_type=part.get_content_type(),
+        data=found if isinstance(found, bytes) else b"",
+        content_id=part["Content-ID"],
+        inline=part.get_content_disposition() == "inline",
+    )
 
 
 def _address(recipient: Recipient) -> str:

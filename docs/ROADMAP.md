@@ -412,7 +412,7 @@ order, each step one pull request or more:
    the text body, `in_reply_to`, the sent copy and inline attachments,
    done
 3. **Microsoft sends large mail through upload sessions**, and IMAP
-   orders the steps of a change of flags and folder
+   orders the steps of a change of flags and folder, done
 4. **One test suite for all adapters**
 5. **The finer capabilities**, read from the server and stored with the
    account, checked by the domain for every operation
