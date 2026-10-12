@@ -1,6 +1,6 @@
 """What the mail pages offer, by the caller's rights on an account and by
-what the account can do: a POP3 account has no flags, folders, search or
-drafts, so their actions are not offered there."""
+what the account can do: a POP3 account has no flags, folders, search,
+drafts or threads, so their actions are not offered there."""
 
 from __future__ import annotations
 
@@ -32,4 +32,6 @@ def mail_rights(
         "update_folder": "update_folder" in allowed and folders,
         "delete_folder": "delete_folder" in allowed and folders,
         "search": Capability.SEARCH in able,
+        "threads": "list_threads" in allowed and Capability.THREADS in able,
+        "thread": "get_thread" in allowed and Capability.THREADS in able,
     }

@@ -8,10 +8,11 @@ UI the way a browser does. It signs in as the user `users create-admin`
 made and connects the second test account through discovery and the
 form. It makes a user, a role and a token, uses the token on the API,
 and sets the user's password, which the user changes at its sign-in.
-It reads mail, opens the pages and follows their forms. It opens the
-status, adds and removes a webhook, shows the recovery key of its own
-service, reads its log, makes a user with a one-time password, and reads
-what it did in the audit, on its page, a user's page and the API. A user
+It reads mail, by messages and by conversations, opens the pages and
+follows their forms. It opens the status, adds and removes a webhook,
+shows the recovery key of its own service, reads its log, makes a user
+with a one-time password, and reads what it did in the audit, on its
+page, a user's page and the API. A user
 of its own adds two devices of a second factor from the keys of their QR
 codes, signs in with a code of each and a recovery code, makes new
 codes and removes them, and the admin and the host remove them too. It

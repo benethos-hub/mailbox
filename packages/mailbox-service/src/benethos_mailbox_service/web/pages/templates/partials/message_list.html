@@ -2,7 +2,9 @@
 {# A page of messages. ``emails``: the account column, for lists across
    accounts, None for one account's list. ``selectable``: a tick box per
    message for the form ``batch``. ``open_as``: "mail", or "drafts" for
-   links that open the draft editor. #}
+   links that open the draft editor. ``folder_names``, where given: a
+   column with each message's folders, by id. #}
+{% set names = folder_names if folder_names is defined else none %}
 {% if messages %}
 <div class="table-scroll">
   <table>
@@ -10,7 +12,7 @@
       <tr>
         {% if selectable %}<th class="tick">{{ tick_all("batch", "ids", "Tick every message") }}</th>{% endif %}
         {% if emails is not none %}<th>Account</th>{% endif %}
-        <th>From</th><th>Subject</th><th>Date</th><th></th>
+        <th>From</th><th>Subject</th><th>Date</th>{% if names is not none %}<th>Folder</th>{% endif %}<th></th>
       </tr>
     </thead>
     <tbody>
@@ -24,6 +26,7 @@
           {% if m.snippet %}<span class="sub">{{ m.snippet }}</span>{% endif %}
         </td>
         <td>{{ m.date | when }}</td>
+        {% if names is not none %}<td class="muted">{% for f in m.folder_ids %}{{ names.get(f, f) }}{% if not loop.last %}, {% endif %}{% endfor %}</td>{% endif %}
         <td>
           {% if m.starred %}<span class="tag warn">{{ icon("star-fill", "starred") }}</span>{% endif %}
           {% if m.has_attachments %}<span class="tag">{{ icon("paperclip", "has attachments") }}</span>{% endif %}

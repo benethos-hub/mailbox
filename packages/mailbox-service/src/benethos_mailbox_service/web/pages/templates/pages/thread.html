@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import breadcrumb with context %}
+{% block title %}{{ thread.subject | or_missing }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}{{ thread.subject | or_missing }}{% endblock %}
+{% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="body">
+    <dl class="facts">
+      <dt>With</dt><dd>{{ thread.participants | addresses }}</dd>
+      <dt>Messages</dt><dd>{{ thread.message_count }}{% if thread.unread_count %}, {{ thread.unread_count }} unread{% endif %}{% if thread.truncated %}, the newest of a longer conversation{% endif %}</dd>
+      <dt>Folders</dt><dd>{{ thread_folders | join(", ") }}</dd>
+      <dt>Id</dt><dd class="mono">{{ thread.id }}</dd>
+    </dl>
+  </div>
+</section>
+
+<section class="card">
+  <header><h2>Messages</h2><span class="meta">oldest first</span></header>
+  <div class="body tight">{% include "partials/message_list.html" %}</div>
+</section>
+{% endblock %}

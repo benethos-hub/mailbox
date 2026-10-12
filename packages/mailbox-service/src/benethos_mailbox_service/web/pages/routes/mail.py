@@ -1,5 +1,6 @@
 """Reading mail: every account's inbox together, one account's folders and
-messages, a message, its attachments and its original.
+messages or conversations, a conversation, a message with the others of
+its conversation, its attachments and its original.
 
 Mail is foreign content. A body is shown as text, escaped like everything
 else. An HTML-only mail shows as the text made from its HTML, never as
@@ -18,9 +19,18 @@ from pydantic import ValidationError
 from benethos_mailbox_common.mail import plaintext
 
 from ....common.urls import path_and_query
-from ....data.models import Folder, FolderRole, Message, MessageFilter
+from ....data.models import (
+    Folder,
+    FolderRole,
+    Message,
+    MessageFilter,
+    MessageSummary,
+    Thread,
+    ThreadSummary,
+)
 from ....domain.mailbox import MailboxService, find_folder
 from ....domain.rights import Access
+from ....errors import MailboxServiceError
 from ...responses import download
 from ...search import FIELDS, FLAGS, filter_from
 from ...services import Mailbox
@@ -33,6 +43,9 @@ from ..rights import mail_rights
 from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
+
+# Conversations on a page: each is read whole.
+THREAD_PAGE = 20
 
 # The search of every message list, by the API's query names (web.search).
 SEARCH = Field("q", "Search text")
@@ -191,14 +204,25 @@ async def account_mail_page(
         trash=can["trash"] and caller.batches("delete_message", account_id),
         purge=caller.batches("delete_message_permanent", account_id),
     )
-    page = await mailbox.list_messages(
-        caller,
-        account_id,
-        folder_id=current.id,
-        search=search,
-        limit=PAGE_SIZE,
-        cursor=request.query_params.get("cursor"),
-    )
+    cursor = request.query_params.get("cursor")
+    by_threads = can["threads"] and request.query_params.get("view") == "threads"
+    messages: list[MessageSummary] = []
+    threads: list[ThreadSummary] = []
+    if by_threads:
+        listed = await mailbox.list_threads(
+            caller, account_id, folder_id=current.id, limit=THREAD_PAGE, cursor=cursor
+        )
+        threads, more = listed.items, listed.next_cursor
+    else:
+        page = await mailbox.list_messages(
+            caller,
+            account_id,
+            folder_id=current.id,
+            search=search,
+            limit=PAGE_SIZE,
+            cursor=cursor,
+        )
+        messages, more = page.items, page.next_cursor
     return render(
         request,
         "pages/account_mail.html",
@@ -211,14 +235,17 @@ async def account_mail_page(
         current=current,
         trail=[*mail_trail(account), (_counted(current), None)],
         bar=mail_bar(request, keep=[("folder", current.id)]),
-        messages=page.items,
-        pages=page_links(request, page.next_cursor),
+        messages=messages,
+        threads=threads,
+        views=_views(account_id, current.id) if can["threads"] else [],
+        view="threads" if by_threads else "messages",
+        pages=page_links(request, more),
         fields=fields,
         problem=problem,
         can=can,
         emails=None,
         open_as="mail",
-        selectable=can["change"] or can["trash"] or can["purge"],
+        selectable=not by_threads and (can["change"] or can["trash"] or can["purge"]),
         here=(
             path_and_query(str(request.url))
             if request.method == "GET"
@@ -241,6 +268,8 @@ async def message(
     names = {f.id: f.name for f in folders}
     folder = found.folder_ids[0] if found.folder_ids else None
     trail = mail_trail(account, (folder, names.get(folder, folder)) if folder else None)
+    can = mail_rights(caller, account_id, account.capabilities)
+    thread = await _conversation(caller, account_id, found, mailbox, can["thread"])
     return render(
         request,
         "pages/message.html",
@@ -254,10 +283,74 @@ async def message(
         in_trash=any(
             f.role is FolderRole.TRASH for f in folders if f.id in found.folder_ids
         ),
-        can=mail_rights(caller, account_id, account.capabilities),
+        thread=thread,
+        others=[m for m in thread.messages if m.id != found.id] if thread else [],
+        folder_names=names,
+        can=can,
         can_raw=caller.allows("get_message_raw", account_id),
         can_attachment=caller.allows("get_attachment", account_id),
     )
+
+
+@router.get("/accounts/{account_id}/threads/{thread_id}")
+async def thread(
+    request: Request, caller: Viewer, account_id: str, thread_id: str, mailbox: Mailbox
+) -> HTMLResponse:
+    """A conversation: its messages in every folder, oldest first. The
+    breadcrumb leads back to the folder it was opened from."""
+    account = account_of(request, caller, account_id)
+    found = await mailbox.get_thread(caller, account_id, thread_id)
+    folders = (
+        await mailbox.list_folders(caller, account_id)
+        if caller.allows("list_folders", account_id)
+        else []
+    )
+    names = {f.id: f.name for f in folders}
+    wanted = request.query_params.get("folder")
+    trail = mail_trail(account, (wanted, names[wanted]) if wanted in names else None)
+    return render(
+        request,
+        "pages/thread.html",
+        page="mail",
+        account=account,
+        trail=[*trail, (found.subject or "(no subject)", None)],
+        thread=found,
+        thread_folders=[names.get(f, f) for f in found.folder_ids],
+        messages=found.messages,
+        folder_names=names,
+        emails=None,
+        selectable=False,
+        open_as="mail",
+        pages=(None, None),
+        fields={},
+    )
+
+
+async def _conversation(
+    caller: Access,
+    account_id: str,
+    message: Message,
+    mailbox: MailboxService,
+    allowed: bool,
+) -> Thread | None:
+    """The conversation of a message, for the card of its other messages.
+    None where there is none to show, or it cannot be read now: the
+    message shows without it."""
+    if not allowed or message.thread_id is None:
+        return None
+    try:
+        return await mailbox.get_thread(caller, account_id, message.thread_id)
+    except MailboxServiceError:
+        return None
+
+
+def _views(account_id: str, folder_id: str) -> list[tuple[str, str, str]]:
+    """The two ways to list a folder: key, label and address."""
+    here = mail_url(account_id, folder_id)
+    return [
+        ("messages", "Messages", here),
+        ("threads", "Conversations", f"{here}&view=threads"),
+    ]
 
 
 def _counted(folder: Folder) -> str:

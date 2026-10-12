@@ -49,6 +49,28 @@ def check_mail(run: Run, browser: httpx.Client, account_id: str) -> None:
         f"/ui/accounts/{account_id}/mail", params={"q": "zz-no-such-mail-zz"}
     )
     run.check("a search that finds nothing", "match the search" in searched.text)
+    check_conversations(run, browser, account_id)
+
+
+def check_conversations(run: Run, browser: httpx.Client, account_id: str) -> None:
+    """The inbox by conversations, and the page of one."""
+    listed = browser.get(
+        f"/ui/accounts/{account_id}/mail",
+        params={"folder": "inbox", "view": "threads"},
+    )
+    found = re.search(
+        rf'href="(/ui/accounts/{account_id}/threads/thr_[0-9a-f]+)\?', listed.text
+    )
+    if not run.check(
+        "the inbox by conversations", listed.status_code == 200 and found is not None
+    ):
+        return
+    assert found is not None
+    opened = browser.get(found.group(1))
+    run.check(
+        "a conversation opens with its messages and their folders",
+        opened.status_code == 200 and "<th>Folder</th>" in opened.text,
+    )
 
 
 def _find(

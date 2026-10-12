@@ -181,7 +181,7 @@ A person finds the delete button of a record in the same place on every
 detail page, and never anywhere else. The entries of its lists have
 their bin on their row.
 
-Detail pages: Account, User, Role, Webhook, Message, Draft.
+Detail pages: Account, User, Role, Webhook, Message, Draft, Conversation.
 
 ### 4.3 Editor
 
@@ -206,6 +206,14 @@ the caller may: **Reply** with its word, then as icons Reply to all,
 Forward, Download original, Mark read or unread, Star, Move (the dialog
 asks the folder), Move to the trash and Delete for good (the dialog
 asks first).
+
+Where the account keeps threads and the caller may read them, the list
+of a folder switches between its messages and its conversations, each
+conversation where its newest message in the folder is. The
+conversations have no search and no batch. A conversation opens its own
+page: its facts, then its messages in every folder, oldest first, each
+with its folder. Below the text of a message a card names the others of
+its conversation and opens the conversation's page.
 
 A message shows its keywords in a card of their own, as chips, and the
 list shows them as tags. Whoever may change the message removes one

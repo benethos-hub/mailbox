@@ -89,7 +89,8 @@ done. Update the roadmap in the same commit that finishes an item.
   its first user with `users create-admin`, change the one-time password
   in the UI and make a token there, as an operator would.
   `uv run python live/ui.py` checks it against the test accounts. It
-  connects the second test account through the UI, writes a folder and
+  connects the second test account through the UI, reads the inbox by
+  conversations, writes a folder and
   a draft on the first and removes them, and sends one mail from the
   first to the second, deleted for good on both sides. It also makes a
   user, a role and a token and uses the token on the API, opens the

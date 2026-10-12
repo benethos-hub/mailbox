@@ -36,6 +36,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   newest message in the folder is. Both are in `mail.read`, and a grant
   that names folders sees the messages of a thread in them. POP3 answers
   `501`. The Python client has `list_threads` and `get_thread`.
+- The UI lists a folder by conversations where the account keeps
+  threads, shows a conversation on a page of its own, and names the
+  others of its conversation below a message.
 - The MCP server:
   - A new tool `get_thread` reads a conversation in every folder,
     oldest first, from a mail of it such as a search hit or from its

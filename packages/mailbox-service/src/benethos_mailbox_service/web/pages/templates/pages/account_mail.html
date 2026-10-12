@@ -78,7 +78,10 @@
   </div>
 
   <section class="card">
-    {% if can.search %}<div class="body">{{ filter_bar(bar, problem) }}</div>{% endif %}
+    {% if views %}
+    <nav class="tabs" aria-label="List the folder by">{% for key, label, url in views %}<a href="{{ url }}"{% if key == view %} class="active" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+    {% endif %}
+    {% if can.search and view == "messages" %}<div class="body">{{ filter_bar(bar, problem) }}</div>{% endif %}
     {% if selectable and messages %}
     <form id="batch" class="body toolbar" method="post" action="/ui/accounts/{{ account.id }}/mail/batch">
       {{ csrf_field() }}
@@ -104,7 +107,11 @@
       {% if can.purge %}<button class="danger" type="submit" name="purge" value="1" data-confirm="Delete the ticked messages for good? This cannot be undone." data-confirm-label="Delete for good" data-confirm-danger>{{ icon("x-octagon") }} Delete for good</button>{% endif %}
     </form>
     {% endif %}
+    {% if view == "threads" %}
+    <div class="body tight">{% include "partials/thread_list.html" %}</div>
+    {% else %}
     <div class="body tight">{% include "partials/message_list.html" %}</div>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

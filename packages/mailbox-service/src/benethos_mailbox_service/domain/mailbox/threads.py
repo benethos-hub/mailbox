@@ -6,11 +6,16 @@ the index keeps them (``sync``), and the messages are read by id
 (``Summaries``). POP3 has none: ``501``. A grant that names folders sees
 the messages of a thread in those folders only, and a thread without
 one of them is not found.
+
+A list of threads reads them all at once: for IMAP the summaries of
+every thread on the page in one go, elsewhere a few threads at a time.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
+
+import anyio
 
 from ...data.models import (
     Address,
@@ -19,7 +24,7 @@ from ...data.models import (
     Thread,
     ThreadSummary,
 )
-from ...errors import missing
+from ...errors import MailboxServiceError, NotFoundError, missing
 from ..accounts import summaries, threads
 from ..rights import Access
 from .calls import Calls, public
@@ -28,6 +33,12 @@ from .reach import Reach, reach_of, require_folder
 
 # The messages a thread lists at most, the newest.
 THREAD_MESSAGES = 500
+# Threads read from the provider at once, for a list of them.
+AT_ONCE = 4
+
+# The newest messages of each thread, oldest first, and whether it holds
+# more, by thread.
+Found = dict[str, tuple[list[MessageSummary], bool]]
 
 
 class Threads:
@@ -72,9 +83,11 @@ class Threads:
             lambda p: p.list_messages(folder, limit=limit, cursor=cursor),
         )
         listed = (await self._calls.published_page(account_id, page)).items
+        ids = list(dict.fromkeys(m.thread_id for m in listed if m.thread_id))
+        read = await self._read(account_id, ids)
         found: list[ThreadSummary] = []
-        for thread_id in dict.fromkeys(m.thread_id for m in listed if m.thread_id):
-            thread = await self._visible(account_id, thread_id, reach)
+        for thread_id in ids:
+            thread = _visible(account_id, thread_id, read, reach)
             if thread is None or (cursor and _listed_before(thread, folder, listed)):
                 continue
             found.append(
@@ -86,36 +99,85 @@ class Threads:
         self, account_id: str, thread_id: str, reach: Reach | None
     ) -> Thread | None:
         """The thread with the messages in reach, None without one."""
-        messages, truncated = await self._messages(account_id, thread_id)
-        if reach is not None:
-            messages = [m for m in messages if reach.sees(m.folder_ids)]
-        if not messages:
-            return None
-        return thread_of(thread_id, account_id, messages, truncated)
+        if self._calls.keeps_threads(account_id):
+            read = await self._from_index(account_id, [thread_id])
+        else:
+            read = {thread_id: await self._from_provider(account_id, thread_id)}
+        return _visible(account_id, thread_id, read, reach)
 
-    async def _messages(
+    async def _read(self, account_id: str, thread_ids: list[str]) -> Found:
+        """The newest messages of each thread of a list, some at once. A
+        thread the provider no longer finds is left out."""
+        if self._calls.keeps_threads(account_id):
+            return await self._from_index(account_id, thread_ids)
+        found: Found = {}
+        failures: list[MailboxServiceError] = []
+        limiter = anyio.CapacityLimiter(AT_ONCE)
+
+        async def read(thread_id: str) -> None:
+            async with limiter:
+                if failures:
+                    return
+                try:
+                    found[thread_id] = await self._from_provider(account_id, thread_id)
+                except NotFoundError:
+                    return
+                except MailboxServiceError as exc:
+                    failures.append(exc)
+
+        async with anyio.create_task_group() as group:
+            for thread_id in thread_ids:
+                group.start_soon(read, thread_id)
+        if failures:
+            raise failures[0]
+        return found
+
+    async def _from_provider(
         self, account_id: str, thread_id: str
     ) -> tuple[list[MessageSummary], bool]:
-        """The newest messages of a thread, oldest first, and whether it
-        holds more."""
-        if not self._calls.keeps_threads(account_id):
-            found = await self._calls.call(
-                account_id, lambda p: threads(p).thread_messages(thread_id, self._limit)
-            )
-            published = await self._calls.published(account_id, found.messages)
-            return published, found.truncated
-        entries = self._calls.thread_entries(account_id, thread_id)
-        wanted = entries[-self._limit :]
-        natives = [e.native_id for e in wanted]
-        read = await self._calls.call(
-            account_id, lambda p: summaries(p).summaries(natives)
+        found = await self._calls.call(
+            account_id, lambda p: threads(p).thread_messages(thread_id, self._limit)
         )
-        messages = [
-            public(read[e.native_id], e.id, account_id, thread_id)
-            for e in wanted
-            if e.native_id in read
-        ]
-        return _oldest_first(messages), len(entries) > self._limit
+        published = await self._calls.published(account_id, found.messages)
+        return published, found.truncated
+
+    async def _from_index(self, account_id: str, thread_ids: list[str]) -> Found:
+        """The messages the index names, read in one go, wherever they are."""
+        entries = {t: self._calls.thread_entries(account_id, t) for t in thread_ids}
+        wanted = {t: found[-self._limit :] for t, found in entries.items()}
+        natives = [e.native_id for found in wanted.values() for e in found]
+        read = (
+            await self._calls.call(
+                account_id, lambda p: summaries(p).summaries(natives)
+            )
+            if natives
+            else {}
+        )
+        return {
+            thread_id: (
+                _oldest_first(
+                    [
+                        public(read[e.native_id], e.id, account_id, thread_id)
+                        for e in found
+                        if e.native_id in read
+                    ]
+                ),
+                len(entries[thread_id]) > self._limit,
+            )
+            for thread_id, found in wanted.items()
+        }
+
+
+def _visible(
+    account_id: str, thread_id: str, read: Found, reach: Reach | None
+) -> Thread | None:
+    """A thread read, with the messages in reach. None without one."""
+    messages, truncated = read.get(thread_id, ([], False))
+    if reach is not None:
+        messages = [m for m in messages if reach.sees(m.folder_ids)]
+    if not messages:
+        return None
+    return thread_of(thread_id, account_id, messages, truncated)
 
 
 def thread_of(
