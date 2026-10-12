@@ -371,14 +371,20 @@ an app password is the credential to ask for.
   **2027-04-01**.
 - **SMTP AUTH with basic auth** is switched off by default for existing
   tenants at the **end of December 2026**, the final removal date follows
-  in the second half of 2027. Sending therefore goes through Graph
-  `sendMail`, not SMTP.
+  in the second half of 2027. Sending therefore goes through Graph, not
+  SMTP.
 - Outlook.com has accepted no basic auth since 2024-09-16.
 - Rules of the implementation (phase 5): every call asks for immutable ids
   (`Prefer: IdType="ImmutableId"`), so the domain keeps no id mapping.
   Sending and drafts go as MIME, composed as for every provider.
-  `sendMail` keeps the copy in Sent Items itself. A draft is created from
-  MIME and replaced by a new one, since Graph cannot change a draft's MIME.
+  A draft is created from MIME and replaced by a new one, since Graph
+  cannot change a draft's MIME. A mail is sent as such a draft: its copy
+  in Sent Items keeps the draft's immutable id, which the send answers,
+  the way Microsoft documents. A message is read from its MIME as well,
+  so its bodies, `in_reply_to` and attachments, inline images among
+  them, are those the other providers answer. Graph's own body is HTML
+  for a plain text mail, and Graph lists no attachments for a mail with
+  inline images only.
   Bcc recipients travel in a Bcc header **(unverified: that Exchange takes
   it out before delivery)**. Keywords are categories. `$answered` and the
   other system keywords have no place: setting or taking one off answers

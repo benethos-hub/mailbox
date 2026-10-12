@@ -13,11 +13,9 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from typing import Any
 
-from ...mail import fields
+from ...mail import convert, fields, parse
 from ...models import (
     Address,
-    Attachment,
-    AttachmentContent,
     Folder,
     FolderRole,
     Message,
@@ -25,7 +23,6 @@ from ...models import (
     MessageSummary,
     MessageUpdate,
 )
-from .shapes import Attachment as GraphAttachment
 from .shapes import MailFolder, Recipient, Recipients
 from .shapes import Message as GraphMessage
 
@@ -46,7 +43,6 @@ SUMMARY_FIELDS = (
     "receivedDateTime,bodyPreview,isRead,flag,categories,hasAttachments,isDraft,"
     "internetMessageId"
 )
-MESSAGE_FIELDS = f"{SUMMARY_FIELDS},ccRecipients,bccRecipients,replyTo,body"
 FOLDER_FIELDS = (
     "id,displayName,parentFolderId,totalItemCount,unreadItemCount,childFolderCount"
 )
@@ -103,38 +99,18 @@ def summary(item: GraphMessage) -> MessageSummary:
     )
 
 
-def message(item: GraphMessage, attachments: list[GraphAttachment]) -> Message:
-    content = (item.body.content if item.body else None) or None
-    kind = (item.body.content_type if item.body else None) or ""
-    is_html = kind.lower() == "html"
-    return Message(
-        **summary(item).model_dump(by_alias=False),
-        cc=_addresses(item.cc_recipients),
-        bcc=_addresses(item.bcc_recipients),
-        reply_to=_addresses(item.reply_to),
-        message_id_header=item.internet_message_id,
-        text_body=None if is_html else content,
-        html_body=content if is_html else None,
-        attachments=[attachment(a) for a in attachments],
-    )
+def message(item: GraphMessage, raw: bytes) -> Message:
+    """The whole message: what Graph knows of it, and what its MIME says,
+    read as for any other provider."""
+    found = convert.message_fields(parse.ParsedMessage(raw))
+    return Message(**{**summary(item).model_dump(by_alias=False), **found})
 
 
-def attachment(item: GraphAttachment) -> Attachment:
-    return Attachment(
-        id=item.id,
-        filename=item.name or None,
-        content_type=item.content_type or fields.OCTET_STREAM,
-        size=item.size or 0,
-        inline=bool(item.is_inline),
-    )
-
-
-def attachment_content(item: GraphAttachment, data: bytes) -> AttachmentContent:
-    return AttachmentContent(
-        filename=item.name or None,
-        content_type=item.content_type or fields.OCTET_STREAM,
-        data=data,
-    )
+def sent_copy(draft: GraphMessage, sent: str | None) -> MessageSummary:
+    """The copy in Sent Items of a draft just sent, which keeps the
+    draft's id, in the folder ``sent``."""
+    copy = draft.model_copy(update={"parent_folder_id": sent, "is_draft": False})
+    return summary(copy)
 
 
 def changes(

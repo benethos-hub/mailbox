@@ -409,7 +409,8 @@ order, each step one pull request or more:
 
 1. **Bugs without a live check**, against today's documentation, done
 2. **Bugs with a live check**: Gmail threads a reply, Microsoft answers
-   the text body, `in_reply_to`, the sent copy and inline attachments
+   the text body, `in_reply_to`, the sent copy and inline attachments,
+   done
 3. **Microsoft sends large mail through upload sessions**, and IMAP
    orders the steps of a change of flags and folder
 4. **One test suite for all adapters**

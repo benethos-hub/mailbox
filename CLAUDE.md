@@ -109,10 +109,15 @@ done. Update the roadmap in the same commit that finishes an item.
   against the Microsoft test account in `live/.env` with that app. With
   `--project` both use the project's app: `--connect` prints a code a
   person enters at Microsoft. It makes and removes a folder and a reply
-  draft there, sends one mail from it to the first test account and
-  deletes it for good on both sides, gives the sent copy a keyword and
-  takes it off, reads its conversation, and checks that the change feed
-  learns of the sent copy through Graph delta queries.
+  draft there, sends one mail with a file from it to the first test
+  account and deletes it for good on both sides. The send names the
+  sent copy, whose text and file are as sent, and the mail arrives
+  under the Message-ID the send answered. A reply to the copy goes to
+  the first test account too and names what it answers. It gives the
+  sent copy a keyword and takes it off, reads its conversation, and
+  checks that the change feed learns of the sent copy through Graph
+  delta queries. Where a mail of the inbox has inline images, they
+  must be listed and download.
 - Gmail accounts: a Google client of your own, `docs/GOOGLE.md`.
   `uv run python live/gmail.py --connect` once (a person signs in in
   the browser), then `uv run python live/gmail.py` checks the adapter

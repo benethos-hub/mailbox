@@ -105,6 +105,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A reply sent or drafted through a Gmail account joins the thread of
   the mail it answers, in Gmail and in `get_thread`. Gmail started a
   thread of its own for it, since it threads a reply only when told.
+- `get_message` of a Microsoft account answers `text_body`, `html_body`
+  and `in_reply_to` as the mail has them, as on the other providers. A
+  plain text mail had `text_body` null and Exchange's HTML in
+  `html_body`, and `in_reply_to` was null on every mail but drafts.
+- `get_message` of a Microsoft account lists inline images as
+  attachments, which can be downloaded. A mail with inline images only
+  listed none. Attachment ids of Microsoft mail now look like those of
+  the other providers, such as `att_0`. An id handed out before answers
+  `404`.
+- A send through a Microsoft account answers `sent_copy_id`, and
+  `message.sent` in the change feed names the copy. Both carried the
+  `Message-ID` header before.
 
 ## [0.4.1] - 2026-10-10
 
