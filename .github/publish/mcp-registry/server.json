@@ -51,7 +51,7 @@
         },
         {
           "name": "MAILBOX_SERVICE_ALLOW_HTTP",
-          "description": "Set to true to send the token over plain http to a service on another machine.",
+          "description": "Set to true to send the token over plain http to a service on another machine. Not needed for localhost or https.",
           "isRequired": false,
           "format": "boolean",
           "default": "false"

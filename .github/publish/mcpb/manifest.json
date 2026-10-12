@@ -115,7 +115,7 @@
     "allow_http": {
       "type": "boolean",
       "title": "Plain http to another machine",
-      "description": "Send the token unencrypted to a service on another machine. Leave off and use https there.",
+      "description": "Send the token unencrypted to a service on another machine. Not needed for localhost or https. Leave off and use https there.",
       "default": false,
       "required": false
     }
