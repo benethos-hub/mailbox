@@ -1,4 +1,5 @@
-"""The links of every README, and the contents at its top.
+"""The links of every README and every document, and the contents at
+the top of a README.
 
 A link renders whether it leads anywhere or not, so a renamed heading or a
 moved file goes unnoticed. Checked here, without the network:
@@ -45,6 +46,12 @@ def _readmes() -> list[Path]:
         for path in ROOT.rglob("README.md")
         if not SKIPPED & set(path.relative_to(ROOT).parts[:-1])
     )
+
+
+def _documents() -> list[Path]:
+    """The READMEs, the documents in docs/ and CLAUDE.md: the files whose
+    links are checked."""
+    return [*_readmes(), *sorted((ROOT / "docs").glob("*.md")), ROOT / "CLAUDE.md"]
 
 
 def _on_pypi(readme: Path) -> bool:
@@ -109,7 +116,7 @@ def _broken(readme: Path, target: str) -> str | None:
 
 
 @pytest.mark.parametrize(
-    "readme", _readmes(), ids=lambda p: p.relative_to(ROOT).as_posix()
+    "readme", _documents(), ids=lambda p: p.relative_to(ROOT).as_posix()
 )
 def test_every_link_leads_somewhere(readme: Path) -> None:
     broken = [
@@ -150,6 +157,11 @@ def test_the_readmes_are_found() -> None:
     names = {p.relative_to(ROOT).as_posix() for p in _readmes()}
     assert {"README.md", "packages/mailbox-mcp/README.md"} <= names
     assert not any("vendor" in name for name in names)
+
+
+def test_the_documents_are_found() -> None:
+    names = {p.relative_to(ROOT).as_posix() for p in _documents()}
+    assert {"CLAUDE.md", "docs/CONCEPT.md", "README.md"} <= names
 
 
 def test_the_anchor_follows_githubs_rules() -> None:
