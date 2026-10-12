@@ -104,8 +104,23 @@ async def test_folders_with_roles_and_parents(server: FakeMailBox) -> None:
     assert set(folders) == {"INBOX", "Sent", "2026"}  # \Noselect is left out
     assert folders["INBOX"].role is FolderRole.INBOX
     assert folders["Sent"].role is FolderRole.SENT
-    assert folders["2026"].parent_id == mappers.folder_id("Archive")
+    # Below a folder that is not listed: at the top, as nothing above it
+    # is listed, but still Archive/2026 on the server.
+    assert folders["2026"].parent_id is None
     assert mappers.folder_name(folders["2026"].id) == "Archive/2026"
+
+
+async def test_a_folder_below_an_unlisted_one_is_renamed_in_place(
+    server: FakeMailBox,
+) -> None:
+    imap = provider(server)
+    year = mappers.folder_id("Archive/2026")
+    renamed = await imap.update_folder(year, "2025", None)
+    assert "Archive/2025" in server.folders and renamed.parent_id is None
+    # Moved when it is asked to go below another folder.
+    inbox = mappers.folder_id("INBOX")
+    moved = await imap.update_folder(renamed.id, "2025", inbox)
+    assert "INBOX/2025" in server.folders and moved.parent_id == inbox
 
 
 async def test_folders_say_whether_they_are_subscribed(server: FakeMailBox) -> None:

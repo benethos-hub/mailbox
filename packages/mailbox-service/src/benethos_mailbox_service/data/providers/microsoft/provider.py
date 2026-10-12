@@ -26,12 +26,14 @@ from __future__ import annotations
 import base64
 import time
 from collections.abc import Callable
-from urllib.parse import unquote, urlencode
+from datetime import datetime
+from urllib.parse import urlencode
 
 from ....errors import (
     BadRequestError,
     ConflictError,
     MailboxServiceError,
+    NotSupportedError,
     ProviderError,
     missing,
 )
@@ -145,10 +147,12 @@ class MicrosoftProvider:
         search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
         query, rest = mappers.query(search)
+        # Graph's next page carries the query it was asked with: bound to
+        # the folder and the search, so another list's cursor is refused.
+        scope = rules.cursor_scope(folder_id, search)
         if cursor:
-            body = await self._graph.read(
-                Listing[GraphMessage], "GET", own_path(cursor)
-            )
+            path = own_path(rules.cursor_value("m_", cursor, scope))
+            body = await self._graph.read(Listing[GraphMessage], "GET", path)
         else:
             path = (
                 f"/me/mailFolders/{id_(folder_id)}/messages"
@@ -160,13 +164,15 @@ class MicrosoftProvider:
                 Listing[GraphMessage], "GET", path, params=params
             )
         found = body.value
-        if "$search" in query or (cursor and "search=" in unquote(cursor)):
+        if "$search" in query:
             found = await self._immutable(found)
         items = [mappers.summary(item) for item in found]
         link = body.next_link
         return Page[MessageSummary](
             items=[item for item in items if mappers.keeps(item, rest)],
-            next_cursor=own_path(link) if link else None,
+            next_cursor=rules.bound_cursor("m_", scope, own_path(link))
+            if link
+            else None,
         )
 
     async def _immutable(self, items: list[GraphMessage]) -> list[GraphMessage]:
@@ -277,7 +283,11 @@ class MicrosoftProvider:
             content_type="text/plain",
         )
         if replaces is not None:
-            await self._delete_for_good(replaces)
+            await rules.replaced(
+                item.id,
+                lambda: self._delete_for_good(replaces),
+                lambda: self._delete_for_good(item.id),
+            )
         return mappers.summary(item)
 
     async def get_draft(self, draft_id: str) -> bytes:
@@ -310,8 +320,16 @@ class MicrosoftProvider:
             target = rules.move_target(changes, self.capabilities)
             path = f"/me/messages/{id_(message_id)}"
             item = None
-            if changes.add_keywords or changes.remove_keywords:
+            if mappers.touches_marks(changes):
+                # Refused before anything changes.
                 item = await self._summary_of(path)
+                if changed := mappers.marks_changed(item, changes):
+                    raise NotSupportedError(
+                        "outlook keeps no keywords with $, only its categories: "
+                        + ", ".join(changed)
+                    )
+            if changes.add_keywords or changes.remove_keywords:
+                item = item or await self._summary_of(path)
                 categories = mappers.categories_after(item, changes)
                 patch = {**body, **mappers.changes(None, None, categories)}
             else:
@@ -358,10 +376,16 @@ class MicrosoftProvider:
         if trash is None:
             trash = await self._graph.role_id(FolderRole.TRASH)
         path = f"/me/messages/{id_(message_id)}"
+        moved = None
         if (await self._graph.placed(path)).parent_folder_id != trash:
-            item = await self._graph.move(Item, path, trash)
-            path = f"/me/messages/{id_(item.id)}"
-        await self._graph.call("DELETE", path)
+            moved = await self._graph.move(Item, path, trash)
+            path = f"/me/messages/{id_(moved.id)}"
+        try:
+            await self._graph.call("DELETE", path)
+        except MailboxServiceError as exc:
+            if moved is None:
+                raise
+            raise exc.noting("the message is in the trash now") from None
 
     # --- for the sync worker ------------------------------------------------------
     # Ids are stable: the domain keeps no id mapping for this provider, so
@@ -429,10 +453,13 @@ class MicrosoftProvider:
             for n, body in found.items()
         }
 
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+    async def folder_changes(
+        self, folder_id: str, token: str | None, since: datetime | None = None
+    ) -> FolderChanges:
         """A delta query of the folder's messages. The token is Graph's
         deltaLink, below ``/v1.0``. A message moved out of the folder comes
-        as removed, one moved in as changed, under the same immutable id."""
+        as removed, one moved in as changed, under the same immutable id.
+        Every message carries when it came, so ``since`` asks nothing more."""
         if token is None:
             body = await self._graph.read(
                 Listing[GraphMessage],

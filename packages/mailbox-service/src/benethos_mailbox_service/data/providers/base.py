@@ -169,7 +169,8 @@ class Deletes(Protocol):
     ) -> dict[str, MessageSummary | None | MailboxServiceError]:
         """Into the trash, or for good. Per id the message in the trash
         where it is known, None when it is gone or not found there at once,
-        or why not. A failed login or connection raises instead."""
+        or why not. A failed login or connection raises instead, or, once
+        some are done, is the outcome of the rest."""
         ...
 
 
@@ -183,7 +184,8 @@ class Writes(Deletes, Protocol):
     ) -> dict[str, MessageSummary | MailboxServiceError]:
         """Change flags and keywords, or move, of every message. Per id the
         message as it is now (after a move its id names the new place), or
-        why not. A failed login or connection raises instead."""
+        why not. A failed login or connection raises instead, or, once some
+        are done, is the outcome of the rest."""
         ...
 
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
@@ -253,10 +255,14 @@ class Deltas(Protocol):
     """Tells what changed in a folder since a token, instead of the sync
     comparing the folder's contents. Gives ``DELTA``."""
 
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+    async def folder_changes(
+        self, folder_id: str, token: str | None, since: datetime | None = None
+    ) -> FolderChanges:
         """What changed in the folder since ``token``. Without a token every
         message counts as changed. A token the provider no longer knows
-        raises ``ChangesExpiredError``."""
+        raises ``ChangesExpiredError``. Without a token but with ``since``,
+        after such an error, the messages that arrived since then carry
+        ``created``."""
         ...
 
 

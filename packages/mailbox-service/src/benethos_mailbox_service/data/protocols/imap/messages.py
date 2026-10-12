@@ -158,13 +158,18 @@ class Messages:
                 )
         return new_uids(reported)
 
+    def can_expunge(self) -> bool:
+        """Whether one message can be deleted for good (``UIDPLUS``)."""
+        with translated():
+            return "UIDPLUS" in capabilities(self._session.client())
+
     def expunge(self, uids: list[int]) -> None:
         """Delete messages of the selected folder for good. Needs
         ``UIDPLUS``: a plain EXPUNGE would take every message marked
         deleted with it, other clients' too."""
         with translated():
             client = self._session.client()
-            if "UIDPLUS" not in capabilities(client):
+            if not self.can_expunge():
                 raise NotSupportedError(
                     "the mail server offers no UIDPLUS: deleting one message "
                     "for good would expunge other deleted messages too"

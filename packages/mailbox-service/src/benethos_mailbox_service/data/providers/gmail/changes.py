@@ -49,16 +49,27 @@ class Changes:
             for i, m in found.items()
         }
 
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
+    async def folder_changes(
+        self, folder_id: str, token: str | None, since: datetime | None = None
+    ) -> FolderChanges:
         if token is None:
             start = await self._history_id()
             found = await self.folder_contents(folder_id)
-            return FolderChanges(start, [ChangedMessage(i) for i in found])
+            new = set(await self._received_since(folder_id, since)) if since else set()
+            now = self._now()
+            return FolderChanges(
+                start, [ChangedMessage(i, now if i in new else None) for i in found]
+            )
         if not token.isdigit():
             raise ChangesExpiredError("not a gmail history id")
         records, latest = await self._history(token)
         changed, removed = _in_folder(folder_id, records, self._now())
         return FolderChanges(latest, changed, removed)
+
+    async def _received_since(self, folder_id: str, since: datetime) -> list[str]:
+        """The messages of the folder Gmail received since then."""
+        query = ("q", f"after:{int(since.timestamp())}")
+        return await reading.ids(self._api, [*reading.folder_params(folder_id), query])
 
     async def _history_id(self) -> str:
         profile = await self._api.read(Profile, "GET", "/profile")

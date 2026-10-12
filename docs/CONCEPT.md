@@ -381,7 +381,8 @@ an app password is the credential to ask for.
   MIME and replaced by a new one, since Graph cannot change a draft's MIME.
   Bcc recipients travel in a Bcc header **(unverified: that Exchange takes
   it out before delivery)**. Keywords are categories. `$answered` and the
-  other system keywords have no place and are not stored. A next-page
+  other system keywords have no place: setting or taking one off answers
+  `501`. A next-page
   cursor is a Graph path below `/me/` and never leaves the Graph host.
   No push yet.
 - Seen live with a personal account: `$search` ignores the preference for
@@ -489,7 +490,8 @@ live against a Gmail account (`live/gmail.py`):
   is the folder `ALL_MAIL` with the role `all`. A message in the trash or
   the spam is in that folder alone. `STARRED` and `UNREAD` are flags.
   `IMPORTANT`, the categories and the chats are left out. Gmail has no
-  keywords: setting one answers 501.
+  keywords: setting one answers 501. A draft reads `$draft`, from its
+  label `DRAFT`, as on the other providers.
 - Changes come from `history.list` since a history id, polled by the
   worker (`DELTA`). Push through Pub/Sub is not built (IDEAS.md).
 
@@ -924,7 +926,7 @@ of the messages by threads.
 | POST | `{acc}/send` | send. Body: recipients, `reply_to`, subject, text / html, attachments, `attachments_from`, optional `reference: {message_id, action: reply\|reply_all\|forward}`. Header `Idempotency-Key` |
 | GET | `{acc}/drafts` | list |
 | POST | `{acc}/drafts` | create (same body as send) |
-| PUT | `{acc}/drafts/{draft_id}` | replace, `keep_attachments` names stored attachments that stay. The answer names the draft's id from now on: IMAP keeps it, Microsoft and JMAP store a new message under a new id (decided 2026-10-06) |
+| PUT | `{acc}/drafts/{draft_id}` | replace, `keep_attachments` names stored attachments that stay. The answer names the draft's id from now on: IMAP keeps it, Microsoft and JMAP store a new message under a new id (decided 2026-10-06). Where the old one cannot be deleted, the new one is taken back, and the error names it only where that fails too. IMAP without `UIDPLUS` answers `501` |
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
 | POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
 | GET | `{acc}/sends` | the audit of sends, newest first |
@@ -1137,6 +1139,9 @@ advisor" need, whichever account it went to.
   belong to one account.
 - The accounts are asked in parallel, the results merged by date, newest
   first. The cursor is opaque and carries the position in every account.
+  Each account gives the start of its own list: IMAP lists by arrival,
+  so an old mail filed late may come a page early, but no message is
+  skipped or given twice. Each page is newest first.
 - **One slow or failing account does not fail the request.** The answer is
   marked incomplete and says which account failed and why:
 
@@ -1954,6 +1959,13 @@ last pass. A message that left one folder and came into another moved.
 One that is new to a folder counts as created when Graph dates its
 creation after the last pass, else as updated. A message that arrives
 while a pass runs may therefore count as updated.
+
+A provider can forget the token of the last pass: Graph and Gmail after
+a while, a JMAP server when it keeps no more changes. The folder is then
+read whole, and the messages that arrived since the last pass count as
+created: Graph dates each, Gmail and JMAP are asked for those received
+since then. The rest is known already. What was deleted in the gap is
+not reported.
 
 **Fallback without the service**, for development and tests only:
 a test harness can run the service app and the MCP client in one process

@@ -3,6 +3,8 @@ messages and folders."""
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 import pytest
 
@@ -13,6 +15,7 @@ from benethos_mailbox_service.errors import (
     BadRequestError,
     ConflictError,
     NotFoundError,
+    NotSupportedError,
     ProviderUnavailableError,
 )
 
@@ -56,6 +59,37 @@ async def test_categories_added_and_taken_off(graph: FakeGraph) -> None:
     assert changed.keywords == ["work", "urgent"]
 
 
+async def test_keywords_with_a_dollar_answer_501(graph: FakeGraph) -> None:
+    """Outlook keeps no `$answered`: refused, and nothing else changed."""
+    message_id = graph.add_message(categories=["Work"])
+    draft_id = graph.add_message(isDraft=True)
+    provider = adapter(graph)
+    for changes in (
+        MessageUpdate(unread=False, add_keywords=["$answered"]),
+        MessageUpdate(keywords=["work", "$junk"]),
+        MessageUpdate(remove_keywords=["$draft"]),
+    ):
+        target = draft_id if changes.remove_keywords else message_id
+        [refused] = (await provider.update_messages([target], changes)).values()
+        assert isinstance(refused, NotSupportedError)
+    assert graph.messages[message_id]["isRead"] is False
+    assert graph.messages[message_id]["categories"] == ["Work"]
+    # What it has already, or has not, is no change.
+    [kept] = (
+        await provider.update_messages(
+            [draft_id],
+            MessageUpdate(keywords=["$draft", "Plan"], remove_keywords=None),
+        )
+    ).values()
+    assert not isinstance(kept, Exception) and kept.keywords == ["plan", "$draft"]
+    [same] = (
+        await provider.update_messages(
+            [message_id], MessageUpdate(remove_keywords=["$answered"])
+        )
+    ).values()
+    assert not isinstance(same, Exception)
+
+
 async def test_a_graph_message_is_in_one_folder(graph: FakeGraph) -> None:
     message_id = graph.add_message()
     archive = graph.new_folder("Archive", graph.root)
@@ -77,6 +111,27 @@ async def test_trash_then_for_good(graph: FakeGraph) -> None:
     assert isinstance(again, ConflictError)
     [gone] = (await provider.delete_messages([message_id], permanent=True)).values()
     assert gone is None and message_id not in graph.messages
+
+
+async def test_a_delete_for_good_that_stops_says_where_it_is(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    message_id = graph.add_message()
+    provider = adapter(graph)
+    real = provider._graph.call
+
+    async def call(method: str, path: str, **kwargs: Any) -> Any:
+        if method == "DELETE":
+            raise BadRequestError("graph refused it")
+        return await real(method, path, **kwargs)
+
+    monkeypatch.setattr(provider._graph, "call", call)
+    [failed] = (await provider.delete_messages([message_id], permanent=True)).values()
+    assert isinstance(failed, BadRequestError)
+    assert failed.message == "graph refused it: the message is in the trash now"
+    assert (
+        graph.messages[message_id]["parentFolderId"] == graph.well_known["deleteditems"]
+    )
 
 
 async def test_message_headers_come_in_one_batch(graph: FakeGraph) -> None:

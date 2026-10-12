@@ -3,7 +3,8 @@
 Each account is read in windows of its own pages. The cursor carries
 where each account stands (``merge``). Accounts the caller may not read
 are left out without a word, like in ``list_accounts``. An account that
-fails leaves the page incomplete, it does not fail the request.
+fails leaves the page incomplete, it does not fail the request. So does
+one without the folder of the role asked for, on the first page.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from ...data.models import (
     MessageSummary,
     Page,
 )
+from ...errors import NotFoundError
 from ..rights import Access
 from . import merge
 from .calls import Calls
@@ -108,10 +110,23 @@ class AcrossAccounts:
             failures,
         )
         positions = {}
-        for account_id, found in folders.items():
+        # In the order asked for, whichever answered first.
+        for account_id in account_ids:
+            if (found := folders.get(account_id)) is None:
+                continue
             match = next((f for f in found if f.role is role), None)
             reach = reaches.get(account_id)
-            if match is not None and (reach is None or match.id in reach.ids):
+            if match is None:
+                # Named once, on the first page: its messages never come.
+                missing = NotFoundError(f"the account has no {role.value} folder")
+                failures.append(
+                    AccountFailure(
+                        account_id=account_id,
+                        code=missing.code,
+                        message=missing.message,
+                    )
+                )
+            elif reach is None or match.id in reach.ids:
                 positions[account_id] = merge.Position(match.id, None, 0)
         return positions
 
@@ -164,14 +179,7 @@ class AcrossAccounts:
     ) -> list[MessageSummary]:
         """The newest ``limit`` of the windows, under our ids. Each
         account's position moves past what it gave."""
-        merged = [
-            (item, account_id)
-            for account_id, window in chunks.items()
-            for chunk in window
-            for item in chunk.items
-        ]
-        merged.sort(key=lambda pair: merge.newest_first(pair[0]))
-        taken = merged[:limit]
+        taken = merge.newest_of(chunks, limit)
         published: dict[str, list[MessageSummary]] = {}
         for account_id, window in chunks.items():
             mine = [item for item, owner in taken if owner == account_id]

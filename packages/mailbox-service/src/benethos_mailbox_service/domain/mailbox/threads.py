@@ -24,6 +24,7 @@ from ...data.models import (
     Thread,
     ThreadSummary,
 )
+from ...data.providers import Reads
 from ...errors import MailboxServiceError, NotFoundError, missing
 from ..accounts import summaries, threads
 from ..rights import Access
@@ -79,9 +80,12 @@ class Threads:
         reach = await reach_of(self._calls, access, "list_threads", account_id)
         if reach is not None:
             require_folder(reach, folder)
+        keeps = self._calls.keeps_threads(account_id)
         page = await self._calls.call(
             account_id,
-            lambda p: p.list_messages(folder, limit=limit, cursor=cursor),
+            lambda p: _threaded(p, keeps).list_messages(
+                folder, limit=limit, cursor=cursor
+            ),
         )
         listed = (await self._calls.published_page(account_id, page)).items
         ids = list(dict.fromkeys(m.thread_id for m in listed if m.thread_id))
@@ -178,6 +182,14 @@ class Threads:
             )
             for thread_id, found in wanted.items()
         }
+
+
+def _threaded(adapter: Reads, keeps: bool) -> Reads:
+    """The adapter of an account with threads, kept by the index or by the
+    provider. Without them: ``501``, before anything is listed."""
+    if not keeps:
+        threads(adapter)
+    return adapter
 
 
 def _visible(

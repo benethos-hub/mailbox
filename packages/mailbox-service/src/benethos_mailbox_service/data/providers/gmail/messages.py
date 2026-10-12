@@ -38,7 +38,7 @@ async def list_messages(
     spam among them."""
     if folder_id is not None:
         await reading.require_folder(api, folder_id)
-    scope = mappers.scope(folder_id, search)
+    scope = rules.cursor_scope(folder_id, search)
     params = [("maxResults", str(limit)), *reading.folder_params(folder_id)]
     if cursor:
         params.append(("pageToken", mappers.page_token(cursor, scope)))

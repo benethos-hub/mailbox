@@ -110,6 +110,22 @@ def test_order_holds_for_any_page_size(world: World, limit: int) -> None:
     assert flat == ["b10", "a9", "b8", "a7", "c6", "a5", "c4", "a3", "b2", "a1"]
 
 
+@pytest.mark.parametrize("limit", [1, 2, 3, 4])
+def test_an_account_not_listed_by_date_loses_nothing(world: World, limit: int) -> None:
+    """IMAP lists by arrival. An old mail filed late comes first there:
+    every message still comes once, each page newest first."""
+    _, client, _, adapters = world
+    adapters[0].messages = _messages("a", [1, 9, 3, 7, 5])
+    pages = _walk(client, limit=limit)
+    every = [s for page in pages for s in page]
+    assert sorted(every) == sorted(
+        ["a1", "a9", "a3", "a7", "a5", "b10", "b8", "b2", "c6", "c4"]
+    )
+    for page in pages:
+        hours = [int(s[1:]) for s in page]
+        assert hours == sorted(hours, reverse=True)
+
+
 def test_items_carry_their_account(world: World) -> None:
     _, client, ids, _ = world
     items = client.get("/v1/messages", params={"limit": 2}).json()["items"]
@@ -139,9 +155,19 @@ def test_a_cursor_continues_its_own_search_alone(world: World) -> None:
 
 
 def test_folder_role_per_account(world: World) -> None:
-    _, client, _, _ = world
+    _, client, ids, _ = world
     archive = _walk(client, limit=10, folder="archive")
     assert archive == [["c6", "c4"]]
+    # The accounts without an archive are named, not left out.
+    body = client.get("/v1/messages", params={"limit": 10, "folder": "archive"})
+    assert body.json()["incomplete"] == [
+        {
+            "account_id": account_id,
+            "code": "not_found",
+            "message": "the account has no archive folder",
+        }
+        for account_id in ids[:2]
+    ]
     inbox = [s for page in _walk(client, limit=10, folder="inbox") for s in page]
     assert "c6" not in inbox
     assert inbox[0] == "b10"

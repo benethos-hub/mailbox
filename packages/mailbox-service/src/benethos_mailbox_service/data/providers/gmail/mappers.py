@@ -14,9 +14,6 @@ import html
 from datetime import UTC, date, datetime, time
 from typing import Any
 
-from benethos_mailbox_common.values import canonical, secret
-
-from ....common import opaque
 from ...mail import convert, parse
 from ...models import Folder, FolderRole, Message, MessageFilter, MessageSummary
 from .. import rules
@@ -31,6 +28,9 @@ UNREAD = "UNREAD"
 STARRED = "STARRED"
 # "All Mail": no label of Gmail's, so an id that is none either.
 ALL_MAIL = "ALL_MAIL"
+# The keyword of a draft, as JMAP names it: Gmail keeps no keywords, but
+# a draft carries the label ``DRAFT``.
+DRAFT_KEYWORD = "$draft"
 
 # The system labels that are folders, with their role and name.
 SYSTEM = {
@@ -138,7 +138,7 @@ def _labels(message: GmailMessage, known: set[str]) -> dict[str, Any]:
         "folder_ids": folder_ids(labels, known),
         "unread": UNREAD in labels,
         "starred": STARRED in labels,
-        "keywords": [],
+        "keywords": [DRAFT_KEYWORD] if DRAFT in labels else [],
     }
 
 
@@ -195,22 +195,9 @@ def _seconds(day: date) -> int:
 # --- cursors -------------------------------------------------------------------------
 
 
-def scope(folder_id: str | None, search: MessageFilter | None) -> str:
-    """What a cursor belongs to: the folder and the search, shortened.
-    Two that collide cost a page of the other search, never another
-    account's mail."""
-    what = canonical.canonical(
-        [folder_id, (search or MessageFilter()).model_dump(mode="json")]
-    )
-    return secret.digest(what)[:16]
+def cursor(scope: str, page_token: str) -> str:
+    return rules.bound_cursor("g_", scope, page_token)
 
 
-def cursor(scope_of: str, page_token: str) -> str:
-    return opaque.encode("g_", [scope_of, page_token])
-
-
-def page_token(value: str, scope_of: str) -> str:
-    parts = opaque.fields("g_", value, str, str)
-    if parts is None or parts[0] != scope_of or not parts[1]:
-        raise rules.invalid_cursor()
-    return str(parts[1])
+def page_token(value: str, scope: str) -> str:
+    return rules.cursor_value("g_", value, scope)

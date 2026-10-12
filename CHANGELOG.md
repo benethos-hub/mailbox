@@ -66,6 +66,43 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The Claude Desktop extension and the registry entry say that the
   setting for plain http is not needed for localhost or https.
 
+### Fixed
+
+- `list_threads` answers `501` on a POP3 account, as `get_thread` does,
+  instead of an empty page.
+- A Gmail draft carries the keyword `$draft`, as on the other providers,
+  and `get_message` names the mail it answers (`reference`). It was
+  always null on Gmail.
+- A Microsoft account answers `501` when a change sets or takes off a
+  keyword with `$`, such as `$answered`, which Outlook keeps no place
+  for. It answered success and stored nothing.
+- The `next_cursor` of a Microsoft account belongs to its folder and
+  search, as on the other providers. Sent with another folder or filter,
+  it answered the first list's next page. Now it answers `400
+  invalid_cursor`. A cursor handed out before this version is refused
+  once.
+- `GET /v1/messages` with a `folder` role names each account without such
+  a folder in `incomplete`, on the first page, as `not_found`. It left
+  them out without a word.
+- An IMAP folder below one that holds no messages (`\Noselect`), which
+  is not listed, names the nearest listed folder above as `parent_id`,
+  or none. It named the unlisted one. Renamed, it stays where it is on
+  the server.
+- When Gmail, Microsoft or a JMAP server forgot the state of the last
+  sync, the mail that arrived since then is reported as
+  `message.created`. It was taken as known and never reported.
+- `update_draft` that cannot delete the draft it replaces takes the new
+  one back and answers the error, so one draft stays. Where even that
+  fails, the error names the new draft. On IMAP without `UIDPLUS` it
+  answers `501` before storing anything. It could leave both drafts.
+- A batch whose connection or login fails after some messages are done
+  answers those as done and the rest with the failure. It answered only
+  the failure, though the first messages were changed. A delete for good
+  on Microsoft that stops in the trash says so.
+- `GET /v1/messages` across accounts no longer skips or repeats a mail of
+  an IMAP account between pages. IMAP lists by arrival, and an old mail
+  filed late threw the pages off. Each page is still newest first.
+
 ## [0.4.1] - 2026-10-10
 
 ### Added

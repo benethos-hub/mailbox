@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.providers.imap import mappers
-from benethos_mailbox_service.errors import ConflictError, NotSupportedError
+from benethos_mailbox_service.errors import (
+    ConflictError,
+    NotSupportedError,
+    ProviderUnavailableError,
+)
 
 from ...conftest import bearer_for
 from ...data.providers.test_imap import provider
-from ...imap_fake import FakeFolder, FakeMailBox
+from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from ...provider_ops import delete
 
 MESSAGE = mappers.message_id("INBOX", 7, 3)
@@ -68,6 +74,32 @@ async def test_for_good_only_this_message(server: FakeMailBox) -> None:
     assert 3 not in server.folders["INBOX"].messages
     assert 4 in server.folders["INBOX"].messages
     assert ("expunge", (3,)) in server.calls
+
+
+async def test_a_lost_connection_names_what_was_done(
+    server: FakeMailBox, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The second folder's step finds the server gone: the first folder's
+    message is deleted, and the answer says so beside the failure."""
+    server.add("Sent", 1, make_message("Sent mail"))
+    imap = provider(server)
+    sent = mappers.message_id("Sent", server.folders["Sent"].uidvalidity, 1)
+    real, calls = imap._run, []
+
+    async def run(operation: Any) -> Any:
+        calls.append(operation)
+        if len(calls) > 1:
+            raise ProviderUnavailableError("the mail server is not reachable")
+        return await real(operation)
+
+    monkeypatch.setattr(imap, "_run", run)
+    done = await imap.delete_messages([MESSAGE, sent], permanent=True)
+    assert done[MESSAGE] is None and 3 not in server.folders["INBOX"].messages
+    assert isinstance(done[sent], ProviderUnavailableError)
+    # Nothing done yet: the failure is the call's, as before.
+    calls.append("first")
+    with pytest.raises(ProviderUnavailableError):
+        await imap.delete_messages([sent], permanent=True)
 
 
 async def test_for_good_needs_uidplus(server: FakeMailBox) -> None:

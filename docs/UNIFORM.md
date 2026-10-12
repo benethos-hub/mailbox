@@ -324,25 +324,28 @@ larger piece that is neither, and runs on its own.
 
 ## 5. Work in order
 
-Nothing of it is started. Each step is one pull request or more.
+Step 1 is done. Each step is one pull request or more.
 
 1. **Bugs without a live check**, together on a branch of their own,
-   against today's documentation:
-   1. POP3 `list_threads` answers `501`.
-   2. A Gmail draft keeps its `reference`.
-   3. Microsoft answers `501` for `$` keywords.
-   4. The Microsoft cursor checks its query.
+   against today's documentation. Done:
+   1. POP3 `list_threads` answers `501`. Done.
+   2. A Gmail draft keeps its `reference`. Done.
+   3. Microsoft answers `501` for `$` keywords. Done.
+   4. The Microsoft cursor checks its query. Done.
    5. `list_all_messages` names an account without the role in
-      `incomplete`.
+      `incomplete`. Done.
    6. IMAP keeps no `\Noselect` folder as a `parent_id`, or lists it.
+      Done: its subfolders go below the nearest listed folder.
    7. After an expired JMAP state, the messages of the gap are reported
-      as created.
+      as created. Done, for Gmail and Microsoft as well.
    8. A replaced draft never leaves two: where the old one cannot be
-      deleted, the answer still names the new one.
+      deleted, the answer still names the new one. Done: the new one is
+      taken back, and only where that fails too the error names it.
    9. A batch across IMAP folders, and Microsoft's delete for good,
-      answer what was done before a step failed.
+      answer what was done before a step failed. Done, for the batches
+      of every adapter.
    10. The list across accounts pages IMAP messages without skipping
-       or repeating them, though IMAP orders by UID.
+       or repeating them, though IMAP orders by UID. Done.
 2. **Bugs with a live check** against the test accounts, in this order:
    1. Gmail sends a reply and a draft with the original's `threadId`.
    2. Microsoft answers the text body and `in_reply_to`.

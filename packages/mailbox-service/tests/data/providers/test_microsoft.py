@@ -29,6 +29,7 @@ from benethos_mailbox_service.data.providers import (
     Reads,
     TokenSource,
     build_provider,
+    rules,
 )
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider, mappers
 from benethos_mailbox_service.data.providers.microsoft import (
@@ -40,6 +41,7 @@ from benethos_mailbox_service.errors import (
     NotFoundError,
     NotSupportedError,
     ProviderAuthError,
+    ProviderError,
     ProviderUnavailableError,
 )
 
@@ -122,7 +124,7 @@ def test_text_goes_into_the_search() -> None:
     assert rest == MessageFilter(unread=True)
 
 
-def test_system_keywords_are_not_stored() -> None:
+def test_the_patch_body_leaves_system_keywords_out() -> None:
     body = mappers.changes(False, True, ["$answered", "Work"])
     assert body == {
         "isRead": True,
@@ -150,10 +152,18 @@ async def test_messages_newest_first_and_paged(graph: FakeGraph) -> None:
     provider = adapter(graph)
     page = await provider.list_messages(graph.well_known["inbox"], limit=2, cursor=None)
     assert [m.id for m in page.items] == [third, second]
-    assert page.next_cursor is not None and page.next_cursor.startswith("/me/")
-    more = await provider.list_messages(None, limit=2, cursor=page.next_cursor)
+    assert page.next_cursor is not None
+    inbox = graph.well_known["inbox"]
+    more = await provider.list_messages(inbox, limit=2, cursor=page.next_cursor)
     assert [m.id for m in more.items] == [first]
     assert more.next_cursor is None
+    # Graph's next page carries its own query: another folder or search
+    # with it would answer the first list's page.
+    for folder, search in ((None, None), (inbox, MessageFilter(unread=True))):
+        with pytest.raises(BadRequestError, match="invalid cursor"):
+            await provider.list_messages(
+                folder, limit=2, cursor=page.next_cursor, search=search
+            )
 
 
 @pytest.mark.parametrize(
@@ -167,8 +177,11 @@ async def test_messages_newest_first_and_paged(graph: FakeGraph) -> None:
     ],
 )
 async def test_a_forged_cursor_is_refused(graph: FakeGraph, cursor: str) -> None:
-    with pytest.raises(BadRequestError, match="invalid cursor"):
-        await adapter(graph).list_messages(None, limit=5, cursor=cursor)
+    # As it stands, and wrapped as a cursor of this list would be.
+    bound = rules.bound_cursor("m_", rules.cursor_scope(None, None), cursor)
+    for value in (cursor, bound):
+        with pytest.raises(BadRequestError, match="invalid cursor"):
+            await adapter(graph).list_messages(None, limit=5, cursor=value)
     assert graph.requests == []
 
 
@@ -239,6 +252,33 @@ async def test_drafts(graph: FakeGraph) -> None:
     assert b"Second" in await provider.get_draft(replaced.id)
     await provider.delete_draft(replaced.id)
     assert replaced.id not in graph.messages
+
+
+async def test_a_draft_not_replaced_leaves_one(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The old one cannot go: the new one goes again, and the error says
+    so. Where even that fails, it names the new one."""
+    provider = adapter(graph)
+    raw = b"Subject: Plan\r\nContent-Type: text/plain\r\n\r\nFirst\r\n"
+    saved = await provider.save_draft(raw, None)
+    real = provider._delete_for_good
+    stuck = {saved.id}
+
+    async def delete(message_id: str, trash: str | None = None) -> None:
+        if message_id in stuck:
+            raise ProviderUnavailableError("graph is busy")
+        await real(message_id, trash)
+
+    monkeypatch.setattr(provider, "_delete_for_good", delete)
+    with pytest.raises(ProviderUnavailableError, match="busy"):
+        await provider.save_draft(raw, saved.id)
+    assert list(graph.messages) == [saved.id]
+    # Even the new one cannot go.
+    monkeypatch.setattr(provider, "_delete_for_good", lambda *_: delete(saved.id))
+    with pytest.raises(ProviderError, match="replacing it stays beside it"):
+        await provider.save_draft(raw, saved.id)
+    assert len(graph.messages) == 2
 
 
 async def test_draft_calls_reach_drafts_only(graph: FakeGraph) -> None:

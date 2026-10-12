@@ -15,14 +15,18 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TypeVar
 
+from benethos_mailbox_common.values import canonical, secret
+
+from ...common import opaque
 from ...errors import (
     BadRequestError,
     ConflictError,
     MailboxServiceError,
     ProviderAuthError,
+    ProviderError,
     ProviderUnavailableError,
 )
-from ..models import Folder, FolderRole, MessageUpdate
+from ..models import Folder, FolderRole, MessageFilter, MessageUpdate
 from .base import Capability
 
 R = TypeVar("R")
@@ -59,6 +63,30 @@ def invalid_cursor() -> BadRequestError:
     return BadRequestError("invalid cursor")
 
 
+def cursor_scope(folder_id: str | None, search: MessageFilter | None) -> str:
+    """What a cursor belongs to: the folder and the search, shortened.
+    Two that collide cost a page of the other search, never another
+    account's mail."""
+    what = canonical.canonical(
+        [folder_id, (search or MessageFilter()).model_dump(mode="json")]
+    )
+    return secret.digest(what)[:16]
+
+
+def bound_cursor(prefix: str, scope: str, value: str) -> str:
+    """A provider's next page, bound to the list it belongs to."""
+    return opaque.encode(prefix, [scope, value])
+
+
+def cursor_value(prefix: str, cursor: str, scope: str) -> str:
+    """The provider's next page of a cursor of this list. Another list's
+    cursor, or one made up, is refused."""
+    parts = opaque.fields(prefix, cursor, str, str)
+    if parts is None or parts[0] != scope or not parts[1]:
+        raise invalid_cursor()
+    return str(parts[1])
+
+
 @dataclass(frozen=True)
 class After:
     """Where the next page starts: after the item ``last``, which was at
@@ -70,6 +98,31 @@ class After:
 
 def role_folder(folders: list[Folder], role: FolderRole) -> Folder | None:
     return next((f for f in folders if f.role is role), None)
+
+
+async def replaced(
+    new_id: str,
+    drop_old: Callable[[], Awaitable[None]],
+    drop_new: Callable[[], Awaitable[None]],
+) -> None:
+    """A draft stored anew drops the one it replaces. Where that fails,
+    the new one goes again, so the replacing changed nothing. Where even
+    that fails, the error names the new one beside the old."""
+    try:
+        await drop_old()
+    except MailboxServiceError as exc:
+        try:
+            await drop_new()
+        except MailboxServiceError:
+            raise kept_both(exc, new_id) from exc
+        raise
+
+
+def kept_both(failure: MailboxServiceError, new_id: str) -> ProviderError:
+    """A replaced draft that stayed, beside the new one."""
+    return ProviderError(
+        f"{failure.message}: the draft {new_id} replacing it stays beside it"
+    )
 
 
 def require_role_folder(folders: list[Folder], role: FolderRole) -> Folder:
@@ -98,7 +151,7 @@ def move_target(
 
 
 # Failures that stop a batch as a whole: the connection or the login, not
-# one message.
+# one message. Once some messages are done, they answer for the rest.
 FATAL = (ProviderAuthError, ProviderUnavailableError)
 
 
@@ -107,13 +160,17 @@ async def per_id(
 ) -> dict[str, R | MailboxServiceError]:
     """``one`` for each id, with the outcome or the failure per id. A
     failed login or connection stops everything and raises, as the
-    contract of ``update_messages`` and ``delete_messages`` says."""
+    contract of ``update_messages`` and ``delete_messages`` says. Once
+    some ids are done, it is the failure of the rest instead, so the
+    answer names what was done."""
     results: dict[str, R | MailboxServiceError] = {}
-    for message_id in ids:
+    for n, message_id in enumerate(ids):
         try:
             results[message_id] = await one(message_id)
-        except FATAL:
-            raise
+        except FATAL as exc:
+            if not results:
+                raise
+            return {**results, **dict.fromkeys(ids[n:], exc)}
         except MailboxServiceError as exc:
             results[message_id] = exc
     return results

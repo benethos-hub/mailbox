@@ -18,7 +18,7 @@ from benethos_mailbox_service.data.models import (
     MessageUpdate,
 )
 from benethos_mailbox_service.data.protocols.http import ApiClient
-from benethos_mailbox_service.data.providers import capabilities_of
+from benethos_mailbox_service.data.providers import capabilities_of, rules
 from benethos_mailbox_service.data.providers.base import Capability
 from benethos_mailbox_service.data.providers.gmail import GmailProvider, mappers
 from benethos_mailbox_service.data.providers.gmail.shapes import Label
@@ -118,11 +118,11 @@ def test_a_filter_in_gmails_search_syntax() -> None:
 
 
 def test_a_cursor_belongs_to_its_list() -> None:
-    inbox = mappers.scope("INBOX", None)
+    inbox = rules.cursor_scope("INBOX", None)
     cursor = mappers.cursor(inbox, "17")
     assert mappers.page_token(cursor, inbox) == "17"
     with pytest.raises(BadRequestError):
-        mappers.page_token(cursor, mappers.scope("SENT", None))
+        mappers.page_token(cursor, rules.cursor_scope("SENT", None))
     with pytest.raises(BadRequestError):
         mappers.page_token("made-up", inbox)
 
@@ -365,6 +365,10 @@ async def test_a_draft_replaced_gets_a_new_id(gmail: FakeGmail) -> None:
     provider = adapter(gmail)
     first = await provider.save_draft(b"Subject: One\r\n\r\nfirst", None)
     assert first.folder_ids == ["DRAFT", "ALL_MAIL"]
+    # A draft says so as the other adapters do, so the domain shows what
+    # it answers.
+    assert first.keywords == ["$draft"]
+    assert (await provider.get_message(first.id)).keywords == ["$draft"]
     second = await provider.save_draft(b"Subject: Two\r\n\r\nsecond", first.id)
     assert second.id != first.id and second.subject == "Two"
     assert first.id not in gmail.messages

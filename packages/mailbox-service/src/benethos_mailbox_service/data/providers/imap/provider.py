@@ -290,16 +290,24 @@ class ImapProvider(MailServerAdapter):
         ],
     ) -> dict[str, T | MailboxServiceError]:
         """Run ``work`` once per folder, each under the lock. A failure of
-        the connection or the login stops everything. Any other failure
-        answers for that folder's messages only."""
+        the connection or the login stops everything: it raises, or, once
+        a folder is done, it is the failure of the folders left, so the
+        answer names what was done. Any other failure answers for that
+        folder's messages only."""
         found, unknown = messages.by_folder(message_ids)
         results: dict[str, T | MailboxServiceError] = dict(unknown)
+        stopped: MailboxServiceError | None = None
         for (folder, validity), by_uid in found.items():
             step = _in_folder(work, folder, validity, list(by_uid))
+            done: dict[int, T | MailboxServiceError] = (
+                dict.fromkeys(by_uid, stopped) if stopped else {}
+            )
             try:
-                done = await self._run(self._counting(step))
-            except rules.FATAL:
-                raise
+                done = done or await self._run(self._counting(step))
+            except rules.FATAL as exc:
+                if len(results) == len(unknown):
+                    raise
+                stopped, done = exc, dict.fromkeys(by_uid, exc)
             except MailboxServiceError as exc:
                 done = dict.fromkeys(by_uid, exc)
             for uid, outcome in done.items():

@@ -162,5 +162,7 @@ class GmailProvider:
 
     # --- Deltas -----------------------------------------------------------------------
 
-    async def folder_changes(self, folder_id: str, token: str | None) -> FolderChanges:
-        return await self._changes.folder_changes(folder_id, token)
+    async def folder_changes(
+        self, folder_id: str, token: str | None, since: datetime | None = None
+    ) -> FolderChanges:
+        return await self._changes.folder_changes(folder_id, token, since)
