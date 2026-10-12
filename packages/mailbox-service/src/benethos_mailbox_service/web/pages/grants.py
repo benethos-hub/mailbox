@@ -42,7 +42,7 @@ MCP_TOOLS: dict[str, tuple[str, ...]] = {
         "get_attachment",
         "whats_new",
     ),
-    "mail.write": ("update_messages", "create_folder"),
+    "mail.write": ("update_messages", "create_folder", "update_folder"),
     "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
     "send": ("send_message", "send_draft"),
 }

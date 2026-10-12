@@ -334,30 +334,31 @@ the tools that fit:
 
 | Tool | Needs | What it does |
 |---|---|---|
-| `list_accounts` | – | the accounts, their addresses, what may be done on each, the limits on sending, a warning where the token may read and send anywhere, and what an account cannot do, such as a POP3 mailbox without folders |
-| `list_folders` | `mail.read` | folders with id, name, role and counts |
+| `list_accounts` | – | the accounts, their addresses, what may be done on each, the limits on sending, a warning where the token may read and send anywhere, what an account cannot do, such as a POP3 mailbox without folders, and an account that needs a person, such as a new sign-in |
+| `list_folders` | `mail.read` | folders with id, name, role, parent and counts |
 | `search_messages` | `mail.read` | find mail by text, sender, recipient, subject, days, flags, attachments, in one account or all |
-| `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default |
+| `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default, with its folders and keywords, and for a draft the mail it answers |
 | `get_attachment` | `mail.read` | an attachment: images up to 5 MiB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 4 megapixels a page and 12 together), text as text, HTML as the text a reader sees, both cut to `max_chars`, 20,000 by default. Other types and larger images by name only. An image, PDF or text above 10 MiB is refused. |
 | `whats_new` | `mail.read` | mail created, updated or deleted since the `state` of an earlier call, ids only, in one account or all |
-| `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), or into the trash |
+| `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), add and take off keywords, add and take off labels where a mail can be in several folders (Gmail, JMAP), or into the trash |
 | `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
+| `update_folder` | `mail.write` | renames a folder, or moves it into another one or to the top. Deleting a folder is not a tool |
 | `list_drafts` | `drafts` | the drafts of an account |
-| `create_draft` | `drafts` | a draft in plain text or HTML, recipients optional. With `original_id` a reply, reply to all or forward. |
+| `create_draft` | `drafts` | a draft in plain text or HTML, recipients optional. With `original_id` a reply, reply to all or forward, with `quote` false without the original, `forward_as` attachment for the original as a file. `reply_to`, `attachments` as base64, `attach_from` for attachments of other mail. |
 | `update_draft` | `drafts` | replaces a draft as a whole, `keep_attachments` keeps stored files. It answers with the draft's id from now on, a new one at Microsoft, JMAP and Gmail |
 | `delete_draft` | `drafts` | deletes a draft for good, reaches drafts only |
-| `send_message` | `send` | sends a mail at once, plain text or HTML. With `original_id` a reply, reply to all or forward. |
+| `send_message` | `send` | sends a mail at once, plain text or HTML. It takes what `create_draft` takes. |
 | `send_draft` | `send` | sends a stored draft |
 
 Each tool has a title for display and the standard MCP hints. Clients
 can use them to decide when to ask the person before a call.
 
 - **Read-only:** the tools that only read.
-- **Destructive:** `update_messages`, `update_draft`, `delete_draft` and
-  both send tools. They can move mail to the trash, overwrite or delete a
-  draft, or send mail.
-- **Idempotent:** `update_messages`, `update_draft` and `delete_draft`. The
-  same call again changes nothing more. The send tools are not marked
+- **Destructive:** `update_messages`, `update_folder`, `update_draft`,
+  `delete_draft` and both send tools. They can move mail to the trash,
+  rename a folder, overwrite or delete a draft, or send mail.
+- **Idempotent:** `update_messages`, `update_folder`, `update_draft` and
+  `delete_draft`. The same call again changes nothing more. The send tools are not marked
   idempotent, although a repeat within 24 hours sends nothing.
 - **Open world:** every tool except `list_accounts`, since they reach mail
   from and to anyone.

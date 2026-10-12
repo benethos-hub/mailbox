@@ -323,6 +323,7 @@ HINTS = {
     "get_attachment": ("Get an attachment", True, None, None, True),
     "update_messages": ("Change messages", False, True, True, True),
     "create_folder": ("Create a folder", False, False, False, True),
+    "update_folder": ("Rename or move a folder", False, True, True, True),
     "list_drafts": ("List drafts", True, None, None, True),
     "create_draft": ("Write a draft", False, False, False, True),
     "update_draft": ("Replace a draft", False, True, True, True),

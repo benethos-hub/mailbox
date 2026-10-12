@@ -260,6 +260,32 @@ async def test_a_move_sets_the_folders_exactly(gmail: FakeGmail) -> None:
     assert set(gmail.messages[message_id]["labelIds"]) == {"UNREAD", "IMPORTANT"}
 
 
+async def test_a_label_added_and_taken_off(gmail: FakeGmail) -> None:
+    work = gmail.new_label("Work")
+    message_id = gmail.add_message(labels=("INBOX", "UNREAD"))
+    provider = adapter(gmail)
+    labelled = await provider.update_messages(
+        [message_id], MessageUpdate(add_folder_ids=[work])
+    )
+    summary = labelled[message_id]
+    assert isinstance(summary, MessageSummary)
+    assert set(summary.folder_ids) == {"INBOX", work, "ALL_MAIL"}
+    assert set(gmail.messages[message_id]["labelIds"]) == {"INBOX", "UNREAD", work}
+    # Out of the inbox, the label kept: archived with it.
+    await provider.update_messages(
+        [message_id], MessageUpdate(remove_folder_ids=["INBOX"])
+    )
+    assert set(gmail.messages[message_id]["labelIds"]) == {"UNREAD", work}
+    tagged = await provider.update_messages(
+        [message_id], MessageUpdate(add_keywords=["work"])
+    )
+    assert isinstance(tagged[message_id], NotSupportedError)
+    sent = await provider.update_messages(
+        [message_id], MessageUpdate(add_folder_ids=["SENT"])
+    )
+    assert isinstance(sent[message_id], BadRequestError)
+
+
 async def test_moves_gmail_does_itself_are_refused(gmail: FakeGmail) -> None:
     message_id = gmail.add_message()
     provider = adapter(gmail)

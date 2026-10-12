@@ -1,5 +1,6 @@
 """The MCP server over stdio, the way Claude starts it, as a session of
-the script's own, and the text of a tool's answer."""
+the script's own, the text of a tool's answer, and the tools a token
+that may only read sees."""
 
 from __future__ import annotations
 
@@ -12,6 +13,16 @@ from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
 from .processes import program
+
+# The tools a token that may only read sees.
+READ_TOOLS = {
+    "list_accounts",
+    "list_folders",
+    "search_messages",
+    "get_message",
+    "get_attachment",
+    "whats_new",
+}
 
 
 def text_of(result: Any) -> str:

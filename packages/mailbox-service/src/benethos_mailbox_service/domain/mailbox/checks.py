@@ -7,7 +7,13 @@ from __future__ import annotations
 from benethos_mailbox_common.values import sizes
 
 from ...data.mail import convert
-from ...data.models import Address, DraftMessage, MessageReference, Recipient
+from ...data.models import (
+    Address,
+    DraftMessage,
+    MessageReference,
+    OutgoingAttachment,
+    Recipient,
+)
 from ...errors import BadRequestError
 from ..rights import Access
 
@@ -20,12 +26,20 @@ def require(
     access: Access, operation: str, account_id: str, message: DraftMessage
 ) -> None:
     """The operation's right and, with a reference, the right to read: a
-    reply quotes the original and a forward passes it on. Whoever may only
-    send or write drafts must not get at mail this way. Then the size."""
+    reply quotes the original and a forward passes it on. Attachments of
+    other messages need the right to read those. Whoever may only send or
+    write drafts must not get at mail this way. Then the size."""
     access.require(operation, account_id)
     if message.reference is not None:
         access.require("get_message", account_id)
-    if sum(len(a.data) for a in message.attachments) > MAX_ATTACHMENT_BYTES:
+    if message.attachments_from:
+        access.require("get_attachment", account_id)
+    sized(message.attachments)
+
+
+def sized(attachments: list[OutgoingAttachment]) -> None:
+    """No more bytes in attachments than one message carries."""
+    if sum(len(a.data) for a in attachments) > MAX_ATTACHMENT_BYTES:
         raise BadRequestError(
             f"the attachments exceed {sizes.megabytes(MAX_ATTACHMENT_BYTES)}"
         )
@@ -53,7 +67,9 @@ def unchanged(
     """Whether ``draft`` is the draft as it is stored: the same addresses,
     subject, bodies and original, every attachment kept and none added.
     Whitespace counts as one space, as a form sends a text back."""
-    if draft.attachments or sorted(keep or []) != sorted(stored.attachment_ids):
+    if draft.attachments or draft.attachments_from:
+        return False
+    if sorted(keep or []) != sorted(stored.attachment_ids):
         return False
     if draft.reference is not None and draft.reference.quote:
         return False  # composing adds the quote again

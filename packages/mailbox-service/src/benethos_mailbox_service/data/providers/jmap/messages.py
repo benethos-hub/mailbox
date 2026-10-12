@@ -111,23 +111,28 @@ async def update_messages(
     message_ids: list[str],
     changes: MessageUpdate,
 ) -> dict[str, MessageSummary | MailboxServiceError]:
-    targets = None
-    if changes.folder_ids is not None:
+    if changes.changes_folders:
         rules.move_target(changes, capabilities)
-        targets = list(dict.fromkeys(changes.folder_ids))
         known = {f.id for f in await account.folders()}
-        unknown = next((t for t in targets if t not in known), None)
+        unknown = next((t for t in changes.named_folders() if t not in known), None)
         if unknown is not None:
             return dict.fromkeys(message_ids, missing("folder", unknown))
     current = await account.emails(message_ids, ["keywords", "mailboxIds"])
+    failed: dict[str, MessageSummary | MailboxServiceError] = {}
     patches: dict[str, dict[str, Any]] = {}
     for message_id, email in current.items():
         patch = mappers.keyword_patch(email.keywords, changes)
+        targets = changes.folders_after(email.mailbox_ids)
+        if targets == []:
+            failed[message_id] = rules.no_folder_left()
+            continue
         if targets is not None and set(targets) != set(email.mailbox_ids):
             patch["mailboxIds"] = dict.fromkeys(targets, True)
         if patch:
             patches[message_id] = patch
-    return await _changed(account, message_ids, current, patches)
+    rest = [i for i in message_ids if i not in failed]
+    done = await _changed(account, rest, current, patches)
+    return {i: failed[i] if i in failed else done[i] for i in message_ids}
 
 
 async def delete_messages(

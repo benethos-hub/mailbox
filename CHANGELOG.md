@@ -6,6 +6,38 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `PATCH .../messages/{id}` and a batch `update` take `add_keywords` and
+  `remove_keywords`, which change the keywords a message has instead of
+  replacing them, and `add_folder_ids` and `remove_folder_ids`, which
+  put a message into folders and take it out of them where it can be in
+  several, such as Gmail's labels. Each goes beside the list it changes,
+  not with it. A message keeps one folder at least.
+- A draft and a message to send take `attachments_from`: attachments of
+  other messages of the same account by message and attachment id,
+  attached as they are. It needs the right to read that mail.
+- `/v1/me` says per account its `status`, whether it needs `attention`
+  and when its last sync succeeded (`last_sync_at`).
+- The MCP server:
+  - `update_messages` adds and takes off keywords and labels
+    (`add_folders`, `remove_folders`, `add_keywords`,
+    `remove_keywords`). At Gmail it labels a mail and leaves it in the
+    inbox.
+  - `send_message`, `create_draft` and `update_draft` take `quote`,
+    `forward_as`, `reply_to`, `attachments` as base64 and
+    `attach_from`, attachments of other mail of the account.
+  - A new tool `update_folder` renames and moves a folder.
+  - `list_accounts` names an account that needs a person, and why.
+  - Search results and `get_message` name the folders and keywords of a
+    mail. `get_message` names the mail a draft answers.
+
+### Changed
+
+- After a reply or a forward the service adds `$answered` or
+  `$forwarded` to the original instead of writing its keywords anew, so
+  a keyword another client set meanwhile stays.
+
 ## [0.4.1] - 2026-10-10
 
 ### Added

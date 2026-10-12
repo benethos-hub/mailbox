@@ -5,10 +5,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from ...data.models import AccountStatus, Capability
 from ..accounts import Adapters
 from ..rights import Access
+from ..sync import SyncState
 
 # Read mail, and send it to any address: what an injected instruction in a
 # mail needs to carry data out (CONCEPT 7.7). A warning, not a block.
@@ -39,6 +41,10 @@ class AccountRights:
     sending: list[Sending]
     status: AccountStatus = AccountStatus.CONNECTED
     capabilities: list[Capability] = field(default_factory=list)
+    # The last sync pass that succeeded since the start, None for none.
+    last_sync_at: datetime | None = None
+    # Not connected, or its last sync pass failed: a person should look.
+    attention: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,12 +58,17 @@ class EffectiveRights:
 
 class Effective:
     def __init__(
-        self, adapters: Adapters, sent: Callable[[str, str], int] | None = None
+        self,
+        adapters: Adapters,
+        sent: Callable[[str, str], int] | None = None,
+        synced: Callable[[str], SyncState] | None = None,
     ) -> None:
         """``sent``: how many mails a user sent from an account in the last
-        24 hours, by user and account id."""
+        24 hours, by user and account id. ``synced``: how the sync passes
+        of an account went, by its id."""
         self._adapters = adapters
         self._sent = sent
+        self._synced = synced
 
     def rights(
         self, access: Access, visible_to: Access | None, roles: list[str]
@@ -71,6 +82,7 @@ class Effective:
             operations = access.operations_on(account_id)
             if operations:
                 account = self._adapters.record(account_id)
+                sync = self._synced(account_id) if self._synced else SyncState()
                 accounts.append(
                     AccountRights(
                         id=account.id,
@@ -81,6 +93,9 @@ class Effective:
                         sending=self._sending(access, account_id),
                         status=account.status,
                         capabilities=self._adapters.offered(account_id),
+                        last_sync_at=sync.last_sync_at,
+                        attention=account.status is not AccountStatus.CONNECTED
+                        or sync.last_error is not None,
                     )
                 )
         return EffectiveRights(

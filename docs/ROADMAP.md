@@ -386,6 +386,12 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   are optional. `.github/publish/` holds the entry and the manifest,
   each held by a test. `publish.yml` builds the extension after the
   PyPI upload and publishes the entry last
+- **The mail tools close their gaps to the API**, decided 2026-10-12,
+  done: labels and keywords added and taken off (the API gained
+  `add_`/`remove_` lists), a reply without the quote and a forward as a
+  file, `reply_to`, attachments as base64 and of other mail (the API
+  gained `attachments_from`), the tool `update_folder`, and how each
+  account fares in `list_accounts` (the API's `/v1/me` gained it)
 
 ## Keeping this file current
 

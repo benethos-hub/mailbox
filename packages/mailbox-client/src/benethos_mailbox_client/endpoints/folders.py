@@ -58,4 +58,5 @@ def _folder(item: dict[str, Any]) -> Folder:
         role=item.get("role"),
         unread=item.get("unread"),
         total=item.get("total"),
+        parent_id=item.get("parent_id"),
     )

@@ -7,7 +7,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, SecretStr
 
-from ....data.models import SERVICE_DESCRIPTION, Capability, Grant, User
+from ....data.models import (
+    SERVICE_DESCRIPTION,
+    AccountStatus,
+    Capability,
+    Grant,
+    User,
+)
 from ....domain.auth import SignInState
 
 
@@ -54,6 +60,27 @@ class MeAccount(BaseModel):
             "What the account can do beyond reading its inbox, as in "
             "`Account`. Without `flags`, `folders` or `search` (a POP3 "
             "account) those operations answer `501`."
+        ),
+    )
+    status: AccountStatus = Field(
+        default=AccountStatus.CONNECTED,
+        description=(
+            "`needs_reauth`: someone has to sign in to the provider again. "
+            "`unreachable`: the provider cannot be reached."
+        ),
+    )
+    last_sync_at: datetime | None = Field(
+        default=None,
+        description=(
+            "The last sync pass that succeeded, null for none since the "
+            "service started or where none runs."
+        ),
+    )
+    attention: bool = Field(
+        default=False,
+        description=(
+            "Whether a person should look: the account is not connected or "
+            "its last sync pass failed. Calls on it may fail until then."
         ),
     )
 

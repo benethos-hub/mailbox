@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +27,12 @@ class MeAccount:
     # What the account can do beyond reading its inbox, e.g. "flags",
     # "folders", "search", "drafts". None: a service that does not say.
     capabilities: frozenset[str] | None = None
+    # "connected", "needs_reauth" or "unreachable".
+    status: str = "connected"
+    # The last sync pass that succeeded, None for none since the start.
+    last_sync_at: datetime | None = None
+    # Not connected, or its last sync pass failed: calls on it may fail.
+    attention: bool = False
 
 
 @dataclass(frozen=True, slots=True)

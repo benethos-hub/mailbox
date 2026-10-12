@@ -72,8 +72,10 @@ done. Update the roadmap in the same commit that finishes an item.
   `uv run python live/mcp_stdio.py` checks it over stdio against the test
   accounts, with a service and database of its own. The write tools create
   a folder and star, move and trash a message of the first test account,
-  then put everything back. The draft tools write, replace and delete a
-  reply draft there. The send tools send three mails from the first test
+  then put everything back. They also rename the folder and add and
+  take off a keyword. The draft tools write a reply draft there without
+  the quote, with a file, replace it with the file of the stored draft
+  and delete it. The send tools send three mails from the first test
   account to the second, one of them twice with the same call and one
   from a draft, and delete them for good. Grants with recipients
   and a send limit stop mails, and the audit names each attempt.
@@ -105,17 +107,18 @@ done. Update the roadmap in the same commit that finishes an item.
   `--project` both use the project's app: `--connect` prints a code a
   person enters at Microsoft. It makes and removes a folder and a reply
   draft there, sends one mail from it to the first test account and
-  deletes it for good on both sides, and checks that the change feed
-  learns of the sent copy through Graph delta queries.
+  deletes it for good on both sides, gives the sent copy a keyword and
+  takes it off, and checks that the change feed learns of the sent copy
+  through Graph delta queries.
 - Gmail accounts: a Google client of your own, `docs/GOOGLE.md`.
   `uv run python live/gmail.py --connect` once (a person signs in in
   the browser), then `uv run python live/gmail.py` checks the adapter
   against the Gmail test account in `live/.env` with that client. It
   makes a label inside a label, renames and removes them, writes,
   replaces and deletes a draft, sends one mail from it to the first
-  test account, deleted for good there, stars, labels and archives the
-  copy in Sent, deletes it for good, and checks that the change feed
-  learns of it through Gmail's history. Then the first test account
+  test account, deleted for good there, stars, labels, unlabels and
+  labels again and archives the copy in Sent, deletes it for good, and
+  checks that the change feed learns of it through Gmail's history. Then the first test account
   sends one mail to it, which must arrive in the inbox, be found, open
   and turn read, and is deleted for good on both sides.
 - A test mail server of our own: `sh containers/test-mail-server/setup.sh`

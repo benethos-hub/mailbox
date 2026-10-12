@@ -20,10 +20,11 @@ connected through the UI. The check then reads folders and mail, makes a
 label inside a label, renames the outer one and removes both, writes and
 replaces a draft and deletes it, and sends one mail from the Gmail test
 account to the first test account. There it is deleted for good. In
-Gmail the copy in Sent is starred, given the label, archived and deleted
-for good. The change feed must name it, which the service learns of
-through Gmail's history only. Then the first test account sends one mail
-to the Gmail test account, with umlauts in its subject. It must arrive
+Gmail the copy in Sent is starred, given the label, which is taken off
+alone and added again, archived and deleted for good. The change feed
+must name it, which the service learns of through Gmail's history only.
+Then the first test account sends one mail to the Gmail test account,
+with umlauts in its subject. It must arrive
 in the inbox, be found by a search, open with its body and source, be
 named by the change feed, and turn read. It is deleted for good in
 Gmail and in the first test account's sent folder. For that the worker polls every 20
@@ -348,7 +349,8 @@ def _receive_and_check(
 
 
 def _labels(run: Run, client: httpx.Client, base: str, copy: str) -> None:
-    """Star the copy, give it a label, archive it, take the label off."""
+    """Star the copy, give it a label, take it off and add it again,
+    archive it, which takes the label off."""
     url = f"{base}/messages/{copy}"
     starred = client.patch(url, json={"starred": True, "unread": False})
     run.check("star it", starred.status_code == 200 and starred.json().get("starred"))
@@ -361,6 +363,20 @@ def _labels(run: Run, client: httpx.Client, base: str, copy: str) -> None:
         folders = moved.json().get("folder_ids", [])
         run.check(
             "it carries the label, Sent stays",
+            label_id in folders and "SENT" in folders,
+            " ".join(folders),
+        )
+        taken = client.patch(url, json={"remove_folder_ids": [label_id]})
+        folders = taken.json().get("folder_ids", [])
+        run.check(
+            "the label taken off alone, Sent stays",
+            label_id not in folders and "SENT" in folders,
+            " ".join(folders),
+        )
+        added = client.patch(url, json={"add_folder_ids": [label_id]})
+        folders = added.json().get("folder_ids", [])
+        run.check(
+            "and added again beside Sent",
             label_id in folders and "SENT" in folders,
             " ".join(folders),
         )

@@ -18,6 +18,7 @@ from benethos_mailbox_service.data.models import (
     FolderRole,
     Grant,
 )
+from benethos_mailbox_service.data.providers.base import Capability
 from benethos_mailbox_service.domain.mailbox.reach import Reach
 from benethos_mailbox_service.domain.rights.access import Access
 
@@ -143,6 +144,33 @@ def test_moves_stay_among_the_folders_of_one_grant(
     assert across.status_code == 403
     assert "outside the folders of the grants" in across.json()["error"]["message"]
     assert writer.patch(f"{base}/m0", json={"unread": False}).status_code == 404
+
+
+def test_labels_stay_among_the_folders_of_one_grant(
+    app_client: TestClient, services: Services, mailbox: str
+) -> None:
+    memory = memory_of(services, mailbox)
+    memory.capabilities = memory.capabilities | {Capability.LABELS}
+    memory.folders.append(Folder(id="f_arch", name="Archive", role=FolderRole.ARCHIVE))
+    writer = caller(
+        app_client, services, mailbox, (["mail.read", "mail.write"], ["Invoices"])
+    )
+    base = f"/v1/accounts/{mailbox}/messages"
+    added = writer.patch(f"{base}/m1", json={"add_folder_ids": ["f_2026"]})
+    assert added.status_code == 200
+    assert added.json()["folder_ids"] == ["f_inv", "f_2026"]
+    # Into a folder out of reach, or out of one: both change it there.
+    for change in ({"add_folder_ids": ["f_priv"]}, {"remove_folder_ids": ["inbox"]}):
+        assert writer.patch(f"{base}/m1", json=change).status_code == 403
+    # A role names a folder here as well.
+    anywhere = caller(app_client, services, mailbox, (["mail.write"], None))
+    archived = anywhere.patch(
+        f"{base}/m0",
+        json={"add_folder_ids": ["archive"], "remove_folder_ids": ["inbox"]},
+    )
+    assert archived.json()["folder_ids"] == ["f_arch"]
+    last = anywhere.patch(f"{base}/m0", json={"remove_folder_ids": ["archive"]})
+    assert last.status_code == 400
 
 
 def test_to_the_trash_from_the_folders_but_not_read_there(

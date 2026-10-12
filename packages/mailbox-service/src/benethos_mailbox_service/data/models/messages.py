@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class MessageReference(BaseModel):
@@ -144,15 +145,27 @@ KEYWORD_PATTERN = r"^[!#$&'+\-.0-9A-Z^_a-z|~]{1,100}$"
 RESERVED_KEYWORDS = frozenset({"$seen", "$flagged", "$deleted", "$recent"})
 
 
+Keywords = Annotated[
+    list[Annotated[str, Field(pattern=KEYWORD_PATTERN)]] | None,
+    Field(max_length=50),
+]
+FolderIds = Annotated[list[str] | None, Field(max_length=20)]
+
+
 class MessageUpdate(BaseModel):
     """What ``PATCH`` changes on a message. Fields left out stay as they are."""
 
     unread: bool | None = None
     starred: bool | None = None
-    keywords: list[Annotated[str, Field(pattern=KEYWORD_PATTERN)]] | None = Field(
+    keywords: Keywords = Field(
+        default=None, description="Replaces the list of keywords."
+    )
+    add_keywords: Keywords = Field(
+        default=None, description="Added to the keywords it has. Not beside `keywords`."
+    )
+    remove_keywords: Keywords = Field(
         default=None,
-        max_length=50,
-        description="Replaces the list of keywords.",
+        description="Taken off the keywords it has. Not beside `keywords`.",
     )
     folder_ids: list[str] | None = Field(
         default=None,
@@ -164,8 +177,24 @@ class MessageUpdate(BaseModel):
             "in exactly one folder."
         ),
     )
+    add_folder_ids: FolderIds = Field(
+        default=None,
+        description=(
+            "Folders the message is to be in as well, by id or by a role, such "
+            "as a Gmail label. Only where a message can be in several folders "
+            "(`labels`). Not beside `folder_ids`."
+        ),
+    )
+    remove_folder_ids: FolderIds = Field(
+        default=None,
+        description=(
+            "Folders the message is to leave, by id or by a role. Only where a "
+            "message can be in several folders (`labels`), and one folder at "
+            "least stays. Not beside `folder_ids`."
+        ),
+    )
 
-    @field_validator("keywords")
+    @field_validator("keywords", "add_keywords", "remove_keywords")
     @classmethod
     def _no_reserved_keywords(cls, keywords: list[str] | None) -> list[str] | None:
         reserved = sorted({k.lower() for k in keywords or []} & RESERVED_KEYWORDS)
@@ -174,3 +203,70 @@ class MessageUpdate(BaseModel):
                 f"{', '.join(reserved)}: use unread, starred or a delete instead"
             )
         return keywords
+
+    @model_validator(mode="after")
+    def _replace_or_add(self) -> MessageUpdate:
+        if self.keywords is not None and (self.add_keywords or self.remove_keywords):
+            raise ValueError("keywords replaces them: not beside add or remove")
+        if self.folder_ids is not None and (
+            self.add_folder_ids or self.remove_folder_ids
+        ):
+            raise ValueError("folder_ids replaces them: not beside add or remove")
+        both = {k.lower() for k in self.add_keywords or []} & {
+            k.lower() for k in self.remove_keywords or []
+        }
+        both |= set(self.add_folder_ids or []) & set(self.remove_folder_ids or [])
+        if both:
+            raise ValueError(f"added and removed at once: {', '.join(sorted(both))}")
+        return self
+
+    @property
+    def changes_keywords(self) -> bool:
+        return (
+            self.keywords is not None
+            or bool(self.add_keywords)
+            or bool(self.remove_keywords)
+        )
+
+    @property
+    def changes_folders(self) -> bool:
+        return (
+            self.folder_ids is not None
+            or bool(self.add_folder_ids)
+            or bool(self.remove_folder_ids)
+        )
+
+    @property
+    def adds_or_removes_folders(self) -> bool:
+        return bool(self.add_folder_ids) or bool(self.remove_folder_ids)
+
+    def named_folders(self) -> list[str]:
+        """Every folder the change names: those to be in, to join and to
+        leave."""
+        return [
+            *(self.folder_ids or []),
+            *(self.add_folder_ids or []),
+            *(self.remove_folder_ids or []),
+        ]
+
+    def keywords_after(self, current: Iterable[str]) -> set[str] | None:
+        """The keywords, in lower case, of a message that has ``current``
+        once changed. None where the keywords stay as they are."""
+        if not self.changes_keywords:
+            return None
+        if self.keywords is not None:
+            return {k.lower() for k in self.keywords}
+        added = {k.lower() for k in self.add_keywords or []}
+        removed = {k.lower() for k in self.remove_keywords or []}
+        return ({k.lower() for k in current} - removed) | added
+
+    def folders_after(self, current: Iterable[str]) -> list[str] | None:
+        """The folders of a message that is in ``current`` once changed, in
+        the order named. None where it stays where it is."""
+        if self.folder_ids is not None:
+            return list(dict.fromkeys(self.folder_ids))
+        if not self.adds_or_removes_folders:
+            return None
+        removed = set(self.remove_folder_ids or [])
+        kept = [f for f in current if f not in removed]
+        return list(dict.fromkeys([*kept, *(self.add_folder_ids or [])]))

@@ -46,6 +46,9 @@ ME = {
                 {"recipients": ["a@x.org"], "max_sends_per_day": 5, "sends_left": 4}
             ],
             "capabilities": ["flags"],
+            "status": "needs_reauth",
+            "last_sync_at": "2026-10-01T08:00:00Z",
+            "attention": True,
         },
         {"id": "acc_2", "email": "two@example.com"},
     ],
@@ -53,6 +56,13 @@ ME = {
 }
 
 FOLDER = {"id": "fld_1", "name": "Inbox", "role": "inbox", "unread": 2, "total": 9}
+SUBFOLDER = {
+    **FOLDER,
+    "id": "fld_2",
+    "name": "2026",
+    "role": None,
+    "parent_id": "fld_1",
+}
 
 SUMMARY = {
     "id": "msg_1",

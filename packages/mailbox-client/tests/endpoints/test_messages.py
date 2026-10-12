@@ -135,6 +135,24 @@ async def test_update_messages(make_client: Callable) -> None:
     assert found == Outcome(["m1"], [Failed("m2", "failed"), Failed("m3", "gone")])
 
 
+async def test_update_messages_adds_and_takes_off(make_client: Callable) -> None:
+    api = FakeApi({"results": [{"id": "m1", "ok": True}]})
+    await make_client(api).update_messages(
+        "acc_1",
+        ["m1"],
+        add_keywords=["urgent"],
+        remove_keywords=["$junk"],
+        add_folder_ids=["Label_1"],
+        remove_folder_ids=["inbox"],
+    )
+    assert api.call()[3]["changes"] == {
+        "add_keywords": ["urgent"],
+        "remove_keywords": ["$junk"],
+        "add_folder_ids": ["Label_1"],
+        "remove_folder_ids": ["inbox"],
+    }
+
+
 async def test_trash_messages(make_client: Callable) -> None:
     api = FakeApi({"results": [{"id": "m1", "ok": True}]})
     found = await make_client(api).trash_messages("acc_1", ["m1"])

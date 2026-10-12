@@ -274,16 +274,20 @@ def flag_changes(
         (remove if changes.unread else add).append("\\Seen")
     if changes.starred is not None:
         (add if changes.starred else remove).append("\\Flagged")
-    if changes.keywords is not None:
-        wanted = {k.lower(): k for k in changes.keywords}
-        # Each keyword the message has, with the flag as the server spells it.
-        present: dict[str, str] = {}
-        for flag in current:
-            for keyword in keywords([flag]):
-                present[keyword] = str(flag)
-        new = [imap_flag(wanted[k]) for k in wanted if k not in present]
+    # Each keyword the message has, with the flag as the server spells it.
+    present: dict[str, str] = {}
+    for flag in current:
+        for keyword in keywords([flag]):
+            present[keyword] = str(flag)
+    after = changes.keywords_after(present)
+    if after is not None:
+        # The new ones as the caller spelled them, in the order given.
+        spelled = {
+            k.lower(): k for k in (changes.keywords or changes.add_keywords or [])
+        }
+        new = [imap_flag(k) for lower, k in spelled.items() if lower not in present]
         if not _kept(new, permanent):
             raise NotSupportedError("the mail server keeps no new keywords")
         add += new
-        remove += [flag for k, flag in present.items() if k not in wanted]
+        remove += [flag for k, flag in present.items() if k not in after]
     return add, remove

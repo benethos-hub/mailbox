@@ -110,14 +110,20 @@ class MemoryProvider:
         self, message_id: str, changes: MessageUpdate
     ) -> MessageSummary:
         message = await self.get_message(message_id)
-        fields = changes.model_dump(exclude_none=True)
+        fields = changes.model_dump(include={"unread", "starred"}, exclude_none=True)
         rules.move_target(changes, self.capabilities)
         known = {folder.id for folder in self.folders}
-        for folder_id in fields.get("folder_ids", []):
+        for folder_id in changes.named_folders():
             if folder_id not in known:
                 raise missing("folder", folder_id)
-        if "keywords" in fields:
-            fields["keywords"] = sorted({k.lower() for k in fields["keywords"]})
+        folders = changes.folders_after(message.folder_ids)
+        if folders == []:
+            raise rules.no_folder_left()
+        if folders is not None:
+            fields["folder_ids"] = folders
+        keywords = changes.keywords_after(message.keywords)
+        if keywords is not None:
+            fields["keywords"] = sorted(keywords)
         updated = message.model_copy(update=fields)
         self.messages[self.messages.index(message)] = updated
         return MessageSummary.model_validate(updated.model_dump())

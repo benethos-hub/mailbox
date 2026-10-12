@@ -197,6 +197,29 @@ async def test_move_and_labels(jmap: JmapProvider, server: FakeJmap) -> None:
     assert "Email/set" not in server.calls[calls:]
 
 
+async def test_labels_and_keywords_added_and_taken_off(
+    jmap: JmapProvider, server: FakeJmap
+) -> None:
+    work = server.add_mailbox("Work")
+    email_id = server.add_email(make_message("One"), keywords={"$junk": True})
+    labelled = await update(
+        jmap, email_id, MessageUpdate(add_folder_ids=[work], add_keywords=["Urgent"])
+    )
+    assert labelled.folder_ids == sorted(["inbox", work])
+    assert labelled.keywords == ["$junk", "urgent"]
+    left = await update(
+        jmap,
+        email_id,
+        MessageUpdate(remove_folder_ids=["inbox"], remove_keywords=["$junk"]),
+    )
+    assert (left.folder_ids, left.keywords) == ([work], ["urgent"])
+    with pytest.raises(BadRequestError, match="one folder at least"):
+        await update(jmap, email_id, MessageUpdate(remove_folder_ids=[work]))
+    with pytest.raises(NotFoundError, match="folder"):
+        await update(jmap, email_id, MessageUpdate(remove_folder_ids=["nowhere"]))
+    assert server.emails[email_id]["mailboxIds"] == {work: True}
+
+
 async def test_update_answers_per_message(jmap: JmapProvider, server: FakeJmap) -> None:
     one = server.add_email(make_message("One"))
     refused = server.add_email(make_message("Two"))

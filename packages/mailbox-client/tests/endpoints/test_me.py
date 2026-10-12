@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 from benethos_mailbox_client import Me, MeAccount, Permissions, Sending
 
@@ -25,6 +26,9 @@ async def test_me(make_client: Callable) -> None:
                 warnings=frozenset({"reads_and_sends"}),
                 sending=(Sending(("a@x.org",), 5, 4),),
                 capabilities=frozenset({"flags"}),
+                status="needs_reauth",
+                last_sync_at=datetime(2026, 10, 1, 8, 0, tzinfo=UTC),
+                attention=True,
             ),
             MeAccount(
                 id="acc_2",

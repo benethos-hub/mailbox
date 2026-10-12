@@ -793,7 +793,7 @@ Rules of the implementation (phase 2):
 | GET | `/v1/messages` | list and search **across accounts** (6.6) |
 | GET | `{acc}/messages` | list and search in one account (6.6) |
 | GET | `{acc}/messages/{id}` | full message, text and HTML body |
-| PATCH | `{acc}/messages/{id}` | `unread`, `starred`, `keywords`, `folder_ids` (a move is a change of `folder_ids`) |
+| PATCH | `{acc}/messages/{id}` | `unread`, `starred`, `keywords`, `folder_ids` (a move is a change of `folder_ids`), `add_keywords`, `remove_keywords`, `add_folder_ids`, `remove_folder_ids` |
 | DELETE | `{acc}/messages/{id}` | to trash, `?permanent=true` expunges |
 | GET | `{acc}/messages/{id}/raw` | RFC 822 source (`message/rfc822`) |
 | GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, with its type and file name |
@@ -824,6 +824,16 @@ draft goes the same way.
 the provider's own keywords as they are. `\Seen` and `\Flagged` are
 `unread` and `starred`. A `PATCH` with `keywords` replaces the list.
 
+**Decided 2026-10-12:** keywords and folders are also added and taken off,
+in the API rather than in the MCP server, so that a batch of messages
+with different labels keeps the rest of each. `add_keywords` and
+`remove_keywords` change the keywords a message has, `add_folder_ids` and
+`remove_folder_ids` its folders, each list by id or by role. They go
+beside the list they change, not with it. Folders are added and taken off
+only where a message can be in several (`labels`: Gmail, JMAP), and a
+message keeps one folder at least. Elsewhere a message is moved with
+`folder_ids`.
+
 **Decided 2026-09-24, threads for IMAP:** IMAP's `THREAD` extension
 (RFC 5256) works within one folder only, while a conversation is spread
 over the inbox, the sent folder and the archive. The service builds IMAP
@@ -834,7 +844,7 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `{acc}/send` | send. Body: recipients, subject, text / html, attachments, optional `reference: {message_id, action: reply\|reply_all\|forward}`. Header `Idempotency-Key` |
+| POST | `{acc}/send` | send. Body: recipients, `reply_to`, subject, text / html, attachments, `attachments_from`, optional `reference: {message_id, action: reply\|reply_all\|forward}`. Header `Idempotency-Key` |
 | GET | `{acc}/drafts` | list |
 | POST | `{acc}/drafts` | create (same body as send) |
 | PUT | `{acc}/drafts/{draft_id}` | replace, `keep_attachments` names stored attachments that stay. The answer names the draft's id from now on: IMAP keeps it, Microsoft and JMAP store a new message under a new id (decided 2026-10-06) |
@@ -855,7 +865,11 @@ threads itself, across all folders, from `Message-ID`, `In-Reply-To` and
 Rules of the implementation (phase 2): a reply without recipients goes to
 the original's `Reply-To`, else its sender. `reply_all` adds everyone in
 `To` and `Cc` except the account itself. Named recipients and a subject
-win over these. A `reference` needs `get_message` besides `send_message`:
+win over these. `attachments_from` names attachments of other messages of
+the account by message and attachment id. They are attached as they
+are, before the message's own, and need `get_attachment` in a folder the
+grants reach (decided 2026-10-12: by reference, so that a file does not
+pass through the model). A `reference` needs `get_message` besides `send_message`:
 a reply quotes the original and a forward passes it on, so a user who may
 only send cannot get at mail this way. When the flag on the original
 cannot be set, the send still counts as done.
@@ -1545,7 +1559,7 @@ included for a grant on every account. `user`, `outcome`, `recipient`
 
 | Method | Path | Right |
 |---|---|---|
-| GET | `/v1/me` | any authenticated user. Who am I, and my effective rights resolved to operations per account |
+| GET | `/v1/me` | any authenticated user. Who am I, and my effective rights resolved to operations per account, with how each account fares: `status`, `attention`, `last_sync_at` |
 | GET | `/v1/permissions` | any authenticated user. The catalogue of operations and groups |
 | GET / POST | `/v1/users` | GET `users.read`, POST `users.manage` |
 | GET / PATCH / DELETE | `/v1/users/{user_id}` | GET `users.read`, the others `users.manage`. Name, roles, service, grants, disabled, `ui_sign_in`. Each answer also says how the user signs in to the UI: `has_password`, `must_change`, `last_sign_in_at`, `second_factor` |
@@ -1571,6 +1585,10 @@ included for a grant on every account. `user`, `outcome`, `recipient`
   need them.
 - At start it calls `/v1/me` and registers **only the tools its user can
   use**. The user's rights decide what is offered to the model.
+- **Decided 2026-10-12:** `/v1/me` says how each account fares, its
+  `status`, whether it needs a person's `attention` and its last
+  successful sync, so a model learns of a problem before a tool fails.
+  The text of the last error stays with `GET /v1/status`.
 
 ### 7.6 Other rules
 
@@ -1707,10 +1725,11 @@ one or two `operationId`s.
 | `get_thread` | read | `get_thread`, **planned** with threads (6.3) |
 | `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
 | `whats_new` | read | `list_all_changes` across accounts, or `list_changes` for one, the "what came in since" tool |
-| `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash |
+| `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash, add and take off keywords and labels |
 | `create_folder` | write | `create_folder` |
+| `update_folder` | write | `update_folder`: rename or move. Deleting a folder stays out of the tools |
 | `list_drafts` | drafts | `list_drafts` |
-| `create_draft` | drafts | `create_draft`, incl. reply / forward by reference |
+| `create_draft` | drafts | `create_draft`, incl. reply / forward by reference, with or without the quote, a forward inline or as a file, `reply_to`, attachments as base64 and of other mail |
 | `update_draft` | drafts | `update_draft`, replaces the whole draft |
 | `delete_draft` | drafts | `delete_draft` |
 | `send_message` | send | `send_message`, with an idempotency key derived from the call |

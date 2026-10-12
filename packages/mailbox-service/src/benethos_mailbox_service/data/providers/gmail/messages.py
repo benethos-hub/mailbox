@@ -90,30 +90,33 @@ async def update_messages(
     changes: MessageUpdate,
 ) -> dict[str, MessageSummary | MailboxServiceError]:
     failure: MailboxServiceError
-    if changes.keywords:
+    if changes.keywords or changes.add_keywords or changes.remove_keywords:
         failure = NotSupportedError(
             "gmail keeps no keywords: its labels are the folders"
         )
         return dict.fromkeys(message_ids, failure)
-    targets = None
     known: set[str] = set()
-    if changes.folder_ids is not None:
+    if changes.changes_folders:
         rules.move_target(changes, capabilities)
-        targets = set(changes.folder_ids)
         known = await reading.known_folders(api)
+        named = changes.named_folders()
         unknown = next(
-            (t for t in sorted(targets) if t not in known | {mappers.ALL_MAIL}), None
+            (t for t in sorted(named) if t not in known | {mappers.ALL_MAIL}), None
         )
         if unknown is not None:
             return dict.fromkeys(
                 message_ids, NotFoundError(f"folder {unknown} not found")
             )
-        if targets & mappers.NOT_TARGETS:
+        if set(named) & mappers.NOT_TARGETS:
             failure = BadRequestError("gmail puts messages in sent and drafts itself")
             return dict.fromkeys(message_ids, failure)
 
     async def one(message_id: str) -> MessageSummary:
-        current = await _labels(api, message_id) if targets is not None else set()
+        current = await _labels(api, message_id) if changes.changes_folders else set()
+        after = changes.folders_after(mappers.folder_ids(sorted(current), known))
+        if after == []:
+            raise rules.no_folder_left()
+        targets = set(after) if after is not None else None
         add, remove = _change(current, targets, known, changes)
         if add or remove:
             await _modify(api, message_id, add, remove)

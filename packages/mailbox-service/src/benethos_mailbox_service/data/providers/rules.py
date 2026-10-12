@@ -49,6 +49,11 @@ def in_trash_already() -> ConflictError:
     )
 
 
+def no_folder_left() -> BadRequestError:
+    """A change that would take a message out of its last folder."""
+    return BadRequestError("a message stays in one folder at least")
+
+
 def invalid_cursor() -> BadRequestError:
     """A cursor the adapter did not hand out, or one from another list."""
     return BadRequestError("invalid cursor")
@@ -79,7 +84,12 @@ def move_target(
     changes: MessageUpdate, capabilities: frozenset[Capability]
 ) -> str | None:
     """The folder ``changes`` move a message to, or None to stay. Several
-    folders at once need ``LABELS``."""
+    folders at once need ``LABELS``, and so does adding or removing one."""
+    if changes.adds_or_removes_folders and Capability.LABELS not in capabilities:
+        raise BadRequestError(
+            "a message of this account is in exactly one folder: "
+            "move it with folder_ids"
+        )
     if changes.folder_ids is None:
         return None
     if len(set(changes.folder_ids)) != 1 and Capability.LABELS not in capabilities:

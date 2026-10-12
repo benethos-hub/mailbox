@@ -1,8 +1,10 @@
-"""Tools that change mail: update_messages and create_folder."""
+"""Tools that change mail and folders: update_messages, create_folder and
+update_folder."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 import httpx
 import pytest
@@ -96,6 +98,40 @@ async def test_nothing_to_change(api: Callable) -> None:
         await writing.update_messages("acc_1", ["msg_1"])
 
 
+async def test_labels_and_keywords_added_and_taken_off(api: Callable) -> None:
+    handler = api({"results": [{"id": "msg_1", "ok": True}]})
+    await writing.update_messages(
+        "acc_1",
+        ["msg_1"],
+        add_folders=["Label_1"],
+        remove_folders=["inbox"],
+        add_keywords=["urgent"],
+        remove_keywords=["$junk"],
+    )
+    assert handler.posted()[0][1]["changes"] == {
+        "add_folder_ids": ["Label_1"],
+        "remove_folder_ids": ["inbox"],
+        "add_keywords": ["urgent"],
+        "remove_keywords": ["$junk"],
+    }
+
+
+@pytest.mark.parametrize(
+    ("arguments", "reason"),
+    [
+        ({"trash": True, "add_keywords": ["x"]}, "alone"),
+        ({"move_to": "archive", "add_folders": ["Label_1"]}, "not beside"),
+        ({"add_folders": [], "remove_keywords": []}, "nothing to change"),
+    ],
+)
+async def test_label_changes_that_cannot_go(
+    api: Callable, arguments: dict[str, Any], reason: str
+) -> None:
+    api(None)
+    with pytest.raises(ToolError, match=reason):
+        await writing.update_messages("acc_1", ["msg_1"], **arguments)
+
+
 # --- create_folder --------------------------------------------------------------------
 
 
@@ -112,6 +148,43 @@ async def test_create_folder_below_a_role(api: Callable) -> None:
     handler = api({"id": "fld_new", "name": "2026"})
     await writing.create_folder("acc_1", "2026", parent="archive")
     assert handler.posted()[0][1] == {"name": "2026", "parent_id": "archive"}
+
+
+# --- update_folder --------------------------------------------------------------------
+
+FOLDER = "/v1/accounts/acc_1/folders/fld_1"
+
+
+async def test_rename_a_folder(api: Callable) -> None:
+    handler = api({"id": "fld_2", "name": "Bills"})
+    assert await writing.update_folder("acc_1", "fld_1", name="Bills") == {
+        "id": "fld_2",
+        "name": "Bills",
+    }
+    [call] = handler.calls
+    assert (call.method, call.path, call.body) == ("PATCH", FOLDER, {"name": "Bills"})
+
+
+async def test_move_a_folder_into_another_or_to_the_top(api: Callable) -> None:
+    handler = api({"id": "fld_1", "name": "2026"})
+    await writing.update_folder("acc_1", "fld_1", parent="archive")
+    await writing.update_folder("acc_1", "fld_1", to_top=True)
+    assert [call.body for call in handler.calls] == [
+        {"parent_id": "archive"},
+        {"parent_id": None},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("arguments", "reason"),
+    [({}, "nothing to change"), ({"parent": "f", "to_top": True}, "not both")],
+)
+async def test_a_folder_change_that_cannot_go(
+    api: Callable, arguments: dict[str, Any], reason: str
+) -> None:
+    api(None)
+    with pytest.raises(ToolError, match=reason):
+        await writing.update_folder("acc_1", "fld_1", **arguments)
 
 
 # --- registration ---------------------------------------------------------------------
