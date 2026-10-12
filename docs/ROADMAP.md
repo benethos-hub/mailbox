@@ -413,7 +413,7 @@ order, each step one pull request or more:
    done
 3. **Microsoft sends large mail through upload sessions**, and IMAP
    orders the steps of a change of flags and folder, done
-4. **One test suite for all adapters**
+4. **One test suite for all adapters**, done
 5. **The finer capabilities**, read from the server and stored with the
    account, checked by the domain for every operation
 6. **The values**: `date` and `received`, the inbox as the list without a
