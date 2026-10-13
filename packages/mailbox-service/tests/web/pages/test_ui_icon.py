@@ -81,7 +81,8 @@ def test_the_social_preview_shows_the_3d_logo_and_what_it_is() -> None:
     assert "width: 1280px; height: 640px;" in page
     # The logo, the faint icon and the lines behind.
     assert page.count("<svg ") == 3
-    assert page.count('<path d="M -40 ') == len(build._SOCIAL_LINES)
+    # Each line starts at a half circle on the left edge.
+    assert page.count('<path d="M 0 ') == len(build._SOCIAL_LINES)
     assert "c2pa" not in page
     readme = " ".join((REPOSITORY / "README.md").read_text("utf-8").split())
     assert build.SOCIAL_TITLE.removeprefix("One ") in readme

@@ -174,24 +174,32 @@ _SOCIAL_STYLE = """
 
 
 # Flowing lines from the left edge that fade out towards the middle: the
-# height where each starts, how far it swings and its stroke width.
+# height where each starts, how far it swings, its stroke width and the
+# radius of the half circle it starts at.
 _SOCIAL_LINES = (
-    (70, 70, 1.6),
-    (150, -50, 2.4),
-    (235, 80, 1.2),
-    (320, -70, 2.0),
-    (405, 60, 1.4),
-    (490, -60, 2.2),
-    (575, 50, 1.2),
+    (70, 70, 1.6, 5),
+    (150, -50, 2.4, 9),
+    (235, 80, 1.2, 4),
+    (320, -70, 2.0, 7),
+    (405, 60, 1.4, 4.5),
+    (490, -60, 2.2, 11),
+    (575, 50, 1.2, 5.5),
 )
 
 
 def _social_lines() -> str:
-    """The lines as an SVG over the whole page, fading out to the right."""
+    """The lines as an SVG over the whole page, fading out to the right.
+    Each starts at a half circle whose straight side lies on the left
+    edge, from the top of its arc."""
     paths = "".join(
-        f'<path d="M -40 {y} C 200 {y}, 340 {y + swing}, 560 {y + swing} '
-        f'S 780 {y + swing * 0.3:g}, 900 {y}" stroke-width="{width}"/>'
-        for y, swing, width in _SOCIAL_LINES
+        f'<path d="M {r} {y} C 200 {y}, 340 {y + swing}, '
+        f'560 {y + swing} S 780 {y + swing * 0.3:g}, 900 {y}" '
+        f'stroke-width="{width}"/>'
+        for y, swing, width, r in _SOCIAL_LINES
+    )
+    starts = "".join(
+        f'<path d="M 0 {y - r} A {r} {r} 0 0 1 0 {y + r} Z"/>'
+        for y, _, _, r in _SOCIAL_LINES
     )
     return (
         '<svg class="lines" width="1280" height="640" viewBox="0 0 1280 640">'
@@ -202,6 +210,7 @@ def _social_lines() -> str:
         '<stop offset="1" stop-color="#335FDB" stop-opacity="0"/>'
         "</linearGradient></defs>"
         f'<g fill="none" stroke="url(#fade)" stroke-linecap="round">{paths}</g>'
+        f'<g fill="#335FDB" fill-opacity=".30">{starts}</g>'
         "</svg>"
     )
 
