@@ -74,7 +74,9 @@ def test_the_social_preview_shows_the_3d_logo_and_what_it_is() -> None:
         build.SOCIAL_SOURCE.read_text("utf-8"), build.SOCIAL_MARK.read_text("utf-8")
     )
     assert "width: 1280px; height: 640px;" in page
-    assert page.count("<svg ") == 2
+    # The logo, the faint icon and the lines behind.
+    assert page.count("<svg ") == 3
+    assert page.count('<path d="M -40 ') == len(build._SOCIAL_LINES)
     assert "c2pa" not in page
     readme = " ".join((REPOSITORY / "README.md").read_text("utf-8").split())
     assert build.SOCIAL_TITLE.removeprefix("One ") in readme

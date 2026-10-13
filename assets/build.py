@@ -150,6 +150,7 @@ _SOCIAL_STYLE = """
     opacity: .08; transform: rotate(-8deg);
   }
   .mark svg { width: 100%; height: auto; }
+  .lines { position: absolute; left: 0; top: 0; }
   .content { position: absolute; left: 96px; top: 92px; right: 96px; }
   .logo svg { width: 520px; height: auto; display: block; }
   h1 {
@@ -171,15 +172,50 @@ _SOCIAL_STYLE = """
 """
 
 
+# Flowing lines from the left edge that fade out towards the middle: the
+# height where each starts, how far it swings and its stroke width.
+_SOCIAL_LINES = (
+    (70, 70, 1.6),
+    (150, -50, 2.4),
+    (235, 80, 1.2),
+    (320, -70, 2.0),
+    (405, 60, 1.4),
+    (490, -60, 2.2),
+    (575, 50, 1.2),
+)
+
+
+def _social_lines() -> str:
+    """The lines as an SVG over the whole page, fading out to the right."""
+    paths = "".join(
+        f'<path d="M -40 {y} C 200 {y}, 340 {y + swing}, 560 {y + swing} '
+        f'S 780 {y + swing * 0.3:g}, 900 {y}" stroke-width="{width}"/>'
+        for y, swing, width in _SOCIAL_LINES
+    )
+    return (
+        '<svg class="lines" width="1280" height="640" viewBox="0 0 1280 640">'
+        '<defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" '
+        'x1="0" y1="0" x2="900" y2="0">'
+        '<stop offset="0" stop-color="#335FDB" stop-opacity=".34"/>'
+        '<stop offset=".55" stop-color="#335FDB" stop-opacity=".12"/>'
+        '<stop offset="1" stop-color="#335FDB" stop-opacity="0"/>'
+        "</linearGradient></defs>"
+        f'<g fill="none" stroke="url(#fade)" stroke-linecap="round">{paths}</g>'
+        "</svg>"
+    )
+
+
 def social(logo: str, mark: str) -> str:
     """The page of the social preview: the 3D logo, what the project is,
     the providers it reaches and where it lives, on a light blue ground
-    with the 3D icon large and faint at the right."""
+    with flowing lines from the left and the 3D icon large and faint at
+    the right."""
     chips = "".join(f'<span class="chip">{p}</span>' for p in SOCIAL_PROVIDERS)
     return (
         '<!doctype html>\n<html><head><meta charset="utf-8">'
         f"<style>{_SOCIAL_STYLE}</style></head>\n<body>\n"
         '<div class="grid"></div>\n'
+        f"{_social_lines()}\n"
         f'<div class="mark">{plain(mark)}</div>\n'
         '<div class="content">\n'
         f'<div class="logo">{plain(logo)}</div>\n'
