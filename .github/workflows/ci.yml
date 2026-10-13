@@ -123,7 +123,7 @@ jobs:
   # uv.lock, never the minimums, so they fall behind the code unnoticed.
   # Each environment is also checked against OSV: a minimum with a known
   # vulnerability lets someone install it.
-  # Not a required check: a failure here means raising a minimum.
+  # A required check: a failure here means raising a minimum.
   lowest-versions:
     runs-on: ubuntu-latest
     steps:
