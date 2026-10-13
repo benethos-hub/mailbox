@@ -129,7 +129,20 @@ SOCIAL_MARK = ASSETS / "brand/icon.svg"
 SOCIAL_SIZE = (1280, 640)
 _ROOT_SIZE = re.compile(r'^(<svg [^>]*?)width="([\d.]+)" height="([\d.]+)"')
 # What the page says besides the logo and its claim.
-SOCIAL_LINE = "Python client &middot; MCP server for AI agents &middot; self-hosted"
+SOCIAL_USES = (
+    ("Python client", '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/>'),
+    (
+        "MCP server for AI agents",
+        '<rect x="4" y="7" width="16" height="12" rx="3"/>'
+        '<path d="M12 3v4M9 12h.01M15 12h.01"/>',
+    ),
+    (
+        "Self-hosted",
+        '<rect x="3" y="4" width="18" height="7" rx="2"/>'
+        '<rect x="3" y="13" width="18" height="7" rx="2"/>'
+        '<path d="M7 7.5h.01M7 16.5h.01"/>',
+    ),
+)
 SOCIAL_PROVIDERS = ("IMAP", "JMAP", "POP3", "Gmail", "Microsoft 365", "Outlook.com")
 SOCIAL_ADDRESS = "github.com/benethos-hub/mailbox"
 # The card at the right: an AI agent asks, the MCP server answers.
@@ -176,13 +189,24 @@ _SOCIAL_STYLE = """
     flex: 1; display: flex; flex-direction: column; justify-content: center;
     max-width: 660px;
   }
-  p { margin: 0; font-size: 24px; color: #335FDB; font-weight: 500; }
-  .chips { margin-top: 36px; display: flex; gap: 10px; flex-wrap: wrap; }
+  /* Both on one frosted panel, parted by a fine line. */
+  .panel {
+    background: rgba(255,255,255,.62); border: 1.5px solid #DCE6F8;
+    border-radius: 20px; padding: 20px 22px; backdrop-filter: blur(6px);
+    box-shadow: 0 10px 30px rgba(22,60,168,.08);
+  }
+  .uses {
+    display: flex; gap: 22px; font-size: 19px; font-weight: 600;
+    color: #163CA8;
+  }
+  .uses span { display: inline-flex; align-items: center; gap: 8px; }
+  .uses svg { color: #335FDB; flex: none; }
+  .rule { height: 1px; background: #DCE6F8; margin: 16px 0; }
+  .chips { display: flex; gap: 8px; }
   .chip {
-    font-size: 17px; font-weight: 600; color: #163CA8;
+    font-size: 16px; font-weight: 600; color: #163CA8;
     background: rgba(255,255,255,.85); border: 1.5px solid #C9D8F5;
-    border-radius: 999px; padding: 7px 16px;
-    box-shadow: 0 2px 6px rgba(22,60,168,.08);
+    border-radius: 999px; padding: 6px 14px; white-space: nowrap;
   }
   /* The card at the right, slightly turned. */
   .agent {
@@ -264,6 +288,12 @@ def social(logo: str, mark: str) -> str:
     with flowing lines from the left and the 3D icon large and faint at
     the right. In front of it an AI agent asks for mail through the MCP
     server."""
+    uses = "".join(
+        '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" '
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+        f'stroke-linejoin="round">{sign}</svg>{use}</span>'
+        for use, sign in SOCIAL_USES
+    )
     chips = "".join(f'<span class="chip">{p}</span>' for p in SOCIAL_PROVIDERS)
     answers = "".join(f"<li>{where}: {what}</li>" for where, what in SOCIAL_ANSWERS)
     agent = (
@@ -282,8 +312,9 @@ def social(logo: str, mark: str) -> str:
         f"{agent}\n"
         '<div class="content">\n'
         f'<div class="logo">{plain(logo)}</div>\n'
-        f'<div class="details">\n<p>{SOCIAL_LINE}</p>\n'
-        f'<div class="chips">{chips}</div>\n</div>\n</div>\n'
+        f'<div class="details"><div class="panel">\n<div class="uses">{uses}</div>\n'
+        '<div class="rule"></div>\n'
+        f'<div class="chips">{chips}</div>\n</div></div>\n</div>\n'
         f'<div class="foot">{SOCIAL_ADDRESS}</div>\n</body></html>\n'
     )
 
