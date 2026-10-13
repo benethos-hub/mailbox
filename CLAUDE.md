@@ -291,7 +291,8 @@ test accounts for golden rule 1.
 
 - Commit only when the user asks. Clear, descriptive messages.
 - `main` is protected: no direct push, no force push, a linear history,
-  and every CI job but `lowest-versions` must pass. Every change reaches
+  and every CI job must pass, `brand / Brand assets` and
+  `lowest-versions` among them. Every change reaches
   `main` as a pull request.
 - The flow: a branch per work stream, created before the first edit.
   Commit, push the branch, open the pull request with `gh pr create`.
