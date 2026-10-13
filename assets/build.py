@@ -132,6 +132,14 @@ _ROOT_SIZE = re.compile(r'^(<svg [^>]*?)width="([\d.]+)" height="([\d.]+)"')
 SOCIAL_LINE = "Python client &middot; MCP server for AI agents &middot; self-hosted"
 SOCIAL_PROVIDERS = ("IMAP", "JMAP", "POP3", "Gmail", "Microsoft 365", "Outlook.com")
 SOCIAL_ADDRESS = "github.com/benethos-hub/mailbox"
+# The card at the right: an AI agent asks, the MCP server answers.
+SOCIAL_QUESTION = "What is unread in my mailboxes?"
+SOCIAL_TOOL = "search_messages"
+SOCIAL_ANSWERS = (
+    ("Gmail", "Invoice 0815"),
+    ("Microsoft 365", "Team call"),
+    ("IMAP", "Photos"),
+)
 
 _SOCIAL_STYLE = """
   html, body { margin: 0; width: 1280px; height: 640px; overflow: hidden; }
@@ -166,15 +174,41 @@ _SOCIAL_STYLE = """
   /* The lines under the logo, in the middle between it and the address. */
   .details {
     flex: 1; display: flex; flex-direction: column; justify-content: center;
+    max-width: 660px;
   }
-  p { margin: 0; font-size: 27px; color: #335FDB; font-weight: 500; }
-  .chips { margin-top: 44px; display: flex; gap: 12px; flex-wrap: wrap; }
+  p { margin: 0; font-size: 24px; color: #335FDB; font-weight: 500; }
+  .chips { margin-top: 36px; display: flex; gap: 10px; flex-wrap: wrap; }
   .chip {
-    font-size: 20px; font-weight: 600; color: #163CA8;
+    font-size: 17px; font-weight: 600; color: #163CA8;
     background: rgba(255,255,255,.85); border: 1.5px solid #C9D8F5;
-    border-radius: 999px; padding: 8px 20px;
+    border-radius: 999px; padding: 7px 16px;
     box-shadow: 0 2px 6px rgba(22,60,168,.08);
   }
+  /* The card at the right, slightly turned. */
+  .agent {
+    position: absolute; right: 80px; top: 50%; width: 374px; padding: 18px;
+    transform: translateY(-50%) rotate(-2deg);
+    background: rgba(255,255,255,.96); border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(15,42,118,.22), 0 4px 12px rgba(15,42,118,.10);
+  }
+  .bubble {
+    border-radius: 16px; padding: 12px 16px; font-size: 16px;
+    line-height: 1.4; max-width: 300px;
+  }
+  .ask {
+    background: #2A50D2; color: #fff; margin-left: auto;
+    border-bottom-right-radius: 4px;
+  }
+  .tool {
+    margin: 14px 0; font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 14px; color: #335FDB; background: #EEF3FD;
+    border: 1px dashed #B9CBF2; border-radius: 10px; padding: 8px 12px;
+  }
+  .tool b { color: #0F2A76; }
+  .answer {
+    background: #F1F5FB; color: #0F172A; border-bottom-left-radius: 4px;
+  }
+  .answer ul { margin: 6px 0 0; padding-left: 18px; }
   .foot {
     position: absolute; left: 96px; bottom: 44px; font-size: 20px;
     color: #5B6B8C; letter-spacing: .2px;
@@ -228,14 +262,24 @@ def social(logo: str, mark: str) -> str:
     """The page of the social preview: the 3D logo, what the project is,
     the providers it reaches and where it lives, on a light blue ground
     with flowing lines from the left and the 3D icon large and faint at
-    the right."""
+    the right. In front of it an AI agent asks for mail through the MCP
+    server."""
     chips = "".join(f'<span class="chip">{p}</span>' for p in SOCIAL_PROVIDERS)
+    answers = "".join(f"<li>{where}: {what}</li>" for where, what in SOCIAL_ANSWERS)
+    agent = (
+        f'<div class="agent"><div class="bubble ask">{SOCIAL_QUESTION}</div>'
+        f'<div class="tool">&#9881; MCP &middot; <b>{SOCIAL_TOOL}</b>'
+        "(unread=true)</div>"
+        '<div class="bubble answer">Three mails in three mailboxes:'
+        f"<ul>{answers}</ul></div></div>"
+    )
     return (
         '<!doctype html>\n<html><head><meta charset="utf-8">'
         f"<style>{_SOCIAL_STYLE}</style></head>\n<body>\n"
         '<div class="grid"></div>\n'
         f"{_social_lines()}\n"
         f'<div class="mark">{plain(mark)}</div>\n'
+        f"{agent}\n"
         '<div class="content">\n'
         f'<div class="logo">{plain(logo)}</div>\n'
         f'<div class="details">\n<p>{SOCIAL_LINE}</p>\n'
