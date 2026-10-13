@@ -55,8 +55,9 @@ def plain(svg: str) -> str:
 
 
 # The word mark of the 3D logo in dark mode: its face, the gradient
-# "word", in light blues, and its depth, the path drawn 2 below the
-# face, in the blue of the icon. The icon keeps its colours.
+# "word", in light blues, its depth, the path drawn 2 below the face, in
+# the blue of the icon, and the claim below it in a light blue. The icon
+# keeps its colours.
 _LIGHT_WORD = (
     (
         re.compile(
@@ -68,9 +69,15 @@ _LIGHT_WORD = (
     ),
     (
         re.compile(
-            r'(<path transform="translate\(230,133\)" d="[^"]*" fill=")#132E86(")'
+            r'(<path transform="translate\(230,\d+\)" d="[^"]*" fill=")#132E86(")'
         ),
         r"\g<1>#1D4ED8\g<2>",
+    ),
+    (
+        re.compile(
+            r'(<path transform="translate\(230,\d+\)" d="[^"]*" fill=")#0F2A76(")'
+        ),
+        r"\g<1>#BFDBFE\g<2>",
     ),
 )
 
@@ -121,8 +128,7 @@ SOCIAL_MARK = ASSETS / "brand/icon.svg"
 # away from them.
 SOCIAL_SIZE = (1280, 640)
 _ROOT_SIZE = re.compile(r'^(<svg [^>]*?)width="([\d.]+)" height="([\d.]+)"')
-# What the page says, from the README's first lines.
-SOCIAL_TITLE = "One REST API for all your mailboxes"
+# What the page says besides the logo and its claim.
 SOCIAL_LINE = "Python client &middot; MCP server for AI agents &middot; self-hosted"
 SOCIAL_PROVIDERS = ("IMAP", "JMAP", "POP3", "Gmail", "Microsoft 365", "Outlook.com")
 SOCIAL_ADDRESS = "github.com/benethos-hub/mailbox"
@@ -152,14 +158,17 @@ _SOCIAL_STYLE = """
   }
   .mark svg { width: 100%; height: auto; }
   .lines { position: absolute; left: 0; top: 0; }
-  .content { position: absolute; left: 96px; top: 92px; right: 96px; }
-  .logo svg { width: 520px; height: auto; display: block; }
-  h1 {
-    margin: 46px 0 0; font-size: 50px; line-height: 1.1; font-weight: 700;
-    color: #0F2A76; letter-spacing: -.5px;
+  .content {
+    position: absolute; left: 96px; right: 96px; top: 84px; bottom: 72px;
+    display: flex; flex-direction: column;
   }
-  p { margin: 16px 0 0; font-size: 27px; color: #335FDB; font-weight: 500; }
-  .chips { margin-top: 40px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .logo svg { width: 600px; height: auto; display: block; margin-left: -6px; }
+  /* The lines under the logo, in the middle between it and the address. */
+  .details {
+    flex: 1; display: flex; flex-direction: column; justify-content: center;
+  }
+  p { margin: 0; font-size: 27px; color: #335FDB; font-weight: 500; }
+  .chips { margin-top: 44px; display: flex; gap: 12px; flex-wrap: wrap; }
   .chip {
     font-size: 20px; font-weight: 600; color: #163CA8;
     background: rgba(255,255,255,.85); border: 1.5px solid #C9D8F5;
@@ -229,8 +238,8 @@ def social(logo: str, mark: str) -> str:
         f'<div class="mark">{plain(mark)}</div>\n'
         '<div class="content">\n'
         f'<div class="logo">{plain(logo)}</div>\n'
-        f"<h1>{SOCIAL_TITLE}</h1>\n<p>{SOCIAL_LINE}</p>\n"
-        f'<div class="chips">{chips}</div>\n</div>\n'
+        f'<div class="details">\n<p>{SOCIAL_LINE}</p>\n'
+        f'<div class="chips">{chips}</div>\n</div>\n</div>\n'
         f'<div class="foot">{SOCIAL_ADDRESS}</div>\n</body></html>\n'
     )
 

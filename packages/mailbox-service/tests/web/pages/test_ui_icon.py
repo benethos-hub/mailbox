@@ -47,17 +47,20 @@ def test_the_dark_logo_differs_in_the_word_mark_only() -> None:
     logo = (REPOSITORY / "assets/brand/logo.svg").read_text("utf-8")
     plain, light = build.plain(logo).split(">"), build.light_word(logo).split(">")
     changed = [(a, b) for a, b in zip(plain, light, strict=True) if a != b]
-    # The three stops of the face's gradient, and the depth below the face.
+    # The three stops of the face's gradient, the depth below the face and
+    # the claim under the word mark.
     ends = (
         'stop-color="#DBEAFE"/',
         'stop-color="#BFDBFE"/',
         'stop-color="#93C5FD"/',
         ' fill="#1D4ED8"/',
+        ' fill="#BFDBFE"/',
     )
     assert len(changed) == len(ends)
     for (_, made), end in zip(changed, ends, strict=True):
         assert made.endswith(end), made[-40:]
-    assert 'transform="translate(230,133)"' in changed[3][0]
+    assert 'transform="translate(230,124)"' in changed[3][0]
+    assert 'transform="translate(230,158)"' in changed[4][0]
 
 
 def test_the_social_preview_has_githubs_size() -> None:
@@ -84,12 +87,14 @@ def test_the_social_preview_shows_the_3d_logo_and_what_it_is() -> None:
     # Each line starts at a half circle on the left edge.
     assert page.count('<path d="M 0 ') == len(build._SOCIAL_LINES)
     assert "c2pa" not in page
-    readme = " ".join((REPOSITORY / "README.md").read_text("utf-8").split())
-    assert build.SOCIAL_TITLE.removeprefix("One ") in readme
+    # The claim is part of the logo, under its word mark.
+    assert 'transform="translate(230,158)"' in build.plain(
+        build.SOCIAL_SOURCE.read_text("utf-8")
+    )
     for provider in build.SOCIAL_PROVIDERS:
         assert f'<span class="chip">{provider}</span>' in page
     # GitHub may crop the edges: the content keeps away from them.
-    assert ".content { position: absolute; left: 96px; top: 92px;" in page
+    assert "position: absolute; left: 96px; right: 96px; top: 84px;" in page
 
 
 def test_the_png_icon_is_square_and_transparent() -> None:
