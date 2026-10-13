@@ -10,6 +10,11 @@ permissions:
   contents: read
 
 jobs:
+  # The organisation's check of assets/brand: the icon as icon.svg, and
+  # icon.png and social-preview.png made from it, none older than it.
+  brand:
+    uses: benethos-hub/.github/.github/workflows/brand.yml@main
+
   lint:
     runs-on: ubuntu-latest
     steps:

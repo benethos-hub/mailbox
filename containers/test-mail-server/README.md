@@ -1,4 +1,4 @@
-# <img src="../../assets/logo/icon-3d.svg" alt="" height="36" align="absmiddle"> Test mail server
+# <img src="../../assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Test mail server
 
 [Stalwart](https://stalw.art) in a container, as a mail server of our own
 for trying the adapters: IMAP, POP3, SMTP and JMAP, with two accounts and

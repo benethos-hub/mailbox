@@ -1,4 +1,4 @@
-"""Make the shipped images from the sources in ``logo/``.
+"""Make the shipped images from the sources in ``brand/``.
 
 ``uv run python assets/build.py`` writes them anew, ``--check`` only
 names the ones that differ from what it would write. The sources stay
@@ -9,12 +9,12 @@ without it:
   3D icon.
 - the logo above the sign-in card, from the 3D logo, and for dark
   mode the same with a light word mark.
-- ``logo/social-preview.png``, the image GitHub shows when the
+- ``brand/social-preview.png``, the image GitHub shows when the
   repository is linked, from the 3D logo. ``--social`` renders it with
   a Chromium browser (Chrome, Edge or Chromium), which ``--check``
   cannot repeat byte for byte. It goes up by hand, under Settings,
   General, Social preview.
-- ``logo/icon.png``, the 3D icon at 512 by 512 on no background, for
+- ``brand/icon.png``, the 3D icon at 512 by 512 on no background, for
   the MCP Registry and the Claude Desktop bundle. ``--icon`` renders it
   the same way.
 - ``architecture/architecture.png`` and ``architecture-dark.png``, the
@@ -85,9 +85,9 @@ def light_word(svg: str) -> str:
 
 # What is made, from which source, and how.
 BUILT: dict[Path, tuple[Path, Callable[[str], str]]] = {
-    STATIC / "img/icon.svg": (ASSETS / "logo/icon-3d.svg", plain),
-    STATIC / "img/logo.svg": (ASSETS / "logo/logo-3d.svg", plain),
-    STATIC / "img/logo-dark.svg": (ASSETS / "logo/logo-3d.svg", light_word),
+    STATIC / "img/icon.svg": (ASSETS / "brand/icon.svg", plain),
+    STATIC / "img/logo.svg": (ASSETS / "brand/logo.svg", plain),
+    STATIC / "img/logo-dark.svg": (ASSETS / "brand/logo.svg", light_word),
 }
 
 
@@ -112,8 +112,8 @@ def build() -> None:
 
 # --- the social preview ---------------------------------------------------
 
-SOCIAL = ASSETS / "logo/social-preview.png"
-SOCIAL_SOURCE = ASSETS / "logo/logo-3d.svg"
+SOCIAL = ASSETS / "brand/social-preview.png"
+SOCIAL_SOURCE = ASSETS / "brand/logo.svg"
 # GitHub's size, and the light background of the configuration UI.
 SOCIAL_SIZE = (1280, 640)
 _BACKGROUND = "#F9FBFE"
@@ -206,8 +206,8 @@ def render_social() -> None:
 
 # For whom an SVG is not enough: the MCP Registry and the Claude Desktop
 # bundle of the MCP server.
-ICON = ASSETS / "logo/icon.png"
-ICON_SOURCE = ASSETS / "logo/icon-3d.svg"
+ICON = ASSETS / "brand/icon.png"
+ICON_SOURCE = ASSETS / "brand/icon.svg"
 ICON_SIZE = (512, 512)
 
 

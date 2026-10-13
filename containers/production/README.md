@@ -1,4 +1,4 @@
-# <img src="../../assets/logo/icon-3d.svg" alt="" height="36" align="absmiddle"> Mailbox in operation
+# <img src="../../assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Mailbox in operation
 
 > **Beta, version 0.4.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored

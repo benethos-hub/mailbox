@@ -1,6 +1,6 @@
 """The project's icon: in the configuration UI, in the heading of every
 README, and the script that makes the shipped copy from the source in
-``assets/logo/``. Also the README's architecture diagram, which the same
+``assets/brand/``. Also the README's architecture diagram, which the same
 script renders."""
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ def _build() -> ModuleType:
 
 
 def test_every_shipped_image_is_made_from_its_source() -> None:
-    # After a change in assets/logo/: uv run python assets/build.py
+    # After a change in assets/brand/: uv run python assets/build.py
     assert _build().stale() == []
 
 
@@ -39,12 +39,12 @@ def test_a_shipped_image_has_no_manifest() -> None:
 
 def test_the_ui_shows_the_3d_icon_and_logo() -> None:
     sources = {source.name for source, _ in _build().BUILT.values()}
-    assert sources == {"icon-3d.svg", "logo-3d.svg"}
+    assert sources == {"icon.svg", "logo.svg"}
 
 
 def test_the_dark_logo_differs_in_the_word_mark_only() -> None:
     build = _build()
-    logo = (REPOSITORY / "assets/logo/logo-3d.svg").read_text("utf-8")
+    logo = (REPOSITORY / "assets/brand/logo.svg").read_text("utf-8")
     plain, light = build.plain(logo).split(">"), build.light_word(logo).split(">")
     changed = [(a, b) for a, b in zip(plain, light, strict=True) if a != b]
     # The two stops of the face's gradient, and the depth below the face.
@@ -67,7 +67,7 @@ def test_the_social_preview_has_githubs_size() -> None:
 def test_the_social_preview_places_the_3d_logo_in_the_middle() -> None:
     build = _build()
     page = build.social(build.SOCIAL_SOURCE.read_text("utf-8"))
-    assert build.SOCIAL_SOURCE.name == "logo-3d.svg"
+    assert build.SOCIAL_SOURCE.name == "logo.svg"
     assert page.startswith('<svg xmlns="http://www.w3.org/2000/svg" width="1280"')
     # 658 by 224 drawn 960 wide: 326.8 high, 156.6 from the top.
     assert 'x="160" y="156.596" width="960" height="326.809"' in page
@@ -87,7 +87,7 @@ def test_the_png_icon_is_square_and_transparent() -> None:
 def test_the_png_icon_places_the_3d_icon_in_the_middle() -> None:
     build = _build()
     page = build.icon(build.ICON_SOURCE.read_text("utf-8"))
-    assert build.ICON_SOURCE.name == "icon-3d.svg"
+    assert build.ICON_SOURCE.name == "icon.svg"
     # 216 by 224 drawn 512 high: 493.7 wide, 9.1 from the left.
     assert 'x="9.14286" y="0" width="493.714" height="512"' in page
     # No background: the icon follows the page directly.
@@ -136,7 +136,7 @@ READMES = {
 def test_every_readme_has_the_3d_icon_in_its_heading(readme: str, prefix: str) -> None:
     first = (REPOSITORY / readme).read_text("utf-8").splitlines()[0]
     assert first.startswith(
-        f'# <img src="{prefix}assets/logo/icon-3d.svg" alt="" height="36"'
+        f'# <img src="{prefix}assets/brand/icon.svg" alt="" height="36"'
         ' align="absmiddle"> '
     ), first
 
