@@ -55,19 +55,20 @@ def plain(svg: str) -> str:
 
 
 # The word mark of the 3D logo in dark mode: its face, the gradient
-# "word", in light blues, and its depth, the path drawn 3 below the
+# "word", in light blues, and its depth, the path drawn 2 below the
 # face, in the blue of the icon. The icon keeps its colours.
 _LIGHT_WORD = (
     (
         re.compile(
             r'(<linearGradient id="word"[^>]*><stop offset="0" stop-color=")'
-            r'#335FDB("/><stop offset="1" stop-color=")#163CA8(")'
+            r'#4A78F0("/><stop offset=".55" stop-color=")#2A50D2("/>'
+            r'<stop offset="1" stop-color=")#1A369F(")'
         ),
-        r"\g<1>#DBEAFE\g<2>#93C5FD\g<3>",
+        r"\g<1>#DBEAFE\g<2>#BFDBFE\g<3>#93C5FD\g<4>",
     ),
     (
         re.compile(
-            r'(<path transform="translate\(230,134\)" d="[^"]*" fill=")#0F2A76(")'
+            r'(<path transform="translate\(230,133\)" d="[^"]*" fill=")#132E86(")'
         ),
         r"\g<1>#1D4ED8\g<2>",
     ),

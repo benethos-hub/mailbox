@@ -47,12 +47,17 @@ def test_the_dark_logo_differs_in_the_word_mark_only() -> None:
     logo = (REPOSITORY / "assets/brand/logo.svg").read_text("utf-8")
     plain, light = build.plain(logo).split(">"), build.light_word(logo).split(">")
     changed = [(a, b) for a, b in zip(plain, light, strict=True) if a != b]
-    # The two stops of the face's gradient, and the depth below the face.
-    ends = ('stop-color="#DBEAFE"/', 'stop-color="#93C5FD"/', ' fill="#1D4ED8"/')
+    # The three stops of the face's gradient, and the depth below the face.
+    ends = (
+        'stop-color="#DBEAFE"/',
+        'stop-color="#BFDBFE"/',
+        'stop-color="#93C5FD"/',
+        ' fill="#1D4ED8"/',
+    )
     assert len(changed) == len(ends)
     for (_, made), end in zip(changed, ends, strict=True):
         assert made.endswith(end), made[-40:]
-    assert 'transform="translate(230,134)"' in changed[2][0]
+    assert 'transform="translate(230,133)"' in changed[3][0]
 
 
 def test_the_social_preview_has_githubs_size() -> None:
