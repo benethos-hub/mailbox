@@ -493,7 +493,7 @@ receiver reports nothing. Built last, if at all.
 - **Density**: a little more air than today. Row height 40 px, card
   padding 20 px, one type size for text and one for the small line under
   a name.
-- **Icon and logo**: the project's 3D icon from `assets/logo/` heads
+- **Icon and logo**: the project's 3D icon from `assets/brand/` heads
   the sidebar and is the favicon. The 3D logo with its word mark
   stands above the card of the sign-in page and of the page a
   provider sends the browser back to (`bare.html`), in dark mode

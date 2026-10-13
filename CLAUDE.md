@@ -155,8 +155,12 @@ config/                   # one folder per package: .env.example versioned,
                           #   .env and key files local
 data/                     # one folder per package, created when missing,
                           #   only .gitkeep is versioned
-assets/                   # logo/: the logo and the icon as they came,
-                          #   and the social preview. architecture/:
+assets/                   # brand/: the organisation's brand assets,
+                          #   icon.svg (the 3D icon) and logo.svg (the
+                          #   3D logo) as the sources, icon.png and
+                          #   social-preview.png made from them, checked
+                          #   by the brand job of the CI. logo/: the
+                          #   files as they came first. architecture/:
                           #   the README's diagram as HTML and PNG,
                           #   light and dark. build.py makes the
                           #   shipped copies in the service's
@@ -164,7 +168,7 @@ assets/                   # logo/: the logo and the icon as they came,
                           #   preview, with --diagram the diagram.
                           #   icons.py makes the UI's icon sprite
                           #   from a pinned Bootstrap Icons package.
-                          #   --icon renders logo/icon.png for the MCP
+                          #   --icon renders brand/icon.png for the MCP
                           #   Registry and the Claude Desktop bundle
 live/                     # manual checks against the test accounts,
                           #   what they share in live/checks/, one module

@@ -137,7 +137,7 @@ def test_the_staged_bundle_pins_the_package_on_pypi(tmp_path: Path) -> None:
     assert staged["project"]["requires-python"] == project["requires-python"]
     assert staged["tool"]["uv"] == {"package": False}
     icon = (target / "icon.png").read_bytes()
-    assert icon == (ROOT / "assets" / "logo" / "icon.png").read_bytes()
+    assert icon == (ROOT / "assets" / "brand" / "icon.png").read_bytes()
     assert (target / _manifest()["icon"]).is_file()
 
 

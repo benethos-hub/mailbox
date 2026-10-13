@@ -32,7 +32,7 @@ MCP = REPOSITORY / "packages" / "mailbox-mcp"
 FILES = {
     "manifest.json": HERE / "manifest.json",
     "server.py": HERE / "server.py",
-    "icon.png": REPOSITORY / "assets" / "logo" / "icon.png",
+    "icon.png": REPOSITORY / "assets" / "brand" / "icon.png",
     "README.md": MCP / "README.md",
     "LICENSE": REPOSITORY / "LICENSE",
 }
