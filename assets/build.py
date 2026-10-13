@@ -10,7 +10,8 @@ without it:
 - the logo above the sign-in card, from the 3D logo, and for dark
   mode the same with a light word mark.
 - ``brand/social-preview.png``, the image GitHub shows when the
-  repository is linked, from the 3D logo. ``--social`` renders it with
+  repository is linked: the 3D logo, what the project is and the
+  providers it reaches, the 3D icon faint behind. ``--social`` renders it with
   a Chromium browser (Chrome, Edge or Chromium), which ``--check``
   cannot repeat byte for byte. It goes up by hand, under Settings,
   General, Social preview.
@@ -114,32 +115,77 @@ def build() -> None:
 
 SOCIAL = ASSETS / "brand/social-preview.png"
 SOCIAL_SOURCE = ASSETS / "brand/logo.svg"
-# GitHub's size, and the light background of the configuration UI.
+SOCIAL_MARK = ASSETS / "brand/icon.svg"
+# GitHub's size. It may crop the edges, so the content keeps 96 pixels
+# away from them.
 SOCIAL_SIZE = (1280, 640)
-_BACKGROUND = "#F9FBFE"
-# The logo's width on the page: GitHub may crop the edges.
-_LOGO_WIDTH = 960
 _ROOT_SIZE = re.compile(r'^(<svg [^>]*?)width="([\d.]+)" height="([\d.]+)"')
+# What the page says, from the README's first lines.
+SOCIAL_TITLE = "One REST API for all your mailboxes"
+SOCIAL_LINE = "Python client &middot; MCP server for AI agents &middot; self-hosted"
+SOCIAL_PROVIDERS = ("IMAP", "JMAP", "POP3", "Gmail", "Microsoft 365", "Outlook.com")
+SOCIAL_ADDRESS = "github.com/benethos-hub/mailbox"
+
+_SOCIAL_STYLE = """
+  html, body { margin: 0; width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(circle at 88% 18%, rgba(51,95,219,.16) 0,
+        rgba(51,95,219,0) 38%),
+      radial-gradient(circle at 78% 92%, rgba(22,60,168,.12) 0,
+        rgba(22,60,168,0) 42%),
+      linear-gradient(135deg, #FBFCFF 0%, #EEF3FD 55%, #E3ECFB 100%);
+    position: relative;
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(22,60,168,.13) 1.2px,
+      transparent 1.2px);
+    background-size: 26px 26px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 35%, #000 100%);
+  }
+  .mark {
+    position: absolute; right: -150px; top: 80px; width: 540px;
+    opacity: .08; transform: rotate(-8deg);
+  }
+  .mark svg { width: 100%; height: auto; }
+  .content { position: absolute; left: 96px; top: 92px; right: 96px; }
+  .logo svg { width: 520px; height: auto; display: block; }
+  h1 {
+    margin: 46px 0 0; font-size: 50px; line-height: 1.1; font-weight: 700;
+    color: #0F2A76; letter-spacing: -.5px;
+  }
+  p { margin: 16px 0 0; font-size: 27px; color: #335FDB; font-weight: 500; }
+  .chips { margin-top: 40px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .chip {
+    font-size: 20px; font-weight: 600; color: #163CA8;
+    background: rgba(255,255,255,.85); border: 1.5px solid #C9D8F5;
+    border-radius: 999px; padding: 8px 20px;
+    box-shadow: 0 2px 6px rgba(22,60,168,.08);
+  }
+  .foot {
+    position: absolute; left: 96px; bottom: 44px; font-size: 20px;
+    color: #5B6B8C; letter-spacing: .2px;
+  }
+"""
 
 
-def social(svg: str) -> str:
-    """The logo in the middle of a page of the social preview's size."""
-    logo = plain(svg)
-    found = _ROOT_SIZE.match(logo)
-    if not found:
-        raise ValueError("the logo names no width and height")
-    width, height = SOCIAL_SIZE
-    logo_height = _LOGO_WIDTH * float(found[3]) / float(found[2])
-    x, y = (width - _LOGO_WIDTH) / 2, (height - logo_height) / 2
-    placed = (
-        f'{found[1]}x="{x:g}" y="{y:g}" width="{_LOGO_WIDTH}" '
-        f'height="{logo_height:g}"' + logo[found.end() :]
-    )
+def social(logo: str, mark: str) -> str:
+    """The page of the social preview: the 3D logo, what the project is,
+    the providers it reaches and where it lives, on a light blue ground
+    with the 3D icon large and faint at the right."""
+    chips = "".join(f'<span class="chip">{p}</span>' for p in SOCIAL_PROVIDERS)
     return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" '
-        f'height="{height}" viewBox="0 0 {width} {height}">\n'
-        f'<rect width="{width}" height="{height}" fill="{_BACKGROUND}"/>\n'
-        f"{placed}</svg>\n"
+        '<!doctype html>\n<html><head><meta charset="utf-8">'
+        f"<style>{_SOCIAL_STYLE}</style></head>\n<body>\n"
+        '<div class="grid"></div>\n'
+        f'<div class="mark">{plain(mark)}</div>\n'
+        '<div class="content">\n'
+        f'<div class="logo">{plain(logo)}</div>\n'
+        f"<h1>{SOCIAL_TITLE}</h1>\n<p>{SOCIAL_LINE}</p>\n"
+        f'<div class="chips">{chips}</div>\n</div>\n'
+        f'<div class="foot">{SOCIAL_ADDRESS}</div>\n</body></html>\n'
     )
 
 
@@ -196,9 +242,11 @@ def _screenshot(
 
 def render_social() -> None:
     """Render the social preview as a PNG."""
+    logo = SOCIAL_SOURCE.read_text("utf-8")
+    mark = SOCIAL_MARK.read_text("utf-8")
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
-        page = Path(folder) / "social-preview.svg"
-        page.write_text(social(SOCIAL_SOURCE.read_text("utf-8")), "utf-8")
+        page = Path(folder) / "social-preview.html"
+        page.write_text(social(logo, mark), "utf-8")
         _screenshot(page.as_uri(), SOCIAL, SOCIAL_SIZE)
 
 

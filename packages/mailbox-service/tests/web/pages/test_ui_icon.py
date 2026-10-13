@@ -64,14 +64,24 @@ def test_the_social_preview_has_githubs_size() -> None:
     assert (width, height) == build.SOCIAL_SIZE == (1280, 640)
 
 
-def test_the_social_preview_places_the_3d_logo_in_the_middle() -> None:
+def test_the_social_preview_shows_the_3d_logo_and_what_it_is() -> None:
     build = _build()
-    page = build.social(build.SOCIAL_SOURCE.read_text("utf-8"))
-    assert build.SOCIAL_SOURCE.name == "logo.svg"
-    assert page.startswith('<svg xmlns="http://www.w3.org/2000/svg" width="1280"')
-    # 658 by 224 drawn 960 wide: 326.8 high, 156.6 from the top.
-    assert 'x="160" y="156.596" width="960" height="326.809"' in page
+    assert (build.SOCIAL_SOURCE.name, build.SOCIAL_MARK.name) == (
+        "logo.svg",
+        "icon.svg",
+    )
+    page = build.social(
+        build.SOCIAL_SOURCE.read_text("utf-8"), build.SOCIAL_MARK.read_text("utf-8")
+    )
+    assert "width: 1280px; height: 640px;" in page
+    assert page.count("<svg ") == 2
     assert "c2pa" not in page
+    readme = " ".join((REPOSITORY / "README.md").read_text("utf-8").split())
+    assert build.SOCIAL_TITLE.removeprefix("One ") in readme
+    for provider in build.SOCIAL_PROVIDERS:
+        assert f'<span class="chip">{provider}</span>' in page
+    # GitHub may crop the edges: the content keeps away from them.
+    assert ".content { position: absolute; left: 96px; top: 92px;" in page
 
 
 def test_the_png_icon_is_square_and_transparent() -> None:
