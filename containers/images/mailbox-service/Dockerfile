@@ -11,10 +11,10 @@
 
 # Base images are named in FROM directly, so Dependabot can update them.
 
-FROM ghcr.io/astral-sh/uv:0.13.0 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.1 AS uv
 
 # --- build: a virtual environment with the service and its dependencies -------
-FROM python:3.14-slim AS build
+FROM python:3.15-slim AS build
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -27,7 +27,7 @@ COPY packages packages
 RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-service
 
 # --- runtime -------------------------------------------------------------------
-FROM python:3.14-slim
+FROM python:3.15-slim
 
 RUN useradd --system --uid 10001 --user-group --home-dir /app \
         --shell /usr/sbin/nologin mailbox \
