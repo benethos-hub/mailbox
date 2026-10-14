@@ -65,6 +65,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   a keyword another client set meanwhile stays.
 - The Claude Desktop extension and the registry entry say that the
   setting for plain http is not needed for localhost or https.
+- The images of the service and the MCP server run on Python 3.15.
 
 ### Fixed
 
