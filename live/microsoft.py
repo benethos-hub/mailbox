@@ -60,7 +60,7 @@ from checks.admin import Admin, bootstrap
 from checks.mail import (
     sweep,
 )
-from checks.microsoft_mail import inline, large, send_and_check
+from checks.microsoft_mail import bounces, inline, large, send_and_check
 from checks.processes import service_env, start_service, stop
 from checks.run import Run
 from checks.service import Service
@@ -214,6 +214,8 @@ def check(
     searched = client.get(f"{base}/messages", params={"q": "zz-no-such-mail-zz"})
     run.check("a search", searched.status_code == 200)
     inline(run, client, base)
+    # One that came back late, after an earlier run had ended.
+    bounces(mailbox, ms_id, SUBJECT)
     if large_only:
         _large_only(run, client, mailbox, ms_id, bot, bot_id)
         return
