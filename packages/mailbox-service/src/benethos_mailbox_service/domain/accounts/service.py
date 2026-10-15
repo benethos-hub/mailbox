@@ -29,6 +29,7 @@ from .adapters import Adapters
 from .checks import (
     AccountChecks,
     merge_settings,
+    moved_to,
     no_secrets_in,
     one_line_name,
     pending,
@@ -225,7 +226,7 @@ class AccountService:
         merged = merge_settings(before, defaults, settings or {})
         changed = merged != before
         secrets = dict(credentials or {})
-        found = await self._check_update(account, merged, changed, secrets, signed_in)
+        found = await self._check_update(account, before, merged, secrets, signed_in)
         what = what_changed(account, display_name, rename, changed, secrets)
         if rename:
             account = account.model_copy(update={"display_name": display_name})
@@ -243,14 +244,16 @@ class AccountService:
     async def _check_update(
         self,
         account: Account,
+        before: dict[str, str | int | bool],
         merged: dict[str, str | int | bool],
-        changed: bool,
         secrets: dict[str, SecretStr],
         signed_in: Tokens | None,
     ) -> Abilities | None:
         """Log in with the changed settings and credentials before anything
         is stored, as on create. What the account can do with them, where
-        it logged in."""
+        it logged in. A stored credential goes to no server the settings
+        did not name before: a new one needs every credential again."""
+        changed = merged != before
         # An OAuth probe may hand back a refresh token to store.
         if secrets or self.signs_in_with_oauth(account.provider):
             self._vault.require_ready()
@@ -258,10 +261,20 @@ class AccountService:
             await self._checks.hosts(merged)
         if not changed and not secrets:
             return None
+        moved = moved_to(before, merged)
+        if moved is not None:
+            stored = [c.field for c in self._vault.info(account.id)]
+            for field in stored:
+                if field not in secrets:
+                    raise BadRequestError(
+                        f"the server of {moved} is new: name the credential "
+                        f"{field} again, "
+                        "a stored one goes to no other server"
+                    )
 
         def read(field: str) -> SecretStr:
-            if field in secrets:
-                return secrets[field]
+            if field in secrets or moved is not None:
+                return pending(secrets, field)
             return self._vault.read(account.id, field)
 
         return await self._checks.login(

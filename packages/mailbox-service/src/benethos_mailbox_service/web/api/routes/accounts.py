@@ -60,7 +60,8 @@ async def update_account(
 ) -> Account:
     """Change the display name, settings or credentials. New settings or
     credentials are tried first: nothing is stored unless the provider
-    accepts them."""
+    accepts them. A server the settings did not name before needs every
+    credential again: a stored one goes to no other server."""
     return await accounts.update(
         caller,
         account_id,

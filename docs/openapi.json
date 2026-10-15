@@ -3203,7 +3203,7 @@
           "accounts"
         ],
         "summary": "Update Account",
-        "description": "Change the display name, settings or credentials. New settings or\ncredentials are tried first: nothing is stored unless the provider\naccepts them.",
+        "description": "Change the display name, settings or credentials. New settings or\ncredentials are tried first: nothing is stored unless the provider\naccepts them. A server the settings did not name before needs every\ncredential again: a stored one goes to no other server.",
         "operationId": "update_account",
         "security": [
           {

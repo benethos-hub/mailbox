@@ -82,6 +82,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** `PATCH /v1/accounts/{account_id}` with settings that
+  name a new server needs every credential of the account in the same
+  request, else it answers `400`. A server removed needs none. The UI
+  says so under the password of an account.
 - `benethos-mailbox-mcp` requires mcp 2.3 and uvicorn 0.38 at least,
   the versions the workspace and the service already ask for.
 - **Breaking:** `operations` of an account in `GET /v1/me` leaves out
@@ -221,6 +225,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   error, since Graph takes at most 4 MB per request. Such a mail is
   stored without its files, which follow one by one, a large one in
   ranges.
+
+### Security
+
+- A change of an account's settings that names a server it did not
+  name before, another `host`, `port`, `smtp_host` or `smtp_port`, no
+  longer tries the stored credentials there. Whoever may change an
+  account could send its password to a server of their choice.
 
 ## [0.4.1] - 2026-10-10
 
