@@ -55,7 +55,7 @@ async def create_draft(
         GraphMessage,
         "GET",
         f"/me/messages/{id_(draft.id)}",
-        params={"$select": mappers.SUMMARY_FIELDS},
+        params=mappers.SUMMARY_PARAMS,
     )
 
 

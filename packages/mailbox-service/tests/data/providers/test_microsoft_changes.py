@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 import pytest
 
-from benethos_mailbox_service.data.models import MessageUpdate
+from benethos_mailbox_service.data.models import MessageSummary, MessageUpdate
 from benethos_mailbox_service.data.protocols.http import ApiClient
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
 from benethos_mailbox_service.errors import (
@@ -60,12 +60,12 @@ async def test_categories_added_and_taken_off(graph: FakeGraph) -> None:
 
 
 async def test_keywords_with_a_dollar_answer_501(graph: FakeGraph) -> None:
-    """Outlook keeps no `$answered`: refused, and nothing else changed."""
+    """Outlook keeps no `$junk`: refused, and nothing else changed."""
     message_id = graph.add_message(categories=["Work"])
     draft_id = graph.add_message(isDraft=True)
     provider = adapter(graph)
     for changes in (
-        MessageUpdate(unread=False, add_keywords=["$answered"]),
+        MessageUpdate(unread=False, add_keywords=["$junk"]),
         MessageUpdate(keywords=["work", "$junk"]),
         MessageUpdate(remove_keywords=["$draft"]),
     ):
@@ -88,6 +88,42 @@ async def test_keywords_with_a_dollar_answer_501(graph: FakeGraph) -> None:
         )
     ).values()
     assert not isinstance(same, Exception)
+
+
+def verb(graph: FakeGraph, message_id: str) -> dict[str, str]:
+    found = graph.messages[message_id].get("singleValueExtendedProperties", [])
+    return {p["id"]: p["value"] for p in found}
+
+
+async def test_answered_and_forwarded_are_the_last_verb(graph: FakeGraph) -> None:
+    message_id = graph.add_message()
+    provider = adapter(graph)
+
+    async def change(**fields: list[str]) -> MessageSummary | Exception:
+        [one] = (
+            await provider.update_messages([message_id], MessageUpdate(**fields))
+        ).values()
+        return one
+
+    answered = await change(add_keywords=["$answered"])
+    assert isinstance(answered, MessageSummary)
+    assert "$answered" in answered.keywords
+    assert verb(graph, message_id)["Integer 0x1081"] == "102"
+    assert verb(graph, message_id)["Integer 0x1080"] == "261"
+    forwarded = await change(add_keywords=["$forwarded"])
+    assert isinstance(forwarded, MessageSummary)
+    assert "$forwarded" in forwarded.keywords and "$answered" not in forwarded.keywords
+    neither = await change(remove_keywords=["$forwarded"])
+    assert isinstance(neither, MessageSummary)
+    assert not {"$answered", "$forwarded"} & set(neither.keywords)
+    assert verb(graph, message_id)["Integer 0x1081"] == "0"
+    both = await change(add_keywords=["$answered", "$forwarded"])
+    assert isinstance(both, BadRequestError)
+    # Outlook's own reply to all reads as answered.
+    graph.messages[message_id]["singleValueExtendedProperties"] = [
+        {"id": "Integer 0x1081", "value": "103"}
+    ]
+    assert "$answered" in (await provider.get_message(message_id)).keywords
 
 
 async def test_a_graph_message_is_in_one_folder(graph: FakeGraph) -> None:

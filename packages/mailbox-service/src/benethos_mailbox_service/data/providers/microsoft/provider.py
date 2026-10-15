@@ -31,12 +31,12 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from datetime import datetime
+from typing import Any
 
 from ....errors import (
     BadRequestError,
     ConflictError,
     MailboxServiceError,
-    NotSupportedError,
     ProviderError,
     missing,
 )
@@ -89,6 +89,7 @@ ABILITIES = Abilities.of(
         Capability.EXTERNAL_CHANGES,
     },
     read={Mark.DRAFT},
+    written={Mark.ANSWERED, Mark.FORWARDED},
 )
 
 
@@ -269,20 +270,17 @@ class MicrosoftProvider:
                 )
             path = f"/me/messages/{id_(message_id)}"
             item = None
+            verb: dict[str, Any] = {}
             if mappers.touches_marks(changes):
                 # Refused before anything changes.
                 item = await self._summary_of(path)
-                if changed := mappers.marks_changed(item, changes):
-                    raise NotSupportedError(
-                        "outlook keeps no keywords with $, only its categories: "
-                        + ", ".join(changed)
-                    )
+                verb = mappers.verb_after(item, changes)
             if changes.add_keywords or changes.remove_keywords:
                 item = item or await self._summary_of(path)
                 categories = mappers.categories_after(item, changes)
-                patch = {**body, **mappers.changes(None, None, categories)}
+                patch = {**body, **mappers.changes(None, None, categories), **verb}
             else:
-                patch = body
+                patch = {**body, **verb}
             if patch:
                 item = await self._graph.read(
                     GraphMessage, "PATCH", path, json_body=patch
@@ -297,7 +295,7 @@ class MicrosoftProvider:
 
     async def _summary_of(self, path: str) -> GraphMessage:
         return await self._graph.read(
-            GraphMessage, "GET", path, params={"$select": mappers.SUMMARY_FIELDS}
+            GraphMessage, "GET", path, params=mappers.SUMMARY_PARAMS
         )
 
     async def delete_messages(
@@ -367,7 +365,7 @@ class MicrosoftProvider:
         **(unverified)**."""
         conversation = thread_id.replace("'", "''")
         params = {
-            "$select": mappers.SUMMARY_FIELDS,
+            **mappers.SUMMARY_PARAMS,
             "$filter": f"conversationId eq '{conversation}'",
             "$top": str(PAGE_SIZE),
         }
@@ -434,7 +432,9 @@ class MicrosoftProvider:
 
     async def abilities(self) -> Abilities:
         """The same for every Microsoft account. Its keywords are Outlook's
-        categories. It reads ``$draft`` and writes no mark (UNIFORM 6.4)."""
+        categories. It reads ``$draft``, and reads and writes ``$answered``
+        and ``$forwarded`` as the verb Outlook last carried out (``marks``,
+        UNIFORM 6.4)."""
         return ABILITIES
 
     async def verify(self) -> None:

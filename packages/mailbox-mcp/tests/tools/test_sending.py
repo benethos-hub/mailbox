@@ -46,10 +46,12 @@ async def test_the_same_call_gives_the_same_key(api: Callable) -> None:
 
 
 async def test_a_reply_by_reference(api: Callable) -> None:
-    handler = api(SENT)
-    await sending.send_message("acc_1", text="Thanks", original_id="msg_1")
+    handler = api({**SENT, "original_marked": False})
+    result = await sending.send_message("acc_1", text="Thanks", original_id="msg_1")
     body = handler.calls[0].body
     assert body["reference"] == {"message_id": "msg_1", "action": "reply"}
+    # The account writes no $answered: the model learns so.
+    assert result["original_marked"] is False
 
 
 async def test_a_reply_without_the_quote_and_a_forward_as_a_file(

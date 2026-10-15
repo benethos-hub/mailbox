@@ -34,4 +34,5 @@ def _sent(found: dict[str, Any]) -> Sent:
     return Sent(
         message_id_header=found.get("message_id_header"),
         refused=list(found.get("refused") or []),
+        original_marked=found.get("original_marked"),
     )

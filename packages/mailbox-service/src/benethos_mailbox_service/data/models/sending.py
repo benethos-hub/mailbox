@@ -85,6 +85,13 @@ class SendResult(BaseModel):
         default_factory=list,
         description="Recipients the server refused while it accepted others.",
     )
+    original_marked: bool | None = Field(
+        default=None,
+        description="Of a reply or a forward: whether the original carries "
+        "`$answered` or `$forwarded` now. False where the account does not "
+        "write that mark (`marks.written`) or the mark failed. Null for a "
+        "message that answers none.",
+    )
 
 
 class SentMessage(BaseModel):

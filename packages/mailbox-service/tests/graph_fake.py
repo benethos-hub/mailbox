@@ -22,6 +22,7 @@ SESSION_MINIMUM = 3_000_000
 UPLOADS = "outlook.office.com"
 # How the fake marks an id that is not immutable.
 REST = "rest-"
+PROPS = "singleValueExtendedProperties"
 WELL_KNOWN = ("inbox", "sentitems", "drafts", "deleteditems", "junkemail")
 
 
@@ -373,7 +374,10 @@ class FakeGraph:
         if method == "GET":
             return _json(200, message)
         if method == "PATCH":
-            message.update(json.loads(request.content))
+            body = json.loads(request.content)
+            # Extended properties merge by their id, as Graph keeps them.
+            both = message.get(PROPS, []) + body.pop(PROPS, [])
+            message.update(body, **{PROPS: list({p["id"]: p for p in both}.values())})
             self.touch(message["id"])
             return _json(200, message)
         if method == "DELETE":

@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A send of a reply or a forward answers `original_marked`: whether the
+  original carries `$answered` or `$forwarded` now. False where the
+  account does not write that mark, as on Gmail, or the mark failed.
+- A Microsoft account reads and writes `$answered` and `$forwarded`, as
+  the verb Outlook last carried out on a message, so Outlook shows a
+  reply or a forward of the service too. One of the two at a time, as
+  Outlook keeps it. Its `marks` name both.
 - `PATCH .../messages/{id}` and a batch `update` take `add_keywords` and
   `remove_keywords`, which change the keywords a message has instead of
   replacing them, and `add_folder_ids` and `remove_folder_ids`, which

@@ -34,7 +34,7 @@ async def list_messages(
             if folder_id == mappers.ALL
             else f"/me/mailFolders/{id_(folder_id)}/messages"
         )
-        params = {"$select": mappers.SUMMARY_FIELDS, "$top": str(limit), **query}
+        params = {**mappers.SUMMARY_PARAMS, "$top": str(limit), **query}
         body = await graph.read(Listing[GraphMessage], "GET", path, params=params)
     found = body.value
     if "$search" in query:

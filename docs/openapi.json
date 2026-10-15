@@ -13244,6 +13244,18 @@
             "type": "array",
             "title": "Refused",
             "description": "Recipients the server refused while it accepted others."
+          },
+          "original_marked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Marked",
+            "description": "Of a reply or a forward: whether the original carries `$answered` or `$forwarded` now. False where the account does not write that mark (`marks.written`) or the mark failed. Null for a message that answers none."
           }
         },
         "type": "object",

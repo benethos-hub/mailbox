@@ -306,6 +306,8 @@ def sent(result: Sent) -> dict[str, Any]:
     }
     if result.refused:
         found["refused"] = result.refused
+    if result.original_marked is not None:
+        found["original_marked"] = result.original_marked
     return found
 
 

@@ -13,16 +13,19 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from typing import Any
 
+from ....errors import BadRequestError, NotSupportedError
 from ...mail import convert, fields, parse
 from ...models import (
     Address,
     Folder,
     FolderRole,
+    Mark,
     Message,
     MessageFilter,
     MessageSummary,
     MessageUpdate,
 )
+from . import marks
 from .shapes import MailFolder, Recipient, Recipients
 from .shapes import Message as GraphMessage
 
@@ -47,6 +50,9 @@ SUMMARY_FIELDS = (
     "sentDateTime,receivedDateTime,bodyPreview,isRead,flag,categories,hasAttachments,isDraft,"
     "internetMessageId"
 )
+# What a message is read with: its fields, and the verb Outlook last
+# carried out on it, which says whether it was answered or forwarded.
+SUMMARY_PARAMS = {"$select": SUMMARY_FIELDS, "$expand": marks.EXPAND}
 FOLDER_FIELDS = (
     "id,displayName,parentFolderId,totalItemCount,unreadItemCount,childFolderCount"
 )
@@ -84,8 +90,12 @@ def _addresses(values: Recipients) -> list[Address]:
 
 
 def keywords(item: GraphMessage) -> list[str]:
-    """The categories as Outlook spells them, and ``$draft`` for a draft."""
+    """The categories as Outlook spells them, ``$answered`` or
+    ``$forwarded`` by the verb Outlook last carried out, and ``$draft`` for
+    a draft."""
     found = [c for c in item.categories if c]
+    if (mark := marks.read(item)) is not None:
+        found.append(mark.value)
     if item.is_draft:
         found.append(DRAFT_KEYWORD)
     return found
@@ -150,7 +160,8 @@ def touches_marks(changes: MessageUpdate) -> bool:
 
 def marks_changed(item: GraphMessage, changes: MessageUpdate) -> list[str]:
     """The keywords with ``$`` that ``changes`` would set or take off
-    ``item``. Outlook keeps none but ``$draft``, which it sets itself."""
+    ``item``. Outlook keeps ``$answered`` and ``$forwarded`` as a verb, and
+    ``$draft``, which it sets itself."""
     present = {k for k in keywords(item) if k.startswith("$")}
     if changes.keywords is not None:
         wanted = {k.lower() for k in changes.keywords if k.startswith("$")}
@@ -161,6 +172,28 @@ def marks_changed(item: GraphMessage, changes: MessageUpdate) -> list[str]:
         }
         wanted = (present | added) - removed
     return sorted(wanted ^ present)
+
+
+def verb_after(item: GraphMessage, changes: MessageUpdate) -> dict[str, Any]:
+    """The PATCH body that sets the verb for the marks ``changes`` set or
+    take off, ``{}`` where they stay. Every other mark with ``$`` is
+    refused: Outlook keeps no place for it."""
+    changed = marks_changed(item, changes)
+    refused = [k for k in changed if k not in marks.WRITTEN]
+    if refused:
+        raise NotSupportedError(
+            "outlook keeps no keywords with $ but $answered and $forwarded: "
+            + ", ".join(refused)
+        )
+    if not changed:
+        return {}
+    present = {k for k in keywords(item) if k.startswith("$")}
+    added = [Mark(k) for k in changed if k not in present]
+    if len(added) > 1:
+        raise BadRequestError(
+            "outlook keeps one of $answered and $forwarded: the last verb"
+        )
+    return marks.patch(added[0] if added else None)
 
 
 def categories_after(item: GraphMessage, changes: MessageUpdate) -> list[str]:
