@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import create_app, openapi_json
 from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.data.models import MessageFilter
+from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.web import search
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 
@@ -54,6 +55,11 @@ def test_protected_routes_declare_bearer_and_errors() -> None:
     common = {"400", "401", "403", "413", "429", "500", "503"}
     for path, op in _operations():
         if not path.startswith(API_PREFIX):
+            continue
+        if op["x-permission"] == permissions.LINK:
+            # Its secret is the credential, and it answers one 404.
+            assert "security" not in op, path
+            assert set(op["responses"]) - {"422"} == {"200", "404"}, path
             continue
         assert op["security"] == [{"bearerAuth": []}], path
         declared = set(op["responses"])

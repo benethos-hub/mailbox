@@ -24,6 +24,11 @@ ADMIN = "admin"
 AUTHENTICATED = "authenticated"
 AUTHENTICATED_OPERATIONS: frozenset[str] = frozenset({"get_me", "list_permissions"})
 
+# Not a group either: operations the secret of a link opens, without a
+# token. The rights of the token that made the link are checked anew.
+LINK = "link"
+LINK_OPERATIONS: frozenset[str] = frozenset({"get_linked_attachment"})
+
 GROUPS: dict[str, tuple[str, ...]] = {
     # get_status: the accounts' sync and the worker, for the accounts the
     # caller may list.
@@ -56,6 +61,9 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
     # Cannot be taken back either.
     "send": ("send_message", "send_draft"),
+    # A link that hands an attachment to whoever holds it: out of every
+    # other group, so a grant names it on purpose.
+    "mail.share": ("share_attachment",),
     # Who sent what to whom, never content. In service: who did what in
     # the service (docs/AUDIT.md).
     "audit": ("list_sends", "list_all_sends", "list_activity"),
@@ -136,7 +144,10 @@ for _group, _operations in GROUPS.items():
 
 # Operations on mail in folders: those a grant's folders narrow.
 IN_FOLDERS: frozenset[str] = frozenset(
-    GROUPS["mail.read"] + GROUPS["mail.write"] + GROUPS["mail.delete"]
+    GROUPS["mail.read"]
+    + GROUPS["mail.write"]
+    + GROUPS["mail.delete"]
+    + GROUPS["mail.share"]
 )
 
 # The operations of the service, and those on one existing account.
@@ -155,9 +166,12 @@ ON_AN_ACCOUNT: frozenset[str] = frozenset(GROUP_OF) - SERVICE
 
 def permission_of(operation: str) -> str | None:
     """The group an operation belongs to, ``authenticated`` for operations
-    open to every caller, or ``None`` if it is not in the catalogue."""
+    open to every caller, ``link`` for those a link opens, or ``None`` if
+    it is not in the catalogue."""
     if operation in AUTHENTICATED_OPERATIONS:
         return AUTHENTICATED
+    if operation in LINK_OPERATIONS:
+        return LINK
     return GROUP_OF.get(operation)
 
 

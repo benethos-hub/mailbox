@@ -22,6 +22,7 @@ from .routes import (
     drafts,
     folders,
     health,
+    links,
     mailbox,
     messages,
     oauth,
@@ -38,7 +39,8 @@ def install(app: FastAPI) -> None:
     """Mount every router, each with the errors its routes can answer.
 
     Every ``/v1`` route gets its right from the catalogue as ``x-permission``.
-    A route missing from the catalogue stops the app from starting.
+    A route missing from the catalogue stops the app from starting. The
+    route of a link takes no token: its secret is the credential.
     """
     app.include_router(health.router)
     # Every /v1 route authenticates, even one that does not use the caller.
@@ -68,6 +70,10 @@ def install(app: FastAPI) -> None:
         app.include_router(
             router, prefix=PREFIX, dependencies=protected, responses=errors
         )
+    for route in links.router.routes:
+        if isinstance(route, APIRoute):
+            _declare_permission(route)
+    app.include_router(links.router, prefix=PREFIX)
 
 
 def _declare_permission(route: APIRoute) -> None:

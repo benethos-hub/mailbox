@@ -15,7 +15,7 @@ from ..domain.accounts import AccountService, OAuthService
 from ..domain.activity import ActivityLog, Audit
 from ..domain.auth import AuthService
 from ..domain.discovery import DiscoveryService
-from ..domain.mailbox import MailboxService
+from ..domain.mailbox import AttachmentLinks, MailboxService
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import (
     PasswordService,
@@ -41,6 +41,7 @@ class Services(Protocol):
     factors: SecondFactorService
     totp: TotpService
     mailbox: MailboxService
+    links: AttachmentLinks
     discovery: DiscoveryService
     oauth: OAuthService
     webhooks: WebhookService
@@ -61,6 +62,10 @@ def get_accounts(request: Request) -> AccountService:
 
 def get_mailbox(request: Request) -> MailboxService:
     return services_of(request).mailbox
+
+
+def get_links(request: Request) -> AttachmentLinks:
+    return services_of(request).links
 
 
 def get_discovery(request: Request) -> DiscoveryService:
@@ -123,6 +128,7 @@ Accounts = Annotated[AccountService, Depends(get_accounts)]
 Auth = Annotated[AuthService, Depends(get_auth)]
 Discoverer = Annotated[DiscoveryService, Depends(get_discovery)]
 Mailbox = Annotated[MailboxService, Depends(get_mailbox)]
+Links = Annotated[AttachmentLinks, Depends(get_links)]
 Users = Annotated[UserService, Depends(get_users)]
 Roles = Annotated[RoleService, Depends(get_roles)]
 Tokens = Annotated[TokenService, Depends(get_tokens)]

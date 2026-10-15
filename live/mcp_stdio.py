@@ -6,7 +6,10 @@ Starts a service of its own on a free port, with a throwaway database and
 master key, adds the first two test accounts of ``live/.env`` through the
 API, and makes a user that may only read them. Then it starts
 ``benethos-mailbox-mcp`` over stdio with that user's token and calls the
-tools, the conversation of a search hit among them. A second user may
+tools, the conversation of a search hit among them. A user that may
+share gets a link to the first PDF attachment, fetched once without a
+token as another service would, and refused the second time. A second
+user may
 also write: with it the check creates and renames
 a folder in the first test account, adds and takes off a keyword, stars,
 moves and trashes the newest inbox message there, and puts everything
@@ -31,6 +34,7 @@ from typing import Any
 import anyio
 from checks.accounts import accounts, read_env, register_all
 from checks.admin import user_token
+from checks.mcp_links import check_links, first_pdf
 from checks.mcp_sending import check_constraints, check_sending
 from checks.mcp_session import READ_TOOLS, mcp_session, text_of
 from checks.mcp_writing import check_writing
@@ -142,39 +146,27 @@ async def check_thread(run: Run, session: ClientSession, hit: dict[str, Any]) ->
 
 async def check_pdf(run: Run, session: ClientSession) -> None:
     """A PDF attachment, if the test accounts hold one, comes as PNG pages."""
-    found = await session.call_tool(
-        "search_messages", {"has_attachments": True, "limit": 20}
-    )
-    for summary in (found.structured_content or {}).get("messages", []):
-        read = await session.call_tool(
-            "get_message",
-            {"account_id": summary["account_id"], "message_id": summary["id"]},
-        )
-        pdfs = [
-            line.split()[1]
-            for line in text_of(read).splitlines()
-            if line.startswith("attachment:") and "application/pdf" in line
-        ]
-        if not pdfs:
-            continue
-        result = await session.call_tool(
-            "get_attachment",
-            {
-                "account_id": summary["account_id"],
-                "message_id": summary["id"],
-                "attachment_id": pdfs[0],
-            },
-        )
-        images = [p for p in result.content if p.type == "image"]
-        run.check(
-            "get_attachment hands a PDF over as PNG pages",
-            not result.is_error
-            and bool(images)
-            and all(p.mime_type == "image/png" for p in images),
-            f"{len(images)} pages",
-        )
+    found = await first_pdf(session)
+    if found is None:
+        print("SKIP  no PDF attachment in the test accounts")
         return
-    print("SKIP  no PDF attachment in the test accounts")
+    account_id, message_id, attachment_id = found
+    result = await session.call_tool(
+        "get_attachment",
+        {
+            "account_id": account_id,
+            "message_id": message_id,
+            "attachment_id": attachment_id,
+        },
+    )
+    images = [p for p in result.content if p.type == "image"]
+    run.check(
+        "get_attachment hands a PDF over as PNG pages",
+        not result.is_error
+        and bool(images)
+        and all(p.mime_type == "image/png" for p in images),
+        f"{len(images)} pages",
+    )
 
 
 async def check_drafts(
@@ -306,6 +298,9 @@ def main() -> int:
         print("\n== the MCP server over stdio, reading")
         anyio.run(check_tools, run, url, token, emails)
         inbox_only = user_token(client, ids, ["mail.read"], folders=["inbox"])
+        sharer = user_token(client, ids, ["mail.read", "mail.share"])
+        print("\n== the MCP server over stdio, a link to an attachment")
+        anyio.run(check_links, run, url, sharer, client)
         print("\n== the MCP server over stdio, a grant narrowed to the inbox")
         anyio.run(check_folders, run, url, inbox_only, ids[0])
         print("\n== the MCP server over stdio, writing")

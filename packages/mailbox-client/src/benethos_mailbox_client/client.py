@@ -111,6 +111,7 @@ class MailboxClient:
     list_all_changes = awaiting(endpoints.list_all_changes)
     get_message = awaiting(endpoints.get_message)
     get_message_raw = awaiting(endpoints.get_message_raw)
+    share_attachment = awaiting(endpoints.share_attachment)
     update_message = awaiting(endpoints.update_message)
     batch_messages = awaiting(endpoints.batch_messages)
     update_messages = awaiting(endpoints.update_messages)

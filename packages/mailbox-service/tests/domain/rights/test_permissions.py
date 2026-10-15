@@ -10,6 +10,7 @@ from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import BadRequestError
 from benethos_mailbox_service.web import api
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
+from benethos_mailbox_service.web.pages.grants import ROLE_TEMPLATES
 
 from ...conftest import METHODS
 
@@ -132,3 +133,21 @@ def test_admin_alone(operation: str) -> None:
     assert not Access("u", "u", [], service=every_group).allows(operation)
     stored = Access("u", "u", [Grant(accounts=["*"], allow=["admin"])])
     assert not stored.allows(operation)
+
+
+def test_sharing_is_a_group_of_its_own() -> None:
+    """A link hands an attachment to whoever holds it: no other group
+    gives it, and no template of a role (PERMISSIONS.md 8.7)."""
+    assert permissions.GROUPS["mail.share"] == ("share_attachment",)
+    holding = [g for g, ops in permissions.GROUPS.items() if "share_attachment" in ops]
+    assert holding == ["mail.share"]
+    for template in ROLE_TEMPLATES.values():
+        for grant in template.grants:
+            assert "mail.share" not in grant.allow
+            assert "share_attachment" not in grant.allow
+
+
+def test_the_route_of_a_link_names_no_group() -> None:
+    assert permissions.permission_of("get_linked_attachment") == permissions.LINK
+    with pytest.raises(BadRequestError):
+        permissions.check_grant(["get_linked_attachment"])

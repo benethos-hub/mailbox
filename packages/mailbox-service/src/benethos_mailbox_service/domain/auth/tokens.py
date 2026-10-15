@@ -131,6 +131,19 @@ class ApiTokens:
         self._tokens.touch(token.id, now)
         return Presented(token, user)
 
+    def holder(self, token_id: str) -> Presented | None:
+        """A token by its id and its user, while both may act. None for a
+        token unknown, revoked or expired, or one whose user is gone or
+        disabled. Nothing is noted: the token itself was not presented."""
+        try:
+            token = self._tokens.get(token_id)
+            user = self._users.get(token.user_id)
+        except NotFoundError:
+            return None
+        if self.state_of(token) != "active" or user.disabled:
+            return None
+        return Presented(token, user)
+
     def _refused(self, token: ApiToken, source: str | None, reason: str) -> None:
         self._activity.record(
             said.TokenRefused(

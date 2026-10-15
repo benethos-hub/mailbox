@@ -21,6 +21,7 @@ from .credentials import (
 )
 from .idempotency import IdempotencyRepository, InMemoryIdempotencyRepository
 from .index import InMemoryMessageIndexRepository, MessageIndexRepository
+from .links import InMemoryLinkRepository, LinkRepository
 from .passwords import InMemoryPasswordRepository, PasswordRepository
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .sends import InMemorySendLogRepository, SendLogRepository
@@ -33,6 +34,7 @@ from .sqlite import (
     SqliteCredentialRepository,
     SqliteIdempotencyRepository,
     SqliteKeyRepository,
+    SqliteLinkRepository,
     SqliteMessageIndexRepository,
     SqlitePasswordRepository,
     SqliteRecoveryCodeRepository,
@@ -105,6 +107,7 @@ class Repositories:
     changes: ChangeLogRepository
     webhooks: WebhookRepository
     audit: AuditRepository
+    links: LinkRepository
     # The store behind them, for backups and for closing. None in memory.
     store: Store | None = None
 
@@ -133,6 +136,7 @@ def open_repositories(
             changes=InMemoryChangeLogRepository(),
             webhooks=InMemoryWebhookRepository(),
             audit=InMemoryAuditRepository(),
+            links=InMemoryLinkRepository(),
         )
     db = Database(database_path)
     return Repositories(
@@ -151,5 +155,6 @@ def open_repositories(
         changes=SqliteChangeLogRepository(db),
         webhooks=SqliteWebhookRepository(db),
         audit=SqliteAuditRepository(db),
+        links=SqliteLinkRepository(db),
         store=db,
     )

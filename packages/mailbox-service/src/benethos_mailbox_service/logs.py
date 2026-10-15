@@ -18,6 +18,8 @@ from typing import Any
 
 from benethos_mailbox_common.log import lines
 
+from .web.urls import logged_path
+
 PACKAGE = __name__.rpartition(".")[0]
 # As uvicorn colours a status: 2xx green, 3xx yellow, 4xx red, 5xx bold.
 _STATUS_COLOURS = {1: "", 2: "\033[32m", 3: "\033[33m", 4: "\033[31m", 5: "\033[1;31m"}
@@ -51,14 +53,16 @@ def _access(record: logging.LogRecord) -> str | None:
 
 class WithoutQuery(logging.Filter):
     """An access line with the path of the request alone. Its query holds
-    what a person typed, such as search terms (docs/LOGGING.md section 4)."""
+    what a person typed, such as search terms, and the path of a link its
+    secret, which is masked (docs/LOGGING.md section 4)."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         args = record.args
         if isinstance(args, tuple) and len(args) == _ACCESS_ARGS:
             path = args[2]
-            if isinstance(path, str) and "?" in path:
-                record.args = (*args[:2], path.partition("?")[0], *args[3:])
+            if isinstance(path, str):
+                shown = logged_path(path.partition("?")[0])
+                record.args = (*args[:2], shown, *args[3:])
         return True
 
 

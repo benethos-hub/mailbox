@@ -38,6 +38,7 @@ from ..domain.activity import http as said
 from ..domain.rights import Access
 from ..errors import RateLimitedError
 from .state import app_limits, app_services
+from .urls import logged_path
 
 # The largest mail the service sends carries 25 MB of attachments, which
 # base64 in a JSON body makes about 34 MB.
@@ -79,7 +80,7 @@ class BodyLimit:
         self._activity(scope).record(
             said.BodyTooLarge(
                 by=someone(client[0] if client else None),
-                path=scope.get("path", ""),
+                path=logged_path(scope.get("path", "")),
                 limit=self._limit,
             )
         )
@@ -269,7 +270,7 @@ def _take(scope: Scope, buckets: Buckets, caller: str, by: Actor) -> None:
         _activity(scope).record(
             said.RequestsLimited(
                 by=by,
-                path=scope.get("path", ""),
+                path=logged_path(scope.get("path", "")),
                 per_minute=buckets.per_minute,
                 seconds=refusal.seconds,
             )

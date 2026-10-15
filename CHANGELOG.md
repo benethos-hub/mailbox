@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `POST /v1/accounts/{id}/messages/{id}/attachments/{id}/links`
+  (`share_attachment`) makes a link to an attachment for another
+  service, which fetches the file itself with `GET /v1/links/{secret}`:
+  once, without a token, until `expires_at`. A link holds
+  `MAILBOX_SERVICE_LINK_SECONDS`, 120 by default, and `expires_in` asks
+  for fewer. It needs an API token and the new group `mail.share`, which
+  is in no role template. When the link is used, its token must still
+  act and hold `get_attachment` and `share_attachment` on the message.
+  Every refusal answers the same `404`. Whoever holds the URL fetches the
+  file. The service logs its path masked, but a reverse proxy in front
+  keeps the URL in its access log for a moment. The Python client has
+  `share_attachment`, the MCP server a tool of the same name.
 - An account answers `operations`, in `GET /v1/accounts/{id}`, the list
   and `GET /v1/me`: the operations the caller can run there, its rights
   and what the account can do together, by their names in the catalogue

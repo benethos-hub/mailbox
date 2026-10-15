@@ -20,7 +20,8 @@ from starlette.exceptions import HTTPException
 
 from benethos_mailbox_common.log import redact
 
-from ..errors import MailboxServiceError, RateLimitedError
+from ..domain.mailbox import LINK_GONE
+from ..errors import MailboxServiceError, NotFoundError, RateLimitedError
 from . import api, pages
 from .api.errors import api_error, http_error, validation_error
 from .errors import status_of
@@ -28,6 +29,7 @@ from .limits import BodyLimit, Credential, RequestLimit, RequestLimits
 from .pages.errors import error_page
 from .pages.session import carries_session
 from .state import app_settings
+from .urls import LINKS
 
 
 def install(app: FastAPI) -> None:
@@ -61,7 +63,11 @@ def install(app: FastAPI) -> None:
 
 
 def _answer(request: Request, exc: MailboxServiceError) -> Response:
-    """A domain error as the front end of the request answers it."""
+    """A domain error as the front end of the request answers it. On the
+    route of a link the limit on requests answers as a link that does not
+    hold: its refusals are all alike."""
+    if request.url.path.startswith(LINKS) and isinstance(exc, RateLimitedError):
+        return api_error(NotFoundError(LINK_GONE))
     if not pages.owns(request):
         return api_error(exc)
     page = error_page(request, status_of(exc), redact.redact(exc.message))
@@ -73,7 +79,10 @@ def _answer(request: Request, exc: MailboxServiceError) -> Response:
 def _credential(request: Request) -> Credential:
     """What a request carries: a session of the UI the service knows, or
     any Authorization header under the API's prefix, where every route
-    checks it and counts it where it is valid."""
+    checks it and counts it where it is valid. The route of a link checks
+    none, so a request there counts against its address at once."""
+    if request.url.path.startswith(LINKS):
+        return Credential.NONE
     if pages.owns(request):
         return Credential.KNOWN if carries_session(request) else Credential.NONE
     if request.url.path.startswith(f"{api.PREFIX}/") and (

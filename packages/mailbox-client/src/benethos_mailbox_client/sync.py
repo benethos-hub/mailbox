@@ -113,6 +113,7 @@ class SyncMailboxClient:
     list_all_changes = blocking(endpoints.list_all_changes)
     get_message = blocking(endpoints.get_message)
     get_message_raw = blocking(endpoints.get_message_raw)
+    share_attachment = blocking(endpoints.share_attachment)
     update_message = blocking(endpoints.update_message)
     batch_messages = blocking(endpoints.batch_messages)
     update_messages = blocking(endpoints.update_messages)

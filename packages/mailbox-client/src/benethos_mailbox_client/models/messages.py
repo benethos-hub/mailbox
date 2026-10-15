@@ -1,11 +1,13 @@
 """Messages read: a message, a page of summaries, the changes since a
-state, the outcome of a batch, an attachment's bytes. A draft is a
-message."""
+state, the outcome of a batch, an attachment's bytes, a link to an
+attachment. A draft is a message."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+
+from .secrets import Secret
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +86,19 @@ class Attachment:
     charset: str | None  # one Python knows, else None
     filename: str | None
     complete: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class AttachmentLink:
+    """A link to an attachment for another service: whoever holds ``url``
+    fetches the attachment once, with GET and no token, until
+    ``expires_at``. Shown once, kept out of every line as a ``Secret``."""
+
+    url: Secret
+    expires_at: datetime
+    content_type: str
+    size: int
+    filename: str | None
 
 
 @dataclass(frozen=True, slots=True)

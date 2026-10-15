@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from .accounts import AccountCreate, AccountUpdate, DiscoveryRequest
 from .errors import ErrorDetail, ErrorResponse
-from .mail import DraftReplacement
+from .mail import AttachmentLink, DraftReplacement, LinkRequest
 from .oauth import (
     DeviceOAuthStart,
     DeviceOAuthStarted,
@@ -33,6 +33,7 @@ from .users import (
 __all__ = [
     "AccountCreate",
     "AccountUpdate",
+    "AttachmentLink",
     "DeviceOAuthStart",
     "DeviceOAuthStarted",
     "DeviceOAuthState",
@@ -40,6 +41,7 @@ __all__ = [
     "DraftReplacement",
     "ErrorDetail",
     "ErrorResponse",
+    "LinkRequest",
     "Me",
     "MeAccount",
     "PasswordSet",

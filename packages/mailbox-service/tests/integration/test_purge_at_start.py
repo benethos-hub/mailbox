@@ -25,4 +25,4 @@ def test_the_audit_is_purged_when_the_service_starts() -> None:
 
     with TestClient(create_app(settings, services)):
         assert services.audit.list_activity(ADMIN, limit=10).items == []
-    assert len(services.purges) == 3
+    assert len(services.purges) == 4

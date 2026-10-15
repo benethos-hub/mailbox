@@ -1,5 +1,5 @@
-"""Sending, drafts, idempotency, the send limit (docs/LOGGING.md 5.6,
-5.9).
+"""Sending, drafts, idempotency, the send limit, links to attachments
+(docs/LOGGING.md 5.6, 5.9).
 
 Drafts are mail content and change nothing others see: not logged. A
 send names the count of its recipients, never their addresses: those are
@@ -12,6 +12,7 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
+from benethos_mailbox_common.log import lines
 from benethos_mailbox_common.values import text
 
 from ....data.models import Account
@@ -159,4 +160,83 @@ class ResultNotKept(Failure):
         return (
             f"did {self.operation} on {self.account_id}, but could not keep its "
             "result for the Idempotency-Key"
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class LinkShared(Activity):
+    """A link to an attachment made. Never its secret, never its URL."""
+
+    name: ClassVar[str] = "link_shared"
+    audited: ClassVar[bool] = True
+
+    link_id: str
+    account_id: str
+    message_id: str
+    attachment_id: str
+    seconds: int
+
+    def says(self) -> str:
+        return (
+            f"shared attachment {self.attachment_id} of {self.message_id} in "
+            f"{self.account_id} as link {self.link_id} for {self.seconds}s"
+        )
+
+    def touched(self) -> str | None:
+        return self.link_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class LinkUsed(Activity):
+    """A link to an attachment used. The actor is the user of the token
+    that made it, the source the address that fetched it."""
+
+    name: ClassVar[str] = "link_used"
+    audited: ClassVar[bool] = True
+
+    link_id: str
+    account_id: str
+    message_id: str
+    attachment_id: str
+
+    def says(self) -> str:
+        return (
+            f"had attachment {self.attachment_id} of {self.message_id} in "
+            f"{self.account_id} fetched through link {self.link_id}"
+        )
+
+    def touched(self) -> str | None:
+        return self.link_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class LinkRefused(Activity):
+    """A link that exists, refused: used, ended, or its token or rights
+    gone. A secret that is no link's writes no line, as a wrong token
+    does not."""
+
+    name: ClassVar[str] = "link_refused"
+    level: ClassVar[int] = logging.WARNING
+
+    link_id: str
+    reason: str
+
+    def says(self) -> str:
+        return f"was refused link {self.link_id}"
+
+    def why(self) -> str:
+        return self.reason
+
+
+@dataclass(frozen=True, kw_only=True)
+class LinksPurged(Purged):
+    """Links used or ended are gone. The normal course, so no warning."""
+
+    name: ClassVar[str] = "links_purged"
+    record: ClassVar[str] = "link"
+
+    def says(self) -> str:
+        return (
+            f"purged {text.plural(self.count, self.record)} to attachments, "
+            f"used or ended by {lines.log_time(self.before)}"
         )

@@ -1,7 +1,7 @@
 """Messages: listed and searched in one account or across every account
 the caller may read, the changes since a state, one message and its
-source, an attachment, flags, keywords and moves for one or many at
-once, deleting. A summary, a message and a page of summaries are read
+source, an attachment and a link to it, flags, keywords and moves for
+one or many at once, deleting. A summary, a message and a page of summaries are read
 here for the drafts as well."""
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from ..calls import ATTACHMENT_TIMEOUT, Call, as_is, given, nothing, path
 from ..models import (
     Address,
     AttachedFile,
+    AttachmentLink,
     Change,
     Changes,
     Failed,
@@ -20,6 +21,7 @@ from ..models import (
     Outcome,
     Page,
     Reference,
+    Secret,
 )
 from .readings import maybe_time, time
 
@@ -161,6 +163,33 @@ def get_attachment(account_id: str, message_id: str, attachment_id: str) -> Call
         ),
         as_is,
         timeout=ATTACHMENT_TIMEOUT,
+    )
+
+
+def share_attachment(
+    account_id: str,
+    message_id: str,
+    attachment_id: str,
+    *,
+    expires_in: int | None = None,
+) -> Call[AttachmentLink]:
+    """A link to the attachment for another service, which fetches the
+    file itself: once, with GET and no token, until ``expires_at``.
+    ``expires_in`` asks for fewer seconds than the service gives. Whoever
+    holds the URL fetches the file. No method of this package uses it."""
+    return Call(
+        "POST",
+        path(
+            "accounts",
+            account_id,
+            "messages",
+            message_id,
+            "attachments",
+            attachment_id,
+            "links",
+        ),
+        _link,
+        json=given({"expires_in": expires_in}),
     )
 
 
@@ -373,6 +402,16 @@ def _attached(found: dict[str, Any]) -> AttachedFile:
         content_type=str(found["content_type"]),
         size=int(found["size"]),
         inline=bool(found.get("inline")),
+    )
+
+
+def _link(found: dict[str, Any]) -> AttachmentLink:
+    return AttachmentLink(
+        url=Secret(str(found["url"])),
+        expires_at=time(found["expires_at"]),
+        content_type=str(found["content_type"]),
+        size=int(found["size"]),
+        filename=found.get("filename"),
     )
 
 

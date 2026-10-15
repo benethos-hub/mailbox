@@ -15,7 +15,7 @@ from ..domain.activity import ActivityLog, Audit
 from ..domain.auth import AuthService
 from ..domain.changes import ChangeFeed
 from ..domain.discovery import DiscoveryService
-from ..domain.mailbox import MailboxService
+from ..domain.mailbox import AttachmentLinks, MailboxService
 from ..domain.sync import SyncService, SyncWorker
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import (
@@ -41,6 +41,7 @@ class Services:
     factors: SecondFactorService
     totp: TotpService
     mailbox: MailboxService
+    links: AttachmentLinks
     discovery: DiscoveryService
     sync: SyncService
     index: MessageIndexRepository  # the store behind sync
@@ -60,8 +61,8 @@ class Services:
     worker: SyncWorker | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
     # What removes records older than the days to keep: the audit, the
-    # change feed, the audit of sends. Each runs once when the service
-    # starts, then as new records come in.
+    # change feed, the audit of sends, and the links used or ended. Each
+    # runs once when the service starts, then as new records come in.
     purges: tuple[Callable[[], None], ...] = ()
 
     @property

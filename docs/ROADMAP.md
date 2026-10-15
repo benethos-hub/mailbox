@@ -399,6 +399,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   file, `reply_to`, attachments as base64 and of other mail (the API
   gained `attachments_from`), the tool `update_folder`, and how each
   account fares in `list_accounts` (the API's `/v1/me` gained it)
+- **A link to an attachment for another service (6.3)**, decided
+  2026-10-15, done: `share_attachment` in the API, the client and the
+  MCP server, the group `mail.share`, and `GET /v1/links/{secret}`,
+  which hands the file out once, without a token
 
 ## Phase 5a – One way to operate every mailbox
 

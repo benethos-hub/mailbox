@@ -110,7 +110,8 @@ some folders, such as the invoices, and end after a week.
   outside the database.
 - **Reading:** folders, lists and search, one account or all at once,
   messages as text and HTML, attachments, the raw source. Message ids stay
-  the same when a message moves, kept by a background sync.
+  the same when a message moves, kept by a background sync. A link to an
+  attachment lets another service fetch the file once, without a token.
 - **Writing:** flags, moving, deleting, folders, drafts, and sending with
   reply, reply to all and forward. A retried send is not sent twice
   (`Idempotency-Key`).

@@ -29,7 +29,12 @@ from ..domain.auth import (
 )
 from ..domain.changes import ChangeFeed
 from ..domain.discovery import DiscoveryService
-from ..domain.mailbox import Idempotency, MailboxService, SendControl
+from ..domain.mailbox import (
+    AttachmentLinks,
+    Idempotency,
+    MailboxService,
+    SendControl,
+)
 from ..domain.sync import SyncService, SyncWorker
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import (
@@ -107,6 +112,7 @@ def build_services(
             factors=services.factors,
             totp=services.totp,
             mailbox=services.mailbox,
+            links=services.links,
             discovery=discovery
             or providers.build_discovery(
                 settings, fetcher, records.activity, offered=offered
@@ -137,7 +143,12 @@ def build_services(
             repositories=repositories,
             activity=records.activity,
             oauth_clients=clients,
-            purges=(records.activity.purge, changes.purge, services.sends.purge),
+            purges=(
+                records.activity.purge,
+                changes.purge,
+                services.sends.purge,
+                services.links.purge,
+            ),
         )
     except BaseException:
         # A part that cannot be built, such as a client secret file that
@@ -230,6 +241,14 @@ class _Domain:
             clock=clock,
             activity=activity,
             thread_messages=settings.thread_messages,
+        )
+        self.links = AttachmentLinks(
+            repositories.links,
+            self.mailbox,
+            self.auth,
+            seconds=settings.link_seconds,
+            clock=clock,
+            activity=activity,
         )
         self.deliveries = self._dispatcher(resolve)
 

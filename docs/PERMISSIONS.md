@@ -62,6 +62,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `mail.delete` | `delete_message_permanent`, `delete_folder` | an account |
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
 | `send` | `send_message`, `send_draft` | an account |
+| `mail.share` | `share_attachment`: a link to an attachment for another service ([CONCEPT 6.3](CONCEPT.md#63-messages)), in no template of 8.7 | an account |
 | `audit` | `list_sends`, `list_all_sends` | an account |
 | `audit` | `list_activity`, the audit of administration (8.6) | the service |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account` | an account |
@@ -86,6 +87,10 @@ Two kinds of right, kept in two lists of a user or a role (8.1):
   holds that there already.
 
 Two operations are open to every user: `get_me` and `list_permissions`.
+One takes no token: `get_linked_attachment`, whose secret is the
+credential. Its `x-permission` is `link`, and it acts with the rights
+of the token that made the link, `get_attachment` and
+`share_attachment`, as they are when it is used.
 
 ## 4. How a right is resolved
 

@@ -196,7 +196,8 @@ packages/mailbox-service/
       __init__.py       # install: both front ends, errors to the right one
       services.py       # the domain services as dependencies, for both
       state.py          # what the app keeps on app.state, read typed
-      urls.py           # this service's public address, OAuth callback
+      urls.py           # this service's public address, OAuth callback,
+                        #   a link's URL, a path as the log names it
       limits.py         # the size of a request body, the requests a
                         #   minute, for both
       errors.py         # error class -> status code, for both
@@ -212,7 +213,9 @@ packages/mailbox-service/
                         #   folders.py, mailbox.py (its messages, in
                         #   two routers that keep the order of the
                         #   OpenAPI document), sending.py, changes.py,
-                        #   drafts.py. messages.py across accounts
+                        #   drafts.py. messages.py across accounts,
+                        #   links.py a link to an attachment used,
+                        #   the one route under /v1 without a token
       pages/            # the configuration UI under /ui, not in OpenAPI
         deps.py         # who is signed in, the CSRF check, if_allowed
         navigation.py   # the sidebar entries a caller may open and their
@@ -281,7 +284,8 @@ packages/mailbox-service/
                         #   limits and the send audit (sending),
                         #   Idempotency-Key and the
                         #   fingerprint of a request (idempotency,
-                        #   fingerprint)
+                        #   fingerprint), links to attachments for
+                        #   another service (links)
       sync/             # SyncService (stable message ids, the sync pass),
                         #   what a pass finds (passes), the threads the
                         #   index keeps (threads), SyncWorker (polling
@@ -432,9 +436,9 @@ packages/mailbox-client/
       folders.py        # the folders of an account
       messages.py       # lists and search in one account or across,
                         #   changes, a message and its source, an
-                        #   attachment, flags, keywords and moves for
-                        #   one or many, deleting; the page the drafts
-                        #   read too
+                        #   attachment and a link to it, flags, keywords
+                        #   and moves for one or many, deleting; the
+                        #   page the drafts read too
       threads.py        # the threads of a folder, one thread
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a message, send a draft
@@ -470,7 +474,7 @@ packages/mailbox-client/
       folders.py        # a folder
       messages.py       # a message and its summary, a page, the
                         #   changes, a batch's outcome, an
-                        #   attachment's bytes
+                        #   attachment's bytes, a link to an attachment
       threads.py        # a thread and its summary
       sending.py        # a recipient, what a send answered
       sends.py          # a record of the audit of sends
@@ -534,7 +538,8 @@ packages/mailbox-mcp/
                         #   message a tool's arguments describe
       accounts.py       # list_accounts, which reports the kinds
       reading.py        # folders, search, a message, what is new,
-                        #   attachments
+                        #   attachments, a link to one for another
+                        #   service
       writing.py        # change messages, create a folder
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a mail, send a draft
@@ -762,7 +767,7 @@ noticing. Every change is measured against that.
 | Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas`, `FlagChanges` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability; `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`) | in-memory, SQLite | another database |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
