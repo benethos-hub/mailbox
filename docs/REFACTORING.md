@@ -1247,3 +1247,10 @@ Built as #180.
 - **Smaller things.** The action menu's batches are `BatchAction`
   records, the page of a message is `message_url`, and the time a
   browser sends is read by `clock.parse_local`.
+
+### 17.6 Flag changes
+
+- **A protocol of its own.** `flag_changes` left `Reads`, where five
+  adapters answered an empty list. `FlagChanges` has it, and only IMAP
+  implements it. The sync asks an adapter that has the protocol and
+  takes no change from one that has not.

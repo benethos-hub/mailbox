@@ -313,7 +313,8 @@ larger piece that is neither, and runs on its own.
 
 - **IMAP without CONDSTORE never reports read state, stars or keywords
   changed by another client.** Nothing tells a client. Capability
-  `external_changes`. Done.
+  `external_changes`. Done. Only the IMAP adapter has `FlagChanges`, the
+  others learn of a change of flags from their changes since a point.
 - **IMAP announces `push` without IDLE, and JMAP without an event
   source.** The worker quietly polls instead. IDLE watches the inbox
   only. Rule R4. Done: without them the account lacks `push`.

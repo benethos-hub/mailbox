@@ -240,8 +240,9 @@ Ids are opaque strings to clients. Nothing may parse them.
 
 Every adapter implements `Reads` of `data.providers.base`, and of the
 protocols beyond it those it may be able to do: `Writes` (flags and
-folders), `Deletes`, `Drafts`, `Sends`, `Watches` (push) and `Deltas`
-(changes since a token). One protocol per ability, checked with
+folders), `Deletes`, `Drafts`, `Sends`, `Watches` (push), `Deltas`
+(changes since a token) and `FlagChanges` (whose flags changed, IMAP
+with CONDSTORE). One protocol per ability, checked with
 `isinstance`, was **decided 2026-10-07**. What an account can do follows
 from what its server answers (5.11, R4): asked when the account is
 connected or verified, when the sync sees a folder come or go, and when
