@@ -44,7 +44,7 @@ from .calls import Calls, public
 from .folders import Folders
 from .idempotency import Idempotency
 from .outgoing import Outgoing
-from .reach import Reach, outside, reach_of, require_folder
+from .reach import Reach, of_the_account, outside, reach_of, require_folder
 from .sending import SendControl
 from .threads import THREAD_MESSAGES, Threads
 
@@ -155,6 +155,17 @@ class MailboxService:
         all: the change feed and the webhooks."""
         reach = await self._reach(access, "list_changes", account_id)
         return reach.hears if reach is not None else None
+
+    async def hearing_now(
+        self, access: Access, account_id: str
+    ) -> Callable[[ChangeRecord], bool] | None:
+        """``hearing`` for a list of several accounts: one whose folders
+        cannot be read now gives only its changes that are not about a
+        message, instead of failing the others."""
+        try:
+            return await self.hearing(access, account_id)
+        except MailboxServiceError:
+            return of_the_account
 
     # --- messages of one account ------------------------------------------------------
 
@@ -331,7 +342,7 @@ class MailboxService:
         )
         keep: Callable[[ChangeRecord], bool] | None = None
         if since:
-            hearing = {a: await self.hearing(access, a) for a in visible}
+            hearing = {a: await self.hearing_now(access, a) for a in visible}
             if any(h is not None for h in hearing.values()):
                 keep = partial(_heard, hearing)
         return self._changes.page(visible, since, limit=limit, keep=keep)

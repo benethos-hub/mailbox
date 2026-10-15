@@ -36,6 +36,7 @@ class Calls:
     def __init__(self, adapters: Adapters, sync: SyncService) -> None:
         self._adapters = adapters
         self._sync = sync
+        self._gone = Gone()
 
     # --- the accounts -----------------------------------------------------------------
 
@@ -73,12 +74,25 @@ class Calls:
         message_id: str,
         operation: Callable[[Reads, str], Awaitable[T]],
     ) -> T:
-        """Run an operation on the message behind one of our ids."""
-        return await self._sync.resolve(
-            account_id,
-            message_id,
-            lambda native: self.call(account_id, lambda p: operation(p, native)),
-        )
+        """Run an operation on the message behind one of our ids. Where
+        the provider no longer finds it there, one sync and its new place.
+        Anything else it does not find is not ours to follow."""
+
+        def run(native: str) -> Awaitable[T]:
+            return self.call(account_id, lambda p: operation(p, native))
+
+        if not self._sync.mapped(account_id):
+            return await run(message_id)
+        native = self._sync.natives(account_id, [message_id])[message_id]
+        if native is None:
+            raise missing_message(message_id)
+        try:
+            return await run(native)
+        except MessageNotFoundError:
+            moved = await self._after_a_pass(account_id, {message_id: native})
+            if message_id not in moved:
+                raise missing_message(message_id) from None
+            return await run(moved[message_id])
 
     async def message(self, account_id: str, message_id: str) -> Message:
         """The message behind one of our ids, as the provider names it."""
@@ -266,12 +280,9 @@ class Calls:
         outcomes.update(await self._run_on(account_id, natives, run))
         missing = [i for i in natives if isinstance(outcomes[i], MessageNotFoundError)]
         if missing and self._sync.mapped(account_id):
-            await self._sync.sync_account(account_id)
-            moved = {
-                i: n
-                for i, n in self._sync.natives(account_id, missing).items()
-                if n and n != natives[i]
-            }
+            moved = await self._after_a_pass(
+                account_id, {i: natives[i] for i in missing}
+            )
             outcomes.update(await self._run_on(account_id, moved, run))
             natives.update(moved)
         for message_id, outcome in outcomes.items():
@@ -280,6 +291,28 @@ class Calls:
                     f"message {message_id} not found"
                 )
         return outcomes, natives
+
+    async def _after_a_pass(
+        self, account_id: str, natives: dict[str, str]
+    ) -> dict[str, str]:
+        """Messages the provider did not find where the index says: one sync
+        pass, and the new place of those that moved. One looked up in vain
+        since the last pass gets no pass of its own: a caller that names a
+        stale id again and again does not sync the account each time."""
+        if self._gone.known(account_id, self._passes(account_id), natives):
+            return {}
+        await self._sync.sync_account(account_id)
+        now = self._sync.natives(account_id, list(natives))
+        moved = {i: n for i, n in now.items() if n and n != natives[i]}
+        self._gone.note(
+            account_id,
+            self._passes(account_id),
+            {i: n for i, n in natives.items() if i not in moved},
+        )
+        return moved
+
+    def _passes(self, account_id: str) -> int:
+        return self._sync.state(account_id).passes
 
     async def _run_on(
         self,
@@ -294,6 +327,31 @@ class Calls:
         )
         absent = missing_message()
         return {i: by_native.get(n, absent) for i, n in natives.items()}
+
+
+class Gone:
+    """Per account, the messages looked up in vain after a pass: our id
+    and the provider's. Forgotten with the next pass."""
+
+    def __init__(self) -> None:
+        self._after: dict[str, tuple[int, set[tuple[str, str]]]] = {}
+
+    def known(self, account_id: str, passes: int, natives: dict[str, str]) -> bool:
+        """Whether every one of them was looked up in vain since pass
+        ``passes``."""
+        noted = self._after.get(account_id)
+        return (
+            noted is not None
+            and noted[0] == passes
+            and set(natives.items()) <= noted[1]
+        )
+
+    def note(self, account_id: str, passes: int, natives: dict[str, str]) -> None:
+        noted = self._after.get(account_id)
+        if noted is None or noted[0] != passes:
+            noted = (passes, set())
+            self._after[account_id] = noted
+        noted[1].update(natives.items())
 
 
 def _done(results: dict[str, Any]) -> list[str]:

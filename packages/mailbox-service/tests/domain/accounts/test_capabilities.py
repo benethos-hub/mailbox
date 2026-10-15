@@ -28,6 +28,7 @@ from benethos_mailbox_service.domain.accounts import (
     for_update,
 )
 from benethos_mailbox_service.domain.accounts.abilities import lacking
+from benethos_mailbox_service.domain.accounts.adapters import RELEARN_PAUSE
 from benethos_mailbox_service.errors import NotSupportedError
 
 from ...conftest import memory_of, relearn
@@ -150,6 +151,37 @@ async def test_a_contradiction_asks_the_server_again(
         r for r in caplog.records if r.name.endswith(".activity.accounts.capabilities")
     ]
     assert "-keywords" in line.getMessage()
+
+
+async def test_refusals_ask_the_server_once_a_minute(
+    services: Services, account_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A caller that asks again and again for what the account cannot do
+    makes no round trip to the server each time."""
+    adapters = services.adapters
+    now = [1000.0]
+    monkeypatch.setattr(adapters, "_clock", lambda: now[0])
+    asked: list[str] = []
+    memory = memory_of(services, account_id)
+    learn = memory.abilities
+
+    async def counted() -> Abilities:
+        asked.append(account_id)
+        return await learn()
+
+    monkeypatch.setattr(memory, "abilities", counted)
+
+    async def refused(_: object) -> None:
+        raise NotSupportedError("not here")
+
+    for _ in range(3):
+        with pytest.raises(NotSupportedError):
+            await adapters.call(account_id, refused)
+    assert len(asked) == 1
+    now[0] += RELEARN_PAUSE
+    with pytest.raises(NotSupportedError):
+        await adapters.call(account_id, refused)
+    assert len(asked) == 2
 
 
 def test_verify_asks_the_server_again(

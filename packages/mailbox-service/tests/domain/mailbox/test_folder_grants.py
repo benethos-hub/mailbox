@@ -17,11 +17,13 @@ from benethos_mailbox_service.data.models import (
     Folder,
     FolderRole,
     Grant,
+    ProviderType,
 )
 from benethos_mailbox_service.domain.mailbox.reach import Reach
 from benethos_mailbox_service.domain.rights.access import Access
+from benethos_mailbox_service.errors import ProviderUnavailableError
 
-from ...conftest import bearer_for, memory_of, relearn
+from ...conftest import bearer_for, create_account, memory_of, relearn
 
 INVOICES = Folder(id="f_inv", name="Invoices")
 YEAR = Folder(id="f_2026", name="2026", parent_id="f_inv")
@@ -288,6 +290,34 @@ def test_the_change_feed_keeps_to_the_folders(
     # The admin hears of all three.
     seen = client.get(url, params={"since": state}).json()["changes"]
     assert [c["id"] for c in seen] == ["m1", "m3", "m0"]
+
+
+def test_an_account_whose_folders_fail_leaves_the_others_heard(
+    app_client: TestClient,
+    client: TestClient,
+    services: Services,
+    mailbox: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A list of several accounts goes on without one that is down, and
+    tells of that one only what is not about a message."""
+    other = create_account(
+        services.accounts, ProviderType.MEMORY, "other@example.com"
+    ).id
+    grant = Grant(accounts=[mailbox, other], allow=["mail.read"], folders=["inbox"])
+    reader = TestClient(app_client.app, headers=bearer_for(services, grant))
+    every = client.get("/v1/changes").json()["state"]
+
+    async def down() -> list[Folder]:
+        raise ProviderUnavailableError("the server does not answer")
+
+    monkeypatch.setattr(memory_of(services, other), "list_folders", down)
+    client.patch(f"/v1/accounts/{mailbox}/messages/m0", json={"unread": True})
+    client.patch(f"/v1/accounts/{other}/messages/m0", json={"unread": True})
+    across = reader.get("/v1/changes", params={"since": every})
+    assert across.status_code == 200
+    heard = [(c["account_id"], c["id"]) for c in across.json()["changes"]]
+    assert heard == [(mailbox, "m0")]
 
 
 def test_a_reply_needs_the_original_in_reach(

@@ -88,11 +88,6 @@ def _longest(_shortest: float, longest: float) -> float:
 DEFAULT_RETRIES = Retries()
 
 
-def _of_the_account(record: ChangeRecord) -> bool:
-    """Only what is not about a message."""
-    return not record.type.startswith("message.")
-
-
 def signature(secret: str, timestamp: int, body: bytes) -> str:
     """The value of ``X-Mailbox-Signature`` for a body."""
     signed = f"{timestamp}.".encode() + body
@@ -317,15 +312,12 @@ class WebhookDispatcher:
     ) -> list[LoggedChange]:
         """The changes the creator may hear of, where its grants name
         folders (PERMISSIONS.md 8.5). An account whose folders cannot be
-        read now gives none of its changes of messages."""
+        read now gives none of its changes of messages: ``hearing``."""
         if self._hearing is None or access is None:
             return window
         hearing: dict[str, Callable[[ChangeRecord], bool] | None] = {}
         for account_id in dict.fromkeys(e.record.account_id for e in window):
-            try:
-                hearing[account_id] = await self._hearing(access, account_id)
-            except MailboxServiceError:
-                hearing[account_id] = _of_the_account
+            hearing[account_id] = await self._hearing(access, account_id)
         return [
             e
             for e in window
