@@ -36,7 +36,7 @@ class SqliteUserRepository(SqliteRows[User]):
         )
 
     def count(self) -> int:
-        return int(self._db.query("SELECT COUNT(*) FROM users")[0][0])
+        return self._db.scalar("SELECT COUNT(*) FROM users")
 
 
 def _user(row: sqlite3.Row) -> User:
@@ -78,17 +78,19 @@ class SqliteTokenRepository:
         self._rows = SqliteRows(db, "tokens", "token", _api_token)
 
     def list_for_user(self, user_id: str) -> list[ApiToken]:
-        rows = self._db.query(
-            "SELECT * FROM tokens WHERE user_id = ? ORDER BY rowid", (user_id,)
+        return self._db.query_as(
+            _api_token,
+            "SELECT * FROM tokens WHERE user_id = ? ORDER BY rowid",
+            (user_id,),
         )
-        return [_api_token(r) for r in rows]
 
     def get(self, token_id: str) -> ApiToken:
         return self._rows.get(token_id)
 
     def find_by_hash(self, token_hash: str) -> ApiToken | None:
-        row = self._db.one("SELECT * FROM tokens WHERE token_hash = ?", (token_hash,))
-        return _api_token(row) if row is not None else None
+        return self._db.one_as(
+            _api_token, "SELECT * FROM tokens WHERE token_hash = ?", (token_hash,)
+        )
 
     def save(self, token: ApiToken) -> None:
         self._db.execute(

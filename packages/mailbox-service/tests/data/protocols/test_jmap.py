@@ -128,7 +128,7 @@ async def test_the_session_is_read_again_when_it_changed() -> None:
     ("answer", "error", "message"),
     [
         (httpx.Response(401), ProviderAuthError, "refused the credential"),
-        (httpx.Response(403), ProviderAuthError, "refused access"),
+        (httpx.Response(403), ProviderError, "refused .403"),
         (httpx.Response(404), NotFoundError, "404"),
         (httpx.Response(413), BadRequestError, "413"),
         (httpx.Response(502), ProviderUnavailableError, "busy"),
@@ -137,7 +137,7 @@ async def test_the_session_is_read_again_when_it_changed() -> None:
                 400,
                 json={"type": "urn:ietf:params:jmap:error:limit", "detail": "too many"},
             ),
-            ProviderError,
+            BadRequestError,
             "too many",
         ),
         (httpx.Response(500, content=b"<html>"), ProviderError, "refused"),

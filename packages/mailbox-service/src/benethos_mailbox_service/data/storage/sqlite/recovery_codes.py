@@ -31,12 +31,10 @@ class SqliteRecoveryCodeRepository:
         )
 
     def left(self, user_id: str) -> int:
-        row = self._db.one(
-            "SELECT count(*) AS left FROM recovery_codes"
-            " WHERE user_id = ? AND used_at IS NULL",
+        return self._db.scalar(
+            "SELECT count(*) FROM recovery_codes WHERE user_id = ? AND used_at IS NULL",
             (user_id,),
         )
-        return int(row["left"]) if row is not None else 0
 
     def delete(self, user_id: str) -> None:
         # ON DELETE CASCADE does this with the user. Said here, so both

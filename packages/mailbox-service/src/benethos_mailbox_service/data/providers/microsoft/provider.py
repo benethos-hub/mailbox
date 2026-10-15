@@ -42,7 +42,7 @@ from ....errors import (
     ProviderError,
     missing,
 )
-from ...mail import ThreadHeaders, compose, convert, parse
+from ...mail import ThreadHeaders, compose, convert
 from ...models import (
     Abilities,
     AttachmentContent,
@@ -57,7 +57,7 @@ from ...models import (
     Page,
     SentMessage,
 )
-from ...protocols import ApiClient
+from ...protocols import ApiClient, path_part
 from .. import rules
 from ..base import (
     ChangedMessage,
@@ -66,7 +66,7 @@ from ..base import (
     TokenSource,
 )
 from . import listing, mappers, uploads
-from .graph import Graph, id_, own_path
+from .graph import Graph, own_path
 from .shapes import Batch, Item, Listing, MailFolder
 from .shapes import Message as GraphMessage
 
@@ -126,7 +126,7 @@ class MicrosoftProvider:
                 waiting.extend(
                     await self._graph.all(
                         Listing[MailFolder],
-                        f"/me/mailFolders/{id_(item.id)}/childFolders",
+                        f"/me/mailFolders/{path_part(item.id)}/childFolders",
                         params,
                     )
                 )
@@ -134,7 +134,7 @@ class MicrosoftProvider:
 
     async def create_folder(self, name: str, parent_id: str | None) -> Folder:
         path = (
-            f"/me/mailFolders/{id_(parent_id)}/childFolders"
+            f"/me/mailFolders/{path_part(parent_id)}/childFolders"
             if parent_id
             else "/me/mailFolders"
         )
@@ -148,7 +148,7 @@ class MicrosoftProvider:
     async def update_folder(
         self, folder_id: str, name: str, parent_id: str | None
     ) -> Folder:
-        path = f"/me/mailFolders/{id_(folder_id)}"
+        path = f"/me/mailFolders/{path_part(folder_id)}"
         item = await self._graph.read(
             MailFolder, "PATCH", path, json_body={"displayName": name}
         )
@@ -160,7 +160,7 @@ class MicrosoftProvider:
         return mappers.folder(item, await self._graph.folder_roles(), root)
 
     async def delete_folder(self, folder_id: str) -> None:
-        await self._graph.call("DELETE", f"/me/mailFolders/{id_(folder_id)}")
+        await self._graph.call("DELETE", f"/me/mailFolders/{path_part(folder_id)}")
 
     # --- messages -------------------------------------------------------------------
 
@@ -182,18 +182,19 @@ class MicrosoftProvider:
         as for any other provider. Graph's own fields would answer
         Exchange's HTML for a plain text mail, and no attachments for a mail
         with inline images only."""
-        item = await self._summary_of(f"/me/messages/{id_(message_id)}")
+        item = await self._summary_of(f"/me/messages/{path_part(message_id)}")
         return mappers.message(item, await self.get_raw(message_id))
 
     async def get_attachment(
         self, message_id: str, attachment_id: str
     ) -> AttachmentContent:
-        parsed = parse.ParsedMessage(await self.get_raw(message_id))
-        return convert.attachment(parsed, attachment_id)
+        return convert.attachment_of(await self.get_raw(message_id), attachment_id)
 
     async def get_raw(self, message_id: str) -> bytes:
         return (
-            await self._graph.call("GET", f"/me/messages/{id_(message_id)}/$value")
+            await self._graph.call(
+                "GET", f"/me/messages/{path_part(message_id)}/$value"
+            )
         ).body
 
     async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
@@ -207,7 +208,7 @@ class MicrosoftProvider:
             self._graph, compose.with_bcc(raw, recipients), self._delete_for_good
         )
         try:
-            await self._graph.call("POST", f"/me/messages/{id_(draft.id)}/send")
+            await self._graph.call("POST", f"/me/messages/{path_part(draft.id)}/send")
         except MailboxServiceError as exc:
             try:
                 await self._delete_for_good(draft.id)
@@ -250,7 +251,9 @@ class MicrosoftProvider:
         """Only drafts: any other id is not found, so the draft operations
         reach no other mail."""
         try:
-            draft = (await self._graph.placed(f"/me/messages/{id_(draft_id)}")).is_draft
+            draft = (
+                await self._graph.placed(f"/me/messages/{path_part(draft_id)}")
+            ).is_draft
         except BadRequestError:
             draft = False
         if not draft:
@@ -268,7 +271,7 @@ class MicrosoftProvider:
             target = rules.move_target(changes, labels=False)
             if target == mappers.ALL:
                 raise rules.into_all()
-            path = f"/me/messages/{id_(message_id)}"
+            path = f"/me/messages/{path_part(message_id)}"
             item = None
             verb: dict[str, Any] = {}
             if mappers.touches_marks(changes):
@@ -308,7 +311,7 @@ class MicrosoftProvider:
             if permanent:
                 await self._delete_for_good(message_id, trash)
                 return None
-            path = f"/me/messages/{id_(message_id)}"
+            path = f"/me/messages/{path_part(message_id)}"
             if (await self._graph.placed(path)).parent_folder_id == trash:
                 raise rules.in_trash_already()
             return mappers.summary(await self._graph.move(GraphMessage, path, trash))
@@ -320,11 +323,11 @@ class MicrosoftProvider:
         For good means: into the trash, then deleted from it."""
         if trash is None:
             trash = await self._graph.role_id(FolderRole.TRASH)
-        path = f"/me/messages/{id_(message_id)}"
+        path = f"/me/messages/{path_part(message_id)}"
         moved = None
         if (await self._graph.placed(path)).parent_folder_id != trash:
             moved = await self._graph.move(Item, path, trash)
-            path = f"/me/messages/{id_(moved.id)}"
+            path = f"/me/messages/{path_part(moved.id)}"
         try:
             await self._graph.call("DELETE", path)
         except MailboxServiceError as exc:
@@ -345,7 +348,7 @@ class MicrosoftProvider:
     async def folder_contents(self, folder_id: str) -> list[str]:
         items = await self._graph.all(
             Listing[Item],
-            f"/me/mailFolders/{id_(folder_id)}/messages",
+            f"/me/mailFolders/{path_part(folder_id)}/messages",
             {"$select": "id", "$top": str(PAGE_SIZE)},
         )
         return [item.id for item in items]
@@ -389,7 +392,7 @@ class MicrosoftProvider:
     async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         """Twenty to a JSON batch. A message that is gone is left out."""
         urls = [
-            f"/me/messages/{id_(message_id)}?$select=internetMessageId"
+            f"/me/messages/{path_part(message_id)}?$select=internetMessageId"
             for message_id in message_ids
         ]
         found = await self._graph.batch(urls, Batch[GraphMessage])
@@ -409,7 +412,7 @@ class MicrosoftProvider:
             body = await self._graph.read(
                 Listing[GraphMessage],
                 "GET",
-                f"/me/mailFolders/{id_(folder_id)}/messages/delta",
+                f"/me/mailFolders/{path_part(folder_id)}/messages/delta",
                 params={"$select": "id,createdDateTime"},
             )
         else:

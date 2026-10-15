@@ -20,14 +20,11 @@ from collections.abc import Callable
 from functools import partial
 from typing import TypeVar
 
-import anyio
-
 from benethos_mailbox_common.values import secret
 
 from ....common.chunks import batched
 from ....common.ratelimit import Clock, Sleep
 from ....errors import (
-    BadRequestError,
     MailboxServiceError,
     NotSupportedError,
     missing_message,
@@ -50,17 +47,20 @@ from ...models import (
 from ...protocols import POP3_PORTS, Pick, Pop3Session, Server, SmtpSession
 from ..base import CredentialReader, ProviderSettings
 from ..guard import Pace
-from ..mailserver import MailServerAdapter
+from ..mailserver import (
+    PROBE_TIMEOUT,
+    MailServerAdapter,
+    capabilities_of,
+    login_settings,
+)
 from ..rules import After
-from ..sender import SmtpFactory, smtp_settings
+from ..sender import SmtpFactory
 from ..settings import server_of
 from . import mappers
 
 T = TypeVar("T")
 
 SessionFactory = Callable[[Server], Pop3Session]
-
-PROBE_TIMEOUT = 10.0
 
 # Message-ID headers read per session during a sync.
 HEADER_BATCH = 200
@@ -74,14 +74,7 @@ def settings_from(
     pop3 = server_of(servers, ServerProtocol.POP3)
     if pop3 is None or credential is CredentialKind.OAUTH:
         return {}
-    username = pop3.username or email
-    return {
-        "host": pop3.host,
-        "port": pop3.port,
-        "security": str(pop3.security),
-        "username": username,
-        **smtp_settings(servers, username),
-    }
+    return login_settings(pop3, servers, email)
 
 
 def probe_session(server: Server) -> Pop3Session:
@@ -95,15 +88,10 @@ async def probe(
     address: str | None = None,
     session_factory: SessionFactory = probe_session,
 ) -> frozenset[str]:
-    """The capabilities of a POP3 server, read without logging in. With
-    ``address``, the connection goes there, the address just checked."""
-    if security not in POP3_PORTS:
-        raise BadRequestError("POP3 without encryption is not supported")
-    pick = (lambda _host, _port: address) if address is not None else None
-    session = session_factory(
-        Server(host=host, port=port, security=security, pick=pick)
+    """The capabilities of a POP3 server, read without logging in."""
+    return await capabilities_of(
+        session_factory, "POP3", POP3_PORTS, host, port, security, address
     )
-    return await anyio.to_thread.run_sync(session.read_capabilities)
 
 
 class Pop3Provider(MailServerAdapter):
@@ -172,7 +160,7 @@ class Pop3Provider(MailServerAdapter):
         self, message_id: str, attachment_id: str
     ) -> AttachmentContent:
         raw = await self.get_raw(message_id)
-        return convert.attachment(parse.ParsedMessage(raw), attachment_id)
+        return convert.attachment_of(raw, attachment_id)
 
     async def get_raw(self, message_id: str) -> bytes:
         uid = mappers.unique_id(message_id)

@@ -10,14 +10,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import ClassVar
 
-from benethos_mailbox_common.log import lines
 from benethos_mailbox_common.values import text
 
 from ....data.models import Account
-from ..base import Activity, Failure, account
+from ..base import Activity, Failure, Purged, account
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -121,20 +119,12 @@ class SendLimitReached(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
-class SendsPurged(Activity):
+class SendsPurged(Purged):
     """Records older than the audit keeps are gone. The normal course,
     once an hour at most, so no warning."""
 
     name: ClassVar[str] = "sends_purged"
-
-    count: int
-    before: datetime
-
-    def says(self) -> str:
-        return (
-            f"purged {text.plural(self.count, 'record')} older than "
-            f"{lines.log_time(self.before)} from the audit of sends"
-        )
+    purged_from: ClassVar[str] = "the audit of sends"
 
 
 @dataclass(frozen=True, kw_only=True)

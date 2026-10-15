@@ -14,8 +14,9 @@ from benethos_mailbox_common.values import sizes
 
 from ....errors import MailboxServiceError
 from ...mail import compose
+from ...protocols import path_part
 from . import mappers
-from .graph import Graph, id_
+from .graph import Graph
 from .shapes import Message as GraphMessage
 from .shapes import UploadSession
 
@@ -54,7 +55,7 @@ async def create_draft(
     return await graph.read(
         GraphMessage,
         "GET",
-        f"/me/messages/{id_(draft.id)}",
+        f"/me/messages/{path_part(draft.id)}",
         params=mappers.SUMMARY_PARAMS,
     )
 
@@ -70,7 +71,7 @@ async def _from_mime(graph: Graph, raw: bytes) -> GraphMessage:
 
 
 async def _attach(graph: Graph, draft_id: str, file: compose.Attached) -> None:
-    path = f"/me/messages/{id_(draft_id)}/attachments"
+    path = f"/me/messages/{path_part(draft_id)}/attachments"
     item: dict[str, Any] = {
         "name": file.filename or "attachment",
         "contentType": file.content_type,

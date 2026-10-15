@@ -1,7 +1,8 @@
 """What the adapters that log in to a mail server share, IMAP and POP3:
 the settings of the login, the guard towards the server, sending through
 the account's SMTP server, and the steps of one session under one lock,
-in a worker thread.
+in a worker thread. Before an account exists: its settings from
+discovered servers, and a probe of a server without a login.
 
 Their libraries are synchronous and their sessions stateful, so a step
 runs as one uninterrupted sequence under the account's lock. The
@@ -20,14 +21,60 @@ import anyio
 
 from ...common.ratelimit import Clock, Sleep
 from ...errors import BadRequestError, NotSupportedError
+from ..models import MailServer
 from ..protocols import Pick, Server, SmtpSession
 from .base import CredentialReader, ProviderSettings
 from .guard import Guard, Pace
-from .sender import SmtpFactory, SmtpSender
+from .sender import SmtpFactory, SmtpSender, smtp_settings
 from .settings import mail_server, rate_of
 
 T = TypeVar("T")
 A = TypeVar("A")
+
+# A probe asks a server what it offers before anyone logs in, and does not
+# wait long for the answer.
+PROBE_TIMEOUT = 10.0
+
+
+class Probed(Protocol):
+    """A session that reads what its server offers without a login."""
+
+    def read_capabilities(self) -> frozenset[str]: ...
+
+
+def login_settings(
+    server: MailServer, servers: list[MailServer], email: str
+) -> dict[str, str | int | bool]:
+    """The settings of a login at a discovered ``server``, with the SMTP
+    server of ``servers`` to send through."""
+    username = server.username or email
+    return {
+        "host": server.host,
+        "port": server.port,
+        "security": str(server.security),
+        "username": username,
+        **smtp_settings(servers, username),
+    }
+
+
+async def capabilities_of(
+    session_factory: Callable[[Server], Probed],
+    protocol: str,
+    ports: Mapping[str, int],
+    host: str,
+    port: int,
+    security: str,
+    address: str | None,
+) -> frozenset[str]:
+    """The capabilities of a ``protocol`` server, read without logging in.
+    With ``address``, the connection goes there, the address just checked."""
+    if security not in ports:
+        raise BadRequestError(f"{protocol} without encryption is not supported")
+    pick = (lambda _host, _port: address) if address is not None else None
+    session = session_factory(
+        Server(host=host, port=port, security=security, pick=pick)
+    )
+    return await anyio.to_thread.run_sync(session.read_capabilities)
 
 
 class MailServerAdapter:

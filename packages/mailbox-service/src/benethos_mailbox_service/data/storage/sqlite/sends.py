@@ -77,12 +77,12 @@ class SqliteSendLogRepository:
                     " WHERE instr(casefold(value), ?) > 0)"
                 )
                 params.append(matching.recipient.casefold())
-        rows = self._db.query(
+        return self._db.query_as(
+            _send,
             f"SELECT * FROM sends WHERE {' AND '.join(where)}"
             " ORDER BY created_at DESC, id DESC LIMIT ?",
             (*params, limit),
         )
-        return [_send(row) for row in rows]
 
     def account_ids(self) -> builtins.list[str]:
         rows = self._db.query("SELECT DISTINCT account_id FROM sends ORDER BY 1")

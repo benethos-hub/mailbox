@@ -6,8 +6,9 @@ from __future__ import annotations
 
 from ....errors import BadRequestError, NotFoundError
 from ...models import Folder
+from ...protocols import path_part
 from . import mappers
-from .api import GmailApi, id_
+from .api import GmailApi
 from .reading import at_once
 from .shapes import Label
 
@@ -61,12 +62,12 @@ async def update_folder(
 
 async def delete_folder(api: GmailApi, folder_id: str) -> None:
     label = await _own(api, folder_id)
-    await api.call("DELETE", f"/labels/{id_(label.id)}")
+    await api.call("DELETE", f"/labels/{path_part(label.id)}")
     api.forget()
 
 
 async def _rename(api: GmailApi, label_id: str, name: str) -> None:
-    await api.call("PATCH", f"/labels/{id_(label_id)}", json_body={"name": name})
+    await api.call("PATCH", f"/labels/{path_part(label_id)}", json_body={"name": name})
 
 
 def _inside(label: Label, outer: Label) -> bool:

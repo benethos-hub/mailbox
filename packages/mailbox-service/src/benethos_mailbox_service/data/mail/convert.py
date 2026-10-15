@@ -109,3 +109,9 @@ def attachment(msg: ParsedMessage, attachment_id: str) -> AttachmentContent:
     return AttachmentContent(
         filename=part.filename, content_type=part.content_type, data=part.payload
     )
+
+
+def attachment_of(raw: bytes, attachment_id: str) -> AttachmentContent:
+    """``attachment`` of a message's source, for an adapter that reads the
+    whole message to give one of its files."""
+    return attachment(ParsedMessage(raw), attachment_id)

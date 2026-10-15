@@ -15,11 +15,11 @@ class SqliteMessageIndexRepository:
         self._db = db
 
     def get(self, account_id: str, message_id: str) -> IndexEntry | None:
-        row = self._db.one(
+        return self._db.one_as(
+            _entry,
             "SELECT * FROM message_index WHERE account_id = ? AND id = ?",
             (account_id, message_id),
         )
-        return _entry(row) if row is not None else None
 
     def by_native(
         self, account_id: str, native_ids: Iterable[str]
@@ -110,20 +110,20 @@ class SqliteMessageIndexRepository:
         return {row["id"]: row["thread_id"] for row in rows}
 
     def in_thread(self, account_id: str, thread_id: str) -> list[IndexEntry]:
-        rows = self._db.query(
+        return self._db.query_as(
+            _entry,
             "SELECT * FROM message_index WHERE account_id = ? AND thread_id = ?"
             " ORDER BY rowid",
             (account_id, thread_id),
         )
-        return [_entry(row) for row in rows]
 
     def unthreaded(self, account_id: str, limit: int) -> list[IndexEntry]:
-        rows = self._db.query(
+        return self._db.query_as(
+            _entry,
             "SELECT * FROM message_index WHERE account_id = ? AND thread_id IS NULL"
             " ORDER BY rowid LIMIT ?",
             (account_id, limit),
         )
-        return [_entry(row) for row in rows]
 
 
 def _join(

@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import ClassVar
 
+from benethos_mailbox_common.log import lines
+from benethos_mailbox_common.values import text
+
 from ...data.models import Account, ActivityOutcome, User
 from ...errors import MailboxServiceError
 from ..rights import Access
@@ -154,6 +157,25 @@ class Failure(Activity):
     @property
     def ours(self) -> bool:
         return isinstance(self.error, MailboxServiceError)
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
+class Purged(Activity):
+    """Records older than a store keeps are gone: ``count`` of them, older
+    than ``before``. A subclass names one ``record`` and the store it
+    purged, ``purged_from``."""
+
+    record: ClassVar[str] = "record"
+    purged_from: ClassVar[str] = ""
+
+    count: int
+    before: datetime
+
+    def says(self) -> str:
+        return (
+            f"purged {text.plural(self.count, self.record)} older than "
+            f"{lines.log_time(self.before)} from {self.purged_from}"
+        )
 
 
 def reason(error: BaseException) -> str:

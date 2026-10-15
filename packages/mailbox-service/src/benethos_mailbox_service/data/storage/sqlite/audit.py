@@ -60,12 +60,12 @@ class SqliteAuditRepository:
                 area = f"{matching.activity}."
                 where.append("(activity = ? OR substr(activity, 1, ?) = ?)")
                 params += [matching.activity, len(area), area]
-        rows = self._db.query(
+        return self._db.query_as(
+            _activity,
             f"SELECT * FROM activity WHERE {' AND '.join(where)}"
             " ORDER BY at DESC, id DESC LIMIT ?",
             (*params, limit),
         )
-        return [_activity(row) for row in rows]
 
     def purge(self, before: datetime) -> int:
         return self._db.purge("activity", "at", before)

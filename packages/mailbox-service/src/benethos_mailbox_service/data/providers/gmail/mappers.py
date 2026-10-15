@@ -11,7 +11,7 @@ every message outside the trash and the spam, here the folder
 from __future__ import annotations
 
 import html
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime
 from typing import Any
 
 from ...mail import convert, parse
@@ -212,7 +212,7 @@ def _quoted(text: str) -> str:
 
 
 def _seconds(day: date) -> int:
-    return int(datetime.combine(day, time(), UTC).timestamp())
+    return int(rules.day_start(day).timestamp())
 
 
 # --- cursors -------------------------------------------------------------------------

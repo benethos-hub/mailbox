@@ -7,24 +7,26 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
-from urllib.parse import quote
 
 import anyio
 from pydantic import BaseModel
 
 from ....common.ratelimit import backoff
 from ....errors import (
-    BadRequestError,
-    ConflictError,
     MailboxServiceError,
-    NotFoundError,
-    ProviderAuthError,
-    ProviderError,
     ProviderUnavailableError,
 )
-from ...protocols import Answer, ApiClient, Params, refused, wire
+from ...protocols import (
+    Answer,
+    ApiClient,
+    Params,
+    path_part,
+    refused,
+    standard_refusals,
+    wire,
+)
 from .. import rules
 from ..base import TokenSource
 from .shapes import Failure, Label, Labels
@@ -136,7 +138,7 @@ class GmailApi:
 
     async def label(self, label_id: str) -> Label:
         """One label, with its counts."""
-        return await self.read(Label, "GET", f"/labels/{id_(label_id)}")
+        return await self.read(Label, "GET", f"/labels/{path_part(label_id)}")
 
     def forget(self) -> None:
         """The labels read again: they changed, or a new sign-in may see
@@ -145,11 +147,6 @@ class GmailApi:
 
     async def close(self) -> None:
         await self._http.close()
-
-
-def id_(value: str) -> str:
-    """An id as one part of a path."""
-    return quote(value, safe="")
 
 
 def _repeatable(method: str, path: str) -> bool:
@@ -168,13 +165,5 @@ def _failure(answer: Answer) -> MailboxServiceError:
     text = f"gmail: {message} ({code or answer.status})"
     if answer.status == 403 and reasons & _SLOW_DOWN:
         return ProviderUnavailableError(f"gmail is busy ({code})")
-    errors: Mapping[int, Callable[[str], MailboxServiceError]] = {
-        401: lambda _: ProviderAuthError(
-            "gmail refused the access token: sign in again"
-        ),
-        400: BadRequestError,
-        403: ProviderError,
-        404: NotFoundError,
-        409: ConflictError,
-    }
+    errors = standard_refusals("gmail refused the access token: sign in again")
     return refused(answer, "gmail", text, errors, code)

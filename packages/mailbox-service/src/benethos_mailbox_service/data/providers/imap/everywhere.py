@@ -121,24 +121,19 @@ def _summaries(
 
 
 def _places(cursor: str, scope: str) -> dict[str, _Place]:
-    try:
-        value = opaque.decode(_PREFIX, cursor)
-    except ValueError:
-        raise rules.invalid_cursor() from None
-    if (
-        not isinstance(value, list)
-        or len(value) != 2
-        or value[0] != scope
-        or not isinstance(value[1], dict)
-    ):
+    """Where each folder with hits left stands. A cursor of another list,
+    or one made up, is refused."""
+    parts = opaque.fields(_PREFIX, cursor, str, dict)
+    if parts is None or parts[0] != scope:
         raise rules.invalid_cursor()
     places: dict[str, _Place] = {}
-    for folder, place in value[1].items():
-        if (
-            not isinstance(place, list)
-            or len(place) != 2
-            or not all(isinstance(n, int) and not isinstance(n, bool) for n in place)
-        ):
+    for folder, place in parts[1].items():
+        if not (isinstance(place, list) and len(place) == 2 and all(map(_uid, place))):
             raise rules.invalid_cursor()
         places[folder] = _Place(place[0], place[1])
     return places
+
+
+def _uid(value: object) -> bool:
+    """Whether ``value`` can be a UID or a UIDVALIDITY."""
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0

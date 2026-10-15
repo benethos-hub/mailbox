@@ -10,10 +10,8 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from datetime import UTC, date, datetime, time
+from datetime import UTC, datetime
 from typing import Any
-
-from benethos_mailbox_common.values import canonical, secret
 
 from ....common import opaque
 from ...mail import convert, parse
@@ -204,9 +202,9 @@ def query_filter(folder_id: str, search: MessageFilter | None) -> dict[str, Any]
         if value:
             conditions.append({name: value})
     if search.after is not None:
-        conditions.append({"after": _midnight(search.after)})
+        conditions.append({"after": utc_date(rules.day_start(search.after))})
     if search.before is not None:
-        conditions.append({"before": _midnight(search.before)})
+        conditions.append({"before": utc_date(rules.day_start(search.before))})
     if search.unread is not None:
         conditions.append({"notKeyword" if search.unread else "hasKeyword": SEEN})
     if search.starred is not None:
@@ -216,10 +214,6 @@ def query_filter(folder_id: str, search: MessageFilter | None) -> dict[str, Any]
     return {"operator": "AND", "conditions": conditions}
 
 
-def _midnight(day: date) -> str:
-    return utc_date(datetime.combine(day, time(), UTC))
-
-
 def utc_date(moment: datetime) -> str:
     """A moment as JMAP's ``UTCDate``."""
     return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -227,17 +221,6 @@ def utc_date(moment: datetime) -> str:
 
 # Newest first, as every list of the API.
 SORT = [{"property": "receivedAt", "isAscending": False}]
-
-
-def scope(folder_id: str, search: MessageFilter | None) -> str:
-    """What a cursor belongs to: the folder and the search. Shortened to
-    16 hex digits, 64 bits, to keep the cursor short. It only tells one
-    search of a caller from another, so two that collide cost a cursor
-    taken for the other search, never another account's mail."""
-    what = canonical.canonical(
-        [folder_id, (search or MessageFilter()).model_dump(mode="json")]
-    )
-    return secret.digest(what)[:16]
 
 
 def cursor(scope_of: str, last_id: str, position: int) -> str:
