@@ -228,6 +228,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- A change or delete of a folder with a role, such as the trash,
+  answers `404` to a caller whose grants do not reach it. It answered
+  `409` with the folder's name before.
 - Under `/v1`, a request counts against the limit of its client address
   unless a valid token counted it. Any `Authorization` header took it
   off that count before, and another scheme than `Bearer` or an empty

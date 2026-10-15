@@ -65,10 +65,9 @@ class Folders:
         them. The messages inside keep their ids: a sync follows them."""
         access.require("update_folder", account_id)
         await self._calls.require(account_id, NEEDS["update_folder"])
-        folder, folders = await self._own_folder(account_id, folder_id)
-        reach = await self._reach(access, "update_folder", account_id, folders)
-        if reach is not None:
-            require_folder(reach, folder_id)
+        folder, folders, reach = await self._own_folder(
+            access, "update_folder", account_id, folder_id
+        )
         name = changes.name or folder.name
         parent = (
             await self.by_role(account_id, changes.parent_id)
@@ -98,10 +97,9 @@ class Folders:
         its messages with it on many servers, and they cannot be taken back."""
         access.require("delete_folder", account_id)
         await self._calls.require(account_id, NEEDS["delete_folder"])
-        folder, folders = await self._own_folder(account_id, folder_id)
-        reach = await self._reach(access, "delete_folder", account_id, folders)
-        if reach is not None:
-            require_folder(reach, folder_id)
+        folder, folders, _ = await self._own_folder(
+            access, "delete_folder", account_id, folder_id
+        )
         if any(f.parent_id == folder_id for f in folders):
             raise ConflictError(f"the folder {folder.name} has subfolders")
         contents = await self._calls.call(
@@ -161,20 +159,25 @@ class Folders:
         return await reach_of(self._calls, access, operation, account_id, folders)
 
     async def _own_folder(
-        self, account_id: str, folder_id: str
-    ) -> tuple[Folder, list[Folder]]:
-        """A folder the user made, and all the account's folders: one with
-        a role is refused."""
+        self, access: Access, operation: str, account_id: str, folder_id: str
+    ) -> tuple[Folder, list[Folder], Reach | None]:
+        """A folder the user made, all the account's folders and the
+        caller's reach for ``operation``. A folder outside the reach is
+        missing before one with a role is refused, so that its name stays
+        unknown."""
         folders = await self.all(account_id)
         folder = next((f for f in folders if f.id == folder_id), None)
         if folder is None:
             raise missing("folder", folder_id)
+        reach = await self._reach(access, operation, account_id, folders)
+        if reach is not None:
+            require_folder(reach, folder_id)
         if folder.role is not None:
             raise ConflictError(
                 f"the folder {folder.name} is the account's {folder.role}: "
                 "it stays as it is"
             )
-        return folder, folders
+        return folder, folders, reach
 
 
 def is_role(folder: str) -> bool:
