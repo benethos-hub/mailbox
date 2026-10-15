@@ -28,6 +28,7 @@ from ...models import (
     Abilities,
     AttachmentContent,
     Folder,
+    FolderRole,
     Message,
     MessageFilter,
     MessageSummary,
@@ -41,7 +42,7 @@ from ..base import CredentialReader, ProviderSettings
 from ..guard import Pace
 from ..mailserver import MailServerAdapter
 from ..sender import SmtpFactory
-from . import drafts, folders, messages, sync
+from . import drafts, everywhere, folders, mappers, messages, sync
 from .abilities import abilities as imap_abilities
 from .connect import SessionFactory, default_session
 from .mailbox import Mailbox
@@ -108,7 +109,12 @@ class ImapProvider(MailServerAdapter):
     # --- Reads ------------------------------------------------------------------------
 
     async def list_folders(self) -> list[Folder]:
-        return await self._run(lambda box: box.list_folders(subscriptions=True))
+        """The server's folders, and where it has no ``\\All`` the folder
+        ``all`` the adapter emulates (``everywhere``)."""
+        found = await self._run(lambda box: box.list_folders(subscriptions=True))
+        if any(f.role is FolderRole.ALL for f in found):
+            return found
+        return [*found, mappers.all_mail()]
 
     async def list_messages(
         self,
@@ -118,6 +124,10 @@ class ImapProvider(MailServerAdapter):
         cursor: str | None,
         search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
+        if folder_id == mappers.ALL:
+            return await self._run(
+                lambda box: everywhere.list_all(box, limit, cursor, search)
+            )
         return await self._run(
             lambda box: messages.list_messages(box, folder_id, limit, cursor, search)
         )

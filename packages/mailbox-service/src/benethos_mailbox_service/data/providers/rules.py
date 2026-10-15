@@ -70,6 +70,13 @@ def in_trash_already() -> ConflictError:
     )
 
 
+def into_all() -> BadRequestError:
+    """A move into the folder ``all`` the adapter emulates."""
+    return BadRequestError(
+        "All Mail shows the mail of the other folders: move a message into one of them"
+    )
+
+
 def no_folder_left() -> BadRequestError:
     """A change that would take a message out of its last folder."""
     return BadRequestError("a message stays in one folder at least")

@@ -168,7 +168,7 @@ larger piece that is neither, and runs on its own.
   POP3.** The same call means two things. It is documented, but against
   R1. The MCP tool `search_messages` inherits it. *Concept (6.5).* Done:
   the inbox on every account, and `all` everywhere but the trash and
-  junk, which Microsoft emulates. IMAP without `\All` follows in step 7.
+  junk, which Microsoft and IMAP without `\All` emulate.
 - **`list_all_messages` with a role leaves out an account that has no
   such folder**, without naming it in `incomplete`
   (`domain/mailbox/across.py:111-116`). *Bug.*
@@ -350,7 +350,7 @@ larger piece that is neither, and runs on its own.
 
 ## 5. Work in order
 
-Steps 1 to 6 are done. Each step is one pull request or more.
+Steps 1 to 7 are done. Each step is one pull request or more.
 
 1. **Bugs without a live check**, together on a branch of their own,
    against today's documentation. Done:
@@ -402,7 +402,9 @@ Steps 1 to 6 are done. Each step is one pull request or more.
    folder, server notes, marks, the case of keywords, `has_attachments`.
    Done.
 7. **IMAP emulates `all`** where the server has no `\All` (decision
-   6.5), a piece of its own.
+   6.5), a piece of its own. Done. Each folder is taken in its own
+   order, and of the folders' next mails the newest comes first, as the
+   list across accounts merges.
 8. **The UI and the MCP server** (section 8, U1 to U5): the vocabulary
    of the marks in `mailbox-common`, and the operations an account
    offers its caller, read from the API.

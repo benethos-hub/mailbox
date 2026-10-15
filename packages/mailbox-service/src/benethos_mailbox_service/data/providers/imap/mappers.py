@@ -136,6 +136,16 @@ def parse_cursor(value: str) -> Cursor:
 
 # --- folders ------------------------------------------------------------------
 
+# The folder with the role ``all`` where the server has no ``\All``: every
+# folder but the trash and junk, emulated (``everywhere``).
+ALL = "all"
+OUTSIDE_ALL = frozenset({FolderRole.TRASH, FolderRole.JUNK})
+
+
+def all_mail() -> Folder:
+    """The folder ``all``, which only this service shows."""
+    return Folder(id=ALL, name="All Mail", role=FolderRole.ALL)
+
 
 def folders(raws: list[RawFolder], prefix: str = "") -> list[Folder]:
     """Every selectable folder, with roles from flags first, then from the

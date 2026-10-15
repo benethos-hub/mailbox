@@ -46,7 +46,7 @@ def list_messages(
     if start is not None and start.uidvalidity != validity:
         raise BadRequestError("the folder changed on the server: start again")
     before = start.before_uid if start is not None else None
-    uids = box.session.messages.search(_criteria(search or MessageFilter(), before))
+    uids = box.session.messages.search(criteria(search or MessageFilter(), before))
     page = list(reversed(uids[-limit:]))
     messages = {
         int(m.uid): m for m in box.session.messages.fetch_headers(page) if m.uid
@@ -279,6 +279,8 @@ def _move_target(box: Mailbox, changes: MessageUpdate, current: str) -> str | No
     wanted = rules.move_target(changes, labels=False)
     if wanted is None:
         return None
+    if wanted == mappers.ALL:
+        raise rules.into_all()
     target = mappers.folder_name(wanted)
     if target == current:
         return None
@@ -315,7 +317,7 @@ def _missing(
     return {uid: missing_message() for uid in uids if uid not in found}
 
 
-def _criteria(search: MessageFilter, before_uid: int | None) -> SearchCriteria:
+def criteria(search: MessageFilter, before_uid: int | None) -> SearchCriteria:
     """The API's filter as IMAP SEARCH keys."""
     return SearchCriteria(
         text=search.text,

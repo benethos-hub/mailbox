@@ -103,6 +103,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   not_supported`, in a list, a move or as a parent, and names the
   account in `incomplete` across accounts. It answered `404`, and an
   adapter `409`.
+- An IMAP server without a folder `\All` gets one from the service:
+  "All Mail", with the id `all` and the role `all`. It lists every
+  folder but the trash and junk, one SEARCH per folder, newest first by
+  when the mail arrived. A mail filed late with an old date can come on
+  a later page than its date says, never twice or not at all. A message
+  cannot be moved into it.
 - `has_attachments` in a list counts real attachments as a whole
   message does, not an image the body shows: IMAP reads BODYSTRUCTURE
   with the headers, Gmail the parts of a message, JMAP its attachments.

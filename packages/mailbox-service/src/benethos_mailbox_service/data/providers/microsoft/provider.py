@@ -267,10 +267,7 @@ class MicrosoftProvider:
             # Judged per id, as the other adapters answer it.
             target = rules.move_target(changes, labels=False)
             if target == mappers.ALL:
-                raise BadRequestError(
-                    "All Mail shows the mail of the other folders: "
-                    "move a message into one of them"
-                )
+                raise rules.into_all()
             path = f"/me/messages/{id_(message_id)}"
             item = None
             verb: dict[str, Any] = {}
