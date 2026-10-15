@@ -157,6 +157,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The Python client names a charset of an attachment only where it
+  decodes text. `charset=base64` came through, and the MCP server's
+  `get_attachment` failed on it. The MCP server reads a text whose
+  charset decodes none as UTF-8.
 - A Gmail account tries a request again, twice at most with a short
   pause, when Gmail answers with an error of its own side, such as
   `500 backendError`, as Gmail asks. Only requests that change nothing
@@ -228,6 +232,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- The MCP server's `get_attachment` gives up a PDF whose pages take
+  longer than 30 seconds to render, and renders one PDF at a time. A
+  PDF made to take long held the tool without end.
 - A grant's recipient pattern `*@domain` matches only an address with
   one `@` and a local part. It matched `domain` alone and
   `a@b@domain` as well.

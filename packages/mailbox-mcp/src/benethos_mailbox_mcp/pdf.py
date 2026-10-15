@@ -8,6 +8,7 @@ written here with ``zlib``, so no imaging library is needed.
 from __future__ import annotations
 
 import struct
+import threading
 import zlib
 from dataclasses import dataclass
 
@@ -23,6 +24,10 @@ MAX_PIXELS = 4_000_000
 # Pixels of all pages of one call at most: more pages each get fewer.
 MAX_TOTAL_PIXELS = 12_000_000
 
+# PDFium is not thread-safe: one document at a time, also after a call
+# that gave up waiting for one.
+_ONE_AT_A_TIME = threading.Lock()
+
 
 @dataclass(frozen=True)
 class Pages:
@@ -34,6 +39,11 @@ class Pages:
 def render(data: bytes, first: int, count: int, dpi: int = DPI) -> Pages:
     """Pages ``first`` to ``first + count - 1`` as PNG, as far as they exist,
     within MAX_TOTAL_PIXELS together."""
+    with _ONE_AT_A_TIME:
+        return _render(data, first, count, dpi)
+
+
+def _render(data: bytes, first: int, count: int, dpi: int) -> Pages:
     try:
         document = pdfium.PdfDocument(data)
     except pdfium.PdfiumError as exc:

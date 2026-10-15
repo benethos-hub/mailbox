@@ -4,7 +4,6 @@ name. Both clients collect the chunks here, each in its own way."""
 
 from __future__ import annotations
 
-import codecs
 import re
 from urllib.parse import unquote
 
@@ -64,8 +63,10 @@ def _media_type(value: str) -> str:
 
 
 def _known_charset(name: str) -> str | None:
+    """``name`` where it decodes text. Python knows codecs such as
+    ``base64`` too, which turn bytes into bytes."""
     try:
-        codecs.lookup(name)
+        b"x".decode(name, "replace")
     except LookupError:
         return None
     return name

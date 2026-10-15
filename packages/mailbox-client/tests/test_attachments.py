@@ -31,6 +31,24 @@ async def test_an_attachment_is_read_up_to_the_limit(make_client: Callable) -> N
     assert (len(whole.data), whole.complete) == (100, True)
 
 
+@pytest.mark.parametrize(
+    ("charset", "known"),
+    [("utf-8", "utf-8"), ("ISO-8859-1", "ISO-8859-1"), ("z", None), ("base64", None)],
+)
+async def test_a_charset_is_one_that_decodes_text(
+    make_client: Callable, charset: str, known: str | None
+) -> None:
+    client = make_client(
+        lambda _: httpx.Response(
+            200,
+            content=b"x",
+            headers={"content-type": f"text/plain; charset={charset}"},
+        )
+    )
+    found = await client.get_attachment("acc_1", "msg_1", "att_0", max_bytes=10)
+    assert found.charset == known
+
+
 async def test_a_refused_attachment_is_an_api_error(make_client: Callable) -> None:
     client = make_client(
         lambda _: httpx.Response(

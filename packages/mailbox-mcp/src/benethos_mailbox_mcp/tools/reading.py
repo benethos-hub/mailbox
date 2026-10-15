@@ -164,6 +164,8 @@ MAX_IMAGE_BYTES = 5 * sizes.MIB
 
 
 MAX_PAGES = 10
+# How long one call may render the pages of a PDF.
+PDF_SECONDS = 30
 
 
 # Image types Claude takes as images.
@@ -227,16 +229,14 @@ async def get_attachment(
             images=[(found.data, kind)],
         )
     if kind == "application/pdf":
-        rendered = await anyio.to_thread.run_sync(
-            pdf.render, found.data, first_page, pages
-        )
+        rendered = await _pdf(found.data, first_page, pages)
         last = rendered.first + len(rendered.images) - 1
         return result(
             f"{head} Pages {rendered.first}-{last} of {rendered.total}, as images.\n\n"
             + render.foreign(source, name),
             images=[(image, "image/png") for image in rendered.images],
         )
-    decoded = found.data.decode(found.charset or "utf-8", errors="replace")
+    decoded = _text(found.data, found.charset)
     if kind == "text/html":
         # What a person sees of it, as of an HTML body: hidden parts out.
         decoded = plaintext.from_html(decoded)
@@ -260,3 +260,26 @@ TOOLS = (
     reads(whats_new, "What is new", "list_changes", "list_all_changes"),
     reads(get_attachment, "Get an attachment", "get_attachment"),
 )
+
+
+async def _pdf(data: bytes, first_page: int, pages: int) -> pdf.Pages:
+    """The pages as images, given up after ``PDF_SECONDS``: a PDF made to
+    take long must not hold the tool. The thread runs on to its end, and
+    the next PDF waits for it in ``pdf.render``."""
+    try:
+        with anyio.fail_after(PDF_SECONDS):
+            return await anyio.to_thread.run_sync(
+                pdf.render, data, first_page, pages, abandon_on_cancel=True
+            )
+    except TimeoutError:
+        raise ToolError(
+            f"the PDF took longer than {PDF_SECONDS} seconds to render"
+        ) from None
+
+
+def _text(data: bytes, charset: str | None) -> str:
+    """The bytes as text in their charset, UTF-8 where it decodes none."""
+    try:
+        return data.decode(charset or "utf-8", errors="replace")
+    except LookupError:
+        return data.decode("utf-8", errors="replace")
