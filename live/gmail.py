@@ -41,104 +41,53 @@ printed.
 from __future__ import annotations
 
 import argparse
-import os
 import secrets
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
 import httpx
 from checks import capabilities
 from checks.accounts import accounts, read_env, register
-from checks.admin import Admin, bootstrap
 from checks.mail import (
     feed_types,
     messages_with_subject,
     sweep,
     thread_holds,
 )
-from checks.processes import service_env, start_service, stop
+from checks.own_service import (
+    SYNC_INTERVAL,
+    URL,
+    OwnService,
+    account_of,
+    wait_connected,
+)
+from checks.processes import start_service, stop
 from checks.run import Run
 from checks.service import Service
 
 from benethos_mailbox_client import SyncMailboxClient
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
-SYNC_INTERVAL = 20
 # Every mail the check sends starts with it, so a later run finds leftovers.
 SUBJECT = "mailbox-service gmail live check"
 LABEL = "mailbox-service live check"
-DATA = Path("data/live-gmail")
-PORT = 8080
-URL = f"http://localhost:{PORT}"
-WAIT = 600
-
-
-def _secret_file(name: str, make: Any) -> str:
-    """A value kept in DATA, readable by the owner only, made once."""
-    path = DATA / name
-    if not path.exists():
-        DATA.mkdir(parents=True, exist_ok=True)
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "w", encoding="utf-8") as out:
-            out.write(make())
-    return path.read_text(encoding="utf-8").strip()
-
-
-def _admin(service: dict[str, str]) -> Admin:
-    """The service's user `admin`, made on the first run the way an
-    operator makes it, and kept in DATA."""
-    if not (DATA / "admin_token").exists():
-        made = bootstrap(service, URL)
-        _secret_file("admin_password", lambda: made.password)
-        _secret_file("admin_token", lambda: made.token)
-    return Admin(
-        "admin", _secret_file("admin_password", str), _secret_file("admin_token", str)
-    )
+OWN = OwnService(Path("data/live-gmail"))
+STEPS = """Then: Accounts, Connect an account, the test account's address,
+Sign in with Google. Google warns that it has not verified the app:
+Advanced, Go to Mailbox."""
 
 
 def gmail_env(env: dict[str, str]) -> dict[str, str]:
-    """The service on its own database in DATA, reachable under URL, with
-    the Google client of live/.env."""
-    master_key = _secret_file("master_key", lambda: encode_recovery(cipher.new_key()))
-    service = {
-        **service_env(str(DATA), PORT, master_key),
-        "MAILBOX_SERVICE_PUBLIC_URL": URL,
-        # The change feed learns of the copy in Sent from the worker.
-        "MAILBOX_SERVICE_SYNC_INTERVAL": str(SYNC_INTERVAL),
-        "MAILBOX_SERVICE_SYNC_IDLE": "false",
-    }
-    service.pop("MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_SECRET_FILE", None)
-    service["MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_ID"] = env["LIVE_GOOGLE_CLIENT_ID"]
-    service["MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_SECRET"] = env[
-        "LIVE_GOOGLE_CLIENT_SECRET"
-    ]
-    return service
-
-
-def gmail_account(client: httpx.Client, email: str) -> dict[str, Any] | None:
-    found = client.get("/v1/accounts", params={"address": email}).json()
-    for account in found["items"]:
-        if account["provider"] == "gmail" and account["email"] == email:
-            return dict(account)
-    return None
-
-
-def connect(client: httpx.Client, email: str) -> int:
-    print(f"Open {URL}/ui and sign in as admin, password in {DATA / 'admin_password'}.")
-    print("Then: Accounts, Connect an account, the test account's address,")
-    print("Sign in with Google. Google warns that it has not verified the app:")
-    print("Advanced, Go to Mailbox. Waiting up to ten minutes...")
-    deadline = time.monotonic() + WAIT
-    while time.monotonic() < deadline:
-        account = gmail_account(client, email)
-        if account is not None and account["status"] == "connected":
-            print("connected; run the check without --connect now")
-            return 0
-        time.sleep(3)
-    print("not connected in time")
-    return 1
+    """The service of OWN, with the Google client of live/.env."""
+    return OWN.env(
+        "MAILBOX_SERVICE_OAUTH_GOOGLE_",
+        {
+            "MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_ID": env["LIVE_GOOGLE_CLIENT_ID"],
+            "MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_SECRET": env[
+                "LIVE_GOOGLE_CLIENT_SECRET"
+            ],
+        },
+    )
 
 
 def check(
@@ -464,14 +413,14 @@ def main() -> int:
         return 2
     service = gmail_env(env)
     # The keys are made on the first run; the database keeps them after.
-    process = start_service(service, URL, init_keys=not (DATA / "mailbox.db").exists())
+    process = start_service(service, URL, init_keys=OWN.fresh)
     run = Run()
     try:
-        running = Service(URL, _admin(service))
+        running = Service(URL, OWN.admin(service))
         with running.admin(timeout=120) as client, running.mailbox() as mailbox:
             if options.connect:
-                return connect(client, email)
-            account = gmail_account(client, email)
+                return wait_connected(OWN, client, "gmail", email, STEPS)
+            account = account_of(client, "gmail", email)
             if not run.check("the test account is connected", account is not None):
                 print("run with --connect first")
                 return 1
