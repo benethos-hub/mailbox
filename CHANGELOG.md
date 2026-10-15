@@ -82,6 +82,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** `PATCH /v1/accounts/{account_id}` with settings that
+  name a new server needs every credential of the account in the same
+  request, else it answers `400`. A server removed needs none. The UI
+  says so under the password of an account.
 - `benethos-mailbox-mcp` requires mcp 2.3 and uvicorn 0.38 at least,
   the versions the workspace and the service already ask for.
 - **Breaking:** `operations` of an account in `GET /v1/me` leaves out
@@ -153,6 +157,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The Python client names a charset of an attachment only where it
+  decodes text. `charset=base64` came through, and the MCP server's
+  `get_attachment` failed on it. The MCP server reads a text whose
+  charset decodes none as UTF-8.
 - A Gmail account tries a request again, twice at most with a short
   pause, when Gmail answers with an error of its own side, such as
   `500 backendError`, as Gmail asks. Only requests that change nothing
@@ -221,6 +229,33 @@ adheres to [Semantic Versioning](https://semver.org/).
   error, since Graph takes at most 4 MB per request. Such a mail is
   stored without its files, which follow one by one, a large one in
   ranges.
+
+### Security
+
+- The MCP server's `get_attachment` gives up a PDF whose pages take
+  longer than 30 seconds to render, and renders one PDF at a time. A
+  PDF made to take long held the tool without end.
+- A grant's recipient pattern `*@domain` matches only an address with
+  one `@` and a local part. It matched `domain` alone and
+  `a@b@domain` as well.
+- The UI shows a refusal when an account is connected, and one of a
+  send or a draft, with every secret masked, as every other page
+  does. A server that echoed a password showed it there.
+- A sent draft marks the message it answers or forwards only where the
+  caller may change that message, with `update_message` and a grant
+  that reaches its folder. Any client that writes drafts could name a
+  message there, and the send marked it.
+- A change or delete of a folder with a role, such as the trash,
+  answers `404` to a caller whose grants do not reach it. It answered
+  `409` with the folder's name before.
+- Under `/v1`, a request counts against the limit of its client address
+  unless a valid token counted it. Any `Authorization` header took it
+  off that count before, and another scheme than `Bearer` or an empty
+  bearer counted no failure of the address either. Now both count.
+- A change of an account's settings that names a server it did not
+  name before, another `host`, `port`, `smtp_host` or `smtp_port`, no
+  longer tries the stored credentials there. Whoever may change an
+  account could send its password to a server of their choice.
 
 ## [0.4.1] - 2026-10-10
 

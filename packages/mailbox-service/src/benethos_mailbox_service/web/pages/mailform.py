@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 from starlette.datastructures import UploadFile
 
+from benethos_mailbox_common.log import redact
 from benethos_mailbox_common.mail import addresses
 from benethos_mailbox_common.values import secret
 
@@ -205,7 +206,7 @@ async def show_again(
         draft_id=draft_id,
         original=original,
         stored=stored,
-        error=exc.message,
+        error=redact.redact(exc.message),
         status_code=status_of(exc) if isinstance(exc, MailboxServiceError) else 400,
     )
 

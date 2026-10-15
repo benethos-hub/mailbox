@@ -20,7 +20,8 @@ from benethos_mailbox_service.data.models import (
     Hint,
     ProviderType,
 )
-from benethos_mailbox_service.errors import NotSupportedError
+from benethos_mailbox_service.data.providers.memory import MemoryProvider
+from benethos_mailbox_service.errors import NotSupportedError, ProviderAuthError
 
 from ...conftest import ADMIN, browser_user
 from ...ui_helpers import post, sign_in
@@ -309,3 +310,28 @@ def test_a_page_opens_when_the_dots_cannot_be_told(
     monkeypatch.setattr(services.status, "attention", fails)
     assert ui.get("/ui/accounts").status_code == 200
     assert ui.get("/ui/accounts/acc_unknown").status_code == 404
+
+
+@pytest.mark.usefixtures("master_key")
+def test_a_refused_connect_shows_no_secret(
+    ui: TestClient, services: Services, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A server's refusal may echo the password typed: shown redacted."""
+    services.vault.initialize()
+
+    async def refused(self: MemoryProvider) -> None:
+        raise ProviderAuthError("login failed for s3cret-pw")
+
+    monkeypatch.setattr(MemoryProvider, "verify", refused)
+    answer = post(
+        ui,
+        "/ui/accounts",
+        {
+            "email": "c@example.org",
+            "provider": "memory",
+            "host": "imap.example.org",
+            "password": "s3cret-pw",
+        },
+    )
+    assert "login failed for" in answer.text
+    assert "s3cret-pw" not in answer.text

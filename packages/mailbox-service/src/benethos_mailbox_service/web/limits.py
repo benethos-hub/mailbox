@@ -7,10 +7,11 @@ at once, and when it comes in chunks, as soon as it grows past the limit.
 Requests are limited as tokens per minute with a burst of half as many.
 A signed-in caller counts per API token or per UI session, where its
 credential is checked: ``signed_in``. Any other request counts per client
-address, in ``RequestLimit`` before the app sees it. A wrong credential
-is slowed down by the sign-in throttle of the domain. A refused request
-answers ``429`` with ``Retry-After``. The state is in memory and per
-process.
+address, in ``RequestLimit``: before the app sees it where it claims no
+credential, else when its answer starts, unless ``signed_in`` counted
+it. A wrong credential is slowed down by the sign-in throttle of the
+domain as well. A refused request answers ``429`` with ``Retry-After``.
+The state is in memory and per process.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ import time
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import Enum
 
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
@@ -177,23 +179,43 @@ class RequestLimits:
         )
 
 
+class Credential(Enum):
+    """What a request carries, as far as ``RequestLimit`` can tell before
+    the app sees it."""
+
+    # Counted against the address at once.
+    NONE = "none"
+    # A credential the app checks, such as any Authorization header:
+    # counted against the address when the answer starts, unless the
+    # check counted it as signed in.
+    CLAIMED = "claimed"
+    # One the service knows already, such as a session of the UI: left
+    # to the app.
+    KNOWN = "known"
+
+
+# Where ``signed_in`` notes a request it counted, in the request's state.
+_COUNTED = "mailbox_counted"
+
+
 def signed_in(request: Request, caller: str, access: Access) -> None:
     """Count a request of a signed-in caller: ``caller`` names its API
     token or UI session. Raises ``RateLimitedError`` when none is left."""
     limits = _limits(request.scope)
+    request.scope.setdefault("state", {})[_COUNTED] = True
     _take(request.scope, limits.signed_in, caller, Actor.of(access))
 
 
 class RequestLimit:
     """ASGI middleware: the limit per client address, for every request
-    that carries no credential. ``credential`` tells whether a request
-    carries one, which is then counted where it is checked. ``refuse``
-    answers a refusal as the front end of the request does."""
+    no signed-in caller counted. ``credential`` tells what a request
+    carries. ``refuse`` answers a refusal as the front end of the request
+    does."""
 
     def __init__(
         self,
         app: ASGIApp,
-        credential: Callable[[Request], bool],
+        credential: Callable[[Request], Credential],
         refuse: Callable[[Request, RateLimitedError], Response],
     ) -> None:
         self._app = app
@@ -204,16 +226,39 @@ class RequestLimit:
         if scope["type"] != "http" or scope["path"] in UNLIMITED:
             await self._app(scope, receive, send)
             return
-        limits = _limits(scope)
+        # Made here, so that the app's request shares it.
+        state = scope.setdefault("state", {})
         request = Request(scope)
-        if not self._credential(request):
-            address = request.client.host if request.client else "unknown"
+        carried = self._credential(request)
+        if carried is Credential.NONE:
             try:
-                _take(scope, limits.anonymous, address, someone(address))
+                self._count(request)
             except RateLimitedError as exc:
                 await self._refuse(request, exc)(scope, receive, send)
                 return
-        await self._app(scope, receive, send)
+        if carried is not Credential.CLAIMED:
+            await self._app(scope, receive, send)
+            return
+        refused = False
+
+        async def counted(message: Message) -> None:
+            nonlocal refused
+            if message["type"] == "http.response.start" and not state.get(_COUNTED):
+                try:
+                    self._count(request)
+                except RateLimitedError as exc:
+                    refused = True
+                    await self._refuse(request, exc)(scope, receive, send)
+            if not refused:
+                await send(message)
+
+        await self._app(scope, receive, counted)
+
+    @staticmethod
+    def _count(request: Request) -> None:
+        address = request.client.host if request.client else "unknown"
+        anonymous = _limits(request.scope).anonymous
+        _take(request.scope, anonymous, address, someone(address))
 
 
 def _take(scope: Scope, buckets: Buckets, caller: str, by: Actor) -> None:

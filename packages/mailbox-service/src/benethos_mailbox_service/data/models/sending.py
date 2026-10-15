@@ -89,8 +89,9 @@ class SendResult(BaseModel):
         default=None,
         description="Of a reply or a forward: whether the original carries "
         "`$answered` or `$forwarded` now. False where the account does not "
-        "write that mark (`marks.written`) or the mark failed. Null for a "
-        "message that answers none.",
+        "write that mark (`marks.written`) or the mark failed, and for a "
+        "sent draft where the caller may not change the original. Null for "
+        "a message that answers none.",
     )
 
 

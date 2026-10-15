@@ -127,6 +127,17 @@ def merge_settings(
     return result
 
 
+def moved_to(before: Mapping[str, object], after: Mapping[str, object]) -> str | None:
+    """The key of the first server ``after`` names that ``before`` did
+    not, by host and port, such as ``smtp_host``. None where no server
+    is new: one removed moves nothing."""
+    known = {(n.key, n.host.casefold(), n.port) for n in hosts_in(before)}
+    for named in hosts_in(after):
+        if (named.key, named.host.casefold(), named.port) not in known:
+            return named.key
+    return None
+
+
 def what_changed(
     account: Account,
     display_name: str | None,

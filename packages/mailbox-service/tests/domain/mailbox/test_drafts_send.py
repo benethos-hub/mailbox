@@ -59,6 +59,28 @@ def test_a_sent_reply_draft_marks_the_original(
     assert "$answered" in original["keywords"]
 
 
+def test_a_draft_marks_only_what_its_sender_may_change(
+    app_client: TestClient, client: TestClient, services: Services, account_id: str
+) -> None:
+    """Any client that writes drafts may name an original in a draft."""
+    url = f"/v1/accounts/{account_id}/messages/m1"
+    reply = {"reference": {"message_id": "m1", "action": "reply"}, "text": "Gern."}
+
+    def sent_by(*allow: str) -> bool:
+        draft = client.post(drafts_url(account_id), json=reply).json()
+        sender = bearer_for(services, Grant(accounts=[account_id], allow=list(allow)))
+        answer = app_client.post(
+            f"{drafts_url(account_id, draft['id'])}/send", headers=sender
+        )
+        assert answer.status_code == 200
+        return bool(answer.json()["original_marked"])
+
+    assert sent_by("send") is False
+    assert "$answered" not in client.get(url).json()["keywords"]
+    assert sent_by("send", "mail.write") is True
+    assert "$answered" in client.get(url).json()["keywords"]
+
+
 def test_a_draft_without_recipients_is_not_sent(
     client: TestClient, services: Services, account_id: str
 ) -> None:

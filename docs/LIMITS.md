@@ -53,8 +53,11 @@ limit on requests off. The other limits can be set, not switched off.
 The limits apply in this order. The first that refuses answers.
 
 1. **Before the app.** A request without a credential counts against its
-   client address. A credential is a bearer token on a path under `/v1`
-   or a session of the UI the service knows. `/health` is never counted.
+   client address. A credential is any `Authorization` header on a path
+   under `/v1` or a session of the UI the service knows. A request under
+   `/v1` that no valid token counted in step 3, a wrong one or a path
+   that does not exist, counts against its address when it is answered,
+   and is answered `429` when none is left. `/health` is never counted.
 2. **While the body is read.** A body above 40 MiB is refused as soon as
    it grows past the limit.
 3. **The credential.**
@@ -62,7 +65,8 @@ The limits apply in this order. The first that refuses answers.
      step 1, and counts no failure.
    - API with a token: a wrong, expired or revoked token counts a
      failure for the address and answers `401`, or `429` while the
-     address is locked out. A valid one passes, locked out or not, and
+     address is locked out. Another scheme than `Bearer`, or a bearer
+     without a token, is a wrong token. A valid one passes, locked out or not, and
      counts against the token.
    - UI with a session: the request counts against the session.
    - The UI's sign-in form: the address's lockout and the name's wait

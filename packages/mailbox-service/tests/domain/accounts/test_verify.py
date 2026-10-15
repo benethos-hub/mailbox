@@ -133,3 +133,28 @@ def test_verify_needs_accounts_manage(world: World) -> None:
         headers={"Authorization": f"Bearer {token['token']}"},
     )
     assert response.status_code == 403
+
+
+def test_a_moved_host_needs_the_credential_again(
+    world: World, server: FakeMailBox
+) -> None:
+    """The stored password never goes to a host it was not given for."""
+    services, client = world
+    url = f"/v1/accounts/{client.post('/v1/accounts', json=NEW_ACCOUNT).json()['id']}"
+    logins = server.logins
+    for moved in ({"host": "imap.example.org"}, {"port": 1993}):
+        alone = client.patch(url, json={"settings": moved})
+        assert alone.status_code == 400
+        assert "password" in alone.json()["error"]["message"]
+    assert server.logins == logins
+    # With the credential named again, the new host sees only that one.
+    server.password = "new"
+    again = client.patch(
+        url,
+        json={
+            "settings": {"host": "imap.example.org"},
+            "credentials": {"password": "new"},
+        },
+    )
+    assert again.status_code == 200
+    assert client.get(url).json()["settings"]["host"] == "imap.example.org"

@@ -249,6 +249,24 @@ def test_folders_are_made_and_moved_inside_the_folders(
     assert writer.patch(f"{base}/f_priv", json={"name": "Mine"}).status_code == 404
 
 
+def test_a_folder_with_a_role_out_of_reach_is_missing(
+    app_client: TestClient, services: Services, mailbox: str
+) -> None:
+    """Its name stays unknown: the refusal of a role comes after the reach."""
+    writer = caller(
+        app_client, services, mailbox, (["mail.write", "mail.delete"], ["inbox"])
+    )
+    base = f"/v1/accounts/{mailbox}/folders"
+    renamed = writer.patch(f"{base}/trash", json={"name": "Bin"})
+    assert renamed.status_code == 404
+    assert "Trash" not in renamed.text
+    deleted = writer.delete(f"{base}/trash")
+    assert deleted.status_code == 404
+    assert "Trash" not in deleted.text
+    # Within reach, the role is refused.
+    assert writer.patch(f"{base}/inbox", json={"name": "In"}).status_code == 409
+
+
 # --- what is heard of -------------------------------------------------------------
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import base64
 import struct
+import time
 import zlib
 from collections.abc import Callable
 
@@ -194,10 +195,31 @@ async def test_too_large(
     assert "over 10 bytes" in text
 
 
-async def test_a_charset_python_does_not_know(make_client: Callable) -> None:
-    make_client(serving("Grüße".encode(), "text/plain; charset=x-unknown"))
+@pytest.mark.parametrize("charset", ["x-unknown", "base64"])
+async def test_a_charset_that_decodes_no_text(
+    make_client: Callable, charset: str
+) -> None:
+    make_client(serving("Grüße".encode(), f"text/plain; charset={charset}"))
     [text] = texts(await call())
     assert "Grüße" in text
+
+
+def test_a_charset_left_by_the_client_falls_back_to_utf_8() -> None:
+    assert reading._text("Grüße".encode(), "base64") == "Grüße"
+
+
+async def test_a_pdf_that_renders_too_long_is_given_up(
+    make_client: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def slow(*args: object) -> pdf.Pages:
+        time.sleep(0.5)
+        return pdf.Pages([], 1, 1)
+
+    monkeypatch.setattr(pdf, "render", slow)
+    monkeypatch.setattr(reading, "PDF_SECONDS", 0.05)
+    make_client(serving(make_pdf(1), "application/pdf", "a.pdf"))
+    with pytest.raises(ToolError, match="longer than 0.05 seconds"):
+        await call()
 
 
 def test_many_pages_share_the_budget_of_one_call() -> None:
