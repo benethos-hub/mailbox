@@ -266,7 +266,7 @@ class _Domain:
             providers.poster(settings, resolve),
             access_of=self.auth.access_of,
             account_ids=self._adapters.ids,
-            hearing=self.mailbox.hearing,
+            hearing=self.mailbox.hearing_now,
             retries=Retries(
                 attempts=settings.webhook_attempts,
                 first_retry=settings.webhook_first_retry,
