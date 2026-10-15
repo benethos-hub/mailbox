@@ -54,7 +54,7 @@ async def test_search_passes_filters_and_answers_summaries(api: Callable) -> Non
                 "starred": False,
                 "has_attachments": False,
                 "folders": ["INBOX", "Label_1"],
-                "keywords": ["$answered"],
+                "marks": ["answered"],
             }
         ],
         "next_cursor": "c1",
@@ -170,5 +170,5 @@ async def test_get_message_names_folders_keywords_and_the_original(
     text = await reading.get_message("acc_1", "msg_d")
     ours = text[: text.index("<mail-content")]
     assert "folders: drafts" in ours
-    assert "keywords: $draft" in ours
+    assert "marks: draft" in ours
     assert "answers: msg_1 (reply)" in ours

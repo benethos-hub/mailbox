@@ -108,6 +108,7 @@ def account(item: dict[str, Any]) -> Account:
         settings=dict(item.get("settings", {})),
         capabilities=frozenset(item.get("capabilities", [])),
         marks=marks(item.get("marks") or {}),
+        operations=frozenset(item.get("operations") or []),
     )
 
 

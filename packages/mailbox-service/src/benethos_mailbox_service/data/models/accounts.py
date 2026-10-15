@@ -149,3 +149,12 @@ class Account(BaseModel):
             "write answers `501`."
         ),
     )
+    operations: list[str] = Field(
+        default_factory=list,
+        description=(
+            "The operations the caller can run on this account, by their "
+            "names in the catalogue of rights (`/v1/permissions`): those its "
+            "rights allow there that the account can do as well. A client "
+            "offers what is in it, and needs no knowledge of providers."
+        ),
+    )

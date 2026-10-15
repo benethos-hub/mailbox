@@ -10312,6 +10312,14 @@
           "marks": {
             "$ref": "#/components/schemas/Marks",
             "description": "The marks of RFC 8621 the account reads and those it writes, such as `$answered`. Adding or taking off a mark it does not write answers `501`."
+          },
+          "operations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Operations",
+            "description": "The operations the caller can run on this account, by their names in the catalogue of rights (`/v1/permissions`): those its rights allow there that the account can do as well. A client offers what is in it, and needs no knowledge of providers."
           }
         },
         "type": "object",
@@ -11899,7 +11907,7 @@
             },
             "type": "array",
             "title": "Operations",
-            "description": "What the caller may do on it"
+            "description": "What the caller can do on it: the operations its rights allow there that the account can do as well, as in `Account`"
           },
           "warnings": {
             "items": {

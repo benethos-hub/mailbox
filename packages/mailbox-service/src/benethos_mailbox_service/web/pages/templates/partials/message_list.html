@@ -30,7 +30,7 @@
         <td>
           {% if m.starred %}<span class="tag warn">{{ icon("star-fill", "starred") }}</span>{% endif %}
           {% if m.has_attachments %}<span class="tag">{{ icon("paperclip", "has attachments") }}</span>{% endif %}
-          {% if "$answered" in m.keywords %}<span class="tag">{{ icon("reply", "answered") }}</span>{% endif %}
+          {% for mark in m.keywords | replied %}<span class="tag">{{ icon(mark.icon, mark.word) }}</span>{% endfor %}
           {% for keyword in m.keywords | own_keywords %}<span class="tag">{{ keyword }}</span>{% endfor %}
         </td>
       </tr>

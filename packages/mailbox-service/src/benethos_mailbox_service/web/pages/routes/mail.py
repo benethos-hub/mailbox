@@ -194,7 +194,7 @@ async def account_mail_page(
     if current is None:
         return error_page(request, 404, f"The account has no folder {wanted}.")
     search, fields, problem = _search(request)
-    can = mail_rights(caller, account_id, account.capabilities)
+    can = mail_rights(account)
     # The ticked messages: only what the caller may do to many at once.
     batch = caller.batches("update_message", account_id)
     can.update(
@@ -270,7 +270,7 @@ async def message(
     names = {f.id: f.name for f in folders}
     folder = found.folder_ids[0] if found.folder_ids else None
     trail = mail_trail(account, (folder, names.get(folder, folder)) if folder else None)
-    can = mail_rights(caller, account_id, account.capabilities)
+    can = mail_rights(account)
     thread = await _conversation(caller, account_id, found, mailbox, can["thread"])
     return render(
         request,

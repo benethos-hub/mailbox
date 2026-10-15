@@ -6,6 +6,8 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
+from benethos_mailbox_common.mail import marks
+
 from .. import render
 from ..errors import ToolError
 from .base import changes, client
@@ -17,15 +19,18 @@ Folders = Annotated[
     Field(
         max_length=20,
         description=(
-            "Folder ids or roles. Only where a mail can be in several folders,"
-            " such as Gmail's labels"
+            "Folder ids or roles. Only where a mail can be in several folders at once"
         ),
     ),
 ]
 
 Keywords = Annotated[
     list[str] | None,
-    Field(max_length=50, description="Keywords, such as $junk or a word of your own"),
+    Field(
+        max_length=50,
+        description="Keywords: a word of your own, or a mark such as "
+        + marks.JUNK.keyword,
+    ),
 ]
 
 
@@ -47,11 +52,11 @@ async def update_messages(
     ] = False,
 ) -> dict[str, Any]:
     """Change mail of one account: mark read or unread, star, move,
-    archive, label, add and remove keywords, or put into the trash. At
-    Gmail a label is a folder: add_folders labels a mail and leaves it
-    where it is, remove_folders takes a label off, remove_folders inbox
-    archives it. Ids stay the same after a move. Answers which ids were
-    done and which failed, with the reason."""
+    archive, label, add and remove keywords, or put into the trash. Where
+    a mail can be in several folders at once, add_folders puts it in one
+    more and leaves it where it is, remove_folders takes it out of one,
+    and remove_folders inbox archives it. Ids stay the same after a move.
+    Answers which ids were done and which failed, with the reason."""
     labels = (add_folders, remove_folders, add_keywords, remove_keywords)
     if trash:
         if (
@@ -108,7 +113,7 @@ async def update_folder(
     to_top: Annotated[bool, Field(description="Move it to the top")] = False,
 ) -> dict[str, Any]:
     """Rename a folder or move it, with the mail and folders inside. Answers
-    its id from now on: on IMAP it follows the name and the place."""
+    its id from now on, which can change with the name and the place."""
     if parent is not None and to_top:
         raise ToolError("parent or to_top, not both")
     if name is None and parent is None and not to_top:

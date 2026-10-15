@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from benethos_mailbox_common.mail import addresses, plaintext
+from benethos_mailbox_common.mail import addresses, marks, plaintext
 
 # Named apart from the parameter text of cut().
 from benethos_mailbox_common.values import text as text_values
@@ -72,8 +72,19 @@ def summary(item: MessageSummary) -> dict[str, Any]:
         "starred": item.starred,
         "has_attachments": item.has_attachments,
         "folders": item.folder_ids,
-        **({"keywords": item.keywords} if item.keywords else {}),
+        **_keywords(item.keywords),
         **({"thread_id": item.thread_id} if item.thread_id else {}),
+    }
+
+
+def _keywords(keywords: list[str]) -> dict[str, list[str]]:
+    """The marks a person sees, in words, and the other keywords, each
+    where there are any."""
+    shown = [mark.word for mark in marks.marks_of(keywords)]
+    others = [k for k in keywords if marks.mark_of(k) is None]
+    return {
+        **({"marks": shown} if shown else {}),
+        **({"keywords": others} if others else {}),
     }
 
 
@@ -102,8 +113,8 @@ def message(account_id: str, item: Message, max_chars: int) -> str:
     ]
     if item.thread_id:
         ours.append(f"thread: {item.thread_id}")
-    if item.keywords:
-        ours.append(f"keywords: {', '.join(item.keywords)}")
+    for name, values in _keywords(item.keywords).items():
+        ours.append(f"{name}: {', '.join(values)}")
     if item.reference is not None:
         ours.append(f"answers: {item.reference.message_id} ({item.reference.action})")
     if note:
@@ -250,10 +261,9 @@ ATTENTION = {
 
 
 def account(found: MeAccount, can: list[str]) -> dict[str, Any]:
+    """``can`` follows the account's operations: what the caller may do
+    there and the account can do."""
     able = found.capabilities
-    if able is not None:
-        # A kind of tool the account cannot use at all.
-        can = [kind for kind in can if kind not in ("drafts", "send") or kind in able]
     shown: dict[str, Any] = {
         "id": found.id,
         "email": found.email,

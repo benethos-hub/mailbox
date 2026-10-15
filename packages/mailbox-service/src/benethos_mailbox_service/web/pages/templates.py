@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 
 from benethos_mailbox_common.log import lines
 from benethos_mailbox_common.mail import addresses as readable_addresses
+from benethos_mailbox_common.mail import marks
 from benethos_mailbox_common.values import text
 
 from ... import __version__
@@ -102,43 +103,30 @@ def or_missing(value: Any) -> Any:
 
 
 def own_keywords(values: Iterable[str]) -> list[str]:
-    """The keywords a person sets. Those starting with ``$``, such as
-    ``$answered``, belong to the mail protocol (docs/UI.md, 4.4)."""
-    return [value for value in values if not value.startswith("$")]
-
-
-# Keywords of the mail protocol, as the flags of a message name them.
-_FLAG_WORDS = {
-    "$answered": "answered",
-    "$forwarded": "forwarded",
-    "$draft": "draft",
-    "$junk": "junk",
-    "$phishing": "phishing",
-    "$important": "important",
-}
-# What a server notes for itself or for other clients, not for a person:
-# whether the mail has attachments, is not junk, had its receipt sent.
-_SERVER_NOTES = frozenset(
-    {
-        "$hasattachment",
-        "$hasnoattachment",
-        "$notjunk",
-        "$mdnsent",
-        "$submitpending",
-        "$submitted",
-    }
-)
+    """The keywords a person sets, without those of the mail protocol
+    (docs/UI.md, 4.4)."""
+    return marks.personal(values)
 
 
 def protocol_flags(values: Iterable[str]) -> list[str]:
-    """The keywords of the mail protocol a person cares about, in words
-    where they have one. A server's own notes are left out (docs/UI.md,
-    4.4)."""
-    return [
-        _FLAG_WORDS.get(value.lower(), value)
-        for value in values
-        if value.startswith("$") and value.lower() not in _SERVER_NOTES
-    ]
+    """The keywords of the mail protocol a person cares about, in words:
+    a mark in the words of ``mailbox-common``, another as it is named
+    (docs/UI.md, 4.4)."""
+    found = []
+    for value in values:
+        if not marks.protocol(value):
+            continue
+        mark = marks.mark_of(value)
+        if mark is None:
+            found.append(value.lstrip("$"))
+        elif mark.shown:
+            found.append(mark.word)
+    return found
+
+
+def replied(values: Iterable[str]) -> list[marks.Mark]:
+    """Whether a message was answered or forwarded, as a list shows it."""
+    return [m for m in marks.marks_of(values) if m in (marks.ANSWERED, marks.FORWARDED)]
 
 
 # Who a person signs in at, by the kind of account.
@@ -167,6 +155,7 @@ templates.env.filters.update(
     or_missing=or_missing,
     own_keywords=own_keywords,
     protocol_flags=protocol_flags,
+    replied=replied,
     segment=segment,
     signs_in_at=signs_in_at,
 )

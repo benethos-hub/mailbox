@@ -42,7 +42,10 @@ class MeAccount(BaseModel):
     id: str
     email: str
     display_name: str | None = None
-    operations: list[str] = Field(description="What the caller may do on it")
+    operations: list[str] = Field(
+        description="What the caller can do on it: the operations its "
+        "rights allow there that the account can do as well, as in `Account`"
+    )
     warnings: list[str] = Field(
         default_factory=list,
         description=(

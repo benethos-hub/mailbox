@@ -350,7 +350,7 @@ larger piece that is neither, and runs on its own.
 
 ## 5. Work in order
 
-Steps 1 to 7 are done. Each step is one pull request or more.
+Steps 1 to 8 are done. Each step is one pull request or more.
 
 1. **Bugs without a live check**, together on a branch of their own,
    against today's documentation. Done:
@@ -407,7 +407,10 @@ Steps 1 to 7 are done. Each step is one pull request or more.
    list across accounts merges.
 8. **The UI and the MCP server** (section 8, U1 to U5): the vocabulary
    of the marks in `mailbox-common`, and the operations an account
-   offers its caller, read from the API.
+   offers its caller, read from the API. Done. `operations` names the
+   operations of the catalogue of rights. Which parts of a change of
+   messages the UI offers still follows the capabilities, since one
+   operation, `update_message`, holds them all.
 9. **Setting up an account, described by the domain** (section 8, U6).
 
 Steps 5 and 6 change the contract. With 7 and 8 they ship together as

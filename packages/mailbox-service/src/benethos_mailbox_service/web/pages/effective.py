@@ -34,7 +34,7 @@ def view_of(rights: EffectiveRights) -> EffectiveView:
     rows = []
     for account in rights.accounts:
         groups, operations = permissions.summarize(
-            account.operations, permissions.ON_AN_ACCOUNT
+            account.rights, permissions.ON_AN_ACCOUNT
         )
         rows.append(
             AccountRow(

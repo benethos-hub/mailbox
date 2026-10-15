@@ -1,32 +1,27 @@
-"""What the mail pages offer, by the caller's rights on an account and by
-what the account can do: a POP3 account keeps no read state, folders,
-drafts or threads, so their actions are not offered there."""
+"""What the mail pages offer an account: the operations the API answers
+for it (UNIFORM U1), the caller's rights and what the account can do
+together. Which parts of a change of messages it offers, and what a
+message shows, follow the account's capabilities. The templates ask
+``can`` alone, never a capability or a kind of account (U2)."""
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-
-from ...data.models import Capability
-from ...domain.rights import Access
+from ...data.models import Account, Capability
 
 
-def mail_rights(
-    caller: Access, account_id: str, capabilities: Iterable[Capability]
-) -> dict[str, bool]:
-    allowed = caller.operations_on(account_id)
-    able = set(capabilities)
-    drafts = Capability.DRAFTS in able
-    folders = Capability.FOLDERS in able
-    sends = "send_message" in allowed and Capability.SEND in able
-    changes = "update_message" in allowed
+def mail_rights(account: Account) -> dict[str, bool]:
+    """``account`` as the caller sees it, with its ``operations``."""
+    offered = set(account.operations)
+    able = set(account.capabilities)
+    changes = "update_message" in offered
     read_state = changes and Capability.READ_STATE in able
     star = changes and Capability.STARS in able
     keywords = changes and Capability.KEYWORDS in able
     move = changes and Capability.MOVE in able
     return {
-        "write": sends or ("create_draft" in allowed and drafts),
-        "send": sends,
-        "drafts": "list_drafts" in allowed and drafts,
+        "write": "send_message" in offered or "create_draft" in offered,
+        "send": "send_message" in offered,
+        "drafts": "list_drafts" in offered,
         # What a message shows: its read state and stars, its keywords.
         "shows_flags": Capability.READ_STATE in able,
         "shows_keywords": Capability.KEYWORDS in able,
@@ -35,12 +30,12 @@ def mail_rights(
         "keywords": keywords,
         "move": move,
         "change": read_state or star or keywords or move,
-        "trash": "delete_message" in allowed and Capability.TRASH in able,
-        "purge": "delete_message_permanent" in allowed and Capability.PURGE in able,
-        "create_folder": "create_folder" in allowed and folders,
-        "update_folder": "update_folder" in allowed and folders,
-        "delete_folder": "delete_folder" in allowed and folders,
+        "trash": "delete_message" in offered,
+        "purge": "delete_message_permanent" in offered,
+        "create_folder": "create_folder" in offered,
+        "update_folder": "update_folder" in offered,
+        "delete_folder": "delete_folder" in offered,
         "search": Capability.SEARCH in able,
-        "threads": "list_threads" in allowed and Capability.THREADS in able,
-        "thread": "get_thread" in allowed and Capability.THREADS in able,
+        "threads": "list_threads" in offered,
+        "thread": "get_thread" in offered,
     }
