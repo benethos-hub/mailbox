@@ -9,10 +9,9 @@ unchanged is not replaced at all.
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
+from starlette.datastructures import FormData
 
 from ....data.models import DraftMessage, Message
 from ....domain.mailbox import MailboxService
@@ -90,7 +89,7 @@ async def draft(
     )
 
 
-def _kept(stored: Message, form: Any) -> list[str]:
+def _kept(stored: Message, form: FormData) -> list[str]:
     """The ids of the draft's attachments that stay."""
     dropped = set(form.getlist("drop"))
     return [a.id for a in stored.attachments if a.id not in dropped]

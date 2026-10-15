@@ -16,11 +16,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
 from pydantic import ValidationError
+from starlette.datastructures import FormData
 
+from ...common import clock
 from ...data.models import Account, Grant
 from ...domain.rights import permissions
 from .forms import FormError, first_problem
@@ -189,14 +190,14 @@ def service_of(names: list[str]) -> ServiceRow:
     )
 
 
-def read_service(form: Any) -> list[str]:
+def read_service(form: FormData) -> list[str]:
     """The service rights a submitted editor holds."""
     names = [str(v) for v in form.getlist("service") if v]
     names += [v for v in _SPLIT.split(str(form.get("service_more") or "")) if v]
     return list(dict.fromkeys(names))
 
 
-def typed_service(form: Any) -> ServiceRow:
+def typed_service(form: FormData) -> ServiceRow:
     """The service rights as they were submitted, unchecked."""
     return service_of(read_service(form))
 
@@ -226,7 +227,7 @@ def rows_of(grants: list[Grant]) -> list[GrantRow]:
     return [*rows, EMPTY_ROW]
 
 
-def typed_rows(form: Any) -> list[GrantRow]:
+def typed_rows(form: FormData) -> list[GrantRow]:
     """The rows as they were submitted, unchecked: a refused editor shows
     them again. Removed and empty rows are left out."""
     rows = []
@@ -253,7 +254,7 @@ def typed_rows(form: Any) -> list[GrantRow]:
     return [*rows, EMPTY_ROW]
 
 
-def _count(form: Any) -> int:
+def _count(form: FormData) -> int:
     """How many rows the form says it has."""
     try:
         return int(str(form.get("grants") or "0"))
@@ -272,7 +273,7 @@ def account_choices(accounts: list[Account], rows: list[GrantRow]) -> list[Any]:
     return sorted(known.items(), key=lambda item: item[1].lower())
 
 
-def read_grants(form: Any) -> list[Grant]:
+def read_grants(form: FormData) -> list[Grant]:
     """The grants a submitted editor holds."""
     count = _count(form)
     if count > MAX_ROWS:
@@ -301,10 +302,7 @@ def read_grants(form: Any) -> list[Grant]:
         ]
         expires = str(form.get(prefix + "expires") or "").strip()
         try:
-            # The browser sends local time without a zone: the service's.
-            expires_at = (
-                datetime.fromisoformat(expires).astimezone() if expires else None
-            )
+            expires_at = clock.parse_local(expires)
         except ValueError:
             raise GrantFormError(
                 f"grant {index + 1}: valid until must be a date and a time"

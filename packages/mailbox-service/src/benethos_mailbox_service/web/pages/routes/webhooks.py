@@ -3,10 +3,12 @@ secret, remove (docs/UI.md, 6.4)."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
+from starlette.datastructures import FormData
 
 from ....data.models import CHANGE_KINDS, Webhook, WebhookCreate, WebhookUpdate
 from ....domain.rights import Access
@@ -57,7 +59,10 @@ async def new_webhook(request: Request, caller: Viewer) -> HTMLResponse:
 
 
 def _new_webhook_page(
-    request: Request, caller: Access, form: Any = None, err: str | None = None
+    request: Request,
+    caller: Access,
+    form: FormData | None = None,
+    err: str | None = None,
 ) -> HTMLResponse:
     """The editor of a new webhook, empty or as ``form`` held it."""
     return render(
@@ -66,46 +71,54 @@ def _new_webhook_page(
         page="webhooks",
         status_code=REFUSED if err else 200,
         err=err,
-        typed=_typed(form) if form is not None else None,
+        typed=WebhookForm.of(form) if form is not None else None,
         events=CHANGE_KINDS,
         accounts=accounts_for(request, caller, "list_changes"),
     )
 
 
-def _typed(form: Any) -> dict[str, Any]:
-    """The fields of a new webhook as they were submitted."""
-    return {
-        "url": text_of(form, "url"),
-        "events": [str(e) for e in form.getlist("events")],
-        "every": form.get("every") == "1",
-        "accounts": [str(a) for a in form.getlist("accounts")],
-    }
+@dataclass(frozen=True, slots=True)
+class WebhookForm:
+    """A webhook's editor: as it was submitted, or as the webhook is."""
+
+    url: str
+    events: list[str]
+    every: bool
+    accounts: list[str]
+
+    @classmethod
+    def of(cls, form: FormData) -> WebhookForm:
+        return cls(
+            url=text_of(form, "url"),
+            events=[str(e) for e in form.getlist("events")],
+            every=form.get("every") == "1",
+            accounts=[str(a) for a in form.getlist("accounts")],
+        )
+
+    @classmethod
+    def shown(cls, webhook: Webhook) -> WebhookForm:
+        return cls(
+            url=webhook.url,
+            events=list(webhook.events),
+            every=webhook.accounts is None,
+            accounts=list(webhook.accounts or []),
+        )
 
 
-def _shown(webhook: Webhook) -> dict[str, Any]:
-    """The fields of a webhook as its Change card shows them."""
-    return {
-        "url": webhook.url,
-        "events": list(webhook.events),
-        "every": webhook.accounts is None,
-        "accounts": list(webhook.accounts or []),
-    }
-
-
-def _fields_of(form: Any) -> dict[str, Any]:
+def _fields_of(form: FormData) -> dict[str, Any]:
     """The URL, events and accounts of a webhook form, for the API's
     shapes. Every account is ``accounts`` None."""
-    typed = _typed(form)
-    if not typed["every"] and not typed["accounts"]:
+    typed = WebhookForm.of(form)
+    if not typed.every and not typed.accounts:
         raise FormError("Choose the accounts, or every account.")
     return {
-        "url": typed["url"],
-        "events": typed["events"],
-        "accounts": None if typed["every"] else typed["accounts"],
+        "url": typed.url,
+        "events": typed.events,
+        "accounts": None if typed.every else typed.accounts,
     }
 
 
-def _request_of(form: Any) -> WebhookCreate:
+def _request_of(form: FormData) -> WebhookCreate:
     return model_of(WebhookCreate, _fields_of(form))
 
 
@@ -136,7 +149,7 @@ def _webhook_page(
     caller: Access,
     webhook_id: str,
     webhooks: WebhookService,
-    form: Any = None,
+    form: FormData | None = None,
     err: str | None = None,
 ) -> HTMLResponse:
     """A webhook's page, its Change card as ``form`` held it if given."""
@@ -150,7 +163,7 @@ def _webhook_page(
         webhook=found,
         names=account_names(request, caller),
         secret=take_once(request, f"secret:{webhook_id}"),
-        typed=_typed(form) if form is not None else _shown(found),
+        typed=WebhookForm.of(form) if form is not None else WebhookForm.shown(found),
         events=CHANGE_KINDS,
         accounts=accounts_for(request, caller, "list_changes"),
         can_update=caller.allows("update_webhook"),

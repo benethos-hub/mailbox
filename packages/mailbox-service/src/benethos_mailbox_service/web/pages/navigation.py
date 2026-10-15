@@ -91,6 +91,11 @@ def mail_url(account_id: str, folder_id: str | None = None) -> str:
     return f"{here}?{urlencode({'folder': folder_id})}" if folder_id else here
 
 
+def message_url(account_id: str, message_id: str) -> str:
+    """The page of one message of an account."""
+    return f"/ui/accounts/{account_id}/mail/{message_id}"
+
+
 def mail_trail(account: Account, folder: tuple[str, str] | None = None) -> Trail:
     """Mail search › the account's mail › a folder, for the pages below them.
     ``folder``: its id and name."""

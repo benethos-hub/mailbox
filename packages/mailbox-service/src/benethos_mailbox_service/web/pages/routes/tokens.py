@@ -17,7 +17,7 @@ from ..deps import Actor
 from ..forms import FormError, failing
 from ..session import show_once
 from ..templates import back
-from .users import access_tab, typed_token, user_page
+from .users import TokenForm, access_tab, user_page
 
 router = APIRouter()
 
@@ -31,8 +31,8 @@ async def create_token(
 ) -> Response:
     form = await request.form()
     here = access_tab(user_id)
-    typed = typed_token(form)
-    name, days = typed["name"], typed["days"]
+    typed = TokenForm.of(form)
+    name, days = typed.name, typed.days
     with failing(
         here,
         again=lambda err: user_page(

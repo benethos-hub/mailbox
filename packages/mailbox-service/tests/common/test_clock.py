@@ -10,6 +10,7 @@ from benethos_mailbox_service.common.clock import (
     iso,
     parse_day,
     parse_iso,
+    parse_local,
     start_of_day,
     utc_now,
 )
@@ -46,3 +47,12 @@ def test_a_day_from_a_form() -> None:
     assert parse_day("") is None
     with pytest.raises(ValueError):
         parse_day("someday")
+
+
+def test_a_time_a_browser_sends_is_local() -> None:
+    found = parse_local("2026-10-07T18:30")
+    assert found is not None and found.utcoffset() is not None
+    assert found.replace(tzinfo=None) == datetime(2026, 10, 7, 18, 30)
+    assert parse_local("") is None
+    with pytest.raises(ValueError):
+        parse_local("tomorrow")

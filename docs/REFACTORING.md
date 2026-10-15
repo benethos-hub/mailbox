@@ -1235,3 +1235,15 @@ Built as #180.
   adapter, and `Guard` takes a `Pace` and a `Timing`.
 - **No switches.** A new display name is a `Rename`, not a flag beside
   it. IMAP deletes for good and into the trash in two functions.
+
+### 17.5 The UI's forms
+
+- **What a form held is a record.** `AccountForm`, `UserForm`,
+  `TokenForm` and `WebhookForm` replace dicts of `Any`, and a submitted
+  form is Starlette's `FormData` where it was `Any`.
+- **Keywords are added and taken off.** The keyword form sends
+  `add_keywords` or `remove_keywords`, where it read the message and
+  wrote the whole list again.
+- **Smaller things.** The action menu's batches are `BatchAction`
+  records, the page of a message is `message_url`, and the time a
+  browser sends is read by `clock.parse_local`.

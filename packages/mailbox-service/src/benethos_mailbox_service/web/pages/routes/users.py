@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
+from starlette.datastructures import FormData
 
 from benethos_mailbox_common.values import text
 
@@ -122,10 +124,13 @@ async def new_user(request: Request, caller: Viewer) -> HTMLResponse:
 
 
 def _newuser_page(
-    request: Request, caller: Access, form: Any = None, err: str | None = None
+    request: Request,
+    caller: Access,
+    form: FormData | None = None,
+    err: str | None = None,
 ) -> HTMLResponse:
     """The editor of a new user, empty or as ``form`` held it."""
-    typed = _typed_user(form) if form is not None else None
+    typed = UserForm.of(form) if form is not None else None
     return render(
         request,
         "pages/user_new.html",
@@ -133,30 +138,45 @@ def _newuser_page(
         status_code=REFUSED if err else 200,
         err=err,
         typed=typed,
-        role_choices=_role_choices(request, caller, typed["roles"] if typed else []),
+        role_choices=_role_choices(request, caller, typed.roles if typed else []),
         can_set_password=caller.allows("set_password"),
         **editor(request, caller, [], [], form),
     )
 
 
-def _typed_user(form: Any) -> dict[str, Any]:
-    """The fields of a user's editor as they were submitted."""
-    return {
-        "name": text_of(form, "name"),
-        "roles": [str(role) for role in form.getlist("roles")],
-        "signs_in_to": str(form.get("signs_in_to") or "api"),
-        "one_time": "one_time" in form,
-        "ui_sign_in": "ui_sign_in" in form,
-        "disabled": "disabled" in form,
-    }
+@dataclass(frozen=True, slots=True)
+class UserForm:
+    """A user's editor as it was submitted."""
+
+    name: str
+    roles: list[str]
+    signs_in_to: str
+    one_time: bool
+    ui_sign_in: bool
+    disabled: bool
+
+    @classmethod
+    def of(cls, form: FormData) -> UserForm:
+        return cls(
+            name=text_of(form, "name"),
+            roles=[str(role) for role in form.getlist("roles")],
+            signs_in_to=str(form.get("signs_in_to") or "api"),
+            one_time="one_time" in form,
+            ui_sign_in="ui_sign_in" in form,
+            disabled="disabled" in form,
+        )
 
 
-def typed_token(form: Any) -> dict[str, str]:
+@dataclass(frozen=True, slots=True)
+class TokenForm:
     """The fields of a new token as they were submitted."""
-    return {
-        "name": text_of(form, "name"),
-        "days": text_of(form, "days"),
-    }
+
+    name: str
+    days: str
+
+    @classmethod
+    def of(cls, form: FormData) -> TokenForm:
+        return cls(name=text_of(form, "name"), days=text_of(form, "days"))
 
 
 @router.post("/users")
@@ -164,21 +184,21 @@ async def create_user(
     request: Request, caller: Actor, users: Users, passwords: Passwords
 ) -> Response:
     form = await request.form()
-    typed = _typed_user(form)
-    ui_sign_in = typed["signs_in_to"] == "ui"
+    typed = UserForm.of(form)
+    ui_sign_in = typed.signs_in_to == "ui"
     with failing(
         "/ui/users/new", again=lambda err: _newuser_page(request, caller, form, err)
     ):
         user = users.create_user(
             caller,
-            typed["name"],
-            typed["roles"],
+            typed.name,
+            typed.roles,
             read_grants(form),
             service=read_service(form),
             ui_sign_in=ui_sign_in,
         )
     here = f"/ui/users/{user.id}"
-    if ui_sign_in and typed["one_time"]:
+    if ui_sign_in and typed.one_time:
         with failing(here, f"{user.name} created, but no password: "):
             password = await passwords.one_time_password(caller, user.id)
         # Shown on the next page, once, and never in the URL.
@@ -199,15 +219,15 @@ def user_page(
     user_id: str,
     users: UserService,
     *,
-    form: Any = None,
-    token_form: Any = None,
+    form: FormData | None = None,
+    token_form: FormData | None = None,
     err: str | None = None,
 ) -> HTMLResponse:
     """A user's page, at one of its tabs. With ``form`` its editor shows
     what was typed, on Rights, with ``token_form`` the fields of a new
     token do, on Access."""
     found = users.get_user(caller, user_id)
-    typed = _typed_user(form) if form is not None else None
+    typed = UserForm.of(form) if form is not None else None
     held = get_tokens(request)
     tokens = if_allowed(
         caller, "list_tokens", lambda: held.list_tokens(caller, user_id), None
@@ -219,7 +239,7 @@ def user_page(
         status_code=REFUSED if err else 200,
         err=err,
         typed=typed,
-        typed_token=typed_token(token_form) if token_form is not None else None,
+        typed_token=TokenForm.of(token_form) if token_form is not None else None,
         user=found,
         effective=view_of(users.rights_of(caller, user_id)),
         tokens=[(token, held.token_state(token)) for token in tokens or []],
@@ -228,7 +248,7 @@ def user_page(
         new_password=take_once(request, f"password:{user_id}"),
         sign_in=get_passwords(request).sign_in_state(found),
         role_choices=_role_choices(
-            request, caller, [*found.roles, *(typed["roles"] if typed else [])]
+            request, caller, [*found.roles, *(typed.roles if typed else [])]
         ),
         names=account_names(request, caller),
         is_me=found.id == caller.user_id,
@@ -268,7 +288,10 @@ TABS = (("rights", "Rights"), ("access", "Access"), ("activity", "Activity"))
 
 
 def _tabs(
-    request: Request, caller: Access, form: Any, token_form: Any
+    request: Request,
+    caller: Access,
+    form: FormData | None,
+    token_form: FormData | None,
 ) -> dict[str, Any]:
     """The tabs the caller sees and the one shown: the one of a refused
     form, else the one the address names, else Rights."""
@@ -298,10 +321,10 @@ async def update_user(
 ) -> Response:
     form = await request.form()
     here = f"/ui/users/{user_id}"
-    typed = _typed_user(form)
+    typed = UserForm.of(form)
     # The tick box of the UI sign-in changes something only where the page
     # showed it: not on the own page, since nobody takes its own sign-in.
-    ui_sign_in = typed["ui_sign_in"] if "ui_sign_in_shown" in form else None
+    ui_sign_in = typed.ui_sign_in if "ui_sign_in_shown" in form else None
     with failing(
         here,
         again=lambda err: user_page(
@@ -311,11 +334,11 @@ async def update_user(
         users.update_user(
             caller,
             user_id,
-            name=typed["name"] or None,
-            roles=typed["roles"],
+            name=typed.name or None,
+            roles=typed.roles,
             service=read_service(form),
             grants=read_grants(form),
-            disabled=typed["disabled"],
+            disabled=typed.disabled,
             ui_sign_in=ui_sign_in,
         )
     return back(request, here, "Saved.")

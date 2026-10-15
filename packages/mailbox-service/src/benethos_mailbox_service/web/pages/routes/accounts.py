@@ -3,11 +3,13 @@ verify, remove."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
+from starlette.datastructures import FormData
 
 from benethos_mailbox_common.log import redact
 
@@ -34,7 +36,7 @@ SETTING_FIELDS = tuple(_FIELDS)
 NUMBERS = {name for name, field in _FIELDS.items() if field.number}
 
 
-def _settings(form: Any) -> dict[str, str | int | bool]:
+def _settings(form: FormData) -> dict[str, str | int | bool]:
     """The filled-in connection fields. Empty ones are left out."""
     found: dict[str, str | int | bool] = {}
     for key in SETTING_FIELDS:
@@ -45,7 +47,7 @@ def _settings(form: Any) -> dict[str, str | int | bool]:
     return found
 
 
-def _submitted(form: Any) -> dict[str, str | int | bool | None]:
+def _submitted(form: FormData) -> dict[str, str | int | bool | None]:
     """The settings the form sent, ``None`` for a field sent empty. A field
     the form did not send is left out and changes nothing. The domain
     compares them with the stored ones."""
@@ -56,16 +58,22 @@ def _submitted(form: Any) -> dict[str, str | int | bool | None]:
     return submitted
 
 
-def _typed_account(form: Any) -> dict[str, Any]:
-    """The fields of an account's editor as they were submitted, the
-    password left out."""
-    return {
-        "display_name": text_of(form, "display_name"),
-        "settings": {key: text_of(form, key) for key in SETTING_FIELDS},
-    }
+@dataclass(frozen=True, slots=True)
+class AccountForm:
+    """An account's editor as it was submitted, the password left out."""
+
+    display_name: str
+    settings: dict[str, str]
+
+    @classmethod
+    def of(cls, form: FormData) -> AccountForm:
+        return cls(
+            display_name=text_of(form, "display_name"),
+            settings={key: text_of(form, key) for key in SETTING_FIELDS},
+        )
 
 
-def _credentials(form: Any) -> dict[str, SecretStr]:
+def _credentials(form: FormData) -> dict[str, SecretStr]:
     """The secret typed into the password field: an API token where the
     form signs in with one (JMAP), else a password."""
     value = text_of(form, "password", strip=False)
@@ -246,7 +254,7 @@ def _account_page(
     account_id: str,
     accounts: AccountService,
     status: StatusService,
-    form: Any = None,
+    form: FormData | None = None,
     err: str | None = None,
 ) -> HTMLResponse:
     """An account's page. With ``form`` its editor shows what was typed,
@@ -258,7 +266,7 @@ def _account_page(
         page="accounts",
         status_code=REFUSED if err else 200,
         err=err,
-        typed=_typed_account(form) if form is not None else None,
+        typed=AccountForm.of(form) if form is not None else None,
         account=found,
         can_read=caller.allows("list_messages", account_id),
         can_audit=caller.allows("list_sends", account_id),
@@ -285,7 +293,7 @@ async def update_account(
     here = f"/ui/accounts/{account_id}"
     rename = None
     if "display_name" in form:
-        rename = Rename(_typed_account(form)["display_name"] or None)
+        rename = Rename(AccountForm.of(form).display_name or None)
     with failing(
         here,
         again=lambda err: _account_page(
