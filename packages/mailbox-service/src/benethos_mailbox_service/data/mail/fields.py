@@ -3,6 +3,7 @@ protocol produced them."""
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -13,16 +14,28 @@ OCTET_STREAM = "application/octet-stream"
 
 
 def message_id(value: object) -> str | None:
-    """A ``Message-ID`` as one token: a folded header keeps its line breaks,
-    the id itself has no spaces. None for an empty value."""
-    text = "".join(str(value or "").split())
-    return text or None
+    """A ``Message-ID`` as one token: the first ``<...>`` of the header,
+    without the spaces and line breaks a fold left in it. A header without
+    one is taken whole, without spaces. None for an empty value."""
+    return next(iter(message_ids(value)), None) or _joined(value)
 
 
 def message_ids(value: object) -> list[str]:
     """The ``Message-ID`` tokens of a header that lists them, such as
-    References, whether folded or not."""
-    return str(value or "").split()
+    References or In-Reply-To, whether folded or not: each ``<...>``,
+    leaving out comments and words between them. A header without one
+    is split at its spaces."""
+    text = str(value or "")
+    found = [_joined(token) for token in _BRACKETED.findall(text)]
+    return [token for token in found if token] or text.split()
+
+
+# A message id in angle brackets, which a fold may have broken.
+_BRACKETED = re.compile(r"<[^<>]*>")
+
+
+def _joined(value: object) -> str | None:
+    return "".join(str(value or "").split()) or None
 
 
 @dataclass(frozen=True, slots=True)

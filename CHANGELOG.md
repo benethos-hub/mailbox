@@ -157,6 +157,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A reply joins the thread of the mail it answers also where its
+  `In-Reply-To` holds a comment beside the id, or its `References`
+  are folded inside an id. The ids are read between their angle
+  brackets.
 - `GET /v1/accounts/{account_id}/threads` shows each thread once, page
   by page. In the folder `all` a thread came again on later pages, as
   in the UI's conversations of All Mail, and so did one whose messages
