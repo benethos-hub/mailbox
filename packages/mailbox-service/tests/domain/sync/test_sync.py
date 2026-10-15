@@ -162,6 +162,41 @@ async def test_a_message_without_message_id_cannot_be_followed(
         await imap_services.mailbox.get_message(ADMIN, imap_account_id, ids["No id"])
 
 
+async def test_a_stale_id_syncs_once_until_the_next_pass(
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An id the index still holds, which the server does not find: one
+    pass follows it, the next requests until the next pass do not."""
+    ids = await ids_by_subject(imap_services, imap_account_id)
+    del imap_server.folders["INBOX"].messages[1]
+    sync = imap_services.sync
+    passes: list[str] = []
+
+    async def stale_pass(account_id: str) -> None:
+        # A pass that leaves the id where it was, as one that cannot read
+        # the folder now.
+        passes.append(account_id)
+
+    monkeypatch.setattr(sync, "sync_account", stale_pass)
+    mailbox = imap_services.mailbox
+    for _ in range(3):
+        with pytest.raises(NotFoundError):
+            await mailbox.get_message(ADMIN, imap_account_id, ids["Mail 1"])
+        batch = MessageBatch(
+            ids=[ids["Mail 1"]], action="update", changes=MessageUpdate(unread=False)
+        )
+        await mailbox.batch_messages(ADMIN, imap_account_id, batch)
+    assert passes == [imap_account_id]
+    # After the next pass, it is followed once more.
+    monkeypatch.undo()
+    await sync.sync_account(imap_account_id)
+    with pytest.raises(NotFoundError):
+        await mailbox.get_message(ADMIN, imap_account_id, ids["Mail 1"])
+
+
 async def test_only_changed_folders_are_read(
     imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:

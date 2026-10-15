@@ -157,6 +157,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A message id that the index still holds but the server no longer
+  finds starts one sync pass of its account until the next pass, not
+  one per request.
 - An operation the server refuses with `501` although the account's
   abilities let it pass asks the server what it can do once a minute
   at most. A client that asked again and again made a round trip to

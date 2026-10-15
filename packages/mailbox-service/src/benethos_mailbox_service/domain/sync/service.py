@@ -23,7 +23,7 @@ already there are not new.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
@@ -38,8 +38,6 @@ from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import (
     ChangesExpiredError,
     MailboxServiceError,
-    MessageNotFoundError,
-    missing_message,
 )
 from ..accounts import Adapters, deltas
 from ..activity import SERVICE, ActivityLog
@@ -75,6 +73,8 @@ class SyncState:
     Kept in memory only."""
 
     last_sync_at: datetime | None = None
+    # Passes that succeeded.
+    passes: int = 0
     # The last pass that failed, and why. Cleared by one that succeeds.
     last_error: str | None = None
     last_error_at: datetime | None = None
@@ -167,27 +167,6 @@ class SyncService:
             self._report_merged(account_id, merged, set(ours))
         return [known[native].id for native in natives]
 
-    async def resolve(
-        self,
-        account_id: str,
-        message_id: str,
-        operation: Callable[[str], Awaitable[T]],
-    ) -> T:
-        """Run ``operation`` with the provider's id of a message. If the
-        provider no longer finds the message there, sync once and try its
-        new place. Anything else it does not find is not ours to follow."""
-        if not self.mapped(account_id):
-            return await operation(message_id)
-        native = self._native(account_id, message_id)
-        try:
-            return await operation(native)
-        except MessageNotFoundError:
-            await self.sync_account(account_id)
-            entry = self._index.get(account_id, message_id)
-            if entry is None or entry.native_id == native:
-                raise missing_message(message_id) from None
-            return await operation(entry.native_id)
-
     def relocate(
         self, account_id: str, message_id: str, native: str, folder_id: str
     ) -> None:
@@ -270,12 +249,6 @@ class SyncService:
             for i, entry in zip(message_ids, entries, strict=True)
         }
 
-    def _native(self, account_id: str, message_id: str) -> str:
-        entry = self._index.get(account_id, message_id)
-        if entry is None:
-            raise missing_message(message_id)
-        return entry.native_id
-
     # --- sync -------------------------------------------------------------------------
 
     async def sync_account(self, account_id: str) -> None:
@@ -298,7 +271,9 @@ class SyncService:
                     last_error_at=self._clock(),
                 )
                 raise
-            self._states[account_id] = SyncState(last_sync_at=self._clock())
+            self._states[account_id] = SyncState(
+                last_sync_at=self._clock(), passes=state.passes + 1
+            )
         self._activity.record(
             said.Synced(
                 by=SERVICE,
