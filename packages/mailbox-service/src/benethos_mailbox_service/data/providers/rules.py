@@ -11,6 +11,7 @@ whatever the provider.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TypeVar
@@ -40,6 +41,22 @@ def no_folder(role: FolderRole) -> NotSupportedError:
             "the account has no trash folder: a message can only be deleted for good"
         )
     return NotSupportedError(f"the account has no {role} folder")
+
+
+# A keyword IMAP and JMAP keep: an atom, without spaces, brackets, quotes
+# or wildcards (RFC 3501 flag-keyword, RFC 8621 4.1.1).
+_ATOM = re.compile(r"^[!#$&'+\-.0-9A-Z^_a-z|~]{1,100}$")
+
+
+def atoms_only(changes: MessageUpdate) -> None:
+    """Refuse a keyword that is no atom, such as an Outlook category with a
+    space, before anything changes."""
+    odd = [k for k in changes.new_keywords() if not _ATOM.match(k)]
+    if odd:
+        raise BadRequestError(
+            "this account keeps keywords without spaces, brackets or quotes: "
+            + ", ".join(odd)
+        )
 
 
 def resting(reason: str, wait: float) -> ProviderUnavailableError:

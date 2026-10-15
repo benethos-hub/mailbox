@@ -126,7 +126,7 @@ class MemoryProvider:
             fields["folder_ids"] = folders
         keywords = changes.keywords_after(message.keywords)
         if keywords is not None:
-            fields["keywords"] = sorted(keywords)
+            fields["keywords"] = sorted(keywords.values(), key=str.lower)
         updated = message.model_copy(update=fields)
         self.messages[self.messages.index(message)] = updated
         return MessageSummary.model_validate(updated.model_dump())

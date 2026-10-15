@@ -289,7 +289,7 @@ async def test_summary_fields(jmap: JmapProvider, server: FakeJmap) -> None:
     assert summary.sender.email == "alice@example.com"
     assert summary.to[0].email == "me@example.com"
     assert summary.unread is False and summary.starred is True
-    assert summary.keywords == ["$forwarded", "work"]
+    assert summary.keywords == ["$forwarded", "Work"]
     assert summary.folder_ids == ["inbox"] and summary.date == NOW
     assert summary.snippet and summary.thread_id
 

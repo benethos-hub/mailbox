@@ -24,6 +24,7 @@ from ...models import (
     MessageFilter,
     MessageSummary,
     MessageUpdate,
+    as_keyword,
 )
 from .. import rules
 from .shapes import Addresses, Email, Mailbox
@@ -121,10 +122,15 @@ def message(email: Email, raw: bytes) -> Message:
 
 
 def keywords(flags: Mapping[str, bool]) -> list[str]:
-    """The API's keywords of an email's JMAP keywords, sorted."""
-    return sorted(
-        k.lower() for k, on in flags.items() if on and k.lower() not in _NOT_KEYWORDS
-    )
+    """The API's keywords of an email's JMAP keywords, sorted without case:
+    the marks as RFC 8621 spells them, the others as the server does."""
+    found: dict[str, str] = {}
+    for flag, on in flags.items():
+        if not on or flag.lower() in _NOT_KEYWORDS:
+            continue
+        if (keyword := as_keyword(flag)) is not None:
+            found.setdefault(keyword.lower(), keyword)
+    return sorted(found.values(), key=str.lower)
 
 
 def keyword_patch(
@@ -137,13 +143,17 @@ def keyword_patch(
         patch[_path(SEEN)] = None if changes.unread else True
     if changes.starred is not None:
         patch[_path(FLAGGED)] = True if changes.starred else None
-    present = set(keywords(current))
-    wanted = changes.keywords_after(present)
+    # Each keyword the email has, by its lower case, as the server spells it.
+    present = {k.lower(): k for k, on in current.items() if on}
+    wanted = changes.keywords_after(keywords(current))
     if wanted is not None:
-        for keyword in wanted - present:
-            patch[_path(keyword)] = True
-        for keyword in present - wanted:
-            patch[_path(keyword)] = None
+        rules.atoms_only(changes)
+        for lower, keyword in wanted.items():
+            if lower not in present:
+                patch[_path(keyword)] = True
+        for keyword in keywords(current):
+            if keyword.lower() not in wanted:
+                patch[_path(present[keyword.lower()])] = None
     return patch
 
 

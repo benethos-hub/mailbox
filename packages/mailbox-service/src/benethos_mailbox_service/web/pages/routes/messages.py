@@ -41,7 +41,7 @@ async def set_flags(
     return back(request, here)
 
 
-KEYWORD_RULE = "A keyword is up to 100 letters, digits or !#&'+-.^_|~, without spaces."
+KEYWORD_RULE = "A keyword is up to 100 characters on one line, not starting with \\."
 
 
 @router.post("/accounts/{account_id}/mail/{message_id}/keywords")

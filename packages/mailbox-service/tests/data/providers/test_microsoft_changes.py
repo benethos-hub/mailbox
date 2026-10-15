@@ -56,7 +56,7 @@ async def test_categories_added_and_taken_off(graph: FakeGraph) -> None:
     assert not isinstance(changed, Exception)
     # Those it keeps as Outlook spells them, one it has not added twice.
     assert graph.messages[message_id]["categories"] == ["Work", "urgent"]
-    assert changed.keywords == ["work", "urgent"]
+    assert changed.keywords == ["Work", "urgent"]
 
 
 async def test_keywords_with_a_dollar_answer_501(graph: FakeGraph) -> None:
@@ -81,7 +81,7 @@ async def test_keywords_with_a_dollar_answer_501(graph: FakeGraph) -> None:
             MessageUpdate(keywords=["$draft", "Plan"], remove_keywords=None),
         )
     ).values()
-    assert not isinstance(kept, Exception) and kept.keywords == ["plan", "$draft"]
+    assert not isinstance(kept, Exception) and kept.keywords == ["Plan", "$draft"]
     [same] = (
         await provider.update_messages(
             [message_id], MessageUpdate(remove_keywords=["$answered"])

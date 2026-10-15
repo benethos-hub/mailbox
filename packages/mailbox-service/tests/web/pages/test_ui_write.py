@@ -72,7 +72,7 @@ def test_keywords_on_a_message(
     assert '<span class="tag">$answered</span>' not in listing
     for refused, reason in (
         ("$junk", "belong to the mail protocol"),
-        ("two words", "without spaces"),
+        ("\\Seen", "on one line"),
         ("", "Type a keyword."),
     ):
         answer = post(ui, f"{url}/keywords", {"add": refused})
