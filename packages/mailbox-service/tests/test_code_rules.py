@@ -191,19 +191,11 @@ def test_a_helper_of_common_exists_once() -> None:
     assert not violations, "a copy of a helper:\n  " + "\n  ".join(violations)
 
 
-# The templates that set up an account or change its connection: the one
-# place the UI knows the kinds of account (UNIFORM U2, U6).
-SETUP_TEMPLATES = {
-    "components/connection.html",
-    "pages/account.html",
-    "pages/account_new.html",
-}
-
-
 def test_templates_ask_operations_not_providers() -> None:
     """A template asks ``can``, what the page was handed: never a
-    capability, and it compares no kind of account, but where an account
-    is set up. Showing the kind is no question."""
+    capability, and it compares no kind of account. Setting up an account
+    draws its form from the kind's description (U6). Showing the kind is
+    no question."""
     from benethos_mailbox_service.data.models import ProviderType
 
     kinds = "|".join(re.escape(p.value) for p in ProviderType)
@@ -213,7 +205,6 @@ def test_templates_ask_operations_not_providers() -> None:
     violations = [
         f"{path.relative_to(templates).as_posix()}: {found.group(0)}"
         for path in sorted(templates.rglob("*.html"))
-        if path.relative_to(templates).as_posix() not in SETUP_TEMPLATES
         for found in named.finditer(path.read_text(encoding="utf-8"))
     ]
     assert not violations, "a template names a provider:\n  " + "\n  ".join(violations)

@@ -23,6 +23,7 @@ from .abilities import (
     writes,
 )
 from .adapters import Adapters
+from .connections import connection_of, connections
 from .device import DeviceSignIn
 from .oauth import OAuthService
 from .service import AccountService
@@ -47,4 +48,6 @@ __all__ = [
     "threads",
     "watches",
     "writes",
+    "connection_of",
+    "connections",
 ]

@@ -84,5 +84,6 @@ def test_a_provider_with_pop3_alone(browser: TestClient) -> None:
     page = post(browser, "/ui/accounts/discover", {"email": "me@example.org"}).text
     assert 'name="provider" value="pop3"' in page
     assert "POP3 server" in page and 'value="pop.example.org"' in page
-    # Setting up by hand offers both.
-    assert '<option value="pop3">' in page and '<option value="imap" selected>' in page
+    # Setting up by hand offers each kind, with what to know of it.
+    assert "Set up IMAP by hand" in page and "Set up POP3 by hand" in page
+    assert "the inbox only, no folders, no read state" in page

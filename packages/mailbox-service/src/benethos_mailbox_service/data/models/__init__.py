@@ -33,6 +33,7 @@ from .changes import (
     ChangePage,
     ChangeRecord,
 )
+from .connections import Connection, SettingField, Summary
 from .discovery import (
     Candidate,
     CredentialKind,
@@ -167,4 +168,7 @@ __all__ = [
     "WebhookPost",
     "WebhookSecret",
     "WebhookUpdate",
+    "Connection",
+    "SettingField",
+    "Summary",
 ]

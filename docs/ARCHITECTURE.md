@@ -333,7 +333,9 @@ packages/mailbox-service/
                         #   names, at the checked address),
                         #   post.py (posts to webhook receivers)
       providers/        # the adapters: base.py, rules.py, registry.py
-                        #   (build_provider, sign_in, probe_server)
+                        #   (build_provider, sign_in, probe_server),
+                        #   connections.py (how each kind of account is
+                        #   connected, as the UI draws its forms)
         guard.py        # pacing, retries, blocked logins, for any adapter
         settings.py     # an account's settings read once into named
                         #   values (Login, Host), server_of for

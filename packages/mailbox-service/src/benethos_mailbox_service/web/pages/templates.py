@@ -27,6 +27,7 @@ from ... import __version__
 from ...common.clock import utc_now
 from ...common.urls import path_and_query
 from ...data.models import Address
+from ...domain.accounts import connection_of
 from ...domain.rights import Access
 from ...domain.system import Attention
 from ...errors import MailboxServiceError
@@ -129,14 +130,10 @@ def replied(values: Iterable[str]) -> list[marks.Mark]:
     return [m for m in marks.marks_of(values) if m in (marks.ANSWERED, marks.FORWARDED)]
 
 
-# Who a person signs in at, by the kind of account.
-_SIGNS_IN_AT = {"gmail": "Google", "microsoft": "Microsoft"}
-
-
 def signs_in_at(provider: str) -> str:
-    """The company a person signs in at for an account of ``provider``:
-    Google for Gmail."""
-    return _SIGNS_IN_AT.get(provider, provider.capitalize())
+    """Where a person signs in for an account of ``provider``, as its kind
+    describes it: Google for Gmail."""
+    return connection_of(provider).signs_in_at or provider.capitalize()
 
 
 def segment(value: str) -> str:

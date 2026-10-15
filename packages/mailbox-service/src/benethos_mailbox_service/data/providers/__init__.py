@@ -41,6 +41,7 @@ from .base import (
     Watches,
     Writes,
 )
+from .connections import CONNECTIONS, connection_of
 from .guard import Pace
 from .registry import (
     ProviderFactory,
@@ -92,4 +93,6 @@ __all__ = [
     "settings_defaults",
     "settings_from_servers",
     "sign_in",
+    "CONNECTIONS",
+    "connection_of",
 ]

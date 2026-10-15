@@ -1,91 +1,22 @@
-{# The connection fields of an IMAP or POP3 account, with sending over
-   SMTP, or of a JMAP account, filled in from ``values``. ``protocol``:
-   "imap", "pop3" or "jmap", None where the form lets one choose between
-   IMAP and POP3. ``editing``: the account exists, an emptied field
-   removes that setting. #}
-{% macro connection_fields(values, security, editing=False, suffix="", protocol="imap") %}
+{# The settings of a connection as its kind describes them (UNIFORM U6),
+   filled in from ``values``. ``editing``: the account exists, an emptied
+   field removes that setting. ``suffix`` keeps ids apart. #}
+{% macro connection_fields(connection, values, editing=False, suffix="") %}
 {% set ids = "-" ~ suffix if suffix else "" %}
-{% if protocol == "jmap" %}{{ jmap_fields(values, editing, ids) }}{% else %}
-{% set ports = {"imap": "993 for tls, 143 for starttls", "pop3": "995 for tls, 110 for starttls"} %}
-{% set protocol = protocol if not protocol or protocol in ports else "imap" %}
-{% set incoming = protocol | upper if protocol else "Incoming" %}
 <div class="form-grid">
+  {% for field in connection.fields %}
   <div class="field">
-    <label for="f-host{{ ids }}">{{ incoming }} server</label>
-    <input id="f-host{{ ids }}" name="host" value="{{ values.get('host', '') }}"{% if not editing %} required{% endif %} />
-  </div>
-  <div class="field">
-    <label for="f-port{{ ids }}">{{ incoming }} port</label>
-    <input id="f-port{{ ids }}" name="port" inputmode="numeric" value="{{ values.get('port', '') }}" />
-    <span class="hint">Empty: {% if protocol %}{{ ports[protocol] }}{% else %}993 or 143 for IMAP, 995 or 110 for POP3, for tls or starttls{% endif %}.</span>
-  </div>
-  <div class="field">
-    <label for="f-security{{ ids }}">{{ incoming }} security</label>
-    <select id="f-security{{ ids }}" name="security">
-      {% for option in security %}<option value="{{ option }}"{% if values.get('security', 'tls') == option %} selected{% endif %}>{{ option }}</option>{% endfor %}
+    <label for="f-{{ field.name }}{{ ids }}">{{ field.label }}</label>
+    {% if field.choices %}
+    <select id="f-{{ field.name }}{{ ids }}" name="{{ field.name }}">
+      {% for value, words in field.choices %}<option value="{{ value }}"{% if (values.get(field.name) or field.default) == value %} selected{% endif %}>{{ words }}</option>{% endfor %}
     </select>
+    {% else %}
+    <input id="f-{{ field.name }}{{ ids }}" name="{{ field.name }}" value="{{ values.get(field.name, '') }}"{% if field.number %} inputmode="numeric"{% endif %}{% if field.login %} autocomplete="off"{% endif %}{% if field.required and not editing %} required{% endif %} />
+    {% endif %}
+    {% if field.hint %}<span class="hint">{{ field.hint }}</span>{% endif %}
   </div>
-  <div class="field">
-    <label for="f-username{{ ids }}">Login name</label>
-    <input id="f-username{{ ids }}" name="username" value="{{ values.get('username', '') }}" autocomplete="off" />
-    <span class="hint">Empty: the address.</span>
-  </div>
-  <div class="field">
-    <label for="f-smtp_host{{ ids }}">SMTP server</label>
-    <input id="f-smtp_host{{ ids }}" name="smtp_host" value="{{ values.get('smtp_host', '') }}" />
-    <span class="hint">For sending. Empty: this account only reads.</span>
-  </div>
-  <div class="field">
-    <label for="f-smtp_port{{ ids }}">SMTP port</label>
-    <input id="f-smtp_port{{ ids }}" name="smtp_port" inputmode="numeric" value="{{ values.get('smtp_port', '') }}" />
-    <span class="hint">Empty: 465 for tls, 587 for starttls.</span>
-  </div>
-  <div class="field">
-    <label for="f-smtp_security{{ ids }}">SMTP security</label>
-    <select id="f-smtp_security{{ ids }}" name="smtp_security">
-      <option value="">default (tls)</option>
-      {% for option in security %}<option value="{{ option }}"{% if values.get('smtp_security') == option %} selected{% endif %}>{{ option }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="field">
-    <label for="f-smtp_username{{ ids }}">SMTP login name</label>
-    <input id="f-smtp_username{{ ids }}" name="smtp_username" value="{{ values.get('smtp_username', '') }}" autocomplete="off" />
-    <span class="hint">Empty: the login name above.</span>
-  </div>
-</div>
-{% if editing %}<p class="hint faint">Only what you change is sent. A change of server logs in again first.</p>{% endif %}
-{% endif %}
-{% endmacro %}
-
-{# A JMAP server: where its session is, and how the account signs in. #}
-{% macro jmap_fields(values, editing, ids) %}
-<div class="form-grid">
-  <div class="field">
-    <label for="f-host{{ ids }}">JMAP server</label>
-    <input id="f-host{{ ids }}" name="host" value="{{ values.get('host', '') }}"{% if not editing %} required{% endif %} />
-  </div>
-  <div class="field">
-    <label for="f-port{{ ids }}">Port</label>
-    <input id="f-port{{ ids }}" name="port" inputmode="numeric" value="{{ values.get('port', '') }}" />
-    <span class="hint">Empty: 443. Always HTTPS.</span>
-  </div>
-  <div class="field">
-    <label for="f-path{{ ids }}">Session path</label>
-    <input id="f-path{{ ids }}" name="path" value="{{ values.get('path', '') }}" autocomplete="off" />
-    <span class="hint">Empty: /.well-known/jmap.</span>
-  </div>
-  <div class="field">
-    <label for="f-auth{{ ids }}">Sign in with</label>
-    <select id="f-auth{{ ids }}" name="auth">
-      <option value="password"{% if values.get('auth', 'password') != 'token' %} selected{% endif %}>a password</option>
-      <option value="token"{% if values.get('auth') == 'token' %} selected{% endif %}>an API token</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="f-username{{ ids }}">Login name</label>
-    <input id="f-username{{ ids }}" name="username" value="{{ values.get('username', '') }}" autocomplete="off" />
-    <span class="hint">With a password. Empty: the address.</span>
-  </div>
+  {% endfor %}
 </div>
 {% if editing %}<p class="hint faint">Only what you change is sent. A change of server logs in again first.</p>{% endif %}
 {% endmacro %}
