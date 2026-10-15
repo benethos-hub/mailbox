@@ -19,7 +19,8 @@ Towards the callers of the service:
 | Requests with a credential | per API token, per UI session | 120 a minute, 60 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` |
 | Requests without a credential | per client address | 30 a minute, 15 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` |
 | Request body | per request | 40 MiB | `413 payload_too_large` | fixed |
-| Failed sign-ins per address | wrong API tokens, wrong UI passwords, wrong codes of a second factor, and the password or code asked again before a step such as the recovery key, alike | 10 in 15 minutes lock the address for 15 minutes | `429 rate_limited` for a wrong credential, the UI names the minutes. A valid token passes. | `MAILBOX_SERVICE_SIGN_IN_FAILURES`, `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` |
+| Failed sign-ins per address | wrong API tokens, wrong UI passwords, wrong codes of a second factor, the password or code asked again before a step such as the recovery key, and links to attachments that do not hold, alike | 10 in 15 minutes lock the address for 15 minutes | `429 rate_limited` for a wrong credential, the UI names the minutes. A valid token passes. A link answers `404`, a valid one too | `MAILBOX_SERVICE_SIGN_IN_FAILURES`, `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` |
+| A link to an attachment | per link | once, for 120 seconds | `404`, the same for every refusal | `MAILBOX_SERVICE_LINK_SECONDS`, fewer with `expires_in` |
 | Failed sign-ins per name | UI password, the code of a second factor, the password or code asked again before a step such as the recovery key | 10 in 15 minutes, from any address, make the name wait 1 minute | `429 rate_limited` | the same failures, `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` |
 | Password hashes | at once, for the whole service | 2 | the next one waits | `MAILBOX_SERVICE_PASSWORD_HASHES_AT_ONCE` |
 | UI session | per session | ends after 8 hours without a request, and after 24 hours however used | sign in again | `MAILBOX_SERVICE_SESSION_IDLE_HOURS`, `MAILBOX_SERVICE_SESSION_MAX_HOURS` |
@@ -58,6 +59,8 @@ The limits apply in this order. The first that refuses answers.
    `/v1` that no valid token counted in step 3, a wrong one or a path
    that does not exist, counts against its address when it is answered,
    and is answered `429` when none is left. `/health` is never counted.
+   A request to a link, `/v1/links/...`, counts against its address at
+   once, whatever it carries, and is answered `404` when none is left.
 2. **While the body is read.** A body above 40 MiB is refused as soon as
    it grows past the limit.
 3. **The credential.**
@@ -68,6 +71,9 @@ The limits apply in this order. The first that refuses answers.
      address is locked out. Another scheme than `Bearer`, or a bearer
      without a token, is a wrong token. A valid one passes, locked out or not, and
      counts against the token.
+   - A link to an attachment: an address locked out gets `404`, for a
+     valid link too. A link that does not hold counts a failure for the
+     address and answers the same `404`.
    - UI with a session: the request counts against the session.
    - The UI's sign-in form: the address's lockout and the name's wait
      first, then the password is hashed, two at a time.
@@ -97,6 +103,11 @@ valid token could reveal, and a client with a stale token behind an
 address it shares with others must not stop them. A session of the UI
 is not checked against the lockout either. Only a successful sign-in in
 the UI clears the failures of its address.
+
+**A link.** Its secret has 128 characters, so it cannot be guessed
+either. A link that does not hold counts as a wrong token, and every
+refusal is the same `404`: a locked-out address learns nothing, not even
+that it is locked out.
 
 **Guessing a password.** A sign-in in the UI takes two requests without
 a credential: the page and the form. With 30 a minute per address that

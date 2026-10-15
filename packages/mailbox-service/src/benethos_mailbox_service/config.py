@@ -105,6 +105,9 @@ class Settings(files.FileSettings):
     # The audits of sends and of administration: days a record is kept.
     # 0 keeps every record.
     audit_days: int = Field(default=90, ge=0)
+    # Seconds a link to an attachment holds, at most: share_attachment may
+    # ask for fewer.
+    link_seconds: int = Field(default=120, ge=1)
     # Requests a minute per API token or UI session, and per client address
     # for requests without a credential. A burst of half as many passes at
     # once. 0 switches the limit off.

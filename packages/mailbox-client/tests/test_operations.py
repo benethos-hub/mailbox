@@ -1,7 +1,8 @@
 """The client covers the whole REST API: every operation of
 docs/openapi.json is a method of both clients, named like its
-``operationId``. No operation is left out, and none is listed as an
-exception. A route added to the service without its method fails here.
+``operationId``. No operation is left out, but those a link opens: their
+URL is the credential, which another service holds, never a client with
+a token. A route added to the service without its method fails here.
 Both clients send the same endpoint, every endpoint is a method, and
 every record is exported by the package."""
 
@@ -26,7 +27,7 @@ def _operations() -> list[str]:
         operation["operationId"]
         for item in paths.values()
         for method, operation in item.items()
-        if method in METHODS
+        if method in METHODS and operation.get("x-permission") != "link"
     )
 
 

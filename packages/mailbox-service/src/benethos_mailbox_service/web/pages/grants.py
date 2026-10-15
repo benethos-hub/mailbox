@@ -47,6 +47,7 @@ MCP_TOOLS: dict[str, tuple[str, ...]] = {
     "mail.write": ("update_messages", "create_folder", "update_folder"),
     "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
     "send": ("send_message", "send_draft"),
+    "mail.share": ("share_attachment",),
 }
 
 # The rows of the rights in the editor: a caption and its groups.

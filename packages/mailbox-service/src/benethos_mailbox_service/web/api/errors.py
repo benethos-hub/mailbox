@@ -65,6 +65,18 @@ CHANGES_ERRORS: dict[int | str, dict[str, Any]] = {
     }
 }
 
+# A link answers everything that does not hand out its attachment with
+# one 404, the limit on requests and a locked-out address included.
+LINK_ERRORS: dict[int | str, dict[str, Any]] = {
+    404: {
+        "model": ErrorResponse,
+        "description": (
+            "No attachment for this link: unknown, used, ended, or no longer "
+            "allowed. One answer for every case"
+        ),
+    }
+}
+
 # A grant may narrow sending (CONCEPT 7.5).
 SEND_ERRORS: dict[int | str, dict[str, Any]] = {
     403: {

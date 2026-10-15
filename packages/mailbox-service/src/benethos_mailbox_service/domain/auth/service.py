@@ -16,6 +16,7 @@ from ...data.storage import RoleRepository, TokenRepository, UserRepository
 from ...errors import (
     BadRequestError,
     NotFoundError,
+    RateLimitedError,
     SetupRequiredError,
     UnauthorizedError,
 )
@@ -268,6 +269,30 @@ class AuthService:
                 self._check_source(source)
                 self._failed_source(source)
             raise
+
+    def token_access(self, token_id: str, source: str) -> Access | None:
+        """What the user of a token may do now, for a request that brings
+        what the token made, such as a link, instead of the token. None
+        when the token is unknown, revoked or expired, or its user is gone
+        or disabled. ``source`` is the client address of the request."""
+        found = self._api_tokens.holder(token_id)
+        if found is None:
+            return None
+        return self._access(found.user, found.token, source)
+
+    def is_locked_out(self, source: str) -> bool:
+        """Whether ``source`` failed too often to sign in, for a check that
+        refuses it without telling why."""
+        try:
+            self._check_source(source)
+        except RateLimitedError:
+            return True
+        return False
+
+    def failed_from(self, source: str) -> None:
+        """A failure of ``source`` beside a sign-in, such as a link that
+        does not hold. It counts as a wrong token does."""
+        self._failed_source(source)
 
     def access_of(self, user_id: str) -> Access | None:
         """What a user may do now, for work done on its behalf outside a

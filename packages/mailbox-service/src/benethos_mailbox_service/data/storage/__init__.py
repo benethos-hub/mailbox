@@ -30,6 +30,7 @@ from .index import (
     MessageIndexRepository,
     ThreadChain,
 )
+from .links import InMemoryLinkRepository, LinkRepository, StoredLink
 from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .repositories import Repositories, Store, open_repositories
@@ -41,6 +42,7 @@ from .sqlite import (
     SqliteAuditRepository,
     SqliteChangeLogRepository,
     SqliteIdempotencyRepository,
+    SqliteLinkRepository,
     SqliteMessageIndexRepository,
     SqlitePasswordRepository,
     SqliteRecoveryCodeRepository,
@@ -89,6 +91,7 @@ __all__ = [
     "InMemoryCredentialRepository",
     "InMemoryIdempotencyRepository",
     "InMemoryKeyRepository",
+    "InMemoryLinkRepository",
     "InMemoryMessageIndexRepository",
     "InMemoryPasswordRepository",
     "InMemoryRoleRepository",
@@ -101,6 +104,7 @@ __all__ = [
     "IndexChanges",
     "IndexEntry",
     "KeyRepository",
+    "LinkRepository",
     "LoggedChange",
     "MessageIndexRepository",
     "ThreadChain",
@@ -114,6 +118,7 @@ __all__ = [
     "SqliteAccountRepository",
     "SqliteChangeLogRepository",
     "SqliteIdempotencyRepository",
+    "SqliteLinkRepository",
     "SqliteMessageIndexRepository",
     "SqlitePasswordRepository",
     "SqliteRoleRepository",
@@ -126,6 +131,7 @@ __all__ = [
     "Store",
     "StoredTotpDevice",
     "StoredPassword",
+    "StoredLink",
     "StoredResult",
     "TokenRepository",
     "TotpRepository",

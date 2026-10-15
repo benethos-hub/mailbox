@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 
 from ....data.models import (
     BatchResult,
@@ -22,7 +22,9 @@ from ....data.models import (
     ThreadSummary,
 )
 from ...responses import download
-from ..deps import Caller, Limit, Mailbox, Search
+from ...urls import link_url
+from ..deps import Caller, Limit, Links, Mailbox, Search
+from ..schemas import AttachmentLink, LinkRequest
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
 after_drafts = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
@@ -169,4 +171,38 @@ async def get_attachment(
     )
     return download(
         attachment.data, attachment.filename or attachment_id, attachment.content_type
+    )
+
+
+@after_drafts.post(
+    "/messages/{message_id}/attachments/{attachment_id}/links", status_code=201
+)
+async def share_attachment(
+    account_id: str,
+    message_id: str,
+    attachment_id: str,
+    request: Request,
+    caller: Caller,
+    links: Links,
+    options: LinkRequest | None = None,
+) -> AttachmentLink:
+    """A link to the attachment, for another service that fetches the file
+    itself: once, with GET and no token, until `expires_at`. Needs
+    `get_attachment` and `share_attachment`, and an API token. The link
+    belongs to the token: when it is used, the token and its user must
+    still act and hold both rights on the message. Whoever holds the URL
+    fetches the file, so it goes to that service alone."""
+    shared = await links.share(
+        caller,
+        account_id,
+        message_id,
+        attachment_id,
+        options.expires_in if options is not None else None,
+    )
+    return AttachmentLink(
+        url=link_url(request, shared.secret),
+        expires_at=shared.expires_at,
+        content_type=shared.content_type,
+        size=shared.size,
+        filename=shared.filename,
     )

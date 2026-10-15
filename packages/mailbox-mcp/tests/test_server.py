@@ -329,6 +329,7 @@ HINTS = {
     "get_thread": ("Read a conversation", True, None, None, True),
     "whats_new": ("What is new", True, None, None, True),
     "get_attachment": ("Get an attachment", True, None, None, True),
+    "share_attachment": ("Share an attachment", True, None, None, True),
     "update_messages": ("Change messages", False, True, True, True),
     "create_folder": ("Create a folder", False, False, False, True),
     "update_folder": ("Rename or move a folder", False, True, True, True),

@@ -14,6 +14,7 @@ from typing import Any
 
 from ...common.clock import utc_now
 from ...data.models import (
+    Attachment,
     AttachmentContent,
     BatchItemResult,
     BatchResult,
@@ -34,7 +35,7 @@ from ...data.models import (
     Thread,
     ThreadSummary,
 )
-from ...errors import BadRequestError, MailboxServiceError, missing_message
+from ...errors import BadRequestError, MailboxServiceError, missing, missing_message
 from ..accounts import Adapters, for_delete, for_list, for_update
 from ..activity import ActivityLog
 from ..rights import Access
@@ -50,6 +51,8 @@ from .threads import THREAD_MESSAGES, Threads
 
 # The keyword of a draft, \Draft on IMAP.
 DRAFT_KEYWORD = "$draft"
+# What a link to an attachment needs, when it is made and when it is used.
+SHARING = ("get_attachment", "share_attachment")
 
 
 class MailboxService:
@@ -312,6 +315,43 @@ class MailboxService:
     ) -> AttachmentContent:
         access.require("get_attachment", account_id)
         await self._require_reached(access, "get_attachment", account_id, message_id)
+        return await self._calls.attachment(account_id, message_id, attachment_id)
+
+    # --- links to attachments ---------------------------------------------------------
+
+    async def attachment_to_share(
+        self, access: Access, account_id: str, message_id: str, attachment_id: str
+    ) -> Attachment:
+        """What a link to the attachment hands out: its type, size and
+        name, the bytes left unread. Needs ``get_attachment`` and
+        ``share_attachment`` on the message."""
+        for operation in SHARING:
+            access.require(operation, account_id)
+        message = await self._calls.message(account_id, message_id)
+        for operation in SHARING:
+            reach = await self._reach(access, operation, account_id)
+            if reach is not None and not reach.sees(message.folder_ids):
+                raise missing_message(message_id)
+        found = next((a for a in message.attachments if a.id == attachment_id), None)
+        if found is None:
+            raise missing("attachment", attachment_id)
+        return found
+
+    async def linked_attachment(
+        self,
+        access: Access,
+        account_id: str,
+        message_id: str,
+        attachment_id: str,
+        claim: Callable[[], None],
+    ) -> AttachmentContent:
+        """The attachment a link hands out, with the rights of the token
+        that made it, as they are now. ``claim`` runs once they pass,
+        before the bytes are read: it marks the link used, or raises."""
+        for operation in SHARING:
+            access.require(operation, account_id)
+            await self._require_reached(access, operation, account_id, message_id)
+        claim()
         return await self._calls.attachment(account_id, message_id, attachment_id)
 
     # --- across accounts ---------------------------------------------------------

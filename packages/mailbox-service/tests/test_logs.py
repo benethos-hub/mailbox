@@ -177,3 +177,25 @@ def test_an_access_line_leaves_out_the_query(
     assert "/v1/messages" in err and "holiday" not in err and "anna" not in err
     [entry] = book.newest_first()
     assert "/v1/messages" in entry.message and "holiday" not in entry.message
+
+
+@pytest.mark.parametrize("colours", [False, True])
+def test_an_access_line_masks_the_secret_of_a_link(
+    capsys: pytest.CaptureFixture[str], colours: bool
+) -> None:
+    """Whoever holds the path of a link fetches the attachment."""
+    secret = "s3cr3t" * 21
+    book = LogBook()
+    logging.config.dictConfig(logs.log_config("info", book, colours=colours))
+    logging.getLogger("uvicorn.access").info(
+        '%s - "%s %s HTTP/%s" %d',
+        "127.0.0.1:5000",
+        "GET",
+        f"/v1/links/{secret}?x=1",
+        "1.1",
+        200,
+    )
+    err = capsys.readouterr().err
+    assert "/v1/links/…" in err and secret not in err
+    [entry] = book.newest_first()
+    assert secret not in entry.message

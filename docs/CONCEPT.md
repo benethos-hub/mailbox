@@ -885,6 +885,8 @@ Rules of the implementation (phase 2):
 | DELETE | `{acc}/messages/{id}` | to trash, `?permanent=true` expunges |
 | GET | `{acc}/messages/{id}/raw` | RFC 822 source (`message/rfc822`) |
 | GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, with its type and file name |
+| POST | `{acc}/messages/{id}/attachments/{att_id}/links` | a link to the attachment for another service (`share_attachment`): its URL, when it ends, the type, size and file name |
+| GET | `/v1/links/{secret}` | the attachment a link hands out, once, without a token (`get_linked_attachment`) |
 | POST | `{acc}/messages/batch` | bulk `update` / `delete` for up to 100 ids, per-id result. A move is an `update` of `folder_ids` |
 | GET | `{acc}/threads` | the threads of a folder (`folder`, required), each where its newest message in the folder is |
 | GET | `{acc}/threads/{thread_id}` | a thread with its message summaries in every folder, oldest first |
@@ -939,6 +941,41 @@ answers `501`. A thread lists at most 500 messages, and of the
 server gets `get_thread` alone, which takes a message id or a thread id.
 The UI gets a card with the conversation on the message page and a list
 of the messages by threads.
+
+**Decided 2026-10-15, links to attachments:** another service takes over
+an attachment without the file passing through the model and without a
+token of this service. The MCP server asks for a link, the model carries
+only its URL across, and the other service fetches the bytes from this
+service directly. In the order of golden rule 6: the service, the
+client, the MCP server.
+
+- The link is stored, not signed: a random secret of 128 characters,
+  kept in the database as its digest only, as an API token is. No new
+  key material.
+- It holds once. A fetch that breaks off is not tried again: the model
+  shares anew.
+- It belongs to the API token that made it. When it is used, that
+  token's rights are resolved anew, as if the token asked: the token
+  valid and not revoked, its user enabled, a grant that still allows
+  `get_attachment` and `share_attachment` on the account and the
+  message. The request itself carries no `Authorization`: the secret is
+  the credential.
+- It holds `MAILBOX_SERVICE_LINK_SECONDS`, 120 by default, any value
+  from 1 second on, without a ceiling. `share_attachment` may ask for
+  fewer with `expires_in`, never for more: more answers `400`.
+- Every refusal of `GET /v1/links/{secret}` is the same `404`, for an
+  address locked out after failed sign-ins too, so the slowing down
+  stays silent. A failure counts as a wrong token in the lockout per
+  address.
+- `share_attachment` is the group `mail.share` of its own, in no role
+  template ([PERMISSIONS.md](PERMISSIONS.md) 8.7): a grant names it on
+  purpose.
+- The service logs the path of the route masked.
+
+Two fetches at once have one winner: the link is marked used in the
+transaction of its audit record, before its bytes are read. The limit
+on requests answers there with the same `404` as well. The answer
+carries `Cache-Control: no-store`.
 
 ### 6.4 Sending and drafts
 
@@ -1495,6 +1532,7 @@ with the role
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
+  | `mail.share` | `share_attachment`: a link to an attachment for another service (6.3), in no role template |
   | `audit` | `list_sends`, `list_all_sends` on accounts, `list_activity` in `service` |
   | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, credentials of mail accounts |
   | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account`. Of the service |
@@ -1835,6 +1873,7 @@ one or two `operationId`s.
 | `get_message` | read | `get_message`, body shortened, `max_chars` param |
 | `get_thread` | read | `get_thread`, then `get_message` for the newest 20 mails: a conversation as text, from a mail of it or its thread id (6.3) |
 | `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
+| `share_attachment` | share | `share_attachment`: a link to an attachment for another service, which fetches the file itself (6.3) |
 | `whats_new` | read | `list_all_changes` across accounts, or `list_changes` for one, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash, add and take off keywords and labels |
 | `create_folder` | write | `create_folder` |

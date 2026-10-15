@@ -65,6 +65,10 @@
       "description": "Read an attachment."
     },
     {
+      "name": "share_attachment",
+      "description": "Share an attachment with another service that fetches the file itself, so it does not pass through you: a URL that service can fetch once, without a token, until it ends."
+    },
+    {
       "name": "update_messages",
       "description": "Change mail of one account: mark read or unread, star, move, archive, label, add and remove keywords, or put into the trash."
     },

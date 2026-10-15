@@ -1,4 +1,5 @@
-"""Addresses: this service's as the outside sees it, and the caller's."""
+"""Addresses: this service's as the outside sees it, and the caller's,
+and the path of a request as the log names it."""
 
 from __future__ import annotations
 
@@ -8,6 +9,10 @@ from fastapi import Request
 
 from ..data.models import ProviderType
 from .state import app_settings
+
+# Where a link to an attachment is used: ``api.PREFIX`` and the router of
+# ``api/routes/links.py``, which a test holds to this.
+LINKS = "/v1/links/"
 
 
 def public_base(request: Request) -> str:
@@ -26,6 +31,19 @@ def client_address(request: Request) -> str:
     that is the proxy, unless ``MAILBOX_SERVICE_FORWARDED_ALLOW_IPS`` names
     it and it sends ``X-Forwarded-For``."""
     return request.client.host if request.client else "unknown"
+
+
+def link_url(request: Request, secret: str) -> str:
+    """The URL of a link to an attachment, at ``public_base``."""
+    return f"{public_base(request)}{LINKS}{secret}"
+
+
+def logged_path(path: str) -> str:
+    """A path as a line of the log names it: a link's secret masked, since
+    whoever holds it fetches the attachment."""
+    if path.startswith(LINKS) and len(path) > len(LINKS):
+        return f"{LINKS}…"
+    return path
 
 
 def oauth_callback(request: Request, provider: ProviderType) -> str:

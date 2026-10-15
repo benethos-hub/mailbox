@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.web import limits
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 from benethos_mailbox_service.web.limits import Buckets, RequestLimits
@@ -241,7 +242,9 @@ def test_every_operation_of_the_api_checks_the_credential() -> None:
         for path, operations in schema["paths"].items()
         if path.startswith(API_PREFIX)
         for method, operation in operations.items()
-        if method in METHODS and {"bearerAuth": []} not in operation.get("security", [])
+        if method in METHODS
+        and operation["x-permission"] != permissions.LINK
+        and {"bearerAuth": []} not in operation.get("security", [])
     ]
     assert unchecked == []
 

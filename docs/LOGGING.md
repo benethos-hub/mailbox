@@ -95,7 +95,10 @@ searches text and a person reads it.
 
 1. **Secrets**: passwords, one-time passwords, tokens, the recovery key,
    the master key, webhook secrets, OAuth tokens, codes and `state`,
-   session ids, CSRF tokens. A token is named by its name and id.
+   session ids, CSRF tokens, the secret of a link to an attachment. A
+   token is named by its name and id, a link by its id. The access log
+   of uvicorn and the lines of 5.9 name the path of a link masked,
+   `/v1/links/…`.
 2. **Mail content**: subject, body, attachment names, headers. A message
    is its `msg_` id. A draft the same.
 3. **Recipients and senders of mail**: addresses of people. A send is
@@ -210,7 +213,7 @@ each account and compares.
 | DEBUG | IDLE on A renewed | account | |
 | INFO | the change log was purged of N entries older than D | counts | once per purge. `INFO`, not `WARNING`: a purge is the normal course, at start and at most once an hour |
 
-### 5.6 Sending, drafts, idempotency
+### 5.6 Sending, drafts, idempotency, links
 
 | Level | Line | Fields | Note |
 |---|---|---|---|
@@ -222,6 +225,10 @@ each account and compares.
 | DEBUG | an Idempotency-Key was replayed | account id, operation | |
 | ERROR | did the operation on A, but could not keep its result for the Idempotency-Key | account id, operation, traceback | a retry with the same key would do it again |
 | INFO | purged N records older than D from the audit of sends | count, before | at start and once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` |
+| INFO | X shared attachment T of M in A as link L for N s | actor, the ids of the attachment, the message, the account and the link, seconds | never the secret, never the URL |
+| INFO | X had attachment T of M in A fetched through link L | the user of the token that made the link, its token, the address that fetched it, the ids | |
+| WARNING | someone was refused link L: reason | source, link id, reason: used, ended, its token or the token's user can no longer act, or what the service answered | a secret that is no link's writes no line, as a wrong token does not |
+| INFO | purged N links to attachments, used or ended by D | count, time | at start and once an hour at most, as links are made |
 
 Drafts are mail content and change nothing others see: not logged.
 
@@ -267,8 +274,8 @@ limits themselves, and how they work together, are in
 | INFO | the lockout of S ended | source | at the next attempt after it ran out: any sign-in in the UI, a wrong token on the API |
 | WARNING | X reached the discovery limit of N in a minute | user, limit | `DiscoveryService`, 10 per user by default |
 | WARNING | X reached the send limit on A: reason, the next in N seconds | actor, account id, reason, `retry_after` | in the audit of sends as `denied` |
-| WARNING | a request from S to P larger than N MB: refused | source, path, limit | `web/limits.py`, 413 |
-| WARNING | X sent too many requests, the last to P: limited to N a minute, refused for M seconds | token, session or source, path, rate, seconds | `web/limits.py`, 429 |
+| WARNING | a request from S to P larger than N MB: refused | source, path, a link's masked, limit | `web/limits.py`, 413 |
+| WARNING | X sent too many requests, the last to P: limited to N a minute, refused for M seconds | token, session or source, path, a link's masked, rate, seconds | `web/limits.py`, 429, a link `404` |
 | DEBUG | paced requests to H: waited N ms | host, wait | no activity: a technical line of the token bucket in front of a provider, which knows the server but not the account |
 | DEBUG | microsoft asked to wait N seconds (Retry-After), gmail asked to wait N seconds, gmail answered STATUS on attempt N | seconds, the status and the attempt | no activity: a technical line of the Microsoft or the Gmail adapter |
 | WARNING | account A could not be reached: the provider's reason | account, reason | the status line of 5.4, no activity of its own: a pause or a refusal for rate reaches the domain as an error, and the account's status changes once |
@@ -554,6 +561,10 @@ and that each is listed here.
 | `mailbox.replayed` | a result given again for an Idempotency-Key |
 | `mailbox.sends_purged` | old records purged from the audit of sends |
 | `mailbox.result_not_kept` | a result not kept for its Idempotency-Key |
+| `mailbox.link_shared` | a link to an attachment made |
+| `mailbox.link_used` | a link to an attachment used |
+| `mailbox.link_refused` | a link to an attachment refused |
+| `mailbox.links_purged` | links to attachments used or ended, purged |
 | `sync.worker_started` | the worker started |
 | `sync.synced` | a pass over an account, with counts |
 | `sync.failed` | a pass that failed |

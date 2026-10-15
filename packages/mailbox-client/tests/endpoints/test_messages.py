@@ -13,6 +13,7 @@ from benethos_mailbox_client import (
     Address,
     ApiError,
     AttachedFile,
+    AttachmentLink,
     Change,
     Changes,
     Failed,
@@ -21,6 +22,7 @@ from benethos_mailbox_client import (
     Outcome,
     Page,
     Reference,
+    Secret,
 )
 
 from ..fake_api import MESSAGE, PAGE, SUMMARY, FakeApi
@@ -191,6 +193,48 @@ async def test_get_message_raw_reads_an_error_as_one(make_client: Callable) -> N
     with pytest.raises(ApiError) as raised:
         await make_client(api).get_message_raw("acc_1", "msg_9")
     assert raised.value.code == "not_found"
+
+
+LINK = {
+    "url": "https://mail.test/v1/links/" + "s" * 128,
+    "expires_at": "2026-10-01T08:02:00Z",
+    "content_type": "application/pdf",
+    "size": 12,
+    "filename": "a.pdf",
+}
+LINKS = "/v1/accounts/acc_1/messages/msg_1/attachments/att_0/links"
+
+
+async def test_share_attachment_answers_the_link(make_client: Callable) -> None:
+    api = FakeApi(LINK, 201)
+    found = await make_client(api).share_attachment("acc_1", "msg_1", "att_0")
+    assert api.call() == ("POST", LINKS, {}, {})
+    assert found == AttachmentLink(
+        url=Secret(LINK["url"]),
+        expires_at=datetime(2026, 10, 1, 8, 2, tzinfo=UTC),
+        content_type="application/pdf",
+        size=12,
+        filename="a.pdf",
+    )
+    assert "s" * 128 not in repr(found)
+
+
+async def test_share_attachment_asks_for_fewer_seconds(make_client: Callable) -> None:
+    api = FakeApi({**LINK, "filename": None}, 201)
+    found = await make_client(api).share_attachment(
+        "acc_1", "msg_1", "att_0", expires_in=30
+    )
+    assert api.call() == ("POST", LINKS, {}, {"expires_in": 30})
+    assert found.filename is None
+
+
+async def test_share_attachment_reads_a_refusal(make_client: Callable) -> None:
+    api = FakeApi(
+        {"error": {"code": "forbidden", "message": "needs share_attachment"}}, 403
+    )
+    with pytest.raises(ApiError) as raised:
+        await make_client(api).share_attachment("acc_1", "msg_1", "att_0")
+    assert raised.value.code == "forbidden"
 
 
 async def test_list_all_messages_names_the_accounts(make_client: Callable) -> None:

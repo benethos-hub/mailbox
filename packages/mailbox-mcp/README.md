@@ -139,7 +139,8 @@ The second answer holds the token. It is shown this once. The account
 ids come from `GET /v1/accounts`.
 
 Rights that matter here: `mail.read` to read and to ask what is new,
-`mail.write` to sort and file, `drafts` to write drafts, `send` to send.
+`mail.write` to sort and file, `drafts` to write drafts, `send` to send,
+`mail.share` beside `mail.read` to hand an attachment to another service.
 A grant can limit sending to certain recipients and a number per day
 (**Send only to** and **Sends per day** in the UI).
 
@@ -340,6 +341,7 @@ the tools that fit:
 | `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default, with its folders, its marks in words, its keywords, and for a draft the mail it answers |
 | `get_thread` | `mail.read` | a conversation in every folder, oldest first, from a mail of it such as a search hit or from its thread id: the newest 20 mails as plain text, sharing `max_chars`, 12,000 by default |
 | `get_attachment` | `mail.read` | an attachment: images up to 5 MiB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 4 megapixels a page and 12 together), text as text, HTML as the text a reader sees, both cut to `max_chars`, 20,000 by default. Other types and larger images by name only. An image, PDF or text above 10 MiB is refused. |
+| `share_attachment` | `mail.share` | a link to an attachment for another service, which fetches the file itself without it passing through the model: a URL that service fetches once, without a token, until it ends, by default after 120 seconds, with when it ends, the type, the size and the file name |
 | `whats_new` | `mail.read` | mail created, updated or deleted since the `state` of an earlier call, ids only, in one account or all |
 | `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), add and take off keywords, add and take off labels where a mail can be in several folders at once, or into the trash |
 | `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
@@ -363,6 +365,18 @@ can use them to decide when to ask the person before a call.
   idempotent, although a repeat within 24 hours sends nothing.
 - **Open world:** every tool except `list_accounts`, since they reach mail
   from and to anyone.
+
+`share_attachment` is for a file another service takes over, such as
+another MCP server the client runs beside this one. The model carries
+only the URL across. That service fetches the bytes from the Mailbox
+service directly, with a plain GET and no token of the Mailbox service.
+The link holds once and for as long as the service is set to,
+`MAILBOX_SERVICE_LINK_SECONDS`. Its rights are those of this server's
+token: when the link is used, the token must still hold `get_attachment`
+and `share_attachment` on the mail. `mail.share` is in no role template,
+so a grant names it on purpose. Whoever holds the URL gets the file, so
+the model hands it to that service alone, never to the sender of the
+mail or anyone else.
 
 Each send carries an `Idempotency-Key` derived from the call. The same
 call repeated within 24 hours sends nothing and returns the first result.
