@@ -16,6 +16,7 @@ from .responses import (
     flags,
     new_uids,
     part,
+    received,
     thread_headers,
     translated,
     with_code,
@@ -79,15 +80,21 @@ class Messages:
     def fetch_headers(self, uids: list[int]) -> list[FetchedMessage]:
         """Flags and headers. Never sets ``\\Seen``."""
         return [
-            FetchedMessage(uid, flags(data), part(data, b"BODY[HEADER]"))
-            for uid, data in self._fetch(uids, ["FLAGS", _HEADER]).items()
+            FetchedMessage(
+                uid, flags(data), part(data, b"BODY[HEADER]"), received(data)
+            )
+            for uid, data in self._fetch(
+                uids, ["FLAGS", "INTERNALDATE", _HEADER]
+            ).items()
         ]
 
     def fetch_message(self, uid: int) -> FetchedMessage | None:
-        found = self._fetch([uid], ["FLAGS", self._whole()]).get(uid)
+        found = self._fetch([uid], ["FLAGS", "INTERNALDATE", self._whole()]).get(uid)
         if found is None:
             return None
-        return FetchedMessage(uid, flags(found), self._body(uid, found))
+        return FetchedMessage(
+            uid, flags(found), self._body(uid, found), received(found)
+        )
 
     def fetch_raw(self, uid: int) -> bytes | None:
         found = self._fetch([uid], [self._whole()]).get(uid)

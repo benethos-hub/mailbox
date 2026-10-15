@@ -74,6 +74,7 @@ SUMMARY = {
     "from": {"email": "a@example.com", "name": "Ann"},
     "to": [{"email": "me@example.com", "name": None}],
     "date": "2026-10-01T08:00:00Z",
+    "received": "2026-10-01T08:00:05Z",
     "snippet": "Hello",
     "unread": True,
     "starred": False,

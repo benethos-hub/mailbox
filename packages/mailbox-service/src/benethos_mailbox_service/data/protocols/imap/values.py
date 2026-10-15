@@ -4,7 +4,7 @@ them, fetched messages, search keys, and the limits."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from benethos_mailbox_common.values import sizes
 
@@ -58,13 +58,20 @@ class Selected:
 
 
 class FetchedMessage(parse.ParsedMessage):
-    """A fetched message: UID and flags as the server reported them, the
-    rest parsed from the fetched bytes."""
+    """A fetched message: UID, flags and when it was received as the server
+    reported them, the rest parsed from the fetched bytes."""
 
-    def __init__(self, uid: int, flags: tuple[str, ...], raw: bytes) -> None:
+    def __init__(
+        self,
+        uid: int,
+        flags: tuple[str, ...],
+        raw: bytes,
+        received: datetime | None = None,
+    ) -> None:
         super().__init__(raw)
         self.uid = str(uid)
         self.flags = flags
+        self.internal_date = received
 
 
 @dataclass(frozen=True, slots=True)

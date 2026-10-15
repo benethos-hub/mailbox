@@ -78,7 +78,9 @@ def summary(item: MessageSummary) -> dict[str, Any]:
 
 
 def _date(item: MessageSummary) -> str | None:
-    return item.date.isoformat() if item.date else None
+    """The Date header, else when it was received."""
+    when = item.date or item.received
+    return when.isoformat() if when else None
 
 
 def cut(text: str, max_chars: int) -> tuple[str, str | None]:

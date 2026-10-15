@@ -136,13 +136,15 @@ def message_filter(
     after: Annotated[
         date | None,
         Query(
-            description="From this day on, including it: a day, YYYY-MM-DD, "
-            "not a time. Mail is searched by day"
+            description="Received from this day on, including it: a day, "
+            "YYYY-MM-DD, not a time. Mail is searched by day"
         ),
     ] = None,
     before: Annotated[
         date | None,
-        Query(description="Up to this day, not including it: a day, YYYY-MM-DD"),
+        Query(
+            description="Received up to this day, not including it: a day, YYYY-MM-DD"
+        ),
     ] = None,
     unread: bool | None = None,
     starred: bool | None = None,

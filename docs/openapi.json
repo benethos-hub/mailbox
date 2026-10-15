@@ -4336,10 +4336,10 @@
                   "type": "null"
                 }
               ],
-              "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day",
+              "description": "Received from this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day",
               "title": "After"
             },
-            "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day"
+            "description": "Received from this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day"
           },
           {
             "name": "before",
@@ -4355,10 +4355,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Up to this day, not including it: a day, YYYY-MM-DD",
+              "description": "Received up to this day, not including it: a day, YYYY-MM-DD",
               "title": "Before"
             },
-            "description": "Up to this day, not including it: a day, YYYY-MM-DD"
+            "description": "Received up to this day, not including it: a day, YYYY-MM-DD"
           },
           {
             "name": "unread",
@@ -5874,10 +5874,10 @@
                   "type": "null"
                 }
               ],
-              "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day",
+              "description": "Received from this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day",
               "title": "After"
             },
-            "description": "From this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day"
+            "description": "Received from this day on, including it: a day, YYYY-MM-DD, not a time. Mail is searched by day"
           },
           {
             "name": "before",
@@ -5893,10 +5893,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Up to this day, not including it: a day, YYYY-MM-DD",
+              "description": "Received up to this day, not including it: a day, YYYY-MM-DD",
               "title": "Before"
             },
-            "description": "Up to this day, not including it: a day, YYYY-MM-DD"
+            "description": "Received up to this day, not including it: a day, YYYY-MM-DD"
           },
           {
             "name": "unread",
@@ -12083,7 +12083,21 @@
                 "type": "null"
               }
             ],
-            "title": "Date"
+            "title": "Date",
+            "description": "The Date header: when the sender wrote the message, as every mail program shows it. Null without one."
+          },
+          "received": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received",
+            "description": "When the account received the message. Lists sort by it, and `after` and `before` compare it. On POP3 it is read from the topmost `Received` header, and null without one."
           },
           "snippet": {
             "anyOf": [
@@ -12403,7 +12417,21 @@
                 "type": "null"
               }
             ],
-            "title": "Date"
+            "title": "Date",
+            "description": "The Date header: when the sender wrote the message, as every mail program shows it. Null without one."
+          },
+          "received": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received",
+            "description": "When the account received the message. Lists sort by it, and `after` and `before` compare it. On POP3 it is read from the topmost `Received` header, and null without one."
           },
           "snippet": {
             "anyOf": [

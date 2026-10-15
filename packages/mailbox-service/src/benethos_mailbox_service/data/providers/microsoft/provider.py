@@ -434,7 +434,7 @@ class MicrosoftProvider:
             raise missing("thread", thread_id)
         every = sorted(
             (mappers.summary(item) for item in found),
-            key=lambda m: (m.date is None, m.date),
+            key=lambda m: (m.received is None, m.received),
         )
         return ThreadMessages(
             every[-limit:], truncated=bool(link) or len(every) > limit

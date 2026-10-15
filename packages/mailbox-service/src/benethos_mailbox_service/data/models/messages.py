@@ -49,7 +49,17 @@ class MessageSummary(BaseModel):
     subject: str | None = None
     sender: Address | None = Field(default=None, alias="from")
     to: list[Address] = Field(default_factory=list)
-    date: datetime | None = None
+    date: datetime | None = Field(
+        default=None,
+        description="The Date header: when the sender wrote the message, as "
+        "every mail program shows it. Null without one.",
+    )
+    received: datetime | None = Field(
+        default=None,
+        description="When the account received the message. Lists sort by "
+        "it, and `after` and `before` compare it. On POP3 it is read from "
+        "the topmost `Received` header, and null without one.",
+    )
     snippet: str | None = None
     unread: bool = False
     starred: bool = False
@@ -69,6 +79,12 @@ class MessageSummary(BaseModel):
     )
 
     model_config = {"populate_by_name": True, "serialize_by_alias": True}
+
+
+def received_or_written(message: MessageSummary) -> datetime | None:
+    """When a message came, for order: its received time, else its Date
+    header, as on a POP3 mail without a ``Received`` header."""
+    return message.received or message.date
 
 
 class Attachment(BaseModel):
@@ -119,8 +135,9 @@ class MessageFilter(BaseModel):
     sender: str | None = Field(default=None, pattern=SEARCH_TEXT_PATTERN)
     to: str | None = Field(default=None, pattern=SEARCH_TEXT_PATTERN)
     subject: str | None = Field(default=None, pattern=SEARCH_TEXT_PATTERN)
-    after: date | None = None  # on or after this day
-    before: date | None = None  # before this day
+    # Received on or after this day, and before this day.
+    after: date | None = None
+    before: date | None = None
     unread: bool | None = None
     starred: bool | None = None
     has_attachments: bool | None = None

@@ -19,6 +19,7 @@ def mail(**given: Any) -> Message:
         "sender": None,
         "to": [],
         "date": None,
+        "received": None,
         "snippet": None,
         "unread": False,
         "starred": False,

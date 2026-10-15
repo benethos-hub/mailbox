@@ -76,6 +76,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   trash answered `409`, several folders without `labels` `400`. A
   change with something the account lacks changes nothing, also where
   the rest of it would work.
+- **Breaking:** `date` is the message's Date header on every account,
+  the time its sender wrote it. Microsoft answered the received time,
+  and Gmail and JMAP the received time where a mail had no Date header,
+  which is now null. A new field `received` says when the account
+  received the message: INTERNALDATE on IMAP, the topmost `Received`
+  header on POP3. Lists sort by it, `after` and `before` compare it, and
+  the list across accounts merges by it.
 - An account's capabilities follow from what its server answers, asked
   when it is connected or verified, when a folder comes or goes, and
   when the server refuses what they promised. They are stored with the

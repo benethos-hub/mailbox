@@ -19,6 +19,7 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
+from benethos_mailbox_service.domain.mailbox.merge import newest_first
 from benethos_mailbox_service.errors import ProviderUnavailableError
 
 from ...conftest import admin_bearer, bearer_for, create_account
@@ -49,6 +50,13 @@ def _messages(prefix: str, hours: list[int], folder: str = "inbox") -> list[Mess
         )
         for h in hours
     ]
+
+
+def test_the_newest_by_when_it_was_received() -> None:
+    late = MessageSummary(id="x", date=START, received=START + timedelta(hours=5))
+    early = MessageSummary(id="y", date=START + timedelta(hours=3))
+    undated = MessageSummary(id="z")
+    assert sorted([undated, early, late], key=newest_first) == [late, early, undated]
 
 
 @pytest.fixture

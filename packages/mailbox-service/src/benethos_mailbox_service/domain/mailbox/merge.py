@@ -9,7 +9,7 @@ from typing import Any, TypeVar
 
 import anyio
 
-from ...data.models import AccountFailure, MessageSummary
+from ...data.models import AccountFailure, MessageSummary, received_or_written
 from ...errors import BadRequestError, MailboxServiceError
 from .. import paging
 
@@ -37,7 +37,8 @@ class Chunk:
 
 
 def newest_first(item: MessageSummary) -> tuple[bool, float]:
-    return (item.date is None, -item.date.timestamp() if item.date else 0.0)
+    when = received_or_written(item)
+    return (when is None, -when.timestamp() if when else 0.0)
 
 
 def newest_of(

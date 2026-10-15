@@ -36,6 +36,7 @@ READ_SUMMARY = MessageSummary(
     sender=Address("a@example.com", "Ann"),
     to=[Address("me@example.com")],
     date=AT,
+    received=datetime(2026, 10, 1, 8, 0, 5, tzinfo=UTC),
     snippet="Hello",
     unread=True,
     starred=False,

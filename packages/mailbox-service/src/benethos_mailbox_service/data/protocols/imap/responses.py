@@ -7,6 +7,7 @@ import imaplib
 import re
 from collections.abc import Callable
 from contextlib import AbstractContextManager
+from datetime import datetime
 from email.parser import BytesHeaderParser
 from typing import Any
 
@@ -38,6 +39,15 @@ def capabilities(client: Any) -> frozenset[str]:
 
 def flags(data: dict[bytes, Any]) -> tuple[str, ...]:
     return tuple(text(flag) for flag in data.get(b"FLAGS", ()))
+
+
+def received(data: dict[bytes, Any]) -> datetime | None:
+    """INTERNALDATE: when the server received the message. IMAPClient
+    answers it in local time without a zone."""
+    value = data.get(b"INTERNALDATE")
+    if not isinstance(value, datetime):
+        return None
+    return value if value.tzinfo is not None else value.astimezone()
 
 
 def part(data: dict[bytes, Any], key: bytes) -> bytes:

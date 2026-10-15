@@ -25,7 +25,7 @@
           <a href="/ui/accounts/{{ m.account_id }}/{{ open_as }}/{{ m.id }}">{{ m.subject | or_missing }}</a>
           {% if m.snippet %}<span class="sub">{{ m.snippet }}</span>{% endif %}
         </td>
-        <td>{{ m.date | when }}</td>
+        <td>{{ (m.date or m.received) | when }}</td>
         {% if names is not none %}<td class="muted">{% for f in m.folder_ids %}{{ names.get(f, f) }}{% if not loop.last %}, {% endif %}{% endfor %}</td>{% endif %}
         <td>
           {% if m.starred %}<span class="tag warn">{{ icon("star-fill", "starred") }}</span>{% endif %}

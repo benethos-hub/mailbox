@@ -40,7 +40,7 @@ WELL_KNOWN: dict[str, FolderRole] = {
 
 SUMMARY_FIELDS = (
     "id,conversationId,parentFolderId,subject,from,toRecipients,"
-    "receivedDateTime,bodyPreview,isRead,flag,categories,hasAttachments,isDraft,"
+    "sentDateTime,receivedDateTime,bodyPreview,isRead,flag,categories,hasAttachments,isDraft,"
     "internetMessageId"
 )
 FOLDER_FIELDS = (
@@ -90,7 +90,8 @@ def summary(item: GraphMessage) -> MessageSummary:
         subject=item.subject,
         sender=_address(item.sender),
         to=_addresses(item.to_recipients),
-        date=item.received_date_time,
+        date=item.sent_date_time,
+        received=item.received_date_time,
         snippet=item.body_preview or None,
         unread=item.is_read is False,
         starred=item.flag is not None and item.flag.flag_status == "flagged",

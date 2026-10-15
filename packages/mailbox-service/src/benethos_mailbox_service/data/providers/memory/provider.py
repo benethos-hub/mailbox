@@ -22,6 +22,7 @@ from ...models import (
     MessageUpdate,
     Page,
     SentMessage,
+    received_or_written,
 )
 from .. import rules
 
@@ -315,7 +316,8 @@ def _matches(message: Message, search: MessageFilter) -> bool:
         return value is None or any(value.lower() in (f or "").lower() for f in fields)
 
     sender = message.sender
-    day = message.date.date() if message.date else None
+    when = received_or_written(message)
+    day = when.date() if when else None
     return (
         has(search.text, message.subject, message.text_body)
         and has(

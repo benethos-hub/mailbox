@@ -62,7 +62,7 @@ def parse_cursor(value: str) -> rules.After:
 
 def summary(msg: parse.ParsedMessage, uid: str) -> MessageSummary:
     return MessageSummary.model_validate(
-        {**convert.summary_fields(msg), **_pop3_fields(uid)}
+        {**convert.summary_fields(msg), **_pop3_fields(msg, uid)}
     )
 
 
@@ -70,13 +70,18 @@ def message(msg: parse.ParsedMessage, uid: str) -> Message:
     return Message.model_validate(
         {
             **convert.summary_fields(msg),
-            **_pop3_fields(uid),
+            **_pop3_fields(msg, uid),
             **convert.message_fields(msg),
         }
     )
 
 
-def _pop3_fields(uid: str) -> dict[str, Any]:
+def _pop3_fields(msg: parse.ParsedMessage, uid: str) -> dict[str, Any]:
     """What only POP3 knows of a message: its id. It has no flags, so it
-    is never unread or starred."""
-    return {"id": message_id(uid), "folder_ids": [folder_id()]}
+    is never unread or starred. When it was received, POP3 does not say:
+    the topmost ``Received`` header does."""
+    return {
+        "id": message_id(uid),
+        "folder_ids": [folder_id()],
+        "received": msg.received,
+    }

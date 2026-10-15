@@ -177,10 +177,12 @@ larger piece that is neither, and runs on its own.
 - **`date` is the received time on Microsoft** (`receivedDateTime`) and
   the Date header, the sender's time, everywhere else. Microsoft does not
   read `sentDateTime` at all. A list across accounts sorts by `date` and
-  mixes both. *Concept (6.6).*
+  mixes both. *Concept (6.6).* Done.
 - **The `after` and `before` filters compare the received time
   everywhere**, while `date` shows the Date header. A message can show a
-  date outside the range it was found with. *Concept (6.6).*
+  date outside the range it was found with. *Concept (6.6).* Done: `date`
+  is the Date header everywhere, Microsoft included, and `received` the
+  time the filters compare and lists sort by.
 - **IMAP lists newest first by UID**, which is arrival order. JMAP and
   Microsoft sort by received time. Since the list across accounts merges
   by `date` and pages by count, IMAP messages whose UID order differs
@@ -388,6 +390,7 @@ Steps 1 to 5 are done. Each step is one pull request or more.
    reads `$draft` and writes no mark until the live check of 6.4.
 6. **Values.** The decisions of section 6: dates, the list without a
    folder, server notes, marks, the case of keywords, `has_attachments`.
+   Dates done.
 7. **IMAP emulates `all`** where the server has no `\All` (decision
    6.5), a piece of its own.
 8. **The UI and the MCP server** (section 8, U1 to U5): the vocabulary
