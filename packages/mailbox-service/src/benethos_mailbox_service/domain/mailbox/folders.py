@@ -15,7 +15,12 @@ from ...data.models import (
     FolderUpdate,
     MessageUpdate,
 )
-from ...errors import ConflictError, MailboxServiceError, NotFoundError, missing
+from ...errors import (
+    ConflictError,
+    MailboxServiceError,
+    NotSupportedError,
+    missing,
+)
 from ..accounts import NEEDS, writes
 from ..rights import Access
 from .calls import Calls
@@ -115,7 +120,17 @@ class Folders:
 
     async def by_role(self, account_id: str, folder: str | None) -> str | None:
         """A folder id, or the id of the folder with that role."""
-        if folder is None or not is_role(folder):
+        return None if folder is None else await self.resolved(account_id, folder)
+
+    async def is_all(self, account_id: str, folder_id: str) -> bool:
+        """Whether the folder is the one with the role ``all``."""
+        found = find_folder(await self.all(account_id), folder_id)
+        return found is not None and found.role is FolderRole.ALL
+
+    async def resolved(self, account_id: str, folder: str) -> str:
+        """A folder id, or the id of the folder with that role: ``501``
+        where the account has none."""
+        if not is_role(folder):
             return folder
         return _resolved(await self.all(account_id), folder)
 
@@ -180,5 +195,5 @@ def _resolved(folders: list[Folder], folder: str) -> str:
         return folder
     match = find_folder(folders, folder)
     if match is None:
-        raise NotFoundError(f"the account has no {folder} folder")
+        raise NotSupportedError(f"the account has no {folder} folder")
     return match.id

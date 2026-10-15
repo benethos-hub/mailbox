@@ -111,16 +111,16 @@ class Reads(Protocol):
 
     async def list_messages(
         self,
-        folder_id: str | None,
+        folder_id: str,
         *,
         limit: int,
         cursor: str | None,
         search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
-        """Newest first. ``search`` narrows the list. A cursor belongs to
-        the same folder and search. Without a folder: every folder of the
-        account where the provider can list across them (Microsoft), else
-        the inbox (IMAP)."""
+        """The messages of a folder, newest first. ``search`` narrows the
+        list. A cursor belongs to the same folder and search. The folder
+        with the role ``all`` holds every message but those in the trash
+        and junk."""
         ...
 
     async def get_message(self, message_id: str) -> Message: ...

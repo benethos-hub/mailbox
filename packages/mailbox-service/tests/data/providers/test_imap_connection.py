@@ -20,13 +20,13 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...imap_fake import FakeMailBox
-from .test_imap import FakeTime, provider
+from .test_imap import INBOX, FakeTime, provider
 
 
 async def test_one_login_for_many_calls(server: FakeMailBox) -> None:
     imap = provider(server)
     await imap.list_folders()
-    await imap.list_messages(None, limit=1, cursor=None, search=None)
+    await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
     assert server.logins == 1
     await imap.close()
     assert ("logout",) in server.calls
@@ -58,10 +58,10 @@ async def test_the_next_page_asks_the_server_for_older_uids_only(
     server: FakeMailBox,
 ) -> None:
     imap = provider(server)
-    first = await imap.list_messages(None, limit=2, cursor=None, search=None)
+    first = await imap.list_messages(INBOX, limit=2, cursor=None, search=None)
     assert first.next_cursor is not None
     second = await imap.list_messages(
-        None, limit=2, cursor=first.next_cursor, search=None
+        INBOX, limit=2, cursor=first.next_cursor, search=None
     )
     assert len(second.items) == 2
     assert not {m.id for m in first.items} & {m.id for m in second.items}
@@ -76,7 +76,7 @@ async def test_a_dropped_connection_is_retried_in_the_same_call(
     imap = provider(server, time)
     await imap.list_folders()
     server.failures = [OSError("connection reset")]
-    page = await imap.list_messages(None, limit=1, cursor=None, search=None)
+    page = await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
     assert len(page.items) == 1
     assert server.logins == 2
     assert time.sleeps == [0.5]
@@ -96,11 +96,11 @@ async def test_other_errors_are_not_retried(
     imap = provider(server, time)
     server.failures = [error]
     with pytest.raises(ProviderError, match=message) as caught:
-        await imap.list_messages(None, limit=1, cursor=None, search=None)
+        await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
     assert not isinstance(caught.value, ProviderUnavailableError)
     assert time.sleeps == []
     # The next call works right away.
-    await imap.list_messages(None, limit=1, cursor=None, search=None)
+    await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
 
 
 async def test_an_unreachable_server_is_paused_and_the_pause_grows(
@@ -110,7 +110,7 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
     imap = provider(server, time)
     server.failures = [TimeoutError()] * 3
     with pytest.raises(ProviderUnavailableError, match="did not answer"):
-        await imap.list_messages(None, limit=1, cursor=None, search=None)
+        await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
     assert time.sleeps == [0.5, 1.0]
 
     calls = len(server.calls)
@@ -121,7 +121,7 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
     time.now += 30
     server.failures = [TimeoutError()] * 3
     with pytest.raises(ProviderUnavailableError):
-        await imap.list_messages(None, limit=1, cursor=None, search=None)
+        await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
     with pytest.raises(ProviderUnavailableError, match="next attempt in 60s"):
         await imap.list_folders()
 
@@ -129,7 +129,7 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
     await imap.list_folders()
     server.failures = [TimeoutError()] * 3
     with pytest.raises(ProviderUnavailableError):
-        await imap.list_messages(None, limit=1, cursor=None, search=None)
+        await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
     with pytest.raises(ProviderUnavailableError, match="next attempt in 30s"):
         await imap.list_folders()  # the success in between reset the count
 
@@ -145,14 +145,14 @@ async def test_the_retries_and_the_rest_come_from_the_pace(
     )
     server.failures = [TimeoutError()] * 2
     with pytest.raises(ProviderUnavailableError, match="did not answer"):
-        await imap.list_messages(None, limit=1, cursor=None, search=None)
+        await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
     assert time.sleeps == [0.5]
     with pytest.raises(ProviderUnavailableError, match="next attempt in 10s"):
         await imap.list_folders()
     time.now += 10
     server.failures = [TimeoutError()] * 2
     with pytest.raises(ProviderUnavailableError):
-        await imap.list_messages(None, limit=1, cursor=None, search=None)
+        await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
     with pytest.raises(ProviderUnavailableError, match="next attempt in 15s"):
         await imap.list_folders()
 

@@ -31,7 +31,6 @@ from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import (
-    ConflictError,
     NotFoundError,
     NotSupportedError,
 )
@@ -179,7 +178,7 @@ async def test_a_deleted_draft_is_gone(box: FakeMailBox) -> None:
 
 async def test_without_a_drafts_folder(box: FakeMailBox) -> None:
     del box.folders["Drafts"]
-    with pytest.raises(ConflictError):
+    with pytest.raises(NotSupportedError):
         await provider(box).save_draft(draft_bytes(), None)
 
 
@@ -201,7 +200,7 @@ async def test_memory_drafts_reach_no_other_mail() -> None:
     memory = MemoryProvider(
         folders=[Folder(id="inbox", name="Inbox", role=FolderRole.INBOX)]
     )
-    with pytest.raises(ConflictError):
+    with pytest.raises(NotSupportedError):
         await memory.list_drafts(limit=10, cursor=None)
     memory.folders.append(Folder(id="drafts", name="Drafts", role=FolderRole.DRAFTS))
     with pytest.raises(NotFoundError):

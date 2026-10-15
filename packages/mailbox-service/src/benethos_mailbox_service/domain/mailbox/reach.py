@@ -5,7 +5,9 @@ A grant's ``folders`` names folders by role, name or id. A listed folder
 reaches its subfolders as well. The IMAP adapter puts the folders of a
 server that keeps them below the inbox (``INBOX.Sent``) at the top, as
 mail clients show them, so ``inbox`` reaches no more than the inbox
-there. A call passes when one grant that allows it reaches every folder
+there. The folder with the role ``all`` reaches every folder but the
+trash and junk, as it lists them. A call passes when one grant that
+allows it reaches every folder
 the call touches. A caller with a grant that reaches every folder has no
 ``Reach``: nothing is checked or filtered for it, and nothing is asked
 of the provider.
@@ -15,7 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from ...data.models import ChangeRecord, Folder
+from ...data.models import ChangeRecord, Folder, FolderRole
 from ...errors import ForbiddenError, missing
 from ..rights import Access
 from .calls import Calls
@@ -27,7 +29,9 @@ class Reach:
     def __init__(self, scopes: list[frozenset[str]], folders: list[Folder]) -> None:
         by_id = {folder.id: folder for folder in folders}
         self._grants = [
-            frozenset(f.id for f in folders if _within(f, scope, by_id))
+            _beside_all(
+                frozenset(f.id for f in folders if _within(f, scope, by_id)), folders
+            )
             for scope in scopes
         ]
         # Every folder some grant reaches.
@@ -80,6 +84,15 @@ def outside(operation: str, where: str) -> ForbiddenError:
     return ForbiddenError(
         f"missing right: {operation} {where}, outside the folders of the grants"
     )
+
+
+def _beside_all(reached: frozenset[str], folders: list[Folder]) -> frozenset[str]:
+    """Where a grant reaches the folder ``all``, every folder but the trash
+    and junk as well: the messages it lists lie there."""
+    if not any(f.role is FolderRole.ALL and f.id in reached for f in folders):
+        return reached
+    outside = (FolderRole.TRASH, FolderRole.JUNK)
+    return reached | {f.id for f in folders if f.role not in outside}
 
 
 def _within(folder: Folder, names: frozenset[str], by_id: dict[str, Folder]) -> bool:

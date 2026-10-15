@@ -61,7 +61,7 @@ async def test_a_retried_deletion_that_went_through_is_done(
 
 
 async def test_no_trash_no_deletion(server: FakeMailBox) -> None:
-    with pytest.raises(ConflictError, match="no trash folder"):
+    with pytest.raises(NotSupportedError, match="no trash folder"):
         await delete(provider(server), MESSAGE, permanent=False)
     assert 3 in server.folders["INBOX"].messages
 

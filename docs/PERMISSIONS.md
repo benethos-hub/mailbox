@@ -281,7 +281,10 @@ Both narrow a grant and are checked in the domain, as `recipients` is:
   lists and reads there and nowhere else. `mail.write` with folders
   moves only between them. Planned in CONCEPT 7.5 already.
   **Decided 2026-10-05:** a listed folder includes its subfolders, so
-  `Invoices` covers `Invoices/2026`. Deleting to the trash stays allowed
+  `Invoices` covers `Invoices/2026`. The folder with the role `all`
+  covers every folder but the trash and junk, as it lists them. A
+  grant with folders lists `all` and sees there what its folders hold.
+  Deleting to the trash stays allowed
   under `mail.write` with folders. Reading the trash needs it in the
   list. Deleting for good stays a right of its own.
 - **`identities`**: which sender identities of an account a send may use,

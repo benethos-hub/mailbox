@@ -157,7 +157,7 @@ async def test_a_draft_the_server_refuses(jmap: JmapProvider, server: FakeJmap) 
     with pytest.raises(ConflictError, match="overQuota"):
         await jmap.save_draft(make_message("Draft"), None)
     del server.mailboxes["drafts"]
-    with pytest.raises(ConflictError, match="drafts"):
+    with pytest.raises(NotSupportedError, match="drafts"):
         await jmap.list_drafts(limit=5, cursor=None)
 
 
@@ -281,7 +281,7 @@ async def test_without_a_trash(jmap: JmapProvider, server: FakeJmap) -> None:
     del server.mailboxes["trash"]
     email_id = server.add_email(make_message("One"))
     outcome = await jmap.delete_messages([email_id], permanent=False)
-    assert isinstance(outcome[email_id], ConflictError)
+    assert isinstance(outcome[email_id], NotSupportedError)
 
 
 # --- for the sync ---------------------------------------------------------------------

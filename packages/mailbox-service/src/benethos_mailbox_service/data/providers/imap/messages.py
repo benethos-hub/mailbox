@@ -33,12 +33,12 @@ from .mailbox import Mailbox, names
 
 def list_messages(
     box: Mailbox,
-    folder_id: str | None,
+    folder_id: str,
     limit: int,
     cursor: str | None,
     search: MessageFilter | None = None,
 ) -> Page[MessageSummary]:
-    folder = mappers.folder_name(folder_id) if folder_id else mappers.INBOX
+    folder = mappers.folder_name(folder_id)
     start = mappers.parse_cursor(cursor) if cursor else None
     if start is not None and start.folder != folder:
         raise rules.invalid_cursor()

@@ -28,13 +28,12 @@ from .shapes import Email, Thread
 
 async def list_messages(
     account: JmapAccount,
-    folder_id: str | None,
+    folder_id: str,
     limit: int,
     cursor: str | None,
     search: MessageFilter | None,
 ) -> Page[MessageSummary]:
-    """Without a folder: every folder of the account."""
-    if folder_id is not None and not mappers.is_id(folder_id):
+    if not mappers.is_id(folder_id):
         raise missing("folder", folder_id)
     scope = mappers.scope(folder_id, search)
     query: dict[str, Any] = {

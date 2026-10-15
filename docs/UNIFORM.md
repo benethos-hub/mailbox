@@ -163,7 +163,9 @@ larger piece that is neither, and runs on its own.
 - **`list_messages` without `folder` lists every folder on Gmail,
   Microsoft and JMAP, trash and junk included, and the inbox on IMAP and
   POP3.** The same call means two things. It is documented, but against
-  R1. The MCP tool `search_messages` inherits it. *Concept (6.5).*
+  R1. The MCP tool `search_messages` inherits it. *Concept (6.5).* Done:
+  the inbox on every account, and `all` everywhere but the trash and
+  junk, which Microsoft emulates. IMAP without `\All` follows in step 7.
 - **`list_all_messages` with a role leaves out an account that has no
   such folder**, without naming it in `incomplete`
   (`domain/mailbox/across.py:111-116`). *Bug.*
@@ -171,6 +173,7 @@ larger piece that is neither, and runs on its own.
   domain and `409` from the adapters**, for the same situation. Gmail
   has no `archive`, Microsoft no `all` folder. Rule R2: `501`, except
   for Microsoft's `all`, which the adapter emulates. *Concept (6.5).*
+  Done.
 
 ### 4.3 Dates and order
 
@@ -390,7 +393,7 @@ Steps 1 to 5 are done. Each step is one pull request or more.
    reads `$draft` and writes no mark until the live check of 6.4.
 6. **Values.** The decisions of section 6: dates, the list without a
    folder, server notes, marks, the case of keywords, `has_attachments`.
-   Dates done.
+   Dates and the list without a folder done.
 7. **IMAP emulates `all`** where the server has no `\All` (decision
    6.5), a piece of its own.
 8. **The UI and the MCP server** (section 8, U1 to U5): the vocabulary

@@ -120,6 +120,6 @@ def test_a_graph_search_value_stays_inside_its_phrase(value: str) -> None:
 def test_a_jmap_filter_carries_any_value_as_data(value: str) -> None:
     text = f"a{value}b"
     sent = json.loads(
-        json.dumps(jmap.query_filter(None, MessageFilter.model_construct(text=text)))
+        json.dumps(jmap.query_filter("m1", MessageFilter.model_construct(text=text)))
     )
-    assert sent["conditions"] == [{"text": text}]
+    assert sent["conditions"] == [{"inMailbox": "m1"}, {"text": text}]

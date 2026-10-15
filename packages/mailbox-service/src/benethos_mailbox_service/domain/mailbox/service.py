@@ -169,12 +169,13 @@ class MailboxService:
         cursor: str | None,
     ) -> Page[MessageSummary]:
         """One account's messages, newest first. ``folder_id`` may also be a
-        role such as ``inbox``."""
+        role such as ``inbox``. Without one: the inbox."""
         access.require("list_messages", account_id)
         await self._calls.require(account_id, for_list(search))
-        folder = await self._folders.by_role(account_id, folder_id)
+        folder = await self._folders.resolved(account_id, folder_id or FolderRole.INBOX)
         reach = await self._reach(access, "list_messages", account_id)
-        if reach is not None and folder is not None:
+        # The folder all lists what the grants reach of every folder.
+        if reach is not None and not await self._folders.is_all(account_id, folder):
             require_folder(reach, folder)
         page = await self._calls.call(
             account_id,

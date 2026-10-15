@@ -213,6 +213,15 @@ def check(
         run.check("its source", raw.status_code == 200 and b":" in raw.content[:200])
     searched = client.get(f"{base}/messages", params={"q": "zz-no-such-mail-zz"})
     run.check("a search", searched.status_code == 200)
+    everywhere = client.get(f"{base}/messages", params={"folder": "all", "limit": 20})
+    outside = {f["id"] for f in folders if f.get("role") in ("trash", "junk")}
+    listed = everywhere.json().get("items", []) if everywhere.status_code == 200 else []
+    run.check(
+        "All Mail leaves out the trash and junk",
+        everywhere.status_code == 200
+        and not any(outside & set(m["folder_ids"]) for m in listed),
+        f"{everywhere.status_code}, {len(listed)} listed",
+    )
     inline(run, client, base)
     # One that came back late, after an earlier run had ended.
     bounces(mailbox, ms_id, SUBJECT)

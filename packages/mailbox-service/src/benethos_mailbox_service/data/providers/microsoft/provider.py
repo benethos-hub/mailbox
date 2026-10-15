@@ -16,7 +16,9 @@ too large for one request gets its files one by one (``uploads``). A message
 is read from its MIME too, so its bodies, headers and attachments are
 what the other providers answer.
 
-The wire, the well-known folders and Graph's errors are in ``graph``.
+The wire, the well-known folders and Graph's errors are in ``graph``, a
+folder's messages in ``listing``. Exchange has no folder ``all``: the
+adapter shows one, every folder but the trash and junk (UNIFORM 6.5).
 
 Details Graph's documentation leaves open are marked **(unverified)**
 until a live check against a Microsoft account confirms them. Seen live:
@@ -29,7 +31,6 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from datetime import datetime
-from urllib.parse import urlencode
 
 from ....errors import (
     BadRequestError,
@@ -62,7 +63,7 @@ from ..base import (
     ThreadMessages,
     TokenSource,
 )
-from . import mappers, uploads
+from . import listing, mappers, uploads
 from .graph import Graph, id_, own_path
 from .shapes import Batch, Item, Listing, MailFolder
 from .shapes import Message as GraphMessage
@@ -105,6 +106,10 @@ class MicrosoftProvider:
     # --- folders --------------------------------------------------------------------
 
     async def list_folders(self) -> list[Folder]:
+        return [*await self._folders(), mappers.all_mail()]
+
+    async def _folders(self) -> list[Folder]:
+        """The folders Exchange keeps, without ``all``."""
         roles = await self._graph.folder_roles()
         root = await self._graph.root_id()
         params = {"$select": mappers.FOLDER_FIELDS, "$top": str(PAGE_SIZE)}
@@ -157,75 +162,15 @@ class MicrosoftProvider:
 
     async def list_messages(
         self,
-        folder_id: str | None,
+        folder_id: str,
         *,
         limit: int,
         cursor: str | None,
         search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
-        query, rest = mappers.query(search)
-        # Graph's next page carries the query it was asked with: bound to
-        # the folder and the search, so another list's cursor is refused.
-        scope = rules.cursor_scope(folder_id, search)
-        if cursor:
-            path = own_path(rules.cursor_value("m_", cursor, scope))
-            body = await self._graph.read(Listing[GraphMessage], "GET", path)
-        else:
-            path = (
-                f"/me/mailFolders/{id_(folder_id)}/messages"
-                if folder_id
-                else "/me/messages"
-            )
-            params = {"$select": mappers.SUMMARY_FIELDS, "$top": str(limit), **query}
-            body = await self._graph.read(
-                Listing[GraphMessage], "GET", path, params=params
-            )
-        found = body.value
-        if "$search" in query:
-            found = await self._immutable(found)
-        items = [mappers.summary(item) for item in found]
-        link = body.next_link
-        return Page[MessageSummary](
-            items=[item for item in items if mappers.keeps(item, rest)],
-            next_cursor=rules.bound_cursor("m_", scope, own_path(link))
-            if link
-            else None,
+        return await listing.list_messages(
+            self._graph, folder_id, limit, cursor, search
         )
-
-    async def _immutable(self, items: list[GraphMessage]) -> list[GraphMessage]:
-        """Search results under their immutable ids.
-
-        Seen live: Graph's search ignores the preference for immutable ids,
-        a message fetched by such an id comes back under it again, and
-        ``translateExchangeIds`` is refused for personal accounts. A list
-        filtered by ``internetMessageId`` does answer with immutable ids:
-        so each result is looked up by its Message-ID, twenty to a JSON
-        batch, in the folder it was found in. One that cannot be looked
-        up keeps the id the search gave.
-        """
-        ids: dict[str, str] = {}
-        wanted = [item for item in items if item.internet_message_id]
-        urls = []
-        for item in wanted:
-            header = (item.internet_message_id or "").replace("'", "''")
-            query = urlencode(
-                {
-                    "$select": "id,parentFolderId",
-                    "$filter": f"internetMessageId eq '{header}'",
-                }
-            )
-            urls.append(f"/me/messages?{query}")
-        found = await self._graph.batch(urls, Batch[Listing[GraphMessage]])
-        for n, body in found.items():
-            item = wanted[n]
-            same = [
-                f for f in body.value if f.parent_folder_id == item.parent_folder_id
-            ]
-            if len(same) == 1:
-                ids[item.id] = same[0].id
-        return [
-            item.model_copy(update={"id": ids.get(item.id, item.id)}) for item in items
-        ]
 
     async def get_message(self, message_id: str) -> Message:
         """What Graph knows of the message, and what its MIME says: the
@@ -317,6 +262,11 @@ class MicrosoftProvider:
         async def one(message_id: str) -> MessageSummary:
             # Judged per id, as the other adapters answer it.
             target = rules.move_target(changes, labels=False)
+            if target == mappers.ALL:
+                raise BadRequestError(
+                    "All Mail shows the mail of the other folders: "
+                    "move a message into one of them"
+                )
             path = f"/me/messages/{id_(message_id)}"
             item = None
             if mappers.touches_marks(changes):
@@ -394,7 +344,7 @@ class MicrosoftProvider:
         """Graph reports no UIDNEXT: the counts stand in. A message that
         arrives read while another leaves goes unnoticed until the next
         change, which the sync then catches up on."""
-        return {f.id: f"{f.total}:{f.unread}" for f in await self.list_folders()}
+        return {f.id: f"{f.total}:{f.unread}" for f in await self._folders()}
 
     async def folder_contents(self, folder_id: str) -> list[str]:
         items = await self._graph.all(

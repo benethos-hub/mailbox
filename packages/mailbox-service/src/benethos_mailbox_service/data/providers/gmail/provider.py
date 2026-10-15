@@ -88,7 +88,7 @@ class GmailProvider:
 
     async def list_messages(
         self,
-        folder_id: str | None,
+        folder_id: str,
         *,
         limit: int,
         cursor: str | None,

@@ -392,6 +392,10 @@ an app password is the credential to ask for.
   `501`. A next-page
   cursor is a Graph path below `/me/` and never leaves the Graph host.
   No push yet.
+- Exchange has no folder with the role `all`. The adapter shows one,
+  "All Mail" with the id `all`: every folder but the trash and junk,
+  which leave a page after Graph answers it, so a page can come back
+  short. A message cannot be moved into it.
 - Seen live with a personal account: `$search` ignores the preference for
   immutable ids, a message fetched by such an id comes back under it
   again, and `translateExchangeIds` is refused. A list filtered by
@@ -1091,7 +1095,7 @@ not followed.
 
 | Parameter | Meaning |
 |---|---|
-| `folder` | folder id, or a role such as `inbox`. Left out: every folder on a Gmail, Microsoft or JMAP account, the inbox on IMAP and POP3. To become the inbox everywhere (5.11) |
+| `folder` | folder id, or a role such as `inbox`. Left out: the inbox, on every account. The role `all` lists every folder but the trash and junk where the account has such a folder (Gmail's All Mail, a JMAP or IMAP server's, on Microsoft one the adapter shows), and answers `501` elsewhere. A grant narrowed to folders lists `all` within them |
 | `q` | free text (subject, addresses, body where the provider can) |
 | `from`, `to`, `subject` | structured filters |
 | `after`, `before` | days, `YYYY-MM-DD`: `after` includes its day, `before` does not. The audits take a time with a zone instead |

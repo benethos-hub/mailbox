@@ -139,7 +139,7 @@ def test_mail_through_the_api(
     moved = client.patch(
         f"{base}/messages/{message_id}", json={"folder_ids": ["archive"]}
     )
-    assert moved.status_code == 404, moved.text  # no archive folder here
+    assert moved.status_code == 501, moved.text  # no archive folder here
     trashed = client.delete(f"{base}/messages/{message_id}")
     assert trashed.status_code in (200, 204), trashed.text
     assert jmap_server.emails[message_id]["mailboxIds"] == {"trash": True}

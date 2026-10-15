@@ -44,6 +44,9 @@ class FakeTime:
         self.now += seconds
 
 
+INBOX = mappers.folder_id("INBOX")
+
+
 def provider(
     box: FakeMailBox,
     time: FakeTime | None = None,
@@ -142,7 +145,7 @@ async def test_folders_say_whether_they_are_subscribed(server: FakeMailBox) -> N
 
 async def test_newest_first_with_cursor(server: FakeMailBox) -> None:
     imap = provider(server)
-    first = await imap.list_messages(None, limit=4, cursor=None, search=None)
+    first = await imap.list_messages(INBOX, limit=4, cursor=None, search=None)
     assert [m.subject for m in first.items] == [
         "With files",
         "Invoice 5",
@@ -151,7 +154,7 @@ async def test_newest_first_with_cursor(server: FakeMailBox) -> None:
     ]
     assert first.next_cursor
     second = await imap.list_messages(
-        None, limit=4, cursor=first.next_cursor, search=None
+        INBOX, limit=4, cursor=first.next_cursor, search=None
     )
     assert [m.subject for m in second.items] == ["Hello 2", "Invoice 1"]
     assert second.next_cursor is None
@@ -159,7 +162,7 @@ async def test_newest_first_with_cursor(server: FakeMailBox) -> None:
 
 async def test_summary_fields(server: FakeMailBox) -> None:
     page = await provider(server).list_messages(
-        None, limit=10, cursor=None, search=None
+        INBOX, limit=10, cursor=None, search=None
     )
     files = page.items[0]
     assert files.starred is True
@@ -181,7 +184,7 @@ async def test_date_is_the_header_and_received_the_internal_date(
     arrived = datetime(2026, 9, 2, 8, 30, tzinfo=UTC)
     server.arrivals[("INBOX", 1)] = arrived
     adapter = provider(server)
-    page = await adapter.list_messages(None, limit=10, cursor=None, search=None)
+    page = await adapter.list_messages(INBOX, limit=10, cursor=None, search=None)
     oldest = page.items[-1]
     assert oldest.date == datetime(2026, 9, 1, 10, 0, tzinfo=UTC)
     assert oldest.received == arrived
@@ -191,7 +194,7 @@ async def test_date_is_the_header_and_received_the_internal_date(
 async def test_filters(server: FakeMailBox) -> None:
     imap = provider(server)
     unread = await imap.list_messages(
-        None, limit=10, cursor=None, search=MessageFilter(unread=True)
+        INBOX, limit=10, cursor=None, search=MessageFilter(unread=True)
     )
     assert {m.subject for m in unread.items} == {
         "Invoice 3",
@@ -200,18 +203,18 @@ async def test_filters(server: FakeMailBox) -> None:
         "With files",
     }
     read = await imap.list_messages(
-        None, limit=10, cursor=None, search=MessageFilter(unread=False)
+        INBOX, limit=10, cursor=None, search=MessageFilter(unread=False)
     )
     assert {m.subject for m in read.items} == {"Invoice 1", "Hello 2"}
     found = await imap.list_messages(
-        None, limit=10, cursor=None, search=MessageFilter(text="invoice")
+        INBOX, limit=10, cursor=None, search=MessageFilter(text="invoice")
     )
     assert {m.subject for m in found.items} == {"Invoice 1", "Invoice 3", "Invoice 5"}
 
 
 async def test_non_ascii_search_uses_utf8(server: FakeMailBox) -> None:
     await provider(server).list_messages(
-        None, limit=10, cursor=None, search=MessageFilter(text="Grüße")
+        INBOX, limit=10, cursor=None, search=MessageFilter(text="Grüße")
     )
     assert any(c[0] == "search" and c[2] == "UTF-8" for c in server.calls)
 
@@ -228,13 +231,17 @@ async def test_other_folder_and_selected_read_only(server: FakeMailBox) -> None:
 async def test_cursor_of_another_folder_is_refused(server: FakeMailBox) -> None:
     cursor = mappers.cursor("Sent", 1, 10)
     with pytest.raises(BadRequestError, match="^invalid cursor$"):
-        await provider(server).list_messages(None, limit=10, cursor=cursor, search=None)
+        await provider(server).list_messages(
+            INBOX, limit=10, cursor=cursor, search=None
+        )
 
 
 async def test_cursor_after_uidvalidity_change_is_refused(server: FakeMailBox) -> None:
     cursor = mappers.cursor("INBOX", 6, 10)
     with pytest.raises(BadRequestError, match="start again"):
-        await provider(server).list_messages(None, limit=10, cursor=cursor, search=None)
+        await provider(server).list_messages(
+            INBOX, limit=10, cursor=cursor, search=None
+        )
 
 
 # --- one message ----------------------------------------------------------------
@@ -284,7 +291,9 @@ async def test_a_message_too_large_is_refused(server: FakeMailBox) -> None:
 async def test_a_huge_header_is_cut_off(server: FakeMailBox) -> None:
     padding = {"X-Padding": "x" * 300_000}
     server.add("INBOX", 10, make_message("Padded", extra_headers=padding))
-    page = await provider(server).list_messages(None, limit=1, cursor=None, search=None)
+    page = await provider(server).list_messages(
+        INBOX, limit=1, cursor=None, search=None
+    )
     assert page.items[0].subject == "Padded"
 
 

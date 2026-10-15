@@ -195,16 +195,12 @@ async def test_date_is_the_header_and_received_gmails_time(gmail: FakeGmail) -> 
     assert undated.date is None and undated.received is not None
 
 
-async def test_all_mail_leaves_out_the_trash_and_no_folder_does_not(
-    gmail: FakeGmail,
-) -> None:
+async def test_all_mail_leaves_out_the_trash(gmail: FakeGmail) -> None:
     kept = gmail.add_message()
     trashed = gmail.add_message(labels=("TRASH",))
     provider = adapter(gmail)
     all_mail = await provider.list_messages("ALL_MAIL", limit=10, cursor=None)
     assert [m.id for m in all_mail.items] == [kept]
-    everything = await provider.list_messages(None, limit=10, cursor=None)
-    assert {m.id for m in everything.items} == {kept, trashed}
     trash = await provider.list_messages("TRASH", limit=10, cursor=None)
     assert [m.id for m in trash.items] == [trashed]
 

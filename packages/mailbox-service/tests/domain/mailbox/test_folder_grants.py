@@ -27,6 +27,7 @@ INVOICES = Folder(id="f_inv", name="Invoices")
 YEAR = Folder(id="f_2026", name="2026", parent_id="f_inv")
 PRIVATE = Folder(id="f_priv", name="Private")
 TRASH = Folder(id="trash", name="Trash", role=FolderRole.TRASH)
+ALL = Folder(id="all", name="All Mail", role=FolderRole.ALL)
 # m0 in the inbox, m1 in Invoices, m2 in Invoices/2026, m3 in Private.
 PLACES = {"m0": "inbox", "m1": "f_inv", "m2": "f_2026", "m3": "f_priv"}
 
@@ -34,7 +35,7 @@ PLACES = {"m0": "inbox", "m1": "f_inv", "m2": "f_2026", "m3": "f_priv"}
 @pytest.fixture
 def mailbox(services: Services, account_id: str) -> str:
     memory = memory_of(services, account_id)
-    memory.folders += [INVOICES, YEAR, PRIVATE, TRASH]
+    memory.folders += [INVOICES, YEAR, PRIVATE, TRASH, ALL]
     relearn(services, account_id)
     memory.messages = [
         m.model_copy(update={"folder_ids": [PLACES.get(m.id, "inbox")]})
@@ -71,7 +72,8 @@ def test_only_the_listed_folders_and_their_subfolders_are_seen(
     base = f"/v1/accounts/{mailbox}"
     folders = reader.get(f"{base}/folders").json()
     assert sorted(f["id"] for f in folders) == ["f_2026", "f_inv"]
-    assert ids(reader.get(f"{base}/messages")) == ["m1", "m2"]
+    everywhere = reader.get(f"{base}/messages", params={"folder": "all"})
+    assert ids(everywhere) == ["m1", "m2"]
     assert ids(reader.get(f"{base}/messages", params={"folder": "f_inv"})) == ["m1"]
     outside = reader.get(f"{base}/messages", params={"folder": "f_priv"})
     assert outside.status_code == 404
@@ -85,14 +87,15 @@ def test_a_folder_is_named_by_role_name_or_id(
     app_client: TestClient, services: Services, mailbox: str
 ) -> None:
     reader = caller(app_client, services, mailbox, (["mail.read"], ["inbox", "f_priv"]))
-    assert ids(reader.get(f"/v1/accounts/{mailbox}/messages")) == ["m0", "m3", "m4"]
+    listed = reader.get(f"/v1/accounts/{mailbox}/messages", params={"folder": "all"})
+    assert ids(listed) == ["m0", "m3", "m4"]
 
 
 def test_the_lists_across_accounts_keep_to_the_folders(
     app_client: TestClient, services: Services, mailbox: str
 ) -> None:
     reader = caller(app_client, services, mailbox, (["mail.read"], ["Invoices"]))
-    assert ids(reader.get("/v1/messages")) == ["m1", "m2"]
+    assert ids(reader.get("/v1/messages", params={"folder": "all"})) == ["m1", "m2"]
     inbox = reader.get("/v1/messages", params={"folder": "inbox"})
     assert ids(inbox) == []
 
@@ -107,7 +110,8 @@ def test_two_grants_see_both_their_folders(
         (["mail.read"], ["Invoices"]),
         (["mail.read"], ["Private"]),
     )
-    assert ids(reader.get(f"/v1/accounts/{mailbox}/messages")) == ["m1", "m2", "m3"]
+    listed = reader.get(f"/v1/accounts/{mailbox}/messages", params={"folder": "all"})
+    assert ids(listed) == ["m1", "m2", "m3"]
 
 
 def test_a_grant_on_every_folder_is_not_narrowed(
@@ -121,10 +125,23 @@ def test_a_grant_on_every_folder_is_not_narrowed(
         (["get_message"], None),  # type: ignore[arg-type]
     )
     assert reader.get(f"/v1/accounts/{mailbox}/messages/m3").status_code == 200
-    assert ids(reader.get(f"/v1/accounts/{mailbox}/messages")) == ["m1", "m2"]
+    listed = reader.get(f"/v1/accounts/{mailbox}/messages", params={"folder": "all"})
+    assert ids(listed) == ["m1", "m2"]
 
 
 # --- writing --------------------------------------------------------------------
+
+
+def test_a_grant_on_all_reaches_every_folder_but_the_trash(
+    app_client: TestClient, services: Services, mailbox: str
+) -> None:
+    reader = caller(app_client, services, mailbox, (["mail.read"], ["all"]))
+    base = f"/v1/accounts/{mailbox}"
+    listed = reader.get(f"{base}/messages", params={"folder": "all"})
+    assert ids(listed) == ["m0", "m1", "m2", "m3", "m4"]
+    assert ids(reader.get(f"{base}/messages", params={"folder": "f_inv"})) == ["m1"]
+    trash = reader.get(f"{base}/messages", params={"folder": "trash"})
+    assert trash.status_code == 404
 
 
 def test_moves_stay_among_the_folders_of_one_grant(

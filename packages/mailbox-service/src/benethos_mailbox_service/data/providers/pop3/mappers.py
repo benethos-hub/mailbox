@@ -29,9 +29,9 @@ def inbox() -> Folder:
     return Folder(id=folder_id(), name=INBOX_NAME, role=FolderRole.INBOX)
 
 
-def check_folder(value: str | None) -> None:
-    """Nothing for the inbox or no folder, not found for any other id."""
-    if value is not None and value != folder_id():
+def check_folder(value: str) -> None:
+    """Nothing for the inbox, not found for any other id."""
+    if value != folder_id():
         raise missing("folder", value)
 
 

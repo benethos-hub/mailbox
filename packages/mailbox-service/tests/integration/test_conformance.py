@@ -22,7 +22,6 @@ from ..mailboxes import ADDRESS, KINDS, Box, box, mail, services_of
 
 PDF = b"%PDF-1.4 conformance"
 # What UNIFORM.md names as work, where a test meets it.
-ALL_FOLDERS = "UNIFORM 6, decision 5: a list without a folder is the inbox (step 6)"
 
 
 def kinds(**known: str) -> list[Any]:
@@ -349,15 +348,7 @@ def test_what_lacks_is_refused_before_anything_changes(account: Account) -> None
 # --- what UNIFORM.md names as work ----------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "kind",
-    kinds(
-        memory=ALL_FOLDERS,
-        jmap=ALL_FOLDERS,
-        gmail=ALL_FOLDERS,
-        microsoft=ALL_FOLDERS,
-    ),
-)
+@pytest.mark.parametrize("kind", kinds())
 def test_a_list_without_a_folder_is_the_inbox(account: Account) -> None:
     account.box.put(mail("In the inbox"))
     drafts = account.client.post(

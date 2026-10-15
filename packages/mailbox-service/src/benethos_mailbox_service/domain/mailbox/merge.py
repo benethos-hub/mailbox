@@ -22,7 +22,7 @@ _CURSOR_PREFIX = "x_"
 class Position:
     """Where one account stands in a list across accounts."""
 
-    folder_id: str | None
+    folder_id: str
     cursor: str | None  # the account's own cursor of the page to read next
     offset: int  # items of that page already delivered
     done: bool = False

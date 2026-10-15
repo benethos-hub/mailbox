@@ -143,11 +143,9 @@ async def ids(api: GmailApi, params: list[tuple[str, str]]) -> list[str]:
             return found
 
 
-def folder_params(folder_id: str | None) -> list[tuple[str, str]]:
-    """What narrows a list to a folder. Without one: every message, the
-    trash and the spam among them."""
-    if folder_id is None:
-        return [("includeSpamTrash", "true")]
+def folder_params(folder_id: str) -> list[tuple[str, str]]:
+    """What narrows a list to a folder. All Mail holds every message but
+    those in the trash and the spam."""
     if folder_id == mappers.ALL_MAIL:
         return []
     found = [("labelIds", folder_id)]

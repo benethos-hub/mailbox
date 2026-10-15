@@ -15,7 +15,7 @@ from benethos_mailbox_service.data.protocols.imap import (
 )
 from benethos_mailbox_service.errors import BadRequestError
 
-from ...data.providers.test_imap import provider
+from ...data.providers.test_imap import INBOX, provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
 
 
@@ -53,7 +53,7 @@ def box() -> FakeMailBox:
 
 async def subjects(box: FakeMailBox, **fields: object) -> list[str]:
     page = await provider(box).list_messages(
-        None, limit=10, cursor=None, search=MessageFilter.model_validate(fields)
+        INBOX, limit=10, cursor=None, search=MessageFilter.model_validate(fields)
     )
     return sorted(m.subject or "" for m in page.items)
 
@@ -112,7 +112,7 @@ def test_a_folder_by_its_role(client: TestClient, account_id: str) -> None:
     url = f"/v1/accounts/{account_id}/messages"
     assert len(client.get(url, params={"folder": "inbox"}).json()["items"]) == 5
     missing = client.get(url, params={"folder": "trash"})
-    assert missing.status_code == 404
+    assert missing.status_code == 501
     assert "trash" in missing.json()["error"]["message"]
 
 

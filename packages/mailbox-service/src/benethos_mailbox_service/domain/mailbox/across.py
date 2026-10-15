@@ -17,7 +17,7 @@ from ...data.models import (
     MessageSummary,
     Page,
 )
-from ...errors import NotFoundError
+from ...errors import NotSupportedError
 from ..accounts import for_list
 from ..rights import Access
 from . import merge
@@ -44,6 +44,9 @@ class AcrossAccounts:
     ) -> MessagePage:
         failures: list[AccountFailure] = []
         visible, reaches = await self._visible(access, account_ids, failures)
+        # A cursor of the time a list without a role was every folder
+        # answers for another query, and is refused once.
+        folder_role = folder_role or FolderRole.INBOX
         query = fingerprint(folder_role, search)
         if cursor:
             positions = {
@@ -99,12 +102,10 @@ class AcrossAccounts:
     async def _start(
         self,
         account_ids: list[str],
-        role: FolderRole | None,
+        role: FolderRole,
         failures: list[AccountFailure],
         reaches: dict[str, Reach | None],
     ) -> dict[str, merge.Position]:
-        if role is None:
-            return {a: merge.Position(None, None, 0) for a in account_ids}
         folders = await merge.per_account(
             account_ids,
             lambda a: self._calls.call(a, lambda p: p.list_folders()),
@@ -119,7 +120,7 @@ class AcrossAccounts:
             reach = reaches.get(account_id)
             if match is None:
                 # Named once, on the first page: its messages never come.
-                missing = NotFoundError(f"the account has no {role.value} folder")
+                missing = NotSupportedError(f"the account has no {role.value} folder")
                 failures.append(
                     AccountFailure(
                         account_id=account_id,
@@ -127,7 +128,7 @@ class AcrossAccounts:
                         message=missing.message,
                     )
                 )
-            elif reach is None or match.id in reach.ids:
+            elif reach is None or match.id in reach.ids or role is FolderRole.ALL:
                 positions[account_id] = merge.Position(match.id, None, 0)
         return positions
 

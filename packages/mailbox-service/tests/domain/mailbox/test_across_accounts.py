@@ -25,6 +25,9 @@ from benethos_mailbox_service.errors import ProviderUnavailableError
 from ...conftest import admin_bearer, bearer_for, create_account
 
 START = datetime(2026, 9, 1, tzinfo=UTC)
+INBOX = Folder(id="inbox", name="Inbox", role=FolderRole.INBOX)
+# Every folder but the trash and junk: the list across all of them.
+ALL = Folder(id="all", name="All Mail", role=FolderRole.ALL)
 
 
 class Flaky(MemoryProvider):
@@ -62,10 +65,13 @@ def test_the_newest_by_when_it_was_received() -> None:
 @pytest.fixture
 def world() -> World:
     adapters = [
-        Flaky(messages=_messages("a", [9, 7, 5, 3, 1])),
-        Flaky(messages=_messages("b", [10, 8, 2])),
+        Flaky(folders=[INBOX, ALL], messages=_messages("a", [9, 7, 5, 3, 1])),
+        Flaky(folders=[INBOX, ALL], messages=_messages("b", [10, 8, 2])),
         Flaky(
-            folders=[Folder(id="archive", name="Archive", role=FolderRole.ARCHIVE)],
+            folders=[
+                Folder(id="archive", name="Archive", role=FolderRole.ARCHIVE),
+                ALL,
+            ],
             messages=_messages("c", [6, 4], folder="archive"),
         ),
     ]
@@ -105,7 +111,7 @@ def _walk(client: TestClient, limit: int, **params: object) -> list[list[str]]:
 
 def test_every_message_once_newest_first(world: World) -> None:
     _, client, _, _ = world
-    pages = _walk(client, limit=3)
+    pages = _walk(client, limit=3, folder="all")
     flat = [s for page in pages for s in page]
     assert flat == ["b10", "a9", "b8", "a7", "c6", "a5", "c4", "a3", "b2", "a1"]
     assert all(len(page) <= 3 for page in pages)
@@ -114,7 +120,7 @@ def test_every_message_once_newest_first(world: World) -> None:
 @pytest.mark.parametrize("limit", [1, 2, 4, 50])
 def test_order_holds_for_any_page_size(world: World, limit: int) -> None:
     _, client, _, _ = world
-    flat = [s for page in _walk(client, limit=limit) for s in page]
+    flat = [s for page in _walk(client, limit=limit, folder="all") for s in page]
     assert flat == ["b10", "a9", "b8", "a7", "c6", "a5", "c4", "a3", "b2", "a1"]
 
 
@@ -124,7 +130,7 @@ def test_an_account_not_listed_by_date_loses_nothing(world: World, limit: int) -
     every message still comes once, each page newest first."""
     _, client, _, adapters = world
     adapters[0].messages = _messages("a", [1, 9, 3, 7, 5])
-    pages = _walk(client, limit=limit)
+    pages = _walk(client, limit=limit, folder="all")
     every = [s for page in pages for s in page]
     assert sorted(every) == sorted(
         ["a1", "a9", "a3", "a7", "a5", "b10", "b8", "b2", "c6", "c4"]
@@ -132,6 +138,23 @@ def test_an_account_not_listed_by_date_loses_nothing(world: World, limit: int) -
     for page in pages:
         hours = [int(s[1:]) for s in page]
         assert hours == sorted(hours, reverse=True)
+
+
+def test_without_a_folder_the_inbox(world: World) -> None:
+    _, client, ids, _ = world
+    body = client.get("/v1/messages", params={"limit": 50}).json()
+    assert [m["subject"] for m in body["items"]] == [
+        "b10",
+        "a9",
+        "b8",
+        "a7",
+        "a5",
+        "a3",
+        "b2",
+        "a1",
+    ]
+    [lacking] = body["incomplete"]
+    assert lacking["account_id"] == ids[2] and lacking["code"] == "not_supported"
 
 
 def test_items_carry_their_account(world: World) -> None:
@@ -143,7 +166,9 @@ def test_items_carry_their_account(world: World) -> None:
 def test_chosen_accounts_only(world: World) -> None:
     _, client, ids, _ = world
     flat = [
-        s for page in _walk(client, limit=10, accounts=[ids[2], ids[1]]) for s in page
+        s
+        for page in _walk(client, limit=10, accounts=[ids[2], ids[1]], folder="all")
+        for s in page
     ]
     assert flat == ["b10", "b8", "c6", "c4", "b2"]
 
@@ -171,7 +196,7 @@ def test_folder_role_per_account(world: World) -> None:
     assert body.json()["incomplete"] == [
         {
             "account_id": account_id,
-            "code": "not_found",
+            "code": "not_supported",
             "message": "the account has no archive folder",
         }
         for account_id in ids[:2]
@@ -198,14 +223,14 @@ def test_a_failing_account_does_not_keep_the_cursor_alive(world: World) -> None:
     adapters[1].fail = True
     # The failed account keeps its place while the others deliver. Once
     # nothing but failed accounts is left, the list ends.
-    pages = _walk(client, limit=50)
+    pages = _walk(client, limit=50, folder="all")
     assert pages == [["a9", "a7", "c6", "a5", "c4", "a3", "a1"], []]
 
 
 def test_a_failing_account_leaves_the_page_incomplete(world: World) -> None:
     _, client, ids, adapters = world
     adapters[1].fail = True
-    body = client.get("/v1/messages", params={"limit": 3}).json()
+    body = client.get("/v1/messages", params={"limit": 3, "folder": "all"}).json()
     assert [m["subject"] for m in body["items"]] == ["a9", "a7", "c6"]
     assert body["incomplete"] == [
         {
@@ -219,7 +244,8 @@ def test_a_failing_account_leaves_the_page_incomplete(world: World) -> None:
     # The failed account keeps its place and joins again later.
     adapters[1].fail = False
     rest = client.get(
-        "/v1/messages", params={"limit": 50, "cursor": body["next_cursor"]}
+        "/v1/messages",
+        params={"limit": 50, "folder": "all", "cursor": body["next_cursor"]},
     ).json()
     assert [m["subject"] for m in rest["items"]] == [
         "b10",
