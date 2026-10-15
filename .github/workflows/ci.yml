@@ -149,9 +149,9 @@ jobs:
           uvx pip-audit==2.10.1 --strict --disable-pip --no-deps \
             --vulnerability-service osv -r /tmp/lowest.txt
 
-      # Alone, the MCP server may get older versions than beside the service,
-      # uvicorn for one. The client and the common package it needs come from
-      # the repository: they are released together.
+      # Alone, the MCP server may get older versions than beside the service.
+      # The client and the common package it needs come from the repository:
+      # they are released together.
       - name: The MCP server alone on its lowest versions
         run: |
           set -euo pipefail
