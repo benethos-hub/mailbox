@@ -228,7 +228,14 @@ def large(
 
     held = polled(lambda: sizes(f"{base}/messages/{copy}"), 5, 3) if copy else None
     run.check("its copy holds both files whole", held == LARGE, str(held))
-    arrived = find(mailbox, bot_id, "inbox", subject, tries=60)
+    if copy:
+        print(f"  its copy lies in: {_roles(client, base, copy)}")
+    # A large mail may take longer, and once it did not arrive at all.
+    arrived = find(mailbox, bot_id, "inbox", subject, tries=120)
+    if arrived is None:
+        arrived = find(mailbox, bot_id, "junk", subject, tries=1)
+        if arrived is not None:
+            print("  it arrived in junk")
     if run.check("it arrives", arrived is not None):
         got = sizes(f"/v1/accounts/{bot_id}/messages/{arrived}")
         run.check("with both files whole", got == LARGE, str(got))
@@ -236,6 +243,17 @@ def large(
     if copy:
         gone = client.delete(f"{base}/messages/{copy}", params={"permanent": "true"})
         run.check("its copy deleted for good", gone.status_code == 204)
+
+
+def _roles(client: httpx.Client, base: str, message_id: str) -> str:
+    """The roles of the folders a message lies in, such as ``sent``, to
+    tell a sent mail from one still waiting in Drafts or the Outbox."""
+    message = client.get(f"{base}/messages/{message_id}")
+    folders = client.get(f"{base}/folders")
+    if message.status_code != 200 or folders.status_code != 200:
+        return "unknown"
+    role = {f["id"]: f["role"] or "no role" for f in folders.json()}
+    return ", ".join(role.get(f, "unlisted") for f in message.json()["folder_ids"])
 
 
 def _said(answer: httpx.Response) -> str:

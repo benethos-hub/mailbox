@@ -69,6 +69,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A text part without a file name, not marked as an attachment, is
+  the body and no longer listed in `attachments`, also where it carries
+  a Content-ID. Exchange gives the body one when a large mail's files
+  are added one by one, so such a mail listed its text as a nameless
+  attachment.
 - `list_threads` answers `501` on a POP3 account, as `get_thread` does,
   instead of an empty page.
 - A Gmail draft carries the keyword `$draft`, as on the other providers,
