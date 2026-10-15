@@ -68,7 +68,13 @@ async def test_connecting_changing_and_verifying_take_it_up(
     await services.accounts.update(ADMIN, account_id, display_name="Me", rename=True)
     assert taken == [account_id], "a new name changes nothing for the sync"
     await services.accounts.update(
-        ADMIN, account_id, display_name=None, rename=False, settings={"port": 443}
+        ADMIN,
+        account_id,
+        display_name=None,
+        rename=False,
+        settings={"port": 443},
+        # Another port is another server.
+        credentials={"password": SecretStr(PASSWORD)},
     )
     await services.accounts.update(
         ADMIN,
