@@ -5,6 +5,8 @@ it, and inline images read where the inbox has them."""
 from __future__ import annotations
 
 import base64
+import os
+import re
 import time
 
 import httpx
@@ -205,7 +207,7 @@ def large(
     files go one by one. Both sides hold them whole, then it is deleted for
     good on both."""
     files = [
-        {"filename": name, "data": base64.b64encode(b"x" * size).decode()}
+        {"filename": name, "data": base64.b64encode(os.urandom(size)).decode()}
         for name, size in LARGE.items()
     ]
     sent = client.post(
@@ -228,11 +230,19 @@ def large(
 
     held = polled(lambda: sizes(f"{base}/messages/{copy}"), 5, 3) if copy else None
     run.check("its copy holds both files whole", held == LARGE, str(held))
-    if copy:
-        print(f"  its copy lies in: {_roles(client, base, copy)}")
-    # A large mail may take longer, and once it did not arrive at all.
-    arrived = find(mailbox, bot_id, "inbox", subject, tries=120)
+    # A large mail may take longer, and once it did not arrive at all,
+    # its copy left in Drafts. Where the copy lies is told as it changes.
+    arrived, place = None, ""
+    for attempt in range(120):
+        if copy and attempt % 6 == 0 and (now := _roles(client, base, copy)) != place:
+            place = now
+            print(f"  after {attempt * 5} s its copy lies in: {place}")
+        arrived = find(mailbox, bot_id, "inbox", subject, tries=1)
+        if arrived is not None:
+            break
+        time.sleep(5)
     if arrived is None:
+        bounces(mailbox, base.rsplit("/", 1)[1], subject)
         arrived = find(mailbox, bot_id, "junk", subject, tries=1)
         if arrived is not None:
             print("  it arrived in junk")
@@ -254,6 +264,25 @@ def _roles(client: httpx.Client, base: str, message_id: str) -> str:
         return "unknown"
     role = {f["id"]: f["role"] or "no role" for f in folders.json()}
     return ", ".join(role.get(f, "unlisted") for f in message.json()["folder_ids"])
+
+
+def bounces(mailbox: SyncMailboxClient, account_id: str, subject: str) -> None:
+    """A report of non-delivery in the inbox of the Microsoft test account,
+    of a mail whose subject holds ``subject``, which says why the mail went
+    nowhere. Its subject and the start of its text are shown with every
+    address masked, then it is deleted for good."""
+    page = mailbox.list_messages(account_id, folder="inbox", limit=20)
+    for summary in page.items:
+        if subject not in (summary.subject or ""):
+            continue
+        message = mailbox.get_message(account_id, summary.id)
+        text = re.sub(r"\S+@\S+", "<address>", message.text_body or "")
+        said = (summary.subject or "").replace(subject, "<subject>")
+        print(f"  a report came back: {said}")
+        print("  " + " ".join(text.split())[:800])
+        mailbox.delete_message(account_id, summary.id, permanent=True)
+        return
+    print("  no report of non-delivery in the inbox")
 
 
 def _said(answer: httpx.Response) -> str:
