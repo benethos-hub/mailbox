@@ -50,7 +50,6 @@ IMAP IDLE. Credentials and mail content are never printed.
 from __future__ import annotations
 
 import argparse
-import os
 import secrets
 import sys
 import time
@@ -59,96 +58,47 @@ from typing import Any
 
 import httpx
 from checks.accounts import accounts, read_env, register
-from checks.admin import Admin, bootstrap
 from checks.mail import (
     sweep,
 )
 from checks.microsoft_mail import bounces, inline, large, marks, send_and_check
-from checks.processes import service_env, start_service, stop
+from checks.own_service import (
+    SYNC_INTERVAL,
+    URL,
+    WAIT,
+    OwnService,
+    account_of,
+    wait_connected,
+)
+from checks.processes import start_service, stop
 from checks.run import Run
 from checks.service import Service
 
 from benethos_mailbox_client import SyncMailboxClient
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
-SYNC_INTERVAL = 20
 # Every mail the check sends starts with it, so a later run finds leftovers.
 SUBJECT = "mailbox-service microsoft live check"
-DATA = Path("data/live-microsoft")
-PORT = 8080
-URL = f"http://localhost:{PORT}"
-WAIT = 600
+STEPS = """Then: Accounts, Connect an account, Sign in with Microsoft, as the
+test account."""
 
 
-def _secret_file(name: str, make: Any) -> str:
-    """A value kept in DATA, readable by the owner only, made once."""
-    path = DATA / name
-    if not path.exists():
-        DATA.mkdir(parents=True, exist_ok=True)
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "w", encoding="utf-8") as out:
-            out.write(make())
-    return path.read_text(encoding="utf-8").strip()
-
-
-def _admin(service: dict[str, str]) -> Admin:
-    """The service's user `admin`, made on the first run the way an
-    operator makes it, and kept in DATA."""
-    if not (DATA / "admin_token").exists():
-        made = bootstrap(service, URL)
-        _secret_file("admin_password", lambda: made.password)
-        _secret_file("admin_token", lambda: made.token)
-    return Admin(
-        "admin", _secret_file("admin_password", str), _secret_file("admin_token", str)
-    )
-
-
-def microsoft_env(env: dict[str, str], project: bool) -> dict[str, str]:
-    """The service on its own database in DATA, reachable under URL, with
-    the app registration of live/.env, or with the project's app."""
-    master_key = _secret_file("master_key", lambda: encode_recovery(cipher.new_key()))
-    service = {
-        **service_env(str(DATA), PORT, master_key),
-        "MAILBOX_SERVICE_PUBLIC_URL": URL,
+def microsoft_env(
+    own: OwnService, env: dict[str, str], project: bool
+) -> dict[str, str]:
+    """The service of ``own``, with the app registration of live/.env, or
+    with the project's app."""
+    oauth = {
         "MAILBOX_SERVICE_OAUTH_MICROSOFT_TENANT": env.get("LIVE_MICROSOFT_TENANT")
         or "common",
-        # The change feed learns of the copy in Sent Items from the worker.
-        "MAILBOX_SERVICE_SYNC_INTERVAL": str(SYNC_INTERVAL),
-        "MAILBOX_SERVICE_SYNC_IDLE": "false",
     }
-    for name in ("ID", "SECRET", "SECRET_FILE"):
-        service.pop(f"MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_{name}", None)
     if not project:
-        service["MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID"] = env[
+        oauth["MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID"] = env[
             "LIVE_MICROSOFT_CLIENT_ID"
         ]
-        service["MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET"] = env.get(
+        oauth["MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET"] = env.get(
             "LIVE_MICROSOFT_CLIENT_SECRET", ""
         )
-    return service
-
-
-def microsoft_account(client: httpx.Client, email: str) -> dict[str, Any] | None:
-    found = client.get("/v1/accounts", params={"address": email}).json()
-    for account in found["items"]:
-        if account["provider"] == "microsoft" and account["email"] == email:
-            return dict(account)
-    return None
-
-
-def connect(client: httpx.Client, email: str) -> int:
-    print(f"Open {URL}/ui and sign in as admin, password in {DATA / 'admin_password'}.")
-    print("Then: Accounts, Connect an account, Sign in with Microsoft, as the")
-    print("test account. Waiting up to ten minutes...")
-    deadline = time.monotonic() + WAIT
-    while time.monotonic() < deadline:
-        account = microsoft_account(client, email)
-        if account is not None and account["status"] == "connected":
-            print("connected; run the check without --connect now")
-            return 0
-        time.sleep(3)
-    print("not connected in time")
-    return 1
+    return own.env("MAILBOX_SERVICE_OAUTH_MICROSOFT_", oauth)
 
 
 def connect_with_code(client: httpx.Client, email: str) -> int:
@@ -355,21 +305,23 @@ def main() -> int:
             "LIVE_MICROSOFT_CLIENT_ID without --project"
         )
         return 2
-    if options.project:
-        global DATA
-        DATA = Path("data/live-microsoft-project")
-    service = microsoft_env(env, options.project)
+    own = OwnService(
+        Path(
+            "data/live-microsoft-project" if options.project else "data/live-microsoft"
+        )
+    )
+    service = microsoft_env(own, env, options.project)
     # The keys are made on the first run; the database keeps them after.
-    process = start_service(service, URL, init_keys=not (DATA / "mailbox.db").exists())
+    process = start_service(service, URL, init_keys=own.fresh)
     run = Run()
     try:
-        running = Service(URL, _admin(service))
+        running = Service(URL, own.admin(service))
         with running.admin(timeout=120) as client, running.mailbox() as mailbox:
             if options.connect:
                 if options.project:
                     return connect_with_code(client, email)
-                return connect(client, email)
-            account = microsoft_account(client, email)
+                return wait_connected(own, client, "microsoft", email, STEPS)
+            account = account_of(client, "microsoft", email)
             if not run.check("the test account is connected", account is not None):
                 print("run with --connect first")
                 return 1

@@ -12,6 +12,8 @@ with ``uv run python live/<name>.py``:
   with narrower rights.
 - ``service``: a service that is gone at the end, in a process or in
   this one.
+- ``own_service``: a service with a database of its own that keeps a
+  sign-in between runs, for ``gmail.py`` and ``microsoft.py``.
 - ``mail``: finding a test mail through the API, and deleting it for good.
 - ``imap``: a plain IMAP connection, standing in for another mail client.
 - ``receiver``: a webhook receiver on 127.0.0.1.
