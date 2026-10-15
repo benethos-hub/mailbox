@@ -29,9 +29,11 @@ preference. The adapter looks their immutable ids up.
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
+
+import anyio
 
 from ....errors import (
     BadRequestError,
@@ -101,8 +103,9 @@ class MicrosoftProvider:
         tokens: TokenSource,
         http: ApiClient | None = None,
         clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], Awaitable[None]] = anyio.sleep,
     ) -> None:
-        self._graph = Graph(tokens, http, clock)
+        self._graph = Graph(tokens, http, clock, sleep)
 
     # --- folders --------------------------------------------------------------------
 
@@ -282,14 +285,12 @@ class MicrosoftProvider:
             else:
                 patch = {**body, **verb}
             if patch:
-                item = await self._graph.read(
-                    GraphMessage, "PATCH", path, json_body=patch
-                )
+                await self._graph.call("PATCH", path, json_body=patch)
             if target is not None:
-                item = await self._graph.move(GraphMessage, path, target)
-            if item is None:
-                item = await self._summary_of(path)
-            return mappers.summary(item)
+                await self._graph.move(GraphMessage, path, target)
+            # Read again: Graph answers a change without the verb that says
+            # whether the message is answered. Its id survives the move.
+            return mappers.summary(await self._summary_of(path))
 
         return await rules.per_id(message_ids, one)
 

@@ -15,18 +15,17 @@ from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 
 import httpx
 
+from .graph_fake_files import REQUEST_LIMIT, UPLOADS, FileCalls
+from .graph_fake_files import json_answer as _json
+
 TOKEN = "good-token"
-# What Graph takes in one request, and the least an upload session takes.
-REQUEST_LIMIT = 4 * 1024 * 1024
-SESSION_MINIMUM = 3_000_000
-UPLOADS = "outlook.office.com"
 # How the fake marks an id that is not immutable.
 REST = "rest-"
 PROPS = "singleValueExtendedProperties"
 WELL_KNOWN = ("inbox", "sentitems", "drafts", "deleteditems", "junkemail")
 
 
-class FakeGraph:
+class FakeGraph(FileCalls):
     def __init__(self) -> None:
         self.ids = (f"AAMk{n}=" for n in itertools.count(1))
         self.root = "root-folder"
@@ -372,14 +371,14 @@ class FakeGraph:
         self, method: str, message: dict[str, Any], request: httpx.Request
     ) -> httpx.Response:
         if method == "GET":
-            return _json(200, message)
+            return _json(200, _expanded(message, request))
         if method == "PATCH":
             body = json.loads(request.content)
             # Extended properties merge by their id, as Graph keeps them.
             both = message.get(PROPS, []) + body.pop(PROPS, [])
             message.update(body, **{PROPS: list({p["id"]: p for p in both}.values())})
             self.touch(message["id"])
-            return _json(200, message)
+            return _json(200, _expanded(message, None))
         if method == "DELETE":
             # As Graph does: outside the trash, a delete moves the message
             # there. Deleted from the trash, it is gone.
@@ -391,61 +390,6 @@ class FakeGraph:
                 del self.messages[message["id"]]
             return httpx.Response(204)
         return _error(400, "BadRequest", "unknown message call")
-
-    def mime(self, message_id: str) -> bytes:
-        """The message's MIME, with the files added one by one."""
-        files = self.files.get(message_id, [])
-        if not files:
-            return self.raws[message_id]
-        parsed = message_from_bytes(self.raws[message_id], policy=default)
-        for file in files:
-            maintype, _, subtype = file["contentType"].partition("/")
-            parsed.add_attachment(
-                file["data"], maintype, subtype, filename=file["name"]
-            )
-        return parsed.as_bytes()
-
-    def _attach(
-        self, message: dict[str, Any], rest: list[str], body: dict[str, Any]
-    ) -> httpx.Response:
-        """A file in one request, or an upload session for a large one."""
-        if not rest:
-            data = base64.b64decode(body.pop("contentBytes"))
-            self.files.setdefault(message["id"], []).append({**body, "data": data})
-            return _json(201, {"id": f"file-{len(self.files[message['id']])}"})
-        item = body["AttachmentItem"]
-        if item["size"] < SESSION_MINIMUM:
-            return _error(
-                400,
-                "ErrorAttachmentSizeShouldNotBeLessThanMinimumSize",
-                "too small for an upload session",
-            )
-        session = f"s{len(self.sessions) + 1}"
-        self.sessions[session] = {"message": message["id"], "item": item, "data": b""}
-        url = f"https://{UPLOADS}/api/v2.0/AttachmentSessions/{session}"
-        return _json(
-            201, {"uploadUrl": f"{url}?authtoken=t", "nextExpectedRanges": ["0-"]}
-        )
-
-    def _upload(self, request: httpx.Request, session: str) -> httpx.Response:
-        """A range of a file, in order, without a token of the account."""
-        assert "authorization" not in request.headers
-        assert len(request.content) <= REQUEST_LIMIT
-        open_ = self.sessions[session]
-        span, _, total = (
-            request.headers["content-range"].removeprefix("bytes ").partition("/")
-        )
-        start = int(span.split("-")[0])
-        assert start == len(open_["data"]), "ranges come in order"
-        open_["data"] += request.content
-        if len(open_["data"]) < int(total):
-            return _json(200, {"nextExpectedRanges": [str(len(open_["data"]))]})
-        item = open_["item"]
-        self.files.setdefault(open_["message"], []).append(
-            {**item, "data": open_["data"]}
-        )
-        del self.sessions[session]
-        return httpx.Response(201)
 
     def _send(self, message: dict[str, Any]) -> httpx.Response:
         """A draft sent: its copy in Sent Items keeps the immutable id."""
@@ -487,8 +431,11 @@ class FakeGraph:
         return _json(201, self.messages[message_id])
 
 
-def _json(status: int, body: Any) -> httpx.Response:
-    return httpx.Response(status, json=body)
+def _expanded(message: dict[str, Any], request: httpx.Request | None) -> Any:
+    """Extended properties only when asked to expand them, as Graph."""
+    if request is not None and "$expand" in request.url.params:
+        return message
+    return {k: v for k, v in message.items() if k != PROPS}
 
 
 def _list(items: Any) -> httpx.Response:

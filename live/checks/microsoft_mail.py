@@ -201,6 +201,37 @@ def _answered(run: Run, client: httpx.Client, url: str, sent: dict) -> None:
     )
 
 
+def marks(run: Run, client: httpx.Client, base: str) -> None:
+    """$answered and $forwarded on the newest mail of the inbox, each put
+    on and taken off right after the other, then what it carried put back.
+    No mail is sent."""
+    print("\n== marks, on the newest mail of the inbox")
+    page = client.get(f"{base}/messages", params={"folder": "inbox", "limit": 1})
+    listed = page.json().get("items", []) if page.status_code == 200 else []
+    if not run.check("a mail in the inbox", bool(listed)):
+        return
+    url = f"{base}/messages/{listed[0]['id']}"
+    had = [k for k in listed[0]["keywords"] if k in ("$answered", "$forwarded")]
+    for how, mark in (
+        ("add", "$answered"),
+        ("remove", "$answered"),
+        ("add", "$forwarded"),
+        ("remove", "$forwarded"),
+    ):
+        changed = client.patch(url, json={f"{how}_keywords": [mark]})
+        held = client.get(url).json().get("keywords", [])
+        on = how == "add"
+        run.check(
+            f"{mark} {'put on' if on else 'taken off'}",
+            changed.status_code == 200
+            and (mark in changed.json()["keywords"]) == on
+            and (mark in held) == on,
+            _said(changed),
+        )
+    if had:
+        client.patch(url, json={"add_keywords": had})
+
+
 def _keywords(run: Run, client: httpx.Client, base: str, copy: str) -> None:
     """A keyword on the copy, an Outlook category, added and taken off."""
     url = f"{base}/messages/{copy}"

@@ -1,19 +1,22 @@
 """Microsoft Graph on the wire, for one account: each request with its
 access token and the preference for immutable ids, a refused token
-renewed once, Graph's pages followed, JSON batches, the well-known
-folders, and Graph's errors as this project's."""
+renewed once, a change Exchange calls a conflict tried again, Graph's
+pages followed, JSON batches, the well-known folders, and Graph's errors
+as this project's."""
 
 from __future__ import annotations
 
 import logging
 import time
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from typing import Any, TypeVar
 from urllib.parse import quote, urlsplit
 
+import anyio
 from pydantic import BaseModel
 
 from ....common.chunks import batched
+from ....common.ratelimit import backoff
 from ....errors import (
     BadRequestError,
     ChangesExpiredError,
@@ -42,6 +45,12 @@ BATCH_SIZE = 20
 UPLOAD_RANGE = 10 * 320 * 1024
 # Ids that survive a move (CONCEPT 4.1), asked for on every request.
 IMMUTABLE_IDS = 'IdType="ImmutableId"'
+# Exchange refuses a change of an item that changed a moment before, such
+# as a mark set right after another (seen live): tried again this often,
+# after a growing pause from this one.
+CONFLICT = "ErrorIrresolvableConflict"
+CONFLICT_TRIES = 3
+CONFLICT_PAUSE = 1.0
 
 S = TypeVar("S", bound=BaseModel)
 T = TypeVar("T")
@@ -54,10 +63,12 @@ class Graph:
         tokens: TokenSource,
         http: ApiClient | None = None,
         clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], Awaitable[None]] = anyio.sleep,
     ) -> None:
         self.tokens = tokens
         self._http = http or ApiClient()
         self._clock = clock
+        self._sleep = sleep
         self._roles: dict[str, FolderRole] | None = None
         self._root: str | None = None
         # Until when Graph asked to be left alone (Retry-After).
@@ -74,10 +85,41 @@ class Graph:
         content_type: str | None = None,
     ) -> Answer:
         """One Graph request. ``path`` below ``/v1.0``, e.g. ``/me/messages``.
-        While Graph asked to be left alone, nothing is sent."""
+        While Graph asked to be left alone, nothing is sent. A change
+        Exchange refuses as a conflict goes again after a pause."""
         wait = self._rest_until - self._clock()
         if wait > 0:
             raise rules.resting("microsoft asked to wait", wait)
+        tries = CONFLICT_TRIES if method == "PATCH" else 1
+        for attempt in range(tries):
+            if attempt:
+                await self._sleep(backoff(attempt - 1, base=CONFLICT_PAUSE))
+            answer = await self._signed(
+                method, path, params, json_body, content, content_type
+            )
+            if answer.ok or _code(answer) != CONFLICT:
+                break
+            log.debug("microsoft answered a conflict on attempt %d", attempt + 1)
+        if not answer.ok:
+            rest = answer.retry_after if answer.status in (429, 503) else 0.0
+            self._rest_until = self._clock() + rest
+            if rest > 0:
+                log.debug("microsoft asked to wait %.0fs", rest)
+            raise _failure(answer)
+        return answer
+
+    async def _signed(
+        self,
+        method: str,
+        path: str,
+        params: Mapping[str, str] | None,
+        json_body: Any,
+        content: bytes | None,
+        content_type: str | None,
+    ) -> Answer:
+        """One request with the access token, and where Graph refuses the
+        token, revoked or changed since it was issued, once more with a
+        new one."""
         for attempt in (1, 2):
             token = await self.tokens.access_token()
             headers = {
@@ -95,16 +137,8 @@ class Graph:
                 content=content,
             )
             if answer.status == 401 and attempt == 1:
-                # Revoked or changed since it was issued: one more try with
-                # a new one.
                 self.tokens.reject()
                 continue
-            if not answer.ok:
-                rest = answer.retry_after if answer.status in (429, 503) else 0.0
-                self._rest_until = self._clock() + rest
-                if rest > 0:
-                    log.debug("microsoft asked to wait %.0fs", rest)
-                raise _failure(answer)
             return answer
         raise AssertionError("unreachable")  # pragma: no cover
 
@@ -245,6 +279,12 @@ def own_path(link: str) -> str:
     if not rest.startswith("/me/") or ".." in rest:
         raise rules.invalid_cursor()
     return f"{rest}?{parts.query}" if parts.query else rest
+
+
+def _code(answer: Answer) -> str | None:
+    """Graph's code of a refused request, such as ``ErrorItemNotFound``."""
+    found = wire.read(Failure, answer.body)
+    return found.error.code if found and found.error else None
 
 
 def _failure(answer: Answer) -> MailboxServiceError:

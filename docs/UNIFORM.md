@@ -441,7 +441,8 @@ Decided 2026-10-12, each with the options weighed and why.
    *Decided: (a), subject to a live check* against the Microsoft
    test account. If it fails, (b) holds for Microsoft. Either way, the
    send answers whether the original was marked, and the account's
-   lists of marks (section 3) say so in advance.
+   lists of marks (section 3) say so in advance. Checked live on
+   2026-10-15: Microsoft reads and writes both, so (a) holds.
 5. **A list without a folder.** (a) The inbox, on every account. (b)
    Every folder, on every account, which IMAP would have to emulate
    folder by folder. (c) The folder becomes required.

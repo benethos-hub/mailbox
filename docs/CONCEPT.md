@@ -391,8 +391,10 @@ an app password is the credential to ask for.
   `$forwarded` are the verb Outlook last carried out on a message
   (`PidTagLastVerbExecuted`), read and written as an extended property
   with the icon Outlook shows for it: one of the two at a time, as
-  Outlook shows it. The other system keywords have no place: setting or
-  taking one off answers `501`. A next-page
+  Outlook shows it. A change Exchange refuses as a conflict, as a mark
+  set right after another one (seen live), is tried again after a pause.
+  The other system keywords have no place: setting or taking one off
+  answers `501`. A next-page
   cursor is a Graph path below `/me/` and never leaves the Graph host.
   No push yet.
 - Exchange has no folder with the role `all`. The adapter shows one,

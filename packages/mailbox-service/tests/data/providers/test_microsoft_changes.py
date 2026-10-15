@@ -126,6 +126,37 @@ async def test_answered_and_forwarded_are_the_last_verb(graph: FakeGraph) -> Non
     assert "$answered" in (await provider.get_message(message_id)).keywords
 
 
+def conflict() -> httpx.Response:
+    return httpx.Response(
+        412,
+        json={
+            "error": {
+                "code": "ErrorIrresolvableConflict",
+                "message": "the change key does not match",
+            }
+        },
+    )
+
+
+async def test_a_conflict_of_exchange_is_tried_again(graph: FakeGraph) -> None:
+    """Seen live: a mark set right after another one."""
+    message_id = graph.add_message()
+    pauses: list[float] = []
+
+    async def pause(seconds: float) -> None:
+        pauses.append(seconds)
+
+    provider = MicrosoftProvider(
+        Tokens(TOKEN), ApiClient(transport=httpx.MockTransport(graph)), sleep=pause
+    )
+    graph.next_answer = conflict()
+    [done] = (
+        await provider.update_messages([message_id], MessageUpdate(starred=True))
+    ).values()
+    assert isinstance(done, MessageSummary) and done.starred
+    assert len(pauses) == 1
+
+
 async def test_a_graph_message_is_in_one_folder(graph: FakeGraph) -> None:
     message_id = graph.add_message()
     archive = graph.new_folder("Archive", graph.root)
