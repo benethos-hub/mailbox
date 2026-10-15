@@ -283,6 +283,9 @@ class FakeGmail:
         answer["snippet"] = "Hi &amp; there"
         if shape == "raw":
             answer["raw"] = _b64(found["raw"])
+        elif shape == "full":
+            # The parts with their names and headers, never their contents.
+            answer["payload"] = _part(message_from_bytes(found["raw"], policy=default))
         elif shape == "metadata":
             parsed = message_from_bytes(found["raw"], policy=default)
             names = query.get("metadataHeaders", [])
@@ -388,6 +391,16 @@ class FakeGmail:
         if records:
             answer["history"] = records
         return _ok(answer)
+
+
+def _part(part: Any) -> dict[str, Any]:
+    inner = part.get_payload() if part.is_multipart() else []
+    return {
+        "mimeType": part.get_content_type(),
+        "filename": part.get_filename() or "",
+        "headers": [{"name": n, "value": str(v)} for n, v in part.items()],
+        "parts": [_part(p) for p in inner],
+    }
 
 
 def _matches(message: dict[str, Any], term: str) -> bool:

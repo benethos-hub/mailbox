@@ -36,6 +36,16 @@ Addresses = list[Annotated[EmailAddress | None, wire.OrNone]]
 When = Annotated[datetime | None, wire.OrNone]
 
 
+class BodyPart(wire.CamelShape):
+    """A part of an email as JMAP describes it, without its content
+    (RFC 8621 4.1.4)."""
+
+    type: Text = None
+    name: Text = None
+    disposition: Text = None
+    cid: Text = None
+
+
 class Email(wire.CamelShape):
     """An email (RFC 8621 4)."""
 
@@ -51,6 +61,8 @@ class Email(wire.CamelShape):
     to: Addresses = []
     preview: Text = None
     has_attachment: Annotated[bool | None, wire.OrNone] = None
+    # The parts beside the body. None where the server sent none.
+    attachments: Annotated[list[BodyPart] | None, wire.OrNone] = None
     message_id: Annotated[list[str] | None, wire.OrNone] = None
 
 

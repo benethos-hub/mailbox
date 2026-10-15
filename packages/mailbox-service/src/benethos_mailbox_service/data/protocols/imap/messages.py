@@ -17,6 +17,7 @@ from .responses import (
     new_uids,
     part,
     received,
+    structure,
     thread_headers,
     translated,
     with_code,
@@ -81,10 +82,14 @@ class Messages:
         """Flags and headers. Never sets ``\\Seen``."""
         return [
             FetchedMessage(
-                uid, flags(data), part(data, b"BODY[HEADER]"), received(data)
+                uid,
+                flags(data),
+                part(data, b"BODY[HEADER]"),
+                received(data),
+                structure(data),
             )
             for uid, data in self._fetch(
-                uids, ["FLAGS", "INTERNALDATE", _HEADER]
+                uids, ["FLAGS", "INTERNALDATE", "BODYSTRUCTURE", _HEADER]
             ).items()
         ]
 

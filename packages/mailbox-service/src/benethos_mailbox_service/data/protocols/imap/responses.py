@@ -12,7 +12,7 @@ from email.parser import BytesHeaderParser
 from typing import Any
 
 from ....errors import ProviderError, ProviderUnavailableError
-from ...mail import fields
+from ...mail import fields, parse
 from .. import transport
 from ..transport import names, text
 
@@ -48,6 +48,57 @@ def received(data: dict[bytes, Any]) -> datetime | None:
     if not isinstance(value, datetime):
         return None
     return value if value.tzinfo is not None else value.astimezone()
+
+
+def structure(data: dict[bytes, Any]) -> tuple[parse.PartShape, ...] | None:
+    """The parts BODYSTRUCTURE describes (RFC 3501 7.4.2), without what a
+    message attached as a part holds. None where the server sent none."""
+    body = data.get(b"BODYSTRUCTURE")
+    if not isinstance(body, tuple | list) or not body:
+        return None
+    found: list[parse.PartShape] = []
+    _walk(body, found)
+    return tuple(found)
+
+
+def _walk(body: Any, found: list[parse.PartShape]) -> None:
+    if isinstance(body[0], list | tuple):
+        # A multipart: its parts first, as IMAPClient lists them.
+        for inner in body[0]:
+            _walk(inner, found)
+        return
+    kind = f"{text(body[0])}/{text(body[1])}".lower()
+    names = _pairs(body[2])
+    # The fields beyond the basic ones: a text has its lines, a message
+    # its envelope, its structure and its lines, then MD5, disposition.
+    at = (
+        8
+        + (1 if kind.startswith("text/") else 0)
+        + (3 if kind == "message/rfc822" else 0)
+    )
+    disposition = body[at] if len(body) > at else None
+    how, more = ("", {})
+    if isinstance(disposition, tuple | list) and disposition:
+        how, more = text(disposition[0]).lower(), _pairs(disposition[1])
+    named = [
+        v for k, v in {**names, **more}.items() if k.startswith(("name", "filename"))
+    ]
+    found.append(
+        parse.PartShape(
+            content_type=kind,
+            filename=named[0] if named else None,
+            disposition=how,
+            content_id=text(body[3]) if body[3] else None,
+        )
+    )
+
+
+def _pairs(values: Any) -> dict[str, str]:
+    """A parameter list of BODYSTRUCTURE, names in lower case."""
+    if not isinstance(values, tuple | list):
+        return {}
+    flat = [text(v) for v in values]
+    return {k.lower(): v for k, v in zip(flat[::2], flat[1::2], strict=False)}
 
 
 def part(data: dict[bytes, Any], key: bytes) -> bytes:

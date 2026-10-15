@@ -56,6 +56,7 @@ SUMMARY_PROPERTIES = [
     "to",
     "preview",
     "hasAttachment",
+    "attachments",
 ]
 
 # Keywords with a field or an operation of their own in the API.
@@ -105,8 +106,24 @@ def summary(email: Email) -> MessageSummary:
             "unread": SEEN not in flags,
             "starred": FLAGGED in flags,
             "keywords": keywords(flags),
-            "has_attachments": bool(email.has_attachment),
+            "has_attachments": _attached(email),
         }
+    )
+
+
+def _attached(email: Email) -> bool:
+    """Counted as in a whole message, from the parts beside the body.
+    The server's own ``hasAttachment`` where it sent none."""
+    if email.attachments is None:
+        return bool(email.has_attachment)
+    return parse.has_attachments(
+        parse.PartShape(
+            content_type=(a.type or "").lower(),
+            filename=a.name or None,
+            disposition=(a.disposition or "").lower(),
+            content_id=a.cid or None,
+        )
+        for a in email.attachments
     )
 
 

@@ -35,10 +35,13 @@ class Header(wire.Shape):
 
 
 class Part(wire.CamelShape):
-    """The top part of a message, with its headers in the order sent."""
+    """A part of a message, the top one first, with its headers in the
+    order sent and the parts inside it."""
 
     mime_type: Text = None
+    filename: Text = None
     headers: list[Header] = []
+    parts: list[Part] = []
 
 
 class GmailMessage(wire.CamelShape):

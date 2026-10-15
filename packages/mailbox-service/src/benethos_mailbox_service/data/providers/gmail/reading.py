@@ -66,6 +66,21 @@ def metadata_params(headers: tuple[str, ...]) -> list[tuple[str, str]]:
     return [("format", "metadata"), *(("metadataHeaders", h) for h in headers)]
 
 
+# A summary: the fields of a message and its parts four levels deep, their
+# names and headers, without their contents, so has_attachments counts as
+# in a whole message (UNIFORM 6.10).
+_PART = "mimeType,filename,headers"
+_PARTS = f"{_PART},parts({_PART},parts({_PART},parts({_PART},parts({_PART}))))"
+SUMMARY = f"id,threadId,labelIds,snippet,historyId,internalDate,payload({_PARTS})"
+
+
+def summary_params(within: str | None = None) -> list[tuple[str, str]]:
+    """The query of summaries, of messages or of the messages ``within``
+    an answer, such as a thread's."""
+    fields = f"id,{within}({SUMMARY})" if within else SUMMARY
+    return [("format", "full"), ("fields", fields)]
+
+
 async def at_once(
     keys: Iterable[str], fetch: Callable[[str], Awaitable[T]]
 ) -> dict[str, T]:
@@ -105,7 +120,7 @@ async def messages(
 async def summaries(api: GmailApi, message_ids: list[str]) -> dict[str, MessageSummary]:
     """The summaries of the messages that are there."""
     known = await known_folders(api)
-    found = await messages(api, message_ids, metadata_params(mappers.SUMMARY_HEADERS))
+    found = await messages(api, message_ids, summary_params())
     return {i: mappers.summary(m, known) for i, m in found.items()}
 
 

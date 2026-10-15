@@ -80,8 +80,9 @@ class MessageSummary(BaseModel):
         default=False,
         description="Whether the message has a part a person sees as an "
         "attachment, not one the body shows in its place such as an image in "
-        "the HTML. In a list of an IMAP account it is read from the header: "
-        "whether the message is multipart/mixed.",
+        "the HTML. Counted the same way in a list and in a whole message, "
+        "except in a list of a POP3 account, which reads the headers alone "
+        "and guesses from them: whether the message is multipart/mixed.",
     )
 
     model_config = {"populate_by_name": True, "serialize_by_alias": True}

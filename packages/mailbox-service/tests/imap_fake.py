@@ -18,6 +18,7 @@ from typing import Any
 from imapclient.exceptions import LoginError
 
 from .imap_fake_folders import FakeFolder, FolderCommands
+from .imap_fake_structure import structure
 
 
 def make_message(
@@ -281,7 +282,8 @@ class FakeMailBox(FolderCommands):
             return self._changed_since(uids, items, modifiers)
         assert not isinstance(uids, str)
         for item in items:
-            assert "BODY" not in item or "PEEK" in item, "a read must never set \\Seen"
+            reads = item.startswith(("BODY[", "BODY."))
+            assert not reads or "PEEK" in item, "a read must never set \\Seen"
         kind = (
             "message-id"
             if any("MESSAGE-ID" in i for i in items)
@@ -301,6 +303,8 @@ class FakeMailBox(FolderCommands):
             data: dict[bytes, Any] = {b"SEQ": number + 1}
             if "FLAGS" in items:
                 data[b"FLAGS"] = tuple(f.encode() for f in flags)
+            if "BODYSTRUCTURE" in items:
+                data[b"BODYSTRUCTURE"] = structure(raw)
             if "INTERNALDATE" in items:
                 arrived = self.arrivals.get((self.selected, uid))
                 data[b"INTERNALDATE"] = _local(arrived or _received(head))

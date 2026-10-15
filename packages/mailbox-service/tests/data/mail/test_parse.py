@@ -6,7 +6,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from email.message import EmailMessage
 
-from benethos_mailbox_service.data.mail.parse import ParsedMessage
+from benethos_mailbox_service.data.mail.parse import (
+    ParsedMessage,
+    PartShape,
+    has_attachments,
+)
 
 
 def _exchange_mail() -> EmailMessage:
@@ -72,3 +76,17 @@ def test_received_is_none_without_a_readable_header() -> None:
     assert ParsedMessage(b"Subject: Hi\r\n\r\nHello\r\n").received is None
     odd = b"Received: from relay.example.org; not a date\r\nSubject: Hi\r\n\r\n"
     assert ParsedMessage(odd).received is None
+
+
+def test_what_counts_as_an_attachment() -> None:
+    """UNIFORM 6.10: a part the body does not show in its place."""
+    shape = PartShape
+    # Apple Mail marks a PDF inline: it is a file all the same.
+    assert has_attachments([shape("application/pdf", "a.pdf", "inline")])
+    assert has_attachments([shape("image/png", "x.png", "attachment", "<x@y>")])
+    assert has_attachments([shape("message/rfc822")])
+    assert not has_attachments([shape("image/png", None, "inline", "<x@y>")])
+    assert not has_attachments(
+        [shape("text/plain"), shape("text/html", None, "inline")]
+    )
+    assert not has_attachments([shape("application/pdf")])

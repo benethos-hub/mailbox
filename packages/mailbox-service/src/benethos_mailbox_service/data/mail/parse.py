@@ -47,7 +47,43 @@ class ParsedAttachment:
         """Whether a person sees it as an attachment: not a part the body
         shows in its place, such as an image in the HTML. A file a client
         marked inline, as Apple Mail does with a PDF, is one."""
-        return self.content_id is None or self.disposition == "attachment"
+        return attached(self.content_id, self.disposition)
+
+
+@dataclass(frozen=True)
+class PartShape:
+    """A part of a message without its content, as IMAP's BODYSTRUCTURE,
+    Gmail's parts or JMAP's attachments describe it. ``content_type`` in
+    lower case, ``disposition`` "attachment", "inline" or ""."""
+
+    content_type: str
+    filename: str | None = None
+    disposition: str = ""
+    content_id: str | None = None
+
+
+def attached(content_id: str | None, disposition: str) -> bool:
+    """The rule of a real attachment (UNIFORM 6.10): a part the body does
+    not name by its Content-ID, or one marked as an attachment."""
+    return content_id is None or disposition == "attachment"
+
+
+def has_attachments(parts: Iterable[PartShape]) -> bool:
+    """Whether a person sees one of the parts as an attachment, counted
+    as ``ParsedMessage.attachments`` and ``attached`` count them in a
+    whole message: a part with a name, a Content-ID or a message inside,
+    not the text of the body."""
+    for part in parts:
+        listed = (
+            part.content_id or part.filename or part.content_type == "message/rfc822"
+        )
+        if not listed or _is_text_body(
+            part.content_type, part.filename, part.disposition
+        ):
+            continue
+        if attached(part.content_id, part.disposition):
+            return True
+    return False
 
 
 class ParsedMessage:
@@ -171,10 +207,16 @@ def _body(part: Any) -> bool:
     body one when files are added to a draft one by one. Without a name
     and not marked as an attachment, such a text is the body, as
     ``text`` and ``html`` read it."""
+    return _is_text_body(
+        part.content_type, part.filename, (part.content_disposition or "").lower()
+    )
+
+
+def _is_text_body(content_type: str, filename: str | None, disposition: str) -> bool:
     return (
-        part.content_type in ("text/plain", "text/html")
-        and not part.filename
-        and (part.content_disposition or "").lower() != "attachment"
+        content_type in ("text/plain", "text/html")
+        and not filename
+        and disposition != "attachment"
     )
 
 

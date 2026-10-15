@@ -103,6 +103,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   not_supported`, in a list, a move or as a parent, and names the
   account in `incomplete` across accounts. It answered `404`, and an
   adapter `409`.
+- `has_attachments` in a list counts real attachments as a whole
+  message does, not an image the body shows: IMAP reads BODYSTRUCTURE
+  with the headers, Gmail the parts of a message, JMAP its attachments.
+  A list guessed from the header before (`multipart/mixed`). A POP3 list
+  still guesses, since it reads the headers alone.
 - **Breaking:** keywords keep the provider's spelling, such as an
   Outlook category `Work`, and compare without case. They came in lower
   case. The marks keep the spelling of RFC 8621, such as `$answered`.

@@ -92,6 +92,31 @@ def mail(subject: str, text: str = "Hello", file: bytes | None = None) -> bytes:
     return found.as_bytes()
 
 
+def inline_only(subject: str) -> bytes:
+    """A mail whose one part beside its text is an image its HTML shows,
+    all in a multipart/mixed: the header alone would guess a file."""
+    found = EmailMessage()
+    found["Subject"] = subject
+    found["Message-ID"] = f"<{subject}@example.com>"
+    found.set_content("Hello")
+    found.add_alternative('<p><img src="cid:logo@example.com"></p>', subtype="html")
+    html = found.get_payload()[1]
+    html.add_related(b"\x89PNG", "image", "png", cid="<logo@example.com>")
+    found.make_mixed()
+    return found.as_bytes()
+
+
+def file_alone(subject: str) -> bytes:
+    """A mail that is one PDF and nothing else: no multipart/mixed."""
+    found = EmailMessage()
+    found["Subject"] = subject
+    found["Message-ID"] = f"<{subject}@example.com>"
+    found.set_content(
+        b"%PDF", "application", "pdf", disposition="attachment", filename="a.pdf"
+    )
+    return found.as_bytes()
+
+
 def box(kind: str, smtp: bool = True) -> Box:
     """A mailbox of ``kind``. Without ``smtp``, IMAP and POP3 name no SMTP
     server."""
@@ -258,7 +283,8 @@ def _microsoft() -> Box:
         server.add_message(
             raw=raw,
             subject=parsed.subject,
-            hasAttachments=bool(parsed.attachments),
+            # Graph counts no inline part as an attachment.
+            hasAttachments=any(a.attached for a in parsed.attachments),
             internetMessageId=parsed.message_id,
         )
 
