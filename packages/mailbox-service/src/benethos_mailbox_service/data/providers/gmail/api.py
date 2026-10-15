@@ -1,17 +1,20 @@
 """The Gmail API on the wire, for one account: each request with its
-access token, a refused token renewed once, a pause Gmail asks for kept,
+access token, a refused token renewed once, an error of Gmail's own side
+tried again where that is safe, a pause Gmail asks for kept,
 the labels kept a minute, and Gmail's errors as this project's."""
 
 from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Any, TypeVar
 from urllib.parse import quote
 
+import anyio
 from pydantic import BaseModel
 
+from ....common.ratelimit import backoff
 from ....errors import (
     BadRequestError,
     ConflictError,
@@ -36,6 +39,14 @@ MAILBOX = "/gmail/v1/users/me"
 LABELS_FOR = 60.0
 # Why Gmail answers 403 when it wants to be asked less often.
 _SLOW_DOWN = frozenset({"rateLimitExceeded", "userRateLimitExceeded"})
+# Errors of Gmail's own side, such as 500 backendError, which Gmail asks
+# to try again with exponential backoff: how often, and the first pause.
+_AGAIN = frozenset({500, 502, 503, 504})
+ATTEMPTS = 3
+FIRST_PAUSE = 1.0
+# Requests that change nothing when they run twice, besides GET, PUT and
+# DELETE: setting labels, and into and out of the trash.
+_SETS = ("/modify", "/batchModify", "/batchDelete", "/trash", "/untrash")
 
 S = TypeVar("S", bound=BaseModel)
 
@@ -46,10 +57,12 @@ class GmailApi:
         tokens: TokenSource,
         http: ApiClient | None = None,
         clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], Awaitable[None]] = anyio.sleep,
     ) -> None:
         self.tokens = tokens
         self._http = http or ApiClient()
         self._clock = clock
+        self._sleep = sleep
         self._labels: list[Label] | None = None
         self._labels_at = 0.0
         # Until when Gmail asked to be left alone (Retry-After).
@@ -64,10 +77,35 @@ class GmailApi:
         json_body: Any = None,
     ) -> Answer:
         """One request. ``path`` below the mailbox, e.g. ``/messages``.
-        While Gmail asked to be left alone, nothing is sent."""
+        While Gmail asked to be left alone, nothing is sent. A request that
+        changes nothing twice is tried again after an error of Gmail's own
+        side, with a growing pause, as Gmail asks."""
         wait = self._rest_until - self._clock()
         if wait > 0:
             raise rules.resting("gmail asked to wait", wait)
+        tries = ATTEMPTS if _repeatable(method, path) else 1
+        for attempt in range(tries):
+            if attempt:
+                await self._sleep(backoff(attempt - 1, base=FIRST_PAUSE))
+            answer = await self._signed(method, path, params, json_body)
+            if answer.ok:
+                return answer
+            if answer.status not in _AGAIN or answer.retry_after > 0:
+                break
+            log.debug("gmail answered %d on attempt %d", answer.status, attempt + 1)
+        failure = _failure(answer)
+        rest = answer.retry_after
+        if isinstance(failure, ProviderUnavailableError) and rest > 0:
+            self._rest_until = self._clock() + rest
+            log.debug("gmail asked to wait %.0fs", rest)
+        raise failure
+
+    async def _signed(
+        self, method: str, path: str, params: Params | None, json_body: Any
+    ) -> Answer:
+        """One request with the access token, and where Gmail refuses the
+        token, revoked or changed since it was issued, once more with a
+        new one."""
         for attempt in (1, 2):
             token = await self.tokens.access_token()
             answer = await self._http.request(
@@ -78,17 +116,8 @@ class GmailApi:
                 json_body=json_body,
             )
             if answer.status == 401 and attempt == 1:
-                # Revoked or changed since it was issued: one more try with
-                # a new one.
                 self.tokens.reject()
                 continue
-            if not answer.ok:
-                failure = _failure(answer)
-                rest = answer.retry_after
-                if isinstance(failure, ProviderUnavailableError) and rest > 0:
-                    self._rest_until = self._clock() + rest
-                    log.debug("gmail asked to wait %.0fs", rest)
-                raise failure
             return answer
         raise AssertionError("unreachable")  # pragma: no cover
 
@@ -121,6 +150,12 @@ class GmailApi:
 def id_(value: str) -> str:
     """An id as one part of a path."""
     return quote(value, safe="")
+
+
+def _repeatable(method: str, path: str) -> bool:
+    """Whether a request changes nothing more when it runs twice. A send
+    or a new draft would be there twice."""
+    return method in ("GET", "PUT", "DELETE") or path.endswith(_SETS)
 
 
 def _failure(answer: Answer) -> MailboxServiceError:

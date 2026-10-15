@@ -19,8 +19,10 @@ them against a Gmail account.
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime
+
+import anyio
 
 from ....common.clock import utc_now
 from ....errors import MailboxServiceError
@@ -74,8 +76,9 @@ class GmailProvider:
         http: ApiClient | None = None,
         clock: Callable[[], float] = time.monotonic,
         now: Callable[[], datetime] = utc_now,
+        sleep: Callable[[float], Awaitable[None]] = anyio.sleep,
     ) -> None:
-        self._api = GmailApi(tokens, http, clock)
+        self._api = GmailApi(tokens, http, clock, sleep)
         self._changes = Changes(self._api, now)
 
     # --- Reads ------------------------------------------------------------------------

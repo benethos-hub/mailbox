@@ -41,7 +41,7 @@ Towards the mail servers:
 | Rejected login | per account | no new attempt until the credential is replaced or the account is verified | `502 provider_auth_failed`, the account shows `needs_reauth` | fixed |
 | Watched accounts | for the whole service | 50 at once, an IMAP one waiting in IDLE in a thread of its own, a JMAP one on its event source | further accounts are polled only | `MAILBOX_SERVICE_SYNC_WATCHERS` |
 | Microsoft Graph | per account | a pause as long as Graph's `Retry-After` | `502 provider_unavailable` | Graph |
-| Gmail API | per account | 8 requests at once for one listing, and a pause as long as Gmail's `Retry-After`. Gmail's own quota is 250 units a second per account. A `403` for the quota counts as busy | the request waits, or `502 provider_unavailable` | Gmail, the 8 are fixed |
+| Gmail API | per account | 8 requests at once for one listing, and a pause as long as Gmail's `Retry-After`. Gmail's own quota is 250 units a second per account. A `403` for the quota counts as busy. An error of Gmail's own side, such as `500 backendError`, is tried twice more after a pause of up to 1 and 2 seconds, where the request changes nothing when it runs twice | the request waits, or `502 provider_unavailable` | Gmail, the 8 are fixed |
 | JMAP server | per account | as many requests at once as the session's `maxConcurrentRequests`, 4 where it names none, and a pause as long as its `Retry-After` | the request waits, or `502 provider_unavailable` during the pause | the server |
 | Webhook posts | per webhook | 8 attempts, 30 seconds after the first failure, doubled up to 1 hour, 10 seconds to answer | the events are dropped | `MAILBOX_SERVICE_WEBHOOK_*` |
 
