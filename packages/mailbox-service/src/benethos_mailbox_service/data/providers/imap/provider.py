@@ -3,9 +3,9 @@
 IMAP connections are stateful (the selected folder), so every operation
 runs as one uninterrupted sequence under the account's lock, in a worker
 thread (``MailServerAdapter``). The sequences themselves are in
-``messages``, ``folders``, ``drafts`` and ``sync``, each on the
+``messages``, ``folders``, ``drafts`` and ``changes``, each on the
 ``Mailbox`` of one step. IDLE waits over a connection of its own
-(``watch``).
+(``changes``).
 
 Towards the server the adapter is careful (CONCEPT 5.9): ``Guard`` paces
 the requests, blocks a rejected login and pauses an unreachable server.
@@ -16,7 +16,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from functools import partial
-from typing import TypeVar
+from typing import Protocol, TypeVar
 
 import anyio
 
@@ -36,22 +36,26 @@ from ...models import (
     Page,
     SentMessage,
 )
-from ...protocols import IMAP_PORTS, Pick, SmtpSession
+from ...protocols import IMAP_PORTS, ImapSession, Pick, SmtpSession
 from .. import rules
 from ..base import CredentialReader, ProviderSettings
 from ..guard import Pace
 from ..mailserver import MailServerAdapter
 from ..sender import SmtpFactory
-from . import drafts, everywhere, folders, mappers, messages, sync
+from . import drafts, everywhere, folders, mappers, messages
 from .abilities import abilities as imap_abilities
+from .changes import Idle, ImapChanges
 from .connect import SessionFactory, default_session
 from .mailbox import Mailbox
-from .watch import Idle
 
 T = TypeVar("T")
+R = TypeVar("R")
 
-# Message-ID headers fetched per request during a sync.
-HEADER_BATCH = 200
+
+class Retried(Protocol):
+    """A step under the lock that learns whether it runs again."""
+
+    async def __call__(self, step: Callable[[Mailbox, bool], R]) -> R: ...
 
 
 class ImapProvider(MailServerAdapter):
@@ -93,6 +97,7 @@ class ImapProvider(MailServerAdapter):
         self._idle = Idle(
             session_factory(self._server), self._guard, self._login, watchers
         )
+        self._changes = ImapChanges(self._run, self._idle)
 
     def _check_auth(self, auth: str) -> None:
         if auth == "xoauth2":
@@ -146,31 +151,18 @@ class ImapProvider(MailServerAdapter):
         return await self._run(lambda box: messages.get_raw(box, message_id))
 
     async def folder_states(self) -> dict[str, str]:
-        return await self._run(sync.folder_states)
+        return await self._changes.folder_states()
 
     async def folder_contents(self, folder_id: str) -> list[str]:
-        return await self._run(lambda box: sync.folder_contents(box, folder_id))
+        return await self._changes.folder_contents(folder_id)
 
     async def flag_changes(
         self, folder_id: str, since: str, message_ids: list[str]
     ) -> list[str]:
-        return await self._run(
-            lambda box: sync.flag_changes(box, folder_id, since, message_ids)
-        )
+        return await self._changes.flag_changes(folder_id, since, message_ids)
 
     async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
-        # Ids that are no id of this adapter are left out, like messages
-        # that are gone.
-        found: dict[str, ThreadHeaders] = {}
-        for (folder, validity), by_uid in messages.by_folder(message_ids)[0].items():
-            # One request per batch, so a long first sync never holds the
-            # connection for long.
-            for batch in batched(list(by_uid), HEADER_BATCH):
-                headers = partial(
-                    sync.message_headers, folder=folder, validity=validity, uids=batch
-                )
-                found.update(await self._run(headers))
-        return found
+        return await self._changes.message_headers(message_ids)
 
     async def abilities(self) -> Abilities:
         return await self._run(
@@ -188,7 +180,7 @@ class ImapProvider(MailServerAdapter):
         """Folder by folder, in batches like the headers."""
         found: dict[str, MessageSummary] = {}
         for (folder, validity), by_uid in messages.by_folder(message_ids)[0].items():
-            for batch in batched(list(by_uid), HEADER_BATCH):
+            for batch in batched(list(by_uid), messages.HEADER_BATCH):
                 wanted = {uid: by_uid[uid] for uid in batch}
                 found.update(
                     await self._run(
@@ -271,7 +263,8 @@ class ImapProvider(MailServerAdapter):
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxServiceError]:
-        return await self._per_folder(
+        return await _per_folder(
+            self._retried,
             message_ids,
             lambda box, folder, validity, uids, _: messages.update_in_folder(
                 box, folder, validity, uids, changes
@@ -281,7 +274,8 @@ class ImapProvider(MailServerAdapter):
     async def delete_messages(
         self, message_ids: list[str], permanent: bool
     ) -> dict[str, MessageSummary | None | MailboxServiceError]:
-        return await self._per_folder(
+        return await _per_folder(
+            self._retried,
             message_ids,
             lambda box, folder, validity, uids, retried: messages.delete_in_folder(
                 box, folder, validity, uids, permanent, retried
@@ -291,57 +285,37 @@ class ImapProvider(MailServerAdapter):
     # --- Watches ----------------------------------------------------------------------
 
     async def wait_for_change(self, timeout: float) -> bool:
-        return await self._idle.wait(timeout)
+        return await self._changes.wait_for_change(timeout)
 
     # --- plumbing ---------------------------------------------------------------------
 
-    async def _per_folder(
-        self,
-        message_ids: list[str],
-        work: Callable[
-            [Mailbox, str, int, list[int], bool], dict[int, T | MailboxServiceError]
-        ],
-    ) -> dict[str, T | MailboxServiceError]:
-        """Run ``work`` once per folder, each under the lock. A failure of
-        the connection or the login stops everything: it raises, or, once
-        a folder is done, it is the failure of the folders left, so the
-        answer names what was done. Any other failure answers for that
-        folder's messages only."""
-        found, unknown = messages.by_folder(message_ids)
-        results: dict[str, T | MailboxServiceError] = dict(unknown)
-        stopped: MailboxServiceError | None = None
-        for (folder, validity), by_uid in found.items():
-            step = _in_folder(work, folder, validity, list(by_uid))
-            done: dict[int, T | MailboxServiceError] = (
-                dict.fromkeys(by_uid, stopped) if stopped else {}
-            )
-            try:
-                done = done or await self._run(self._counting(step))
-            except rules.FATAL as exc:
-                if len(results) == len(unknown):
-                    raise
-                stopped, done = exc, dict.fromkeys(by_uid, exc)
-            except MailboxServiceError as exc:
-                done = dict.fromkeys(by_uid, exc)
-            for uid, outcome in done.items():
-                results[by_uid[uid]] = outcome
-        return results
+    async def _retried(self, step: Callable[[Mailbox, bool], R]) -> R:
+        """``step`` under the lock, told whether it runs again."""
+        return await self._run(self._counting(step))
 
     async def _run(self, operation: Callable[[Mailbox], T]) -> T:
         """One step under the lock, logged in first, through the guard."""
         return await self._in_thread(
-            lambda: self._attempted(self._session, partial(self._step, operation))
+            lambda: self._attempted(
+                self._session, partial(_step, self._box, self._login, operation)
+            )
         )
-
-    def _step(self, operation: Callable[[Mailbox], T]) -> T:
-        self._box.fresh()
-        if not self._session.connected:
-            self._login(self._session)
-        return operation(self._box)
 
     def _close(self) -> None:
         self._closed(self._session)
         self._idle.close()
+
+
+def _step(
+    box: Mailbox,
+    login: Callable[[ImapSession], None],
+    operation: Callable[[Mailbox], T],
+) -> T:
+    """``operation`` on a fresh ``box``, its session logged in first."""
+    box.fresh()
+    if not box.session.connected:
+        login(box.session)
+    return operation(box)
 
 
 def _in_folder(
@@ -352,3 +326,36 @@ def _in_folder(
 ) -> Callable[[Mailbox, bool], T]:
     """``work`` for one folder's messages, to be retried."""
     return lambda box, retried: work(box, folder, validity, uids, retried)
+
+
+async def _per_folder(
+    retried: Retried,
+    message_ids: list[str],
+    work: Callable[
+        [Mailbox, str, int, list[int], bool], dict[int, T | MailboxServiceError]
+    ],
+) -> dict[str, T | MailboxServiceError]:
+    """Run ``work`` once per folder, each under the lock. A failure of
+    the connection or the login stops everything: it raises, or, once
+    a folder is done, it is the failure of the folders left, so the
+    answer names what was done. Any other failure answers for that
+    folder's messages only."""
+    found, unknown = messages.by_folder(message_ids)
+    results: dict[str, T | MailboxServiceError] = dict(unknown)
+    stopped: MailboxServiceError | None = None
+    for (folder, validity), by_uid in found.items():
+        step = _in_folder(work, folder, validity, list(by_uid))
+        done: dict[int, T | MailboxServiceError] = (
+            dict.fromkeys(by_uid, stopped) if stopped else {}
+        )
+        try:
+            done = done or await retried(step)
+        except rules.FATAL as exc:
+            if len(results) == len(unknown):
+                raise
+            stopped, done = exc, dict.fromkeys(by_uid, exc)
+        except MailboxServiceError as exc:
+            done = dict.fromkeys(by_uid, exc)
+        for uid, outcome in done.items():
+            results[by_uid[uid]] = outcome
+    return results

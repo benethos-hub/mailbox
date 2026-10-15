@@ -16,7 +16,7 @@ from ...mail import ThreadHeaders
 from ...protocols import jmap
 from ..base import ChangedMessage, FolderChanges
 from . import mappers
-from .account import JmapAccount
+from .api import JmapAccount
 
 # Message ids asked for at once while listing a whole folder.
 QUERY_PAGE = 500

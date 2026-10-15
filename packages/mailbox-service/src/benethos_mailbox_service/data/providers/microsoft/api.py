@@ -41,6 +41,8 @@ log = logging.getLogger(__name__)
 
 GRAPH = "https://graph.microsoft.com"
 VERSION = "/v1.0"
+# A page of folders or of message ids, as many as Graph hands out at once.
+PAGE_SIZE = 250
 # Requests in one JSON batch, Graph's limit.
 BATCH_SIZE = 20
 # The bytes of one PUT to an upload session: a multiple of 320 KiB, below

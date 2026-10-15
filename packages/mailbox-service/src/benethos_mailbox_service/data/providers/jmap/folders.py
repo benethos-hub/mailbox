@@ -6,7 +6,7 @@ from ....errors import BadRequestError, ConflictError, ProviderError, missing
 from ...models import Folder
 from ...protocols import jmap
 from . import mappers
-from .account import JmapAccount
+from .api import JmapAccount
 from .shapes import Mailbox
 
 

@@ -9,7 +9,7 @@ from ...models import MessageFilter, MessageSummary, Page
 from ...protocols import path_part
 from .. import rules
 from . import mappers
-from .graph import Graph, own_path
+from .api import Graph, own_path
 from .shapes import Batch, Listing
 from .shapes import Message as GraphMessage
 

@@ -1206,3 +1206,16 @@ Built as #180.
 - **SQLite.** `Database.one_as`, `query_as` and `scalar` read rows into
   records and a number. The three activities of a purge have one base,
   `Purged`.
+
+### 17.3 The adapters' layout
+
+- **One name for one part.** An adapter's HTTP API on the wire is in
+  `api.py`, as the user decided: Graph's `graph.py` and JMAP's
+  `account.py` are renamed. What the sync asks is in `changes.py` in
+  every adapter that has more than the provider's class for it. IMAP's
+  `sync.py` and `watch.py` are one `changes.py` with `ImapChanges`.
+- **Microsoft in parts.** `provider.py` hands each operation to
+  `folders`, `messages`, `drafts` or `changes`, as JMAP and Gmail do.
+- **The memory adapter in parts.** `messages`, `folders` and `drafts`
+  work on what it holds, `store.Store`, which the adapter keeps itself,
+  where tests look at it.

@@ -16,7 +16,7 @@ from ...models import Folder, FolderRole, SentMessage
 from ...protocols import jmap
 from .. import rules
 from . import mappers
-from .account import JmapAccount
+from .api import JmapAccount
 from .shapes import Identity
 
 WITH_SUBMISSION = (jmap.CORE, jmap.MAIL, jmap.SUBMISSION)

@@ -358,32 +358,36 @@ packages/mailbox-service/
         imap/, memory/, # one directory per provider (adapter),
         microsoft/,     #   provider.py the adapter, mappers.py the
         pop3/, jmap/,   #   translation, shapes.py what the provider
-        gmail/          #   sends as JSON, the rest one module per
+        gmail/          #   sends as JSON, api.py its HTTP API on the
+                        #   wire, changes.py what the sync asks, where
+                        #   it has them, the rest one module per
                         #   subject.
                         #   imap: connect.py, mailbox.py (one session
                         #   and its folders), folders, messages, drafts,
-                        #   sync, watch (IDLE), abilities (what the
+                        #   changes (with IDLE), abilities (what the
                         #   server announces), everywhere (the folder
                         #   all where the server has no \All).
-                        #   jmap: over data/protocols/jmap/,
-                        #   connect.py (its settings),
-                        #   account.py (one account's calls), folders,
+                        #   jmap: api.py over data/protocols/jmap/,
+                        #   connect.py (its settings), folders,
                         #   messages, drafts, sending, changes.
-                        #   microsoft: graph.py (Graph over
+                        #   microsoft: api.py (Graph over
                         #   data/protocols/http), signin.py its
                         #   endpoints and the scopes it needs,
-                        #   uploads.py (a draft too large for one
-                        #   request, its files one by one), listing.py
-                        #   (a folder's messages, the search), marks.py
-                        #   (answered and forwarded as Outlook keeps
-                        #   them).
+                        #   folders, messages, listing.py (a folder's
+                        #   messages, the search), drafts (with
+                        #   sending), uploads.py (a draft too large for
+                        #   one request, its files one by one), changes
+                        #   (delta queries), marks.py (answered and
+                        #   forwarded as Outlook keeps them).
                         #   gmail: api.py (the Gmail API over
                         #   data/protocols/http), signin.py,
                         #   reading.py (what the parts read alike),
                         #   folders (labels), messages, sending
                         #   (with the drafts), changes (history).
                         #   pop3: one inbox, a session per step,
-                        #   mappers.py its ids and cursors
+                        #   mappers.py its ids and cursors.
+                        #   memory: store.py what it holds, where
+                        #   tests look, messages, folders, drafts
       storage/          # own records, one module per subject, table.py
                         #   for the in-memory ones, sqlite/ the database
                         #   (database.py) and its rows read typed
