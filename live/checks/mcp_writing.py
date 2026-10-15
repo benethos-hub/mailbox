@@ -70,7 +70,7 @@ async def check_keywords(
     labelled = await update(add_folders=["inbox"])
     run.check(
         "a label is refused where a message is in one folder",
-        "exactly one folder" in str(labelled),
+        "several folders" in str(labelled),
     )
 
 
