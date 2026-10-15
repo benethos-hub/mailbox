@@ -9,6 +9,7 @@ that use it do, and hand it accounts the caller may act on.
 from __future__ import annotations
 
 import builtins
+import time
 from collections.abc import Awaitable, Callable, Mapping
 from typing import TypeVar
 
@@ -41,6 +42,9 @@ from .abilities import NOTHING, Needs, lacking
 
 T = TypeVar("T")
 
+# Seconds between two questions to a server after a refusal (``call``).
+RELEARN_PAUSE = 60.0
+
 # The credential of an OAuth account: its refresh token.
 REFRESH_TOKEN = "refresh_token"
 
@@ -54,6 +58,7 @@ class Adapters:
         oauth: Mapping[ProviderType, OAuthClient] | None = None,
         changes: ChangeFeed | None = None,
         activity: ActivityLog | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._repository = repository
         self._activity = activity or ActivityLog()
@@ -68,6 +73,9 @@ class Adapters:
         # The status as last read or written, so a call does not read the
         # record again to see whether it changed.
         self._status: dict[str, AccountStatus] = {}
+        self._clock = clock
+        # When each account's server was last asked again after a refusal.
+        self._relearned: dict[str, float] = {}
 
     # --- the records, without a rights check ----------------------------------------
 
@@ -200,7 +208,9 @@ class Adapters:
         unreachable server is marked as such, and success clears both. An
         operation the adapter refuses with ``501``, although the stored
         abilities let it pass, has the server asked again (UNIFORM R4):
-        it may have stopped offering something, such as IDLE."""
+        it may have stopped offering something, such as IDLE. Once in
+        ``RELEARN_PAUSE`` at most: a caller that asks for what an account
+        cannot do, again and again, makes no round trips."""
         try:
             return await self._called(account_id, operation)
         except NotSupportedError:
@@ -209,6 +219,11 @@ class Adapters:
             raise
 
     async def _relearn(self, account_id: str) -> None:
+        now = self._clock()
+        last = self._relearned.get(account_id)
+        if last is not None and now - last < RELEARN_PAUSE:
+            return
+        self._relearned[account_id] = now
         try:
             await self.learn(account_id)
         except MailboxServiceError:

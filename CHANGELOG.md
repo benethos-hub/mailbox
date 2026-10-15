@@ -157,6 +157,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- An operation the server refuses with `501` although the account's
+  abilities let it pass asks the server what it can do once a minute
+  at most. A client that asked again and again made a round trip to
+  the mail server each time.
 - `GET /v1/changes` with `since` answers for a grant that names
   folders also while one of its accounts does not answer. That account
   gives only its changes that are not about a message, as webhooks
